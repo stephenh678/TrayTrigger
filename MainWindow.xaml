@@ -372,8 +372,12 @@
                                 Style="{StaticResource ModernAccentButton}" Margin="0,0,8,0"/>
                         <Button Content="📁 Add Folder" Command="{Binding AddFolderCommand}" 
                                 Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"/>
-                        <Button Content="Import Steam" Command="{Binding OpenSteamImportCommand}" 
-                                Style="{StaticResource ModernOutlineButton}"/>
+                        <Button Content="Import Steam" Command="{Binding OpenSteamImportCommand}"
+                                Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"/>
+                        <Button Content="Refresh Posters" Command="{Binding RefreshAllPostersCommand}"
+                                IsEnabled="{Binding CanRefreshAllPosters}"
+                                Style="{StaticResource ModernOutlineButton}"
+                                ToolTip="Re-checks poster art for every game in your library, including ones that already have a cover."/>
                     </StackPanel>
 
                     <!-- Left: Segmented Category Tabs -->
@@ -1365,9 +1369,14 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <Button Content="Refresh All Game Posters" Command="{Binding RefreshAllPostersCommand}"
-                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"
-                                            HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Refresh All Game Posters" Command="{Binding RefreshAllPostersCommand}"
+                                                IsEnabled="{Binding CanRefreshAllPosters}"
+                                                Style="{StaticResource ModernOutlineButton}" Padding="10,5"
+                                                HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding PosterRefreshStatus}" Foreground="{StaticResource BrushAccentHover}"
+                                                   FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,4"/>
+                                    </StackPanel>
                                     <TextBlock Text="Re-checks poster art for every game in your library, even ones that already have a cover. Picks up Steam's official artwork once it's published (e.g. a game you added before release has since launched) as well as any newly added/changed art sources like SteamGridDB below."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="0,4,0,12" TextWrapping="Wrap"/>

@@ -184,7 +184,7 @@ public class MainViewModel : ViewModelBase
             },
             onHotkeySettingChanged: UpdateHotkeys,
             onRequestEnrichLibrary: EnrichLibraryAsync,
-            onRequestRefreshAllPosters: RefreshAllPostersAsync,
+            onRequestRefreshAllPosters: progress => RefreshAllPostersAsync(progress),
             onRequestOpenSteamImport: OpenSteamImport
         );
 
@@ -275,6 +275,7 @@ public class MainViewModel : ViewModelBase
         AddGameCommand = new RelayCommand(AddGameBrowse);
         AddFolderCommand = new RelayCommand(AddGameFolderBrowse);
         OpenSteamImportCommand = new RelayCommand(OpenSteamImport);
+        RefreshAllPostersCommand = new RelayCommand(async () => await RefreshAllPostersAsync());
         OpenSettingsCommand = new RelayCommand(OpenSettings);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
@@ -671,6 +672,7 @@ public class MainViewModel : ViewModelBase
     public ICommand AddGameCommand { get; }
     public ICommand AddFolderCommand { get; }
     public ICommand OpenSteamImportCommand { get; }
+    public ICommand RefreshAllPostersCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
     public ICommand OpenSteamGridDbSiteCommand { get; }
@@ -1074,7 +1076,15 @@ public class MainViewModel : ViewModelBase
     }
 
     private const int MaxConcurrentEnrichments = 4;
+
     private bool _isRefreshingAllPosters;
+    public bool IsRefreshingAllPosters
+    {
+        get => _isRefreshingAllPosters;
+        private set { _isRefreshingAllPosters = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRefreshAllPosters)); }
+    }
+
+    public bool CanRefreshAllPosters => !IsRefreshingAllPosters;
 
     /// <summary>
     /// Force-refreshes poster art for every game with a known Steam AppId, bypassing the
@@ -1083,22 +1093,34 @@ public class MainViewModel : ViewModelBase
     /// Unlike <see cref="EnrichLibraryAsync"/>, this ignores existing category/cover state and
     /// always re-fetches, since the whole point is to override a previously-cached poster.
     /// </summary>
-    public async Task RefreshAllPostersAsync()
+    /// <param name="progress">
+    /// Optional progress/result text sink. StatusMessage alone isn't enough here: this action
+    /// is triggered from the Settings page, whose status bar (bound to StatusMessage) lives in
+    /// a different XAML section that's collapsed while Settings is the active view - callers
+    /// needing on-screen feedback in that context should pass a sink that surfaces it there.
+    /// </param>
+    public async Task RefreshAllPostersAsync(IProgress<string>? progress = null)
     {
-        if (_isRefreshingAllPosters)
+        void Report(string message)
         {
-            StatusMessage = "A poster refresh is already in progress. Please wait for it to finish.";
+            StatusMessage = message;
+            progress?.Report(message);
+        }
+
+        if (IsRefreshingAllPosters)
+        {
+            Report("A poster refresh is already in progress. Please wait for it to finish.");
             return;
         }
 
         var candidates = Games.Where(card => !string.IsNullOrWhiteSpace(card.Game.SteamAppId)).ToList();
         if (candidates.Count == 0)
         {
-            StatusMessage = "No games with a linked Steam AppId to refresh.";
+            Report("No games with a linked Steam AppId to refresh.");
             return;
         }
 
-        _isRefreshingAllPosters = true;
+        IsRefreshingAllPosters = true;
         try
         {
             int completed = 0;
@@ -1112,7 +1134,14 @@ public class MainViewModel : ViewModelBase
                 {
                     string appId = card.Game.SteamAppId!;
                     var details = await _steamMetadataService.GetAppDetailsAsync(appId, SteamGridDbApiKeyOrNull, forceRefresh: true);
-                    if (details != null && !string.IsNullOrWhiteSpace(details.CoverImagePath) && details.CoverImagePath != card.Game.CoverImagePath)
+                    // DownloadAndCachePosterAsync always writes to the same Covers/{appId}.jpg
+                    // path regardless of which source tier supplied it, so CoverImagePath is
+                    // virtually always unchanged even when the file's actual contents just got
+                    // replaced with better art. Don't gate on path equality - always reassign
+                    // and refresh so the in-memory bitmap reloads from disk (LoadBitmapSafely
+                    // already bypasses WPF's image cache), or a same-path content change would
+                    // never show up until the app restarts.
+                    if (details != null && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                     {
                         card.Game.CoverImagePath = details.CoverImagePath;
                         card.RefreshProperties();
@@ -1122,7 +1151,7 @@ public class MainViewModel : ViewModelBase
                 finally
                 {
                     Interlocked.Increment(ref completed);
-                    StatusMessage = $"Refreshing posters... {completed}/{candidates.Count}";
+                    Report($"Refreshing posters... {completed}/{candidates.Count}");
                 }
             });
 
@@ -1134,11 +1163,11 @@ public class MainViewModel : ViewModelBase
                 LibraryUpdated?.Invoke();
             }
 
-            StatusMessage = $"Poster refresh complete: {updated} of {candidates.Count} game(s) updated.";
+            Report($"Poster refresh complete: {updated} of {candidates.Count} game(s) refreshed.");
         }
         finally
         {
-            _isRefreshingAllPosters = false;
+            IsRefreshingAllPosters = false;
         }
     }
 

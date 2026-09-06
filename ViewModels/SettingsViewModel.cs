@@ -37,7 +37,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly Action? _onPosterArtSettingChanged;
     private readonly Action? _onHotkeySettingChanged;
     private readonly Func<Task>? _onRequestEnrichLibrary;
-    private readonly Func<Task>? _onRequestRefreshAllPosters;
+    private readonly Func<IProgress<string>, Task>? _onRequestRefreshAllPosters;
     private readonly Action? _onRequestOpenSteamImport;
 
     public const string ViewModePosterGrid = "Poster Grid";
@@ -132,7 +132,7 @@ public class SettingsViewModel : ViewModelBase
         Action? onPosterArtSettingChanged = null,
         Action? onHotkeySettingChanged = null,
         Func<Task>? onRequestEnrichLibrary = null,
-        Func<Task>? onRequestRefreshAllPosters = null,
+        Func<IProgress<string>, Task>? onRequestRefreshAllPosters = null,
         Action? onRequestOpenSteamImport = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -174,7 +174,21 @@ public class SettingsViewModel : ViewModelBase
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
         OpenSteamImportCommand = new RelayCommand(() => _onRequestOpenSteamImport?.Invoke());
-        RefreshAllPostersCommand = new RelayCommand(() => _ = _onRequestRefreshAllPosters?.Invoke());
+        RefreshAllPostersCommand = new RelayCommand(async () =>
+        {
+            if (_onRequestRefreshAllPosters == null || IsRefreshingAllPosters)
+                return;
+
+            IsRefreshingAllPosters = true;
+            try
+            {
+                await _onRequestRefreshAllPosters(new Progress<string>(msg => PosterRefreshStatus = msg));
+            }
+            finally
+            {
+                IsRefreshingAllPosters = false;
+            }
+        });
         CheckUpdatesInSettingsCommand = new RelayCommand(async () => await CheckForUpdatesAsync(true));
     }
 
@@ -534,6 +548,22 @@ public class SettingsViewModel : ViewModelBase
                 AutoSaveSettings();
             }
         }
+    }
+
+    private bool _isRefreshingAllPosters;
+    public bool IsRefreshingAllPosters
+    {
+        get => _isRefreshingAllPosters;
+        private set { _isRefreshingAllPosters = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRefreshAllPosters)); }
+    }
+
+    public bool CanRefreshAllPosters => !IsRefreshingAllPosters;
+
+    private string _posterRefreshStatus = string.Empty;
+    public string PosterRefreshStatus
+    {
+        get => _posterRefreshStatus;
+        private set { _posterRefreshStatus = value; OnPropertyChanged(); }
     }
 
     public string? SteamGridDbApiKeyOrNull =>
