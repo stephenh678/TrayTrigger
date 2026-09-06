@@ -184,7 +184,7 @@ public partial class MainWindow : Window
 
     private void OnRequestEditGameDialog(GameCardViewModel card)
     {
-        var editDialog = new GameEditDialog(card.Game, _viewModel.Categories, _viewModel.IconExtractorService);
+        var editDialog = new GameEditDialog(card.Game, _viewModel.Categories, _viewModel.IconExtractorService, steamGridDbApiKey: _viewModel.SteamGridDbApiKeyOrNull);
         editDialog.Owner = this;
         if (editDialog.ShowDialog() == true)
         {

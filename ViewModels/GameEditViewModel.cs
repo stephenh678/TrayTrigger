@@ -17,6 +17,8 @@ namespace TrayTrigger.ViewModels;
 public class GameEditViewModel : ViewModelBase
 {
     private readonly IconExtractorService _iconExtractorService;
+    private readonly string? _steamGridDbApiKey;
+    private bool _isRefreshingMetadata;
     private string _name;
     private string _executablePath;
     private string _arguments;
@@ -38,10 +40,11 @@ public class GameEditViewModel : ViewModelBase
 
     public event Action<bool>? RequestClose;
 
-    public GameEditViewModel(GameEntry game, IEnumerable<string> categories, IconExtractorService iconExtractorService, bool isNewGame = false)
+    public GameEditViewModel(GameEntry game, IEnumerable<string> categories, IconExtractorService iconExtractorService, bool isNewGame = false, string? steamGridDbApiKey = null)
     {
         SourceGame = game;
         _iconExtractorService = iconExtractorService;
+        _steamGridDbApiKey = steamGridDbApiKey;
         IsNewGame = isNewGame;
 
         _name = game.Name;
@@ -73,6 +76,8 @@ public class GameEditViewModel : ViewModelBase
         ResetCoverCommand = new RelayCommand(ResetCover);
         FetchNameFromExeCommand = new RelayCommand(FetchNameFromExe);
         FetchOfficialNameOnlineCommand = new RelayCommand(FetchOfficialNameOnline);
+        FetchBySteamIdCommand = new RelayCommand(FetchBySteamId, () => !IsRefreshingMetadata);
+        RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
 
@@ -136,6 +141,19 @@ public class GameEditViewModel : ViewModelBase
 
     public string SteamAppIdDisplay => !string.IsNullOrEmpty(SteamAppId) ? $"Steam AppID: {SteamAppId}" : string.Empty;
 
+    public bool IsRefreshingMetadata
+    {
+        get => _isRefreshingMetadata;
+        private set
+        {
+            if (_isRefreshingMetadata != value)
+            {
+                _isRefreshingMetadata = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public string? CustomIconPath
     {
         get => _customIconPath;
@@ -195,6 +213,8 @@ public class GameEditViewModel : ViewModelBase
     public ICommand ResetCoverCommand { get; }
     public ICommand FetchNameFromExeCommand { get; }
     public ICommand FetchOfficialNameOnlineCommand { get; }
+    public ICommand FetchBySteamIdCommand { get; }
+    public ICommand RefreshPosterCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand CancelCommand { get; }
 
@@ -403,6 +423,95 @@ public class GameEditViewModel : ViewModelBase
     }
 
     public void FetchOfficialNameOnline() => _ = FetchOfficialNameOnlineAsync();
+
+    /// <summary>
+    /// Corrects a misidentified game by fetching name + poster art directly from Steam for an
+    /// exact AppID, bypassing whatever the fuzzy name search or folder-scan heuristics guessed.
+    /// Invalidates any cached details/poster for this AppID first, so a previously wrong result
+    /// (e.g. from a bad automatic match) doesn't get served back out of the in-memory cache.
+    /// </summary>
+    public async Task FetchBySteamIdAsync()
+    {
+        string id = SteamAppId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(id) || !id.All(char.IsDigit))
+        {
+            LoggingService.Warn("GameEditViewModel", $"Invalid Steam AppID '{id}' supplied for manual match.");
+            return;
+        }
+
+        IsRefreshingMetadata = true;
+        try
+        {
+            SteamMetadataService.InvalidateCache(id);
+            var metadataService = new SteamMetadataService();
+            var details = await metadataService.GetAppDetailsAsync(id, _steamGridDbApiKey, forceRefresh: true);
+            if (details == null || string.IsNullOrWhiteSpace(details.Name))
+            {
+                LoggingService.Warn("GameEditViewModel", $"No Steam app details found for AppID '{id}'.");
+                return;
+            }
+
+            Name = details.Name;
+            SteamAppId = id;
+            IsSteamGame = true;
+            ApplyFetchedCover(details.CoverImagePath);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("GameEditViewModel", $"Failed to fetch Steam details for AppID '{id}': {ex.Message}");
+        }
+        finally
+        {
+            IsRefreshingMetadata = false;
+        }
+    }
+
+    public void FetchBySteamId() => _ = FetchBySteamIdAsync();
+
+    /// <summary>
+    /// Force re-downloads poster art for the currently set Steam AppID, bypassing the on-disk
+    /// "poster already exists" check - useful when the name/AppID are already correct but the
+    /// cached art is a low-quality fallback (or was cached before SteamGridDB was configured).
+    /// </summary>
+    public async Task RefreshPosterAsync()
+    {
+        string id = SteamAppId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            LoggingService.Warn("GameEditViewModel", "Cannot refresh poster: no Steam AppID set for this game.");
+            return;
+        }
+
+        IsRefreshingMetadata = true;
+        try
+        {
+            var metadataService = new SteamMetadataService();
+            string? cover = await metadataService.DownloadAndCachePosterAsync(id, null, _steamGridDbApiKey, forceRefresh: true);
+            ApplyFetchedCover(cover);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("GameEditViewModel", $"Failed to refresh poster for AppID '{id}': {ex.Message}");
+        }
+        finally
+        {
+            IsRefreshingMetadata = false;
+        }
+    }
+
+    public void RefreshPoster() => _ = RefreshPosterAsync();
+
+    private void ApplyFetchedCover(string? coverPath)
+    {
+        if (string.IsNullOrWhiteSpace(coverPath) || !File.Exists(coverPath)) return;
+
+        SourceGame.CoverImagePath = coverPath;
+        // Clear any earlier manual "Change..." pick so the freshly fetched official art wins,
+        // both in the preview and in Save()'s custom-cover-copy check.
+        _customCoverPath = null;
+        OnPropertyChanged(nameof(CustomCoverPath));
+        UpdateCoverPreview();
+    }
 
     private void BrowseExe()
     {

@@ -104,10 +104,13 @@
                                            Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,1"/>
                                 <TextBlock Text="600×900 vertical poster" FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,5"/>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="Change..." Command="{Binding BrowseCoverCommand}" 
+                                    <Button Content="Change..." Command="{Binding BrowseCoverCommand}"
                                             Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="11" Margin="0,0,6,0"/>
-                                    <Button Content="Reset" Command="{Binding ResetCoverCommand}" 
-                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11"/>
+                                    <Button Content="Reset" Command="{Binding ResetCoverCommand}"
+                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11" Margin="0,0,6,0"/>
+                                    <Button Content="Refresh" Command="{Binding RefreshPosterCommand}"
+                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11"
+                                            ToolTip="Force re-download poster art from Steam for this game's App ID, bypassing the cache"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
@@ -135,6 +138,21 @@
                           Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                           IsEditable="True"
                           Style="{StaticResource ModernComboBox}" Margin="0,0,0,10"/>
+
+                <!-- Steam App ID (manual match) -->
+                <TextBlock Text="Steam App ID (force an exact match)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+                             ToolTip="Found in the game's Steam store URL, e.g. store.steampowered.com/app/&lt;this number&gt;/"/>
+                    <Button Grid.Column="1" Content="Fetch by ID" Command="{Binding FetchBySteamIdCommand}"
+                            Style="{StaticResource ModernOutlineButton}"
+                            ToolTip="Re-fetch this game's name and poster art from Steam using the exact App ID above"/>
+                </Grid>
 
                 <!-- Executable Path -->
                 <TextBlock Text="Executable or Target Path" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
