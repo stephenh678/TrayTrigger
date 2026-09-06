@@ -187,6 +187,15 @@ public class StorageService
         bool changed = false;
         foreach (var g in games)
         {
+            // Auto-heal games that have a local executable path on disk but were erroneously marked as IsSteamGame
+            if (g.IsSteamGame && !string.IsNullOrWhiteSpace(g.ExecutablePath) &&
+                !g.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(g.ExecutablePath))
+            {
+                g.IsSteamGame = false;
+                changed = true;
+            }
+
             if (!string.IsNullOrEmpty(g.IconPath) && !File.Exists(g.IconPath))
             {
                 string candidate = Path.Combine(_iconsDirectory, Path.GetFileName(g.IconPath));

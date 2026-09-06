@@ -22,6 +22,8 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onChangeCover;
     private readonly Action<GameCardViewModel>? _onFetchExeName;
     private readonly Action<GameCardViewModel>? _onViewDetails;
+    private readonly Action<GameCardViewModel>? _onEditSteamAppId;
+    private readonly Action<GameCardViewModel>? _onRefreshMetadata;
     private readonly Func<bool>? _getUseVerticalPosterArt;
     private BitmapImage? _iconImage;
     private BitmapImage? _coverImage;
@@ -41,6 +43,8 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onChangeCover = null,
         Action<GameCardViewModel>? onFetchExeName = null,
         Action<GameCardViewModel>? onViewDetails = null,
+        Action<GameCardViewModel>? onEditSteamAppId = null,
+        Action<GameCardViewModel>? onRefreshMetadata = null,
         Func<bool>? getUseVerticalPosterArt = null)
     {
         Game = game;
@@ -54,6 +58,8 @@ public class GameCardViewModel : ViewModelBase
         _onChangeCover = onChangeCover;
         _onFetchExeName = onFetchExeName;
         _onViewDetails = onViewDetails;
+        _onEditSteamAppId = onEditSteamAppId;
+        _onRefreshMetadata = onRefreshMetadata;
         _getUseVerticalPosterArt = getUseVerticalPosterArt;
 
         LaunchCommand = new RelayCommand(() => _onLaunch(this));
@@ -66,6 +72,8 @@ public class GameCardViewModel : ViewModelBase
         ChangeIconCommand = new RelayCommand(() => _onChangeIcon?.Invoke(this));
         ChangeCoverCommand = new RelayCommand(() => _onChangeCover?.Invoke(this));
         FetchExeNameCommand = new RelayCommand(() => _onFetchExeName?.Invoke(this));
+        EditSteamAppIdCommand = new RelayCommand(() => _onEditSteamAppId?.Invoke(this));
+        RefreshMetadataCommand = new RelayCommand(() => _onRefreshMetadata?.Invoke(this));
         OpenFolderCommand = new RelayCommand(OpenContainingFolder);
         OpenStoreCommand = new RelayCommand(OpenStorePage);
         OpenInSteamLibraryCommand = new RelayCommand(OpenInSteamLibrary);
@@ -139,6 +147,8 @@ public class GameCardViewModel : ViewModelBase
     public ICommand EditCommand { get; }
     public ICommand DeleteCommand { get; }
     public ICommand ViewDetailsCommand { get; }
+    public ICommand EditSteamAppIdCommand { get; }
+    public ICommand RefreshMetadataCommand { get; }
     public ICommand RelocateCommand { get; }
     public ICommand RenameCommand { get; }
     public ICommand FetchExeNameCommand { get; }
@@ -149,6 +159,13 @@ public class GameCardViewModel : ViewModelBase
     public ICommand OpenStoreCommand { get; }
     public ICommand OpenInSteamLibraryCommand { get; }
     public ICommand VerifyFilesCommand { get; }
+
+    public string? SteamAppId => Game.SteamAppId;
+    public bool HasSteamAppId => !string.IsNullOrWhiteSpace(Game.SteamAppId);
+    public string SteamAppIdDisplay => HasSteamAppId ? $"ID: {SteamAppId}" : string.Empty;
+    public string SteamAppIdTooltip => HasSteamAppId 
+        ? $"Steam App ID: {SteamAppId}\nClick to update App ID or re-match metadata" 
+        : "Click to link a Steam App ID for artwork and info";
 
     public void ReloadIcon()
     {
@@ -172,6 +189,10 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasHotkey));
         OnPropertyChanged(nameof(IsSteamGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
+        OnPropertyChanged(nameof(SteamAppId));
+        OnPropertyChanged(nameof(HasSteamAppId));
+        OnPropertyChanged(nameof(SteamAppIdDisplay));
+        OnPropertyChanged(nameof(SteamAppIdTooltip));
         OnPropertyChanged(nameof(PlaytimeDisplay));
         OnPropertyChanged(nameof(LastPlayedDisplay));
         ReloadIcon();

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
@@ -32,6 +33,23 @@ public class GameEditViewModel : ViewModelBase
     private BitmapImage? _iconPreview;
     private string? _customCoverPath;
     private BitmapImage? _coverPreview;
+    private string? _statusMessage;
+
+    public string? StatusMessage
+    {
+        get => _statusMessage;
+        set
+        {
+            if (_statusMessage != value)
+            {
+                _statusMessage = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasStatusMessage));
+            }
+        }
+    }
+
+    public bool HasStatusMessage => !string.IsNullOrWhiteSpace(_statusMessage);
 
     public GameEntry SourceGame { get; }
     public bool IsNewGame { get; }
@@ -136,10 +154,17 @@ public class GameEditViewModel : ViewModelBase
     public string? SteamAppId
     {
         get => _steamAppId;
-        set { _steamAppId = value; OnPropertyChanged(); OnPropertyChanged(nameof(SteamAppIdDisplay)); }
+        set 
+        { 
+            _steamAppId = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(SteamAppIdDisplay)); 
+            OnPropertyChanged(nameof(HasSteamAppId));
+        }
     }
 
     public string SteamAppIdDisplay => !string.IsNullOrEmpty(SteamAppId) ? $"Steam AppID: {SteamAppId}" : string.Empty;
+    public bool HasSteamAppId => !string.IsNullOrWhiteSpace(SteamAppId);
 
     public bool IsRefreshingMetadata
     {
@@ -150,6 +175,7 @@ public class GameEditViewModel : ViewModelBase
             {
                 _isRefreshingMetadata = value;
                 OnPropertyChanged();
+                Application.Current?.Dispatcher?.InvokeAsync(CommandManager.InvalidateRequerySuggested);
             }
         }
     }
@@ -407,17 +433,32 @@ public class GameEditViewModel : ViewModelBase
                 term = Path.GetFileName(Path.GetDirectoryName(ExecutablePath) ?? "");
             }
 
-            if (string.IsNullOrWhiteSpace(term)) return;
+            if (string.IsNullOrWhiteSpace(term))
+            {
+                StatusMessage = "Enter a title or select an executable first.";
+                return;
+            }
 
+            StatusMessage = $"Searching Steam for \"{term}\"...";
             var steamSearch = new SteamSearchService();
             var match = await steamSearch.FindBestMatchAsync(term);
             if (match != null && !string.IsNullOrWhiteSpace(match.Name))
             {
                 Name = match.Name;
+                if (!string.IsNullOrWhiteSpace(match.AppId))
+                {
+                    SteamAppId = match.AppId;
+                }
+                StatusMessage = $"Found Steam match: \"{match.Name}\"";
+            }
+            else
+            {
+                StatusMessage = $"No matching game found on Steam for \"{term}\".";
             }
         }
         catch (Exception ex)
         {
+            StatusMessage = $"Search failed: {ex.Message}";
             LoggingService.Warn("GameEditViewModel", $"Failed to fetch official name online: {ex.Message}");
         }
     }
@@ -429,17 +470,20 @@ public class GameEditViewModel : ViewModelBase
     /// exact AppID, bypassing whatever the fuzzy name search or folder-scan heuristics guessed.
     /// Invalidates any cached details/poster for this AppID first, so a previously wrong result
     /// (e.g. from a bad automatic match) doesn't get served back out of the in-memory cache.
+    /// Note: Does NOT modify IsSteamGame; local executables remain local executable games.
     /// </summary>
     public async Task FetchBySteamIdAsync()
     {
         string id = SteamAppId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(id) || !id.All(char.IsDigit))
         {
+            StatusMessage = "Please enter a valid numeric Steam App ID.";
             LoggingService.Warn("GameEditViewModel", $"Invalid Steam AppID '{id}' supplied for manual match.");
             return;
         }
 
         IsRefreshingMetadata = true;
+        StatusMessage = $"Fetching Steam details for App ID {id}...";
         try
         {
             SteamMetadataService.InvalidateCache(id);
@@ -447,17 +491,31 @@ public class GameEditViewModel : ViewModelBase
             var details = await metadataService.GetAppDetailsAsync(id, _steamGridDbApiKey, forceRefresh: true);
             if (details == null || string.IsNullOrWhiteSpace(details.Name))
             {
+                StatusMessage = $"No Steam store details found for App ID {id}.";
                 LoggingService.Warn("GameEditViewModel", $"No Steam app details found for AppID '{id}'.");
                 return;
             }
 
             Name = details.Name;
             SteamAppId = id;
-            IsSteamGame = true;
+            // Preserves non-Steam state: local executables must NOT be changed to steam:// protocol games
+            if (!string.IsNullOrWhiteSpace(ExecutablePath) && !ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
+            {
+                IsSteamGame = false;
+            }
             ApplyFetchedCover(details.CoverImagePath);
+
+            if ((string.IsNullOrWhiteSpace(Category) || Category.Equals("Uncategorized", StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+            {
+                Category = details.PrimaryGenre;
+            }
+
+            StatusMessage = $"Successfully matched with \"{details.Name}\"!";
         }
         catch (Exception ex)
         {
+            StatusMessage = $"Error fetching from Steam: {ex.Message}";
             LoggingService.Warn("GameEditViewModel", $"Failed to fetch Steam details for AppID '{id}': {ex.Message}");
         }
         finally
@@ -476,21 +534,33 @@ public class GameEditViewModel : ViewModelBase
     public async Task RefreshPosterAsync()
     {
         string id = SteamAppId?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(id))
+        if (string.IsNullOrWhiteSpace(id) || !id.All(char.IsDigit))
         {
-            LoggingService.Warn("GameEditViewModel", "Cannot refresh poster: no Steam AppID set for this game.");
+            StatusMessage = "Cannot refresh poster: no valid numeric Steam App ID set.";
+            LoggingService.Warn("GameEditViewModel", "Cannot refresh poster: no valid numeric Steam AppID set for this game.");
             return;
         }
 
         IsRefreshingMetadata = true;
+        StatusMessage = $"Downloading latest poster for App ID {id}...";
         try
         {
+            SteamMetadataService.InvalidateCache(id);
             var metadataService = new SteamMetadataService();
             string? cover = await metadataService.DownloadAndCachePosterAsync(id, null, _steamGridDbApiKey, forceRefresh: true);
-            ApplyFetchedCover(cover);
+            if (!string.IsNullOrWhiteSpace(cover))
+            {
+                ApplyFetchedCover(cover);
+                StatusMessage = "Poster artwork refreshed successfully!";
+            }
+            else
+            {
+                StatusMessage = "No updated poster art found on Steam.";
+            }
         }
         catch (Exception ex)
         {
+            StatusMessage = $"Failed to refresh poster: {ex.Message}";
             LoggingService.Warn("GameEditViewModel", $"Failed to refresh poster for AppID '{id}': {ex.Message}");
         }
         finally
@@ -566,7 +636,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.Category = string.IsNullOrWhiteSpace(Category) ? "Uncategorized" : Category.Trim();
         SourceGame.Hotkey = Hotkey?.Trim() ?? string.Empty;
         SourceGame.IsSteamGame = IsSteamGame;
-        SourceGame.SteamAppId = SteamAppId?.Trim();
+        SourceGame.SteamAppId = string.IsNullOrWhiteSpace(SteamAppId) ? null : SteamAppId.Trim();
 
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))

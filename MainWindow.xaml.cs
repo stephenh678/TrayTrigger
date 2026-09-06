@@ -47,6 +47,7 @@ public partial class MainWindow : Window
         _viewModel.RequestFolderBatchImport += OnRequestFolderBatchImport;
         _viewModel.RequestQuickRename += OnRequestQuickRename;
         _viewModel.RequestQuickCategory += OnRequestQuickCategory;
+        _viewModel.RequestEditSteamAppId += OnRequestEditSteamAppId;
         _viewModel.RequestMinimizeToTray += OnRequestMinimizeToTray;
 
         Closed += (s, e) =>
@@ -57,6 +58,7 @@ public partial class MainWindow : Window
             _viewModel.RequestFolderBatchImport -= OnRequestFolderBatchImport;
             _viewModel.RequestQuickRename -= OnRequestQuickRename;
             _viewModel.RequestQuickCategory -= OnRequestQuickCategory;
+            _viewModel.RequestEditSteamAppId -= OnRequestEditSteamAppId;
             _viewModel.RequestMinimizeToTray -= OnRequestMinimizeToTray;
         };
     }
@@ -234,6 +236,20 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() == true)
         {
             _viewModel.ApplyCategory(card, dialog.ResultValue);
+        }
+    }
+
+    private void OnRequestEditSteamAppId(GameCardViewModel card)
+    {
+        var dialog = new QuickInputDialog(
+            "Link Steam App ID",
+            "Steam Store & Artwork Match",
+            $"Enter numeric Steam App ID for \"{card.Name}\":\n(Found in store.steampowered.com/app/<id>/ - does not require Steam to run)",
+            card.Game.SteamAppId ?? "");
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true)
+        {
+            _ = _viewModel.UpdateGameSteamAppIdAsync(card, dialog.ResultValue);
         }
     }
 }

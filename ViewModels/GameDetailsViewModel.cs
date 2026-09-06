@@ -1,9 +1,12 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using TrayTrigger.Models;
 using TrayTrigger.Services;
 
@@ -102,19 +105,39 @@ public class GameDetailsViewModel : ViewModelBase
         ? _details.ShortDescription 
         : "No synopsis available for this title.";
 
-    public string DisplayCoverImage
+    public ImageSource? DisplayCoverImage
     {
         get
         {
-            if (!string.IsNullOrWhiteSpace(_details?.CoverImagePath) && System.IO.File.Exists(_details.CoverImagePath))
-                return _details.CoverImagePath;
-            if (!string.IsNullOrWhiteSpace(Game.CoverImagePath) && System.IO.File.Exists(Game.CoverImagePath))
-                return Game.CoverImagePath;
+            string? localPath = null;
+            if (!string.IsNullOrWhiteSpace(_details?.CoverImagePath) && File.Exists(_details.CoverImagePath))
+                localPath = _details.CoverImagePath;
+            else if (!string.IsNullOrWhiteSpace(Game.CoverImagePath) && File.Exists(Game.CoverImagePath))
+                localPath = Game.CoverImagePath;
+            else if (!string.IsNullOrWhiteSpace(Game.IconPath) && File.Exists(Game.IconPath))
+                localPath = Game.IconPath;
+
+            if (localPath != null)
+            {
+                return IconExtractorService.LoadBitmapSafely(localPath);
+            }
+
             if (!string.IsNullOrWhiteSpace(_details?.HeaderImageUrl))
-                return _details.HeaderImageUrl;
-            if (!string.IsNullOrWhiteSpace(Game.IconPath))
-                return Game.IconPath;
-            return string.Empty;
+            {
+                try
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(_details.HeaderImageUrl, UriKind.Absolute);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return bmp;
+                }
+                catch { }
+            }
+
+            return null;
         }
     }
 
@@ -176,13 +199,16 @@ public class GameDetailsViewModel : ViewModelBase
     public ICommand ShowMinReqsCommand { get; }
     public ICommand ShowRecReqsCommand { get; }
 
+    private readonly string? _steamGridDbApiKey;
+
     public GameDetailsViewModel(
         GameEntry game, 
         SteamMetadataService steamMetadataService,
         SteamSearchService steamSearchService,
         Action<GameEntry>? launchAction = null,
         Action<GameEntry>? editAction = null,
-        Action<GameEntry>? deleteAction = null)
+        Action<GameEntry>? deleteAction = null,
+        string? steamGridDbApiKey = null)
     {
         Game = game ?? throw new ArgumentNullException(nameof(game));
         _steamMetadataService = steamMetadataService ?? throw new ArgumentNullException(nameof(steamMetadataService));
@@ -190,6 +216,14 @@ public class GameDetailsViewModel : ViewModelBase
         _launchAction = launchAction;
         _editAction = editAction;
         _deleteAction = deleteAction;
+        _steamGridDbApiKey = steamGridDbApiKey;
+
+        // If cached details are available, show them immediately so the dialog opens instantly
+        if (!string.IsNullOrWhiteSpace(Game.SteamAppId) && SteamMetadataService.TryGetCached(Game.SteamAppId, out var cached))
+        {
+            _details = cached;
+            _isLoading = false;
+        }
 
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
         EditGameCommand = new RelayCommand(ExecuteEdit);
@@ -199,13 +233,16 @@ public class GameDetailsViewModel : ViewModelBase
         ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);
         ShowRecReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = true);
 
-        // Asynchronously load details
+        // Asynchronously load and refresh latest details in the background every time
         _ = LoadDetailsAsync();
     }
 
     public async Task LoadDetailsAsync()
     {
-        IsLoading = true;
+        if (_details == null)
+        {
+            IsLoading = true;
+        }
         ErrorMessage = null;
 
         try
@@ -225,20 +262,26 @@ public class GameDetailsViewModel : ViewModelBase
 
             if (string.IsNullOrWhiteSpace(targetAppId))
             {
-                ErrorMessage = $"No matching Steam store entry was found for \"{Game.Name}\".";
+                if (_details == null)
+                {
+                    ErrorMessage = $"No matching Steam store entry was found for \"{Game.Name}\".";
+                }
                 IsLoading = false;
                 return;
             }
 
-            var loaded = await _steamMetadataService.GetAppDetailsAsync(targetAppId);
+            // Always fetch with forceRefresh: true so that every time a card is clicked,
+            // fresh news, reviews, and specs are updated in the background.
+            var loaded = await _steamMetadataService.GetAppDetailsAsync(targetAppId, _steamGridDbApiKey, forceRefresh: true);
             if (loaded != null)
             {
                 Details = loaded;
 
-                // Sync cover image back to game if missing
-                if (string.IsNullOrWhiteSpace(Game.CoverImagePath) && !string.IsNullOrWhiteSpace(loaded.CoverImagePath))
+                // Sync cover image back to game if missing or updated
+                if (!string.IsNullOrWhiteSpace(loaded.CoverImagePath) && (string.IsNullOrWhiteSpace(Game.CoverImagePath) || !File.Exists(Game.CoverImagePath)))
                 {
                     Game.CoverImagePath = loaded.CoverImagePath;
+                    OnPropertyChanged(nameof(DisplayCoverImage));
                 }
 
                 // Auto-categorize if game is still uncategorized
@@ -247,15 +290,20 @@ public class GameDetailsViewModel : ViewModelBase
                 {
                     Game.Category = loaded.PrimaryGenre;
                 }
+
+                ErrorMessage = null;
             }
-            else
+            else if (_details == null)
             {
                 ErrorMessage = $"Could not retrieve metadata from Steam for App ID {targetAppId}. Check internet connection.";
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Error loading Steam information: {ex.Message}";
+            if (_details == null)
+            {
+                ErrorMessage = $"Error loading Steam information: {ex.Message}";
+            }
         }
         finally
         {

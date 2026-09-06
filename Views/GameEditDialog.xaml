@@ -5,227 +5,344 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Edit Game Configuration"
-        Height="640" Width="550"
+        Height="660" Width="820"
+        MinHeight="600" MinWidth="760"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{StaticResource BrushDialogBg}"
-        Foreground="{StaticResource BrushTextPrimary}">
+        Foreground="{StaticResource BrushTextPrimary}"
+        FontFamily="{StaticResource AppFont}">
 
-    <Grid Margin="20,16,20,16">
+    <Grid Margin="22,18,22,18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Header -->
-            <RowDefinition Height="*"/>    <!-- Form Fields -->
-            <RowDefinition Height="Auto"/> <!-- Action Buttons -->
+            <RowDefinition Height="Auto"/> <!-- Subtle Divider -->
+            <RowDefinition Height="*"/>    <!-- 2-Column Body -->
+            <RowDefinition Height="Auto"/> <!-- Footer -->
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,14">
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Edit Game Details" FontSize="17" Foreground="{StaticResource BrushTextPrimary}" 
-                           FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                <TextBlock Text="Configure game icon, launch arguments, hotkeys, and administrative elevation" 
-                           FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
-                           FontFamily="{StaticResource AppFont}" Margin="0,2,0,0"/>
-            </StackPanel>
-        </DockPanel>
+        <!-- ============================================================== -->
+        <!-- HEADER                                                         -->
+        <!-- ============================================================== -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12" VerticalAlignment="Center">
+            <TextBlock Text="Edit Game Configuration" FontSize="18" FontWeight="SemiBold" 
+                       Foreground="{StaticResource BrushTextPrimary}"/>
+            <TextBlock Text="Configure artwork, Steam store enrichment, launch paths, and execution privileges" 
+                       FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
+        </StackPanel>
 
-        <!-- Form ScrollViewer -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,12,0" Margin="0,0,0,12">
-            <StackPanel>
-                <!-- Visual Assets: Icon & Poster Artwork -->
-                <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
-                        CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+        <!-- Divider -->
+        <Rectangle Grid.Row="1" Height="1" Fill="{StaticResource BrushBorderDark}" Margin="0,0,0,14"/>
 
-                        <!-- Left: Game Icon (52x52) -->
-                        <Grid Grid.Column="0">
+        <!-- ============================================================== -->
+        <!-- TWO-COLUMN BODY                                                -->
+        <!-- ============================================================== -->
+        <Grid Grid.Row="2" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/> <!-- Left: Visual Artwork Assets -->
+                <ColumnDefinition Width="*"/>   <!-- Right: Configuration Cards -->
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT COLUMN: VISUAL ARTWORK & ASSETS -->
+            <Border Grid.Column="0" Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
+                    BorderThickness="1" CornerRadius="8" Padding="14" VerticalAlignment="Stretch">
+                <DockPanel LastChildFill="True">
+                    <!-- Section: Poster Artwork -->
+                    <StackPanel DockPanel.Dock="Top">
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock Text="POSTER ARTWORK" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextSecondary}" DockPanel.Dock="Left"/>
+                            <TextBlock Text="2:3 Ratio" FontSize="10" Foreground="{StaticResource BrushTextMuted}" 
+                                       DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </DockPanel>
+
+                        <!-- Poster Artwork Frame (170 x 255) -->
+                        <Border Width="170" Height="255" CornerRadius="6" Background="#111116" 
+                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                                ClipToBounds="True" HorizontalAlignment="Center">
+                            <Grid>
+                                <!-- Fallback / Empty Placeholder -->
+                                <Border Background="#15151C" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasCoverPreview}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="🖼" FontSize="26" HorizontalAlignment="Center" Opacity="0.4" Margin="0,0,0,6"/>
+                                        <TextBlock Text="NO POSTER" FontSize="11" FontWeight="SemiBold" 
+                                                   Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="600 × 900" FontSize="9.5" Foreground="{StaticResource BrushTextMuted}" 
+                                                   HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Ambient Blurred Background Fill -->
+                                <Image Source="{Binding CoverPreview}" Stretch="UniformToFill"
+                                       RenderOptions.BitmapScalingMode="LowQuality">
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasCoverPreview}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                    <Image.Effect>
+                                        <BlurEffect Radius="24" RenderingBias="Performance"/>
+                                    </Image.Effect>
+                                </Image>
+                                <Border Background="#550E0E14"/>
+
+                                <!-- Crisp Centered Poster -->
+                                <Image Source="{Binding CoverPreview}" Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasCoverPreview}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                            </Grid>
+                        </Border>
+
+                        <!-- Poster Action Buttons -->
+                        <Grid Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" CornerRadius="8" Width="50" Height="50" 
-                                    Background="#202028" BorderBrush="#2C2C38" BorderThickness="1" 
+                            <Button Grid.Column="0" Content="Change..." Command="{Binding BrowseCoverCommand}"
+                                    Style="{StaticResource ModernOutlineButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
+                            <Button Grid.Column="1" Content="Reset" Command="{Binding ResetCoverCommand}"
+                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"
+                                    ToolTip="Clear custom poster artwork"/>
+                            <Button Grid.Column="2" Content="🔄" Command="{Binding RefreshPosterCommand}"
+                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"
+                                    ToolTip="Re-download official poster from Steam"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Divider -->
+                    <Rectangle DockPanel.Dock="Top" Height="1" Fill="#242430" Margin="0,14,0,12"/>
+
+                    <!-- Section: Game Icon -->
+                    <StackPanel DockPanel.Dock="Top">
+                        <TextBlock Text="GAME ICON" FontSize="11" FontWeight="SemiBold" 
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8"/>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Left" Width="48" Height="48" CornerRadius="6" 
+                                    Background="#202028" BorderBrush="#2C2C38" BorderThickness="1"
                                     Margin="0,0,10,0" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Image Source="{Binding IconPreview}" Width="42" Height="42" 
+                                <Image Source="{Binding IconPreview}" Width="36" Height="36" 
                                        RenderOptions.BitmapScalingMode="HighQuality"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Game Icon" FontSize="12" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,1"/>
-                                <TextBlock Text="Executable &amp; tray icon" FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,5"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Tray &amp; list icon" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5"/>
                                 <StackPanel Orientation="Horizontal">
                                     <Button Content="Change..." Command="{Binding BrowseIconCommand}" 
-                                            Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="11" Margin="0,0,6,0"/>
+                                            Style="{StaticResource ModernOutlineButton}" Padding="6,3" FontSize="11" Margin="0,0,4,0"/>
                                     <Button Content="Reset" Command="{Binding ResetIconCommand}" 
-                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Subtle Divider -->
-                        <Rectangle Grid.Column="1" Width="1" Fill="#282835" Margin="10,2"/>
-
-                        <!-- Right: Poster Artwork (Vertical 600x900) -->
-                        <Grid Grid.Column="2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" CornerRadius="6" Width="44" Height="66" 
-                                    Background="#202028" BorderBrush="#2C2C38" BorderThickness="1" 
-                                    Margin="0,0,10,0" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="True">
-                                <Grid>
-                                    <Image Source="{Binding CoverPreview}" Stretch="UniformToFill"
-                                           RenderOptions.BitmapScalingMode="HighQuality"/>
-                                    <TextBlock Text="POSTER" FontSize="8" FontWeight="SemiBold" Foreground="#66FFFFFF" 
-                                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasCoverPreview}" Value="False">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Grid>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Poster Artwork" FontSize="12" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,1"/>
-                                <TextBlock Text="600×900 vertical poster" FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,5"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Content="Change..." Command="{Binding BrowseCoverCommand}"
-                                            Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="11" Margin="0,0,6,0"/>
-                                    <Button Content="Reset" Command="{Binding ResetCoverCommand}"
-                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11" Margin="0,0,6,0"/>
-                                    <Button Content="Refresh" Command="{Binding RefreshPosterCommand}"
                                             Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11"
-                                            ToolTip="Force re-download poster art from Steam for this game's App ID, bypassing the cache"/>
+                                            ToolTip="Extract icon from executable"/>
                                 </StackPanel>
                             </StackPanel>
-                        </Grid>
-                    </Grid>
-                </Border>
-
-                <!-- Title -->
-                <DockPanel Margin="0,0,0,4">
-                    <TextBlock Text="Game Title" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
-                               VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                        <Button Content="Search Online 🔍" Command="{Binding FetchOfficialNameOnlineCommand}" 
-                                Style="{StaticResource ModernGhostButton}" Margin="0,0,6,0"
-                                Padding="8,2" FontSize="10.5" ToolTip="Search Steam database for the official commercial title"/>
-                        <Button Content="From .exe" Command="{Binding FetchNameFromExeCommand}" 
-                                Style="{StaticResource ModernGhostButton}" 
-                                Padding="8,2" FontSize="10.5" ToolTip="Extract clean title directly from executable metadata"/>
+                        </DockPanel>
                     </StackPanel>
                 </DockPanel>
-                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+            </Border>
 
-                <!-- Category -->
-                <TextBlock Text="Category (choose or type new)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                <ComboBox ItemsSource="{Binding ExistingCategories}" 
-                          Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                          IsEditable="True"
-                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,10"/>
+            <!-- RIGHT COLUMN: CONFIGURATION CARDS (SCROLLABLE) -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0">
+                <StackPanel>
 
-                <!-- Steam App ID (manual match) -->
-                <TextBlock Text="Steam App ID (force an exact match)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
-                             ToolTip="Found in the game's Steam store URL, e.g. store.steampowered.com/app/&lt;this number&gt;/"/>
-                    <Button Grid.Column="1" Content="Fetch by ID" Command="{Binding FetchBySteamIdCommand}"
-                            Style="{StaticResource ModernOutlineButton}"
-                            ToolTip="Re-fetch this game's name and poster art from Steam using the exact App ID above"/>
-                </Grid>
+                    <!-- CARD 1: IDENTITY & STEAM ENRICHMENT -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Identity &amp; Store Metadata" FontSize="12.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
-                <!-- Executable Path -->
-                <TextBlock Text="Executable or Target Path" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                    <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseExeCommand}" 
-                            Style="{StaticResource ModernOutlineButton}"/>
-                </Grid>
+                            <!-- Game Title -->
+                            <DockPanel Margin="0,0,0,4">
+                                <TextBlock Text="Game Title" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
+                                           VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                    <Button Content="Search Online 🔍" Command="{Binding FetchOfficialNameOnlineCommand}" 
+                                            Style="{StaticResource ModernGhostButton}" Margin="0,0,6,0"
+                                            Padding="8,2" FontSize="10.5" ToolTip="Search Steam store for official game title"/>
+                                    <Button Content="From .exe" Command="{Binding FetchNameFromExeCommand}" 
+                                            Style="{StaticResource ModernGhostButton}" 
+                                            Padding="8,2" FontSize="10.5" ToolTip="Extract title metadata directly from the executable file"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
 
-                <!-- Arguments -->
-                <TextBlock Text="Launch Arguments" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" 
-                         Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+                            <!-- Category -->
+                            <TextBlock Text="Category (choose existing or type a custom tag)" FontSize="11.5" 
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding ExistingCategories}" 
+                                      Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                      IsEditable="True"
+                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,12"/>
 
-                <!-- Working Directory -->
-                <TextBlock Text="Working Directory" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                    <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}" 
-                            Style="{StaticResource ModernOutlineButton}"/>
-                </Grid>
+                            <!-- Steam App ID Search & Linking -->
+                            <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,4">
+                                        <TextBlock Text="Steam App ID (Metadata &amp; Poster Sync)" FontSize="11.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushAccentHover}" DockPanel.Dock="Left"/>
+                                        <TextBlock Text="Keeps local launch target" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                                   DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    <TextBlock Text="Enrich this game with high-res vertical box art, Steam reviews, specs, and news. Linking an App ID does not require Steam to run."
+                                               FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+                                                 ToolTip="Steam App ID (numeric ID found in store.steampowered.com/app/&lt;id&gt;/)"/>
+                                        <Button Grid.Column="1" Content="Fetch by ID" Command="{Binding FetchBySteamIdCommand}"
+                                                Style="{StaticResource ModernOutlineButton}" Padding="12,4"
+                                                ToolTip="Look up title and download poster artwork from Steam without changing launch protocol"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Hotkey -->
-                <TextBlock Text="Global Hotkey (e.g. Ctrl+Alt+D, F10)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                <TextBox Text="{Binding Hotkey, UpdateSourceTrigger=PropertyChanged}" 
-                         Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+                    <!-- CARD 2: LAUNCH & FILE PATHS -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Launch Configuration &amp; Paths" FontSize="12.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
-                <!-- Run as Admin -->
-                <CheckBox Content="Run as Administrator (UAC elevation)" IsChecked="{Binding RunAsAdmin}" 
-                          Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"/>
+                            <!-- Executable Path -->
+                            <TextBlock Text="Executable / Shortcut Target" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseExeCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}"/>
+                            </Grid>
 
-                <!-- Steam Info if Steam Game -->
-                <Border CornerRadius="6" Background="#16222E" BorderBrush="#1C3852" BorderThickness="1" 
-                        Padding="12" Margin="0,4,0,0">
-                    <Border.Style>
-                        <Style TargetType="Border">
+                            <!-- Working Directory -->
+                            <TextBlock Text="Working Directory" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}"/>
+                            </Grid>
+
+                            <!-- Launch Arguments -->
+                            <TextBlock Text="Launch Arguments (optional command-line parameters)" FontSize="11.5" 
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource ModernTextBox}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CARD 3: CONTROLS & INTEGRATION OPTIONS -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
+                            BorderThickness="1" CornerRadius="8" Padding="14">
+                        <StackPanel>
+                            <TextBlock Text="Privileges &amp; Protocol Integration" FontSize="12.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
+
+                            <!-- Hotkey -->
+                            <DockPanel Margin="0,0,0,10">
+                                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="Press to launch anytime (e.g. Ctrl+Alt+D, F10)" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"/>
+                                </StackPanel>
+                                <TextBox DockPanel.Dock="Right" Text="{Binding Hotkey, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource ModernTextBox}" Width="160" HorizontalAlignment="Right"/>
+                            </DockPanel>
+
+                            <!-- Run As Admin -->
+                            <CheckBox Content="Run as Administrator (requests elevated UAC permissions)" 
+                                      IsChecked="{Binding RunAsAdmin}" 
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"/>
+
+                            <!-- Steam Client Protocol Toggle -->
+                            <StackPanel Margin="0,2,0,0">
+                                <CheckBox Content="Launch via Steam Client protocol (steam://rungameid/)" 
+                                          IsChecked="{Binding IsSteamGame}" 
+                                          Style="{StaticResource ModernCheckBox}"/>
+                                <TextBlock Text="Check this only if the game is installed in your local Steam library. Leave unchecked for standalone or non-Steam local executables." 
+                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ============================================================== -->
+        <!-- FOOTER                                                         -->
+        <!-- ============================================================== -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Status Feedback & Busy Indicator -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="⏳ " FontSize="12" Foreground="{StaticResource BrushAccentHover}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                                <DataTrigger Binding="{Binding IsRefreshingMetadata}" Value="True">
                                     <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <TextBlock Text="Steam Integrated Game" Foreground="{StaticResource BrushAccentHover}" FontSize="12" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding SteamAppIdDisplay}" 
-                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="11" Margin="0,3,0,0"/>
-                        <TextBlock Text="Launched directly through Steam protocol; playtime is managed by Steam." 
-                                   Foreground="{StaticResource BrushTextMuted}" FontSize="10.5" Margin="0,2,0,0"/>
-                    </StackPanel>
-                </Border>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="11.5" 
+                           Foreground="{StaticResource BrushAccentHover}" 
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
             </StackPanel>
-        </ScrollViewer>
 
-        <!-- Footer Buttons -->
-        <DockPanel Grid.Row="2" LastChildFill="False">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+            <!-- Action Buttons -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Cancel" Command="{Binding CancelCommand}" 
-                        Style="{StaticResource ModernGhostButton}" Margin="0,0,8,0"/>
+                        Style="{StaticResource ModernGhostButton}" MinWidth="85" Margin="0,0,8,0"/>
                 <Button Content="Save Changes" Command="{Binding SaveCommand}" 
-                        Style="{StaticResource ModernAccentButton}"/>
+                        Style="{StaticResource ModernAccentButton}" MinWidth="110"/>
             </StackPanel>
-        </DockPanel>
+        </Grid>
     </Grid>
 </Window>

@@ -130,6 +130,7 @@ public class MainViewModel : ViewModelBase
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
     public event Action<GameCardViewModel>? RequestQuickRename;
     public event Action<GameCardViewModel>? RequestQuickCategory;
+    public event Action<GameCardViewModel>? RequestEditSteamAppId;
     public event Action? LibraryUpdated;
     public event Action? RequestMinimizeToTray;
     public event Action? RequestExitApplication;
@@ -722,6 +723,8 @@ public class MainViewModel : ViewModelBase
             onChangeCover: ChangeGameCover,
             onFetchExeName: FetchExeNameForGame,
             onViewDetails: OpenGameDetails,
+            onEditSteamAppId: EditSteamAppId,
+            onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
             getUseVerticalPosterArt: () => UseVerticalPosterArt
         );
     }
@@ -738,7 +741,8 @@ public class MainViewModel : ViewModelBase
             _steamSearchService, 
             launchAction: _ => requestedLaunch = true,
             editAction: _ => requestedEdit = true,
-            deleteAction: _ => requestedDelete = true);
+            deleteAction: _ => requestedDelete = true,
+            steamGridDbApiKey: SteamGridDbApiKeyOrNull);
 
         var dlg = new Views.GameDetailsDialog(vm);
         if (Application.Current?.MainWindow is { IsVisible: true } owner)
@@ -925,6 +929,90 @@ public class MainViewModel : ViewModelBase
                 ModernDialog.ShowWarning(null, "Poster Artwork Error", $"Failed to set poster artwork: {ex.Message}");
             }
         }
+    }
+
+    public void EditSteamAppId(GameCardViewModel card)
+    {
+        RequestEditSteamAppId?.Invoke(card);
+    }
+
+    public async Task UpdateGameSteamAppIdAsync(GameCardViewModel card, string? newAppId)
+    {
+        string trimmed = newAppId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            card.Game.SteamAppId = null;
+            card.RefreshProperties();
+            SaveLibrary();
+            StatusMessage = $"Cleared Steam App ID for \"{card.Name}\"";
+            return;
+        }
+
+        if (!trimmed.All(char.IsDigit))
+        {
+            ModernDialog.ShowWarning(Application.Current?.MainWindow, "Invalid App ID", "Steam App ID must be a numeric ID (e.g. 1245620).");
+            return;
+        }
+
+        card.Game.SteamAppId = trimmed;
+        // IMPORTANT: Never change IsSteamGame to true! Non-Steam games link Steam App ID purely for metadata/art.
+        if (!string.IsNullOrWhiteSpace(card.Game.ExecutablePath) && !card.Game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
+        {
+            card.Game.IsSteamGame = false;
+        }
+
+        StatusMessage = $"Fetching Steam metadata for App ID {trimmed}...";
+        SteamMetadataService.InvalidateCache(trimmed);
+        var details = await _steamMetadataService.GetAppDetailsAsync(trimmed, SteamGridDbApiKeyOrNull, forceRefresh: true);
+        if (details != null)
+        {
+            if (!string.IsNullOrWhiteSpace(details.Name) && (string.IsNullOrWhiteSpace(card.Game.Name) || card.Game.Name.StartsWith("Unnamed", StringComparison.OrdinalIgnoreCase)))
+            {
+                card.Game.Name = details.Name;
+            }
+            if (!string.IsNullOrWhiteSpace(details.CoverImagePath))
+            {
+                card.Game.CoverImagePath = details.CoverImagePath;
+            }
+            if ((string.IsNullOrWhiteSpace(card.Game.Category) || card.Game.Category.Equals("Uncategorized", StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+            {
+                card.Game.Category = details.PrimaryGenre;
+            }
+            StatusMessage = $"Updated metadata and poster for \"{card.Name}\" (Steam App ID {trimmed})";
+        }
+        else
+        {
+            StatusMessage = $"Linked Steam App ID {trimmed} to \"{card.Name}\"";
+        }
+
+        card.RefreshProperties();
+        RebuildCategories();
+        SaveLibrary();
+    }
+
+    public async Task RefreshGameMetadataAsync(GameCardViewModel card)
+    {
+        if (string.IsNullOrWhiteSpace(card.Game.SteamAppId))
+        {
+            StatusMessage = $"Searching Steam store for \"{card.Name}\"...";
+            await EnrichGameWithSteamMetadataAsync(card.Game);
+        }
+        else
+        {
+            StatusMessage = $"Refreshing metadata for \"{card.Name}\"...";
+            SteamMetadataService.InvalidateCache(card.Game.SteamAppId);
+            var details = await _steamMetadataService.GetAppDetailsAsync(card.Game.SteamAppId, SteamGridDbApiKeyOrNull, forceRefresh: true);
+            if (details != null && !string.IsNullOrWhiteSpace(details.CoverImagePath))
+            {
+                card.Game.CoverImagePath = details.CoverImagePath;
+            }
+        }
+
+        card.RefreshProperties();
+        RebuildCategories();
+        SaveLibrary();
+        StatusMessage = $"Refreshed metadata for \"{card.Name}\"";
     }
 
     public void FetchExeNameForGame(GameCardViewModel card) => _ = FetchExeNameForGameAsync(card);
@@ -1157,6 +1245,7 @@ public class MainViewModel : ViewModelBase
                 }
                 finally
                 {
+                    throttle.Release();
                     Interlocked.Increment(ref completed);
                     Report($"Refreshing posters... {completed}/{candidates.Count}");
                 }
