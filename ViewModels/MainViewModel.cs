@@ -288,18 +288,23 @@ public class MainViewModel : ViewModelBase
 
         LoadLibrary();
 
-        // Schedule quiet background check for updates if enabled
+        // Schedule quiet background check for updates if enabled: once shortly after
+        // launch, then again every 24 hours for as long as the app keeps running.
         _ = Task.Run(async () =>
         {
             try
             {
                 await Task.Delay(3500);
-                if (_settings.AutoCheckForUpdates)
+                while (true)
                 {
-                    Application.Current?.Dispatcher.InvokeAsync(async () =>
+                    if (_settings.AutoCheckForUpdates)
                     {
-                        await CheckForUpdatesAsync(false);
-                    });
+                        Application.Current?.Dispatcher.InvokeAsync(async () =>
+                        {
+                            await CheckForUpdatesAsync(false);
+                        });
+                    }
+                    await Task.Delay(TimeSpan.FromHours(24));
                 }
             }
             catch
