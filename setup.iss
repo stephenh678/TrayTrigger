@@ -6,8 +6,8 @@
 #endif
 
 #define MyAppName "TrayTrigger"
-#define MyAppPublisher "Steph"
-#define MyAppURL "https://github.com/Steph/TrayTrigger"
+#define MyAppPublisher "stephenh678"
+#define MyAppURL "https://github.com/stephenh678/TrayTrigger"
 #define MyAppExeName "TrayTrigger.exe"
 
 [Setup]
@@ -102,7 +102,7 @@ begin
       Lines[1] := '  "StartWithWindows": false,';
     Lines[2] := '  "StartMinimizedToTray": true,';
     Lines[3] := '  "AutoCheckForUpdates": true,';
-    Lines[4] := '  "GitHubRepository": "Steph/TrayTrigger"';
+    Lines[4] := '  "GitHubRepository": "stephenh678/TrayTrigger"';
     Lines[5] := '}';
     SaveStringsToFile(SettingsFile, Lines, False);
   end;

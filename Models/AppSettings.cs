@@ -24,6 +24,6 @@ public class AppSettings
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
     public bool AutoCheckForUpdates { get; set; } = true;
-    public string GitHubRepository { get; set; } = "Steph/TrayTrigger";
+    public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
 }
 

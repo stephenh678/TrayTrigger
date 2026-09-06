@@ -260,10 +260,10 @@ public class SettingsViewModel : ViewModelBase
 
     public string GitHubRepository
     {
-        get => string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "Steph/TrayTrigger" : _settings.GitHubRepository;
+        get => string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository;
         set
         {
-            string clean = string.IsNullOrWhiteSpace(value) ? "Steph/TrayTrigger" : value.Trim();
+            string clean = string.IsNullOrWhiteSpace(value) ? "stephenh678/TrayTrigger" : value.Trim();
             if (_settings.GitHubRepository != clean)
             {
                 _settings.GitHubRepository = clean;
@@ -658,7 +658,7 @@ public class SettingsViewModel : ViewModelBase
         _settings.LibraryViewMode = ViewModePosterGrid;
         _settings.MinimizeOnGameLaunch = true;
         _settings.AutoCheckForUpdates = true;
-        _settings.GitHubRepository = "Steph/TrayTrigger";
+        _settings.GitHubRepository = "stephenh678/TrayTrigger";
 
         // Execute side effects
         _startupManager.SetStartupEnabled(false, true);

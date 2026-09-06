@@ -71,11 +71,11 @@ public class UpdateService
     }
 
     /// <summary>
-    /// Checks GitHub for the latest release in the specified repository (e.g. "Steph/TrayTrigger").
+    /// Checks GitHub for the latest release in the specified repository (e.g. "stephenh678/TrayTrigger").
     /// </summary>
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(string? repository)
     {
-        string targetRepo = string.IsNullOrWhiteSpace(repository) ? "Steph/TrayTrigger" : repository.Trim();
+        string targetRepo = string.IsNullOrWhiteSpace(repository) ? "stephenh678/TrayTrigger" : repository.Trim();
 
         try
         {
