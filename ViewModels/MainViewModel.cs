@@ -229,7 +229,7 @@ public class MainViewModel : ViewModelBase
         {
             try
             {
-                string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "Steph/TrayTrigger" : _settings.GitHubRepository.Trim();
+                string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
                 Process.Start(new ProcessStartInfo($"https://github.com/{repo}") { UseShellExecute = true });
             }
             catch (Exception ex)
@@ -241,7 +241,7 @@ public class MainViewModel : ViewModelBase
         {
             try
             {
-                string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "Steph/TrayTrigger" : _settings.GitHubRepository.Trim();
+                string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
                 Process.Start(new ProcessStartInfo($"https://github.com/{repo}/issues") { UseShellExecute = true });
             }
             catch (Exception ex)
@@ -458,7 +458,7 @@ public class MainViewModel : ViewModelBase
                 UpdateStatusBrush = accentBrush;
             }
 
-            string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "Steph/TrayTrigger" : _settings.GitHubRepository.Trim();
+            string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
             var result = await UpdateService.Instance.CheckForUpdatesAsync(repo);
 
             if (result.IsUpdateAvailable && result.LatestRelease != null)
