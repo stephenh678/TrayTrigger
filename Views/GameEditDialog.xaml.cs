@@ -10,10 +10,16 @@ public partial class GameEditDialog : Window
 {
     private readonly GameEditViewModel _viewModel;
 
-    public GameEditDialog(GameEntry game, IEnumerable<string> categories, IconExtractorService iconExtractorService, bool isNewGame = false, string? steamGridDbApiKey = null)
+    public GameEditDialog(
+        GameEntry game, 
+        IEnumerable<string> categories, 
+        IconExtractorService iconExtractorService, 
+        bool isNewGame = false, 
+        string? steamGridDbApiKey = null,
+        double minConfidence = SteamSearchService.DefaultMinConfidence)
     {
         InitializeComponent();
-        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey);
+        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence);
         DataContext = _viewModel;
 
         if (Application.Current?.MainWindow is { IsVisible: true } main)

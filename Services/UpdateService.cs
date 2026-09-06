@@ -218,7 +218,14 @@ public class UpdateService
         Application.Current?.Dispatcher.Invoke(() =>
         {
             LoggingService.Info("UpdateService", "Shutting down application for update installation...");
-            Application.Current.Shutdown();
+            if (Application.Current is App app)
+            {
+                app.ExitApplication();
+            }
+            else
+            {
+                Application.Current.Shutdown();
+            }
         });
     }
 }

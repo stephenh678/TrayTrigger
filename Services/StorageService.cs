@@ -241,7 +241,7 @@ public class StorageService
                     File.Copy(_gamesFilePath, _gamesBakFilePath, overwrite: true);
                 }
 
-                File.Move(tempFile, _gamesFilePath, overwrite: true);
+                SafeReplaceFile(tempFile, _gamesFilePath);
                 LoggingService.Verbose("Storage", $"Saved {list.Count} game(s) to '{_gamesFilePath}'.");
             }
             catch (Exception ex)
@@ -319,13 +319,40 @@ public class StorageService
                     File.Copy(_settingsFilePath, _settingsBakFilePath, overwrite: true);
                 }
 
-                File.Move(tempFile, _settingsFilePath, overwrite: true);
+                SafeReplaceFile(tempFile, _settingsFilePath);
                 LoggingService.Verbose("Storage", $"Saved settings to '{_settingsFilePath}'.");
             }
             catch (Exception ex)
             {
                 LoggingService.Error("Storage", $"Error saving settings to '{_settingsFilePath}': {ex.Message}", ex);
             }
+        }
+    }
+
+    private static void SafeReplaceFile(string tempFile, string targetFile)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            try
+            {
+                File.Move(tempFile, targetFile, overwrite: true);
+                return;
+            }
+            catch (IOException) when (i < 2)
+            {
+                Thread.Sleep(50);
+            }
+        }
+
+        try
+        {
+            File.Copy(tempFile, targetFile, overwrite: true);
+            try { File.Delete(tempFile); } catch { }
+        }
+        catch
+        {
+            // Re-throw so caller logs error if disk is genuinely unwriteable
+            throw;
         }
     }
 }
