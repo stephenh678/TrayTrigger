@@ -1360,6 +1360,14 @@ public class MainViewModel : ViewModelBase
     {
         TryDeleteManagedFile(game.IconPath, _storageService.IconsDirectory);
         TryDeleteManagedFile(game.CoverImagePath, SteamMetadataService.CoversDirectory);
+
+        // Without this, re-adding the same game later hits SteamMetadataService's in-memory
+        // details cache and gets back a CoverImagePath pointing at the file just deleted above,
+        // so the re-added card shows no cover art at all (icon-only) until the app restarts.
+        if (!string.IsNullOrWhiteSpace(game.SteamAppId))
+        {
+            SteamMetadataService.InvalidateCache(game.SteamAppId);
+        }
     }
 
     private static void TryDeleteManagedFile(string? path, string expectedDirectory)
