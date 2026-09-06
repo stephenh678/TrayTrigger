@@ -171,6 +171,8 @@ public static partial class GameNameExtractor
     {
         string localName = ExtractGameName(exePath, folderFallback, preferExe);
 
+        LoggingService.Verbose("GameNameExtractor", $"Resolving match: localName='{localName}', exe='{exePath}', folderFallback='{folderFallback}', preferExe={preferExe}, minConfidence={minConfidence:F2}");
+
         if (!searchOnline)
             return new GameResolutionResult(localName, null, null);
 
@@ -180,8 +182,11 @@ public static partial class GameNameExtractor
         {
             // Pass 1: Search using local extracted name
             var match1 = await steamSearch.FindBestMatchAsync(localName, minConfidence, cancellationToken).ConfigureAwait(false);
+            LoggingService.Verbose("GameNameExtractor", $"Pass 1 result for '{localName}': {(match1 != null ? $"{match1.Name} (score {match1.SimilarityScore:F2})" : "None")}");
+
             if (match1 != null && match1.SimilarityScore >= Math.Max(0.85, minConfidence))
             {
+                LoggingService.Verbose("GameNameExtractor", $"Pass 1 decisive match accepted: '{match1.Name}' ({match1.AppId})");
                 return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
             }
 
@@ -193,12 +198,15 @@ public static partial class GameNameExtractor
                 !cleanedFolder.Equals(localName, StringComparison.OrdinalIgnoreCase) && 
                 !IsGenericFolder(cleanedFolder))
             {
+                LoggingService.Verbose("GameNameExtractor", $"Pass 2 folder candidate='{cleanedFolder}'");
                 var match2 = await steamSearch.FindBestMatchAsync(cleanedFolder, minConfidence, cancellationToken).ConfigureAwait(false);
+                LoggingService.Verbose("GameNameExtractor", $"Pass 2 result for '{cleanedFolder}': {(match2 != null ? $"{match2.Name} (score {match2.SimilarityScore:F2})" : "None")}");
 
                 if (match2 != null)
                 {
                     if (match1 == null || match2.SimilarityScore > match1.SimilarityScore)
                     {
+                        LoggingService.Verbose("GameNameExtractor", $"Pass 2 preferred over Pass 1: '{match2.Name}' ({match2.AppId})");
                         return new GameResolutionResult(match2.Name, match2.AppId, match2.ThumbnailUrl);
                     }
                 }
@@ -206,6 +214,7 @@ public static partial class GameNameExtractor
 
             if (match1 != null && match1.SimilarityScore >= minConfidence)
             {
+                LoggingService.Verbose("GameNameExtractor", $"Pass 1 match accepted: '{match1.Name}' ({match1.AppId})");
                 return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
             }
         }
@@ -215,6 +224,7 @@ public static partial class GameNameExtractor
         }
 
         // Safe fallback: preserve clean local name, do not attach incorrect SteamAppId
+        LoggingService.Verbose("GameNameExtractor", $"No online match reached confidence threshold {minConfidence:F2}. Preserving local name='{localName}'.");
         return new GameResolutionResult(localName, null, null);
     }
 

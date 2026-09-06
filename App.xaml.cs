@@ -59,6 +59,16 @@ public partial class App : Application
         base.OnStartup(e);
 
         LoggingService.EnsureLogFileExists();
+        try
+        {
+            var startupStorage = new StorageService();
+            var startupSettings = startupStorage.LoadSettings();
+            LoggingService.Initialize(startupSettings.VerboseLoggingEnabled);
+        }
+        catch
+        {
+            LoggingService.Initialize(false);
+        }
         void Log(string msg) => LoggingService.Info("App", msg);
         _logger = Log;
 

@@ -661,7 +661,15 @@ public class SettingsViewModel : ViewModelBase
                 LoggingService.IsVerboseEnabled = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
-                LoggingService.Info("Settings", $"Verbose logging toggled: {value}");
+                if (value)
+                {
+                    LoggingService.Info("Settings", $"[VERBOSE ENABLED] Verbose diagnostic logging is now active. Detailed traces will be written to: {LoggingService.LogFilePath}");
+                }
+                else
+                {
+                    LoggingService.Info("Settings", "[VERBOSE DISABLED] Verbose diagnostic logging has been turned off.");
+                }
+                OnPropertyChanged(nameof(LogFileSizeDisplay));
             }
         }
     }

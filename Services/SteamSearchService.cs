@@ -151,20 +151,25 @@ public partial class SteamSearchService
         string sanitized = SanitizeSearchQuery(trimmed);
         string effectiveQuery = !string.IsNullOrWhiteSpace(sanitized) ? sanitized : trimmed;
 
+        LoggingService.Verbose("SteamSearch", $"Searching Steam for query='{trimmed}' (sanitized='{effectiveQuery}')");
+
         var results = await QueryStoreSearchApiAsync(effectiveQuery, cancellationToken).ConfigureAwait(false);
 
         // If primary API returned nothing, and sanitized was different, try original query
         if (results.Count == 0 && !sanitized.Equals(trimmed, StringComparison.OrdinalIgnoreCase))
         {
+            LoggingService.Verbose("SteamSearch", $"Sanitized search yielded 0 results; retrying raw query='{trimmed}'");
             results = await QueryStoreSearchApiAsync(trimmed, cancellationToken).ConfigureAwait(false);
         }
 
         // If still nothing, fallback to Steam Suggest endpoint
         if (results.Count == 0)
         {
+            LoggingService.Verbose("SteamSearch", $"Primary storesearch API yielded 0 results; querying Suggest endpoint for '{effectiveQuery}'");
             results = await QuerySuggestApiAsync(effectiveQuery, cancellationToken).ConfigureAwait(false);
         }
 
+        LoggingService.Verbose("SteamSearch", $"Total {results.Count} candidate(s) found for '{trimmed}'");
         Cache[trimmed] = results;
         return results;
     }
@@ -287,6 +292,7 @@ public partial class SteamSearchService
                 : 0.0;
 
             double score = Math.Max(scoreRaw, scoreSanitized);
+            LoggingService.Verbose("SteamSearch", $"Candidate '{c.Name}' (AppId: {c.AppId}) score={score:F2} (raw={scoreRaw:F2}, sanitized={scoreSanitized:F2})");
 
             if (score > highestScore)
             {
@@ -297,6 +303,7 @@ public partial class SteamSearchService
 
         if (bestMatch != null && highestScore >= minConfidence)
         {
+            LoggingService.Verbose("SteamSearch", $"Accepted best match for '{query}': '{bestMatch.Name}' (AppId: {bestMatch.AppId}) [score {highestScore:F2} >= {minConfidence:F2}]");
             return bestMatch;
         }
 

@@ -104,9 +104,17 @@ public static class LoggingService
         }
     }
 
+    public static void Debug(string category, string message)
+    {
+        if (_isVerboseEnabled)
+        {
+            Log(LogLevel.Debug, category, message);
+        }
+    }
+
     public static void Log(LogLevel level, string category, string message)
     {
-        if (level == LogLevel.Verbose && !_isVerboseEnabled)
+        if ((level == LogLevel.Verbose || level == LogLevel.Debug) && !_isVerboseEnabled)
         {
             return;
         }
