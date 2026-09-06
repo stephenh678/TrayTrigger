@@ -1358,14 +1358,21 @@
                                                   Style="{StaticResource ModernComboBox}" Width="140" HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Center"/>
                                     </DockPanel>
 
-                                    <CheckBox Content="Display vertical poster art on game cards (Steam 600×900)" 
-                                              IsChecked="{Binding UseVerticalPosterArt}" 
+                                    <CheckBox Content="Display vertical poster art on game cards (Steam 600×900)"
+                                              IsChecked="{Binding UseVerticalPosterArt}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Shows official high-resolution vertical box artwork on library game cards instead of square icons when available." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                    <TextBlock Text="Shows official high-resolution vertical box artwork on library game cards instead of square icons when available."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox Content="Use SteamGridDB for fallback poster art (optional)" 
+                                    <Button Content="Refresh All Game Posters" Command="{Binding RefreshAllPostersCommand}"
+                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"
+                                            HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Re-checks poster art for every game in your library, even ones that already have a cover. Picks up Steam's official artwork once it's published (e.g. a game you added before release has since launched) as well as any newly added/changed art sources like SteamGridDB below."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="0,4,0,12" TextWrapping="Wrap"/>
+
+                                    <CheckBox Content="Use SteamGridDB for fallback poster art (optional)"
                                               IsChecked="{Binding UseSteamGridDbArt}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                     <TextBlock Text="Uses community-submitted vertical box art from SteamGridDB.com as a fallback when official Steam artwork is not available yet (e.g. new, indie, or upcoming games). Requires a free API key." 
@@ -1380,7 +1387,7 @@
                                         <TextBox Grid.Column="0" Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}" 
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" 
                                                  Tag="Paste your SteamGridDB API key here..."/>
-                                        <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}" 
+                                        <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                     </Grid>
                                 </StackPanel>

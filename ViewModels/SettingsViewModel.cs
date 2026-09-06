@@ -37,6 +37,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly Action? _onPosterArtSettingChanged;
     private readonly Action? _onHotkeySettingChanged;
     private readonly Func<Task>? _onRequestEnrichLibrary;
+    private readonly Func<Task>? _onRequestRefreshAllPosters;
     private readonly Action? _onRequestOpenSteamImport;
 
     public const string ViewModePosterGrid = "Poster Grid";
@@ -120,6 +121,7 @@ public class SettingsViewModel : ViewModelBase
     public ICommand OpenTaskbarSettingsCommand { get; }
     public ICommand OpenSteamGridDbSiteCommand { get; }
     public ICommand OpenSteamImportCommand { get; }
+    public ICommand RefreshAllPostersCommand { get; }
 
     public SettingsViewModel(
         AppSettings settings,
@@ -130,6 +132,7 @@ public class SettingsViewModel : ViewModelBase
         Action? onPosterArtSettingChanged = null,
         Action? onHotkeySettingChanged = null,
         Func<Task>? onRequestEnrichLibrary = null,
+        Func<Task>? onRequestRefreshAllPosters = null,
         Action? onRequestOpenSteamImport = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -141,6 +144,7 @@ public class SettingsViewModel : ViewModelBase
         _onPosterArtSettingChanged = onPosterArtSettingChanged;
         _onHotkeySettingChanged = onHotkeySettingChanged;
         _onRequestEnrichLibrary = onRequestEnrichLibrary;
+        _onRequestRefreshAllPosters = onRequestRefreshAllPosters;
         _onRequestOpenSteamImport = onRequestOpenSteamImport;
 
         // Ensure configured MaxRecentInTray is present in options
@@ -170,6 +174,7 @@ public class SettingsViewModel : ViewModelBase
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
         OpenSteamImportCommand = new RelayCommand(() => _onRequestOpenSteamImport?.Invoke());
+        RefreshAllPostersCommand = new RelayCommand(() => _ = _onRequestRefreshAllPosters?.Invoke());
         CheckUpdatesInSettingsCommand = new RelayCommand(async () => await CheckForUpdatesAsync(true));
     }
 
