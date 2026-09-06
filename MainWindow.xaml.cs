@@ -38,6 +38,7 @@ public partial class MainWindow : Window
         Loaded += (s, e) =>
         {
             LoggingService.Verbose("MainWindow", "Loaded.");
+            MaybeShowSteamGridDbPrompt();
         };
 
         _viewModel.RequestOpenSteamDialog += OnRequestOpenSteamDialog;
@@ -63,6 +64,30 @@ public partial class MainWindow : Window
     public void MarkExplicitExit()
     {
         _isExplicitExit = true;
+    }
+
+    /// <summary>
+    /// Shows a one-time reminder recommending SteamGridDB setup for better poster art. Gated by
+    /// a persisted flag so it only ever appears once, the first time the window is actually
+    /// shown (not on every process start - a --minimized launch skips Show() entirely, so this
+    /// naturally defers to the next time the user actually opens the window instead of being
+    /// lost). Skipped entirely if SteamGridDB is already enabled.
+    /// </summary>
+    private void MaybeShowSteamGridDbPrompt()
+    {
+        var settingsVm = _viewModel.SettingsVM;
+        if (settingsVm.Settings.HasSeenSteamGridDbPrompt || settingsVm.UseSteamGridDbArt)
+            return;
+
+        settingsVm.Settings.HasSeenSteamGridDbPrompt = true;
+        settingsVm.AutoSaveSettings();
+
+        bool setUpNow = ModernDialog.PromptSteamGridDbSetup(this);
+        if (setUpNow)
+        {
+            _viewModel.CurrentSection = NavSection.Settings;
+            settingsVm.SelectedTab = SettingsCategoryTab.Library;
+        }
     }
 
     protected override void OnClosing(CancelEventArgs e)

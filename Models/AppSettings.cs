@@ -25,5 +25,6 @@ public class AppSettings
     public bool MinimizeOnGameLaunch { get; set; } = true;
     public bool AutoCheckForUpdates { get; set; } = true;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
+    public bool HasSeenSteamGridDbPrompt { get; set; } = false;
 }
 
