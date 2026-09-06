@@ -76,6 +76,26 @@ jobs:
         run: |
           Get-ChildItem -Path publish/installer | Format-Table Name, Length, LastWriteTime
 
+      - name: Generate Release Notes
+        shell: pwsh
+        run: |
+          $prevTag = git tag --sort=-creatordate | Where-Object { $_ -ne $env:TAG_NAME } | Select-Object -First 1
+
+          if ($prevTag) {
+            $range = "$prevTag..$env:TAG_NAME"
+            $compareLine = "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$prevTag...$env:TAG_NAME"
+          } else {
+            $range = $env:TAG_NAME
+            $compareLine = ""
+          }
+
+          $commits = git log $range --no-merges --pretty=format:"- %s"
+          if (-not $commits) {
+            $commits = "- No notable changes."
+          }
+
+          @("## What's Changed", $commits, "", $compareLine) -join "`n" | Out-File -FilePath release_notes.md -Encoding utf8
+
       - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -83,7 +103,7 @@ jobs:
           name: "TrayTrigger v${{ env.VERSION }}"
           draft: false
           prerelease: false
-          generate_release_notes: true
+          body_path: release_notes.md
           files: |
             publish/installer/TrayTrigger-v*-Setup.exe
             publish/installer/TrayTrigger-v*-portable.zip
