@@ -1419,7 +1419,15 @@
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                     <TextBlock Text="Queries the Steam Store database to match official commercial titles, correct capitalization, and store IDs (e.g. 'The Blood of Dawnwalker' instead of raw binary stems)." 
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+                                               Margin="24,3,0,8" TextWrapping="Wrap"/>
+
+                                    <DockPanel Margin="24,0,0,10" LastChildFill="False" IsEnabled="{Binding SearchOfficialTitleOnline}">
+                                        <TextBlock Text="Matching sensitivity:" Foreground="{StaticResource BrushTextSecondary}" 
+                                                   FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <ComboBox ItemsSource="{Binding ConfidenceThresholdOptions}" 
+                                                  SelectedItem="{Binding OnlineMatchSensitivity, Mode=TwoWay}" 
+                                                  Style="{StaticResource ModernComboBox}" Width="190" HorizontalAlignment="Left"/>
+                                    </DockPanel>
 
                                     <CheckBox Content="Local title fallback: Prefer executable (.exe) over folder name" 
                                               IsChecked="{Binding PreferExeForGameName}" 

@@ -597,6 +597,8 @@ public class MainViewModel : ViewModelBase
     public bool GroupTrayMenuByCategory { get => SettingsVM.GroupTrayMenuByCategory; set => SettingsVM.GroupTrayMenuByCategory = value; }
     public bool PreferExeForGameName { get => SettingsVM.PreferExeForGameName; set => SettingsVM.PreferExeForGameName = value; }
     public bool SearchOfficialTitleOnline { get => SettingsVM.SearchOfficialTitleOnline; set => SettingsVM.SearchOfficialTitleOnline = value; }
+    public string OnlineMatchSensitivity { get => SettingsVM.OnlineMatchSensitivity; set => SettingsVM.OnlineMatchSensitivity = value; }
+    public ObservableCollection<string> ConfidenceThresholdOptions => SettingsVM.ConfidenceThresholdOptions;
     public bool AutoCategorizeFromSteam { get => SettingsVM.AutoCategorizeFromSteam; set => SettingsVM.AutoCategorizeFromSteam = value; }
     public bool UseVerticalPosterArt { get => SettingsVM.UseVerticalPosterArt; set => SettingsVM.UseVerticalPosterArt = value; }
     public bool UseSteamGridDbArt { get => SettingsVM.UseSteamGridDbArt; set => SettingsVM.UseSteamGridDbArt = value; }
@@ -1031,7 +1033,8 @@ public class MainViewModel : ViewModelBase
                 folder,
                 preferExe: _settings.PreferExeForGameName,
                 searchOnline: _settings.SearchOfficialTitleOnline,
-                steamSearch: _steamSearchService);
+                steamSearch: _steamSearchService,
+                minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
             bool updated = false;
 
@@ -1139,7 +1142,8 @@ public class MainViewModel : ViewModelBase
                 folder,
                 preferExe: _settings.PreferExeForGameName,
                 searchOnline: true,
-                steamSearch: _steamSearchService);
+                steamSearch: _steamSearchService,
+                minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
             if (!string.IsNullOrWhiteSpace(res.ResolvedTitle) && _settings.SearchOfficialTitleOnline)
             {
@@ -1512,18 +1516,25 @@ public class MainViewModel : ViewModelBase
                 {
                     var shortcut = _shortcutService.Resolve(file);
                     string entryName = shortcut.Name;
+                    string? onlineAppId = shortcut.SteamAppId;
+
                     if (_settings.SearchOfficialTitleOnline && !shortcut.IsSteamUrl)
                     {
-                        string onlineName = await GameNameExtractor.ResolveGameNameAsync(
+                        var res = await GameNameExtractor.ResolveGameMatchAsync(
                             shortcut.TargetPath,
                             shortcut.WorkingDirectory,
                             preferExe: _settings.PreferExeForGameName,
                             searchOnline: true,
-                            steamSearch: _steamSearchService);
+                            steamSearch: _steamSearchService,
+                            minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
-                        if (!string.IsNullOrWhiteSpace(onlineName))
+                        if (!string.IsNullOrWhiteSpace(res.ResolvedTitle))
                         {
-                            entryName = onlineName;
+                            entryName = res.ResolvedTitle;
+                        }
+                        if (!string.IsNullOrWhiteSpace(res.SteamAppId))
+                        {
+                            onlineAppId = res.SteamAppId;
                         }
                     }
 
@@ -1535,7 +1546,7 @@ public class MainViewModel : ViewModelBase
                         WorkingDirectory = shortcut.WorkingDirectory,
                         Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized",
                         IsSteamGame = shortcut.IsSteamUrl,
-                        SteamAppId = shortcut.SteamAppId
+                        SteamAppId = onlineAppId
                     };
 
                     // Extract & cache icon
@@ -1734,7 +1745,8 @@ public class MainViewModel : ViewModelBase
                             c.WorkingDirectory,
                             preferExe: _settings.PreferExeForGameName,
                             searchOnline: true,
-                            steamSearch: _steamSearchService);
+                            steamSearch: _steamSearchService,
+                            minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
                         if (!string.IsNullOrWhiteSpace(res.ResolvedTitle))
                         {
@@ -1821,7 +1833,8 @@ public class MainViewModel : ViewModelBase
                     candidate.WorkingDirectory,
                     preferExe: _settings.PreferExeForGameName,
                     searchOnline: true,
-                    steamSearch: _steamSearchService);
+                    steamSearch: _steamSearchService,
+                    minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
                 if (!string.IsNullOrWhiteSpace(res.ResolvedTitle))
                 {
