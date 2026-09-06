@@ -1,0 +1,320 @@
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using TrayTrigger.Models;
+using TrayTrigger.Services;
+
+namespace TrayTrigger.ViewModels;
+
+public class GameDetailsViewModel : ViewModelBase
+{
+    public event Action? RequestClose;
+
+    private readonly SteamMetadataService _steamMetadataService;
+    private readonly SteamSearchService _steamSearchService;
+    private readonly Action<GameEntry>? _launchAction;
+    private readonly Action<GameEntry>? _editAction;
+    private readonly Action<GameEntry>? _deleteAction;
+
+    private SteamAppDetails? _details;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private bool _isShowingRecommendedReqs;
+
+    public GameEntry Game { get; }
+    public string GameTitle => !string.IsNullOrWhiteSpace(_details?.Name) ? _details.Name : Game.Name;
+
+    public string PlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? (Game.IsSteamGame ? "Tracked in Steam" : "0 min played") : Game.PlaytimeDisplay;
+    public string LastPlayedDisplay => Game.LastPlayedDisplay;
+    public string Category => Game.Category;
+    public bool HasHotkey => !string.IsNullOrWhiteSpace(Game.Hotkey);
+    public string? Hotkey => Game.Hotkey;
+
+    public SteamAppDetails? Details
+    {
+        get => _details;
+        internal set
+        {
+            if (_details != value)
+            {
+                _details = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(GameTitle));
+                OnPropertyChanged(nameof(HasDetails));
+                OnPropertyChanged(nameof(Developers));
+                OnPropertyChanged(nameof(Publishers));
+                OnPropertyChanged(nameof(ReleaseDate));
+                OnPropertyChanged(nameof(ShortDescription));
+                OnPropertyChanged(nameof(DisplayCoverImage));
+                OnPropertyChanged(nameof(MetacriticScore));
+                OnPropertyChanged(nameof(HasMetacritic));
+                OnPropertyChanged(nameof(ReviewSummary));
+                OnPropertyChanged(nameof(HasReviewSummary));
+                OnPropertyChanged(nameof(PlayModes));
+                OnPropertyChanged(nameof(HasPlayModes));
+                OnPropertyChanged(nameof(GenresDisplay));
+                OnPropertyChanged(nameof(HasRequirements));
+                OnPropertyChanged(nameof(CurrentRequirementsText));
+                OnPropertyChanged(nameof(HasNews));
+                OnPropertyChanged(nameof(NewsItems));
+                OnPropertyChanged(nameof(StoreUrl));
+            }
+        }
+    }
+
+    public bool IsLoading
+    {
+        get => _isLoading;
+        internal set
+        {
+            if (_isLoading != value)
+            {
+                _isLoading = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        internal set
+        {
+            if (_errorMessage != value)
+            {
+                _errorMessage = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasError));
+            }
+        }
+    }
+
+    public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
+    public bool HasDetails => _details != null && !string.IsNullOrWhiteSpace(_details.Name);
+
+    public string Developers => _details?.Developers ?? "Unknown Developer";
+    public string Publishers => _details?.Publishers ?? "Unknown Publisher";
+    public string ReleaseDate => !string.IsNullOrWhiteSpace(_details?.ReleaseDate) ? _details.ReleaseDate : "TBA";
+    public string ShortDescription => !string.IsNullOrWhiteSpace(_details?.ShortDescription) 
+        ? _details.ShortDescription 
+        : "No synopsis available for this title.";
+
+    public string DisplayCoverImage
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_details?.CoverImagePath) && System.IO.File.Exists(_details.CoverImagePath))
+                return _details.CoverImagePath;
+            if (!string.IsNullOrWhiteSpace(Game.CoverImagePath) && System.IO.File.Exists(Game.CoverImagePath))
+                return Game.CoverImagePath;
+            if (!string.IsNullOrWhiteSpace(_details?.HeaderImageUrl))
+                return _details.HeaderImageUrl;
+            if (!string.IsNullOrWhiteSpace(Game.IconPath))
+                return Game.IconPath;
+            return string.Empty;
+        }
+    }
+
+    public int? MetacriticScore => _details?.MetacriticScore;
+    public bool HasMetacritic => _details?.MetacriticScore != null && _details.MetacriticScore > 0;
+
+    public string? ReviewSummary => _details?.ReviewSummary;
+    public bool HasReviewSummary => !string.IsNullOrWhiteSpace(_details?.ReviewSummary);
+
+    public System.Collections.Generic.List<string> PlayModes => _details?.PlayModes ?? new();
+    public bool HasPlayModes => PlayModes.Count > 0;
+
+    public string GenresDisplay => _details?.Genres != null && _details.Genres.Count > 0 
+        ? string.Join(" • ", _details.Genres) 
+        : Game.Category;
+
+    public bool HasRequirements => !string.IsNullOrWhiteSpace(_details?.PcRequirementsMin) || !string.IsNullOrWhiteSpace(_details?.PcRequirementsRec);
+
+    public bool IsShowingRecommendedReqs
+    {
+        get => _isShowingRecommendedReqs;
+        set
+        {
+            if (_isShowingRecommendedReqs != value)
+            {
+                _isShowingRecommendedReqs = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CurrentRequirementsText));
+            }
+        }
+    }
+
+    public string CurrentRequirementsText
+    {
+        get
+        {
+            if (IsShowingRecommendedReqs)
+            {
+                return !string.IsNullOrWhiteSpace(_details?.PcRequirementsRec) 
+                    ? _details.PcRequirementsRec 
+                    : "Recommended specifications not specified by developer.";
+            }
+            return !string.IsNullOrWhiteSpace(_details?.PcRequirementsMin) 
+                ? _details.PcRequirementsMin 
+                : "Minimum specifications not specified by developer.";
+        }
+    }
+
+    public System.Collections.Generic.List<SteamNewsItem> NewsItems => _details?.NewsItems ?? new();
+    public bool HasNews => NewsItems.Count > 0;
+
+    public string StoreUrl => _details?.StoreUrl ?? (!string.IsNullOrWhiteSpace(Game.SteamAppId) ? $"https://store.steampowered.com/app/{Game.SteamAppId}" : string.Empty);
+
+    public ICommand LaunchGameCommand { get; }
+    public ICommand EditGameCommand { get; }
+    public ICommand DeleteGameCommand { get; }
+    public ICommand OpenStorePageCommand { get; }
+    public ICommand OpenNewsUrlCommand { get; }
+    public ICommand ShowMinReqsCommand { get; }
+    public ICommand ShowRecReqsCommand { get; }
+
+    public GameDetailsViewModel(
+        GameEntry game, 
+        SteamMetadataService steamMetadataService,
+        SteamSearchService steamSearchService,
+        Action<GameEntry>? launchAction = null,
+        Action<GameEntry>? editAction = null,
+        Action<GameEntry>? deleteAction = null)
+    {
+        Game = game ?? throw new ArgumentNullException(nameof(game));
+        _steamMetadataService = steamMetadataService ?? throw new ArgumentNullException(nameof(steamMetadataService));
+        _steamSearchService = steamSearchService ?? throw new ArgumentNullException(nameof(steamSearchService));
+        _launchAction = launchAction;
+        _editAction = editAction;
+        _deleteAction = deleteAction;
+
+        LaunchGameCommand = new RelayCommand(ExecuteLaunch);
+        EditGameCommand = new RelayCommand(ExecuteEdit);
+        DeleteGameCommand = new RelayCommand(ExecuteDelete);
+        OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
+        OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
+        ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);
+        ShowRecReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = true);
+
+        // Asynchronously load details
+        _ = LoadDetailsAsync();
+    }
+
+    public async Task LoadDetailsAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            string? targetAppId = Game.SteamAppId;
+
+            // If game doesn't have an AppId yet, search Steam by name
+            if (string.IsNullOrWhiteSpace(targetAppId))
+            {
+                var match = await _steamSearchService.FindBestMatchAsync(Game.Name);
+                if (match != null && !string.IsNullOrWhiteSpace(match.AppId))
+                {
+                    targetAppId = match.AppId;
+                    Game.SteamAppId = targetAppId;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(targetAppId))
+            {
+                ErrorMessage = $"No matching Steam store entry was found for \"{Game.Name}\".";
+                IsLoading = false;
+                return;
+            }
+
+            var loaded = await _steamMetadataService.GetAppDetailsAsync(targetAppId);
+            if (loaded != null)
+            {
+                Details = loaded;
+
+                // Sync cover image back to game if missing
+                if (string.IsNullOrWhiteSpace(Game.CoverImagePath) && !string.IsNullOrWhiteSpace(loaded.CoverImagePath))
+                {
+                    Game.CoverImagePath = loaded.CoverImagePath;
+                }
+
+                // Auto-categorize if game is still uncategorized
+                if ((string.IsNullOrWhiteSpace(Game.Category) || Game.Category.Equals("Uncategorized", StringComparison.OrdinalIgnoreCase)) &&
+                    !string.IsNullOrWhiteSpace(loaded.PrimaryGenre))
+                {
+                    Game.Category = loaded.PrimaryGenre;
+                }
+            }
+            else
+            {
+                ErrorMessage = $"Could not retrieve metadata from Steam for App ID {targetAppId}. Check internet connection.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading Steam information: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ExecuteLaunch()
+    {
+        RequestClose?.Invoke();
+        _launchAction?.Invoke(Game);
+    }
+
+    private void ExecuteEdit()
+    {
+        RequestClose?.Invoke();
+        _editAction?.Invoke(Game);
+    }
+
+    private void ExecuteDelete()
+    {
+        RequestClose?.Invoke();
+        _deleteAction?.Invoke(Game);
+    }
+
+    private void ExecuteOpenStorePage()
+    {
+        if (!string.IsNullOrWhiteSpace(StoreUrl))
+        {
+            ExecuteOpenUrl(StoreUrl);
+        }
+    }
+
+    private static void ExecuteOpenUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+
+        // This URL originates from Steam's public news/store APIs, not user input, but it's
+        // still remote content. Restrict to http/https before shell-executing it so a
+        // malformed or unexpected value can't be used to launch another URI handler or a
+        // local file path.
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            LoggingService.Warn("GameDetailsViewModel", $"Refused to open URL with unexpected scheme: '{url}'");
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = uri.AbsoluteUri,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("GameDetailsViewModel", $"Failed to open URL '{url}': {ex.Message}");
+        }
+    }
+}
