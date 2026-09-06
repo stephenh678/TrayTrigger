@@ -1024,9 +1024,7 @@ public class MainViewModel : ViewModelBase
 
         try
         {
-            string folder = Path.GetFileName(card.Game.WorkingDirectory);
-            if (string.IsNullOrWhiteSpace(folder))
-                folder = Path.GetFileName(Path.GetDirectoryName(card.Game.ExecutablePath) ?? "");
+            string folder = GameNameExtractor.FindMeaningfulFolderName(card.Game.ExecutablePath, card.Game.WorkingDirectory);
 
             var res = await GameNameExtractor.ResolveGameMatchAsync(
                 card.Game.ExecutablePath,
@@ -1134,9 +1132,7 @@ public class MainViewModel : ViewModelBase
             if (!_settings.SearchOfficialTitleOnline && !_settings.AutoCategorizeFromSteam && !_settings.UseVerticalPosterArt)
                 return;
 
-            string folder = !string.IsNullOrWhiteSpace(entry.WorkingDirectory) ? Path.GetFileName(entry.WorkingDirectory) : "";
-            if (string.IsNullOrWhiteSpace(folder) && !string.IsNullOrWhiteSpace(entry.ExecutablePath))
-                folder = Path.GetFileName(Path.GetDirectoryName(entry.ExecutablePath) ?? "");
+            string folder = GameNameExtractor.FindMeaningfulFolderName(entry.ExecutablePath, entry.WorkingDirectory);
 
             var res = await GameNameExtractor.ResolveGameMatchAsync(
                 entry.ExecutablePath,
@@ -1729,18 +1725,24 @@ public class MainViewModel : ViewModelBase
                 try
                 {
                     string gameName = c.Name;
+                    string? matchedAppId = null;
+
                     if (_settings.SearchOfficialTitleOnline)
                     {
-                        string onlineName = await GameNameExtractor.ResolveGameNameAsync(
+                        var res = await GameNameExtractor.ResolveGameMatchAsync(
                             c.ExePath,
                             c.WorkingDirectory,
                             preferExe: _settings.PreferExeForGameName,
                             searchOnline: true,
                             steamSearch: _steamSearchService);
 
-                        if (!string.IsNullOrWhiteSpace(onlineName))
+                        if (!string.IsNullOrWhiteSpace(res.ResolvedTitle))
                         {
-                            gameName = onlineName;
+                            gameName = res.ResolvedTitle;
+                        }
+                        if (!string.IsNullOrWhiteSpace(res.SteamAppId))
+                        {
+                            matchedAppId = res.SteamAppId;
                         }
                     }
 
@@ -1749,7 +1751,8 @@ public class MainViewModel : ViewModelBase
                         Name = gameName,
                         ExecutablePath = c.ExePath,
                         WorkingDirectory = c.WorkingDirectory,
-                        Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized"
+                        Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized",
+                        SteamAppId = matchedAppId
                     };
 
                     entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, entry.ExecutablePath, entry.Name);
@@ -1809,18 +1812,24 @@ public class MainViewModel : ViewModelBase
         try
         {
             string finalName = candidate.Name;
+            string? matchedAppId = null;
+
             if (_settings.SearchOfficialTitleOnline)
             {
-                string onlineName = await GameNameExtractor.ResolveGameNameAsync(
+                var res = await GameNameExtractor.ResolveGameMatchAsync(
                     candidate.ExePath,
                     candidate.WorkingDirectory,
                     preferExe: _settings.PreferExeForGameName,
                     searchOnline: true,
                     steamSearch: _steamSearchService);
 
-                if (!string.IsNullOrWhiteSpace(onlineName))
+                if (!string.IsNullOrWhiteSpace(res.ResolvedTitle))
                 {
-                    finalName = onlineName;
+                    finalName = res.ResolvedTitle;
+                }
+                if (!string.IsNullOrWhiteSpace(res.SteamAppId))
+                {
+                    matchedAppId = res.SteamAppId;
                 }
             }
 
@@ -1829,7 +1838,8 @@ public class MainViewModel : ViewModelBase
                 Name = finalName,
                 ExecutablePath = candidate.ExePath,
                 WorkingDirectory = candidate.WorkingDirectory,
-                Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized"
+                Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized",
+                SteamAppId = matchedAppId
             };
 
             entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, entry.ExecutablePath, entry.Name);

@@ -31,13 +31,59 @@ public partial class App
         {
             string arg = e.Args[i];
             bool isScan = arg.Equals("--test-scan", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("-test-scan", StringComparison.OrdinalIgnoreCase);
+                          arg.Equals("-test-scan", StringComparison.OrdinalIgnoreCase) ||
+                          arg.Equals("--test-identify", StringComparison.OrdinalIgnoreCase) ||
+                          arg.Equals("-test-identify", StringComparison.OrdinalIgnoreCase);
             bool requiresVm = !isScan && (
                               arg.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("--test-", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("-test-", StringComparison.OrdinalIgnoreCase));
             if (requiresVm && (_mainViewModel == null || _mainWindow == null)) continue;
+
+            if (e.Args[i].Equals("--test-identify", StringComparison.OrdinalIgnoreCase) ||
+                e.Args[i].Equals("-test-identify", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("=== TESTING ENHANCED GAME IDENTIFICATION ===");
+                var steam = new SteamSearchService();
+
+                // Test 1: Gothic 1 reamek with Unreal Engine subpath
+                string gothicExe = @"C:\Games\Gothic 1 reamek\Gothic\Binaries\Win64\Gothic-Win64-Shipping.exe";
+                string gothicFolder = "Gothic 1 reamek";
+                var resGothic = GameNameExtractor.ResolveGameMatchAsync(gothicExe, gothicFolder, preferExe: true, searchOnline: true, steamSearch: steam).GetAwaiter().GetResult();
+                Console.WriteLine($"[TEST 1 - Gothic 1 reamek] Title: \"{resGothic.ResolvedTitle}\" | SteamAppId: {resGothic.SteamAppId ?? "NULL"}");
+
+                // Test 2: Release group clutter AnkerGames
+                string dawnExe = @"C:\Games\The-Blood-of-Dawnwalker-AnkerGames\The Blood of Dawnwalker\Dawnwalker\Binaries\Win64\Dawnwalker.exe";
+                string dawnFolder = "The-Blood-of-Dawnwalker-AnkerGames";
+                var resDawn = GameNameExtractor.ResolveGameMatchAsync(dawnExe, dawnFolder, preferExe: true, searchOnline: true, steamSearch: steam).GetAwaiter().GetResult();
+                Console.WriteLine($"[TEST 2 - AnkerGames] Title: \"{resDawn.ResolvedTitle}\" | SteamAppId: {resDawn.SteamAppId ?? "NULL"}");
+
+                // Test 3: Clutter DODI + version number
+                string hkExe = @"C:\Games\Hollow.Knight.v1.5.78.11833.GoG-DODI\hollow_knight.exe";
+                string hkFolder = "Hollow.Knight.v1.5.78.11833.GoG-DODI";
+                var resHk = GameNameExtractor.ResolveGameMatchAsync(hkExe, hkFolder, preferExe: true, searchOnline: true, steamSearch: steam).GetAwaiter().GetResult();
+                Console.WriteLine($"[TEST 3 - DODI / Version] Title: \"{resHk.ResolvedTitle}\" | SteamAppId: {resHk.SteamAppId ?? "NULL"}");
+
+                // Test 4: Unknown / non-Steam game should reject low-confidence matches and preserve clean local name
+                string fakeExe = @"C:\Games\CustomUnreleasedGame2026\CustomUnreleasedGame2026.exe";
+                string fakeFolder = "CustomUnreleasedGame2026";
+                var resFake = GameNameExtractor.ResolveGameMatchAsync(fakeExe, fakeFolder, preferExe: true, searchOnline: true, steamSearch: steam).GetAwaiter().GetResult();
+                Console.WriteLine($"[TEST 4 - Unknown Game] Title: \"{resFake.ResolvedTitle}\" | SteamAppId: {resFake.SteamAppId ?? "NULL"} (Expected: NULL AppId, preserved name)");
+
+                // Test 5: String similarity checks
+                double simGeneric = SteamSearchService.CalculateSimilarity("Remake", "Heroes of Might and Magic III Remake");
+                double simGothicTypo = SteamSearchService.CalculateSimilarity("Gothic 1 reamek", "Gothic 1 Remake");
+                double simRoman = SteamSearchService.CalculateSimilarity("Civilization VI", "Civilization 6");
+                Console.WriteLine($"[TEST 5 - Similarity] 'Remake' vs 'Heroes...': {simGeneric:F2} (Must be < 0.60)");
+                Console.WriteLine($"[TEST 5 - Similarity] 'Gothic 1 reamek' vs 'Gothic 1 Remake': {simGothicTypo:F2} (Must be >= 0.60)");
+                Console.WriteLine($"[TEST 5 - Similarity] 'Civilization VI' vs 'Civilization 6': {simRoman:F2} (Must be >= 0.85)");
+
+                Console.WriteLine("=== ALL TESTS FINISHED ===");
+                ExitApplication();
+                return;
+            }
+
             if (e.Args[i].Equals("--test-scan", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {
                 string targetFolder = e.Args[i + 1];
