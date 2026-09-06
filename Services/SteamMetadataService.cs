@@ -76,6 +76,19 @@ public partial class SteamMetadataService
     /// composited-banner fallback tier - is never revisited, so e.g. adding a SteamGridDB key
     /// later would never improve an already-imported game's poster.
     /// </param>
+    /// <summary>
+    /// Removes a single AppId's cached details, so the next lookup re-runs the full fetch
+    /// chain instead of returning a possibly-stale in-memory result (e.g. one whose
+    /// CoverImagePath points at a poster file that was since deleted from disk).
+    /// </summary>
+    public static void InvalidateCache(string appId)
+    {
+        if (!string.IsNullOrWhiteSpace(appId))
+        {
+            Cache.TryRemove(appId.Trim(), out _);
+        }
+    }
+
     public async Task<SteamAppDetails?> GetAppDetailsAsync(string appId, string? steamGridDbApiKey = null, bool forceRefresh = false, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(appId))
