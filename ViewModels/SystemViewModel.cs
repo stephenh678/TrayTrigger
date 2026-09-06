@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using TrayTrigger.Models;
@@ -328,6 +329,7 @@ public class SystemViewModel : ViewModelBase
     private void OnTelemetryTick(object? sender, EventArgs e)
     {
         if (!ShowSpecsSection) return;
+        if (Application.Current?.MainWindow is { IsVisible: false }) return;
 
         try
         {

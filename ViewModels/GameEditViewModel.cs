@@ -19,6 +19,7 @@ public class GameEditViewModel : ViewModelBase
 {
     private readonly IconExtractorService _iconExtractorService;
     private readonly string? _steamGridDbApiKey;
+    private readonly double _minConfidence;
     private bool _isRefreshingMetadata;
     private string _name;
     private string _executablePath;
@@ -58,11 +59,18 @@ public class GameEditViewModel : ViewModelBase
 
     public event Action<bool>? RequestClose;
 
-    public GameEditViewModel(GameEntry game, IEnumerable<string> categories, IconExtractorService iconExtractorService, bool isNewGame = false, string? steamGridDbApiKey = null)
+    public GameEditViewModel(
+        GameEntry game, 
+        IEnumerable<string> categories, 
+        IconExtractorService iconExtractorService, 
+        bool isNewGame = false, 
+        string? steamGridDbApiKey = null,
+        double minConfidence = SteamSearchService.DefaultMinConfidence)
     {
         SourceGame = game;
         _iconExtractorService = iconExtractorService;
         _steamGridDbApiKey = steamGridDbApiKey;
+        _minConfidence = minConfidence;
         IsNewGame = isNewGame;
 
         _name = game.Name;
@@ -441,7 +449,7 @@ public class GameEditViewModel : ViewModelBase
 
             StatusMessage = $"Searching Steam for \"{term}\"...";
             var steamSearch = new SteamSearchService();
-            var match = await steamSearch.FindBestMatchAsync(term);
+            var match = await steamSearch.FindBestMatchAsync(term, _minConfidence);
             if (match != null && !string.IsNullOrWhiteSpace(match.Name))
             {
                 Name = match.Name;

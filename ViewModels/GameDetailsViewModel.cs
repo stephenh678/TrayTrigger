@@ -200,6 +200,7 @@ public class GameDetailsViewModel : ViewModelBase
     public ICommand ShowRecReqsCommand { get; }
 
     private readonly string? _steamGridDbApiKey;
+    private readonly double _minConfidence;
 
     public GameDetailsViewModel(
         GameEntry game, 
@@ -208,7 +209,8 @@ public class GameDetailsViewModel : ViewModelBase
         Action<GameEntry>? launchAction = null,
         Action<GameEntry>? editAction = null,
         Action<GameEntry>? deleteAction = null,
-        string? steamGridDbApiKey = null)
+        string? steamGridDbApiKey = null,
+        double minConfidence = SteamSearchService.DefaultMinConfidence)
     {
         Game = game ?? throw new ArgumentNullException(nameof(game));
         _steamMetadataService = steamMetadataService ?? throw new ArgumentNullException(nameof(steamMetadataService));
@@ -217,6 +219,7 @@ public class GameDetailsViewModel : ViewModelBase
         _editAction = editAction;
         _deleteAction = deleteAction;
         _steamGridDbApiKey = steamGridDbApiKey;
+        _minConfidence = minConfidence;
 
         // If cached details are available, show them immediately so the dialog opens instantly
         if (!string.IsNullOrWhiteSpace(Game.SteamAppId) && SteamMetadataService.TryGetCached(Game.SteamAppId, out var cached))
@@ -252,7 +255,7 @@ public class GameDetailsViewModel : ViewModelBase
             // If game doesn't have an AppId yet, search Steam by name
             if (string.IsNullOrWhiteSpace(targetAppId))
             {
-                var match = await _steamSearchService.FindBestMatchAsync(Game.Name);
+                var match = await _steamSearchService.FindBestMatchAsync(Game.Name, _minConfidence);
                 if (match != null && !string.IsNullOrWhiteSpace(match.AppId))
                 {
                     targetAppId = match.AppId;

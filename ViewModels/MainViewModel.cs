@@ -744,7 +744,8 @@ public class MainViewModel : ViewModelBase
             launchAction: _ => requestedLaunch = true,
             editAction: _ => requestedEdit = true,
             deleteAction: _ => requestedDelete = true,
-            steamGridDbApiKey: SteamGridDbApiKeyOrNull);
+            steamGridDbApiKey: SteamGridDbApiKeyOrNull,
+            minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
         var dlg = new Views.GameDetailsDialog(vm);
         if (Application.Current?.MainWindow is { IsVisible: true } owner)
