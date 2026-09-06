@@ -166,6 +166,7 @@ public static partial class GameNameExtractor
         bool preferExe = true, 
         bool searchOnline = true, 
         SteamSearchService? steamSearch = null,
+        double minConfidence = SteamSearchService.DefaultMinConfidence,
         CancellationToken cancellationToken = default)
     {
         string localName = ExtractGameName(exePath, folderFallback, preferExe);
@@ -178,8 +179,8 @@ public static partial class GameNameExtractor
         try
         {
             // Pass 1: Search using local extracted name
-            var match1 = await steamSearch.FindBestMatchAsync(localName, SteamSearchService.DefaultMinConfidence, cancellationToken).ConfigureAwait(false);
-            if (match1 != null && match1.SimilarityScore >= 0.85)
+            var match1 = await steamSearch.FindBestMatchAsync(localName, minConfidence, cancellationToken).ConfigureAwait(false);
+            if (match1 != null && match1.SimilarityScore >= Math.Max(0.85, minConfidence))
             {
                 return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
             }
@@ -192,7 +193,7 @@ public static partial class GameNameExtractor
                 !cleanedFolder.Equals(localName, StringComparison.OrdinalIgnoreCase) && 
                 !IsGenericFolder(cleanedFolder))
             {
-                var match2 = await steamSearch.FindBestMatchAsync(cleanedFolder, SteamSearchService.DefaultMinConfidence, cancellationToken).ConfigureAwait(false);
+                var match2 = await steamSearch.FindBestMatchAsync(cleanedFolder, minConfidence, cancellationToken).ConfigureAwait(false);
 
                 if (match2 != null)
                 {
@@ -203,7 +204,7 @@ public static partial class GameNameExtractor
                 }
             }
 
-            if (match1 != null && match1.SimilarityScore >= SteamSearchService.DefaultMinConfidence)
+            if (match1 != null && match1.SimilarityScore >= minConfidence)
             {
                 return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
             }
@@ -226,9 +227,10 @@ public static partial class GameNameExtractor
         bool preferExe = true, 
         bool searchOnline = true, 
         SteamSearchService? steamSearch = null,
+        double minConfidence = SteamSearchService.DefaultMinConfidence,
         CancellationToken cancellationToken = default)
     {
-        var result = await ResolveGameMatchAsync(exePath, folderFallback, preferExe, searchOnline, steamSearch, cancellationToken).ConfigureAwait(false);
+        var result = await ResolveGameMatchAsync(exePath, folderFallback, preferExe, searchOnline, steamSearch, minConfidence, cancellationToken).ConfigureAwait(false);
         return result.ResolvedTitle;
     }
 

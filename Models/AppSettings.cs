@@ -17,6 +17,7 @@ public class AppSettings
     public string TrayMenuSortOption { get; set; } = "Alphabetical (A - Z)";
     public bool PreferExeForGameName { get; set; } = true;
     public bool SearchOfficialTitleOnline { get; set; } = true;
+    public double OnlineMatchConfidenceThreshold { get; set; } = 0.60;
     public bool AutoCategorizeFromSteam { get; set; } = true;
     public bool UseVerticalPosterArt { get; set; } = true;
     public bool UseSteamGridDbArt { get; set; } = false;

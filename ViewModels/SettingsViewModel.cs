@@ -102,6 +102,19 @@ public class SettingsViewModel : ViewModelBase
         ViewModeDetailsList
     };
 
+    public const string SensitivityRelaxed = "Relaxed (50%)";
+    public const string SensitivityBalanced = "Balanced (60% - Default)";
+    public const string SensitivityStrict = "Strict (75%)";
+    public const string SensitivityVeryStrict = "Very Strict (85%)";
+
+    public ObservableCollection<string> ConfidenceThresholdOptions { get; } = new()
+    {
+        SensitivityRelaxed,
+        SensitivityBalanced,
+        SensitivityStrict,
+        SensitivityVeryStrict
+    };
+
     // Category Tab Commands
     public ICommand SelectAllTabCommand { get; }
     public ICommand SelectGeneralTabCommand { get; }
@@ -443,6 +456,37 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public string OnlineMatchSensitivity
+    {
+        get
+        {
+            if (_settings.OnlineMatchConfidenceThreshold <= 0.52)
+                return SensitivityRelaxed;
+            if (_settings.OnlineMatchConfidenceThreshold <= 0.67)
+                return SensitivityBalanced;
+            if (_settings.OnlineMatchConfidenceThreshold <= 0.80)
+                return SensitivityStrict;
+            return SensitivityVeryStrict;
+        }
+        set
+        {
+            double target = value switch
+            {
+                SensitivityRelaxed => 0.50,
+                SensitivityStrict => 0.75,
+                SensitivityVeryStrict => 0.85,
+                _ => 0.60
+            };
+
+            if (Math.Abs(_settings.OnlineMatchConfidenceThreshold - target) > 0.01)
+            {
+                _settings.OnlineMatchConfidenceThreshold = target;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public bool AutoCategorizeFromSteam
     {
         get => _settings.AutoCategorizeFromSteam;
@@ -682,6 +726,7 @@ public class SettingsViewModel : ViewModelBase
         _settings.TrayMenuSortOption = "Alphabetical (A - Z)";
         _settings.PreferExeForGameName = true;
         _settings.SearchOfficialTitleOnline = true;
+        _settings.OnlineMatchConfidenceThreshold = 0.60;
         _settings.AutoCategorizeFromSteam = true;
         _settings.UseVerticalPosterArt = true;
         _settings.UseSteamGridDbArt = false;
@@ -713,6 +758,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(TrayMenuSortOption));
         OnPropertyChanged(nameof(PreferExeForGameName));
         OnPropertyChanged(nameof(SearchOfficialTitleOnline));
+        OnPropertyChanged(nameof(OnlineMatchSensitivity));
         OnPropertyChanged(nameof(AutoCategorizeFromSteam));
         OnPropertyChanged(nameof(UseVerticalPosterArt));
         OnPropertyChanged(nameof(UseSteamGridDbArt));
