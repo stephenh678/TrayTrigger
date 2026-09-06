@@ -1,0 +1,205 @@
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Windows;
+using System.Windows.Media.Imaging;
+
+namespace TrayTrigger.Services;
+
+public class IconExtractorService
+{
+    private readonly StorageService _storageService;
+
+    public IconExtractorService(StorageService storageService)
+    {
+        _storageService = storageService;
+    }
+
+    /// <summary>
+    /// Extracts or generates an icon for the game, caches it as a PNG in %LocalAppData%\TrayTrigger\Icons\{gameId}.png,
+    /// and returns the absolute path to the cached PNG.
+    /// </summary>
+    public string ExtractAndCacheIcon(string gameId, string sourcePath, string gameName)
+    {
+        _storageService.EnsureDirectories();
+        string cachedIconPath = Path.Combine(_storageService.IconsDirectory, $"{gameId}.png");
+
+        try
+        {
+            // If source is already a valid image/icon file
+            if (!string.IsNullOrEmpty(sourcePath) && File.Exists(sourcePath))
+            {
+                string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+                if (ext == ".png")
+                {
+                    if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(cachedIconPath), StringComparison.OrdinalIgnoreCase))
+                    {
+                        return cachedIconPath;
+                    }
+                    File.Copy(sourcePath, cachedIconPath, overwrite: true);
+                    return cachedIconPath;
+                }
+
+                if (ext == ".ico")
+                {
+                    using var ico = new Icon(sourcePath);
+                    using var bmp = ico.ToBitmap();
+                    bmp.Save(cachedIconPath, ImageFormat.Png);
+                    return cachedIconPath;
+                }
+
+                if (ext == ".jpg" || ext == ".jpeg" || ext == ".bmp")
+                {
+                    using var img = Image.FromFile(sourcePath);
+                    img.Save(cachedIconPath, ImageFormat.Png);
+                    return cachedIconPath;
+                }
+
+                // Try ExtractAssociatedIcon for .exe, .dll, .lnk
+                using var associatedIcon = Icon.ExtractAssociatedIcon(sourcePath);
+                if (associatedIcon != null)
+                {
+                    using var bmp = associatedIcon.ToBitmap();
+                    bmp.Save(cachedIconPath, ImageFormat.Png);
+                    return cachedIconPath;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("IconExtractorService", $"Extraction failed for '{sourcePath}': {ex.Message}");
+        }
+
+        // Fallback: Generate a crisp, modern letter/badge icon
+        try
+        {
+            GenerateFallbackIcon(cachedIconPath, gameName);
+            return cachedIconPath;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("IconExtractorService", $"Fallback generation failed: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Generates a clean dark rounded badge with the game's initial letter or icon.
+    /// </summary>
+    private static void GenerateFallbackIcon(string outputPath, string gameName)
+    {
+        const int size = 128;
+        using var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(bmp);
+
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.Clear(Color.Transparent);
+
+        // Background rounded box (#26262B with subtle border)
+        float pad = 4f;
+        float rectSize = size - (pad * 2);
+        float radius = 24f;
+
+        using (var bgBrush = new SolidBrush(Color.FromArgb(38, 38, 43))) // #26262B
+        using (var path = CreateRoundedRect(pad, pad, rectSize, rectSize, radius))
+        {
+            g.FillPath(bgBrush, path);
+            using var borderPen = new Pen(Color.FromArgb(0, 122, 204), 3f); // #007ACC
+            g.DrawPath(borderPen, path);
+        }
+
+        // Initial letter
+        string letter = "?";
+        if (!string.IsNullOrWhiteSpace(gameName))
+        {
+            letter = gameName.Trim().Substring(0, 1).ToUpperInvariant();
+        }
+
+        using var font = new Font("Segoe UI", 56, System.Drawing.FontStyle.Bold, GraphicsUnit.Pixel);
+        using var textBrush = new SolidBrush(Color.FromArgb(240, 240, 240));
+
+        var format = new StringFormat
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center
+        };
+
+        g.DrawString(letter, font, textBrush, new RectangleF(0, 0, size, size), format);
+
+        bmp.Save(outputPath, ImageFormat.Png);
+    }
+
+    private static GraphicsPath CreateRoundedRect(float x, float y, float width, float height, float radius)
+    {
+        var path = new GraphicsPath();
+        float d = radius * 2;
+        path.AddArc(x, y, d, d, 180, 90);
+        path.AddArc(x + width - d, y, d, d, 270, 90);
+        path.AddArc(x + width - d, y + height - d, d, d, 0, 90);
+        path.AddArc(x, y + height - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    /// <summary>
+    /// Safely loads a bitmap image from disk without locking the file on disk.
+    /// Returns null if path is invalid or file does not exist.
+    /// Optional decodePixelWidth scales the bitmap during decode to dramatically reduce memory consumption.
+    /// </summary>
+    public static BitmapImage? LoadBitmapSafely(string? path, int decodePixelWidth = 0)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return null;
+
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            if (decodePixelWidth > 0)
+            {
+                bitmap.DecodePixelWidth = decodePixelWidth;
+            }
+            bitmap.UriSource = new Uri(path, UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze(); // Freezes for cross-thread access and performance
+            return bitmap;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts an executable's associated icon as a frozen WPF BitmapSource, ensuring the native Win32 HICON handle is released.
+    /// </summary>
+    public static System.Windows.Media.ImageSource? ExtractAssociatedBitmapSource(string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+            // Icon.ExtractAssociatedIcon returns an Icon that owns its HICON, so disposing it
+            // via `using` already destroys the handle - don't also call DestroyIcon manually,
+            // that would double-destroy the same handle.
+            using var ico = Icon.ExtractAssociatedIcon(path);
+            if (ico == null) return null;
+
+            var bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                ico.Handle,
+                Int32Rect.Empty,
+                BitmapSizeOptions.FromEmptyOptions());
+            bs.Freeze();
+            return bs;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}

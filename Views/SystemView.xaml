@@ -1,0 +1,422 @@
+<UserControl x:Class="TrayTrigger.Views.SystemView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="900" d:DesignWidth="1100"
+             Background="Transparent">
+
+    <UserControl.Resources>
+        <!-- Standard Settings-Style Card -->
+        <Style x:Key="SettingsCard" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BrushSurfaceDark}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushBorderDark}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Reusable Settings-Style Tweak Row Item Template -->
+        <DataTemplate x:Key="TweakItemTemplate" DataType="{x:Type vm:SystemTweakViewModel}">
+            <Border BorderBrush="#252530" BorderThickness="0,0,0,1" Padding="0,6,0,10" Margin="0,0,0,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
+                            </Border>
+                            <Border Background="#3D2F14" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Requires a restart to take effect">
+                                <TextBlock Text="⟳ RESTART" FontSize="9" FontWeight="Bold" Foreground="#E8B84E"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" 
+                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding WhyItMatters, StringFormat='Impact: {0}'}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" 
+                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="{Binding CustomActionLabel}" Command="{Binding CustomActionCommand}" 
+                                Visibility="{Binding HasCustomAction, Converter={StaticResource BoolToVis}}" 
+                                Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,4" FontSize="11.5"/>
+                        <Button Content="{Binding ActionButtonText}" Command="{Binding ToggleCommand}" 
+                                Visibility="{Binding CanToggle, Converter={StaticResource BoolToVis}}" 
+                                Style="{StaticResource ModernOutlineButton}" Padding="10,4" FontSize="11.5"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Category Tabs -->
+            <RowDefinition Height="*"/>    <!-- Main Content -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. HEADER -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+            <!-- Right: Live Telemetry Indicator -->
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" 
+                           Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBlock Text="Live Hardware Telemetry" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" 
+                           FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Left: Title & Subtitle matching Settings -->
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="System &amp; Performance" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
+                           FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
+                <TextBlock Text="Hardware telemetry, gaming specifications, and verified performance optimizations"
+                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                           FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- 2. CATEGORY SEGMENTED TABS -->
+        <Border Grid.Row="1" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
+                BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="All" Command="{Binding SelectAllTabCommand}"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}"/>
+                <Button Content="Hardware Specs" Command="{Binding SelectSpecsTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSpecsTab}"/>
+                <Button Content="Performance Tweaks" Command="{Binding SelectTweaksTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsTweaksTab}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 3. CONTENT AREA -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
+            <StackPanel HorizontalAlignment="Stretch" Margin="0,0,12,0">
+
+                <!-- ========================================================== -->
+                <!-- CATEGORY 1: HARDWARE SPECS                                 -->
+                <!-- ========================================================== -->
+                <StackPanel Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All view) -->
+                    <Border Margin="0,2,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE770;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="HARDWARE TELEMETRY &amp; SPECS" FontSize="11.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 1. Graphics Card (GPU) -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding PrimaryGpu.VramGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB VRAM'}" FontSize="11" FontWeight="SemiBold" Foreground="#4EC9B0"/>
+                                </Border>
+                                <TextBlock Text="Graphics Card (GPU)" FontSize="13.5" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock Text="{Binding PrimaryGpu.ModelName}" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <DockPanel>
+                                <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}">
+                                    <Run Text="{Binding PrimaryGpu.DriverVersion, Mode=OneWay, StringFormat='Driver: {0}'}"/>
+                                    <Run Text="{Binding PrimaryGpu.DriverDate, Mode=OneWay, StringFormat=' ({0})'}"/>
+                                </TextBlock>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2. Displays & Refresh Rate -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding PrimaryDisplay.RefreshRateHz, Mode=OneWay, StringFormat='{}{0} Hz'}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                </Border>
+                                <TextBlock Text="Displays &amp; Refresh Rate" FontSize="13.5" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock Text="{Binding PrimaryDisplay.ResolutionDisplay, Mode=OneWay, StringFormat='Primary Display: {0}'}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <ItemsControl ItemsSource="{Binding SecondaryDisplays}" Visibility="{Binding HasMultipleDisplays, Converter={StaticResource BoolToVis}}" Margin="0,2,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding ResolutionDisplay, StringFormat='• Additional: {0}'}" FontSize="11" 
+                                                   Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 3. Processor (CPU) -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Cpu.CurrentUsagePercent, Mode=OneWay, StringFormat='Load: {0}%'}" 
+                                           FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                                <TextBlock Text="Processor (CPU)" FontSize="13.5" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock Text="{Binding Cpu.ModelName}" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}">
+                                    <Run Text="{Binding Cpu.PhysicalCores, Mode=OneWay, StringFormat='{}{0} Cores, '}"/>
+                                    <Run Text="{Binding Cpu.LogicalProcessors, Mode=OneWay, StringFormat='{}{0} Threads, '}"/>
+                                    <Run Text="{Binding Cpu.ClockSpeedDisplay, Mode=OneWay}"/>
+                                </TextBlock>
+                            </DockPanel>
+                            <ProgressBar Value="{Binding Cpu.CurrentUsagePercent, Mode=OneWay}" Maximum="100" Height="6" 
+                                         Background="#16161B" Foreground="{StaticResource BrushAccent}" BorderThickness="0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 4. System Memory (RAM) -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Ram.UsagePercent, Mode=OneWay, StringFormat='Used: {0}%'}" 
+                                           FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                                <TextBlock Text="System Memory (RAM)" FontSize="13.5" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <DockPanel Margin="0,0,0,4">
+                                <TextBlock FontSize="12" Foreground="{StaticResource BrushTextSecondary}">
+                                    <Run Text="{Binding Ram.UsedGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB in use'}"/>
+                                    <Run Text="{Binding Ram.AvailableGigabytes, Mode=OneWay, StringFormat=' ({0:0.#} GB free of '}"/>
+                                    <Run Text="{Binding Ram.TotalGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB)'}"/>
+                                </TextBlock>
+                            </DockPanel>
+                            <TextBlock Text="{Binding Ram.SpeedDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                       Visibility="{Binding Ram.HasSpeedInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8"/>
+                            <ProgressBar Value="{Binding Ram.UsagePercent, Mode=OneWay}" Maximum="100" Height="6"
+                                         Background="#16161B" Foreground="{StaticResource BrushAccent}" BorderThickness="0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 5. Storage & Gaming Drives -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Storage &amp; Gaming Drives" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Fixed drive volumes, available storage capacity, and disk usage." 
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding Drives}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,8">
+                                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                                <TextBlock HorizontalAlignment="Right" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource BrushTextSecondary}">
+                                                    <Run Text="{Binding FreeGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB free'}"/>
+                                                    <Run Text="{Binding TotalGigabytes, Mode=OneWay, StringFormat=' of {0:0.#} GB'}"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}" DockPanel.Dock="Left"/>
+                                                <Border Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="5,1" Margin="6,0,0,0"
+                                                        HorizontalAlignment="Left" DockPanel.Dock="Left"
+                                                        Visibility="{Binding HasMediaTypeInfo, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="{Binding MediaTypeDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="#4EC9B0"/>
+                                                </Border>
+                                            </DockPanel>
+                                            <ProgressBar Value="{Binding UsagePercent, Mode=OneWay}" Maximum="100" Height="6"
+                                                         Background="#16161B" Foreground="{StaticResource BrushAccent}" BorderThickness="0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 6. Network & Latency -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Network.PingDisplay, Mode=OneWay, StringFormat='Ping: {0}'}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                </Border>
+                                <TextBlock Text="Network &amp; Latency" FontSize="13.5" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock Text="{Binding Network.ConnectionType, Mode=OneWay, StringFormat='Connection: {0}'}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding Network.AdapterName, Mode=OneWay, StringFormat='Adapter: {0}'}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 7. Operating System & Power -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Operating System &amp; Power" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding Os.FullOsTitle}" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding Os.MotherboardDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                       Visibility="{Binding Os.HasMotherboardInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding Os.UptimeDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                       Visibility="{Binding Os.HasUptimeInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,2"/>
+                            <DockPanel Margin="0,0,0,2">
+                                <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}">
+                                    <Run Text="{Binding Os.ActivePowerPlan, Mode=OneWay, StringFormat='Power Plan: {0} • '}"/>
+                                    <Run Text="{Binding Power.StatusText, Mode=OneWay, StringFormat='Power Status: {0} • '}"/>
+                                    <Run Text="DirectX 12 Ultimate Ready"/>
+                                </TextBlock>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 8. Windows Gaming Utilities -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <Button DockPanel.Dock="Right" Content="Refresh Specs" Command="{Binding RefreshSpecsCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" Padding="10,3" VerticalAlignment="Center"/>
+                                <TextBlock Text="Windows Gaming Utilities" FontSize="13.5" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock Text="Quick access to native Windows diagnostic and hardware management tools." 
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <WrapPanel>
+                                <Button Content="Task Manager" Command="{Binding OpenTaskManagerCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
+                                <Button Content="Graphics Settings" Command="{Binding OpenGraphicsSettingsCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
+                                <Button Content="Device Manager" Command="{Binding OpenDeviceManagerCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
+                                <Button Content="DirectX Diagnostic (DxDiag)" Command="{Binding OpenDxDiagCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+
+                <!-- ========================================================== -->
+                <!-- CATEGORY 2: PERFORMANCE TWEAKS                             -->
+                <!-- ========================================================== -->
+                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All view) -->
+                    <Border Margin="0,2,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="PERFORMANCE TWEAKS &amp; OPTIMIZATIONS" FontSize="11.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Preset & Optimization Overview Card -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,8">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
+                                            Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
+                                    <Button Content="Reset Defaults" Command="{Binding ResetDefaultsCommand}" 
+                                            Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,5"/>
+                                    <Button Content="Refresh" Command="{Binding RefreshTweaksCommand}" 
+                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Performance Optimization Status" FontSize="13.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12" 
+                                               Foreground="{StaticResource BrushAccentHover}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
+                                <TextBlock Text="💡 Verified, low-overhead OS configurations for latency, frame pacing, and scheduling. No destructive registry cleaners or snake oil." 
+                                           Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 1. Input & Display Latency -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Input &amp; Display Latency" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="Hardware scheduling and pointer precision responsiveness for competitive gaming."
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding InputAndDisplayTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2. CPU & Thread Scheduling Priority -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="CPU &amp; Scheduling Priority" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="Foreground thread prioritization, power plans, and background DVR capture throttling." 
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding CpuAndPowerTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 3. Network & Background Telemetry -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Network &amp; Background Telemetry" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="Low-latency TCP packet dispatch and non-essential background activity suppression." 
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding NetworkAndBackgroundTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 4. Security & System Virtualization -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Security &amp; Virtualization (HVCI)" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="Hypervisor-protected Code Integrity (VBS) state and Windows Security device settings." 
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding SecurityAndAdvancedTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 4. STATUS BAR -->
+        <DockPanel Grid.Row="3" Margin="0,10,0,0">
+            <TextBlock Text="{Binding StatusMessage}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
+                       FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock Text="Low-risk gaming optimizations" FontSize="11" Foreground="{StaticResource BrushTextMuted}"/>
+            </StackPanel>
+        </DockPanel>
+
+    </Grid>
+</UserControl>
