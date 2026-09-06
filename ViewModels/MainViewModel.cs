@@ -1489,10 +1489,60 @@ public class MainViewModel : ViewModelBase
         }
 
         // Processed after the guard above is released - see comment at the top of this method.
-        foreach (var folder in folders)
+        if (folders.Count == 1)
         {
-            ProcessFolderAdd(folder);
+            ProcessFolderAdd(folders[0]);
         }
+        else if (folders.Count > 1)
+        {
+            ProcessFolderAddBatch(folders);
+        }
+    }
+
+    // Scans every dropped folder up front and merges the results into a single batch-import
+    // prompt, instead of prompting once per folder (see ProcessFolderAdd, which still owns the
+    // single-folder path so its "no games" / "one game" / "overwhelming match" shortcuts are
+    // unaffected).
+    public void ProcessFolderAddBatch(List<string> folderPaths)
+    {
+        var aggregated = new List<GameCandidate>();
+
+        foreach (var folderPath in folderPaths)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) continue;
+
+            var scanResult = _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName);
+
+            if (scanResult.IsMultiGameLibrary)
+            {
+                aggregated.AddRange(scanResult.DiscoveredGames);
+            }
+            else if (scanResult.SingleGameCandidates.Count > 0)
+            {
+                // Represent this individual game folder with its single best-scoring candidate.
+                aggregated.Add(scanResult.SingleGameCandidates[0]);
+            }
+        }
+
+        if (aggregated.Count == 0)
+        {
+            Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+            ModernDialog.ShowInfo(
+                owner,
+                "No Games Found",
+                "No game executables found across the dropped folders.",
+                "Please ensure the selected folders contain installed games or executable files.");
+            return;
+        }
+
+        if (aggregated.Count == 1)
+        {
+            AddCandidate(aggregated[0]);
+            return;
+        }
+
+        string combinedLabel = $"{folderPaths.Count} folders";
+        RequestFolderBatchImport?.Invoke(combinedLabel, aggregated);
     }
 
     public void ProcessFolderAdd(string folderPath)
