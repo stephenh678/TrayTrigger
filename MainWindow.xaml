@@ -1294,7 +1294,7 @@
                                     <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                                     <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}" 
                                              Style="{StaticResource ModernTextBox}" Width="240" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                    <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: Steph/TrayTrigger)." 
+                                    <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: stephenh678/TrayTrigger)."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
 
                                     <TextBlock Text="{Binding UpdateStatusText}" FontSize="11.5" Foreground="{StaticResource BrushAccentHover}" 
