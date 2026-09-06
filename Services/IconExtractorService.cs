@@ -52,7 +52,8 @@ public class IconExtractorService
 
                 if (ext == ".jpg" || ext == ".jpeg" || ext == ".bmp")
                 {
-                    using var img = Image.FromFile(sourcePath);
+                    using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    using var img = Image.FromStream(fs);
                     img.Save(cachedIconPath, ImageFormat.Png);
                     return cachedIconPath;
                 }
@@ -157,15 +158,19 @@ public class IconExtractorService
 
         try
         {
+            using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var ms = new MemoryStream((int)fileStream.Length);
+            fileStream.CopyTo(ms);
+            ms.Position = 0;
+
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             if (decodePixelWidth > 0)
             {
                 bitmap.DecodePixelWidth = decodePixelWidth;
             }
-            bitmap.UriSource = new Uri(path, UriKind.Absolute);
+            bitmap.StreamSource = ms;
             bitmap.EndInit();
             bitmap.Freeze(); // Freezes for cross-thread access and performance
             return bitmap;

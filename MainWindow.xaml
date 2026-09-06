@@ -57,6 +57,8 @@
             <MenuItem Header="Change Category..." Command="{Binding ChangeCategoryCommand}"/>
             <MenuItem Header="Change Icon..." Command="{Binding ChangeIconCommand}"/>
             <MenuItem Header="Change Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
+            <MenuItem Header="Set Steam App ID..." Command="{Binding EditSteamAppIdCommand}"/>
+            <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding RefreshMetadataCommand}"/>
             <MenuItem Header="Edit Game Properties..." Command="{Binding EditCommand}"/>
 
             <!-- Steam Specific Actions -->

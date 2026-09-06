@@ -81,6 +81,20 @@ public partial class SteamMetadataService
     /// chain instead of returning a possibly-stale in-memory result (e.g. one whose
     /// CoverImagePath points at a poster file that was since deleted from disk).
     /// </summary>
+    /// <summary>
+    /// Attempts to retrieve in-memory cached details for an App ID without triggering a network request.
+    /// </summary>
+    public static bool TryGetCached(string appId, out SteamAppDetails? details)
+    {
+        if (!string.IsNullOrWhiteSpace(appId) && Cache.TryGetValue(appId.Trim(), out var found))
+        {
+            details = found;
+            return true;
+        }
+        details = null;
+        return false;
+    }
+
     public static void InvalidateCache(string appId)
     {
         if (!string.IsNullOrWhiteSpace(appId))
@@ -388,9 +402,10 @@ public partial class SteamMetadataService
                 $"https://steamcdn-a.akamaihd.net/steam/apps/{appId}/library_600x900.jpg"
             };
 
-            if (await TryDownloadFromUrlsAsync(officialUrls, localPath, ct).ConfigureAwait(false))
+            string? officialSaved = await TryDownloadFromUrlsAsync(officialUrls, localPath, ct).ConfigureAwait(false);
+            if (officialSaved != null)
             {
-                return localPath;
+                return officialSaved;
             }
 
             // 2. Optional: community-sourced vertical art from SteamGridDB, tried only once
@@ -401,8 +416,7 @@ public partial class SteamMetadataService
                 if (gridBytes != null && gridBytes.Length > 1000 && IsDecodableImage(gridBytes))
                 {
                     byte[] processed = EnsureVerticalPoster(gridBytes);
-                    await File.WriteAllBytesAsync(localPath, processed, ct).ConfigureAwait(false);
-                    return localPath;
+                    return await WritePosterFileSafelyAsync(localPath, processed, ct).ConfigureAwait(false);
                 }
             }
 
@@ -410,17 +424,20 @@ public partial class SteamMetadataService
             // store page's header/capsule image), composited into a full vertical poster.
             var fallbackUrls = new List<string>
             {
-                $"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appId}/library_hero.jpg"
+                $"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appId}/library_hero.jpg",
+                $"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appId}/header.jpg",
+                $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/header.jpg"
             };
 
-            if (!string.IsNullOrWhiteSpace(fallbackUrl))
+            if (!string.IsNullOrWhiteSpace(fallbackUrl) && !fallbackUrls.Contains(fallbackUrl))
             {
                 fallbackUrls.Add(fallbackUrl);
             }
 
-            if (await TryDownloadFromUrlsAsync(fallbackUrls, localPath, ct).ConfigureAwait(false))
+            string? fallbackSaved = await TryDownloadFromUrlsAsync(fallbackUrls, localPath, ct).ConfigureAwait(false);
+            if (fallbackSaved != null)
             {
-                return localPath;
+                return fallbackSaved;
             }
         }
         catch (Exception ex)
@@ -434,8 +451,9 @@ public partial class SteamMetadataService
     /// <summary>
     /// Tries each candidate URL in order, saving the first response that decodes as a real
     /// image (processed into a vertical poster) to <paramref name="localPath"/>.
+    /// Returns the absolute path written to, or null if all candidates failed.
     /// </summary>
-    private static async Task<bool> TryDownloadFromUrlsAsync(List<string> urls, string localPath, CancellationToken ct)
+    private static async Task<string?> TryDownloadFromUrlsAsync(List<string> urls, string localPath, CancellationToken ct)
     {
         foreach (var url in urls)
         {
@@ -448,8 +466,7 @@ public partial class SteamMetadataService
                     if (bytes.Length > 1000 && IsDecodableImage(bytes))
                     {
                         byte[] verticalBytes = EnsureVerticalPoster(bytes);
-                        await File.WriteAllBytesAsync(localPath, verticalBytes, ct).ConfigureAwait(false);
-                        return true;
+                        return await WritePosterFileSafelyAsync(localPath, verticalBytes, ct).ConfigureAwait(false);
                     }
                 }
             }
@@ -459,7 +476,41 @@ public partial class SteamMetadataService
             }
         }
 
-        return false;
+        return null;
+    }
+
+    /// <summary>
+    /// Resiliently writes image bytes to disk with non-exclusive file sharing and retries,
+    /// falling back to a unique timestamped filename if the target file is locked by an external process.
+    /// </summary>
+    public static async Task<string> WritePosterFileSafelyAsync(string localPath, byte[] bytes, CancellationToken ct = default)
+    {
+        string dir = Path.GetDirectoryName(localPath)!;
+        if (!Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        for (int i = 0; i < 5; i++)
+        {
+            try
+            {
+                using var fs = new FileStream(localPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+                await fs.WriteAsync(bytes, ct).ConfigureAwait(false);
+                return localPath;
+            }
+            catch (IOException) when (i < 4)
+            {
+                await Task.Delay(100, ct).ConfigureAwait(false);
+            }
+        }
+
+        string altPath = Path.Combine(dir, $"{Path.GetFileNameWithoutExtension(localPath)}_{DateTime.UtcNow.Ticks}.jpg");
+        using (var fs = new FileStream(altPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
+        {
+            await fs.WriteAsync(bytes, ct).ConfigureAwait(false);
+        }
+        return altPath;
     }
 
     private const int PosterWidth = 600;
