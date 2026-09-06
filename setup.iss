@@ -68,7 +68,7 @@ var
   I: Integer;
   StartWithWin: Boolean;
 begin
-  SettingsDir := ExpandConstant('{localappdata}\TrayTrigger');
+  SettingsDir := ExpandConstant('{userappdata}\TrayTrigger');
   SettingsFile := SettingsDir + '\settings.json';
   StartWithWin := WizardIsTaskSelected('startwithwindows');
 

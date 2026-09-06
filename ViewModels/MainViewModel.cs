@@ -184,6 +184,7 @@ public class MainViewModel : ViewModelBase
             },
             onHotkeySettingChanged: UpdateHotkeys,
             onRequestEnrichLibrary: EnrichLibraryAsync,
+            onRequestRefreshAllPosters: RefreshAllPostersAsync,
             onRequestOpenSteamImport: OpenSteamImport
         );
 
@@ -1073,6 +1074,73 @@ public class MainViewModel : ViewModelBase
     }
 
     private const int MaxConcurrentEnrichments = 4;
+    private bool _isRefreshingAllPosters;
+
+    /// <summary>
+    /// Force-refreshes poster art for every game with a known Steam AppId, bypassing the
+    /// "already has a cover" cache check so a game stuck on the composited-banner fallback
+    /// tier can pick up better art (e.g. after the user adds/enables a SteamGridDB API key).
+    /// Unlike <see cref="EnrichLibraryAsync"/>, this ignores existing category/cover state and
+    /// always re-fetches, since the whole point is to override a previously-cached poster.
+    /// </summary>
+    public async Task RefreshAllPostersAsync()
+    {
+        if (_isRefreshingAllPosters)
+        {
+            StatusMessage = "A poster refresh is already in progress. Please wait for it to finish.";
+            return;
+        }
+
+        var candidates = Games.Where(card => !string.IsNullOrWhiteSpace(card.Game.SteamAppId)).ToList();
+        if (candidates.Count == 0)
+        {
+            StatusMessage = "No games with a linked Steam AppId to refresh.";
+            return;
+        }
+
+        _isRefreshingAllPosters = true;
+        try
+        {
+            int completed = 0;
+            int updated = 0;
+            using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
+
+            var tasks = candidates.Select(async card =>
+            {
+                await throttle.WaitAsync();
+                try
+                {
+                    string appId = card.Game.SteamAppId!;
+                    var details = await _steamMetadataService.GetAppDetailsAsync(appId, SteamGridDbApiKeyOrNull, forceRefresh: true);
+                    if (details != null && !string.IsNullOrWhiteSpace(details.CoverImagePath) && details.CoverImagePath != card.Game.CoverImagePath)
+                    {
+                        card.Game.CoverImagePath = details.CoverImagePath;
+                        card.RefreshProperties();
+                        Interlocked.Increment(ref updated);
+                    }
+                }
+                finally
+                {
+                    Interlocked.Increment(ref completed);
+                    StatusMessage = $"Refreshing posters... {completed}/{candidates.Count}";
+                }
+            });
+
+            await Task.WhenAll(tasks);
+
+            if (updated > 0)
+            {
+                SaveLibrary();
+                LibraryUpdated?.Invoke();
+            }
+
+            StatusMessage = $"Poster refresh complete: {updated} of {candidates.Count} game(s) updated.";
+        }
+        finally
+        {
+            _isRefreshingAllPosters = false;
+        }
+    }
 
     public async Task EnrichLibraryAsync()
     {
