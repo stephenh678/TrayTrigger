@@ -115,3 +115,85 @@ begin
     UpdateAppSettings();
   end;
 end;
+
+var
+  DeleteUserData: Boolean;
+
+function InitializeUninstall(): Boolean;
+var
+  UninstallForm: TSetupForm;
+  InfoLabel: TNewStaticText;
+  DeleteDataCheckBox: TNewCheckBox;
+  OKButton, CancelButton: TNewButton;
+begin
+  Result := True;
+  DeleteUserData := False;
+
+  UninstallForm := CreateCustomForm(ScaleX(420), ScaleY(160), False, True);
+  try
+    UninstallForm.Caption := 'Uninstall TrayTrigger';
+
+    InfoLabel := TNewStaticText.Create(UninstallForm);
+    InfoLabel.Parent := UninstallForm;
+    InfoLabel.Left := ScaleX(16);
+    InfoLabel.Top := ScaleY(16);
+    InfoLabel.Width := UninstallForm.ClientWidth - ScaleX(32);
+    InfoLabel.AutoSize := False;
+    InfoLabel.WordWrap := True;
+    InfoLabel.Height := ScaleY(60);
+    InfoLabel.Caption := 'Your game library, settings, and cached artwork are stored separately from the program files and are kept by default so a future reinstall picks up where you left off.';
+
+    DeleteDataCheckBox := TNewCheckBox.Create(UninstallForm);
+    DeleteDataCheckBox.Parent := UninstallForm;
+    DeleteDataCheckBox.Left := ScaleX(16);
+    DeleteDataCheckBox.Top := InfoLabel.Top + InfoLabel.Height + ScaleY(8);
+    DeleteDataCheckBox.Width := UninstallForm.ClientWidth - ScaleX(32);
+    DeleteDataCheckBox.Caption := 'Also delete my settings, game library, and cached artwork';
+    DeleteDataCheckBox.Checked := False;
+
+    OKButton := TNewButton.Create(UninstallForm);
+    OKButton.Parent := UninstallForm;
+    OKButton.Width := ScaleX(75);
+    OKButton.Height := ScaleY(23);
+    OKButton.Left := UninstallForm.ClientWidth - ScaleX(16) - ScaleX(75) - ScaleX(8) - ScaleX(75);
+    OKButton.Top := UninstallForm.ClientHeight - ScaleY(16) - OKButton.Height;
+    OKButton.Caption := 'Uninstall';
+    OKButton.ModalResult := mrOk;
+    OKButton.Default := True;
+
+    CancelButton := TNewButton.Create(UninstallForm);
+    CancelButton.Parent := UninstallForm;
+    CancelButton.Width := ScaleX(75);
+    CancelButton.Height := ScaleY(23);
+    CancelButton.Left := UninstallForm.ClientWidth - ScaleX(16) - ScaleX(75);
+    CancelButton.Top := OKButton.Top;
+    CancelButton.Caption := 'Cancel';
+    CancelButton.ModalResult := mrCancel;
+    CancelButton.Cancel := True;
+
+    if UninstallForm.ShowModal() = mrCancel then
+      Result := False
+    else
+      DeleteUserData := DeleteDataCheckBox.Checked;
+  finally
+    UninstallForm.Free();
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  AppDataDir: string;
+  LocalAppDataDir: string;
+begin
+  if (CurUninstallStep = usPostUninstall) and DeleteUserData then
+  begin
+    AppDataDir := ExpandConstant('{userappdata}\TrayTrigger');
+    LocalAppDataDir := ExpandConstant('{localappdata}\TrayTrigger');
+
+    if DirExists(AppDataDir) then
+      DelTree(AppDataDir, True, True, True);
+
+    if DirExists(LocalAppDataDir) then
+      DelTree(LocalAppDataDir, True, True, True);
+  end;
+end;
