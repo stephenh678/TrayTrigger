@@ -477,11 +477,13 @@ public class MainViewModel : ViewModelBase
                     UpdateStatusBrush = acBrush;
                 }
 
-                if (interactive)
-                {
-                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
-                    UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
-                }
+                // Always surface the dialog when a real update is found - even for the quiet
+                // background checks (startup / 24h timer) - since a silently-updated badge is
+                // easy to miss. Only the "up to date" / "no releases" / "error" outcomes below
+                // stay gated behind `interactive`, since nagging the user with those on every
+                // automatic check would be annoying.
+                Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
             }
             else if (result.IsUpToDate)
             {
