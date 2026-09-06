@@ -125,7 +125,10 @@ public partial class FolderScannerService
                 foreach (var file in files)
                 {
                     if (IsDisqualified(file, rootFolderName))
+                    {
+                        LoggingService.Verbose("FolderScanner", $"Skipped disqualified utility/stub binary: '{file}'");
                         continue;
+                    }
 
                     int score = ScoreExecutable(file, folderPath, rootFolderName, depth);
                     if (score > 0)
@@ -133,6 +136,8 @@ public partial class FolderScannerService
                         var fi = new FileInfo(file);
                         string relativePath = Path.GetRelativePath(folderPath, file);
                         string cleanName = DetermineGameName(file, rootFolderName, preferExe);
+
+                        LoggingService.Verbose("FolderScanner", $"Candidate accepted: '{cleanName}' [Score={score}] ({relativePath})");
 
                         discoveredCandidates.Add(new GameCandidate(
                             Name: cleanName,
@@ -142,6 +147,10 @@ public partial class FolderScannerService
                             ConfidenceScore: score,
                             RelativePath: relativePath
                         ));
+                    }
+                    else
+                    {
+                        LoggingService.Verbose("FolderScanner", $"Candidate scored 0 (ignored): '{file}'");
                     }
                 }
             }
