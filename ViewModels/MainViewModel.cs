@@ -137,6 +137,7 @@ public class MainViewModel : ViewModelBase
     public event Action? LibraryUpdated;
     public event Action? RequestMinimizeToTray;
     public event Action? RequestExitApplication;
+    public event Action<string, string>? RequestTrayNotification;
 
     public MainViewModel(
         StorageService storageService,
@@ -492,13 +493,32 @@ public class MainViewModel : ViewModelBase
                     UpdateStatusBrush = acBrush;
                 }
 
-                // Always surface the dialog when a real update is found - even for the quiet
-                // background checks (startup / 24h timer) - since a silently-updated badge is
-                // easy to miss. Only the "up to date" / "no releases" / "error" outcomes below
-                // stay gated behind `interactive`, since nagging the user with those on every
-                // automatic check would be annoying.
-                Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
-                UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
+                bool mainWindowVisible = Application.Current?.MainWindow is { IsVisible: true };
+                bool alreadySnoozed = interactive == false &&
+                    string.Equals(_settings.SkippedUpdateVersion, result.LatestRelease.TagName, StringComparison.OrdinalIgnoreCase) &&
+                    _settings.RemindAfterUtc.HasValue && DateTime.UtcNow < _settings.RemindAfterUtc.Value;
+
+                if (interactive || mainWindowVisible)
+                {
+                    // Surface the modal when the user explicitly asked (interactive), or when a
+                    // quiet background check (startup / 24h timer) finds the window is actually
+                    // visible - a silently-updated badge alone is easy to miss in that case.
+                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                    bool remindLater = UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
+                    if (remindLater)
+                    {
+                        _settings.SkippedUpdateVersion = result.LatestRelease.TagName;
+                        _settings.RemindAfterUtc = DateTime.UtcNow.AddHours(24);
+                        _storageService.SaveSettings(_settings);
+                    }
+                }
+                else if (!alreadySnoozed)
+                {
+                    // Background check, window hidden (e.g. a full-screen game): a modal dialog
+                    // here would steal focus mid-match. Use a tray balloon instead so the user
+                    // isn't interrupted but still finds out.
+                    RequestTrayNotification?.Invoke("Update Available", $"{result.LatestRelease.TagName} is ready to install. Open TrayTrigger to update.");
+                }
             }
             else if (result.IsUpToDate)
             {

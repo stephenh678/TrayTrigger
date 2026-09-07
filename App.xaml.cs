@@ -249,6 +249,7 @@ public partial class App : Application
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;
         _mainViewModel.RequestExitApplication += ExitApplication;
+        _mainViewModel.RequestTrayNotification += (title, message) => _trayIcon?.ShowNotification(title, message);
 
         // Setup Taskbar Tray Icon
         Log("Initializing Tray Icon...");
