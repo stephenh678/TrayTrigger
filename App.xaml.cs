@@ -44,7 +44,6 @@ public partial class App : Application
 
     private TaskbarIcon? _trayIcon;
     private MainWindow? _mainWindow;
-    private TraySearchFlyout? _searchFlyout;
     private bool _isShuttingDown = false;
     private Action<string> _logger = _ => { };
 
@@ -320,28 +319,6 @@ public partial class App : Application
         {
             LoggingService.Error("App", $"Error initializing TaskbarIcon: {ex.Message}", ex);
         }
-    }
-
-    public void OpenSearchFlyout()
-    {
-        Dispatcher.Invoke(() =>
-        {
-            if (_searchFlyout != null && _searchFlyout.IsLoaded)
-            {
-                _searchFlyout.Activate();
-                _searchFlyout.Focus();
-                return;
-            }
-
-            _searchFlyout = new TraySearchFlyout(_mainViewModel.Games, card =>
-            {
-                _mainViewModel.LaunchGame(card);
-            });
-            _searchFlyout.Closed += (s, e) => _searchFlyout = null;
-            _searchFlyout.Show();
-            _searchFlyout.Activate();
-            _searchFlyout.Focus();
-        });
     }
 
     public void UpdateTrayContextMenu()

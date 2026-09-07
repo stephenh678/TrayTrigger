@@ -1800,55 +1800,6 @@ public partial class App
                 return;
             }
 
-            if ((e.Args[i].Equals("--screenshot-flyout", StringComparison.OrdinalIgnoreCase) ||
-                 e.Args[i].Equals("-screenshot-flyout", StringComparison.OrdinalIgnoreCase)) &&
-                i + 1 < e.Args.Length)
-            {
-                string targetPng = e.Args[i + 1];
-
-                string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-                var sample1 = new GameEntry
-                {
-                    Name = "Cyberpunk 2077",
-                    Category = "RPG",
-                    ExecutablePath = Path.Combine(winDir, "explorer.exe"),
-                    LastPlayed = DateTime.Now.AddHours(-2)
-                };
-                sample1.IconPath = _iconExtractorService.ExtractAndCacheIcon(sample1.Id, sample1.ExecutablePath, sample1.Name);
-
-                var sample2 = new GameEntry
-                {
-                    Name = "Elden Ring",
-                    Category = "Action RPG",
-                    ExecutablePath = Path.Combine(winDir, "notepad.exe"),
-                    LastPlayed = DateTime.Now.AddDays(-1)
-                };
-                sample2.IconPath = _iconExtractorService.ExtractAndCacheIcon(sample2.Id, sample2.ExecutablePath, sample2.Name);
-
-                var sample3 = new GameEntry
-                {
-                    Name = "Hades II",
-                    Category = "Rogue-like",
-                    ExecutablePath = "steam://rungameid/1145350",
-                    IsSteamGame = true,
-                    LastPlayed = DateTime.Now.AddDays(-3)
-                };
-                sample3.IconPath = _iconExtractorService.ExtractAndCacheIcon(sample3.Id, "", sample3.Name);
-
-                var cardList = new List<GameCardViewModel>
-                {
-                    new GameCardViewModel(sample1, _mainViewModel.LaunchGame, _ => { }, _mainViewModel.DeleteGame),
-                    new GameCardViewModel(sample2, _mainViewModel.LaunchGame, _ => { }, _mainViewModel.DeleteGame),
-                    new GameCardViewModel(sample3, _mainViewModel.LaunchGame, _ => { }, _mainViewModel.DeleteGame)
-                };
-
-                var flyout = new TraySearchFlyout(cardList, _mainViewModel.LaunchGame);
-                flyout.SetSearchQuery("cyb");
-                CaptureVisual(flyout, 400, 470, targetPng);
-                ExitApplication();
-                return;
-            }
-
             if ((e.Args[i].Equals("--screenshot-settings-tray", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-tray", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
