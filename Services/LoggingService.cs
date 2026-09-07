@@ -20,6 +20,10 @@ public static class LoggingService
     private static readonly Lock LockObj = new();
     private static string? _logFilePath;
     private static bool _isVerboseEnabled;
+    private static StreamWriter? _writer;
+    private static int _writesSinceRotationCheck;
+    private const int RotationCheckInterval = 50;
+    private const long MaxLogSizeBytes = 5 * 1024 * 1024;
 
     public static string LogFilePath
     {
@@ -58,12 +62,29 @@ public static class LoggingService
         Info("App", $"TrayTrigger logging initialized. Verbose={_isVerboseEnabled}");
     }
 
+    private static StreamWriter GetWriter()
+    {
+        if (_writer == null)
+        {
+            var fs = new FileStream(LogFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+            _writer = new StreamWriter(fs) { AutoFlush = true };
+        }
+        return _writer;
+    }
+
+    private static void CloseWriter()
+    {
+        _writer?.Dispose();
+        _writer = null;
+    }
+
     public static void EnsureLogFileExists()
     {
         try
         {
             lock (LockObj)
             {
+                CloseWriter();
                 if (!File.Exists(LogFilePath))
                 {
                     var sb = new StringBuilder();
@@ -133,7 +154,30 @@ public static class LoggingService
                 };
 
                 string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{tag}] [{category}] {message}\n";
-                File.AppendAllText(LogFilePath, line);
+                GetWriter().Write(line);
+
+                if (++_writesSinceRotationCheck >= RotationCheckInterval)
+                {
+                    _writesSinceRotationCheck = 0;
+                    CheckRotation();
+                }
+            }
+        }
+        catch { }
+    }
+
+    // Must be called while holding LockObj.
+    private static void CheckRotation()
+    {
+        try
+        {
+            var fi = new FileInfo(LogFilePath);
+            if (fi.Exists && fi.Length > MaxLogSizeBytes)
+            {
+                CloseWriter();
+                string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
+                File.Copy(LogFilePath, oldLog, overwrite: true);
+                File.WriteAllText(LogFilePath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log rotated. Previous log archived to debug.old.log.\n");
             }
         }
         catch { }
@@ -145,6 +189,7 @@ public static class LoggingService
         {
             lock (LockObj)
             {
+                CloseWriter();
                 var sb = new StringBuilder();
                 sb.AppendLine("================================================================================");
                 sb.AppendLine($" TrayTrigger Debug Log - Cleared & Restarted {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
