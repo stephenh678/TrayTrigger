@@ -25,6 +25,16 @@ public static partial class GameNameExtractor
         "windows", "prereq", "easyanticheat", "battleye", "bootstrapper"
     ];
 
+    // Keywords strong enough on their own to disqualify a title regardless of length
+    // (real game titles do not contain these); the rest of GenericKeywords only
+    // disqualifies single-word titles, since real titles like "Unreal Tournament" or
+    // "Microsoft Flight Simulator" legitimately contain a generic-sounding word. See M-20.
+    private static readonly HashSet<string> UtilityKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "crash", "reporter", "reportclient", "setup", "installer", "updater",
+        "patcher", "redist", "prereq", "easyanticheat", "battleye", "bootstrapper"
+    };
+
     private static readonly string[] EngineSuffixes =
     [
         "-Win64-Shipping", "-WinGDK-Shipping", "-Win32-Shipping",
@@ -297,9 +307,12 @@ public static partial class GameNameExtractor
 
         if (GenericNames.Contains(lower)) return false;
 
+        bool isSingleWord = !lower.Contains(' ');
+
         foreach (var kw in GenericKeywords)
         {
-            if (lower.Contains(kw)) return false;
+            if (!lower.Contains(kw)) continue;
+            if (UtilityKeywords.Contains(kw) || isSingleWord) return false;
         }
 
         return true;
