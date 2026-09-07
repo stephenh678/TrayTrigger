@@ -291,7 +291,8 @@ public partial class App : Application
                 var resInfo = GetResourceStream(iconUri);
                 if (resInfo?.Stream != null)
                 {
-                    loadedIcon = new System.Drawing.Icon(resInfo.Stream);
+                    using var stream = resInfo.Stream;
+                    loadedIcon = new System.Drawing.Icon(stream);
                 }
             }
             catch

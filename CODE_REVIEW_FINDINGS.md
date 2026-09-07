@@ -401,7 +401,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **What:** A throwaway `StorageService` (which also runs legacy migration) and `LoggingService.Initialize` run in `App`, then again in `MainViewModel`. Pass the first instance into the ViewModel and drop the second `Initialize`.
 
 ### L-02 Tray icon resource stream is never disposed
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Re-verified: `resInfo.Stream` was read by `new System.Drawing.Icon(...)` and never disposed. Wrapped it in a `using var stream = resInfo.Stream;` scoped to just the `Icon` construction - safe since `Icon`'s constructor copies the stream's data internally rather than holding a reference to it. Release build: 0 warnings, 0 errors. This code only runs inside a live WPF `Application` (`GetResourceStream` is an `Application` instance method reading a pack:// resource), so a standalone harness can't exercise it; verified by launching the real built exe with `--minimized` and checking `debug.log` for the full startup sequence through "Initializing Tray Icon" / "OnStartup completed successfully" with no exceptions - the tray icon path completed normally with the disposed-stream code in place. Closed the process afterward.
 - **Files:** `App.xaml.cs:286-299`
 - **What:** `new System.Drawing.Icon(resInfo.Stream)` copies the data; wrap the stream in `using`.
 
