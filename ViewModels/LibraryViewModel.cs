@@ -194,6 +194,16 @@ public class LibraryViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Raises change notifications for TotalGameCount/TotalGameCountDisplay. Public so
+    /// ImportCoordinator can call it after adding entries directly to <see cref="Games"/>.
+    /// </summary>
+    public void NotifyGameCountChanged()
+    {
+        OnPropertyChanged(nameof(TotalGameCount));
+        OnPropertyChanged(nameof(TotalGameCountDisplay));
+    }
+
     public void LoadLibrary()
     {
         Games.Clear();
