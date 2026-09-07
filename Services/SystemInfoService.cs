@@ -149,7 +149,7 @@ public partial class SystemInfoService
     public (int CpuUsagePercent, RamHardwareInfo Ram) GetQuickTelemetry()
     {
         int cpuUsage = SampleCpuUsage();
-        var ram = GetRamInfo();
+        var ram = GetRamUsage();
         return (cpuUsage, ram);
     }
 
@@ -369,6 +369,16 @@ public partial class SystemInfoService
 
     private RamHardwareInfo GetRamInfo()
     {
+        var ram = GetRamUsage();
+        ApplyRamSpeedInfo(ram);
+        return ram;
+    }
+
+    /// <summary>
+    /// GlobalMemoryStatusEx only - sub-millisecond, no WMI. Safe to call on every UI poll tick.
+    /// </summary>
+    private RamHardwareInfo GetRamUsage()
+    {
         var ram = new RamHardwareInfo();
         var memStatus = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
 
@@ -380,6 +390,15 @@ public partial class SystemInfoService
             ram.UsagePercent = (int)memStatus.dwMemoryLoad;
         }
 
+        return ram;
+    }
+
+    /// <summary>
+    /// WMI RAM speed lookup - tens to hundreds of ms. Only call from the full hardware report,
+    /// never from the quick UI poll.
+    /// </summary>
+    private static void ApplyRamSpeedInfo(RamHardwareInfo ram)
+    {
         try
         {
             // Speed = the module's rated/capable speed (e.g. 6000 for DDR5-6000); ConfiguredClockSpeed
@@ -406,8 +425,6 @@ public partial class SystemInfoService
         {
             LoggingService.Warn("SystemInfoService", $"Could not read RAM speed via WMI: {ex.Message}");
         }
-
-        return ram;
     }
 
     // =========================================================================
