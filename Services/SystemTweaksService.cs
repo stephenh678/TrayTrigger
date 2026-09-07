@@ -413,6 +413,37 @@ public partial class SystemTweaksService
     }
 
     /// <summary>
+    /// Re-reads the real current state of a tweak straight from the system, the same Check used
+    /// to build <see cref="GetAllTweaks"/>. Callers should trust this over an <see cref="ApplyTweak"/>
+    /// return value, since an elevated write's success/failure can be reported wrong (e.g. a slow
+    /// UAC prompt) while the underlying registry/system state is the ground truth.
+    /// </summary>
+    public bool GetTweakState(string tweakId)
+    {
+        return tweakId switch
+        {
+            "mouse_accel" => CheckMouseAccelerationDisabled(),
+            "hags" => CheckHagsEnabled(),
+            "windowed_opts" => CheckWindowedOptsEnabled(),
+            "fse_behavior" => CheckFseDisabled(),
+            "game_mode" => CheckGameModeEnabled(),
+            "power_plan" => CheckUltimatePlanActive(),
+            "sys_responsiveness" => CheckSystemResponsivenessOptimal(),
+            "mmcss_games_priority" => CheckMmcssGamesPriorityOptimal(),
+            "timer_resolution" => CheckTimerResolutionOptimal(),
+            "visual_fx" => CheckVisualFxPerformance(),
+            "net_throttling" => CheckNetworkThrottlingDisabled(),
+            "nagle_disable" => CheckNagleDisabled(),
+            "delivery_opt" => CheckDeliveryOptimizationDisabled(),
+            "game_dvr" => CheckGameDvrDisabled(),
+            "telemetry_sweeps" => CheckTelemetryDisabled(),
+            "game_bar_overlay" => CheckGameBarDisabled(),
+            "core_isolation" => !CheckHvciActive(),
+            _ => false
+        };
+    }
+
+    /// <summary>
     /// Tweak IDs the preset/reset actions apply that require a restart to fully take effect -
     /// used by the UI to decide whether to show a single consolidated restart prompt.
     /// </summary>
@@ -972,7 +1003,7 @@ public partial class SystemTweaksService
             {
                 RunPowercfg($"/setactive {BalancedPlanGuid}");
                 NotifySettingsChanged();
-                return true;
+                return string.Equals(GetActivePowerSchemeGuid(), BalancedPlanGuid, StringComparison.OrdinalIgnoreCase);
             }
 
             string? schemeGuid = FindExistingUltimatePlanGuid() ?? CreateUltimateTrayTriggerPlan();
@@ -986,10 +1017,11 @@ public partial class SystemTweaksService
             // lock CPU min/max state at 100%, disable core parking, aggressive turbo boost,
             // active cooling, and disable PCIe/USB power-saving states that otherwise cause
             // frame-time spikes and input lag when cores or devices wake from an idle state.
-            ApplyUltimatePlanTweaks(schemeGuid);
+            bool tweaksApplied = ApplyUltimatePlanTweaks(schemeGuid);
             RunPowercfg($"/setactive {schemeGuid}");
             NotifySettingsChanged();
-            return true;
+            bool activated = string.Equals(GetActivePowerSchemeGuid(), schemeGuid, StringComparison.OrdinalIgnoreCase);
+            return tweaksApplied && activated;
         }
         catch (Exception ex)
         {
@@ -1155,7 +1187,7 @@ public partial class SystemTweaksService
         }
     }
 
-    private static void ApplyUltimatePlanTweaks(string schemeGuid)
+    private static bool ApplyUltimatePlanTweaks(string schemeGuid)
     {
         var settings = new (string Subgroup, string Setting, int Val)[]
         {
@@ -1175,10 +1207,10 @@ public partial class SystemTweaksService
             commands.Add($"powercfg /setdcvalueindex {schemeGuid} {subgroup} {setting} {val}");
         }
 
-        RunCommandBatch(commands);
+        return RunCommandBatch(commands);
     }
 
-    private static void RunCommandBatch(IEnumerable<string> commands)
+    private static bool RunCommandBatch(IEnumerable<string> commands)
     {
         try
         {
@@ -1191,9 +1223,14 @@ public partial class SystemTweaksService
                 UseShellExecute = false
             };
             using var proc = Process.Start(psi);
-            proc?.WaitForExit(5000);
+            if (proc == null) return false;
+            proc.WaitForExit(5000);
+            return proc.HasExited && proc.ExitCode == 0;
         }
-        catch { }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string RunPowercfg(string arguments)
@@ -1448,8 +1485,14 @@ public partial class SystemTweaksService
                 WindowStyle = ProcessWindowStyle.Hidden
             };
             using var proc = Process.Start(psi);
-            proc?.WaitForExit(5000);
-            return proc?.ExitCode == 0;
+            if (proc == null) return false;
+
+            // A generous timeout: WaitForExit(5000) used to return while the user was still
+            // looking at the UAC prompt, after which reading ExitCode on a still-running
+            // process threw and got swallowed by the catch below as a false "failed".
+            proc.WaitForExit(120000);
+            if (!proc.HasExited) return false;
+            return proc.ExitCode == 0;
         }
         catch
         {
@@ -1513,8 +1556,14 @@ public partial class SystemTweaksService
                 WindowStyle = ProcessWindowStyle.Hidden
             };
             using var proc = Process.Start(psi);
-            proc?.WaitForExit(5000);
-            return proc?.ExitCode == 0;
+            if (proc == null) return false;
+
+            // A generous timeout: WaitForExit(5000) used to return while the user was still
+            // looking at the UAC prompt, after which reading ExitCode on a still-running
+            // process threw and got swallowed by the catch below as a false "failed".
+            proc.WaitForExit(120000);
+            if (!proc.HasExited) return false;
+            return proc.ExitCode == 0;
         }
         catch
         {
