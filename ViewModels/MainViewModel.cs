@@ -63,7 +63,7 @@ public class CategoryTabItem : ViewModelBase
     {
         Name = name;
         DisplayName = displayName;
-        IsFavoritesTab = string.Equals(name, "Favorites", StringComparison.OrdinalIgnoreCase);
+        IsFavoritesTab = string.Equals(name, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
         _isSelected = isSelected;
         SelectCommand = new RelayCommand(() => onSelect(Name));
     }
@@ -92,7 +92,7 @@ public class MainViewModel : ViewModelBase
 
     // Filtering & Sorting
     private string _searchText = string.Empty;
-    private string _selectedCategory = "All";
+    private string _selectedCategory = LibraryConstants.AllCategory;
     private string _selectedSortOption = "Alphabetical (A - Z)";
     private string _statusMessage = string.Empty;
     private AppSettings _settings;
@@ -1040,7 +1040,7 @@ public class MainViewModel : ViewModelBase
             {
                 card.Game.CoverImagePath = details.CoverImagePath;
             }
-            if ((string.IsNullOrWhiteSpace(card.Game.Category) || card.Game.Category.Equals("Uncategorized", StringComparison.OrdinalIgnoreCase)) &&
+            if ((string.IsNullOrWhiteSpace(card.Game.Category) || card.Game.Category.Equals(LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase)) &&
                 !string.IsNullOrWhiteSpace(details.PrimaryGenre))
             {
                 card.Game.Category = details.PrimaryGenre;
@@ -1127,7 +1127,7 @@ public class MainViewModel : ViewModelBase
                     var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, SteamGridDbApiKeyOrNull, forceRefresh: true);
                     if (details != null)
                     {
-                        if (card.Game.Category == "Uncategorized" && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                        if (card.Game.Category == LibraryConstants.Uncategorized && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                         {
                             card.Game.Category = details.PrimaryGenre;
                         }
@@ -1186,7 +1186,7 @@ public class MainViewModel : ViewModelBase
                     var details = await _steamMetadataService.GetAppDetailsAsync(entry.SteamAppId, SteamGridDbApiKeyOrNull);
                     if (details != null)
                     {
-                        if (_settings.AutoCategorizeFromSteam && (entry.Category == "Uncategorized" || entry.Category == "Steam") && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                        if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                             entry.Category = details.PrimaryGenre;
                         if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                             entry.CoverImagePath = details.CoverImagePath;
@@ -1220,7 +1220,7 @@ public class MainViewModel : ViewModelBase
                 var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, SteamGridDbApiKeyOrNull);
                 if (details != null)
                 {
-                    if (_settings.AutoCategorizeFromSteam && (entry.Category == "Uncategorized" || entry.Category == "Steam") && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                    if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                         entry.Category = details.PrimaryGenre;
                     if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                         entry.CoverImagePath = details.CoverImagePath;
@@ -1372,7 +1372,7 @@ public class MainViewModel : ViewModelBase
         {
             var candidates = Games
                 .Where(card =>
-                    (card.Game.Category == "Uncategorized" || card.Game.Category == "Steam" || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId)) &&
+                    (card.Game.Category == LibraryConstants.Uncategorized || card.Game.Category == LibraryConstants.SteamCategory || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId)) &&
                     (card.Game.LastEnrichmentAttemptUtc == null || DateTime.UtcNow - card.Game.LastEnrichmentAttemptUtc.Value >= EnrichmentRetryInterval))
                 .ToList();
 
@@ -1437,7 +1437,7 @@ public class MainViewModel : ViewModelBase
     public void ApplyCategory(GameCardViewModel card, string newCategory)
     {
         if (string.IsNullOrWhiteSpace(newCategory))
-            newCategory = "Uncategorized";
+            newCategory = LibraryConstants.Uncategorized;
 
         card.Game.Category = newCategory.Trim();
         card.RefreshProperties();
@@ -1669,7 +1669,7 @@ public class MainViewModel : ViewModelBase
                         ExecutablePath = shortcut.TargetPath,
                         Arguments = shortcut.Arguments,
                         WorkingDirectory = shortcut.WorkingDirectory,
-                        Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized",
+                        Category = SelectedCategory != LibraryConstants.AllCategory ? SelectedCategory : LibraryConstants.Uncategorized,
                         IsSteamGame = shortcut.IsSteamUrl,
                         SteamAppId = onlineAppId
                     };
@@ -1888,7 +1888,7 @@ public class MainViewModel : ViewModelBase
                         Name = gameName,
                         ExecutablePath = c.ExePath,
                         WorkingDirectory = c.WorkingDirectory,
-                        Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized",
+                        Category = SelectedCategory != LibraryConstants.AllCategory ? SelectedCategory : LibraryConstants.Uncategorized,
                         SteamAppId = matchedAppId
                     };
 
@@ -1983,7 +1983,7 @@ public class MainViewModel : ViewModelBase
                 Name = finalName,
                 ExecutablePath = candidate.ExePath,
                 WorkingDirectory = candidate.WorkingDirectory,
-                Category = SelectedCategory != "All" ? SelectedCategory : "Uncategorized",
+                Category = SelectedCategory != LibraryConstants.AllCategory ? SelectedCategory : LibraryConstants.Uncategorized,
                 SteamAppId = matchedAppId
             };
 
@@ -2104,7 +2104,7 @@ public class MainViewModel : ViewModelBase
                         ExecutablePath = $"steam://rungameid/{d.AppId}",
                         IsSteamGame = true,
                         SteamAppId = d.AppId,
-                        Category = "Steam",
+                        Category = LibraryConstants.SteamCategory,
                         WorkingDirectory = d.InstallDir
                     };
 
@@ -2201,12 +2201,12 @@ public class MainViewModel : ViewModelBase
     {
         string previous = SelectedCategory;
         Categories.Clear();
-        Categories.Add("All");
-        Categories.Add("Favorites");
+        Categories.Add(LibraryConstants.AllCategory);
+        Categories.Add(LibraryConstants.FavoritesCategory);
 
         var distinctCategories = Games
             .Select(g => g.Category)
-            .Where(c => !string.IsNullOrWhiteSpace(c) && c != "All" && c != "Favorites")
+            .Where(c => !string.IsNullOrWhiteSpace(c) && c != LibraryConstants.AllCategory && c != LibraryConstants.FavoritesCategory)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(c => c);
 
@@ -2221,8 +2221,8 @@ public class MainViewModel : ViewModelBase
         }
         else
         {
-            _selectedCategory = "All";
-            _settings.LastCategoryFilter = "All";
+            _selectedCategory = LibraryConstants.AllCategory;
+            _settings.LastCategoryFilter = LibraryConstants.AllCategory;
             FilteredGames.Refresh();
         }
         OnPropertyChanged(nameof(SelectedCategory));
@@ -2235,7 +2235,7 @@ public class MainViewModel : ViewModelBase
         CategoryTabs.Clear();
         foreach (var cat in Categories)
         {
-            string display = cat == "All" ? "All Games" : cat == "Favorites" ? "Favorites" : cat;
+            string display = cat == LibraryConstants.AllCategory ? "All Games" : cat == LibraryConstants.FavoritesCategory ? LibraryConstants.FavoritesCategory : cat;
             bool isSelected = string.Equals(cat, SelectedCategory, StringComparison.OrdinalIgnoreCase);
             CategoryTabs.Add(new CategoryTabItem(cat, display, isSelected, SelectCategoryTab));
         }
@@ -2279,11 +2279,11 @@ public class MainViewModel : ViewModelBase
         if (obj is not GameCardViewModel card) return false;
 
         // Category filter
-        if (SelectedCategory == "Favorites")
+        if (SelectedCategory == LibraryConstants.FavoritesCategory)
         {
             if (!card.Game.IsFavorite) return false;
         }
-        else if (SelectedCategory != "All" &&
+        else if (SelectedCategory != LibraryConstants.AllCategory &&
             !card.Category.Equals(SelectedCategory, StringComparison.OrdinalIgnoreCase))
         {
             return false;
