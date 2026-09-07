@@ -213,7 +213,7 @@
                                     </DockPanel>
                                     <TextBlock Text="Enrich this game with high-res vertical box art, Steam reviews, specs, and news. Linking an App ID does not require Steam to run."
                                                FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                    <Grid>
+                                    <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
@@ -225,6 +225,15 @@
                                                 Style="{StaticResource ModernOutlineButton}" Padding="12,4"
                                                 ToolTip="Look up title and download poster artwork from Steam without changing launch protocol"/>
                                     </Grid>
+
+                                    <!-- Force Apply Steam Overlay Tag Option -->
+                                    <StackPanel Margin="0,2,0,2">
+                                        <CheckBox Content="Force apply Steam overlay tag" 
+                                                  IsChecked="{Binding ForceSteamOverlayTag}" 
+                                                  Style="{StaticResource ModernCheckBox}"/>
+                                        <TextBlock Text="Always display the STEAM badge overlay on this game's library card even when launched via executable." 
+                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -294,11 +303,20 @@
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"/>
 
                             <!-- Steam Client Protocol Toggle -->
-                            <StackPanel Margin="0,2,0,0">
+                            <StackPanel Margin="0,2,0,10">
                                 <CheckBox Content="Launch via Steam Client protocol (steam://rungameid/)" 
                                           IsChecked="{Binding IsSteamGame}" 
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Check this only if the game is installed in your local Steam library. Leave unchecked for standalone or non-Steam local executables." 
+                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                            </StackPanel>
+
+                            <!-- Force Steam Overlay Tag Toggle -->
+                            <StackPanel Margin="0,0,0,0">
+                                <CheckBox Content="Force apply Steam overlay tag" 
+                                          IsChecked="{Binding ForceSteamOverlayTag}" 
+                                          Style="{StaticResource ModernCheckBox}"/>
+                                <TextBlock Text="Always display the STEAM badge overlay on this game's library card, regardless of launch method or executable source." 
                                            FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                             </StackPanel>
                         </StackPanel>

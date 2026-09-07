@@ -332,6 +332,36 @@
             </Setter>
         </Style>
 
+        <!-- Favorite Star Toggle (Game Cards, List Rows, Details Dialog) -->
+        <Style x:Key="FavoriteToggleButton" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="ToolTip" Value="Toggle Favorite"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="11">
+                            <TextBlock x:Name="StarGlyph" Text="&#xE735;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
+                                       FontSize="13" Foreground="#99FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                <Setter TargetName="StarGlyph" Property="Text" Value="&#xE734;"/>
+                                <Setter TargetName="StarGlyph" Property="Foreground" Value="#FFD700"/>
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="StarGlyph" Property="Foreground" Value="#FFD700"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Modern Search & Input TextBox with Placeholder Support -->
         <Style x:Key="ModernTextBox" TargetType="TextBox">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>

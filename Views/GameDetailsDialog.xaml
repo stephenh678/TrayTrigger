@@ -72,12 +72,16 @@
                 </Grid.RowDefinitions>
 
                 <!-- Title & Genre Pill -->
-                <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="{Binding GameTitle}" FontSize="21" FontWeight="SemiBold" 
-                               Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding GenresDisplay}" FontSize="12.5" Foreground="{StaticResource BrushAccentHover}" 
-                               Margin="0,4,0,0" FontWeight="Medium"/>
-                </StackPanel>
+                <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Left" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
+                            VerticalAlignment="Top" Margin="0,2,10,0"/>
+                    <StackPanel>
+                        <TextBlock Text="{Binding GameTitle}" FontSize="21" FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding GenresDisplay}" FontSize="12.5" Foreground="{StaticResource BrushAccentHover}"
+                                   Margin="0,4,0,0" FontWeight="Medium"/>
+                    </StackPanel>
+                </DockPanel>
 
                 <!-- Dev, Pub, Release Date, Playtime & Category -->
                 <Grid Grid.Row="1" Margin="0,0,0,12">

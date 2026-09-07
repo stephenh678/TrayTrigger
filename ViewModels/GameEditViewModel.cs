@@ -29,6 +29,7 @@ public class GameEditViewModel : ViewModelBase
     private string _category;
     private string _hotkey;
     private bool _isSteamGame;
+    private bool _forceSteamOverlayTag;
     private string? _steamAppId;
     private string? _customIconPath;
     private BitmapImage? _iconPreview;
@@ -81,6 +82,7 @@ public class GameEditViewModel : ViewModelBase
         _category = string.IsNullOrWhiteSpace(game.Category) ? "Uncategorized" : game.Category;
         _hotkey = game.Hotkey;
         _isSteamGame = game.IsSteamGame;
+        _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
@@ -157,6 +159,12 @@ public class GameEditViewModel : ViewModelBase
     {
         get => _isSteamGame;
         set { _isSteamGame = value; OnPropertyChanged(); }
+    }
+
+    public bool ForceSteamOverlayTag
+    {
+        get => _forceSteamOverlayTag;
+        set { _forceSteamOverlayTag = value; OnPropertyChanged(); }
     }
 
     public string? SteamAppId
@@ -644,6 +652,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.Category = string.IsNullOrWhiteSpace(Category) ? "Uncategorized" : Category.Trim();
         SourceGame.Hotkey = Hotkey?.Trim() ?? string.Empty;
         SourceGame.IsSteamGame = IsSteamGame;
+        SourceGame.ForceSteamOverlayTag = ForceSteamOverlayTag;
         SourceGame.SteamAppId = string.IsNullOrWhiteSpace(SteamAppId) ? null : SteamAppId.Trim();
 
         // Handle custom icon caching

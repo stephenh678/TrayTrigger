@@ -36,6 +36,21 @@ public class GameDetailsViewModel : ViewModelBase
     public bool HasHotkey => !string.IsNullOrWhiteSpace(Game.Hotkey);
     public string? Hotkey => Game.Hotkey;
 
+    public bool IsFavorite
+    {
+        get => Game.IsFavorite;
+        set
+        {
+            if (Game.IsFavorite != value)
+            {
+                Game.IsFavorite = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public ICommand ToggleFavoriteCommand { get; }
+
     public SteamAppDetails? Details
     {
         get => _details;
@@ -228,6 +243,7 @@ public class GameDetailsViewModel : ViewModelBase
             _isLoading = false;
         }
 
+        ToggleFavoriteCommand = new RelayCommand(() => IsFavorite = !IsFavorite);
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
         EditGameCommand = new RelayCommand(ExecuteEdit);
         DeleteGameCommand = new RelayCommand(ExecuteDelete);

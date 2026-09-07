@@ -727,8 +727,15 @@ public class MainViewModel : ViewModelBase
             onViewDetails: OpenGameDetails,
             onEditSteamAppId: EditSteamAppId,
             onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
+            onToggleFavorite: ToggleFavorite,
             getUseVerticalPosterArt: () => UseVerticalPosterArt
         );
+    }
+
+    private void ToggleFavorite(GameCardViewModel card)
+    {
+        SaveLibrary();
+        FilteredGames.Refresh();
     }
 
     public void OpenGameDetails(GameCardViewModel card)
@@ -2075,10 +2082,11 @@ public class MainViewModel : ViewModelBase
         string previous = SelectedCategory;
         Categories.Clear();
         Categories.Add("All");
+        Categories.Add("Favorites");
 
         var distinctCategories = Games
             .Select(g => g.Category)
-            .Where(c => !string.IsNullOrWhiteSpace(c) && c != "All")
+            .Where(c => !string.IsNullOrWhiteSpace(c) && c != "All" && c != "Favorites")
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(c => c);
 
@@ -2105,7 +2113,7 @@ public class MainViewModel : ViewModelBase
         CategoryTabs.Clear();
         foreach (var cat in Categories)
         {
-            string display = cat == "All" ? "All Games" : cat;
+            string display = cat == "All" ? "All Games" : cat == "Favorites" ? "★ Favorites" : cat;
             bool isSelected = string.Equals(cat, SelectedCategory, StringComparison.OrdinalIgnoreCase);
             CategoryTabs.Add(new CategoryTabItem(cat, display, isSelected, SelectCategoryTab));
         }
@@ -2145,7 +2153,11 @@ public class MainViewModel : ViewModelBase
         if (obj is not GameCardViewModel card) return false;
 
         // Category filter
-        if (SelectedCategory != "All" &&
+        if (SelectedCategory == "Favorites")
+        {
+            if (!card.Game.IsFavorite) return false;
+        }
+        else if (SelectedCategory != "All" &&
             !card.Category.Equals(SelectedCategory, StringComparison.OrdinalIgnoreCase))
         {
             return false;
