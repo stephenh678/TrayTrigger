@@ -238,22 +238,6 @@ public static partial class GameNameExtractor
         return new GameResolutionResult(localName, null, null);
     }
 
-    /// <summary>
-    /// Resolves the game name, checking local executable metadata first, and optionally querying Steam online for the official commercial title.
-    /// </summary>
-    public static async Task<string> ResolveGameNameAsync(
-        string exePath, 
-        string? folderFallback = null, 
-        bool preferExe = true, 
-        bool searchOnline = true, 
-        SteamSearchService? steamSearch = null,
-        double minConfidence = SteamSearchService.DefaultMinConfidence,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await ResolveGameMatchAsync(exePath, folderFallback, preferExe, searchOnline, steamSearch, minConfidence, cancellationToken).ConfigureAwait(false);
-        return result.ResolvedTitle;
-    }
-
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
 

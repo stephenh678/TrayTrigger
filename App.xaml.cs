@@ -122,15 +122,6 @@ public partial class App : Application
             args.Handled = true;
         };
 
-        // Apply dark titlebar to all windows automatically
-        EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, _) =>
-        {
-            if (s is Window w)
-            {
-                WindowThemeService.ApplyDarkTitleBar(w);
-            }
-        }));
-
         Log("Application starting...");
 
 #if DEBUG

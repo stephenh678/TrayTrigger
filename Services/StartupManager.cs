@@ -55,25 +55,6 @@ public class StartupManager
         }
     }
 
-    public bool IsStartupMinimized()
-    {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, false);
-            if (key == null) return true;
-
-            var val = key.GetValue(AppName) as string;
-            if (string.IsNullOrWhiteSpace(val)) return true;
-
-            return val.Contains("--minimized", StringComparison.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("StartupManager", $"Error checking startup minimized flag: {ex.Message}");
-            return true;
-        }
-    }
-
     public void SetStartupEnabled(bool enabled, bool startMinimized = true)
     {
         try
