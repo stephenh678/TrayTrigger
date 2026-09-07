@@ -292,6 +292,13 @@ public class MainViewModel : ViewModelBase
 
         LoadLibrary();
 
+        if (_storageService.SettingsLoadWarning != null || _storageService.GamesLoadWarning != null)
+        {
+            string warning = string.Join(" ", new[] { _storageService.SettingsLoadWarning, _storageService.GamesLoadWarning }
+                .Where(w => w != null));
+            ModernDialog.ShowWarning(null, "Data File Recovered", warning);
+        }
+
         // Schedule quiet background check for updates if enabled: once shortly after
         // launch, then again every 24 hours for as long as the app keeps running.
         _ = Task.Run(async () =>
