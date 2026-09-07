@@ -296,7 +296,7 @@ public class SystemViewModel : ViewModelBase
         SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
         SelectTweaksTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.PerformanceTweaks);
-        RefreshSpecsCommand = new RelayCommand(async () => await LoadHardwareSpecsAsync());
+        RefreshSpecsCommand = new AsyncRelayCommand(async () => await LoadHardwareSpecsAsync());
         RefreshTweaksCommand = new RelayCommand(RefreshAllTweaks);
         ApplyRecommendedPresetCommand = new RelayCommand(ExecuteApplyPreset);
         ResetDefaultsCommand = new RelayCommand(ExecuteResetDefaults);

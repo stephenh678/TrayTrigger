@@ -1,5 +1,7 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
@@ -36,6 +38,57 @@ public class RelayCommand : ICommand
     public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
 
     public void Execute(object? parameter) => _execute(parameter);
+
+    public void RaiseCanExecuteChanged()
+    {
+        CommandManager.InvalidateRequerySuggested();
+    }
+}
+
+/// <summary>
+/// An ICommand for async handlers. Plain `new RelayCommand(async () => await X())` compiles
+/// to `async void`, which lets any exception escape straight to the process-wide unhandled
+/// exception handler instead of being observable/catchable at the call site; this awaits the
+/// handler inside a try/catch and logs instead. See L-07.
+/// </summary>
+public class AsyncRelayCommand : ICommand
+{
+    private readonly Func<Task> _execute;
+    private readonly Predicate<object?>? _canExecute;
+
+    public AsyncRelayCommand(Func<Task> execute, Func<bool>? canExecute = null)
+    {
+        _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+        _canExecute = canExecute != null ? _ => canExecute() : null;
+    }
+
+    public event EventHandler? CanExecuteChanged
+    {
+        add
+        {
+            if (_canExecute != null)
+                CommandManager.RequerySuggested += value;
+        }
+        remove
+        {
+            if (_canExecute != null)
+                CommandManager.RequerySuggested -= value;
+        }
+    }
+
+    public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
+
+    public async void Execute(object? parameter)
+    {
+        try
+        {
+            await _execute();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("AsyncRelayCommand", $"Unhandled exception in async command: {ex.Message}", ex);
+        }
+    }
 
     public void RaiseCanExecuteChanged()
     {

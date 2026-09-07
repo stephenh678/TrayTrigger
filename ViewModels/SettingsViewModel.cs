@@ -197,7 +197,7 @@ public class SettingsViewModel : ViewModelBase
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
         OpenSteamImportCommand = new RelayCommand(() => _onRequestOpenSteamImport?.Invoke());
-        RefreshAllPostersCommand = new RelayCommand(async () =>
+        RefreshAllPostersCommand = new AsyncRelayCommand(async () =>
         {
             if (_onRequestRefreshAllPosters == null || IsRefreshingAllPosters)
                 return;
@@ -212,7 +212,7 @@ public class SettingsViewModel : ViewModelBase
                 IsRefreshingAllPosters = false;
             }
         });
-        CheckUpdatesInSettingsCommand = new RelayCommand(async () => await CheckForUpdatesAsync(true));
+        CheckUpdatesInSettingsCommand = new AsyncRelayCommand(async () => await CheckForUpdatesAsync(true));
     }
 
     // --- Windows Startup & System Tray Integration ---
