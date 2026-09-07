@@ -31,23 +31,13 @@
 </p>
 
 <p align="center">
-  <img src="Assets/screenshots/library-list.png" width="800" alt="Games library, details list view"><br>
-  <em>Details list view for scanning category, playtime, and last-played at a glance</em>
-</p>
-
-<p align="center">
-  <img src="Assets/screenshots/system-hardware.png" width="800" alt="Live hardware telemetry"><br>
+  <img src="Assets/screenshots/system-hardware.png" width="800" alt="Live hardware telemetry and system specs"><br>
   <em>Live hardware telemetry: GPU, display, CPU load, RAM, and storage</em>
 </p>
 
 <p align="center">
-  <img src="Assets/screenshots/system-tweaks.png" width="800" alt="Performance tweaks"><br>
-  <em>One-click, verified performance tweaks for input latency and frame pacing</em>
-</p>
-
-<p align="center">
-  <img src="Assets/screenshots/about-features.png" width="800" alt="About and key features"><br>
-  <em>In-app overview of key features and diagnostics</em>
+  <img src="Assets/screenshots/about-features.png" width="800" alt="About page, key features"><br>
+  <em>In-app overview of key features, shortcuts, and diagnostics</em>
 </p>
 
 ---
@@ -66,16 +56,18 @@
 - **Automated Icon Extraction**: Extracts crisp 32-bit icons directly from executables, shortcuts (`.lnk`), and game folders with procedural fallback badge generation.
 - **Drag & Drop Importing**: Simply drag executables or shortcuts onto the window to automatically add games to your library.
 - **Batch Folder Scanner**: Scan entire game drives or directories with intelligent executable scoring to filter out uninstaller and launcher binaries.
+- **Favorites & Categories**: Pin favorite games to the top of the tray menu and library, and organize the rest into custom categories.
 
-### ⚡ System Specs & Gaming Optimization Tweaks
+### 🎯 Game-Level Performance Profiles
+- **Per-Game Optimized / Aggressive Profiles**: Assign each game its own tweak tier from Edit Game. Optimized applies your custom high-performance power plan and GPU preference; Aggressive layers on System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, and an off-by-default Windows Defender exclusion.
+- **Session-Scoped, Zero Manual Cleanup**: Tweaks apply the moment a game launches (Steam or direct `.exe`) and revert to your exact prior settings the moment it closes - nothing is ever assumed back to a generic default.
+- **Crash-Safe**: If TrayTrigger or your PC crashes mid-session, the next launch detects and restores your pre-game state automatically.
+
+### ⚡ Verified System-Wide Performance Tweaks
 - **Live Hardware Telemetry**: Instant breakdown of CPU, GPU, VRAM, RAM, Displays, Motherboard, BIOS, OS version, and DirectX capability.
-- **Performance Diagnostics**: Scan and audit 10 critical Windows performance settings with 1-click toggle optimization:
-  - Disable Enhanced Pointer Precision (enforces 1:1 raw mouse input)
-  - Hardware-Accelerated GPU Scheduling (HAGS)
-  - Windows Game Mode & Xbox Game Bar
-  - Ultimate Performance Power Plan activation
-  - Windows Visual Effects optimization
-  - Network Throttling & Multimedia Network optimizations
+- **15 Verified Windows Tweaks** across Input & Display, CPU & Scheduling, Network & Background, and Security & Advanced - each grounded in Microsoft documentation rather than folklore: mouse acceleration, Hardware-Accelerated GPU Scheduling (HAGS), Game Mode, System Timer Resolution, MMCSS network throttling, Delivery Optimization, Game DVR, Xbox Game Bar, telemetry, and more.
+- **Opt-In Tweaks**: Situational or tradeoff-heavy tweaks (Windows Visual Effects, Disable Nagle's Algorithm, a permanent Ultimate Performance power plan) stay off by default and clearly badged, so nothing with a real downside applies without you choosing it.
+- **System Restore Point Safety Net**: Optional automatic restore point before any bulk tweak apply or reset.
 
 ### ⚙️ Customizable Settings & Reliable Storage
 - **Single-Source of Truth**: Unified settings for startup, window behaviors, sort options, and theme preferences.
