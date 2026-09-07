@@ -737,18 +737,18 @@ public class MainViewModel : ViewModelBase
         var cardsSnapshot = Games.ToList();
         _ = Task.Run(() =>
         {
-            var results = new List<(GameCardViewModel Card, bool IsMissing, System.Windows.Media.Imaging.BitmapImage? Icon, System.Windows.Media.Imaging.BitmapImage? Cover)>();
+            var results = new List<(GameCardViewModel Card, bool IsMissing, System.Windows.Media.Imaging.BitmapImage? Icon, DateTime? IconWriteTimeUtc, System.Windows.Media.Imaging.BitmapImage? Cover, DateTime? CoverWriteTimeUtc)>();
             foreach (var card in cardsSnapshot)
             {
-                var (isMissing, icon, cover) = card.ComputeHeavyState();
-                results.Add((card, isMissing, icon, cover));
+                var (isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) = card.ComputeHeavyState();
+                results.Add((card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc));
             }
 
             Application.Current?.Dispatcher.Invoke(() =>
             {
-                foreach (var (card, isMissing, icon, cover) in results)
+                foreach (var (card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) in results)
                 {
-                    card.ApplyHeavyState(isMissing, icon, cover);
+                    card.ApplyHeavyState(isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
                 }
             });
         });

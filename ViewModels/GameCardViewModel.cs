@@ -29,6 +29,10 @@ public class GameCardViewModel : ViewModelBase
     private BitmapImage? _iconImage;
     private BitmapImage? _coverImage;
     private bool _isMissing;
+    private string? _loadedIconPath;
+    private DateTime? _loadedIconWriteTimeUtc;
+    private string? _loadedCoverPath;
+    private DateTime? _loadedCoverWriteTimeUtc;
 
     public GameEntry Game { get; }
 
@@ -107,22 +111,30 @@ public class GameCardViewModel : ViewModelBase
     /// IconExtractorService.LoadBitmapSafely freezes the BitmapImages it returns). Pair with
     /// <see cref="ApplyHeavyState"/> on the UI thread to actually update the card.
     /// </summary>
-    public (bool IsMissing, BitmapImage? Icon, BitmapImage? Cover) ComputeHeavyState()
+    public (bool IsMissing, BitmapImage? Icon, DateTime? IconWriteTimeUtc, BitmapImage? Cover, DateTime? CoverWriteTimeUtc) ComputeHeavyState()
     {
         bool isMissing = !IsSteamGame && !string.IsNullOrWhiteSpace(Game.ExecutablePath) && !File.Exists(Game.ExecutablePath);
         var icon = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 64);
         var cover = !string.IsNullOrWhiteSpace(Game.CoverImagePath)
             ? IconExtractorService.LoadBitmapSafely(Game.CoverImagePath, decodePixelWidth: 368)
             : null;
-        return (isMissing, icon, cover);
+        return (isMissing, icon, SafeGetLastWriteTimeUtc(Game.IconPath), cover, SafeGetLastWriteTimeUtc(Game.CoverImagePath));
     }
 
-    /// <summary>Applies a result from <see cref="ComputeHeavyState"/>. Must run on the UI thread.</summary>
-    public void ApplyHeavyState(bool isMissing, BitmapImage? icon, BitmapImage? cover)
+    /// <summary>
+    /// Applies a result from <see cref="ComputeHeavyState"/>. Must run on the UI thread. Also
+    /// records what was loaded so a later <see cref="ReloadIcon"/>/<see cref="ReloadCover"/> (e.g.
+    /// from RefreshProperties during enrichment right after startup) can skip re-decoding.
+    /// </summary>
+    public void ApplyHeavyState(bool isMissing, BitmapImage? icon, DateTime? iconWriteTimeUtc, BitmapImage? cover, DateTime? coverWriteTimeUtc)
     {
         IsMissing = isMissing;
         IconImage = icon;
+        _loadedIconPath = Game.IconPath;
+        _loadedIconWriteTimeUtc = iconWriteTimeUtc;
         CoverImage = cover;
+        _loadedCoverPath = Game.CoverImagePath;
+        _loadedCoverWriteTimeUtc = coverWriteTimeUtc;
     }
 
     public string Id => Game.Id;
@@ -213,16 +225,45 @@ public class GameCardViewModel : ViewModelBase
         ? $"Steam App ID: {SteamAppId}\nClick to update App ID or re-match metadata" 
         : "Click to link a Steam App ID for artwork and info";
 
-    public void ReloadIcon()
+    /// <summary>File.Exists + GetLastWriteTimeUtc, thread-safe, never throws.</summary>
+    private static DateTime? SafeGetLastWriteTimeUtc(string? path)
     {
-        IconImage = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 64);
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+        try { return File.GetLastWriteTimeUtc(path); } catch { return null; }
     }
 
+    /// <summary>
+    /// Re-decodes the icon only if the path or the file's last-write time changed since the last
+    /// load - a launch or playtime tick calls this every time nothing about the icon actually
+    /// changed, so re-decoding unconditionally wasted a full bitmap decode for no reason.
+    /// </summary>
+    public void ReloadIcon()
+    {
+        var writeTimeUtc = SafeGetLastWriteTimeUtc(Game.IconPath);
+        if (_loadedIconPath == Game.IconPath && _loadedIconWriteTimeUtc == writeTimeUtc)
+        {
+            return;
+        }
+
+        IconImage = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 64);
+        _loadedIconPath = Game.IconPath;
+        _loadedIconWriteTimeUtc = writeTimeUtc;
+    }
+
+    /// <summary>Same skip-if-unchanged behavior as <see cref="ReloadIcon"/>, for the cover art.</summary>
     public void ReloadCover()
     {
+        var writeTimeUtc = SafeGetLastWriteTimeUtc(Game.CoverImagePath);
+        if (_loadedCoverPath == Game.CoverImagePath && _loadedCoverWriteTimeUtc == writeTimeUtc)
+        {
+            return;
+        }
+
         CoverImage = !string.IsNullOrWhiteSpace(Game.CoverImagePath)
             ? IconExtractorService.LoadBitmapSafely(Game.CoverImagePath, decodePixelWidth: 368)
             : null;
+        _loadedCoverPath = Game.CoverImagePath;
+        _loadedCoverWriteTimeUtc = writeTimeUtc;
         OnPropertyChanged(nameof(ShowPosterArt));
     }
 
