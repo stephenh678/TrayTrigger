@@ -203,7 +203,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **How to verify:** Put one game in category "Test", select the Test tab, delete the game. The grid must show all games.
 
 ### M-04 Renaming a game does not re-sort the grid
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Added `FilteredGames.Refresh()` to `ApplyRename` (`ViewModels/MainViewModel.cs`) and to `OnRequestEditGameDialog`'s success path (`MainWindow.xaml.cs`, after a successful Edit dialog), matching the sibling `ApplyCategory` method which already did this. Went with the finding's first suggested option (explicit `Refresh()` calls) rather than enabling `IsLiveSorting`, since it's the smaller, more targeted change. Traced that `FilteredGames.SortDescriptions` stays populated by `ApplySort()` for the life of the view, so a manual `Refresh()` re-filters *and* re-sorts against the current sort option, not just re-filters. Release build: 0 warnings, 0 errors. Could not run the manual GUI verification (rename "Alpha" to "Zulu" in A-Z sort, confirm it jumps to the end immediately) - no tool in this session can drive the native WPF grid/rename dialog. Verified by tracing the collection-view refresh/sort behavior only.
 - **Confidence:** CONFIRMED
 - **Category:** UX
 - **Files:** `ViewModels/MainViewModel.cs:1343-1351` (ApplyRename), `MainWindow.xaml.cs:199-205` (after Edit dialog)
