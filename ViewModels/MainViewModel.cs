@@ -1233,6 +1233,32 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    // Shared tail of every import pipeline (file drop, folder scan, batch import, Steam import):
+    // cache the icon, then enrich from Steam metadata. See L-12.
+    private async Task FinalizeNewEntryAsync(GameEntry entry, string iconSourcePath)
+    {
+        entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, iconSourcePath, entry.Name);
+        await EnrichGameWithSteamMetadataAsync(entry);
+    }
+
+    // Shared commit step of every import pipeline: add the prepared entries to the visible
+    // library and refresh everything that depends on it. See L-12.
+    private void CommitImportedEntries(IEnumerable<GameEntry> entries, string statusMessage)
+    {
+        foreach (var entry in entries)
+        {
+            Games.Add(CreateCardViewModel(entry));
+        }
+
+        RebuildCategories();
+        SaveLibrary();
+        UpdateHotkeys();
+        ApplySort();
+        StatusMessage = statusMessage;
+        OnPropertyChanged(nameof(TotalGameCount));
+        OnPropertyChanged(nameof(TotalGameCountDisplay));
+    }
+
     private const int MaxConcurrentEnrichments = 4;
     private static readonly TimeSpan EnrichmentRetryInterval = TimeSpan.FromDays(7);
 
@@ -1587,7 +1613,7 @@ public class MainViewModel : ViewModelBase
         _isImportInProgress = true;
         try
         {
-            int addedCount = 0;
+            var addedEntries = new List<GameEntry>();
             foreach (var file in nonFolderFiles)
             {
                 if (string.IsNullOrWhiteSpace(file)) continue;
@@ -1650,11 +1676,8 @@ public class MainViewModel : ViewModelBase
 
                     // Extract & cache icon
                     string iconSource = !string.IsNullOrEmpty(shortcut.IconLocation) ? shortcut.IconLocation : shortcut.TargetPath;
-                    entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, iconSource, entry.Name);
-
-                    await EnrichGameWithSteamMetadataAsync(entry);
-                    Games.Add(CreateCardViewModel(entry));
-                    addedCount++;
+                    await FinalizeNewEntryAsync(entry, iconSource);
+                    addedEntries.Add(entry);
                 }
                 catch (Exception ex)
                 {
@@ -1662,15 +1685,9 @@ public class MainViewModel : ViewModelBase
                 }
             }
 
-            if (addedCount > 0)
+            if (addedEntries.Count > 0)
             {
-                RebuildCategories();
-                SaveLibrary();
-                UpdateHotkeys();
-                ApplySort();
-                StatusMessage = $"Added {addedCount} new game(s) instantly!";
-                OnPropertyChanged(nameof(TotalGameCount));
-                OnPropertyChanged(nameof(TotalGameCountDisplay));
+                CommitImportedEntries(addedEntries, $"Added {addedEntries.Count} new game(s) instantly!");
             }
         }
         catch (Exception ex)
@@ -1875,8 +1892,7 @@ public class MainViewModel : ViewModelBase
                         SteamAppId = matchedAppId
                     };
 
-                    entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, entry.ExecutablePath, entry.Name);
-                    await EnrichGameWithSteamMetadataAsync(entry);
+                    await FinalizeNewEntryAsync(entry, entry.ExecutablePath);
                     preparedEntries.Add(entry);
                 }
                 catch (Exception ex)
@@ -1893,20 +1909,10 @@ public class MainViewModel : ViewModelBase
 
             if (!preparedEntries.IsEmpty)
             {
-                foreach (var entry in preparedEntries)
-                {
-                    Games.Add(CreateCardViewModel(entry));
-                }
-
-                RebuildCategories();
-                SaveLibrary();
-                UpdateHotkeys();
-                ApplySort();
-                StatusMessage = skippedDuplicates > 0
+                string status = skippedDuplicates > 0
                     ? $"Added {preparedEntries.Count} games from folder! ({skippedDuplicates} already in library, skipped)"
                     : $"Added {preparedEntries.Count} games from folder!";
-                OnPropertyChanged(nameof(TotalGameCount));
-                OnPropertyChanged(nameof(TotalGameCountDisplay));
+                CommitImportedEntries(preparedEntries, status);
             }
         }
         catch (Exception ex)
@@ -1981,16 +1987,8 @@ public class MainViewModel : ViewModelBase
                 SteamAppId = matchedAppId
             };
 
-            entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, entry.ExecutablePath, entry.Name);
-            await EnrichGameWithSteamMetadataAsync(entry);
-            Games.Add(CreateCardViewModel(entry));
-            RebuildCategories();
-            SaveLibrary();
-            UpdateHotkeys();
-            ApplySort();
-            StatusMessage = $"Added \"{entry.Name}\" to library!";
-            OnPropertyChanged(nameof(TotalGameCount));
-            OnPropertyChanged(nameof(TotalGameCountDisplay));
+            await FinalizeNewEntryAsync(entry, entry.ExecutablePath);
+            CommitImportedEntries([entry], $"Added \"{entry.Name}\" to library!");
         }
         catch (Exception ex)
         {
@@ -2110,13 +2108,8 @@ public class MainViewModel : ViewModelBase
                         WorkingDirectory = d.InstallDir
                     };
 
-                    entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(
-                        entry.Id,
-                        !string.IsNullOrEmpty(d.IconPath) ? d.IconPath : (d.ExePath ?? string.Empty),
-                        entry.Name
-                    );
-
-                    await EnrichGameWithSteamMetadataAsync(entry);
+                    string iconSource = !string.IsNullOrEmpty(d.IconPath) ? d.IconPath : (d.ExePath ?? string.Empty);
+                    await FinalizeNewEntryAsync(entry, iconSource);
                     preparedEntries.Add(entry);
                 }
                 catch (Exception ex)
@@ -2133,20 +2126,10 @@ public class MainViewModel : ViewModelBase
 
             if (!preparedEntries.IsEmpty)
             {
-                foreach (var entry in preparedEntries)
-                {
-                    Games.Add(CreateCardViewModel(entry));
-                }
-
-                RebuildCategories();
-                SaveLibrary();
-                UpdateHotkeys();
-                ApplySort();
-                StatusMessage = skippedDuplicates > 0
+                string status = skippedDuplicates > 0
                     ? $"Imported {preparedEntries.Count} Steam game(s)! ({skippedDuplicates} already in library, skipped)"
                     : $"Imported {preparedEntries.Count} Steam game(s)!";
-                OnPropertyChanged(nameof(TotalGameCount));
-                OnPropertyChanged(nameof(TotalGameCountDisplay));
+                CommitImportedEntries(preparedEntries, status);
             }
         }
         catch (Exception ex)
