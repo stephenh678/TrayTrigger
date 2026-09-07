@@ -1243,8 +1243,7 @@ public partial class SystemTweaksService
                 Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardOutput = true
             };
             using var proc = Process.Start(psi);
             if (proc == null) return string.Empty;

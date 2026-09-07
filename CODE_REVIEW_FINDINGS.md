@@ -406,7 +406,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **What:** `new System.Drawing.Icon(resInfo.Stream)` copies the data; wrap the stream in `using`.
 
 ### L-03 `RunPowercfg` redirects stderr but never reads it
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Re-verified: `RedirectStandardError = true` was set but nothing ever read `proc.StandardError`, so a child that wrote enough to stderr to fill its pipe buffer could deadlock against the `ReadToEnd()`/`WaitForExit(5000)` pair. Applied the suggested fix's simpler option: removed `RedirectStandardError = true` entirely (stderr is never used for anything - not logged, not returned), so the child's stderr now inherits the parent's (or is discarded, same as before the redirect existed) and can never block on a full pipe. Release build: 0 warnings, 0 errors. Verified with a reflection-based harness (`C:\hkt1`, referencing the built `TrayTrigger.dll`) calling the private `RunPowercfg("/getactivescheme")` directly (a read-only query, safe to run for real): returned real output in 15ms with no timeout, confirming the normal path still works correctly. Did not reproduce a stderr-pipe-fill deadlock specifically (would require an artificial powercfg invocation producing enough stderr to fill the OS pipe buffer, not practical to construct safely); the fix removes the mechanism that could cause it.
 - **Files:** `Services/SystemTweaksService.cs:1155-1180`
 - **What:** If stderr fills its pipe buffer the child blocks and `WaitForExit(5000)` times out. Either read stderr asynchronously (`BeginErrorReadLine`) or set `RedirectStandardError = false`.
 
