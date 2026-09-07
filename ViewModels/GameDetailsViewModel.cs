@@ -59,6 +59,7 @@ public class GameDetailsViewModel : ViewModelBase
             if (_details != value)
             {
                 _details = value;
+                InvalidateCoverImageCache();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(GameTitle));
                 OnPropertyChanged(nameof(HasDetails));
@@ -120,10 +121,28 @@ public class GameDetailsViewModel : ViewModelBase
         ? _details.ShortDescription 
         : "No synopsis available for this title.";
 
+    private bool _coverImageCached;
+    private ImageSource? _cachedCoverImage;
+
+    // DisplayCoverImage used to decode from disk (or start a fresh remote download) on every
+    // read, and WPF reads bound properties often; cache the result and only recompute when the
+    // underlying data actually changes (Details setter / the explicit sync-back in
+    // LoadDetailsAsync both call this). See L-18.
+    private void InvalidateCoverImageCache()
+    {
+        _coverImageCached = false;
+        _cachedCoverImage = null;
+    }
+
     public ImageSource? DisplayCoverImage
     {
         get
         {
+            if (_coverImageCached)
+            {
+                return _cachedCoverImage;
+            }
+
             string? localPath = null;
             if (!string.IsNullOrWhiteSpace(_details?.CoverImagePath) && File.Exists(_details.CoverImagePath))
                 localPath = _details.CoverImagePath;
@@ -132,12 +151,13 @@ public class GameDetailsViewModel : ViewModelBase
             else if (!string.IsNullOrWhiteSpace(Game.IconPath) && File.Exists(Game.IconPath))
                 localPath = Game.IconPath;
 
+            ImageSource? result = null;
+
             if (localPath != null)
             {
-                return IconExtractorService.LoadBitmapSafely(localPath, decodePixelWidth: 340);
+                result = IconExtractorService.LoadBitmapSafely(localPath, decodePixelWidth: 340);
             }
-
-            if (!string.IsNullOrWhiteSpace(_details?.HeaderImageUrl))
+            else if (!string.IsNullOrWhiteSpace(_details?.HeaderImageUrl))
             {
                 try
                 {
@@ -146,13 +166,19 @@ public class GameDetailsViewModel : ViewModelBase
                     bmp.UriSource = new Uri(_details.HeaderImageUrl, UriKind.Absolute);
                     bmp.CacheOption = BitmapCacheOption.OnLoad;
                     bmp.EndInit();
-                    bmp.Freeze();
-                    return bmp;
+                    // A remote UriSource loads asynchronously regardless of CacheOption;
+                    // Freeze() throws while it's still downloading (IsDownloading == true),
+                    // which the old code swallowed silently here, so this fallback never
+                    // actually returned an image. Skip Freeze() instead - this ImageSource is
+                    // only ever bound on the UI thread, so cross-thread freezing isn't needed.
+                    result = bmp;
                 }
                 catch { }
             }
 
-            return null;
+            _cachedCoverImage = result;
+            _coverImageCached = true;
+            return result;
         }
     }
 
@@ -314,6 +340,7 @@ public class GameDetailsViewModel : ViewModelBase
                 if (!string.IsNullOrWhiteSpace(loaded.CoverImagePath) && (string.IsNullOrWhiteSpace(Game.CoverImagePath) || !File.Exists(Game.CoverImagePath)))
                 {
                     Game.CoverImagePath = loaded.CoverImagePath;
+                    InvalidateCoverImageCache();
                     OnPropertyChanged(nameof(DisplayCoverImage));
                 }
 
