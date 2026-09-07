@@ -331,7 +331,8 @@ public class GameDetailsViewModel : ViewModelBase
 
             // Always fetch with forceRefresh: true so that every time a card is clicked,
             // fresh news, reviews, and specs are updated in the background.
-            var loaded = await _steamMetadataService.GetAppDetailsAsync(targetAppId, _steamGridDbApiKey, forceRefresh: true);
+            bool noStoreData = false;
+            var loaded = await _steamMetadataService.GetAppDetailsAsync(targetAppId, _steamGridDbApiKey, forceRefresh: true, onNoStoreData: _ => noStoreData = true);
             if (loaded != null)
             {
                 Details = loaded;
@@ -355,7 +356,11 @@ public class GameDetailsViewModel : ViewModelBase
             }
             else if (_details == null)
             {
-                ErrorMessage = $"Could not retrieve metadata from Steam for App ID {targetAppId}. Check internet connection.";
+                // Distinguish a real "Steam has no store data for this AppId" (delisted /
+                // region-locked) response from an actual transport/network failure. See L-25.
+                ErrorMessage = noStoreData
+                    ? $"Steam has no store page for App ID {targetAppId}. It may have been delisted or is region-locked."
+                    : $"Could not retrieve metadata from Steam for App ID {targetAppId}. Check internet connection.";
             }
         }
         catch (Exception ex)

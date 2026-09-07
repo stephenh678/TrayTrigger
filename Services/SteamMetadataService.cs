@@ -116,7 +116,15 @@ public partial class SteamMetadataService
         }
     }
 
-    public async Task<SteamAppDetails?> GetAppDetailsAsync(string appId, string? steamGridDbApiKey = null, bool forceRefresh = false, CancellationToken cancellationToken = default)
+    /// <param name="onNoStoreData">
+    /// Optional callback invoked with true when Steam responded successfully (HTTP 200) but
+    /// explicitly reported no store data for this AppId (`"success": false` - a delisted or
+    /// region-locked app), as opposed to a transport/network failure. Callers that want to show
+    /// a different message for that case (rather than "check your internet connection") can pass
+    /// this instead of the two outcomes being indistinguishable through the null return alone.
+    /// See L-25.
+    /// </param>
+    public async Task<SteamAppDetails?> GetAppDetailsAsync(string appId, string? steamGridDbApiKey = null, bool forceRefresh = false, CancellationToken cancellationToken = default, Action<bool>? onNoStoreData = null)
     {
         if (string.IsNullOrWhiteSpace(appId))
             return null;
@@ -157,6 +165,14 @@ public partial class SteamMetadataService
                         appElement.TryGetProperty("data", out var data))
                     {
                         ParseAppDetailsData(data, details);
+                    }
+                    else if (doc.RootElement.TryGetProperty(trimmedId, out var noDataElement) &&
+                        noDataElement.TryGetProperty("success", out var noDataSuccessProp) &&
+                        !noDataSuccessProp.GetBoolean())
+                    {
+                        // A real Steam response explicitly saying "no store data for this AppId"
+                        // (delisted/region-locked) - distinct from a transport/network failure.
+                        onNoStoreData?.Invoke(true);
                     }
                 }
 
