@@ -433,21 +433,21 @@
                     <Border Grid.Column="2" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
                             BorderThickness="1" CornerRadius="6" Padding="3">
                         <StackPanel Orientation="Horizontal">
-                            <Button ToolTip="Poster Grid View" Command="{Binding SetViewModeCommand}" CommandParameter="Poster Grid"
+                            <Button ToolTip="Poster Grid View" Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
                                     Width="32" Height="30" Padding="0" Cursor="Hand"
-                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsGridView}">
+                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsGridView}">
                                 <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
-                            <Button ToolTip="Compact Icons View" Command="{Binding SetViewModeCommand}" CommandParameter="Compact Icons"
+                            <Button ToolTip="Compact Icons View" Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Compact Icons"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
-                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsIconsView}">
+                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsIconsView}">
                                 <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
-                            <Button ToolTip="Details List View" Command="{Binding SetViewModeCommand}" CommandParameter="Details List"
+                            <Button ToolTip="Details List View" Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Details List"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
-                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsListView}">
+                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsListView}">
                                 <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
@@ -532,7 +532,7 @@
                                 <Style.Triggers>
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding IsListView}" Value="False"/>
+                                            <Condition Binding="{Binding SettingsVM.IsListView}" Value="False"/>
                                             <Condition Binding="{Binding FilteredGames.IsEmpty}" Value="False"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -550,7 +550,7 @@
                                     <Style TargetType="ItemsControl">
                                         <Setter Property="Visibility" Value="Visible"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsGridView}" Value="False">
+                                            <DataTrigger Binding="{Binding SettingsVM.IsGridView}" Value="False">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -817,7 +817,7 @@
                                     <Style TargetType="ItemsControl">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsIconsView}" Value="True">
+                                            <DataTrigger Binding="{Binding SettingsVM.IsIconsView}" Value="True">
                                                 <Setter Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -962,7 +962,7 @@
                                 <Style.Triggers>
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding IsListView}" Value="True"/>
+                                            <Condition Binding="{Binding SettingsVM.IsListView}" Value="True"/>
                                             <Condition Binding="{Binding FilteredGames.IsEmpty}" Value="False"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>

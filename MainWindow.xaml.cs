@@ -193,7 +193,7 @@ public partial class MainWindow : Window
             card.Game, 
             _viewModel.Categories, 
             _viewModel.IconExtractorService, 
-            steamGridDbApiKey: _viewModel.SteamGridDbApiKeyOrNull,
+            steamGridDbApiKey: _viewModel.SettingsVM.SteamGridDbApiKeyOrNull,
             minConfidence: _viewModel.Settings.OnlineMatchConfidenceThreshold);
         editDialog.Owner = this;
         if (editDialog.ShowDialog() == true)

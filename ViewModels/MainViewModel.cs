@@ -388,7 +388,7 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(SidebarToggleTooltip));
                 OnPropertyChanged(nameof(SidebarToggleLabel));
                 OnPropertyChanged(nameof(SidebarToggleChevron));
-                AutoSaveSettings();
+                SettingsVM.AutoSaveSettings();
             }
         }
     }
@@ -600,62 +600,6 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    // Delegated settings commands
-    public ICommand SaveInWindowSettingsCommand => SettingsVM.SaveInWindowSettingsCommand;
-    public ICommand ResetSettingsCommand => SettingsVM.ResetSettingsCommand;
-    public ICommand OpenStorageFolderCommand => SettingsVM.OpenStorageFolderCommand;
-    public ICommand OpenCacheFolderCommand => SettingsVM.OpenCacheFolderCommand;
-    public ICommand SetViewModeCommand => SettingsVM.SetViewModeCommand;
-    public ICommand OpenLogFileCommand => SettingsVM.OpenLogFileCommand;
-    public ICommand ClearLogCommand => SettingsVM.ClearLogCommand;
-    public ICommand OpenLogFolderCommand => SettingsVM.OpenLogFolderCommand;
-
-    // Settings ViewModel & view-mode properties
-    public const string ViewModePosterGrid = SettingsViewModel.ViewModePosterGrid;
-    public const string ViewModeCompactIcons = SettingsViewModel.ViewModeCompactIcons;
-    public const string ViewModeDetailsList = SettingsViewModel.ViewModeDetailsList;
-    public static string NormalizeViewMode(string? mode) => SettingsViewModel.NormalizeViewMode(mode);
-
-    public string? SteamGridDbApiKeyOrNull => SettingsVM.SteamGridDbApiKeyOrNull;
-
-    public string LibraryViewMode
-    {
-        get => SettingsVM.LibraryViewMode;
-        set => SettingsVM.LibraryViewMode = value;
-    }
-
-    public bool IsGridView => SettingsVM.IsGridView;
-    public bool IsIconsView => SettingsVM.IsIconsView;
-    public bool IsListView => SettingsVM.IsListView;
-
-    public void AutoSaveSettings() => SettingsVM.AutoSaveSettings();
-    public void ResetSettingsToDefaults(bool promptConfirm = true) => SettingsVM.ResetSettingsToDefaults(promptConfirm);
-
-    // Forwarded settings properties for backward compatibility with external consumers and diagnostics
-    public bool StartWithWindows { get => SettingsVM.StartWithWindows; set => SettingsVM.StartWithWindows = value; }
-    public bool StartMinimizedToTray { get => SettingsVM.StartMinimizedToTray; set => SettingsVM.StartMinimizedToTray = value; }
-    public bool CanConfigureMinimized => SettingsVM.CanConfigureMinimized;
-    public bool AlwaysShowTrayIcon { get => SettingsVM.AlwaysShowTrayIcon; set => SettingsVM.AlwaysShowTrayIcon = value; }
-    public bool MinimizeOnGameLaunch { get => SettingsVM.MinimizeOnGameLaunch; set => SettingsVM.MinimizeOnGameLaunch = value; }
-    public bool ShowRecentInTray { get => SettingsVM.ShowRecentInTray; set => SettingsVM.ShowRecentInTray = value; }
-    public int MaxRecentInTray { get => SettingsVM.MaxRecentInTray; set => SettingsVM.MaxRecentInTray = value; }
-    public string TrayMenuSortOption { get => SettingsVM.TrayMenuSortOption; set => SettingsVM.TrayMenuSortOption = value; }
-    public bool GroupTrayMenuByCategory { get => SettingsVM.GroupTrayMenuByCategory; set => SettingsVM.GroupTrayMenuByCategory = value; }
-    public bool PreferExeForGameName { get => SettingsVM.PreferExeForGameName; set => SettingsVM.PreferExeForGameName = value; }
-    public bool SearchOfficialTitleOnline { get => SettingsVM.SearchOfficialTitleOnline; set => SettingsVM.SearchOfficialTitleOnline = value; }
-    public string OnlineMatchSensitivity { get => SettingsVM.OnlineMatchSensitivity; set => SettingsVM.OnlineMatchSensitivity = value; }
-    public ObservableCollection<string> ConfidenceThresholdOptions => SettingsVM.ConfidenceThresholdOptions;
-    public bool AutoCategorizeFromSteam { get => SettingsVM.AutoCategorizeFromSteam; set => SettingsVM.AutoCategorizeFromSteam = value; }
-    public bool UseVerticalPosterArt { get => SettingsVM.UseVerticalPosterArt; set => SettingsVM.UseVerticalPosterArt = value; }
-    public bool UseSteamGridDbArt { get => SettingsVM.UseSteamGridDbArt; set => SettingsVM.UseSteamGridDbArt = value; }
-    public string SteamGridDbApiKey { get => SettingsVM.SteamGridDbApiKey; set => SettingsVM.SteamGridDbApiKey = value; }
-    public bool SteamIntegrationEnabled { get => SettingsVM.SteamIntegrationEnabled; set => SettingsVM.SteamIntegrationEnabled = value; }
-    public string GlobalManageHotkey { get => SettingsVM.GlobalManageHotkey; set => SettingsVM.GlobalManageHotkey = value; }
-    public bool VerboseLoggingEnabled { get => SettingsVM.VerboseLoggingEnabled; set => SettingsVM.VerboseLoggingEnabled = value; }
-    public string StorageDirectoryDisplay => SettingsVM.StorageDirectoryDisplay;
-    public string CacheDirectoryDisplay => SettingsVM.CacheDirectoryDisplay;
-
-
     // --- LIBRARY & SEARCH PROPERTIES ---
     public string SearchText
     {
@@ -683,7 +627,7 @@ public class MainViewModel : ViewModelBase
                     tab.IsSelected = string.Equals(tab.Name, value, StringComparison.OrdinalIgnoreCase);
                 }
                 FilteredGames.Refresh();
-                AutoSaveSettings();
+                SettingsVM.AutoSaveSettings();
             }
         }
     }
@@ -803,7 +747,7 @@ public class MainViewModel : ViewModelBase
             onEditSteamAppId: EditSteamAppId,
             onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
             onToggleFavorite: ToggleFavorite,
-            getUseVerticalPosterArt: () => UseVerticalPosterArt,
+            getUseVerticalPosterArt: () => SettingsVM.UseVerticalPosterArt,
             deferHeavyInit: deferHeavyInit
         );
     }
@@ -827,7 +771,7 @@ public class MainViewModel : ViewModelBase
             launchAction: _ => requestedLaunch = true,
             editAction: _ => requestedEdit = true,
             deleteAction: _ => requestedDelete = true,
-            steamGridDbApiKey: SteamGridDbApiKeyOrNull,
+            steamGridDbApiKey: SettingsVM.SteamGridDbApiKeyOrNull,
             minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
         var dlg = new Views.GameDetailsDialog(vm);
@@ -1026,7 +970,7 @@ public class MainViewModel : ViewModelBase
 
         StatusMessage = $"Fetching Steam metadata for App ID {trimmed}...";
         SteamMetadataService.InvalidateCache(trimmed);
-        var details = await _steamMetadataService.GetAppDetailsAsync(trimmed, SteamGridDbApiKeyOrNull, forceRefresh: true);
+        var details = await _steamMetadataService.GetAppDetailsAsync(trimmed, SettingsVM.SteamGridDbApiKeyOrNull, forceRefresh: true);
         if (details != null)
         {
             if (!string.IsNullOrWhiteSpace(details.Name) && (string.IsNullOrWhiteSpace(card.Game.Name) || card.Game.Name.StartsWith("Unnamed", StringComparison.OrdinalIgnoreCase)))
@@ -1065,7 +1009,7 @@ public class MainViewModel : ViewModelBase
         {
             StatusMessage = $"Refreshing metadata for \"{card.Name}\"...";
             SteamMetadataService.InvalidateCache(card.Game.SteamAppId);
-            var details = await _steamMetadataService.GetAppDetailsAsync(card.Game.SteamAppId, SteamGridDbApiKeyOrNull, forceRefresh: true);
+            var details = await _steamMetadataService.GetAppDetailsAsync(card.Game.SteamAppId, SettingsVM.SteamGridDbApiKeyOrNull, forceRefresh: true);
             if (details != null && !string.IsNullOrWhiteSpace(details.CoverImagePath))
             {
                 card.Game.CoverImagePath = details.CoverImagePath;
@@ -1121,7 +1065,7 @@ public class MainViewModel : ViewModelBase
                     // forceRefresh, a game that fell back to a composited-banner poster earlier
                     // would never get a chance to pick up better art later (e.g. after the user
                     // adds a SteamGridDB API key).
-                    var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, SteamGridDbApiKeyOrNull, forceRefresh: true);
+                    var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, SettingsVM.SteamGridDbApiKeyOrNull, forceRefresh: true);
                     if (details != null)
                     {
                         if (card.Game.Category == LibraryConstants.Uncategorized && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
@@ -1156,22 +1100,6 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    public void NotifySettingsChanged()
-    {
-        OnPropertyChanged(nameof(UseVerticalPosterArt));
-        OnPropertyChanged(nameof(AutoCategorizeFromSteam));
-        OnPropertyChanged(nameof(SearchOfficialTitleOnline));
-        OnPropertyChanged(nameof(PreferExeForGameName));
-        foreach (var card in Games)
-        {
-            card.NotifyPosterArtChanged();
-        }
-        if (_settings.AutoCategorizeFromSteam)
-        {
-            _ = EnrichLibraryAsync();
-        }
-    }
-
     private async Task EnrichGameWithSteamMetadataAsync(GameEntry entry)
     {
         try
@@ -1180,7 +1108,7 @@ public class MainViewModel : ViewModelBase
             {
                 if (_settings.AutoCategorizeFromSteam || _settings.UseVerticalPosterArt)
                 {
-                    var details = await _steamMetadataService.GetAppDetailsAsync(entry.SteamAppId, SteamGridDbApiKeyOrNull);
+                    var details = await _steamMetadataService.GetAppDetailsAsync(entry.SteamAppId, SettingsVM.SteamGridDbApiKeyOrNull);
                     if (details != null)
                     {
                         if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
@@ -1214,7 +1142,7 @@ public class MainViewModel : ViewModelBase
             {
                 entry.SteamAppId = res.SteamAppId;
 
-                var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, SteamGridDbApiKeyOrNull);
+                var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, SettingsVM.SteamGridDbApiKeyOrNull);
                 if (details != null)
                 {
                     if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
@@ -1315,7 +1243,7 @@ public class MainViewModel : ViewModelBase
                 try
                 {
                     string appId = card.Game.SteamAppId!;
-                    var details = await _steamMetadataService.GetAppDetailsAsync(appId, SteamGridDbApiKeyOrNull, forceRefresh: true);
+                    var details = await _steamMetadataService.GetAppDetailsAsync(appId, SettingsVM.SteamGridDbApiKeyOrNull, forceRefresh: true);
                     // DownloadAndCachePosterAsync always writes to the same Covers/{appId}.jpg
                     // path regardless of which source tier supplied it, so CoverImagePath is
                     // virtually always unchanged even when the file's actual contents just got
