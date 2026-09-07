@@ -118,7 +118,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **How to verify:** Open Settings, clear the hotkey box, type `c` and then switch to Notepad and type `c`; the character must appear. Confirm `debug.log` no longer gets a "Failed to register" line per keystroke.
 
 ### H-02 `ParseHotkey` accepts numeric strings as raw enum values ("Ctrl+5" registers Ctrl+Clear)
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: `ParseHotkey` now special-cases a single digit main-key token, mapping it to `Key.D0 + digit` instead of `Enum.TryParse`, and rejects multi-digit numeric tokens outright (no real key corresponds to them). Release build: 0 warnings, 0 errors. Verified with a standalone harness (referencing the built `TrayTrigger.dll`) covering the finding's test table: `"Ctrl+5" -> D5`, `"Ctrl+Alt+G" -> G`, `"F10" -> F10`, `"Ctrl+" -> false`, `"5" -> false` (per H-01 policy), `"c" -> false`, `"Ctrl+Alt+5" -> D5` — all passed. Did not run the full end-to-end verification (bind a game to Ctrl+Alt+5, press it, confirm the game launches) — no tool in this session can send a global hotkey keypress and observe process launch; the harness confirms the parser now resolves to the correct virtual key instead.
 - **Confidence:** CONFIRMED
 - **Category:** correctness
 - **Files:** `Services/HotkeyManager.cs:144-148`
