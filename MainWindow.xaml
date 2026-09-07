@@ -1342,7 +1342,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Global Manage Window Hotkey" FontSize="13.5" FontWeight="SemiBold" 
                                                 Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
-                                    <TextBox Text="{Binding GlobalManageHotkey, UpdateSourceTrigger=PropertyChanged}" 
+                                    <TextBox Text="{Binding GlobalManageHotkey, UpdateSourceTrigger=LostFocus}"
                                              Style="{StaticResource ModernTextBox}" Margin="0,0,0,6" Width="150" HorizontalAlignment="Left"/>
                                     <TextBlock Text="Press this key combination anywhere in Windows to toggle the Manage Games window (default: Ctrl+Alt+G)." 
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
