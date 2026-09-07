@@ -448,7 +448,7 @@ public partial class SystemTweaksService
     public void ResetAllToDefaults()
     {
         ApplyTweak("mouse_accel", false);
-        ApplyTweak("hags", false);
+        ResetHagsToDefault();
         ApplyTweak("windowed_opts", false);
         ApplyTweak("fse_behavior", false);
         ApplyTweak("game_mode", false);
@@ -458,11 +458,55 @@ public partial class SystemTweaksService
         ApplyTweak("mmcss_games_priority", false);
         ApplyTweak("timer_resolution", false);
         ApplyTweak("net_throttling", false);
-        ApplyTweak("nagle_disable", false);
-        ApplyTweak("delivery_opt", false);
-        ApplyTweak("telemetry_sweeps", false);
+        ResetNagleToDefault();
+        ResetDeliveryOptimizationToDefault();
+        ResetTelemetryToDefault();
         ApplyTweak("game_bar_overlay", false);
         ApplyTweak("visual_fx", false);
+    }
+
+    // These four tweaks write a Windows *policy* value or force a hardware feature off; on a
+    // stock machine the value is simply absent (Windows/the driver decides). "Reset" must restore
+    // that absence, not write a different fixed number - unlike disabling the tweak from its own
+    // toggle, which is a deliberate "force off" and legitimately writes a value. Until a full
+    // snapshot/restore of prior values exists, deleting these four values is the minimum safe reset.
+    private static bool ResetHagsToDefault() =>
+        DeleteHklmValue(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode");
+
+    private static bool ResetDeliveryOptimizationToDefault() =>
+        DeleteHklmValue(@"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode");
+
+    private static bool ResetTelemetryToDefault() =>
+        DeleteHklmValue(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry");
+
+    private static bool ResetNagleToDefault()
+    {
+        try
+        {
+            List<string> interfaceNames;
+            using (var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath))
+            {
+                if (interfacesKey == null) return false;
+                interfaceNames = new List<string>(interfacesKey.GetSubKeyNames());
+            }
+
+            if (interfaceNames.Count == 0) return false;
+
+            var deletes = new List<(string SubKey, string ValueName)>();
+            foreach (var name in interfaceNames)
+            {
+                string subKey = $@"{TcpInterfacesPath}\{name}";
+                deletes.Add((subKey, "TcpAckFrequency"));
+                deletes.Add((subKey, "TCPNoDelay"));
+            }
+
+            return DeleteHklmValuesBatch(deletes.ToArray());
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"ResetNagleToDefault failed: {ex.Message}");
+            return false;
+        }
     }
 
     // =========================================================================
@@ -1394,6 +1438,71 @@ public partial class SystemTweaksService
                 commands.Add($"reg add \"{fullPath}\" /v \"{valueName}\" /t {typeFlag} /d {dataArg} /f");
             }
             string combined = string.Join(" & ", commands);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{combined}\"",
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            using var proc = Process.Start(psi);
+            proc?.WaitForExit(5000);
+            return proc?.ExitCode == 0;
+        }
+        catch
+        {
+            // User likely cancelled UAC prompt
+            return false;
+        }
+    }
+
+    private static bool DeleteHklmValue(string subKey, string valueName)
+    {
+        return DeleteHklmValuesBatch((subKey, valueName));
+    }
+
+    /// <summary>
+    /// Deletes multiple HKLM values, restoring them to "absent" (the real Windows default for
+    /// policy values and driver-decides hardware switches). A value that is already absent counts
+    /// as success. Mirrors <see cref="SetHklmValuesBatch"/>'s elevated/non-elevated split.
+    /// </summary>
+    private static bool DeleteHklmValuesBatch(params (string SubKey, string ValueName)[] deletes)
+    {
+        if (deletes.Length == 0) return true;
+
+        if (IsElevated)
+        {
+            bool allOk = true;
+            foreach (var (subKey, valueName) in deletes)
+            {
+                try
+                {
+                    using var key = Registry.LocalMachine.OpenSubKey(subKey, writable: true);
+                    key?.DeleteValue(valueName, throwOnMissingValue: false);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn("SystemTweaksService", $"Direct HKLM delete failed for '{subKey}\\{valueName}': {ex.Message}");
+                    allOk = false;
+                }
+            }
+            return allOk;
+        }
+
+        try
+        {
+            var commands = new List<string>();
+            foreach (var (subKey, valueName) in deletes)
+            {
+                string fullPath = @"HKLM\" + subKey;
+                commands.Add($"reg delete \"{fullPath}\" /v \"{valueName}\" /f");
+            }
+            // A missing value is not a failure here (it means the default was already restored),
+            // so make the overall exit code reflect that the deletes were attempted, not whether
+            // every one of them found something to remove.
+            string combined = string.Join(" & ", commands) + " & exit /b 0";
 
             var psi = new ProcessStartInfo
             {
