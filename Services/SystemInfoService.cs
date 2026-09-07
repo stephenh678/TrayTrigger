@@ -634,7 +634,10 @@ public partial class SystemInfoService
             if (gameBarKey != null)
             {
                 var val = gameBarKey.GetValue("AllowAutoGameMode");
-                info.IsGameModeActive = val == null || (int)val != 0;
+                // Preserve the original "absent = active" default, but use a type check instead
+                // of an unsafe cast: a non-DWORD value here would otherwise throw and abandon
+                // ActivePowerPlan/LastBootTime below, in the same try block. See L-22.
+                info.IsGameModeActive = val is not int i || i != 0;
             }
 
             // Power plan
