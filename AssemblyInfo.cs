@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Windows;
 
 [assembly:ThemeInfo(
@@ -8,3 +9,7 @@ using System.Windows;
                                                 //(used if a resource is not found in the page,
                                                 // app, or any theme specific resource dictionaries)
 )]
+
+// Lets TrayTrigger.Tests call internal-only members (e.g. SteamMetadataService.CleanHtmlText)
+// without making them public just for testability. See L-19.
+[assembly: InternalsVisibleTo("TrayTrigger.Tests")]
