@@ -113,12 +113,17 @@ public partial class App : Application
                 // corrupted state rather than hitting one isolated fluke - shut down
                 // cleanly (saving settings) instead of continuing to run broken.
                 LoggingService.Error("App", "Too many unhandled exceptions in a short window; exiting instead of continuing in a possibly corrupted state.");
+                // Notify before ExitApplication() disposes the tray icon. See L-24.
+                _trayIcon?.ShowNotification("TrayTrigger", "Too many errors occurred; TrayTrigger is closing. Check the log for details.");
                 args.Handled = true;
                 ExitApplication();
                 return;
             }
 
-            // Keep the tray app alive after an isolated exception rather than letting WPF terminate the process.
+            // Keep the tray app alive after an isolated exception rather than letting WPF
+            // terminate the process - but a silently swallowed exception is invisible to the
+            // user, so surface it as a non-modal toast instead of only the log file. See L-24.
+            _trayIcon?.ShowNotification("TrayTrigger", "An error was logged. The app is still running - check the log if something looks wrong.");
             args.Handled = true;
         };
 
