@@ -18,14 +18,27 @@ namespace TrayTrigger.Services;
 
 public partial class SteamMetadataService
 {
+    // No client-wide Timeout: it would apply to image downloads too (a 600x900 2x poster over a
+    // slow connection needs much longer than a JSON API call does). Each call below applies its
+    // own appropriately-sized per-request timeout via a linked CancellationTokenSource instead.
     private static readonly HttpClient HttpClient = new(new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(15),
         EnableMultipleHttp2Connections = true
     })
     {
-        Timeout = TimeSpan.FromSeconds(5)
+        Timeout = Timeout.InfiniteTimeSpan
     };
+
+    private static readonly TimeSpan JsonCallTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ImageDownloadTimeout = TimeSpan.FromSeconds(30);
+
+    private static CancellationTokenSource LinkedTimeoutCts(CancellationToken ct, TimeSpan timeout)
+    {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(timeout);
+        return cts;
+    }
 
     private static readonly ConcurrentDictionary<string, SteamAppDetails> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AppLocks = new(StringComparer.OrdinalIgnoreCase);
@@ -131,11 +144,12 @@ public partial class SteamMetadataService
             {
                 // 1. Fetch Store AppDetails
                 string appDetailsUrl = $"https://store.steampowered.com/api/appdetails?appids={trimmedId}&l=english";
-                using var response = await HttpClient.GetAsync(appDetailsUrl, cancellationToken).ConfigureAwait(false);
+                using var appDetailsTimeoutCts = LinkedTimeoutCts(cancellationToken, JsonCallTimeout);
+                using var response = await HttpClient.GetAsync(appDetailsUrl, appDetailsTimeoutCts.Token).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
-                    await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    await using var stream = await response.Content.ReadAsStreamAsync(appDetailsTimeoutCts.Token).ConfigureAwait(false);
+                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: appDetailsTimeoutCts.Token).ConfigureAwait(false);
 
                     if (doc.RootElement.TryGetProperty(trimmedId, out var appElement) &&
                         appElement.TryGetProperty("success", out var successProp) &&
@@ -303,11 +317,12 @@ public partial class SteamMetadataService
         try
         {
             string url = $"https://store.steampowered.com/appreviews/{appId}?json=1&language=all&purchase_type=all";
-            using var resp = await HttpClient.GetAsync(url, ct).ConfigureAwait(false);
+            using var timeoutCts = LinkedTimeoutCts(ct, JsonCallTimeout);
+            using var resp = await HttpClient.GetAsync(url, timeoutCts.Token).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return;
 
-            await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+            await using var stream = await resp.Content.ReadAsStreamAsync(timeoutCts.Token).ConfigureAwait(false);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: timeoutCts.Token).ConfigureAwait(false);
 
             if (doc.RootElement.TryGetProperty("query_summary", out var qs))
             {
@@ -343,11 +358,12 @@ public partial class SteamMetadataService
             // which is often not in English and isn't "the latest about the game" from the
             // developer. Unfiltered, the top 3 for a popular title can be all third-party.
             string url = $"https://api.steampowered.com/ISteamNews/GetNewsForApp/v0002/?appid={appId}&count=5&feeds=steam_community_announcements";
-            using var resp = await HttpClient.GetAsync(url, ct).ConfigureAwait(false);
+            using var timeoutCts = LinkedTimeoutCts(ct, JsonCallTimeout);
+            using var resp = await HttpClient.GetAsync(url, timeoutCts.Token).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return;
 
-            await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+            await using var stream = await resp.Content.ReadAsStreamAsync(timeoutCts.Token).ConfigureAwait(false);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: timeoutCts.Token).ConfigureAwait(false);
 
             if (doc.RootElement.TryGetProperty("appnews", out var an) &&
                 an.TryGetProperty("newsitems", out var ni) &&
@@ -480,10 +496,11 @@ public partial class SteamMetadataService
         {
             try
             {
-                using var resp = await HttpClient.GetAsync(url, ct).ConfigureAwait(false);
+                using var timeoutCts = LinkedTimeoutCts(ct, ImageDownloadTimeout);
+                using var resp = await HttpClient.GetAsync(url, timeoutCts.Token).ConfigureAwait(false);
                 if (resp.IsSuccessStatusCode)
                 {
-                    byte[] bytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+                    byte[] bytes = await resp.Content.ReadAsByteArrayAsync(timeoutCts.Token).ConfigureAwait(false);
                     if (bytes.Length > 1000 && IsDecodableImage(bytes))
                     {
                         byte[] verticalBytes = EnsureVerticalPoster(bytes);
