@@ -93,11 +93,17 @@ public class SystemTweakViewModel : ViewModelBase
     private void ExecuteToggle()
     {
         bool targetState = !IsOptimal;
-        bool success = _service.ApplyTweak(Id, targetState);
-        if (success)
+        _service.ApplyTweak(Id, targetState);
+
+        // Trust a fresh read of the real system state over ApplyTweak's own return value: an
+        // elevated write can report "failed" (e.g. a slow UAC prompt) while it actually went
+        // through moments later, or report "succeeded" without the underlying state matching.
+        bool actualState = _service.GetTweakState(Id);
+        IsOptimal = actualState;
+        StatusText = actualState ? "Optimal configuration applied" : "Reverted to standard Windows default";
+
+        if (actualState == targetState)
         {
-            IsOptimal = targetState;
-            StatusText = targetState ? "Optimal configuration applied" : "Reverted to standard Windows default";
             _notifyParent($"Toggled '{Name}' to {(targetState ? "Optimal" : "Default")}.");
 
             if (RequiresReboot)
