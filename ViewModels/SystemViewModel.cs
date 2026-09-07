@@ -126,7 +126,7 @@ public class SystemTweakViewModel : ViewModelBase
     {
         try
         {
-            using var proc = Process.Start("shutdown.exe", "/r /t 10");
+            using var proc = Process.Start("shutdown.exe", "/r /t 30 /c \"TrayTrigger: restarting to apply performance settings\"");
         }
         catch (Exception ex)
         {
