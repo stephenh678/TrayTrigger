@@ -310,16 +310,7 @@
                                 <CheckBox Content="Launch via Steam Client protocol (steam://rungameid/)" 
                                           IsChecked="{Binding IsSteamGame}" 
                                           Style="{StaticResource ModernCheckBox}"/>
-                                <TextBlock Text="Check this only if the game is installed in your local Steam library. Leave unchecked for standalone or non-Steam local executables." 
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
-                            </StackPanel>
-
-                            <!-- Force Steam Overlay Tag Toggle -->
-                            <StackPanel Margin="0,0,0,0">
-                                <CheckBox Content="Force apply Steam overlay tag" 
-                                          IsChecked="{Binding ForceSteamOverlayTag}" 
-                                          Style="{StaticResource ModernCheckBox}"/>
-                                <TextBlock Text="Always display the STEAM badge overlay on this game's library card, regardless of launch method or executable source." 
+                                <TextBlock Text="Check this only if the game is installed in your local Steam library. Leave unchecked for standalone or non-Steam local executables."
                                            FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                             </StackPanel>
                         </StackPanel>
