@@ -1467,8 +1467,17 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     private void DeleteCachedArtwork(GameEntry game)
     {
-        TryDeleteManagedFile(game.IconPath, _storageService.IconsDirectory);
-        TryDeleteManagedFile(game.CoverImagePath, SteamMetadataService.CoversDirectory);
+        // Two library entries can share one cached file (same Steam AppId added twice, e.g. via
+        // "Add Anyway", or a Steam entry plus a local exe entry) - don't blank the other entry's
+        // art out from under it just because this one is being removed.
+        if (!IsArtworkPathStillReferenced(game.IconPath, g => g.Game.IconPath, game.Id))
+        {
+            TryDeleteManagedFile(game.IconPath, _storageService.IconsDirectory);
+        }
+        if (!IsArtworkPathStillReferenced(game.CoverImagePath, g => g.Game.CoverImagePath, game.Id))
+        {
+            TryDeleteManagedFile(game.CoverImagePath, SteamMetadataService.CoversDirectory);
+        }
 
         // Without this, re-adding the same game later hits SteamMetadataService's in-memory
         // details cache and gets back a CoverImagePath pointing at the file just deleted above,
@@ -1477,6 +1486,12 @@ public class MainViewModel : ViewModelBase
         {
             SteamMetadataService.InvalidateCache(game.SteamAppId);
         }
+    }
+
+    private bool IsArtworkPathStillReferenced(string? path, Func<GameCardViewModel, string?> selector, string excludeGameId)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        return Games.Any(g => g.Id != excludeGameId && string.Equals(selector(g), path, StringComparison.OrdinalIgnoreCase));
     }
 
     private static void TryDeleteManagedFile(string? path, string expectedDirectory)
