@@ -271,14 +271,14 @@ public class MainViewModel : ViewModelBase
                 LoggingService.Error("MainViewModel", "Failed to copy system info to clipboard", ex);
             }
         });
-        CheckForUpdatesCommand = new RelayCommand(async () => await CheckForUpdatesAsync(true));
+        CheckForUpdatesCommand = new AsyncRelayCommand(async () => await CheckForUpdatesAsync(true));
         ExitApplicationCommand = new RelayCommand(PromptExitApplication);
 
         // Game Commands
         AddGameCommand = new RelayCommand(AddGameBrowse);
         AddFolderCommand = new RelayCommand(AddGameFolderBrowse);
         OpenSteamImportCommand = new RelayCommand(OpenSteamImport);
-        RefreshAllPostersCommand = new RelayCommand(async () => await RefreshAllPostersAsync());
+        RefreshAllPostersCommand = new AsyncRelayCommand(async () => await RefreshAllPostersAsync());
         OpenSettingsCommand = new RelayCommand(OpenSettings);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
