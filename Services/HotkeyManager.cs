@@ -141,13 +141,32 @@ public partial class HotkeyManager : IDisposable
             else if (mod is "win" or "windows") modifiers |= MOD_WIN;
         }
 
-        if (Enum.TryParse<Key>(mainKeyStr, true, out var key))
+        Key key;
+        if (mainKeyStr.Length == 1 && char.IsAsciiDigit(mainKeyStr[0]))
         {
-            virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
-            return virtualKey != 0;
+            // A single digit must map to the number-row key (D5), not to Enum.TryParse's
+            // raw underlying-value parse, which would give an unrelated key (e.g. Key.Clear for "5").
+            key = Key.D0 + (mainKeyStr[0] - '0');
+        }
+        else if (int.TryParse(mainKeyStr, out _))
+        {
+            // No real key corresponds to a multi-digit number; reject rather than let
+            // Enum.TryParse map it to whatever enum value happens to share that ordinal.
+            return false;
+        }
+        else if (!Enum.TryParse(mainKeyStr, true, out key))
+        {
+            return false;
         }
 
-        return false;
+        // Require a modifier unless the key is a standalone function key (F1-F24),
+        // otherwise a partially-typed string like "c" would register a bare key globally.
+        bool isFunctionKey = key >= Key.F1 && key <= Key.F24;
+        if (modifiers == 0 && !isFunctionKey)
+            return false;
+
+        virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
+        return virtualKey != 0;
     }
 
     public void Dispose()

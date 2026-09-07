@@ -60,9 +60,13 @@ public class UpdateService
 
     public UpdateService()
     {
+        // No client-wide Timeout: HttpClient.Timeout governs the whole request including reading
+        // the response body (even with ResponseHeadersRead), which would abort a slow-but-still-
+        // progressing installer download. Each call below applies its own appropriately-sized
+        // per-request timeout instead.
         _httpClient = new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(10)
+            Timeout = Timeout.InfiniteTimeSpan
         };
         _httpClient.DefaultRequestHeaders.UserAgent.Add(
             new ProductInfoHeaderValue("TrayTrigger", CurrentVersionDisplay.TrimStart('v')));
@@ -82,7 +86,8 @@ public class UpdateService
             string url = $"https://api.github.com/repos/{targetRepo}/releases/latest";
             LoggingService.Info("UpdateService", $"Checking for updates at {url}");
 
-            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token).ConfigureAwait(false);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -101,7 +106,7 @@ public class UpdateService
                 return new UpdateCheckResult(UpdateStatus.Error, null, statusMsg, CurrentVersion);
             }
 
-            string json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            string json = await response.Content.ReadAsStringAsync(timeoutCts.Token).ConfigureAwait(false);
             var release = JsonSerializer.Deserialize(json, AppJsonContext.Default.GitHubReleaseInfo);
 
             if (release == null || string.IsNullOrWhiteSpace(release.TagName))
@@ -162,6 +167,10 @@ public class UpdateService
 
         LoggingService.Info("UpdateService", $"Downloading update asset from {asset.BrowserDownloadUrl} to {targetPath}");
 
+        // No extra internal timeout here: the caller (UpdateDialog) already provides a real,
+        // user-controlled cancellationToken wired to a visible Cancel button and progress bar, so
+        // there's no need for (and real risk of harm from) a silent ceiling that could abort a
+        // slow-but-still-progressing ~60MB download on a throttled connection.
         using var response = await _httpClient.GetAsync(
             asset.BrowserDownloadUrl,
             HttpCompletionOption.ResponseHeadersRead,

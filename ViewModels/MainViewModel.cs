@@ -137,6 +137,7 @@ public class MainViewModel : ViewModelBase
     public event Action? LibraryUpdated;
     public event Action? RequestMinimizeToTray;
     public event Action? RequestExitApplication;
+    public event Action<string, string>? RequestTrayNotification;
 
     public MainViewModel(
         StorageService storageService,
@@ -292,6 +293,13 @@ public class MainViewModel : ViewModelBase
 
         LoadLibrary();
 
+        if (_storageService.SettingsLoadWarning != null || _storageService.GamesLoadWarning != null)
+        {
+            string warning = string.Join(" ", new[] { _storageService.SettingsLoadWarning, _storageService.GamesLoadWarning }
+                .Where(w => w != null));
+            ModernDialog.ShowWarning(null, "Data File Recovered", warning);
+        }
+
         // Schedule quiet background check for updates if enabled: once shortly after
         // launch, then again every 24 hours for as long as the app keeps running.
         _ = Task.Run(async () =>
@@ -343,10 +351,19 @@ public class MainViewModel : ViewModelBase
                     {
                         _ = SystemVM.LoadHardwareSpecsAsync();
                     }
+                    if (SystemVM.TotalTweakCount == 0)
+                    {
+                        _ = SystemVM.LoadTweaksAsync();
+                    }
                 }
                 else if (prev == NavSection.System)
                 {
                     SystemVM.StopTelemetry();
+                }
+
+                if (_currentSection == NavSection.Settings)
+                {
+                    SettingsVM.ReconcileStartWithWindows();
                 }
             }
         }
@@ -481,13 +498,32 @@ public class MainViewModel : ViewModelBase
                     UpdateStatusBrush = acBrush;
                 }
 
-                // Always surface the dialog when a real update is found - even for the quiet
-                // background checks (startup / 24h timer) - since a silently-updated badge is
-                // easy to miss. Only the "up to date" / "no releases" / "error" outcomes below
-                // stay gated behind `interactive`, since nagging the user with those on every
-                // automatic check would be annoying.
-                Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
-                UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
+                bool mainWindowVisible = Application.Current?.MainWindow is { IsVisible: true };
+                bool alreadySnoozed = interactive == false &&
+                    string.Equals(_settings.SkippedUpdateVersion, result.LatestRelease.TagName, StringComparison.OrdinalIgnoreCase) &&
+                    _settings.RemindAfterUtc.HasValue && DateTime.UtcNow < _settings.RemindAfterUtc.Value;
+
+                if (interactive || mainWindowVisible)
+                {
+                    // Surface the modal when the user explicitly asked (interactive), or when a
+                    // quiet background check (startup / 24h timer) finds the window is actually
+                    // visible - a silently-updated badge alone is easy to miss in that case.
+                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                    bool remindLater = UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
+                    if (remindLater)
+                    {
+                        _settings.SkippedUpdateVersion = result.LatestRelease.TagName;
+                        _settings.RemindAfterUtc = DateTime.UtcNow.AddHours(24);
+                        _storageService.SaveSettings(_settings);
+                    }
+                }
+                else if (!alreadySnoozed)
+                {
+                    // Background check, window hidden (e.g. a full-screen game): a modal dialog
+                    // here would steal focus mid-match. Use a tray balloon instead so the user
+                    // isn't interrupted but still finds out.
+                    RequestTrayNotification?.Invoke("Update Available", $"{result.LatestRelease.TagName} is ready to install. Open TrayTrigger to update.");
+                }
             }
             else if (result.IsUpToDate)
             {
@@ -700,7 +736,7 @@ public class MainViewModel : ViewModelBase
 
         foreach (var g in rawGames)
         {
-            Games.Add(CreateCardViewModel(g));
+            Games.Add(CreateCardViewModel(g, deferHeavyInit: true));
         }
 
         RebuildCategories();
@@ -711,10 +747,39 @@ public class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalGameCountDisplay));
         LibraryUpdated?.Invoke();
 
+        LoadCardHeavyStateInBackground();
         _ = EnrichLibraryAsync();
     }
 
-    public GameCardViewModel CreateCardViewModel(GameEntry game)
+    /// <summary>
+    /// Checks "missing" status and decodes icon/cover for every card off the UI thread, then
+    /// applies the results in one dispatcher hop. Startup used to do this per-card, synchronously,
+    /// inside the constructor loop above, so the window stayed hidden until every File.Exists and
+    /// bitmap decode in the whole library finished.
+    /// </summary>
+    private void LoadCardHeavyStateInBackground()
+    {
+        var cardsSnapshot = Games.ToList();
+        _ = Task.Run(() =>
+        {
+            var results = new List<(GameCardViewModel Card, bool IsMissing, System.Windows.Media.Imaging.BitmapImage? Icon, DateTime? IconWriteTimeUtc, System.Windows.Media.Imaging.BitmapImage? Cover, DateTime? CoverWriteTimeUtc)>();
+            foreach (var card in cardsSnapshot)
+            {
+                var (isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) = card.ComputeHeavyState();
+                results.Add((card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc));
+            }
+
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                foreach (var (card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) in results)
+                {
+                    card.ApplyHeavyState(isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
+                }
+            });
+        });
+    }
+
+    public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false)
     {
         return new GameCardViewModel(
             game,
@@ -731,7 +796,8 @@ public class MainViewModel : ViewModelBase
             onEditSteamAppId: EditSteamAppId,
             onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
             onToggleFavorite: ToggleFavorite,
-            getUseVerticalPosterArt: () => UseVerticalPosterArt
+            getUseVerticalPosterArt: () => UseVerticalPosterArt,
+            deferHeavyInit: deferHeavyInit
         );
     }
 
@@ -780,7 +846,6 @@ public class MainViewModel : ViewModelBase
         card.RefreshProperties();
         RebuildCategories();
         SaveLibrary();
-        LibraryUpdated?.Invoke();
     }
 
     public void LaunchGameEntry(GameEntry game)
@@ -1093,7 +1158,6 @@ public class MainViewModel : ViewModelBase
                 SaveLibrary();
                 ApplySort();
                 StatusMessage = $"Updated \"{card.Name}\" with Steam metadata.";
-                LibraryUpdated?.Invoke();
             }
             else
             {
@@ -1182,6 +1246,7 @@ public class MainViewModel : ViewModelBase
     }
 
     private const int MaxConcurrentEnrichments = 4;
+    private static readonly TimeSpan EnrichmentRetryInterval = TimeSpan.FromDays(7);
 
     private bool _isRefreshingAllPosters;
     public bool IsRefreshingAllPosters
@@ -1267,7 +1332,6 @@ public class MainViewModel : ViewModelBase
             if (updated > 0)
             {
                 SaveLibrary();
-                LibraryUpdated?.Invoke();
             }
 
             Report($"Poster refresh complete: {updated} of {candidates.Count} game(s) refreshed.");
@@ -1293,7 +1357,9 @@ public class MainViewModel : ViewModelBase
         try
         {
             var candidates = Games
-                .Where(card => card.Game.Category == "Uncategorized" || card.Game.Category == "Steam" || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId))
+                .Where(card =>
+                    (card.Game.Category == "Uncategorized" || card.Game.Category == "Steam" || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId)) &&
+                    (card.Game.LastEnrichmentAttemptUtc == null || DateTime.UtcNow - card.Game.LastEnrichmentAttemptUtc.Value >= EnrichmentRetryInterval))
                 .ToList();
 
             if (candidates.Count == 0)
@@ -1312,11 +1378,15 @@ public class MainViewModel : ViewModelBase
                     string? oldAppId = card.Game.SteamAppId;
 
                     await EnrichGameWithSteamMetadataAsync(card.Game);
+                    // Record the attempt regardless of outcome so a game that legitimately never
+                    // matches (indie, emulator, tool) isn't re-searched online every single launch -
+                    // and so this needs saving even when nothing else about the game changed.
+                    card.Game.LastEnrichmentAttemptUtc = DateTime.UtcNow;
+                    changed = true;
 
                     if (card.Game.Category != oldCat || card.Game.CoverImagePath != oldCover || card.Game.SteamAppId != oldAppId)
                     {
                         card.RefreshProperties();
-                        changed = true;
                     }
                 }
                 finally
@@ -1331,7 +1401,6 @@ public class MainViewModel : ViewModelBase
             {
                 RebuildCategories();
                 SaveLibrary();
-                LibraryUpdated?.Invoke();
             }
         }
         finally
@@ -1347,6 +1416,7 @@ public class MainViewModel : ViewModelBase
         card.Game.Name = newName.Trim();
         card.RefreshProperties();
         SaveLibrary();
+        FilteredGames.Refresh();
         StatusMessage = $"Renamed to \"{card.Name}\"";
     }
 
@@ -1419,7 +1489,6 @@ public class MainViewModel : ViewModelBase
         StatusMessage = $"Removed {card.Name}";
         OnPropertyChanged(nameof(TotalGameCount));
         OnPropertyChanged(nameof(TotalGameCountDisplay));
-        LibraryUpdated?.Invoke();
     }
 
     public void UndoDelete()
@@ -1447,7 +1516,6 @@ public class MainViewModel : ViewModelBase
             StatusMessage = $"Restored \"{card.Name}\" to library.";
             OnPropertyChanged(nameof(TotalGameCount));
             OnPropertyChanged(nameof(TotalGameCountDisplay));
-            LibraryUpdated?.Invoke();
             _lastRemovedGame = null;
         }
     }
@@ -1460,8 +1528,17 @@ public class MainViewModel : ViewModelBase
     /// </summary>
     private void DeleteCachedArtwork(GameEntry game)
     {
-        TryDeleteManagedFile(game.IconPath, _storageService.IconsDirectory);
-        TryDeleteManagedFile(game.CoverImagePath, SteamMetadataService.CoversDirectory);
+        // Two library entries can share one cached file (same Steam AppId added twice, e.g. via
+        // "Add Anyway", or a Steam entry plus a local exe entry) - don't blank the other entry's
+        // art out from under it just because this one is being removed.
+        if (!IsArtworkPathStillReferenced(game.IconPath, g => g.Game.IconPath, game.Id))
+        {
+            TryDeleteManagedFile(game.IconPath, _storageService.IconsDirectory);
+        }
+        if (!IsArtworkPathStillReferenced(game.CoverImagePath, g => g.Game.CoverImagePath, game.Id))
+        {
+            TryDeleteManagedFile(game.CoverImagePath, SteamMetadataService.CoversDirectory);
+        }
 
         // Without this, re-adding the same game later hits SteamMetadataService's in-memory
         // details cache and gets back a CoverImagePath pointing at the file just deleted above,
@@ -1470,6 +1547,12 @@ public class MainViewModel : ViewModelBase
         {
             SteamMetadataService.InvalidateCache(game.SteamAppId);
         }
+    }
+
+    private bool IsArtworkPathStillReferenced(string? path, Func<GameCardViewModel, string?> selector, string excludeGameId)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        return Games.Any(g => g.Id != excludeGameId && string.Equals(selector(g), path, StringComparison.OrdinalIgnoreCase));
     }
 
     private static void TryDeleteManagedFile(string? path, string expectedDirectory)
@@ -1600,7 +1683,6 @@ public class MainViewModel : ViewModelBase
                 StatusMessage = $"Added {addedCount} new game(s) instantly!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
-                LibraryUpdated?.Invoke();
             }
         }
         catch (Exception ex)
@@ -1615,11 +1697,11 @@ public class MainViewModel : ViewModelBase
         // Processed after the guard above is released - see comment at the top of this method.
         if (folders.Count == 1)
         {
-            ProcessFolderAdd(folders[0]);
+            await ProcessFolderAddAsync(folders[0]);
         }
         else if (folders.Count > 1)
         {
-            ProcessFolderAddBatch(folders);
+            await ProcessFolderAddBatchAsync(folders);
         }
     }
 
@@ -1627,15 +1709,16 @@ public class MainViewModel : ViewModelBase
     // prompt, instead of prompting once per folder (see ProcessFolderAdd, which still owns the
     // single-folder path so its "no games" / "one game" / "overwhelming match" shortcuts are
     // unaffected).
-    public void ProcessFolderAddBatch(List<string> folderPaths)
+    public async Task ProcessFolderAddBatchAsync(List<string> folderPaths)
     {
+        StatusMessage = "Scanning folders...";
         var aggregated = new List<GameCandidate>();
 
         foreach (var folderPath in folderPaths)
         {
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) continue;
 
-            var scanResult = _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName);
+            var scanResult = await Task.Run(() => _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName));
 
             if (scanResult.IsMultiGameLibrary)
             {
@@ -1669,11 +1752,14 @@ public class MainViewModel : ViewModelBase
         RequestFolderBatchImport?.Invoke(combinedLabel, aggregated);
     }
 
-    public void ProcessFolderAdd(string folderPath)
+    public void ProcessFolderAdd(string folderPath) => _ = ProcessFolderAddAsync(folderPath);
+
+    public async Task ProcessFolderAddAsync(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) return;
 
-        var scanResult = _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName);
+        StatusMessage = "Scanning folder...";
+        var scanResult = await Task.Run(() => _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName));
 
         // A. Multi-game parent folder detected (e.g. C:\Games, D:\SteamLibrary\steamapps\common, C:\GOG Games)
         if (scanResult.IsMultiGameLibrary)
@@ -1833,7 +1919,6 @@ public class MainViewModel : ViewModelBase
                     : $"Added {preparedEntries.Count} games from folder!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
-                LibraryUpdated?.Invoke();
             }
         }
         catch (Exception ex)
@@ -1918,7 +2003,6 @@ public class MainViewModel : ViewModelBase
             StatusMessage = $"Added \"{entry.Name}\" to library!";
             OnPropertyChanged(nameof(TotalGameCount));
             OnPropertyChanged(nameof(TotalGameCountDisplay));
-            LibraryUpdated?.Invoke();
         }
         catch (Exception ex)
         {
@@ -2075,7 +2159,6 @@ public class MainViewModel : ViewModelBase
                     : $"Imported {preparedEntries.Count} Steam game(s)!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
-                LibraryUpdated?.Invoke();
             }
         }
         catch (Exception ex)
@@ -2168,6 +2251,8 @@ public class MainViewModel : ViewModelBase
         else
         {
             _selectedCategory = "All";
+            _settings.LastCategoryFilter = "All";
+            FilteredGames.Refresh();
         }
         OnPropertyChanged(nameof(SelectedCategory));
 

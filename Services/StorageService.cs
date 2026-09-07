@@ -22,6 +22,12 @@ public class StorageService
     private readonly string _settingsFilePath;
     private readonly string _settingsBakFilePath;
 
+    private bool _gamesPrimaryUnreadableThisSession;
+    private bool _settingsPrimaryUnreadableThisSession;
+
+    public string? GamesLoadWarning { get; private set; }
+    public string? SettingsLoadWarning { get; private set; }
+
     public StorageService()
     {
         _baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TrayTrigger");
@@ -154,6 +160,9 @@ public class StorageService
                 catch (Exception ex)
                 {
                     LoggingService.Warn("Storage", $"Primary games.json failed to parse: {ex.Message}. Attempting backup recovery...");
+                    string archivePath = ArchiveCorruptFile(_gamesFilePath);
+                    _gamesPrimaryUnreadableThisSession = true;
+                    GamesLoadWarning = $"Your game library file could not be read and a copy was kept at '{archivePath}'.";
                 }
             }
 
@@ -178,6 +187,10 @@ public class StorageService
             }
 
             LoggingService.Info("Storage", "No existing games library found. Initializing empty library.");
+            if (_gamesPrimaryUnreadableThisSession)
+            {
+                GamesLoadWarning += " Your library could not be recovered and was reset to empty.";
+            }
             return new List<GameEntry>();
         }
     }
@@ -235,11 +248,13 @@ public class StorageService
                 string tempFile = _gamesFilePath + ".tmp";
                 File.WriteAllText(tempFile, json);
 
-                // Keep rolling .bak copy
-                if (File.Exists(_gamesFilePath))
+                // Keep rolling .bak copy, unless the primary was found unreadable earlier this
+                // session - in that case it must not overwrite a still-good backup.
+                if (File.Exists(_gamesFilePath) && !_gamesPrimaryUnreadableThisSession)
                 {
                     File.Copy(_gamesFilePath, _gamesBakFilePath, overwrite: true);
                 }
+                _gamesPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _gamesFilePath);
                 LoggingService.Verbose("Storage", $"Saved {list.Count} game(s) to '{_gamesFilePath}'.");
@@ -273,6 +288,9 @@ public class StorageService
                 catch (Exception ex)
                 {
                     LoggingService.Warn("Storage", $"Primary settings.json failed to parse: {ex.Message}. Attempting backup recovery...");
+                    string archivePath = ArchiveCorruptFile(_settingsFilePath);
+                    _settingsPrimaryUnreadableThisSession = true;
+                    SettingsLoadWarning = $"Your settings file could not be read and a copy was kept at '{archivePath}'.";
                 }
             }
 
@@ -295,6 +313,10 @@ public class StorageService
                 }
             }
 
+            if (_settingsPrimaryUnreadableThisSession)
+            {
+                SettingsLoadWarning += " Your settings could not be recovered and were reset to defaults.";
+            }
             var defaultSettings = new AppSettings();
             SaveSettings(defaultSettings);
             LoggingService.Info("Storage", "Created default settings file.");
@@ -313,11 +335,13 @@ public class StorageService
                 string tempFile = _settingsFilePath + ".tmp";
                 File.WriteAllText(tempFile, json);
 
-                // Keep rolling .bak copy
-                if (File.Exists(_settingsFilePath))
+                // Keep rolling .bak copy, unless the primary was found unreadable earlier this
+                // session - in that case it must not overwrite a still-good backup.
+                if (File.Exists(_settingsFilePath) && !_settingsPrimaryUnreadableThisSession)
                 {
                     File.Copy(_settingsFilePath, _settingsBakFilePath, overwrite: true);
                 }
+                _settingsPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _settingsFilePath);
                 LoggingService.Verbose("Storage", $"Saved settings to '{_settingsFilePath}'.");
@@ -327,6 +351,21 @@ public class StorageService
                 LoggingService.Error("Storage", $"Error saving settings to '{_settingsFilePath}': {ex.Message}", ex);
             }
         }
+    }
+
+    private static string ArchiveCorruptFile(string path)
+    {
+        string archivePath = path + $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}";
+        try
+        {
+            File.Copy(path, archivePath, overwrite: true);
+            LoggingService.Warn("Storage", $"Archived unreadable file to '{archivePath}'.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Storage", $"Failed to archive unreadable file '{path}': {ex.Message}", ex);
+        }
+        return archivePath;
     }
 
     private static void SafeReplaceFile(string tempFile, string targetFile)

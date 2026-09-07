@@ -83,8 +83,11 @@ public partial class UpdateDialog : Window
         }
     }
 
+    public bool WasRemindLaterClicked { get; private set; }
+
     private void OnRemindLaterClick(object sender, RoutedEventArgs e)
     {
+        WasRemindLaterClicked = true;
         Close();
     }
 
@@ -160,7 +163,9 @@ public partial class UpdateDialog : Window
         }
     }
 
-    public static void ShowUpdateDialog(Window? owner, GitHubReleaseInfo release, Version currentVersion)
+    /// <returns>True if the user clicked "Remind Later" (as opposed to installing or otherwise
+    /// dismissing the dialog), so the caller can persist a snooze.</returns>
+    public static bool ShowUpdateDialog(Window? owner, GitHubReleaseInfo release, Version currentVersion)
     {
         var activeOwner = owner ?? (Application.Current?.MainWindow is { IsVisible: true } w ? w : null);
         var dialog = new UpdateDialog(release, currentVersion);
@@ -171,5 +176,6 @@ public partial class UpdateDialog : Window
         }
 
         dialog.ShowDialog();
+        return dialog.WasRemindLaterClicked;
     }
 }
