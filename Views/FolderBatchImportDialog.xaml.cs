@@ -15,6 +15,7 @@ public partial class FolderBatchImportDialog : Window
     public FolderBatchImportDialog(string folderPath, List<GameCandidate> candidates, IEnumerable<string> existingExePaths)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
         _viewModel = new FolderBatchImportViewModel(folderPath, candidates, existingExePaths);
         DataContext = _viewModel;
 

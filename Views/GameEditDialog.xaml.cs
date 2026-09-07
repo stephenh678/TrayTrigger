@@ -19,6 +19,7 @@ public partial class GameEditDialog : Window
         double minConfidence = SteamSearchService.DefaultMinConfidence)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
         _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence);
         DataContext = _viewModel;
 

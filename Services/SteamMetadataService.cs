@@ -337,7 +337,12 @@ public partial class SteamMetadataService
     {
         try
         {
-            string url = $"https://api.steampowered.com/ISteamNews/GetNewsForApp/v0002/?appid={appId}&count=3";
+            // Restrict to the developer's own Steam Community announcements (patch notes,
+            // official updates). Without the feeds filter the API also returns syndicated
+            // third-party RSS (Rock Paper Shotgun, SteamDB, regional outlets like Gamemag.ru)
+            // which is often not in English and isn't "the latest about the game" from the
+            // developer. Unfiltered, the top 3 for a popular title can be all third-party.
+            string url = $"https://api.steampowered.com/ISteamNews/GetNewsForApp/v0002/?appid={appId}&count=5&feeds=steam_community_announcements";
             using var resp = await HttpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return;
 
@@ -356,6 +361,21 @@ public partial class SteamMetadataService
                     long unixDate = item.TryGetProperty("date", out var d) && d.TryGetInt64(out long val) ? val : 0;
                     string rawContents = item.TryGetProperty("contents", out var c) ? c.GetString() ?? string.Empty : string.Empty;
 
+                    // Steam marks developer-flagged patch notes with a "patchnotes" tag.
+                    bool isPatchNotes = false;
+                    if (item.TryGetProperty("tags", out var tags) && tags.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var tag in tags.EnumerateArray())
+                        {
+                            if (tag.ValueKind == JsonValueKind.String &&
+                                string.Equals(tag.GetString(), "patchnotes", StringComparison.OrdinalIgnoreCase))
+                            {
+                                isPatchNotes = true;
+                                break;
+                            }
+                        }
+                    }
+
                     DateTime dt = unixDate > 0 ? DateTimeOffset.FromUnixTimeSeconds(unixDate).LocalDateTime : DateTime.MinValue;
                     string snippet = CleanHtmlText(rawContents);
                     if (snippet.Length > 170)
@@ -369,7 +389,8 @@ public partial class SteamMetadataService
                             Url = newsUrl,
                             Author = author,
                             Date = dt,
-                            Snippet = snippet
+                            Snippet = snippet,
+                            IsPatchNotes = isPatchNotes
                         });
                     }
                 }
@@ -651,8 +672,17 @@ public partial class SteamMetadataService
     [GeneratedRegex(@"<[^>]+>")]
     private static partial Regex HtmlTagsRegex();
 
-    [GeneratedRegex(@"\[/?(b|i|u|url|img|h1|h2|h3|quote|list|\*)[^\]]*\]", RegexOptions.IgnoreCase)]
+    // Steam announcement bodies use Steam-flavoured BBCode: [p], [br], [h1]-[h6], [b], [i],
+    // [list]/[olist]/[*], [url=...], [img src="..."], [previewyoutube=...;full],
+    // [dynamiclink href="..."], [table]/[tr]/[td], [spoiler], [code], [hr], [strike] and
+    // more. Match any tag generically rather than whitelisting, so new tags don't leak
+    // through as literal "[p][/p]" text in the snippet.
+    [GeneratedRegex(@"\[/?[a-zA-Z][a-zA-Z0-9_]*(?:[=\s][^\]]*)?\]|\[/?\*\]")]
     private static partial Regex BbCodeRegex();
+
+    // Legacy [img]https://...[/img] form carries the URL as inner text; drop it entirely.
+    [GeneratedRegex(@"\[img\][^\[]*\[/img\]", RegexOptions.IgnoreCase)]
+    private static partial Regex BbCodeImgBlockRegex();
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex MultipleWhitespaceRegex();
@@ -663,6 +693,7 @@ public partial class SteamMetadataService
 
         // Strip HTML & BBCode
         string text = HtmlTagsRegex().Replace(html, " ");
+        text = BbCodeImgBlockRegex().Replace(text, " ");
         text = BbCodeRegex().Replace(text, " ");
         text = WebUtility.HtmlDecode(text);
         text = MultipleWhitespaceRegex().Replace(text, " ").Trim();

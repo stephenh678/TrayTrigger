@@ -688,10 +688,18 @@ public partial class App : Application
                 _mainWindow.Show();
             }
 
-            _mainWindow.Activate();
-            _mainWindow.Topmost = true;
-            _mainWindow.Topmost = false;
-            _mainWindow.Focus();
+            // On the very first show the window is cloaked until its first frame renders;
+            // defer the activation dance until then so it doesn't compete with the first
+            // paint. On subsequent shows this runs immediately.
+            var window = _mainWindow;
+            WindowThemeService.WhenContentRendered(window, () =>
+            {
+                if (_isShuttingDown || !window.IsVisible) return;
+                window.Activate();
+                window.Topmost = true;
+                window.Topmost = false;
+                window.Focus();
+            });
         }
         catch (Exception ex)
         {

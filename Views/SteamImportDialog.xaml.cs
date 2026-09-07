@@ -10,6 +10,7 @@ public partial class SteamImportDialog : Window
     public SteamImportDialog(MainViewModel mainViewModel)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
 
         var existingAppIds = mainViewModel.Games
             .Where(g => g.IsSteamGame && !string.IsNullOrEmpty(g.Game.SteamAppId))
