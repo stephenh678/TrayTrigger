@@ -89,9 +89,11 @@ jobs:
             $compareLine = ""
           }
 
-          $commits = git log $range --no-merges --pretty=format:"- %s"
-          if (-not $commits) {
+          $commitLines = git log $range --no-merges --pretty=format:"- %s"
+          if (-not $commitLines) {
             $commits = "- No notable changes."
+          } else {
+            $commits = ($commitLines -join "`n")
           }
 
           @("## What's Changed", $commits, "", $compareLine) -join "`n" | Out-File -FilePath release_notes.md -Encoding utf8
