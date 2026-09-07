@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -776,33 +777,29 @@ public class SettingsViewModel : ViewModelBase
 
         string existingApiKey = _settings.SteamGridDbApiKey;
 
-        // Apply recommended defaults
-        _settings.StartWithWindows = false;
-        _settings.StartMinimizedToTray = true;
-        _settings.AlwaysShowTrayIcon = true;
-        _settings.GroupTrayMenuByCategory = true;
-        _settings.ShowRecentInTray = true;
-        _settings.MaxRecentInTray = 5;
-        _settings.RecentTraySortOption = "Most Recently Played";
-        _settings.ShowFavoritesInTray = true;
-        _settings.MaxFavoritesInTray = 5;
-        _settings.FavoritesTraySortOption = "Alphabetical (A - Z)";
-        _settings.TrayMenuSortOption = "Alphabetical (A - Z)";
-        _settings.PreferExeForGameName = true;
-        _settings.SearchOfficialTitleOnline = true;
-        _settings.OnlineMatchConfidenceThreshold = 0.60;
-        _settings.AutoCategorizeFromSteam = true;
-        _settings.UseVerticalPosterArt = true;
-        _settings.UseSteamGridDbArt = false;
+        // Copy every default from a fresh AppSettings instead of a hand-maintained literal
+        // list, so a newly added setting is reset automatically instead of silently staying
+        // un-reset if someone forgets to add it here. Excludes properties that aren't a
+        // user "preference" in the sense this dialog means - library view state
+        // (LastCategoryFilter/LastSortOption), one-time-prompt/update-snooze state
+        // (HasSeenSteamGridDbPrompt/SkippedUpdateVersion/RemindAfterUtc), and the API key
+        // (preserved explicitly below, same as before). See L-23.
+        var defaults = new AppSettings();
+        var excludedFromReset = new HashSet<string>
+        {
+            nameof(AppSettings.LastCategoryFilter),
+            nameof(AppSettings.LastSortOption),
+            nameof(AppSettings.HasSeenSteamGridDbPrompt),
+            nameof(AppSettings.SkippedUpdateVersion),
+            nameof(AppSettings.RemindAfterUtc),
+            nameof(AppSettings.SteamGridDbApiKey),
+        };
+        foreach (var prop in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (!prop.CanWrite || excludedFromReset.Contains(prop.Name)) continue;
+            prop.SetValue(_settings, prop.GetValue(defaults));
+        }
         _settings.SteamGridDbApiKey = existingApiKey;
-        _settings.SteamIntegrationEnabled = true;
-        _settings.GlobalManageHotkey = "Ctrl+Alt+G";
-        _settings.IsSidebarExpanded = false;
-        _settings.VerboseLoggingEnabled = false;
-        _settings.LibraryViewMode = ViewModePosterGrid;
-        _settings.MinimizeOnGameLaunch = true;
-        _settings.AutoCheckForUpdates = true;
-        _settings.GitHubRepository = "stephenh678/TrayTrigger";
 
         // Execute side effects
         _startupManager.SetStartupEnabled(false, true);
