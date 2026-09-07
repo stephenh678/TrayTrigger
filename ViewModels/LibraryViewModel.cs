@@ -15,6 +15,38 @@ using TrayTrigger.Views;
 
 namespace TrayTrigger.ViewModels;
 
+public class CategoryTabItem : ViewModelBase
+{
+    public string Name { get; }
+    public string DisplayName { get; }
+    public bool IsFavoritesTab { get; }
+
+    private bool _isSelected;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected != value)
+            {
+                _isSelected = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public ICommand SelectCommand { get; }
+
+    public CategoryTabItem(string name, string displayName, bool isSelected, Action<string> onSelect)
+    {
+        Name = name;
+        DisplayName = displayName;
+        IsFavoritesTab = string.Equals(name, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
+        _isSelected = isSelected;
+        SelectCommand = new RelayCommand(() => onSelect(Name));
+    }
+}
+
 /// <summary>
 /// Owns the game library: CRUD, filtering, sorting, selection, and the undo-delete toast. Split
 /// out of MainViewModel per L-13. <see cref="ImportCoordinator"/> depends on this class (to add
