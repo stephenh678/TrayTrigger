@@ -720,7 +720,7 @@ public partial class SteamMetadataService
     [GeneratedRegex(@"\s+")]
     private static partial Regex MultipleWhitespaceRegex();
 
-    private static string CleanHtmlText(string html)
+    internal static string CleanHtmlText(string html)
     {
         if (string.IsNullOrWhiteSpace(html)) return string.Empty;
 

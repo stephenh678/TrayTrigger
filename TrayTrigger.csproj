@@ -27,6 +27,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The SDK's implicit glob would otherwise pull TrayTrigger.Tests' own .cs files into
+         this project's build. See L-19. -->
+    <Compile Remove="TrayTrigger.Tests\**" />
+    <EmbeddedResource Remove="TrayTrigger.Tests\**" />
+    <None Remove="TrayTrigger.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\app_icon.ico" />
     <Resource Include="Assets\app_icon.png" />
   </ItemGroup>
