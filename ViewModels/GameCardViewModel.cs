@@ -113,7 +113,7 @@ public class GameCardViewModel : ViewModelBase
     /// </summary>
     public (bool IsMissing, BitmapImage? Icon, DateTime? IconWriteTimeUtc, BitmapImage? Cover, DateTime? CoverWriteTimeUtc) ComputeHeavyState()
     {
-        bool isMissing = !IsSteamGame && !string.IsNullOrWhiteSpace(Game.ExecutablePath) && !File.Exists(Game.ExecutablePath);
+        bool isMissing = ComputeIsMissing(Game);
         var icon = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 64);
         var cover = !string.IsNullOrWhiteSpace(Game.CoverImagePath)
             ? IconExtractorService.LoadBitmapSafely(Game.CoverImagePath, decodePixelWidth: 368)
@@ -163,7 +163,20 @@ public class GameCardViewModel : ViewModelBase
 
     public void CheckIsMissing()
     {
-        IsMissing = !IsSteamGame && !string.IsNullOrWhiteSpace(Game.ExecutablePath) && !File.Exists(Game.ExecutablePath);
+        IsMissing = ComputeIsMissing(Game);
+    }
+
+    /// <summary>
+    /// A non-Steam launcher protocol shortcut (Epic, GOG Galaxy, Ubisoft Connect, etc.) resolves
+    /// to a "scheme://..." URL rather than a file, so File.Exists on it would always be false -
+    /// exempt those the same way IsSteamGame already is.
+    /// </summary>
+    private static bool ComputeIsMissing(GameEntry game)
+    {
+        return !game.IsSteamGame &&
+            !string.IsNullOrWhiteSpace(game.ExecutablePath) &&
+            !ProcessLauncherService.IsNonFileProtocolUrl(game.ExecutablePath) &&
+            !File.Exists(game.ExecutablePath);
     }
     public string PlaytimeDisplay => Game.PlaytimeDisplay;
     public string ListPlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? "—" : Game.PlaytimeDisplay;

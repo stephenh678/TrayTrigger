@@ -52,6 +52,16 @@ public partial class ProcessLauncherService
         }
     }
 
+    /// <summary>
+    /// True for a launcher protocol URL (e.g. "com.epicgames.launcher://...", "goggalaxy://...")
+    /// as opposed to a filesystem path - including a plain "C:\..." path, which Uri also parses
+    /// successfully but as the "file" scheme.
+    /// </summary>
+    internal static bool IsNonFileProtocolUrl(string path)
+    {
+        return Uri.TryCreate(path, UriKind.Absolute, out var uri) && !uri.IsFile;
+    }
+
     public bool LaunchGame(GameEntry game, out string? errorMessage)
     {
         return LaunchGame(game, out errorMessage, out _);
@@ -89,6 +99,20 @@ public partial class ProcessLauncherService
                 isMissing = true;
                 LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Executable path is blank.");
                 return false;
+            }
+
+            // Non-Steam protocol shortcut (Epic, GOG Galaxy, Ubisoft Connect, etc. desktop
+            // shortcuts resolve to a "scheme://..." URL, not a file). Hand it to the shell the
+            // same way as the Steam branch above instead of treating it as a missing exe.
+            if (IsNonFileProtocolUrl(game.ExecutablePath))
+            {
+                LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
+                Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });
+
+                game.LastPlayed = DateTime.Now;
+                GameUpdated?.Invoke(game);
+                LoggingService.Info("Launcher", $"Dispatched protocol launch for '{game.Name}'.");
+                return true;
             }
 
             if (!File.Exists(game.ExecutablePath))
