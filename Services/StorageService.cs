@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using TrayTrigger.Models;
@@ -281,6 +283,7 @@ public class StorageService
                     var settings = JsonSerializer.Deserialize(json, AppJsonContext.Default.AppSettings);
                     if (settings != null)
                     {
+                        settings.SteamGridDbApiKey = DecryptApiKey(settings.SteamGridDbApiKey);
                         LoggingService.Verbose("Storage", $"Loaded settings from '{_settingsFilePath}'.");
                         return settings;
                     }
@@ -303,6 +306,7 @@ public class StorageService
                     var bakSettings = JsonSerializer.Deserialize(bakJson, AppJsonContext.Default.AppSettings);
                     if (bakSettings != null)
                     {
+                        bakSettings.SteamGridDbApiKey = DecryptApiKey(bakSettings.SteamGridDbApiKey);
                         LoggingService.Info("Storage", $"Recovered settings from '{_settingsBakFilePath}'.");
                         return bakSettings;
                     }
@@ -328,9 +332,14 @@ public class StorageService
     {
         lock (_settingsLock)
         {
+            // Encrypt the API key for the on-disk representation only; restore the
+            // plaintext on the caller's live object afterward since it's still in active
+            // use (bound to Settings UI, passed to SteamGridDB requests, etc.). See L-06.
+            string plainApiKey = settings.SteamGridDbApiKey;
             try
             {
                 EnsureDirectories();
+                settings.SteamGridDbApiKey = EncryptApiKey(plainApiKey);
                 string json = JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings);
                 string tempFile = _settingsFilePath + ".tmp";
                 File.WriteAllText(tempFile, json);
@@ -350,6 +359,51 @@ public class StorageService
             {
                 LoggingService.Error("Storage", $"Error saving settings to '{_settingsFilePath}': {ex.Message}", ex);
             }
+            finally
+            {
+                settings.SteamGridDbApiKey = plainApiKey;
+            }
+        }
+    }
+
+    private const string EncryptedApiKeyPrefix = "dpapi:";
+
+    private static string EncryptApiKey(string plainKey)
+    {
+        if (string.IsNullOrEmpty(plainKey)) return string.Empty;
+        try
+        {
+            byte[] encrypted = ProtectedData.Protect(Encoding.UTF8.GetBytes(plainKey), null, DataProtectionScope.CurrentUser);
+            return EncryptedApiKeyPrefix + Convert.ToBase64String(encrypted);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Storage", $"Failed to encrypt SteamGridDB API key, storing as-is: {ex.Message}");
+            return plainKey;
+        }
+    }
+
+    private static string DecryptApiKey(string storedKey)
+    {
+        if (string.IsNullOrEmpty(storedKey)) return string.Empty;
+
+        // A value without the prefix is a legacy plain-text key from before this fix;
+        // it will be encrypted the next time settings are saved.
+        if (!storedKey.StartsWith(EncryptedApiKeyPrefix, StringComparison.Ordinal))
+        {
+            return storedKey;
+        }
+
+        try
+        {
+            byte[] encrypted = Convert.FromBase64String(storedKey[EncryptedApiKeyPrefix.Length..]);
+            byte[] plain = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(plain);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Storage", $"Failed to decrypt SteamGridDB API key: {ex.Message}");
+            return string.Empty;
         }
     }
 
