@@ -169,7 +169,10 @@ public class ShortcutService
             var persistFile = (IPersistFile)link;
             persistFile.Load(lnkPath, 0);
 
-            var targetSb = new StringBuilder(260);
+            // 1024 (rather than the classic MAX_PATH of 260) so long-path targets under
+            // extended-length paths or deeply nested install dirs aren't silently truncated.
+            // See L-21.
+            var targetSb = new StringBuilder(1024);
             link.GetPath(targetSb, targetSb.Capacity, out _, 0);
             string targetPath = targetSb.ToString();
 
@@ -177,11 +180,11 @@ public class ShortcutService
             link.GetArguments(argsSb, argsSb.Capacity);
             string args = argsSb.ToString();
 
-            var workDirSb = new StringBuilder(260);
+            var workDirSb = new StringBuilder(1024);
             link.GetWorkingDirectory(workDirSb, workDirSb.Capacity);
             string workDir = workDirSb.ToString();
 
-            var iconSb = new StringBuilder(260);
+            var iconSb = new StringBuilder(1024);
             link.GetIconLocation(iconSb, iconSb.Capacity, out int iconIndex);
             string iconLocation = iconSb.ToString();
 
