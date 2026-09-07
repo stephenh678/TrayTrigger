@@ -45,14 +45,6 @@ public static partial class GameNameExtractor
         "_final", "_release", "_preview", "_demo"
     ];
 
-    private static readonly string[] ReleaseGroupSuffixes =
-    [
-        "AnkerGames", "FitGirl", "DODI", "GOG", "Steam", "CODEX", 
-        "RUNE", "TENOKE", "SKIDROW", "FLT", "FairLight", "CPY", "EMPRESS", 
-        "Razor1911", "RELOADED", "PLAZA", "TiNYiSO", "DARKSiDERS",
-        "ElAmigos", "KaOs", "Goldberg", "ALI213", "3DM", "HOODLUM", "PROPHET", "CHRONOS", "VACE"
-    ];
-
     private static readonly string[] GenericFolders =
     [
         "bin", "binaries", "win64", "win32", "wingdk", "x64", "x86",
@@ -65,26 +57,6 @@ public static partial class GameNameExtractor
         "games", "my games", "steamlibrary", "common", "steamapps",
         "gog games", "xboxgames", "installed games", "game library",
         "pc games", "epic games", "ubisoft games", "ea games"
-    ];
-
-    private static readonly string[] EditionPhrases =
-    [
-        "Digital Deluxe Edition", "Deluxe Edition", "Definitive Edition",
-        "Director's Cut", "Directors Cut", "Game of the Year Edition", "Game of the Year",
-        "GOTY Edition", "GOTY", "Collector's Edition", "Collectors Edition",
-        "Anniversary Edition", "Complete Edition", "Premium Edition", "Ultimate Edition",
-        "Special Edition", "Enhanced Edition", "Standard Edition", "Limited Edition",
-        "Gold Edition", "Silver Edition", "Remastered Edition", "HD Remaster"
-    ];
-
-    private static readonly (string Misspelling, string Correction)[] CommonSpellingCorrections =
-    [
-        (@"\breamek\b", "remake"),
-        (@"\bedtion\b", "edition"),
-        (@"\bdefinative\b", "definitive"),
-        (@"\bdelux\b", "deluxe"),
-        (@"\bremasterd\b", "remastered"),
-        (@"\bdirectors\b", "director's")
     ];
 
     /// <summary>
@@ -357,7 +329,7 @@ public static partial class GameNameExtractor
         string cleaned = folderName;
 
         // 1. Correct common spelling mistakes
-        foreach (var (pattern, correction) in CommonSpellingCorrections)
+        foreach (var (pattern, correction) in TitleHeuristics.CommonSpellingCorrections)
         {
             cleaned = Regex.Replace(cleaned, pattern, correction, RegexOptions.IgnoreCase);
         }
@@ -367,13 +339,13 @@ public static partial class GameNameExtractor
         cleaned = ParenthesesAnnotationsRegex().Replace(cleaned, " ");
 
         // 3. Strip known release group / repack tags
-        foreach (var grp in ReleaseGroupSuffixes)
+        foreach (var grp in TitleHeuristics.ReleaseGroups)
         {
             cleaned = Regex.Replace(cleaned, $@"(?:^|[-_.\s])+{Regex.Escape(grp)}(?:[-_.\s]|$)+", " ", RegexOptions.IgnoreCase);
         }
 
         // 4. Strip edition tags
-        foreach (var ed in EditionPhrases)
+        foreach (var ed in TitleHeuristics.EditionPhrases)
         {
             cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", " ", RegexOptions.IgnoreCase);
         }

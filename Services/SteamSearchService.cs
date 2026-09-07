@@ -34,34 +34,6 @@ public partial class SteamSearchService
 
     private static readonly ConcurrentDictionary<string, List<SteamGameMatch>> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly string[] ReleaseGroups =
-    [
-        "AnkerGames", "FitGirl", "DODI", "ElAmigos", "KaOs", "TENOKE", "RUNE", 
-        "FLT", "FairLight", "SKIDROW", "CODEX", "Razor1911", "RELOADED", "PLAZA", 
-        "TiNYiSO", "DARKSiDERS", "EMPRESS", "CPY", "GOG", "PROPHET", "HOODLUM", 
-        "CHRONOS", "VACE", "Goldberg", "ALI213", "3DM"
-    ];
-
-    private static readonly string[] EditionPhrases =
-    [
-        "Digital Deluxe Edition", "Deluxe Edition", "Definitive Edition",
-        "Director's Cut", "Directors Cut", "Game of the Year Edition", "Game of the Year",
-        "GOTY Edition", "GOTY", "Collector's Edition", "Collectors Edition",
-        "Anniversary Edition", "Complete Edition", "Premium Edition", "Ultimate Edition",
-        "Special Edition", "Enhanced Edition", "Standard Edition", "Limited Edition",
-        "Gold Edition", "Silver Edition", "Remastered Edition", "HD Remaster"
-    ];
-
-    private static readonly (string Misspelling, string Correction)[] CommonSpellingCorrections =
-    [
-        (@"\breamek\b", "remake"),
-        (@"\bedtion\b", "edition"),
-        (@"\bdefinative\b", "definitive"),
-        (@"\bdelux\b", "deluxe"),
-        (@"\bremasterd\b", "remastered"),
-        (@"\bdirectors\b", "director's")
-    ];
-
     private static readonly string[] PenaltyKeywords =
     [
         "soundtrack", "ost", "demo", "teaser", "prologue", "artbook", 
@@ -101,7 +73,7 @@ public partial class SteamSearchService
         string cleaned = query;
 
         // 1. Correct common spelling mistakes
-        foreach (var (pattern, correction) in CommonSpellingCorrections)
+        foreach (var (pattern, correction) in TitleHeuristics.CommonSpellingCorrections)
         {
             cleaned = Regex.Replace(cleaned, pattern, correction, RegexOptions.IgnoreCase);
         }
@@ -111,13 +83,13 @@ public partial class SteamSearchService
         cleaned = ParenthesesClutterRegex().Replace(cleaned, " ");
 
         // 3. Strip release groups
-        foreach (var grp in ReleaseGroups)
+        foreach (var grp in TitleHeuristics.ReleaseGroups)
         {
             cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(grp)}\b", "", RegexOptions.IgnoreCase);
         }
 
         // 4. Strip edition tags (which often break Steam API search matching)
-        foreach (var ed in EditionPhrases)
+        foreach (var ed in TitleHeuristics.EditionPhrases)
         {
             cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", "", RegexOptions.IgnoreCase);
         }
