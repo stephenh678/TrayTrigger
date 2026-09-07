@@ -39,6 +39,8 @@ public class SettingsViewModel : ViewModelBase
     private readonly Func<Task>? _onRequestEnrichLibrary;
     private readonly Func<IProgress<string>, Task>? _onRequestRefreshAllPosters;
     private readonly Action? _onRequestOpenSteamImport;
+    private readonly Func<Task>? _onCheckForUpdates;
+    private readonly Func<string>? _getUpdateStatusText;
 
     public const string ViewModePosterGrid = "Poster Grid";
     public const string ViewModeCompactIcons = "Compact Icons";
@@ -147,7 +149,9 @@ public class SettingsViewModel : ViewModelBase
         Action? onHotkeySettingChanged = null,
         Func<Task>? onRequestEnrichLibrary = null,
         Func<IProgress<string>, Task>? onRequestRefreshAllPosters = null,
-        Action? onRequestOpenSteamImport = null)
+        Action? onRequestOpenSteamImport = null,
+        Func<Task>? onCheckForUpdates = null,
+        Func<string>? getUpdateStatusText = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
@@ -160,6 +164,8 @@ public class SettingsViewModel : ViewModelBase
         _onRequestEnrichLibrary = onRequestEnrichLibrary;
         _onRequestRefreshAllPosters = onRequestRefreshAllPosters;
         _onRequestOpenSteamImport = onRequestOpenSteamImport;
+        _onCheckForUpdates = onCheckForUpdates;
+        _getUpdateStatusText = getUpdateStatusText;
 
         // Ensure configured MaxRecentInTray is present in options
         if (_settings.MaxRecentInTray > 0 && !MaxRecentOptions.Contains(_settings.MaxRecentInTray))
@@ -212,7 +218,13 @@ public class SettingsViewModel : ViewModelBase
                 IsRefreshingAllPosters = false;
             }
         });
-        CheckUpdatesInSettingsCommand = new AsyncRelayCommand(async () => await CheckForUpdatesAsync(true));
+        CheckUpdatesInSettingsCommand = new AsyncRelayCommand(async () =>
+        {
+            if (_onCheckForUpdates != null)
+            {
+                await _onCheckForUpdates();
+            }
+        });
     }
 
     // --- Windows Startup & System Tray Integration ---
@@ -336,64 +348,13 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    private string _updateStatusText = string.Empty;
-    public string UpdateStatusText
-    {
-        get => _updateStatusText;
-        set => SetProperty(ref _updateStatusText, value);
-    }
+    // Update checking itself lives in MainViewModel (the single implementation, per L-10);
+    // this just displays that status and triggers it via the callbacks passed at construction.
+    public string UpdateStatusText => _getUpdateStatusText?.Invoke() ?? string.Empty;
 
-    private bool _isCheckingUpdates;
-    public bool IsCheckingUpdates
-    {
-        get => _isCheckingUpdates;
-        set => SetProperty(ref _isCheckingUpdates, value);
-    }
+    public void NotifyUpdateStatusChanged() => OnPropertyChanged(nameof(UpdateStatusText));
 
     public ICommand CheckUpdatesInSettingsCommand { get; }
-
-    public async Task CheckForUpdatesAsync(bool showDialogIfAvailable = true)
-    {
-        if (IsCheckingUpdates) return;
-
-        IsCheckingUpdates = true;
-        UpdateStatusText = "Checking GitHub for updates...";
-
-        try
-        {
-            var result = await UpdateService.Instance.CheckForUpdatesAsync(GitHubRepository);
-            if (result.IsUpdateAvailable && result.LatestRelease != null)
-            {
-                UpdateStatusText = $"Update available: {result.LatestRelease.TagName}!";
-                if (showDialogIfAvailable)
-                {
-                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
-                    UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
-                }
-            }
-            else if (result.IsUpToDate)
-            {
-                UpdateStatusText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
-            }
-            else if (result.Status == UpdateStatus.NoReleasesFound)
-            {
-                UpdateStatusText = "No releases published yet on GitHub.";
-            }
-            else
-            {
-                UpdateStatusText = result.ErrorMessage ?? "Could not check for updates.";
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Error("SettingsViewModel", "Failed to check for updates", ex);
-            UpdateStatusText = "Failed to check updates.";
-        }
-        finally
-        {
-            IsCheckingUpdates = false;
-        }
-    }
 
     // --- System Tray Context Menu Preferences ---
 
