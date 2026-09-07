@@ -188,7 +188,9 @@ public class MainViewModel : ViewModelBase
             onHotkeySettingChanged: UpdateHotkeys,
             onRequestEnrichLibrary: EnrichLibraryAsync,
             onRequestRefreshAllPosters: progress => RefreshAllPostersAsync(progress),
-            onRequestOpenSteamImport: OpenSteamImport
+            onRequestOpenSteamImport: OpenSteamImport,
+            onCheckForUpdates: () => CheckForUpdatesAsync(true),
+            getUpdateStatusText: () => UpdateStatusBadgeText
         );
 
         SettingsVM.PropertyChanged += (s, e) =>
@@ -456,7 +458,14 @@ public class MainViewModel : ViewModelBase
     public string UpdateStatusBadgeText
     {
         get => _updateStatusBadgeText;
-        set => SetProperty(ref _updateStatusBadgeText, value);
+        set
+        {
+            if (SetProperty(ref _updateStatusBadgeText, value))
+            {
+                // Settings tab shows the same status text via SettingsVM; see L-10.
+                SettingsVM?.NotifyUpdateStatusChanged();
+            }
+        }
     }
 
     private string _updateStatusIcon = "\uE73E"; // Segoe checkmark
