@@ -41,8 +41,13 @@ public class TrayPromotionService
                     bool isCurrent = !string.IsNullOrEmpty(currentExePath) &&
                                      string.Equals(storedPath, currentExePath, StringComparison.OrdinalIgnoreCase);
 
-                    // If it is not the current running executable, remove it to eliminate ghost/duplicate icons
-                    if (!isCurrent)
+                    // A different TrayTrigger install (e.g. portable copy vs. installed copy) is
+                    // still live if its executable still exists on disk; only remove entries whose
+                    // target is actually gone, so live installs don't repeatedly delete each other's
+                    // "always show" promotion. See M-21.
+                    bool targetStillExists = !string.IsNullOrEmpty(storedPath) && File.Exists(storedPath);
+
+                    if (!isCurrent && !targetStillExists)
                     {
                         try
                         {
