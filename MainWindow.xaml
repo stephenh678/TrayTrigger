@@ -1536,15 +1536,46 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                                Margin="24,3,0,6" TextWrapping="Wrap"/>
 
-                                    <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
-                                        <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}" 
+                                    <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
+                                        <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding MaxRecentOptions}" 
-                                                  SelectedItem="{Binding MaxRecentInTray, Mode=TwoWay}" 
+                                        <ComboBox ItemsSource="{Binding MaxRecentOptions}"
+                                                  SelectedItem="{Binding MaxRecentInTray, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="80" HorizontalAlignment="Left"/>
                                     </DockPanel>
 
-                                    <CheckBox Content="Group tray context menu by category" 
+                                    <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
+                                        <TextBlock Text="Recent sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                                   FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                                  SelectedItem="{Binding RecentTraySortOption, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
+                                    </DockPanel>
+
+                                    <CheckBox Content="Include 'Favorites' category in tray menu"
+                                              IsChecked="{Binding ShowFavoritesInTray}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Adds a persistent 'Favorites' category submenu to the tray menu for quick access to your starred games, whether category grouping is enabled or not."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                                    <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
+                                        <TextBlock Text="Max favorites to show:" Foreground="{StaticResource BrushTextSecondary}"
+                                                   FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <ComboBox ItemsSource="{Binding MaxFavoritesOptions}"
+                                                  SelectedItem="{Binding MaxFavoritesInTray, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernComboBox}" Width="80" HorizontalAlignment="Left"/>
+                                    </DockPanel>
+
+                                    <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
+                                        <TextBlock Text="Favorites sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                                   FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                                  SelectedItem="{Binding FavoritesTraySortOption, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
+                                    </DockPanel>
+
+                                    <CheckBox Content="Group tray context menu by category"
                                               IsChecked="{Binding GroupTrayMenuByCategory}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                     <TextBlock Text="When enabled, games are shown under category submenus in the right-click tray menu. When disabled, shows a flat list sorted by your preference." 

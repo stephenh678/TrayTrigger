@@ -94,6 +94,7 @@ public class SettingsViewModel : ViewModelBase
     };
 
     public ObservableCollection<int> MaxRecentOptions { get; } = new() { 3, 5, 8, 10 };
+    public ObservableCollection<int> MaxFavoritesOptions { get; } = new() { 3, 5, 8, 10 };
 
     public ObservableCollection<string> ViewModeOptions { get; } = new()
     {
@@ -167,6 +168,15 @@ public class SettingsViewModel : ViewModelBase
             var sorted = MaxRecentOptions.OrderBy(x => x).ToList();
             MaxRecentOptions.Clear();
             foreach (var opt in sorted) MaxRecentOptions.Add(opt);
+        }
+
+        // Ensure configured MaxFavoritesInTray is present in options
+        if (_settings.MaxFavoritesInTray > 0 && !MaxFavoritesOptions.Contains(_settings.MaxFavoritesInTray))
+        {
+            MaxFavoritesOptions.Add(_settings.MaxFavoritesInTray);
+            var sortedFavorites = MaxFavoritesOptions.OrderBy(x => x).ToList();
+            MaxFavoritesOptions.Clear();
+            foreach (var opt in sortedFavorites) MaxFavoritesOptions.Add(opt);
         }
 
         // Initialize Tab Commands
@@ -389,6 +399,66 @@ public class SettingsViewModel : ViewModelBase
             if (_settings.MaxRecentInTray != value)
             {
                 _settings.MaxRecentInTray = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    public string RecentTraySortOption
+    {
+        get => _settings.RecentTraySortOption;
+        set
+        {
+            if (_settings.RecentTraySortOption != value)
+            {
+                _settings.RecentTraySortOption = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    public bool ShowFavoritesInTray
+    {
+        get => _settings.ShowFavoritesInTray;
+        set
+        {
+            if (_settings.ShowFavoritesInTray != value)
+            {
+                _settings.ShowFavoritesInTray = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    public int MaxFavoritesInTray
+    {
+        get => _settings.MaxFavoritesInTray > 0 ? _settings.MaxFavoritesInTray : 3;
+        set
+        {
+            if (_settings.MaxFavoritesInTray != value)
+            {
+                _settings.MaxFavoritesInTray = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    public string FavoritesTraySortOption
+    {
+        get => _settings.FavoritesTraySortOption;
+        set
+        {
+            if (_settings.FavoritesTraySortOption != value)
+            {
+                _settings.FavoritesTraySortOption = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
                 _onTrayMenuSettingChanged?.Invoke();
@@ -731,6 +801,10 @@ public class SettingsViewModel : ViewModelBase
         _settings.GroupTrayMenuByCategory = true;
         _settings.ShowRecentInTray = true;
         _settings.MaxRecentInTray = 5;
+        _settings.RecentTraySortOption = "Most Recently Played";
+        _settings.ShowFavoritesInTray = true;
+        _settings.MaxFavoritesInTray = 5;
+        _settings.FavoritesTraySortOption = "Alphabetical (A - Z)";
         _settings.TrayMenuSortOption = "Alphabetical (A - Z)";
         _settings.PreferExeForGameName = true;
         _settings.SearchOfficialTitleOnline = true;
@@ -763,6 +837,10 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(GroupTrayMenuByCategory));
         OnPropertyChanged(nameof(ShowRecentInTray));
         OnPropertyChanged(nameof(MaxRecentInTray));
+        OnPropertyChanged(nameof(RecentTraySortOption));
+        OnPropertyChanged(nameof(ShowFavoritesInTray));
+        OnPropertyChanged(nameof(MaxFavoritesInTray));
+        OnPropertyChanged(nameof(FavoritesTraySortOption));
         OnPropertyChanged(nameof(TrayMenuSortOption));
         OnPropertyChanged(nameof(PreferExeForGameName));
         OnPropertyChanged(nameof(SearchOfficialTitleOnline));
