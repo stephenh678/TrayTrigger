@@ -37,38 +37,6 @@ public enum AboutSubSection
     Support
 }
 
-public class CategoryTabItem : ViewModelBase
-{
-    public string Name { get; }
-    public string DisplayName { get; }
-    public bool IsFavoritesTab { get; }
-
-    private bool _isSelected;
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set
-        {
-            if (_isSelected != value)
-            {
-                _isSelected = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    public ICommand SelectCommand { get; }
-
-    public CategoryTabItem(string name, string displayName, bool isSelected, Action<string> onSelect)
-    {
-        Name = name;
-        DisplayName = displayName;
-        IsFavoritesTab = string.Equals(name, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
-        _isSelected = isSelected;
-        SelectCommand = new RelayCommand(() => onSelect(Name));
-    }
-}
-
 public class MainViewModel : ViewModelBase
 {
     private readonly StorageService _storageService;
@@ -188,17 +156,6 @@ public class MainViewModel : ViewModelBase
             onCheckForUpdates: () => Update.CheckForUpdatesAsync(true),
             getUpdateStatusText: () => Update.UpdateStatusBadgeText
         );
-
-        SettingsVM.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName is nameof(SettingsViewModel.LibraryViewMode)
-                or nameof(SettingsViewModel.IsGridView)
-                or nameof(SettingsViewModel.IsIconsView)
-                or nameof(SettingsViewModel.IsListView))
-            {
-                OnPropertyChanged(e.PropertyName);
-            }
-        };
 
         Library.RequestEditGameDialog += card => RequestEditGameDialog?.Invoke(card);
         Library.RequestQuickRename += card => RequestQuickRename?.Invoke(card);
