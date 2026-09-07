@@ -821,7 +821,6 @@ public class MainViewModel : ViewModelBase
         card.RefreshProperties();
         RebuildCategories();
         SaveLibrary();
-        LibraryUpdated?.Invoke();
     }
 
     public void LaunchGameEntry(GameEntry game)
@@ -1134,7 +1133,6 @@ public class MainViewModel : ViewModelBase
                 SaveLibrary();
                 ApplySort();
                 StatusMessage = $"Updated \"{card.Name}\" with Steam metadata.";
-                LibraryUpdated?.Invoke();
             }
             else
             {
@@ -1308,7 +1306,6 @@ public class MainViewModel : ViewModelBase
             if (updated > 0)
             {
                 SaveLibrary();
-                LibraryUpdated?.Invoke();
             }
 
             Report($"Poster refresh complete: {updated} of {candidates.Count} game(s) refreshed.");
@@ -1372,7 +1369,6 @@ public class MainViewModel : ViewModelBase
             {
                 RebuildCategories();
                 SaveLibrary();
-                LibraryUpdated?.Invoke();
             }
         }
         finally
@@ -1461,7 +1457,6 @@ public class MainViewModel : ViewModelBase
         StatusMessage = $"Removed {card.Name}";
         OnPropertyChanged(nameof(TotalGameCount));
         OnPropertyChanged(nameof(TotalGameCountDisplay));
-        LibraryUpdated?.Invoke();
     }
 
     public void UndoDelete()
@@ -1489,7 +1484,6 @@ public class MainViewModel : ViewModelBase
             StatusMessage = $"Restored \"{card.Name}\" to library.";
             OnPropertyChanged(nameof(TotalGameCount));
             OnPropertyChanged(nameof(TotalGameCountDisplay));
-            LibraryUpdated?.Invoke();
             _lastRemovedGame = null;
         }
     }
@@ -1657,7 +1651,6 @@ public class MainViewModel : ViewModelBase
                 StatusMessage = $"Added {addedCount} new game(s) instantly!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
-                LibraryUpdated?.Invoke();
             }
         }
         catch (Exception ex)
@@ -1890,7 +1883,6 @@ public class MainViewModel : ViewModelBase
                     : $"Added {preparedEntries.Count} games from folder!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
-                LibraryUpdated?.Invoke();
             }
         }
         catch (Exception ex)
@@ -1975,7 +1967,6 @@ public class MainViewModel : ViewModelBase
             StatusMessage = $"Added \"{entry.Name}\" to library!";
             OnPropertyChanged(nameof(TotalGameCount));
             OnPropertyChanged(nameof(TotalGameCountDisplay));
-            LibraryUpdated?.Invoke();
         }
         catch (Exception ex)
         {
@@ -2132,7 +2123,6 @@ public class MainViewModel : ViewModelBase
                     : $"Imported {preparedEntries.Count} Steam game(s)!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
-                LibraryUpdated?.Invoke();
             }
         }
         catch (Exception ex)
