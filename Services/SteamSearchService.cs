@@ -437,9 +437,9 @@ public partial class SteamSearchService
         s = Regex.Replace(s, @"\bv\b", "5");
         s = Regex.Replace(s, @"\biii\b", "3");
         s = Regex.Replace(s, @"\bii\b", "2");
-        s = Regex.Replace(s, @"\bi\b", "1");
         s = Regex.Replace(s, @"\bix\b", "9");
-        s = Regex.Replace(s, @"\bx\b", "10");
+        // Single "i" and "x" are ambiguous (word "I", franchise letter "X") and are
+        // deliberately left unconverted; see M-19.
 
         // Remove punctuation
         s = s.Replace(':', ' ').Replace('-', ' ').Replace('_', ' ')
