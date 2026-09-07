@@ -360,6 +360,11 @@ public class MainViewModel : ViewModelBase
                 {
                     SystemVM.StopTelemetry();
                 }
+
+                if (_currentSection == NavSection.Settings)
+                {
+                    SettingsVM.ReconcileStartWithWindows();
+                }
             }
         }
     }

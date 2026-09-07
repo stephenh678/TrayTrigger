@@ -253,6 +253,27 @@ public class SettingsViewModel : ViewModelBase
 
     public bool CanConfigureMinimized => StartWithWindows;
 
+    /// <summary>
+    /// Re-reads the real registry state (Run key + Task Manager's StartupApproved flag) and
+    /// updates the toggle if it disagrees with what's stored in settings.json - e.g. the user
+    /// disabled TrayTrigger from Task Manager's Startup tab, or a portable copy moved folders.
+    /// Called when the Settings page is opened, not on every property access, since it's a
+    /// registry read.
+    /// </summary>
+    public void ReconcileStartWithWindows()
+    {
+        _startupManager.ReconcilePath();
+
+        bool actuallyEnabled = _startupManager.IsStartupEnabled();
+        if (_settings.StartWithWindows != actuallyEnabled)
+        {
+            _settings.StartWithWindows = actuallyEnabled;
+            OnPropertyChanged(nameof(StartWithWindows));
+            OnPropertyChanged(nameof(CanConfigureMinimized));
+            AutoSaveSettings();
+        }
+    }
+
     public bool AlwaysShowTrayIcon
     {
         get => _settings.AlwaysShowTrayIcon;
