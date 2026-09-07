@@ -535,7 +535,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
                         <Grid x:Name="Bg" SnapsToDevicePixels="true" Background="Transparent">
-                            <Track x:Name="PART_Track" IsDirectionReversed="true">
+                            <Track x:Name="PART_Track" IsDirectionReversed="False">
                                 <Track.Thumb>
                                     <Thumb>
                                         <Thumb.Template>
@@ -555,6 +555,17 @@
                                 </Track.Thumb>
                             </Track>
                         </Grid>
+                        <ControlTemplate.Triggers>
+                            <!-- A vertical scrollbar's value increases downward while its track's
+                                 "increase" side is visually below the thumb, so it needs the track
+                                 direction reversed. A horizontal scrollbar's value already increases
+                                 left-to-right in the same direction as its track, so reversing it
+                                 (the previous unconditional default) swapped left/right dragging
+                                 and made the left/right ends scroll the opposite way. -->
+                            <Trigger Property="Orientation" Value="Vertical">
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="True"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

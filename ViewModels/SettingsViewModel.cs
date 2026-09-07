@@ -19,6 +19,7 @@ public enum SettingsCategoryTab
     General,
     Library,
     TrayMenu,
+    PerformanceTweaks,
     Diagnostics
 }
 
@@ -61,10 +62,12 @@ public class SettingsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsGeneralTab));
                 OnPropertyChanged(nameof(IsLibraryTab));
                 OnPropertyChanged(nameof(IsTrayMenuTab));
+                OnPropertyChanged(nameof(IsPerformanceTweaksTab));
                 OnPropertyChanged(nameof(IsDiagnosticsTab));
                 OnPropertyChanged(nameof(ShowGeneralSection));
                 OnPropertyChanged(nameof(ShowLibrarySection));
                 OnPropertyChanged(nameof(ShowTrayMenuSection));
+                OnPropertyChanged(nameof(ShowPerformanceTweaksSection));
                 OnPropertyChanged(nameof(ShowDiagnosticsSection));
             }
         }
@@ -74,11 +77,13 @@ public class SettingsViewModel : ViewModelBase
     public bool IsGeneralTab => SelectedTab == SettingsCategoryTab.General;
     public bool IsLibraryTab => SelectedTab == SettingsCategoryTab.Library;
     public bool IsTrayMenuTab => SelectedTab == SettingsCategoryTab.TrayMenu;
+    public bool IsPerformanceTweaksTab => SelectedTab == SettingsCategoryTab.PerformanceTweaks;
     public bool IsDiagnosticsTab => SelectedTab == SettingsCategoryTab.Diagnostics;
 
     public bool ShowGeneralSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.General;
     public bool ShowLibrarySection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.Library;
     public bool ShowTrayMenuSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.TrayMenu;
+    public bool ShowPerformanceTweaksSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.PerformanceTweaks;
     public bool ShowDiagnosticsSection => SelectedTab == SettingsCategoryTab.All || SelectedTab == SettingsCategoryTab.Diagnostics;
 
     private string _statusMessage = string.Empty;
@@ -124,6 +129,7 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SelectGeneralTabCommand { get; }
     public ICommand SelectLibraryTabCommand { get; }
     public ICommand SelectTrayMenuTabCommand { get; }
+    public ICommand SelectPerformanceTweaksTabCommand { get; }
     public ICommand SelectDiagnosticsTabCommand { get; }
 
     // Commands
@@ -191,6 +197,7 @@ public class SettingsViewModel : ViewModelBase
         SelectGeneralTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.General);
         SelectLibraryTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.Library);
         SelectTrayMenuTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.TrayMenu);
+        SelectPerformanceTweaksTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.PerformanceTweaks);
         SelectDiagnosticsTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.Diagnostics);
 
         SaveInWindowSettingsCommand = new RelayCommand(SaveInWindowSettings);
@@ -701,6 +708,22 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    // --- Performance Tweaks ---
+
+    public bool CreateRestorePointBeforeTweaks
+    {
+        get => _settings.CreateRestorePointBeforeTweaks;
+        set
+        {
+            if (_settings.CreateRestorePointBeforeTweaks != value)
+            {
+                _settings.CreateRestorePointBeforeTweaks = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     // --- Troubleshooting & Diagnostics ---
 
     public bool VerboseLoggingEnabled
@@ -833,6 +856,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(AutoCheckForUpdates));
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
+        OnPropertyChanged(nameof(CreateRestorePointBeforeTweaks));
         OnPropertyChanged(nameof(VerboseLoggingEnabled));
         OnPropertyChanged(nameof(LibraryViewMode));
         OnPropertyChanged(nameof(IsGridView));

@@ -33,5 +33,6 @@ public class AppSettings
     public bool HasSeenSteamGridDbPrompt { get; set; } = false;
     public string? SkippedUpdateVersion { get; set; }
     public System.DateTime? RemindAfterUtc { get; set; }
+    public bool CreateRestorePointBeforeTweaks { get; set; } = true;
 }
 

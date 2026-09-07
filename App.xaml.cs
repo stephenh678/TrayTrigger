@@ -239,7 +239,7 @@ public partial class App : Application
 #endif
 
         // Global Hotkey Trigger
-        _hotkeyManager.ManageHotkeyTriggered += ToggleMainWindow;
+        _hotkeyManager.ManageHotkeyTriggered += OnManageHotkeyTriggered;
 
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;
@@ -691,6 +691,17 @@ public partial class App : Application
                 LoggingService.Error("App", $"Fatal exception recreating MainWindow: {ex2.Message}", ex2);
             }
         }
+    }
+
+    /// <summary>
+    /// The global "manage" hotkey (default Ctrl+Alt+G) is meant as a jump-to-library shortcut,
+    /// not just a raise/hide toggle - so unlike the tray icon's left-click (plain ToggleMainWindow),
+    /// it also switches to the Library section.
+    /// </summary>
+    private void OnManageHotkeyTriggered()
+    {
+        _mainViewModel.CurrentSection = NavSection.Library;
+        ToggleMainWindow();
     }
 
     public void ToggleMainWindow()

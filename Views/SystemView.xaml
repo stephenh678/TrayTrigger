@@ -339,22 +339,31 @@
                             <DockPanel LastChildFill="True" Margin="0,0,0,8">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
+                                            IsEnabled="{Binding CanRunBulkAction}"
                                             Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
-                                    <Button Content="Reset Defaults" Command="{Binding ResetDefaultsCommand}" 
+                                    <Button Content="Reset Defaults" Command="{Binding ResetDefaultsCommand}"
+                                            IsEnabled="{Binding CanRunBulkAction}"
                                             Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,5"/>
-                                    <Button Content="Refresh" Command="{Binding RefreshTweaksCommand}" 
+                                    <Button Content="Refresh" Command="{Binding RefreshTweaksCommand}"
+                                            IsEnabled="{Binding CanRunBulkAction}"
                                             Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                 </StackPanel>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Performance Optimization Status" FontSize="13.5" FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12" 
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Performance Optimization Status" FontSize="13.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                        <Border Background="{Binding RestorePointBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                ToolTip="Configured in Settings &#x2192; Performance Tweaks">
+                                            <TextBlock Text="{Binding RestorePointBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12"
                                                Foreground="{StaticResource BrushAccentHover}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>
 
                             <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
-                                <TextBlock Text="💡 Verified, low-overhead OS configurations for latency, frame pacing, and scheduling. No destructive registry cleaners or snake oil." 
+                                <TextBlock Text="💡 Verified, low-overhead OS configurations for latency, frame pacing, and scheduling. No destructive registry cleaners or snake oil."
                                            Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap"/>
                             </Border>
                         </StackPanel>
@@ -408,6 +417,45 @@
 
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Reset Defaults runs) -->
+        <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
+                Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                CornerRadius="8" Padding="16,10" Panel.ZIndex="100">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+            </Border.Effect>
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsApplyingTweaks}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="14" Height="14" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <Border.RenderTransform>
+                        <RotateTransform CenterX="7" CenterY="7"/>
+                    </Border.RenderTransform>
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Border.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetProperty="(Border.RenderTransform).(RotateTransform.Angle)"
+                                                     From="0" To="360" Duration="0:0:0.9"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                    <Path Data="M7,0 A7,7 0 0 1 14,7" Stroke="{StaticResource BrushAccentHover}" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                </Border>
+                <TextBlock Text="{Binding BusyToastMessage}" Foreground="{StaticResource BrushTextPrimary}"
+                           FontSize="13" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
 
         <!-- 4. STATUS BAR -->
         <DockPanel Grid.Row="3" Margin="0,10,0,0">

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using TrayTrigger.Services;
 using TrayTrigger.ViewModels;
@@ -107,6 +108,28 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
+    /// <summary>
+    /// Library-only shortcuts documented in the About page's Quick Reference: Ctrl+F jumps focus
+    /// to the search box, Escape clears an active search filter. Both are no-ops outside the
+    /// Library section so they don't steal keystrokes while e.g. editing a Settings text field.
+    /// </summary>
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_viewModel.CurrentSection != NavSection.Library) return;
+
+        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            LibrarySearchTextBox.Focus();
+            LibrarySearchTextBox.SelectAll();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && !string.IsNullOrEmpty(_viewModel.SearchText))
+        {
+            _viewModel.SearchText = string.Empty;
+            e.Handled = true;
+        }
+    }
+
     private void Window_DragOver(object sender, DragEventArgs e)
     {
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -170,6 +193,18 @@ public partial class MainWindow : Window
         // past this element up to the Window's own separate Drop="Window_Drop" handler,
         // running HandleFileDrop a second time for the one physical drop (which is what
         // produced the "processed the folder twice" symptom).
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// The category strip only scrolls horizontally (vertical is disabled), but a mouse wheel
+    /// by default only ever raises vertical scroll requests - so without this, hovering the
+    /// category tabs and scrolling does nothing. Redirects the wheel delta to a horizontal scroll.
+    /// </summary>
+    private void CategoryScrollViewer_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        var scrollViewer = (System.Windows.Controls.ScrollViewer)sender;
+        scrollViewer.ScrollToHorizontalOffset(scrollViewer.HorizontalOffset - e.Delta);
         e.Handled = true;
     }
 
