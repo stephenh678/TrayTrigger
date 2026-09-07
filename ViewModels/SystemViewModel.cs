@@ -413,6 +413,15 @@ public class SystemViewModel : ViewModelBase
 
     private void ExecuteApplyPreset()
     {
+        var changing = Tweaks.Where(t => t.CanToggle && !t.IsOptimal).Select(t => t.Name).ToList();
+        if (!ConfirmBulkAction(
+            "Apply Performance Preset",
+            "This will change the following settings:",
+            changing))
+        {
+            return;
+        }
+
         StatusMessage = "Applying recommended performance optimizations...";
         _tweaksService.ApplyRecommendedPerformancePreset();
         RefreshAllTweaks();
@@ -422,11 +431,30 @@ public class SystemViewModel : ViewModelBase
 
     private void ExecuteResetDefaults()
     {
+        var changing = Tweaks.Where(t => t.CanToggle && t.IsOptimal).Select(t => t.Name).ToList();
+        if (!ConfirmBulkAction(
+            "Reset Defaults",
+            "This will restore the following settings to their Windows defaults:",
+            changing))
+        {
+            return;
+        }
+
         StatusMessage = "Resetting optimizations to standard Windows defaults...";
         _tweaksService.ResetAllToDefaults();
         RefreshAllTweaks();
         StatusMessage = "Reset all settings to Windows defaults.";
         PromptRestartForBulkAction();
+    }
+
+    private static bool ConfirmBulkAction(string title, string message, List<string> changingTweakNames)
+    {
+        if (changingTweakNames.Count == 0) return true;
+
+        string detail = "Affected: " + string.Join(", ", changingTweakNames) +
+            ". This may require admin approval and a restart to fully take effect.";
+
+        return ModernDialog.Confirm(null, title, message, detail, confirmText: "Continue", cancelText: "Cancel");
     }
 
     private void PromptRestartForBulkAction()
