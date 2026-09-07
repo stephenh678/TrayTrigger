@@ -281,7 +281,15 @@ public class GameDetailsViewModel : ViewModelBase
                 if (match != null && !string.IsNullOrWhiteSpace(match.AppId))
                 {
                     targetAppId = match.AppId;
-                    Game.SteamAppId = targetAppId;
+
+                    // Only persist the match onto the game entry when it clears the same
+                    // "decisive" bar used elsewhere (GameNameExtractor); below that, use it
+                    // to show details this once without silently binding a possibly-wrong
+                    // AppId. See M-22.
+                    if (match.SimilarityScore >= Math.Max(0.85, _minConfidence))
+                    {
+                        Game.SteamAppId = targetAppId;
+                    }
                 }
             }
 
