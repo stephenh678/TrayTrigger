@@ -515,7 +515,7 @@ public class MainViewModel : ViewModelBase
                     // Surface the modal when the user explicitly asked (interactive), or when a
                     // quiet background check (startup / 24h timer) finds the window is actually
                     // visible - a silently-updated badge alone is easy to miss in that case.
-                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                    Window? owner = WindowHelper.ActiveOwner();
                     bool remindLater = UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
                     if (remindLater)
                     {
@@ -540,7 +540,7 @@ public class MainViewModel : ViewModelBase
 
                 if (interactive)
                 {
-                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                    Window? owner = WindowHelper.ActiveOwner();
                     ModernDialog.ShowInfo(
                         owner,
                         "Check for Updates",
@@ -556,7 +556,7 @@ public class MainViewModel : ViewModelBase
 
                 if (interactive)
                 {
-                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                    Window? owner = WindowHelper.ActiveOwner();
                     ModernDialog.ShowInfo(
                         owner,
                         "Check for Updates",
@@ -572,7 +572,7 @@ public class MainViewModel : ViewModelBase
 
                 if (interactive)
                 {
-                    Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                    Window? owner = WindowHelper.ActiveOwner();
                     ModernDialog.ShowWarning(
                         owner,
                         "Check for Updates",
@@ -590,7 +590,7 @@ public class MainViewModel : ViewModelBase
 
             if (interactive)
             {
-                Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                Window? owner = WindowHelper.ActiveOwner();
                 ModernDialog.ShowWarning(
                     owner,
                     "Check for Updates",
@@ -831,10 +831,7 @@ public class MainViewModel : ViewModelBase
             minConfidence: _settings.OnlineMatchConfidenceThreshold);
 
         var dlg = new Views.GameDetailsDialog(vm);
-        if (Application.Current?.MainWindow is { IsVisible: true } owner)
-        {
-            dlg.Owner = owner;
-        }
+        dlg.Owner = WindowHelper.ActiveOwner();
         dlg.ShowDialog();
 
         if (requestedLaunch)
@@ -857,7 +854,7 @@ public class MainViewModel : ViewModelBase
 
     public void LaunchGame(GameCardViewModel card)
     {
-        Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+        Window? owner = WindowHelper.ActiveOwner();
         if (card.IsMissing)
         {
             var res = ModernDialog.Confirm(
@@ -1449,7 +1446,7 @@ public class MainViewModel : ViewModelBase
 
     public void DeleteGame(GameCardViewModel card)
     {
-        Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+        Window? owner = WindowHelper.ActiveOwner();
         bool confirmed = ModernDialog.ConfirmDelete(
             owner,
             "Remove from Library",
@@ -1629,7 +1626,7 @@ public class MainViewModel : ViewModelBase
                     var existingDuplicate = FindDuplicateGame(shortcut.TargetPath, shortcut.SteamAppId);
                     if (existingDuplicate != null)
                     {
-                        Window? dupOwner = Application.Current?.MainWindow is { IsVisible: true } dw ? dw : null;
+                        Window? dupOwner = WindowHelper.ActiveOwner();
                         bool addAnyway = ModernDialog.Confirm(
                             dupOwner,
                             "Game Already in Library",
@@ -1738,7 +1735,7 @@ public class MainViewModel : ViewModelBase
 
         if (aggregated.Count == 0)
         {
-            Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+            Window? owner = WindowHelper.ActiveOwner();
             ModernDialog.ShowInfo(
                 owner,
                 "No Games Found",
@@ -1771,7 +1768,7 @@ public class MainViewModel : ViewModelBase
         {
             if (scanResult.DiscoveredGames.Count == 0)
             {
-                Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+                Window? owner = WindowHelper.ActiveOwner();
                 ModernDialog.ShowInfo(
                     owner,
                     "No Games Found",
@@ -1795,7 +1792,7 @@ public class MainViewModel : ViewModelBase
         var candidates = scanResult.SingleGameCandidates;
         if (candidates.Count == 0)
         {
-            Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+            Window? owner = WindowHelper.ActiveOwner();
             ModernDialog.ShowInfo(
                 owner,
                 "No Game Executable Found",
@@ -1941,7 +1938,7 @@ public class MainViewModel : ViewModelBase
             var existingDuplicate = FindDuplicateGame(candidate.ExePath, null);
             if (existingDuplicate != null)
             {
-                Window? dupOwner = Application.Current?.MainWindow is { IsVisible: true } dw ? dw : null;
+                Window? dupOwner = WindowHelper.ActiveOwner();
                 bool addAnyway = ModernDialog.Confirm(
                     dupOwner,
                     "Game Already in Library",
@@ -2040,7 +2037,7 @@ public class MainViewModel : ViewModelBase
     {
         if (!_settings.SteamIntegrationEnabled)
         {
-            Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+            Window? owner = WindowHelper.ActiveOwner();
             var res = ModernDialog.Confirm(
                 owner,
                 "Steam Integration Disabled",
@@ -2144,7 +2141,7 @@ public class MainViewModel : ViewModelBase
 
     private void PromptExitApplication()
     {
-        Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+        Window? owner = WindowHelper.ActiveOwner();
         var choice = ModernDialog.PromptExitAction(owner);
 
         if (choice == DialogResultOption.Primary)

@@ -167,7 +167,7 @@ public partial class UpdateDialog : Window
     /// dismissing the dialog), so the caller can persist a snooze.</returns>
     public static bool ShowUpdateDialog(Window? owner, GitHubReleaseInfo release, Version currentVersion)
     {
-        var activeOwner = owner ?? (Application.Current?.MainWindow is { IsVisible: true } w ? w : null);
+        var activeOwner = owner ?? WindowHelper.ActiveOwner();
         var dialog = new UpdateDialog(release, currentVersion);
 
         if (activeOwner != null)

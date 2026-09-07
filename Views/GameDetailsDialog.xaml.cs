@@ -17,7 +17,7 @@ public partial class GameDetailsDialog : Window
             Dispatcher.Invoke(Close);
         };
 
-        if (Application.Current?.MainWindow is { IsVisible: true } main && main != this)
+        if (WindowHelper.ActiveOwner() is { } main && main != this)
         {
             Owner = main;
         }
