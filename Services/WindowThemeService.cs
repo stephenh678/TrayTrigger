@@ -257,21 +257,6 @@ public static partial class WindowThemeService
     [LibraryImport("dwmapi.dll")]
     private static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, in int attrValue, int attrSize);
 
-    public static void ApplyDarkTitleBar(Window window)
-    {
-        if (window == null) return;
-
-        var handle = new WindowInteropHelper(window).Handle;
-        if (handle != IntPtr.Zero)
-        {
-            SetDarkAttributes(window);
-        }
-        else
-        {
-            window.SourceInitialized += (s, e) => SetDarkAttributes(window);
-        }
-    }
-
     private static void SetDarkAttributes(Window window)
     {
         try

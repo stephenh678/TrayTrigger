@@ -266,11 +266,6 @@ public partial class SteamScannerService
         }
     }
 
-    public static void LaunchGame(string appId)
-    {
-        Process.Start(new ProcessStartInfo($"steam://rungameid/{appId}") { UseShellExecute = true });
-    }
-
     public static void OpenStorePage(string appId)
     {
         Process.Start(new ProcessStartInfo($"https://store.steampowered.com/app/{appId}") { UseShellExecute = true });

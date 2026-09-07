@@ -169,35 +169,4 @@ public class TrayPromotionService
         }
     }
 
-    public bool? IsCurrentlyPromoted()
-    {
-        string? exePath = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(exePath)) return null;
-
-        try
-        {
-            using var rootKey = Registry.CurrentUser.OpenSubKey(NotifyIconSettingsPath, false);
-            if (rootKey == null) return null;
-
-            // Prioritize exact match first
-            foreach (var subKeyName in rootKey.GetSubKeyNames())
-            {
-                using var subKey = rootKey.OpenSubKey(subKeyName, false);
-                if (subKey?.GetValue("ExecutablePath") is string storedPath &&
-                    storedPath.Equals(exePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (subKey.GetValue("IsPromoted") is int intVal)
-                    {
-                        return intVal == 1;
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("TrayPromotionService", $"Error reading promotion status: {ex.Message}");
-        }
-
-        return null;
-    }
 }

@@ -846,25 +846,6 @@ public class MainViewModel : ViewModelBase
         SaveLibrary();
     }
 
-    public void LaunchGameEntry(GameEntry game)
-    {
-        var card = Games.FirstOrDefault(c => c.Game.Id == game.Id);
-        if (card != null)
-        {
-            LaunchGame(card);
-        }
-        else
-        {
-            if (_launcherService.LaunchGame(game, out _, out _))
-            {
-                if (_settings.MinimizeOnGameLaunch)
-                {
-                    RequestMinimizeToTray?.Invoke();
-                }
-            }
-        }
-    }
-
     public void LaunchGame(GameCardViewModel card)
     {
         Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
