@@ -1354,6 +1354,7 @@ public class MainViewModel : ViewModelBase
         card.Game.Name = newName.Trim();
         card.RefreshProperties();
         SaveLibrary();
+        FilteredGames.Refresh();
         StatusMessage = $"Renamed to \"{card.Name}\"";
     }
 
