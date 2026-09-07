@@ -75,7 +75,9 @@ public partial class IconExtractorService
                     {
                         return cachedIconPath;
                     }
-                    File.Copy(sourcePath, cachedIconPath, overwrite: true);
+                    using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    using var img = Image.FromStream(fs);
+                    SaveDownscaled(img, cachedIconPath);
                     return cachedIconPath;
                 }
 
@@ -93,7 +95,7 @@ public partial class IconExtractorService
                 {
                     using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                     using var img = Image.FromStream(fs);
-                    img.Save(cachedIconPath, ImageFormat.Png);
+                    SaveDownscaled(img, cachedIconPath);
                     return cachedIconPath;
                 }
 
@@ -132,6 +134,33 @@ public partial class IconExtractorService
             LoggingService.Warn("IconExtractorService", $"Fallback generation failed: {ex.Message}");
             return string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Saves a raster source as the cached icon, downscaling it first if either dimension
+    /// exceeds 256px so an oversized artwork file (e.g. a Steam hero image) never becomes a
+    /// multi-megabyte "icon" on disk. See M-23.
+    /// </summary>
+    private static void SaveDownscaled(Image img, string outputPath)
+    {
+        const int maxDimension = 256;
+        if (img.Width <= maxDimension && img.Height <= maxDimension)
+        {
+            img.Save(outputPath, ImageFormat.Png);
+            return;
+        }
+
+        double scale = Math.Min((double)maxDimension / img.Width, (double)maxDimension / img.Height);
+        int w = Math.Max(1, (int)Math.Round(img.Width * scale));
+        int h = Math.Max(1, (int)Math.Round(img.Height * scale));
+
+        using var resized = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+        using (var g = Graphics.FromImage(resized))
+        {
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.DrawImage(img, 0, 0, w, h);
+        }
+        resized.Save(outputPath, ImageFormat.Png);
     }
 
     /// <summary>

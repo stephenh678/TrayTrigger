@@ -228,8 +228,12 @@ public partial class SteamScannerService
                         string appSubdir = Path.Combine(libraryCacheDir, appId);
                         if (Directory.Exists(appSubdir))
                         {
+                            // Only accept files that look like an icon/logo asset; do not fall back
+                            // to "any file in this folder", which can pick a multi-megabyte hero
+                            // image (e.g. library_hero.jpg) as the tray icon. See M-23.
                             var subIcons = Directory.GetFiles(appSubdir, "*icon*.*")
-                                .Concat(Directory.GetFiles(appSubdir, "*.*"))
+                                .Concat(Directory.GetFiles(appSubdir, "*logo*.*"))
+                                .Concat(Directory.GetFiles(appSubdir, "*.ico"))
                                 .ToList();
                             if (subIcons.Count > 0)
                             {
