@@ -383,7 +383,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **How to verify:** Import a Steam game; `%LocalAppData%\TrayTrigger\Icons\{id}.png` is <= 256 px.
 
 ### M-24 Steam import decodes every game icon synchronously on the UI thread
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Re-verified: `SteamImportItemViewModel`'s constructor still called `IconExtractorService.LoadBitmapSafely` directly, inside the UI-thread `foreach` in `LoadGamesAsync`. Mirrored `BatchGameItemViewModel` (`FolderBatchImportViewModel.cs`) exactly as suggested: `IconImage` is now a mutable property raising `OnPropertyChanged`, decoded via `Task.Run` and set back through `Application.Current?.Dispatcher.BeginInvoke`. Release build: 0 warnings, 0 errors. Verified with a git-stash before/after timing harness (`C:\hkt1`, referencing the built `TrayTrigger.dll`): constructed 100 `SteamImportItemViewModel`s on the calling thread (simulating the dialog's UI-thread `foreach`) against a synthetic 1024x1024 PNG icon source. Pre-fix (stashed): 170ms blocking the thread. Post-fix: 1ms. Confirms the constructor no longer blocks on decode. Did not run the manual GUI verification (open the real import dialog with 100+ Steam games) - no tool in this session can drive the native dialog, and this environment doesn't have 100+ real Steam games installed - but the harness exercises the exact code path (`SteamImportItemViewModel` constructor as called from the real UI-thread loop) with a representative icon size.
 - **Confidence:** CONFIRMED
 - **Category:** performance
 - **Files:** `ViewModels/SteamImportViewModel.cs:20-25,106-132`
