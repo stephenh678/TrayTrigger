@@ -1672,11 +1672,11 @@ public class MainViewModel : ViewModelBase
         // Processed after the guard above is released - see comment at the top of this method.
         if (folders.Count == 1)
         {
-            ProcessFolderAdd(folders[0]);
+            await ProcessFolderAddAsync(folders[0]);
         }
         else if (folders.Count > 1)
         {
-            ProcessFolderAddBatch(folders);
+            await ProcessFolderAddBatchAsync(folders);
         }
     }
 
@@ -1684,15 +1684,16 @@ public class MainViewModel : ViewModelBase
     // prompt, instead of prompting once per folder (see ProcessFolderAdd, which still owns the
     // single-folder path so its "no games" / "one game" / "overwhelming match" shortcuts are
     // unaffected).
-    public void ProcessFolderAddBatch(List<string> folderPaths)
+    public async Task ProcessFolderAddBatchAsync(List<string> folderPaths)
     {
+        StatusMessage = "Scanning folders...";
         var aggregated = new List<GameCandidate>();
 
         foreach (var folderPath in folderPaths)
         {
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) continue;
 
-            var scanResult = _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName);
+            var scanResult = await Task.Run(() => _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName));
 
             if (scanResult.IsMultiGameLibrary)
             {
@@ -1726,11 +1727,14 @@ public class MainViewModel : ViewModelBase
         RequestFolderBatchImport?.Invoke(combinedLabel, aggregated);
     }
 
-    public void ProcessFolderAdd(string folderPath)
+    public void ProcessFolderAdd(string folderPath) => _ = ProcessFolderAddAsync(folderPath);
+
+    public async Task ProcessFolderAddAsync(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) return;
 
-        var scanResult = _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName);
+        StatusMessage = "Scanning folder...";
+        var scanResult = await Task.Run(() => _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName));
 
         // A. Multi-game parent folder detected (e.g. C:\Games, D:\SteamLibrary\steamapps\common, C:\GOG Games)
         if (scanResult.IsMultiGameLibrary)
