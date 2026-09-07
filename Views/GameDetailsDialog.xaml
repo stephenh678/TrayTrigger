@@ -31,9 +31,12 @@
             </Grid.ColumnDefinitions>
 
             <!-- Poster Artwork Container -->
-            <Border Grid.Column="0" Width="170" Height="255" CornerRadius="8" 
-                    Background="#141418" BorderBrush="{StaticResource BrushBorderDark}" 
-                    BorderThickness="1" Margin="0,0,20,0" ClipToBounds="True">
+            <Border Grid.Column="0" Width="170" Height="255" CornerRadius="8"
+                    Background="#141418" BorderBrush="{StaticResource BrushBorderDark}"
+                    BorderThickness="1" Margin="0,0,20,0">
+                <Border.Clip>
+                    <RectangleGeometry Rect="0,0,168,253" RadiusX="7" RadiusY="7"/>
+                </Border.Clip>
                 <Grid>
                     <!-- Fallback Icon Tile if no poster -->
                     <Border Background="#181820" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">

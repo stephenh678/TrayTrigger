@@ -26,11 +26,7 @@ public partial class GameDetailsDialog : Window
 
         Loaded += (s, e) =>
         {
-            if (Owner != null)
-            {
-                Left = Owner.Left + (Owner.ActualWidth - ActualWidth) / 2;
-                Top = Owner.Top + (Owner.ActualHeight - ActualHeight) / 2;
-            }
+            WindowThemeService.CenterOverOwner(this);
             Activate();
         };
     }

@@ -406,11 +406,11 @@ public class GameEditViewModel : ViewModelBase
     {
         if (!string.IsNullOrEmpty(_customCoverPath) && File.Exists(_customCoverPath))
         {
-            CoverPreview = IconExtractorService.LoadBitmapSafely(_customCoverPath);
+            CoverPreview = IconExtractorService.LoadBitmapSafely(_customCoverPath, decodePixelWidth: 340);
         }
         else if (!string.IsNullOrEmpty(SourceGame.CoverImagePath) && File.Exists(SourceGame.CoverImagePath))
         {
-            CoverPreview = IconExtractorService.LoadBitmapSafely(SourceGame.CoverImagePath);
+            CoverPreview = IconExtractorService.LoadBitmapSafely(SourceGame.CoverImagePath, decodePixelWidth: 340);
         }
         else
         {

@@ -134,7 +134,7 @@ public class GameDetailsViewModel : ViewModelBase
 
             if (localPath != null)
             {
-                return IconExtractorService.LoadBitmapSafely(localPath);
+                return IconExtractorService.LoadBitmapSafely(localPath, decodePixelWidth: 340);
             }
 
             if (!string.IsNullOrWhiteSpace(_details?.HeaderImageUrl))

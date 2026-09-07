@@ -41,6 +41,7 @@ public class CategoryTabItem : ViewModelBase
 {
     public string Name { get; }
     public string DisplayName { get; }
+    public bool IsFavoritesTab { get; }
 
     private bool _isSelected;
     public bool IsSelected
@@ -62,6 +63,7 @@ public class CategoryTabItem : ViewModelBase
     {
         Name = name;
         DisplayName = displayName;
+        IsFavoritesTab = string.Equals(name, "Favorites", StringComparison.OrdinalIgnoreCase);
         _isSelected = isSelected;
         SelectCommand = new RelayCommand(() => onSelect(Name));
     }
@@ -117,6 +119,7 @@ public class MainViewModel : ViewModelBase
     {
         "Alphabetical (A - Z)",
         "Alphabetical (Z - A)",
+        "Favorites First (A - Z)",
         "Most Recently Played",
         "Cumulative Playtime"
     };
@@ -1526,6 +1529,23 @@ public class MainViewModel : ViewModelBase
                     string entryName = shortcut.Name;
                     string? onlineAppId = shortcut.SteamAppId;
 
+                    var existingDuplicate = FindDuplicateGame(shortcut.TargetPath, shortcut.SteamAppId);
+                    if (existingDuplicate != null)
+                    {
+                        Window? dupOwner = Application.Current?.MainWindow is { IsVisible: true } dw ? dw : null;
+                        bool addAnyway = ModernDialog.Confirm(
+                            dupOwner,
+                            "Game Already in Library",
+                            $"\"{existingDuplicate.Name}\" is already in your library.",
+                            "Add it again anyway?",
+                            confirmText: "Add Anyway",
+                            cancelText: "Skip");
+                        if (!addAnyway)
+                        {
+                            continue;
+                        }
+                    }
+
                     if (_settings.SearchOfficialTitleOnline && !shortcut.IsSteamUrl)
                     {
                         var res = await GameNameExtractor.ResolveGameMatchAsync(
@@ -1731,7 +1751,13 @@ public class MainViewModel : ViewModelBase
                 .Where(c => !Games.Any(g => g.Game.ExecutablePath.Equals(c.ExePath, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
-            if (toProcess.Count == 0) return;
+            int skippedDuplicates = candidates.Count - toProcess.Count;
+
+            if (toProcess.Count == 0)
+            {
+                StatusMessage = "All selected games are already in your library.";
+                return;
+            }
 
             StatusMessage = $"Importing {toProcess.Count} game(s)...";
 
@@ -1802,7 +1828,9 @@ public class MainViewModel : ViewModelBase
                 SaveLibrary();
                 UpdateHotkeys();
                 ApplySort();
-                StatusMessage = $"Added {preparedEntries.Count} games from folder!";
+                StatusMessage = skippedDuplicates > 0
+                    ? $"Added {preparedEntries.Count} games from folder! ({skippedDuplicates} already in library, skipped)"
+                    : $"Added {preparedEntries.Count} games from folder!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
                 LibraryUpdated?.Invoke();
@@ -1831,6 +1859,23 @@ public class MainViewModel : ViewModelBase
         _isImportInProgress = true;
         try
         {
+            var existingDuplicate = FindDuplicateGame(candidate.ExePath, null);
+            if (existingDuplicate != null)
+            {
+                Window? dupOwner = Application.Current?.MainWindow is { IsVisible: true } dw ? dw : null;
+                bool addAnyway = ModernDialog.Confirm(
+                    dupOwner,
+                    "Game Already in Library",
+                    $"\"{existingDuplicate.Name}\" is already in your library.",
+                    "Add it again anyway?",
+                    confirmText: "Add Anyway",
+                    cancelText: "Skip");
+                if (!addAnyway)
+                {
+                    return;
+                }
+            }
+
             string finalName = candidate.Name;
             string? matchedAppId = null;
 
@@ -1883,6 +1928,13 @@ public class MainViewModel : ViewModelBase
         {
             _isImportInProgress = false;
         }
+    }
+
+    private GameCardViewModel? FindDuplicateGame(string? executablePath, string? steamAppId)
+    {
+        return Games.FirstOrDefault(g =>
+            (!string.IsNullOrWhiteSpace(steamAppId) && string.Equals(g.Game.SteamAppId, steamAppId, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrWhiteSpace(executablePath) && string.Equals(g.Game.ExecutablePath, executablePath, StringComparison.OrdinalIgnoreCase)));
     }
 
     private void AddGameBrowse()
@@ -1954,12 +2006,24 @@ public class MainViewModel : ViewModelBase
         _isImportInProgress = true;
         try
         {
-            StatusMessage = $"Importing {discoveredGames.Count} Steam game(s)...";
+            var toProcess = discoveredGames
+                .Where(d => !Games.Any(g => string.Equals(g.Game.SteamAppId, d.AppId, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            int skippedDuplicates = discoveredGames.Count - toProcess.Count;
+
+            if (toProcess.Count == 0)
+            {
+                StatusMessage = "All selected Steam games are already in your library.";
+                return;
+            }
+
+            StatusMessage = $"Importing {toProcess.Count} Steam game(s)...";
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
 
-            var tasks = discoveredGames.Select(async d =>
+            var tasks = toProcess.Select(async d =>
             {
                 await throttle.WaitAsync();
                 try
@@ -2006,7 +2070,9 @@ public class MainViewModel : ViewModelBase
                 SaveLibrary();
                 UpdateHotkeys();
                 ApplySort();
-                StatusMessage = $"Imported {preparedEntries.Count} Steam game(s)!";
+                StatusMessage = skippedDuplicates > 0
+                    ? $"Imported {preparedEntries.Count} Steam game(s)! ({skippedDuplicates} already in library, skipped)"
+                    : $"Imported {preparedEntries.Count} Steam game(s)!";
                 OnPropertyChanged(nameof(TotalGameCount));
                 OnPropertyChanged(nameof(TotalGameCountDisplay));
                 LibraryUpdated?.Invoke();
@@ -2113,7 +2179,7 @@ public class MainViewModel : ViewModelBase
         CategoryTabs.Clear();
         foreach (var cat in Categories)
         {
-            string display = cat == "All" ? "All Games" : cat == "Favorites" ? "★ Favorites" : cat;
+            string display = cat == "All" ? "All Games" : cat == "Favorites" ? "Favorites" : cat;
             bool isSelected = string.Equals(cat, SelectedCategory, StringComparison.OrdinalIgnoreCase);
             CategoryTabs.Add(new CategoryTabItem(cat, display, isSelected, SelectCategoryTab));
         }
@@ -2131,6 +2197,10 @@ public class MainViewModel : ViewModelBase
         {
             case "Alphabetical (Z - A)":
                 FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Descending));
+                break;
+            case "Favorites First (A - Z)":
+                FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
+                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
                 break;
             case "Most Recently Played":
                 FilteredGames.SortDescriptions.Add(new SortDescription("Game.LastPlayed", ListSortDirection.Descending));

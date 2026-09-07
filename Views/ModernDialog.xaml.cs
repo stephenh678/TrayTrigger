@@ -66,11 +66,7 @@ public partial class ModernDialog : Window
         Loaded += (s, e) =>
         {
             WindowThemeService.ApplyDarkTitleBar(this);
-            if (Owner != null)
-            {
-                Left = Owner.Left + (Owner.ActualWidth - ActualWidth) / 2;
-                Top = Owner.Top + (Owner.ActualHeight - ActualHeight) / 2;
-            }
+            WindowThemeService.CenterOverOwner(this);
             Activate();
             if (ConfirmBtn.Visibility == Visibility.Visible)
             {
@@ -185,11 +181,6 @@ public partial class ModernDialog : Window
         if (activeOwner != null)
         {
             dialog.Owner = activeOwner;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-        else
-        {
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
         dialog.ShowDialog();
@@ -274,11 +265,6 @@ public partial class ModernDialog : Window
         if (activeOwner != null)
         {
             dialog.Owner = activeOwner;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-        else
-        {
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
         bool? res = dialog.ShowDialog();

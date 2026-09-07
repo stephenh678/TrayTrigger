@@ -81,6 +81,7 @@ public class GameCardViewModel : ViewModelBase
         {
             Game.IsFavorite = !Game.IsFavorite;
             OnPropertyChanged(nameof(IsFavorite));
+            OnPropertyChanged(nameof(FavoriteMenuLabel));
             _onToggleFavorite?.Invoke(this);
         });
         OpenFolderCommand = new RelayCommand(OpenContainingFolder);
@@ -103,6 +104,7 @@ public class GameCardViewModel : ViewModelBase
     public bool HasSteamOverlay => Game.HasSteamOverlay;
     public bool ShowCategoryBadge => !HasSteamOverlay || !string.Equals(Category, "Steam", StringComparison.OrdinalIgnoreCase);
     public bool IsFavorite => Game.IsFavorite;
+    public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public bool IsMissing
     {
         get => _isMissing;
@@ -205,6 +207,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasSteamOverlay));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));
+        OnPropertyChanged(nameof(FavoriteMenuLabel));
         OnPropertyChanged(nameof(SteamAppId));
         OnPropertyChanged(nameof(HasSteamAppId));
         OnPropertyChanged(nameof(SteamAppIdDisplay));

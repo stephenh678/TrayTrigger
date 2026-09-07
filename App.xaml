@@ -345,12 +345,12 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}" CornerRadius="11">
-                            <TextBlock x:Name="StarGlyph" Text="&#xE735;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
-                                       FontSize="13" Foreground="#99FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="StarGlyph" Text="&#x2606;" FontFamily="Segoe UI Symbol, Segoe UI"
+                                       FontSize="15" Foreground="#FFFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsFavorite}" Value="True">
-                                <Setter TargetName="StarGlyph" Property="Text" Value="&#xE734;"/>
+                                <Setter TargetName="StarGlyph" Property="Text" Value="&#x2605;"/>
                                 <Setter TargetName="StarGlyph" Property="Foreground" Value="#FFD700"/>
                             </DataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
