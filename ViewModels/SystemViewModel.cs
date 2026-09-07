@@ -313,11 +313,10 @@ public class SystemViewModel : ViewModelBase
         };
         _telemetryTimer.Tick += OnTelemetryTick;
 
-        // Initialize tweaks collection
-        LoadTweaks();
-
-        // Initial async load
-        _ = LoadHardwareSpecsAsync();
+        // Tweaks and hardware specs are loaded lazily on first visit to the System tab (see
+        // MainViewModel.CurrentSection) rather than here, so launching - especially with
+        // --minimized - doesn't pay for ~20 registry reads and a hardware/network probe that
+        // may never be looked at this session.
     }
 
     public void StartTelemetry()
@@ -379,10 +378,11 @@ public class SystemViewModel : ViewModelBase
         }
     }
 
-    private void LoadTweaks()
+    public async Task LoadTweaksAsync()
     {
+        var all = await Task.Run(() => _tweaksService.GetAllTweaks());
+
         Tweaks.Clear();
-        var all = _tweaksService.GetAllTweaks();
         foreach (var item in all)
         {
             Tweaks.Add(new SystemTweakViewModel(item, _tweaksService, msg =>

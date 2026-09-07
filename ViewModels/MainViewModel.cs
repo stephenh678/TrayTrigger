@@ -350,6 +350,10 @@ public class MainViewModel : ViewModelBase
                     {
                         _ = SystemVM.LoadHardwareSpecsAsync();
                     }
+                    if (SystemVM.TotalTweakCount == 0)
+                    {
+                        _ = SystemVM.LoadTweaksAsync();
+                    }
                 }
                 else if (prev == NavSection.System)
                 {
