@@ -120,6 +120,7 @@ public class MainViewModel : ViewModelBase
         "Alphabetical (A - Z)",
         "Alphabetical (Z - A)",
         "Favorites First (A - Z)",
+        "Favorites First (Z - A)",
         "Most Recently Played",
         "Cumulative Playtime"
     };
@@ -2182,6 +2183,10 @@ public class MainViewModel : ViewModelBase
             case "Favorites First (A - Z)":
                 FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
                 FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+                break;
+            case "Favorites First (Z - A)":
+                FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
+                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Descending));
                 break;
             case "Most Recently Played":
                 FilteredGames.SortDescriptions.Add(new SortDescription("Game.LastPlayed", ListSortDirection.Descending));
