@@ -224,7 +224,7 @@ public partial class ModernDialog : Window
             owner,
             "Restart Required",
             "This change needs a restart to take effect.",
-            detail,
+            $"{detail} If you choose \"Restart Now\", Windows will restart in 30 seconds - run \"shutdown /a\" from a command prompt to cancel it.",
             confirmText: "Restart Now",
             cancelText: "Restart Later");
     }
