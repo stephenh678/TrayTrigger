@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -179,32 +180,56 @@ public partial class ProcessLauncherService
                 LoggingService.Info("Launcher", $"Started '{game.Name}' (PID {process.Id}).");
                 DateTime startTime = DateTime.Now;
                 bool exitHandlerAttached = false;
+                int exitHandled = 0; // guards against running the handler twice (see below)
+
+                void OnExited(object? s, EventArgs e)
+                {
+                    if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
+                    try
+                    {
+                        TimeSpan playedDuration = DateTime.Now - startTime;
+                        long minutes = (long)Math.Max(0, Math.Round(playedDuration.TotalMinutes));
+                        if (minutes > 0)
+                        {
+                            game.CumulativePlaytimeMinutes += minutes;
+                            GameUpdated?.Invoke(game);
+                            LoggingService.Info("Launcher", $"'{game.Name}' session ended. +{minutes}m playtime recorded.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Error("Launcher", $"Error updating playtime for '{game.Name}': {ex.Message}");
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+
                 try
                 {
+                    // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited
+                    // on a thread-pool thread almost immediately for a process that already exited,
+                    // and doing it the other way around left a real window where that fire found
+                    // no subscriber yet and playtime for the session was silently never recorded.
+                    process.Exited += OnExited;
                     process.EnableRaisingEvents = true;
-                    process.Exited += (s, e) =>
-                    {
-                        try
-                        {
-                            TimeSpan playedDuration = DateTime.Now - startTime;
-                            long minutes = (long)Math.Max(0, Math.Round(playedDuration.TotalMinutes));
-                            if (minutes > 0)
-                            {
-                                game.CumulativePlaytimeMinutes += minutes;
-                                GameUpdated?.Invoke(game);
-                                LoggingService.Info("Launcher", $"'{game.Name}' session ended. +{minutes}m playtime recorded.");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LoggingService.Error("Launcher", $"Error updating playtime for '{game.Name}': {ex.Message}");
-                        }
-                        finally
-                        {
-                            process.Dispose();
-                        }
-                    };
                     exitHandlerAttached = true;
+
+                    // Handle it inline too in case the process had already exited before the line
+                    // above and the async callback hasn't run yet - exitHandled guards against
+                    // double-processing if it fires anyway.
+                    try
+                    {
+                        if (process.HasExited)
+                        {
+                            OnExited(process, EventArgs.Empty);
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Already handled by the async Exited callback in the tiny window above.
+                    }
                 }
                 catch (Exception ex)
                 {
