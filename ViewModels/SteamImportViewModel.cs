@@ -14,14 +14,39 @@ namespace TrayTrigger.ViewModels;
 public class SteamImportItemViewModel : ViewModelBase
 {
     private bool _isSelected;
+    private BitmapImage? _iconImage;
     public DiscoveredSteamGame Discovered { get; }
-    public BitmapImage? IconImage { get; }
+    public BitmapImage? IconImage
+    {
+        get => _iconImage;
+        private set
+        {
+            if (_iconImage != value)
+            {
+                _iconImage = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     public SteamImportItemViewModel(DiscoveredSteamGame discovered)
     {
         Discovered = discovered;
         _isSelected = !discovered.IsAlreadyImported;
-        IconImage = IconExtractorService.LoadBitmapSafely(discovered.IconPath);
+
+        // Decode off the UI thread; large Steam libraries would otherwise hang the
+        // import dialog after "Scanning..." while every icon decodes synchronously. See M-24.
+        _ = Task.Run(() =>
+        {
+            var img = IconExtractorService.LoadBitmapSafely(discovered.IconPath);
+            if (img != null)
+            {
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    IconImage = img;
+                });
+            }
+        });
     }
 
     public string AppId => Discovered.AppId;
