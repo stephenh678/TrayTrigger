@@ -57,9 +57,12 @@
                         </DockPanel>
 
                         <!-- Poster Artwork Frame (170 x 255) -->
-                        <Border Width="170" Height="255" CornerRadius="6" Background="#111116" 
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
-                                ClipToBounds="True" HorizontalAlignment="Center">
+                        <Border Width="170" Height="255" CornerRadius="6" Background="#111116"
+                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                HorizontalAlignment="Center">
+                            <Border.Clip>
+                                <RectangleGeometry Rect="0,0,168,253" RadiusX="5" RadiusY="5"/>
+                            </Border.Clip>
                             <Grid>
                                 <!-- Fallback / Empty Placeholder -->
                                 <Border Background="#15151C" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">

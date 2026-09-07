@@ -22,7 +22,7 @@
                      DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
             <MenuItem Header="Game Info (Steam Details)..." Command="{Binding ViewDetailsCommand}" FontWeight="SemiBold"/>
             <MenuItem Header="Play" Command="{Binding LaunchCommand}"/>
-            <MenuItem Header="Favorite" IsCheckable="True" IsChecked="{Binding IsFavorite, Mode=OneWay}" Command="{Binding ToggleFavoriteCommand}"/>
+            <MenuItem Header="{Binding FavoriteMenuLabel}" IsCheckable="True" IsChecked="{Binding IsFavorite, Mode=OneWay}" Command="{Binding ToggleFavoriteCommand}"/>
             <MenuItem Header="Open Containing Folder" Command="{Binding OpenFolderCommand}"/>
 
             <!-- Broken Game Relocate Option -->
@@ -395,9 +395,16 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Content="{Binding DisplayName}" Command="{Binding SelectCommand}"
+                                        <Button Command="{Binding SelectCommand}"
                                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
-                                                Margin="0,0,2,0"/>
+                                                Margin="0,0,2,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#x2605;" FontFamily="Segoe UI Symbol, Segoe UI"
+                                                           FontSize="13" Foreground="#FFD700" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                           Visibility="{Binding IsFavoritesTab, Converter={StaticResource BoolToVis}}"/>
+                                                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -468,7 +475,18 @@
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
+                        <Grid>
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedCategory}" Value="Favorites">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
                             <TextBlock Text="🎮" FontSize="42" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                             <TextBlock Text="No games found in your library"
                                        FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
@@ -482,6 +500,28 @@
                                 <Button Content="Import Steam" Command="{Binding OpenSteamImportCommand}" Style="{StaticResource ModernOutlineButton}"/>
                             </StackPanel>
                         </StackPanel>
+
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedCategory}" Value="Favorites">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="&#x2606;" FontFamily="Segoe UI Symbol, Segoe UI" FontSize="42"
+                                       Foreground="#FFFFFFFF" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                            <TextBlock Text="No favorites yet"
+                                       FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
+                                       FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Click the star on any game to add it to your Favorites."
+                                       FontSize="13" Foreground="{StaticResource BrushTextSecondary}"
+                                       FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                        </StackPanel>
+                        </Grid>
                     </Border>
 
                     <!-- ScrollViewer for WrapPanel Views (View 1: Poster Cards & View 2: Compact Icons) -->
@@ -541,7 +581,10 @@
                                                 <!-- 1. Full Bleed Poster View (Active when ShowPosterArt = True) -->
                                                 <Grid x:Name="PosterArtView" Visibility="Collapsed">
                                                     <!-- Ambient Blurred Background Fill (Fills entire card with game colors, zero black voids) -->
-                                                    <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="True">
+                                                    <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                        <Border.Clip>
+                                                            <RectangleGeometry Rect="0,0,182,274" RadiusX="7" RadiusY="7"/>
+                                                        </Border.Clip>
                                                         <Grid>
                                                             <Image Source="{Binding CoverImage}" Stretch="UniformToFill"
                                                                    Opacity="0.45"
@@ -551,7 +594,10 @@
                                                     </Border>
 
                                                     <!-- Crisp Artwork Layer (Fits cleanly without cropping letters, logos, or characters) -->
-                                                    <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="True">
+                                                    <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                        <Border.Clip>
+                                                            <RectangleGeometry Rect="0,0,182,274" RadiusX="7" RadiusY="7"/>
+                                                        </Border.Clip>
                                                         <Image Source="{Binding CoverImage}" Stretch="Uniform"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -813,12 +859,12 @@
                                                             ToolTip="Toggle Favorite" VerticalAlignment="Center">
                                                         <Button.Template>
                                                             <ControlTemplate TargetType="Button">
-                                                                <TextBlock x:Name="StarGlyph" Text="&#xE735;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
-                                                                           FontSize="10" Foreground="#99FFFFFF"
+                                                                <TextBlock x:Name="StarGlyph" Text="&#x2606;" FontFamily="Segoe UI Symbol, Segoe UI"
+                                                                           FontSize="12" Foreground="#FFFFFFFF"
                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                 <ControlTemplate.Triggers>
                                                                     <DataTrigger Binding="{Binding IsFavorite}" Value="True">
-                                                                        <Setter TargetName="StarGlyph" Property="Text" Value="&#xE734;"/>
+                                                                        <Setter TargetName="StarGlyph" Property="Text" Value="&#x2605;"/>
                                                                         <Setter TargetName="StarGlyph" Property="Foreground" Value="#FFD700"/>
                                                                     </DataTrigger>
                                                                     <Trigger Property="IsMouseOver" Value="True">

@@ -57,11 +57,7 @@ public partial class UpdateDialog : Window
         Loaded += (s, e) =>
         {
             WindowThemeService.ApplyDarkTitleBar(this);
-            if (Owner != null)
-            {
-                Left = Owner.Left + (Owner.ActualWidth - ActualWidth) / 2;
-                Top = Owner.Top + (Owner.ActualHeight - ActualHeight) / 2;
-            }
+            WindowThemeService.CenterOverOwner(this);
             Activate();
             InstallBtn.Focus();
         };
@@ -172,11 +168,6 @@ public partial class UpdateDialog : Window
         if (activeOwner != null)
         {
             dialog.Owner = activeOwner;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-        else
-        {
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
         dialog.ShowDialog();
