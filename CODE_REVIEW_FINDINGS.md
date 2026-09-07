@@ -185,7 +185,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **How to verify:** As a non-admin, toggle an HKLM tweak and wait 10 s before accepting UAC. The UI must show the correct final state.
 
 ### M-02 Deleting a game removes a poster file shared by other entries with the same Steam AppId
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: `DeleteCachedArtwork` now checks, per file (icon and cover independently), whether any other entry still in `Games` has the exact same path before deleting it, via a new `IsArtworkPathStillReferenced` helper; if another live entry references the file, the delete for that file is skipped (the `SteamMetadataService.InvalidateCache` call is unaffected, since that's keyed by AppId and only affects the in-memory lookup cache, not the shared file). Both call sites (the immediate cleanup of a superseded pending-undo entry, and the timer-driven cleanup once the undo window expires) go through this same method, and by the time either runs the entry being cleaned up has already been removed from `Games`, so "still referenced" correctly means "referenced by a surviving entry." Release build: 0 warnings, 0 errors. Could not run the manual GUI verification (link two games to the same AppId via "Add Anyway", delete one, wait for the undo toast, confirm the other keeps its poster) - this needs the native WPF grid and context menu, which no tool in this session can drive. Verified by code inspection only.
 - **Confidence:** CONFIRMED
 - **Category:** correctness
 - **Files:** `ViewModels/MainViewModel.cs:1461-1494`
