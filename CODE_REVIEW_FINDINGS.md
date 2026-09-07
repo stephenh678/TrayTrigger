@@ -221,7 +221,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **How to verify:** Open Edit, Fetch by ID, Cancel, re-open Edit: the original cover path is unchanged.
 
 ### M-06 Live telemetry runs a WMI query every 3 seconds on the UI thread
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Split `GetRamInfo()` into `GetRamUsage()` (`GlobalMemoryStatusEx` only) and `ApplyRamSpeedInfo(ram)` (the `Win32_PhysicalMemory` WMI query); `GetRamInfo()` now just calls both in sequence so `GetFullHardwareReportAsync()` is unaffected, while `GetQuickTelemetry()` (the dispatcher timer's 3s poll) calls `GetRamUsage()` directly and never touches WMI. Release build: 0 warnings, 0 errors. Verified with a harness against the built DLL: 20 consecutive `GetQuickTelemetry()` calls all completed in 0ms (previously this path ran a WMI query every call, which the finding measured at tens-to-hundreds of ms), and a full `GetFullHardwareReportAsync()` call still returned real RAM speed data (5600 MHz on this machine), confirming the split didn't drop that data from the full report. Could not run the manual GUI verification (open the System tab, drag the window, confirm no periodic hitch) - no tool in this session can drive the native window - but the timing measurement directly confirms the root cause (per-tick WMI overhead) is gone.
 - **Confidence:** CONFIRMED
 - **Category:** performance
 - **Files:** `Services/SystemInfoService.cs:149-154` (GetQuickTelemetry), `370-411` (GetRamInfo includes `Win32_PhysicalMemory` WMI), `ViewModels/SystemViewModel.cs:304-354` (DispatcherTimer tick)
