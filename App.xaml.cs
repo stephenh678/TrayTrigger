@@ -59,10 +59,10 @@ public partial class App : Application
         base.OnStartup(e);
 
         LoggingService.EnsureLogFileExists();
+        _storageService = new StorageService();
         try
         {
-            var startupStorage = new StorageService();
-            var startupSettings = startupStorage.LoadSettings();
+            var startupSettings = _storageService.LoadSettings();
             LoggingService.Initialize(startupSettings.VerboseLoggingEnabled);
         }
         catch
@@ -212,7 +212,6 @@ public partial class App : Application
 
         // Initialize Core Services
         Log("Initializing Services...");
-        _storageService = new StorageService();
         _shortcutService = new ShortcutService();
         _iconExtractorService = new IconExtractorService(_storageService);
         _steamScannerService = new SteamScannerService();

@@ -172,8 +172,6 @@ public class MainViewModel : ViewModelBase
             _selectedCategory = _settings.LastCategoryFilter;
         }
 
-        LoggingService.Initialize(_settings.VerboseLoggingEnabled);
-
         SettingsVM = new SettingsViewModel(
             _settings,
             _storageService,

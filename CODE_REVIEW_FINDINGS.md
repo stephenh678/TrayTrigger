@@ -396,7 +396,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 ## Low
 
 ### L-01 Logging and storage are initialised twice at startup
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Re-verified: `App.OnStartup` built a throwaway `StorageService` just to load settings for `LoggingService.Initialize`, then built a second real one at `Initializing Services`; `MainViewModel`'s constructor then called `LoggingService.Initialize` again. Fixed per the suggested fix: `App.OnStartup` now assigns the first `StorageService` directly to `_storageService` (no second construction, no legacy-migration re-run) and the redundant `LoggingService.Initialize` call in `MainViewModel`'s constructor was deleted. Release build: 0 warnings, 0 errors. Verified by launching the real built exe with `--minimized` and diffing `debug.log`: before the fix, "TrayTrigger logging initialized" appeared twice per launch; after, it appears exactly once, with the rest of the startup sequence (services/viewmodel/mainwindow/tray icon/update check) unchanged and no exceptions. Closed the process afterward.
 - **Files:** `App.xaml.cs:61-71,215`, `ViewModels/MainViewModel.cs:162,174`
 - **What:** A throwaway `StorageService` (which also runs legacy migration) and `LoggingService.Initialize` run in `App`, then again in `MainViewModel`. Pass the first instance into the ViewModel and drop the second `Initialize`.
 
