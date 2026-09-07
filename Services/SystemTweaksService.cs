@@ -1334,6 +1334,14 @@ public partial class SystemTweaksService
 
     private static bool SetNagleDisabled(bool disableNagle)
     {
+        // Reverting to "Nagle enabled" means restoring the machine default of no value
+        // present, not writing 0 (TcpAckFrequency=0 is outside the documented 1-255
+        // range). See L-04.
+        if (!disableNagle)
+        {
+            return ResetNagleToDefault();
+        }
+
         try
         {
             List<string> interfaceNames;
@@ -1345,13 +1353,12 @@ public partial class SystemTweaksService
 
             if (interfaceNames.Count == 0) return false;
 
-            int val = disableNagle ? 1 : 0;
             var writes = new List<(string, string, object, RegistryValueKind)>();
             foreach (var name in interfaceNames)
             {
                 string subKey = $@"{TcpInterfacesPath}\{name}";
-                writes.Add((subKey, "TcpAckFrequency", val, RegistryValueKind.DWord));
-                writes.Add((subKey, "TCPNoDelay", val, RegistryValueKind.DWord));
+                writes.Add((subKey, "TcpAckFrequency", 1, RegistryValueKind.DWord));
+                writes.Add((subKey, "TCPNoDelay", 1, RegistryValueKind.DWord));
             }
 
             return SetHklmValuesBatch(writes.ToArray());
