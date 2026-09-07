@@ -219,6 +219,7 @@ public partial class App : Application
         _launcherService = new ProcessLauncherService(_storageService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
+        _startupManager.ReconcilePath();
         _trayPromotionService = new TrayPromotionService();
         TrayPromotionService.CleanStaleRegistrations();
 
