@@ -2190,6 +2190,8 @@ public class MainViewModel : ViewModelBase
         else
         {
             _selectedCategory = "All";
+            _settings.LastCategoryFilter = "All";
+            FilteredGames.Refresh();
         }
         OnPropertyChanged(nameof(SelectedCategory));
 

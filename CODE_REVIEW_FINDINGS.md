@@ -194,7 +194,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **How to verify:** Link two games to the same AppId, delete one, wait for the undo toast to expire; the other keeps its poster.
 
 ### M-03 Deleting the last game in a category leaves an empty grid with "All Games" highlighted
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: In `RebuildCategories`, the branch that falls back to `"All"` when the previously-selected category no longer exists now also sets `_settings.LastCategoryFilter = "All"` and calls `FilteredGames.Refresh()`, matching what the normal `SelectedCategory` setter does (which this code path bypasses by writing the backing field directly). Traced `FilterGameItem` (the view's filter predicate): it reads `SelectedCategory`, which returns the now-corrected `_selectedCategory`, so the `Refresh()` re-evaluates every card against `"All"` and un-hides them. Release build: 0 warnings, 0 errors. Could not run the manual GUI verification (create a "Test" category, select its tab, delete the game, confirm the grid shows all games) - no tool in this session can drive the native WPF category tabs/grid. Verified by tracing the filter predicate logic only.
 - **Confidence:** CONFIRMED
 - **Category:** correctness / UX
 - **Files:** `ViewModels/MainViewModel.cs:2146-2175`
