@@ -36,6 +36,7 @@ public partial class App : Application
     private ShortcutService _shortcutService = null!;
     private IconExtractorService _iconExtractorService = null!;
     private SteamScannerService _steamScannerService = null!;
+    private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
     private HotkeyManager _hotkeyManager = null!;
     private StartupManager _startupManager = null!;
@@ -210,7 +211,9 @@ public partial class App : Application
         _shortcutService = new ShortcutService();
         _iconExtractorService = new IconExtractorService(_storageService);
         _steamScannerService = new SteamScannerService();
-        _launcherService = new ProcessLauncherService(_storageService);
+        _performanceProfileService = new PerformanceProfileService(_storageService);
+        _performanceProfileService.RecoverFromCrashIfNeeded();
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -727,6 +730,8 @@ public partial class App : Application
 
         try
         {
+            _performanceProfileService?.RestoreActiveSessionOnShutdown();
+
             if (_mainViewModel != null && _storageService != null)
             {
                 _storageService.SaveSettings(_mainViewModel.Settings);

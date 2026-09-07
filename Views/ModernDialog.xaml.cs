@@ -241,6 +241,18 @@ public partial class ModernDialog : Window
             DialogIconType.Info);
     }
 
+    public static bool PromptOptimizedProfileMigration(Window? owner)
+    {
+        return ShowModal(
+            owner,
+            "New: Game-Level Performance Profiles",
+            "The Optimized profile is now TrayTrigger's recommended default for every game - it's the standard we apply automatically to any game you add from here on.",
+            "Your existing games predate this feature and are currently set to Off. Optimized only applies its tweaks (power plan, GPU preference) while that specific game is actually running, and reverts everything the moment it closes - low risk, and the same profile new games get by default. You can always change any individual game's profile later from Edit Game.",
+            confirmText: "Set All Existing Games to Optimized",
+            cancelText: "Leave As-Is",
+            DialogIconType.Info);
+    }
+
     public static void ShowWarning(
         Window? owner,
         string title,

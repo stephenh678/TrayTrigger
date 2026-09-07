@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Win32;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -26,11 +27,13 @@ public partial class ProcessLauncherService
     private static partial bool IsIconic(IntPtr hWnd);
 
     private readonly StorageService _storageService;
+    private readonly PerformanceProfileService _performanceProfileService;
     public event Action<GameEntry>? GameUpdated;
 
-    public ProcessLauncherService(StorageService storageService)
+    public ProcessLauncherService(StorageService storageService, PerformanceProfileService performanceProfileService)
     {
         _storageService = storageService;
+        _performanceProfileService = performanceProfileService;
     }
 
     /// <summary>
@@ -89,6 +92,7 @@ public partial class ProcessLauncherService
                 game.LastPlayed = DateTime.Now;
                 GameUpdated?.Invoke(game);
                 LoggingService.Info("Launcher", $"Dispatched Steam launch for '{game.Name}'.");
+                TrackSteamSession(game);
                 return true;
             }
 
@@ -201,6 +205,7 @@ public partial class ProcessLauncherService
 
             if (process != null)
             {
+                _performanceProfileService.BeginGameSession(game, process);
                 LoggingService.Info("Launcher", $"Started '{game.Name}' (PID {process.Id}).");
                 DateTime startTime = DateTime.Now;
                 bool exitHandlerAttached = false;
@@ -226,6 +231,7 @@ public partial class ProcessLauncherService
                     }
                     finally
                     {
+                        _performanceProfileService.EndGameSession(game.Id);
                         process.Dispose();
                     }
                 }
@@ -263,6 +269,10 @@ public partial class ProcessLauncherService
                 {
                     if (!exitHandlerAttached)
                     {
+                        // No Exited handler means OnExited (and its EndGameSession call) will
+                        // never run for this launch - end the session immediately instead of
+                        // leaving a Performance Profile applied with no way to know when to undo it.
+                        _performanceProfileService.EndGameSession(game.Id);
                         process.Dispose();
                     }
                 }
@@ -276,5 +286,68 @@ public partial class ProcessLauncherService
             LoggingService.Error("Launcher", $"Failed to launch '{game.Name}': {ex.Message}", ex);
             return false;
         }
+    }
+
+    private const string SteamRunningKeyRoot = @"Software\Valve\Steam\Apps\";
+    private static readonly TimeSpan SteamSessionPollInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan SteamSessionStartTimeout = TimeSpan.FromMinutes(3);
+
+    /// <summary>
+    /// A Steam launch is a fire-and-forget "steam://" dispatch with no Process handle - the
+    /// Performance Profile can't be tied to the launcher exiting (Steam itself keeps running).
+    /// Steam maintains its own "Running" flag per AppId while a game is actually in session, so
+    /// poll that instead: begin the profile once it flips on, end it once it flips back off. If
+    /// it never turns on (user cancels the Steam launch, game isn't actually installed, etc.),
+    /// give up after a few minutes rather than polling forever.
+    /// </summary>
+    private void TrackSteamSession(GameEntry game)
+    {
+        if (game.PerformanceProfile == PerformanceProfileMode.Off || string.IsNullOrWhiteSpace(game.SteamAppId))
+        {
+            return;
+        }
+
+        string runningKeyPath = SteamRunningKeyRoot + game.SteamAppId;
+        string gameId = game.Id;
+        DateTime waitStartedUtc = DateTime.UtcNow;
+        bool sessionBegun = false;
+        Timer? timer = null;
+
+        timer = new Timer(_ =>
+        {
+            try
+            {
+                bool isRunning;
+                using (var key = Registry.CurrentUser.OpenSubKey(runningKeyPath))
+                {
+                    isRunning = key?.GetValue("Running") is int i && i != 0;
+                }
+
+                if (!sessionBegun)
+                {
+                    if (isRunning)
+                    {
+                        sessionBegun = true;
+                        _performanceProfileService.BeginGameSession(game);
+                        LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' now running; Performance Profile applied if configured.");
+                    }
+                    else if (DateTime.UtcNow - waitStartedUtc > SteamSessionStartTimeout)
+                    {
+                        LoggingService.Verbose("Launcher", $"'{game.Name}' never reported running via Steam within {SteamSessionStartTimeout.TotalMinutes:0}m; abandoning Performance Profile tracking for this launch.");
+                        timer?.Dispose();
+                    }
+                }
+                else if (!isRunning)
+                {
+                    _performanceProfileService.EndGameSession(gameId);
+                    LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' session ended.");
+                    timer?.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Verbose("Launcher", $"Steam session tracking error for '{game.Name}': {ex.Message}");
+            }
+        }, null, SteamSessionPollInterval, SteamSessionPollInterval);
     }
 }

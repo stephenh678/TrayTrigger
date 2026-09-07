@@ -36,6 +36,11 @@
                             <Border Background="{Binding StatusBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
                             </Border>
+                            <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Off by default and skipped by Apply Performance Preset - situational or tradeoff-heavy, so it's your call.">
+                                <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#9A9AB0"/>
+                            </Border>
                             <Border Background="#3D2F14" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Requires a restart to take effect">
@@ -55,6 +60,37 @@
                                 Visibility="{Binding CanToggle, Converter={StaticResource BoolToVis}}" 
                                 Style="{StaticResource ModernOutlineButton}" Padding="10,4" FontSize="11.5"/>
                     </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ProfileTweakToggleTemplate" DataType="{x:Type vm:ProfileTweakToggleViewModel}">
+            <Border BorderBrush="#252530" BorderThickness="0,0,0,1" Padding="0,6,0,10" Margin="0,0,0,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
+                            </Border>
+                            <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Off by default within this profile - a real tradeoff, not just a performance win, so it's your call.">
+                                <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#9A9AB0"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding WhyItMatters, StringFormat='Impact: {0}'}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="{Binding ActionButtonText}" Command="{Binding ToggleCommand}"
+                            Style="{StaticResource ModernOutlineButton}" Padding="10,4" FontSize="11.5" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -98,6 +134,8 @@
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSpecsTab}"/>
                 <Button Content="Performance Tweaks" Command="{Binding SelectTweaksTabCommand}" Margin="2,0,0,0"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsTweaksTab}"/>
+                <Button Content="Performance Profiles" Command="{Binding SelectGameProfilesTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsGameProfilesTab}"/>
             </StackPanel>
         </Border>
 
@@ -394,7 +432,7 @@
                     <!-- 3. Network & Background Telemetry -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Network &amp; Background Telemetry" FontSize="13.5" FontWeight="SemiBold" 
+                            <TextBlock Text="Network &amp; Background Telemetry" FontSize="13.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="Low-latency TCP packet dispatch and non-essential background activity suppression." 
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
@@ -413,6 +451,54 @@
                         </StackPanel>
                     </Border>
 
+                </StackPanel>
+
+                <!-- ========================================================== -->
+                <!-- CATEGORY 3: PERFORMANCE PROFILES                          -->
+                <!-- ========================================================== -->
+                <StackPanel Visibility="{Binding ShowGameProfilesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All view) -->
+                    <Border Margin="0,2,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="GAME-LEVEL PERFORMANCE PROFILES" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Game-Level Performance Profiles" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="Optimized and Aggressive are assigned per-game (Edit Game &#x2192; Performance Profile) and are only applied for the duration of that game's session - from launch until it closes - then reverted automatically. Editing a tweak below changes it for every game currently assigned to that profile."
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+                            <StackPanel Margin="0,0,0,16">
+                                <TextBlock Text="OPTIMIZED" FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding OptimizedProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <TextBlock Text="AGGRESSIVE" FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Aggressive always applies every Optimized tweak above too - only the additional tweaks it adds on top are listed here."
+                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                <ItemsControl ItemsSource="{Binding AggressiveProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
             </StackPanel>

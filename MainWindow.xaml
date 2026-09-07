@@ -2046,7 +2046,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Feature Grid (2 columns x 4 rows) -->
+                            <!-- Feature Grid (2 columns x 5 rows) -->
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -2057,12 +2057,30 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <!-- Feature 1: One-Click Launch -->
+                                <!-- Feature 1: Game-Level Performance Profiles -->
                                 <Border Grid.Row="0" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="0,0,5,10">
+                                    <DockPanel LastChildFill="True">
+                                        <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
+                                            <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
+                                                       Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Game-Level Performance Profiles" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Assign each game an Optimized or Aggressive tweak profile, automatically applied for the duration of that game's session and fully reverted the moment it closes."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Feature 2: One-Click Launch -->
+                                <Border Grid.Row="0" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                        BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                        Padding="14,12" Margin="5,0,0,10">
                                     <DockPanel LastChildFill="True">
                                         <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
                                             <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
@@ -2076,8 +2094,25 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 2: Steam Library Integration -->
-                                <Border Grid.Row="0" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                <!-- Feature 3: Distraction-Free Tray Launcher -->
+                                <Border Grid.Row="1" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                        BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                        Padding="14,12" Margin="0,0,5,10">
+                                    <DockPanel LastChildFill="True">
+                                        <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
+                                            <TextBlock Text="&#xE704;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
+                                                       Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Distraction-Free Tray Launcher" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text="A lightweight, tray-native footprint, global hotkey toggle, and instant access via tray menus."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Feature 4: Steam Library Integration -->
+                                <Border Grid.Row="1" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="5,0,0,10">
                                     <DockPanel LastChildFill="True">
@@ -2093,25 +2128,25 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 3: Smart Folder Detection -->
-                                <Border Grid.Row="1" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                <!-- Feature 5: Live Hardware Telemetry & Performance Tweaks -->
+                                <Border Grid.Row="2" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="0,0,5,10">
                                     <DockPanel LastChildFill="True">
                                         <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
+                                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
                                                        Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Smart Folder Detection" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Drag and drop install folders to auto-filter uninstallers and extract high-resolution icons."
+                                            <TextBlock Text="Hardware Telemetry &amp; Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Monitor CPU/RAM/VRAM telemetry and apply verified Windows gaming optimizations - with an automatic System Restore Point as a safety net."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 4: Per-Game Global Hotkeys -->
-                                <Border Grid.Row="1" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                <!-- Feature 6: Per-Game Global Hotkeys -->
+                                <Border Grid.Row="2" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="5,0,0,10">
                                     <DockPanel LastChildFill="True">
@@ -2127,8 +2162,8 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 5: Categories & Sorting -->
-                                <Border Grid.Row="2" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                <!-- Feature 7: Categories & Sorting -->
+                                <Border Grid.Row="3" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="0,0,5,10">
                                     <DockPanel LastChildFill="True">
@@ -2144,10 +2179,27 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 6: SteamGridDB Fallback Artwork -->
-                                <Border Grid.Row="2" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                <!-- Feature 8: Smart Folder Detection -->
+                                <Border Grid.Row="3" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="5,0,0,10">
+                                    <DockPanel LastChildFill="True">
+                                        <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
+                                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
+                                                       Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Smart Folder Detection" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Drag and drop install folders to auto-filter uninstallers and extract high-resolution icons."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Feature 9: SteamGridDB Fallback Artwork -->
+                                <Border Grid.Row="4" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                        BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                        Padding="14,12" Margin="0,0,5,0">
                                     <DockPanel LastChildFill="True">
                                         <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
                                             <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
@@ -2161,35 +2213,18 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 7: Live Hardware Telemetry & Performance Tweaks -->
-                                <Border Grid.Row="3" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                        BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
-                                        Padding="14,12" Margin="0,0,5,0">
-                                    <DockPanel LastChildFill="True">
-                                        <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
-                                                       Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Hardware Telemetry &amp; Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Monitor CPU/RAM/VRAM telemetry and apply verified Windows gaming optimizations - with an automatic System Restore Point as a safety net."
-                                                       FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                    </DockPanel>
-                                </Border>
-
-                                <!-- Feature 8: Tray & Quick Launch -->
-                                <Border Grid.Row="3" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                <!-- Feature 10: Opt-In Performance Tweaks -->
+                                <Border Grid.Row="4" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="5,0,0,0">
                                     <DockPanel LastChildFill="True">
                                         <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                            <TextBlock Text="&#xE704;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
+                                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
                                                        Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Distraction-Free Tray Launcher" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Minimal memory footprint (~35MB), global hotkey toggle, and instant access via tray menus."
+                                            <TextBlock Text="Opt-In Performance Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Situational or tradeoff-heavy tweaks (like Visual Effects and Nagle's Algorithm) stay off by default and clearly badged, so nothing with a real downside applies without you choosing it."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>

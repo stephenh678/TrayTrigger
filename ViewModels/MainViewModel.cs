@@ -175,7 +175,7 @@ public class MainViewModel : ViewModelBase
         Library.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
         Import.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
 
-        SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings);
+        SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
 
         // Navigation Commands
         ToggleSidebarCommand = new RelayCommand(() => IsSidebarExpanded = !IsSidebarExpanded);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using TrayTrigger.Models;
 using TrayTrigger.Services;
 using TrayTrigger.ViewModels;
 using TrayTrigger.Views;
@@ -43,6 +44,7 @@ public partial class MainWindow : Window
         {
             LoggingService.Verbose("MainWindow", "Loaded.");
             MaybeShowSteamGridDbPrompt();
+            MaybeShowPerformanceProfileMigrationPrompt();
         };
 
         _viewModel.RequestOpenSteamDialog += OnRequestOpenSteamDialog;
@@ -93,6 +95,40 @@ public partial class MainWindow : Window
         {
             _viewModel.CurrentSection = NavSection.Settings;
             settingsVm.SelectedTab = SettingsCategoryTab.Library;
+        }
+    }
+
+    /// <summary>
+    /// One-time prompt (gated like <see cref="MaybeShowSteamGridDbPrompt"/>) offering to bulk-set
+    /// every existing game to the Optimized performance profile - the new recommended default
+    /// applied automatically to any game added from here on. Only relevant to users upgrading
+    /// from before this feature existed; skipped entirely if no game is still sitting at Off
+    /// (a fresh install has no games yet, and every game added since gets Optimized already).
+    /// </summary>
+    private void MaybeShowPerformanceProfileMigrationPrompt()
+    {
+        var settingsVm = _viewModel.SettingsVM;
+        if (settingsVm.Settings.HasSeenPerformanceProfileMigrationPrompt)
+            return;
+
+        bool hasUnmigratedGame = _viewModel.Games.Any(g => g.Game.PerformanceProfile == PerformanceProfileMode.Off);
+        if (!hasUnmigratedGame)
+            return;
+
+        settingsVm.Settings.HasSeenPerformanceProfileMigrationPrompt = true;
+        settingsVm.AutoSaveSettings();
+
+        bool setAllToOptimized = ModernDialog.PromptOptimizedProfileMigration(this);
+        if (setAllToOptimized)
+        {
+            foreach (var card in _viewModel.Games)
+            {
+                if (card.Game.PerformanceProfile == PerformanceProfileMode.Off)
+                {
+                    card.Game.PerformanceProfile = PerformanceProfileMode.Optimized;
+                }
+            }
+            _viewModel.SaveLibrary();
         }
     }
 

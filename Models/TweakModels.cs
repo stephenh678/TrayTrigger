@@ -19,6 +19,7 @@ public class SystemTweakItem
     public string WhyItMatters { get; set; } = "";
     public bool IsOptimal { get; set; }
     public string StatusText { get; set; } = "";
+    public bool IsOptIn { get; set; }
     public bool RequiresAdmin { get; set; }
     public bool RequiresReboot { get; set; }
     public bool CanToggle { get; set; } = true;

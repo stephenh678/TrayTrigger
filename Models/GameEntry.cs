@@ -22,6 +22,7 @@ public class GameEntry
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
     public DateTime? LastEnrichmentAttemptUtc { get; set; }
+    public PerformanceProfileMode PerformanceProfile { get; set; } = PerformanceProfileMode.Off;
 
     [JsonIgnore]
     public bool HasSteamOverlay => IsSteamGame || ForceSteamOverlayTag;
