@@ -380,8 +380,7 @@
                                 Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0"/>
                         <Button Content="Refresh Posters" Command="{Binding RefreshAllPostersCommand}"
                                 IsEnabled="{Binding CanRefreshAllPosters}"
-                                Style="{StaticResource ModernOutlineButton}"
-                                ToolTip="Re-checks poster art for every game in your library, including ones that already have a cover."/>
+                                Style="{StaticResource ModernOutlineButton}"/>
                     </StackPanel>
 
                     <!-- Left: Segmented Category Tabs -->
@@ -436,19 +435,19 @@
                     <Border Grid.Column="2" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
                             BorderThickness="1" CornerRadius="6" Padding="3">
                         <StackPanel Orientation="Horizontal">
-                            <Button ToolTip="Poster Grid View" Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
+                            <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
                                     Width="32" Height="30" Padding="0" Cursor="Hand"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsGridView}">
                                 <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
-                            <Button ToolTip="Compact Icons View" Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Compact Icons"
+                            <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Compact Icons"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsIconsView}">
                                 <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
-                            <Button ToolTip="Details List View" Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Details List"
+                            <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Details List"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsListView}">
                                 <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
@@ -701,13 +700,30 @@
                                                 </Grid>
 
                                                 <!-- 3. Top Badges (Category, Steam Overlay, Missing, Hotkey) -->
-                                                <DockPanel VerticalAlignment="Top" Margin="10,10,10,0">
+                                                <DockPanel VerticalAlignment="Top" Margin="10,10,10,0" LastChildFill="False">
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" DockPanel.Dock="Left">
-                                                        <Button Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0"/>
+                                                        <Button Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                            <Button.Style>
+                                                                <Style TargetType="Button" BasedOn="{StaticResource FavoriteToggleButton}">
+                                                                    <Setter Property="Width" Value="19"/>
+                                                                    <Setter Property="Height" Value="19"/>
+                                                                    <Setter Property="FontSize" Value="13"/>
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Button.Style>
+                                                        </Button>
 
                                                         <!-- Category Pill (Hidden if category is Steam to prevent duplicate badges) -->
-                                                        <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1" 
-                                                                CornerRadius="4" Padding="6,2">
+                                                        <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
+                                                                CornerRadius="4" Padding="6,2" Height="19" VerticalAlignment="Center">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
                                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -718,14 +734,14 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock Text="{Binding Category}" FontSize="10" 
-                                                                       Foreground="{StaticResource BrushTextSecondary}" 
-                                                                       FontFamily="{StaticResource AppFont}"/>
+                                                            <TextBlock Text="{Binding Category}" FontSize="10"
+                                                                       Foreground="{StaticResource BrushTextSecondary}"
+                                                                       FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                         </Border>
 
                                                         <!-- Steam Game Indicator Badge Overlay -->
-                                                        <Border Background="#E60D1A29" BorderBrush="#2A82E4" BorderThickness="1" 
-                                                                CornerRadius="4" Padding="5,2" ToolTip="Steam Game">
+                                                        <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
+                                                                CornerRadius="4" Padding="6,2" Height="19" VerticalAlignment="Center">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
                                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -743,18 +759,14 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <Viewbox Width="10" Height="10" Margin="0,0,3,0">
-                                                                    <Path Fill="#389BFF" Stretch="Uniform"
-                                                                          Data="M12,2A10,10 0 0,0 2,12C2,16.4 4.9,20.1 8.9,21.5L11.7,17.7C11.5,17.2 11.4,16.6 11.4,16A4,4 0 0,1 15.4,12C15.5,12 15.6,12 15.7,12L18.6,7.8C16.8,6.7 14.5,6 12,6A6,6 0 0,0 6,12C6,12.3 6,12.7 6.1,13L2.4,14.5C2.1,13.7 2,12.9 2,12A10,10 0 0,1 12,2M15.4,13.5A2.5,2.5 0 0,0 12.9,16A2.5,2.5 0 0,0 15.4,18.5A2.5,2.5 0 0,0 17.9,16A2.5,2.5 0 0,0 15.4,13.5Z"/>
-                                                                </Viewbox>
-                                                                <TextBlock Text="STEAM" FontSize="8.5" FontWeight="SemiBold" 
-                                                                           Foreground="#389BFF" FontFamily="{StaticResource AppFont}"/>
-                                                            </StackPanel>
+                                                            <Viewbox Width="10" Height="10" VerticalAlignment="Center">
+                                                                <Path Fill="#389BFF" Stretch="Uniform"
+                                                                      Data="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/>
+                                                            </Viewbox>
                                                         </Border>
                                                     </StackPanel>
 
-                                                    <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1" 
+                                                    <Border DockPanel.Dock="Right" Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1"
                                                             CornerRadius="4" Padding="6,2" HorizontalAlignment="Right">
                                                         <Border.Style>
                                                             <Style TargetType="Border">
@@ -766,31 +778,26 @@
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </Border.Style>
-                                                        <TextBlock Text="⚠️ MISSING" FontSize="9.5" FontWeight="SemiBold" 
+                                                        <TextBlock Text="⚠️ MISSING" FontSize="9.5" FontWeight="SemiBold"
                                                                    Foreground="#FFA040" FontFamily="{StaticResource AppFont}"/>
                                                     </Border>
-
-                                                    <Border Background="#E61F2A38" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1" 
-                                                            CornerRadius="4" Padding="6,2" HorizontalAlignment="Right">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <MultiDataTrigger>
-                                                                        <MultiDataTrigger.Conditions>
-                                                                            <Condition Binding="{Binding HasHotkey}" Value="True"/>
-                                                                            <Condition Binding="{Binding IsMissing}" Value="False"/>
-                                                                        </MultiDataTrigger.Conditions>
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </MultiDataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                        <TextBlock Text="{Binding Hotkey}" FontSize="10" 
-                                                                   Foreground="{StaticResource BrushAccentHover}" 
-                                                                   FontFamily="{StaticResource AppFont}"/>
-                                                    </Border>
                                                 </DockPanel>
+
+                                                <!-- 4. Hover Play Button Overlay -->
+                                                <Button Command="{Binding LaunchCommand}"
+                                                        Width="46" Height="46"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
 
                                             </Grid>
                                         </Border>
@@ -931,11 +938,28 @@
                                                            ToolTip="{Binding Name}"/>
 
                                                 <!-- Playtime / Category Subtext -->
-                                                <TextBlock Grid.Row="3" Text="{Binding Category}" FontSize="9.5" 
-                                                           Foreground="{StaticResource BrushTextMuted}" 
+                                                <TextBlock Grid.Row="3" Text="{Binding Category}" FontSize="9.5"
+                                                           Foreground="{StaticResource BrushTextMuted}"
                                                            FontFamily="{StaticResource AppFont}"
-                                                           TextAlignment="Center" TextTrimming="CharacterEllipsis" 
+                                                           TextAlignment="Center" TextTrimming="CharacterEllipsis"
                                                            HorizontalAlignment="Center" Margin="0,2,0,0"/>
+
+                                                <!-- Hover Play Button Overlay -->
+                                                <Button Grid.Row="1" Command="{Binding LaunchCommand}"
+                                                        Width="34" Height="34"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">
+                                                            <Setter Property="FontSize" Value="13"/>
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=IconCardBorder}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
                                             </Grid>
                                         </Border>
 
@@ -1130,8 +1154,12 @@
                                             <!-- Action Buttons -->
                                             <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                 <Button Command="{Binding LaunchCommand}" ToolTip="Play Game"
-                                                        Style="{StaticResource ModernAccentButton}" Height="26" Width="42" Padding="0" Margin="0,0,6,0">
-                                                    <TextBlock Text="▶" FontSize="9.5" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        Height="34" Width="34" Margin="0,0,6,0">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">
+                                                            <Setter Property="FontSize" Value="12"/>
+                                                        </Style>
+                                                    </Button.Style>
                                                 </Button>
                                                 <Button Command="{Binding ViewDetailsCommand}" ToolTip="Game Details &amp; Info"
                                                         Style="{StaticResource ModernOutlineButton}" Height="26" Width="28" Padding="0">
@@ -1585,11 +1613,12 @@
                                                Margin="24,3,0,6" TextWrapping="Wrap"/>
 
                                     <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
-                                        <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}"
+                                        <TextBlock Text="Max recent games to show (0 = disabled):" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding MaxRecentOptions}"
-                                                  SelectedItem="{Binding MaxRecentInTray, Mode=TwoWay}"
-                                                  Style="{StaticResource ModernComboBox}" Width="80" HorizontalAlignment="Left"/>
+                                        <TextBox Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
+                                                 Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
+                                                 PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                                 DataObject.Pasting="NumericTextBox_Pasting"/>
                                     </DockPanel>
 
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
@@ -1608,11 +1637,12 @@
                                                Margin="24,3,0,6" TextWrapping="Wrap"/>
 
                                     <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
-                                        <TextBlock Text="Max favorites to show:" Foreground="{StaticResource BrushTextSecondary}"
+                                        <TextBlock Text="Max favorites to show (0 = disabled):" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding MaxFavoritesOptions}"
-                                                  SelectedItem="{Binding MaxFavoritesInTray, Mode=TwoWay}"
-                                                  Style="{StaticResource ModernComboBox}" Width="80" HorizontalAlignment="Left"/>
+                                        <TextBox Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
+                                                 Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
+                                                 PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                                 DataObject.Pasting="NumericTextBox_Pasting"/>
                                     </DockPanel>
 
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">

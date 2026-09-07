@@ -110,6 +110,29 @@
             </Setter>
         </Style>
 
+        <!-- Circular Play Button (dark fill by default, accent blue on hover) -->
+        <Style x:Key="CirclePlayButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PlayCircle" CornerRadius="999" Background="#CC000000"
+                                BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5">
+                            <TextBlock Text="&#9654;" FontSize="{TemplateBinding FontSize}" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PlayCircle" Property="Background" Value="{StaticResource BrushAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Modern Outline Button -->
         <Style x:Key="ModernOutlineButton" TargetType="Button">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
@@ -336,17 +359,17 @@
         <Style x:Key="FavoriteToggleButton" TargetType="Button">
             <Setter Property="Width" Value="22"/>
             <Setter Property="Height" Value="22"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="ToolTip" Value="Toggle Favorite"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}" CornerRadius="11">
                             <TextBlock x:Name="StarGlyph" Text="&#x2606;" FontFamily="Segoe UI Symbol, Segoe UI"
-                                       FontSize="15" Foreground="#FFFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                       FontSize="{TemplateBinding FontSize}" Foreground="#FFFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsFavorite}" Value="True">

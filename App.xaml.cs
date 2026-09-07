@@ -344,14 +344,13 @@ public partial class App : Application
             else
             {
                 // 1. Persistent "Recent" section directly in root menu
-                if (_mainViewModel.Settings.ShowRecentInTray)
+                if (_mainViewModel.Settings.ShowRecentInTray && _mainViewModel.Settings.MaxRecentInTray > 0)
                 {
-                    int maxRecent = _mainViewModel.Settings.MaxRecentInTray > 0 ? _mainViewModel.Settings.MaxRecentInTray : LibraryConstants.DefaultTrayItemCount;
                     var recentGames = ApplySortOption(
                         games
                             .Where(g => g.Game.LastPlayed.HasValue)
                             .OrderByDescending(g => g.Game.LastPlayed!.Value)
-                            .Take(maxRecent),
+                            .Take(_mainViewModel.Settings.MaxRecentInTray),
                         _mainViewModel.Settings.RecentTraySortOption)
                         .ToList();
 
@@ -380,13 +379,12 @@ public partial class App : Application
                 }
 
                 // 1b. Persistent "Favorites" section directly in root menu
-                if (_mainViewModel.Settings.ShowFavoritesInTray)
+                if (_mainViewModel.Settings.ShowFavoritesInTray && _mainViewModel.Settings.MaxFavoritesInTray > 0)
                 {
-                    int maxFavorites = _mainViewModel.Settings.MaxFavoritesInTray > 0 ? _mainViewModel.Settings.MaxFavoritesInTray : LibraryConstants.DefaultTrayItemCount;
                     var favoriteGames = ApplySortOption(
                         games.Where(g => g.Game.IsFavorite),
                         _mainViewModel.Settings.FavoritesTraySortOption)
-                        .Take(maxFavorites)
+                        .Take(_mainViewModel.Settings.MaxFavoritesInTray)
                         .ToList();
 
                     menu.Items.Add(CreateSectionHeader(LibraryConstants.FavoritesCategory));

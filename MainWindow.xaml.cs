@@ -296,4 +296,20 @@ public partial class MainWindow : Window
             _ = _viewModel.UpdateGameSteamAppIdAsync(card, dialog.ResultValue);
         }
     }
+
+    /// <summary>Blocks non-digit keystrokes on tray "max items" TextBoxes (e.g. MaxRecentInTray).</summary>
+    private void NumericTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        e.Handled = !e.Text.All(char.IsDigit);
+    }
+
+    /// <summary>Blocks pasting non-numeric text into tray "max items" TextBoxes.</summary>
+    private void NumericTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (e.DataObject.GetDataPresent(typeof(string)) && ((string)e.DataObject.GetData(typeof(string))!).All(char.IsDigit))
+        {
+            return;
+        }
+        e.CancelCommand();
+    }
 }

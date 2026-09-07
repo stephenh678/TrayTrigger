@@ -16,25 +16,9 @@ public partial class SystemTweaksService
     private const uint SPIF_UPDATEINIFILE = 0x0001;
     private const uint SPIF_SENDCHANGE = 0x0002;
 
-    private const uint SPI_GETANIMATION = 0x0048;
-    private const uint SPI_SETANIMATION = 0x0049;
-    private const uint SPI_GETDROPSHADOW = 0x1024;
-    private const uint SPI_SETDROPSHADOW = 0x1025;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct ANIMATIONINFO
-    {
-        public uint cbSize;
-        public int iMinAnimate; // nonzero = minimize/restore window animation enabled
-    }
-
     [LibraryImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
-
-    [LibraryImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SystemParametersInfoAnimation(uint uiAction, uint uiParam, ref ANIMATIONINFO pvParam, uint fWinIni);
 
     [LibraryImport("user32.dll", EntryPoint = "PostMessageW")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -177,12 +161,12 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "sys_responsiveness",
-            Name = "System Responsiveness (100% CPU Priority for Games)",
+            Name = "System Responsiveness (MMCSS Gaming Reserve)",
             Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Allocates 100% of CPU execution cycles to the foreground game process.",
-            WhyItMatters = "By default, Windows Multimedia Scheduler reserves 20% of CPU resources for background processes. Setting this to 0 dedicates full processing capacity to your game.",
+            ShortDescription = "Reduces the CPU reserve for lower-priority MMCSS tasks to the supported minimum.",
+            WhyItMatters = "Windows reserves 20% of CPU resources for low-priority background tasks by default. Microsoft's MMCSS documentation clamps any value below 10 back up to 20, so 10 is the lowest reserve Windows actually honors - it leaves more scheduling headroom for latency-sensitive foreground workloads like games.",
             IsOptimal = sysResponsivenessOptimal,
-            StatusText = sysResponsivenessOptimal ? "Optimal (100% Gaming Priority)" : "Standard (20% Reserved)",
+            StatusText = sysResponsivenessOptimal ? "Optimal (10% Reserved - Minimum Supported)" : "Standard (20% Reserved)",
             RequiresAdmin = true,
             RequiresReboot = false
         });
@@ -191,10 +175,10 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "mmcss_games_priority",
-            Name = "MMCSS \"Games\" Task Scheduling Priority",
+            Name = "MMCSS \"Games\" Task Scheduling Tuning",
             Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Raises the Multimedia Class Scheduler's built-in \"Games\" task from its Medium/Normal defaults to High.",
-            WhyItMatters = "Officially documented by Microsoft, MMCSS grants time-sensitive threads registered under the \"Games\" task category prioritized CPU access - the same mechanism game engines request via AvSetMmThreadCharacteristics. Windows ships this task at Scheduling Category=Medium and SFIO Priority=Normal by default; raising both to High uses the same sanctioned mechanism with more headroom.",
+            ShortDescription = "Raises the Multimedia Class Scheduler's built-in \"Games\" task from its Medium default to High.",
+            WhyItMatters = "Officially documented by Microsoft, MMCSS grants time-sensitive threads registered under the \"Games\" task category prioritized CPU access - the same mechanism game engines request via AvSetMmThreadCharacteristics. Windows ships this task at Scheduling Category=Medium by default; raising it to High uses the same sanctioned mechanism with more headroom. This is scheduling tuning, not a guaranteed FPS boost - the effect depends on what else is contending for the CPU. (Other fields some optimizer tools also touch here, like SFIO Priority, are documented by Microsoft as not used, so this tweak leaves them alone.)",
             IsOptimal = mmcssGamesPriorityOptimal,
             StatusText = mmcssGamesPriorityOptimal ? "Optimal (High Priority)" : "Standard (Medium Priority)",
             RequiresAdmin = true,
@@ -215,20 +199,6 @@ public partial class SystemTweaksService
             RequiresReboot = true
         });
 
-        bool visualFxPerformance = CheckVisualFxPerformance();
-        list.Add(new SystemTweakItem
-        {
-            Id = "visual_fx",
-            Name = "Windows Visual Effects (Performance Mode for DWM)",
-            Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Disables desktop window minimize animations and drop shadows to reduce compositor load.",
-            WhyItMatters = "Frees Desktop Window Manager (DWM) GPU cycles and eliminates UI stutter when running borderless or switching windows.",
-            IsOptimal = visualFxPerformance,
-            StatusText = visualFxPerformance ? "Optimal (Performance Profile)" : "Standard (Visual Effects On)",
-            RequiresAdmin = false,
-            RequiresReboot = false
-        });
-
         // ---------------------------------------------------------------------
         // Category 3: Network & Background
         // Ordered: raw TCP/IP stack tweaks first, then background bandwidth users,
@@ -239,26 +209,12 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "net_throttling",
-            Name = "Disable Windows Network Packet Throttling",
+            Name = "Disable MMCSS Network Throttling",
             Category = TweakCategory.NetworkAndBackground,
-            ShortDescription = "Removes the legacy Windows multimedia packet limit of 10,000 packets per second.",
-            WhyItMatters = "Essential for 64-tick and 128-tick competitive servers (CS2, Valorant, Apex), ensuring continuous uncapped packet throughput even when Discord or audio streams are active.",
+            ShortDescription = "Removes MMCSS's legacy network packet limit (default ~10,000 packets/sec) instead of 10.",
+            WhyItMatters = "MMCSS's NetworkThrottlingIndex can cap non-multimedia network throughput while a multimedia task (like game audio) is active - potentially relevant on 64/128-tick competitive servers when Discord or audio is also running. The real-world gaming benefit isn't guaranteed and varies by system; some testing has also found disabling it can increase NDIS DPC activity, so treat this as a situational tweak rather than a sure win.",
             IsOptimal = netThrottlingDisabled,
             StatusText = netThrottlingDisabled ? "Optimal (Uncapped Packet Rate)" : "Standard (Throttled)",
-            RequiresAdmin = true,
-            RequiresReboot = false
-        });
-
-        bool nagleDisabled = CheckNagleDisabled();
-        list.Add(new SystemTweakItem
-        {
-            Id = "nagle_disable",
-            Name = "Disable Nagle's Algorithm (TCP Send Delay)",
-            Category = TweakCategory.NetworkAndBackground,
-            ShortDescription = "Disables TCP's Nagle buffering delay on your network adapter(s) so small, latency-sensitive packets send immediately instead of being batched.",
-            WhyItMatters = "Nagle's algorithm can add up to one round-trip of delay (commonly 40-200ms) for applications sending small packets - exactly the traffic pattern of real-time multiplayer games. Disabling it (TcpAckFrequency=1, TCPNoDelay=1) has measured reductions in P99 latency in documented tests, though the exact benefit varies by game and connection.",
-            IsOptimal = nagleDisabled,
-            StatusText = nagleDisabled ? "Optimal (Nagle Disabled)" : "Standard (Nagle Enabled)",
             RequiresAdmin = true,
             RequiresReboot = false
         });
@@ -297,8 +253,8 @@ public partial class SystemTweaksService
             Id = "telemetry_sweeps",
             Name = "Disable Diagnostic Telemetry Scheduled Sweeps",
             Category = TweakCategory.NetworkAndBackground,
-            ShortDescription = "Minimizes automated Windows background telemetry collection tasks.",
-            WhyItMatters = "Prevents Windows CompatTelRunner from randomly spinning up CPU threads and disk I/O while you are gaming.",
+            ShortDescription = "Sets the telemetry policy to its lowest level to reduce automated background collection tasks.",
+            WhyItMatters = "Lowers how often Windows CompatTelRunner and related diagnostic tasks spin up CPU threads and disk I/O in the background. On Home/Pro editions Windows silently floors this policy at \"Basic\" rather than fully off (only Enterprise/Education can reach zero), so treat this as a reduction, not a complete elimination, of telemetry activity.",
             IsOptimal = telemetryDisabled,
             StatusText = telemetryDisabled ? "Optimal (Telemetry Minimal)" : "Standard (Full Telemetry)",
             RequiresAdmin = true,
@@ -329,10 +285,10 @@ public partial class SystemTweaksService
             Id = "core_isolation",
             Name = "Core Isolation / Memory Integrity (HVCI) Status",
             Category = TweakCategory.SecurityAndAdvanced,
-            ShortDescription = "Microsoft's hypervisor-enforced code integrity check for kernel drivers.",
-            WhyItMatters = "Microsoft officially documented that HVCI causes a 3–8% CPU frame rate penalty in certain games. You can inspect status here and adjust in Windows Security if desired.",
-            IsOptimal = !hvciActive, // For competitive gaming performance, disabled provides max FPS
-            StatusText = hvciActive ? "Standard Security (HVCI Enabled)" : "Max Performance (HVCI Disabled)",
+            ShortDescription = "Microsoft's hypervisor-enforced code integrity check for kernel drivers - status only, not changed here.",
+            WhyItMatters = "Microsoft has documented a CPU frame rate penalty (roughly 3-8%) in certain games while HVCI is enabled, but it's also a real security boundary against kernel-level exploits and vulnerable driver attacks. This is informational only - weigh the tradeoff yourself and change it in Windows Security if you want to.",
+            IsOptimal = !hvciActive,
+            StatusText = hvciActive ? "Security Enabled (HVCI On)" : "HVCI Off (Reduced Protection)",
             RequiresAdmin = true,
             RequiresReboot = true,
             CanToggle = false, // Must be changed in Windows Defender GUI safely
@@ -434,14 +390,8 @@ public partial class SystemTweaksService
                 case "timer_resolution":
                     return SetTimerResolution(enableOptimal);
 
-                case "visual_fx":
-                    return SetVisualFx(enableOptimal);
-
                 case "net_throttling":
                     return SetNetworkThrottling(enableOptimal);
-
-                case "nagle_disable":
-                    return SetNagleDisabled(enableOptimal);
 
                 case "delivery_opt":
                     return SetDeliveryOptimization(enableOptimal);
@@ -485,9 +435,7 @@ public partial class SystemTweaksService
             "sys_responsiveness" => CheckSystemResponsivenessOptimal(),
             "mmcss_games_priority" => CheckMmcssGamesPriorityOptimal(),
             "timer_resolution" => CheckTimerResolutionOptimal(),
-            "visual_fx" => CheckVisualFxPerformance(),
             "net_throttling" => CheckNetworkThrottlingDisabled(),
-            "nagle_disable" => CheckNagleDisabled(),
             "delivery_opt" => CheckDeliveryOptimizationDisabled(),
             "game_dvr" => CheckGameDvrDisabled(),
             "telemetry_sweeps" => CheckTelemetryDisabled(),
@@ -512,22 +460,18 @@ public partial class SystemTweaksService
         ApplyTweak("game_mode", true);
         ApplyTweak("power_plan", true);
         ApplyTweak("game_dvr", true);
-        ApplyTweak("visual_fx", true);
 
         // Tweaks that write to HKLM. Applying each individually via ApplyTweak would spawn a
         // separate elevated reg.exe (and UAC prompt) per tweak when not already running as
         // admin - batch them into a single elevated call so the preset needs at most one prompt.
         SetHklmValuesBatch(
-            (@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "SystemResponsiveness", 0, RegistryValueKind.DWord),
+            (@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "SystemResponsiveness", 10, RegistryValueKind.DWord),
             (@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF), RegistryValueKind.DWord),
             (@"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 0, RegistryValueKind.DWord),
             (@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0, RegistryValueKind.DWord),
             (@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2, RegistryValueKind.DWord),
             (@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", 1, RegistryValueKind.DWord),
-            (MmcssGamesTaskPath, "Scheduling Category", "High", RegistryValueKind.String),
-            (MmcssGamesTaskPath, "SFIO Priority", "High", RegistryValueKind.String));
-
-        SetNagleDisabled(true);
+            (MmcssGamesTaskPath, "Scheduling Category", "High", RegistryValueKind.String));
     }
 
     public void ResetAllToDefaults()
@@ -543,11 +487,9 @@ public partial class SystemTweaksService
         ApplyTweak("mmcss_games_priority", false);
         ApplyTweak("timer_resolution", false);
         ApplyTweak("net_throttling", false);
-        ResetNagleToDefault();
         ResetDeliveryOptimizationToDefault();
         ResetTelemetryToDefault();
         ApplyTweak("game_bar_overlay", false);
-        ApplyTweak("visual_fx", false);
     }
 
     // These four tweaks write a Windows *policy* value or force a hardware feature off; on a
@@ -563,36 +505,6 @@ public partial class SystemTweaksService
 
     private static bool ResetTelemetryToDefault() =>
         DeleteHklmValue(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry");
-
-    private static bool ResetNagleToDefault()
-    {
-        try
-        {
-            List<string> interfaceNames;
-            using (var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath))
-            {
-                if (interfacesKey == null) return false;
-                interfaceNames = new List<string>(interfacesKey.GetSubKeyNames());
-            }
-
-            if (interfaceNames.Count == 0) return false;
-
-            var deletes = new List<(string SubKey, string ValueName)>();
-            foreach (var name in interfaceNames)
-            {
-                string subKey = $@"{TcpInterfacesPath}\{name}";
-                deletes.Add((subKey, "TcpAckFrequency"));
-                deletes.Add((subKey, "TCPNoDelay"));
-            }
-
-            return DeleteHklmValuesBatch(deletes.ToArray());
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SystemTweaksService", $"ResetNagleToDefault failed: {ex.Message}");
-            return false;
-        }
-    }
 
     // =========================================================================
     // Check Implementations
@@ -720,7 +632,7 @@ public partial class SystemTweaksService
             if (key != null)
             {
                 var val = key.GetValue("SystemResponsiveness");
-                return val is int i && i == 0;
+                return val is int i && i == 10;
             }
         }
         catch { }
@@ -737,9 +649,7 @@ public partial class SystemTweaksService
             if (key != null)
             {
                 string? category = key.GetValue("Scheduling Category") as string;
-                string? sfio = key.GetValue("SFIO Priority") as string;
-                return string.Equals(category, "High", StringComparison.OrdinalIgnoreCase) &&
-                       string.Equals(sfio, "High", StringComparison.OrdinalIgnoreCase);
+                return string.Equals(category, "High", StringComparison.OrdinalIgnoreCase);
             }
         }
         catch { }
@@ -761,47 +671,6 @@ public partial class SystemTweaksService
         return false;
     }
 
-    private static bool CheckVisualFxPerformance()
-    {
-        // VisualFXSetting alone is just a status marker Windows' own dialog writes - it doesn't
-        // reliably reflect whether animations/shadows are actually off. Query the live OS state
-        // of the two effects this tweak actually controls instead.
-        try
-        {
-            return !GetMinimizeAnimationEnabled() && !GetDropShadowEnabled();
-        }
-        catch { }
-        return false;
-    }
-
-    private static bool GetMinimizeAnimationEnabled()
-    {
-        var info = new ANIMATIONINFO { cbSize = (uint)Marshal.SizeOf<ANIMATIONINFO>() };
-        if (SystemParametersInfoAnimation(SPI_GETANIMATION, info.cbSize, ref info, 0))
-        {
-            return info.iMinAnimate != 0;
-        }
-        return true; // assume Windows' default (on) if the query fails
-    }
-
-    private static bool GetDropShadowEnabled()
-    {
-        IntPtr buffer = Marshal.AllocHGlobal(sizeof(int));
-        try
-        {
-            Marshal.WriteInt32(buffer, 1);
-            if (SystemParametersInfo(SPI_GETDROPSHADOW, 0, buffer, 0))
-            {
-                return Marshal.ReadInt32(buffer) != 0;
-            }
-            return true; // assume Windows' default (on) if the query fails
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(buffer);
-        }
-    }
-
     private static bool CheckNetworkThrottlingDisabled()
     {
         try
@@ -812,38 +681,6 @@ public partial class SystemTweaksService
                 var val = key.GetValue("NetworkThrottlingIndex");
                 if (val is int i) return (uint)i == 0xFFFFFFFF || i == -1;
             }
-        }
-        catch { }
-        return false;
-    }
-
-    private const string TcpInterfacesPath = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";
-
-    private static bool CheckNagleDisabled()
-    {
-        try
-        {
-            using var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath);
-            if (interfacesKey == null) return false;
-
-            var subKeyNames = interfacesKey.GetSubKeyNames();
-            if (subKeyNames.Length == 0) return false;
-
-            // Optimal only when every network adapter interface has both values set - a single
-            // untouched adapter (e.g. a VPN or virtual adapter added later) means Nagle is still
-            // in effect for traffic routed through it.
-            foreach (var name in subKeyNames)
-            {
-                using var ifaceKey = interfacesKey.OpenSubKey(name);
-                if (ifaceKey == null) continue;
-
-                var ack = ifaceKey.GetValue("TcpAckFrequency");
-                var noDelay = ifaceKey.GetValue("TCPNoDelay");
-                bool ackOk = ack is int a && a == 1;
-                bool noDelayOk = noDelay is int nd && nd == 1;
-                if (!ackOk || !noDelayOk) return false;
-            }
-            return true;
         }
         catch { }
         return false;
@@ -1315,17 +1152,19 @@ public partial class SystemTweaksService
 
     private static bool SetSystemResponsiveness(bool optimal)
     {
-        int val = optimal ? 0 : 20;
+        // Microsoft's MMCSS docs: values below 10 are clamped back up to 20, so 10 - not 0 -
+        // is the lowest reserve Windows actually honors. See CheckSystemResponsivenessOptimal.
+        int val = optimal ? 10 : 20;
         return SetHklmDword(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "SystemResponsiveness", val);
     }
 
     private static bool SetMmcssGamesPriority(bool highPriority)
     {
+        // SFIO Priority is intentionally not written here - Microsoft's MMCSS docs state it
+        // "is not used", so setting it would be a no-op that only misrepresents what this does.
         string category = highPriority ? "High" : "Medium";
-        string sfio = highPriority ? "High" : "Normal";
         return SetHklmValuesBatch(
-            (MmcssGamesTaskPath, "Scheduling Category", category, RegistryValueKind.String),
-            (MmcssGamesTaskPath, "SFIO Priority", sfio, RegistryValueKind.String));
+            (MmcssGamesTaskPath, "Scheduling Category", category, RegistryValueKind.String));
     }
 
     private static bool SetTimerResolution(bool enableGlobal)
@@ -1333,95 +1172,10 @@ public partial class SystemTweaksService
         return SetHklmDword(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", enableGlobal ? 1 : 0);
     }
 
-    private static bool SetVisualFx(bool performanceMode)
-    {
-        bool ok = true;
-
-        // Status marker: what Windows' own Advanced System Settings dialog also writes so it
-        // shows the matching radio button selected. Not relied on for our own Check anymore.
-        try
-        {
-            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects");
-            key?.SetValue("VisualFXSetting", performanceMode ? 2 : 1, RegistryValueKind.DWord);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to write VisualFXSetting marker: {ex.Message}");
-            ok = false;
-        }
-
-        // The actual effects: minimize/restore window animation and window drop shadows.
-        try
-        {
-            var info = new ANIMATIONINFO
-            {
-                cbSize = (uint)Marshal.SizeOf<ANIMATIONINFO>(),
-                iMinAnimate = performanceMode ? 0 : 1
-            };
-            ok &= SystemParametersInfoAnimation(SPI_SETANIMATION, info.cbSize, ref info, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to set minimize animation: {ex.Message}");
-            ok = false;
-        }
-
-        try
-        {
-            var dropShadowValue = new IntPtr(performanceMode ? 0 : 1);
-            ok &= SystemParametersInfo(SPI_SETDROPSHADOW, 0, dropShadowValue, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to set drop shadow: {ex.Message}");
-            ok = false;
-        }
-
-        return ok;
-    }
-
     private static bool SetNetworkThrottling(bool disableThrottle)
     {
         int val = disableThrottle ? unchecked((int)0xFFFFFFFF) : 10;
         return SetHklmDword(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", val);
-    }
-
-    private static bool SetNagleDisabled(bool disableNagle)
-    {
-        // Reverting to "Nagle enabled" means restoring the machine default of no value
-        // present, not writing 0 (TcpAckFrequency=0 is outside the documented 1-255
-        // range). See L-04.
-        if (!disableNagle)
-        {
-            return ResetNagleToDefault();
-        }
-
-        try
-        {
-            List<string> interfaceNames;
-            using (var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath))
-            {
-                if (interfacesKey == null) return false;
-                interfaceNames = new List<string>(interfacesKey.GetSubKeyNames());
-            }
-
-            if (interfaceNames.Count == 0) return false;
-
-            var writes = new List<(string, string, object, RegistryValueKind)>();
-            foreach (var name in interfaceNames)
-            {
-                string subKey = $@"{TcpInterfacesPath}\{name}";
-                writes.Add((subKey, "TcpAckFrequency", 1, RegistryValueKind.DWord));
-                writes.Add((subKey, "TCPNoDelay", 1, RegistryValueKind.DWord));
-            }
-
-            return SetHklmValuesBatch(writes.ToArray());
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SystemTweaksService", $"SetNagleDisabled failed: {ex.Message}");
-            return false;
-        }
     }
 
     private static bool SetDeliveryOptimization(bool disableP2P)

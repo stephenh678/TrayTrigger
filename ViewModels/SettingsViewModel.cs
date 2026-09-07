@@ -101,9 +101,6 @@ public class SettingsViewModel : ViewModelBase
         "Alphabetical (Z - A)"
     };
 
-    public ObservableCollection<int> MaxRecentOptions { get; } = new() { 3, 5, 8, 10 };
-    public ObservableCollection<int> MaxFavoritesOptions { get; } = new() { 3, 5, 8, 10 };
-
     public ObservableCollection<string> ViewModeOptions { get; } = new()
     {
         ViewModePosterGrid,
@@ -173,24 +170,6 @@ public class SettingsViewModel : ViewModelBase
         _onRequestOpenSteamImport = onRequestOpenSteamImport;
         _onCheckForUpdates = onCheckForUpdates;
         _getUpdateStatusText = getUpdateStatusText;
-
-        // Ensure configured MaxRecentInTray is present in options
-        if (_settings.MaxRecentInTray > 0 && !MaxRecentOptions.Contains(_settings.MaxRecentInTray))
-        {
-            MaxRecentOptions.Add(_settings.MaxRecentInTray);
-            var sorted = MaxRecentOptions.OrderBy(x => x).ToList();
-            MaxRecentOptions.Clear();
-            foreach (var opt in sorted) MaxRecentOptions.Add(opt);
-        }
-
-        // Ensure configured MaxFavoritesInTray is present in options
-        if (_settings.MaxFavoritesInTray > 0 && !MaxFavoritesOptions.Contains(_settings.MaxFavoritesInTray))
-        {
-            MaxFavoritesOptions.Add(_settings.MaxFavoritesInTray);
-            var sortedFavorites = MaxFavoritesOptions.OrderBy(x => x).ToList();
-            MaxFavoritesOptions.Clear();
-            foreach (var opt in sortedFavorites) MaxFavoritesOptions.Add(opt);
-        }
 
         // Initialize Tab Commands
         SelectAllTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.All);
@@ -383,12 +362,13 @@ public class SettingsViewModel : ViewModelBase
 
     public int MaxRecentInTray
     {
-        get => _settings.MaxRecentInTray > 0 ? _settings.MaxRecentInTray : LibraryConstants.DefaultTrayItemCount;
+        get => _settings.MaxRecentInTray;
         set
         {
-            if (_settings.MaxRecentInTray != value)
+            int clamped = Math.Max(0, value);
+            if (_settings.MaxRecentInTray != clamped)
             {
-                _settings.MaxRecentInTray = value;
+                _settings.MaxRecentInTray = clamped;
                 OnPropertyChanged();
                 AutoSaveSettings();
                 _onTrayMenuSettingChanged?.Invoke();
@@ -428,12 +408,13 @@ public class SettingsViewModel : ViewModelBase
 
     public int MaxFavoritesInTray
     {
-        get => _settings.MaxFavoritesInTray > 0 ? _settings.MaxFavoritesInTray : LibraryConstants.DefaultTrayItemCount;
+        get => _settings.MaxFavoritesInTray;
         set
         {
-            if (_settings.MaxFavoritesInTray != value)
+            int clamped = Math.Max(0, value);
+            if (_settings.MaxFavoritesInTray != clamped)
             {
-                _settings.MaxFavoritesInTray = value;
+                _settings.MaxFavoritesInTray = clamped;
                 OnPropertyChanged();
                 AutoSaveSettings();
                 _onTrayMenuSettingChanged?.Invoke();
