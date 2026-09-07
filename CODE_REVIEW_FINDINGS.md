@@ -457,7 +457,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **What:** "resolve name -> new GameEntry -> extract icon -> enrich -> add -> rebuild/save/hotkeys/sort/status" is copy-pasted. Extract `Task<GameEntry> BuildEntryAsync(...)` and `void CommitAdded(IEnumerable<GameEntry>, string status)`. Do this **after** M-10/M-11 so the fix lands once.
 
 ### L-13 `MainViewModel` (2246 lines) and `MainWindow.xaml` (2336 lines) are god objects
-- [ ] Status: Open | Resolution:
+- [ ] Status: Needs human decision | Resolution: Large architectural refactor, deliberately deferred - needs a scoped plan reviewed by a human before attempting, per prior decision.
 - **Files:** `ViewModels/MainViewModel.cs`, `MainWindow.xaml`
 - **What:** Split the XAML into `LibraryView`, `SettingsView`, `AboutView` user controls (SystemView already is one). Split the ViewModel into `LibraryViewModel` (CRUD/filter/sort), `ImportCoordinator` (drops, folders, Steam import, enrichment) and `UpdateCoordinator`. Large change; schedule after the functional fixes.
 
