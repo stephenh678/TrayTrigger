@@ -85,6 +85,7 @@ public class MainViewModel : ViewModelBase
 
     public SystemViewModel SystemVM { get; }
     public SettingsViewModel SettingsVM { get; }
+    public UpdateCoordinator Update { get; }
 
     // Navigation state
     private NavSection _currentSection = NavSection.Library;
@@ -173,6 +174,13 @@ public class MainViewModel : ViewModelBase
             _selectedCategory = _settings.LastCategoryFilter;
         }
 
+        Update = new UpdateCoordinator(
+            _storageService,
+            _settings,
+            onStatusChanged: () => SettingsVM?.NotifyUpdateStatusChanged(),
+            onTrayNotification: (title, message) => RequestTrayNotification?.Invoke(title, message)
+        );
+
         SettingsVM = new SettingsViewModel(
             _settings,
             _storageService,
@@ -190,8 +198,8 @@ public class MainViewModel : ViewModelBase
             onRequestEnrichLibrary: EnrichLibraryAsync,
             onRequestRefreshAllPosters: progress => RefreshAllPostersAsync(progress),
             onRequestOpenSteamImport: OpenSteamImport,
-            onCheckForUpdates: () => CheckForUpdatesAsync(true),
-            getUpdateStatusText: () => UpdateStatusBadgeText
+            onCheckForUpdates: () => Update.CheckForUpdatesAsync(true),
+            getUpdateStatusText: () => Update.UpdateStatusBadgeText
         );
 
         SettingsVM.PropertyChanged += (s, e) =>
@@ -274,7 +282,6 @@ public class MainViewModel : ViewModelBase
                 LoggingService.Error("MainViewModel", "Failed to copy system info to clipboard", ex);
             }
         });
-        CheckForUpdatesCommand = new AsyncRelayCommand(async () => await CheckForUpdatesAsync(true));
         ExitApplicationCommand = new RelayCommand(PromptExitApplication);
 
         // Game Commands
@@ -301,30 +308,7 @@ public class MainViewModel : ViewModelBase
             ModernDialog.ShowWarning(null, "Data File Recovered", warning);
         }
 
-        // Schedule quiet background check for updates if enabled: once shortly after
-        // launch, then again every 24 hours for as long as the app keeps running.
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(3500);
-                while (true)
-                {
-                    if (_settings.AutoCheckForUpdates)
-                    {
-                        Application.Current?.Dispatcher.InvokeAsync(async () =>
-                        {
-                            await CheckForUpdatesAsync(false);
-                        });
-                    }
-                    await Task.Delay(TimeSpan.FromHours(24));
-                }
-            }
-            catch
-            {
-                // Ignore silent update check exceptions
-            }
-        });
+        Update.StartBackgroundChecks();
     }
 
     // --- NAVIGATION PROPERTIES ---
@@ -413,7 +397,7 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenGitHubCommand { get; }
     public ICommand OpenGitHubIssuesCommand { get; }
     public ICommand CopySystemInfoCommand { get; }
-    public ICommand CheckForUpdatesCommand { get; }
+    public ICommand CheckForUpdatesCommand => Update.CheckForUpdatesCommand;
     public ICommand ExitApplicationCommand { get; }
 
     // --- ABOUT SUB-SECTIONS ---
@@ -451,155 +435,15 @@ public class MainViewModel : ViewModelBase
     public bool ShowAboutShortcutsSection => CurrentAboutSection == AboutSubSection.All || CurrentAboutSection == AboutSubSection.Shortcuts;
     public bool ShowAboutSupportSection => CurrentAboutSection == AboutSubSection.All || CurrentAboutSection == AboutSubSection.Support;
 
-    // --- APPLICATION VERSION & UPDATES ---
+    // --- APPLICATION VERSION & UPDATES (forwarded to UpdateCoordinator; see L-13) ---
 
-    public string AppVersionDisplay => UpdateService.CurrentVersionDisplay;
+    public string AppVersionDisplay => Update.AppVersionDisplay;
 
-    private string _updateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
-    public string UpdateStatusBadgeText
-    {
-        get => _updateStatusBadgeText;
-        set
-        {
-            if (SetProperty(ref _updateStatusBadgeText, value))
-            {
-                // Settings tab shows the same status text via SettingsVM; see L-10.
-                SettingsVM?.NotifyUpdateStatusChanged();
-            }
-        }
-    }
+    public string UpdateStatusBadgeText => Update.UpdateStatusBadgeText;
 
-    private string _updateStatusIcon = "\uE73E"; // Segoe checkmark
-    public string UpdateStatusIcon
-    {
-        get => _updateStatusIcon;
-        set => SetProperty(ref _updateStatusIcon, value);
-    }
-
-    private Brush _updateStatusBrush = new SolidColorBrush(Color.FromRgb(78, 201, 176)); // #4EC9B0
-    public Brush UpdateStatusBrush
-    {
-        get => _updateStatusBrush;
-        set => SetProperty(ref _updateStatusBrush, value);
-    }
-
-    public async Task CheckForUpdatesAsync(bool interactive)
-    {
-        try
-        {
-            UpdateStatusBadgeText = "Checking for updates...";
-            UpdateStatusIcon = "\uE896";
-            if (Application.Current?.TryFindResource("BrushAccentHover") is Brush accentBrush)
-            {
-                UpdateStatusBrush = accentBrush;
-            }
-
-            string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
-            var result = await UpdateService.Instance.CheckForUpdatesAsync(repo);
-
-            if (result.IsUpdateAvailable && result.LatestRelease != null)
-            {
-                UpdateStatusBadgeText = $"{result.LatestRelease.TagName} available!";
-                UpdateStatusIcon = "\uE896";
-                if (Application.Current?.TryFindResource("BrushAccentHover") is Brush acBrush)
-                {
-                    UpdateStatusBrush = acBrush;
-                }
-
-                bool mainWindowVisible = Application.Current?.MainWindow is { IsVisible: true };
-                bool alreadySnoozed = interactive == false &&
-                    string.Equals(_settings.SkippedUpdateVersion, result.LatestRelease.TagName, StringComparison.OrdinalIgnoreCase) &&
-                    _settings.RemindAfterUtc.HasValue && DateTime.UtcNow < _settings.RemindAfterUtc.Value;
-
-                if (interactive || mainWindowVisible)
-                {
-                    // Surface the modal when the user explicitly asked (interactive), or when a
-                    // quiet background check (startup / 24h timer) finds the window is actually
-                    // visible - a silently-updated badge alone is easy to miss in that case.
-                    Window? owner = WindowHelper.ActiveOwner();
-                    bool remindLater = UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
-                    if (remindLater)
-                    {
-                        _settings.SkippedUpdateVersion = result.LatestRelease.TagName;
-                        _settings.RemindAfterUtc = DateTime.UtcNow.AddHours(24);
-                        _storageService.SaveSettings(_settings);
-                    }
-                }
-                else if (!alreadySnoozed)
-                {
-                    // Background check, window hidden (e.g. a full-screen game): a modal dialog
-                    // here would steal focus mid-match. Use a tray balloon instead so the user
-                    // isn't interrupted but still finds out.
-                    RequestTrayNotification?.Invoke("Update Available", $"{result.LatestRelease.TagName} is ready to install. Open TrayTrigger to update.");
-                }
-            }
-            else if (result.IsUpToDate)
-            {
-                UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
-                UpdateStatusIcon = "\uE73E";
-                UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(78, 201, 176));
-
-                if (interactive)
-                {
-                    Window? owner = WindowHelper.ActiveOwner();
-                    ModernDialog.ShowInfo(
-                        owner,
-                        "Check for Updates",
-                        "TrayTrigger is Up to Date",
-                        $"You are currently running the latest version ({UpdateService.CurrentVersionDisplay}). No updates are available.");
-                }
-            }
-            else if (result.Status == UpdateStatus.NoReleasesFound)
-            {
-                UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
-                UpdateStatusIcon = "\uE73E";
-                UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(78, 201, 176));
-
-                if (interactive)
-                {
-                    Window? owner = WindowHelper.ActiveOwner();
-                    ModernDialog.ShowInfo(
-                        owner,
-                        "Check for Updates",
-                        "No Releases Found on GitHub",
-                        $"No published releases were found for repository '{repo}'. Once you create a release on GitHub, updates will appear here.");
-                }
-            }
-            else
-            {
-                UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Check failed";
-                UpdateStatusIcon = "\uE783";
-                UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(224, 108, 117));
-
-                if (interactive)
-                {
-                    Window? owner = WindowHelper.ActiveOwner();
-                    ModernDialog.ShowWarning(
-                        owner,
-                        "Check for Updates",
-                        "Unable to Check for Updates",
-                        result.ErrorMessage ?? "Please verify your internet connection and GitHub repository setting.");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Error("MainViewModel", "CheckForUpdatesAsync error", ex);
-            UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Check failed";
-            UpdateStatusIcon = "\uE783";
-            UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(224, 108, 117));
-
-            if (interactive)
-            {
-                Window? owner = WindowHelper.ActiveOwner();
-                ModernDialog.ShowWarning(
-                    owner,
-                    "Check for Updates",
-                    "Error Checking for Updates",
-                    ex.Message);
-            }
-        }
-    }
+    public string UpdateStatusIcon => Update.UpdateStatusIcon;
+    public Brush UpdateStatusBrush => Update.UpdateStatusBrush;
+    public Task CheckForUpdatesAsync(bool interactive) => Update.CheckForUpdatesAsync(interactive);
 
     // --- LIBRARY & SEARCH PROPERTIES ---
     public string SearchText
