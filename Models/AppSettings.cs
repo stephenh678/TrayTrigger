@@ -14,6 +14,10 @@ public class AppSettings
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
     public bool ShowRecentInTray { get; set; } = true;
     public int MaxRecentInTray { get; set; } = 5;
+    public string RecentTraySortOption { get; set; } = "Most Recently Played";
+    public bool ShowFavoritesInTray { get; set; } = true;
+    public int MaxFavoritesInTray { get; set; } = 5;
+    public string FavoritesTraySortOption { get; set; } = "Alphabetical (A - Z)";
     public string TrayMenuSortOption { get; set; } = "Alphabetical (A - Z)";
     public bool PreferExeForGameName { get; set; } = true;
     public bool SearchOfficialTitleOnline { get; set; } = true;

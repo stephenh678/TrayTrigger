@@ -372,10 +372,12 @@ public partial class App : Application
                 if (_mainViewModel.Settings.ShowRecentInTray)
                 {
                     int maxRecent = _mainViewModel.Settings.MaxRecentInTray > 0 ? _mainViewModel.Settings.MaxRecentInTray : 3;
-                    var recentGames = games
-                        .Where(g => g.Game.LastPlayed.HasValue)
-                        .OrderByDescending(g => g.Game.LastPlayed!.Value)
-                        .Take(maxRecent)
+                    var recentGames = ApplySortOption(
+                        games
+                            .Where(g => g.Game.LastPlayed.HasValue)
+                            .OrderByDescending(g => g.Game.LastPlayed!.Value)
+                            .Take(maxRecent),
+                        _mainViewModel.Settings.RecentTraySortOption)
                         .ToList();
 
                     menu.Items.Add(CreateSectionHeader("Recent"));
@@ -402,10 +404,44 @@ public partial class App : Application
                     menu.Items.Add(new Separator());
                 }
 
-                // 2. Sorting helper according to TrayMenuSortOption setting
-                IEnumerable<GameCardViewModel> ApplyTraySort(IEnumerable<GameCardViewModel> source)
+                // 1b. Persistent "Favorites" section directly in root menu
+                if (_mainViewModel.Settings.ShowFavoritesInTray)
                 {
-                    return _mainViewModel.Settings.TrayMenuSortOption switch
+                    int maxFavorites = _mainViewModel.Settings.MaxFavoritesInTray > 0 ? _mainViewModel.Settings.MaxFavoritesInTray : 5;
+                    var favoriteGames = ApplySortOption(
+                        games.Where(g => g.Game.IsFavorite),
+                        _mainViewModel.Settings.FavoritesTraySortOption)
+                        .Take(maxFavorites)
+                        .ToList();
+
+                    menu.Items.Add(CreateSectionHeader("Favorites"));
+
+                    if (favoriteGames.Count > 0)
+                    {
+                        foreach (var card in favoriteGames)
+                        {
+                            menu.Items.Add(CreateGameMenuItem(card));
+                        }
+                    }
+                    else
+                    {
+                        menu.Items.Add(new MenuItem
+                        {
+                            Header = "(No favorites yet)",
+                            IsEnabled = false,
+                            IsHitTestVisible = false,
+                            FontSize = 12,
+                            Foreground = (Brush)FindResource("BrushTextMuted")
+                        });
+                    }
+
+                    menu.Items.Add(new Separator());
+                }
+
+                // 2. Sorting helper, reused per-section with each section's own sort option
+                IEnumerable<GameCardViewModel> ApplySortOption(IEnumerable<GameCardViewModel> source, string sortOption)
+                {
+                    return sortOption switch
                     {
                         "Most Recently Played" => source.OrderByDescending(c => c.Game.LastPlayed ?? DateTime.MinValue).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase),
                         "Cumulative Playtime" => source.OrderByDescending(c => c.Game.CumulativePlaytimeMinutes).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase),
@@ -413,6 +449,9 @@ public partial class App : Application
                         _ => source.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
                     };
                 }
+
+                IEnumerable<GameCardViewModel> ApplyTraySort(IEnumerable<GameCardViewModel> source) =>
+                    ApplySortOption(source, _mainViewModel.Settings.TrayMenuSortOption);
 
                 bool groupByCategory = _mainViewModel.Settings.GroupTrayMenuByCategory;
 
@@ -435,6 +474,7 @@ public partial class App : Application
                     var grouped = games
                         .GroupBy(g => string.IsNullOrWhiteSpace(g.Category) ? "Uncategorized" : g.Category)
                         .Where(g => !_mainViewModel.Settings.ShowRecentInTray || !string.Equals(g.Key, "Recent", StringComparison.OrdinalIgnoreCase))
+                        .Where(g => !_mainViewModel.Settings.ShowFavoritesInTray || !string.Equals(g.Key, "Favorites", StringComparison.OrdinalIgnoreCase))
                         .OrderBy(g => g.Key)
                         .ToList();
 
