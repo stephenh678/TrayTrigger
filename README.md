@@ -1,7 +1,18 @@
-﻿# TrayTrigger
+﻿<p align="center">
+  <img src="Assets/app_icon.png" width="96" alt="TrayTrigger icon">
+</p>
+
+<h1 align="center">TrayTrigger</h1>
 
 <p align="center">
   <strong>A modern, ultra-fast system tray game launcher and performance companion for Windows.</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/stephenh678/TrayTrigger?style=flat-square&label=release" alt="Latest release">
+  <img src="https://img.shields.io/github/license/stephenh678/TrayTrigger?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?style=flat-square" alt="Platform">
+  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square" alt=".NET 10">
 </p>
 
 ---
@@ -9,6 +20,35 @@
 ## Overview
 
 **TrayTrigger** is a lightweight, high-performance Windows desktop application designed to streamline how you launch, organize, and optimize PC games. Inspired by modern Windows 11 Fluent design and Steam jump lists, TrayTrigger lives quietly in your system notification tray while giving you instant 1-click access to your library, system specs, and gaming tweaks.
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="Assets/screenshots/library-grid.png" width="800" alt="Games library, poster grid view"><br>
+  <em>Poster grid library view with automatic art, categories, and Steam integration</em>
+</p>
+
+<p align="center">
+  <img src="Assets/screenshots/library-list.png" width="800" alt="Games library, details list view"><br>
+  <em>Details list view for scanning category, playtime, and last-played at a glance</em>
+</p>
+
+<p align="center">
+  <img src="Assets/screenshots/system-hardware.png" width="800" alt="Live hardware telemetry"><br>
+  <em>Live hardware telemetry: GPU, display, CPU load, RAM, and storage</em>
+</p>
+
+<p align="center">
+  <img src="Assets/screenshots/system-tweaks.png" width="800" alt="Performance tweaks"><br>
+  <em>One-click, verified performance tweaks for input latency and frame pacing</em>
+</p>
+
+<p align="center">
+  <img src="Assets/screenshots/about-features.png" width="800" alt="About and key features"><br>
+  <em>In-app overview of key features and diagnostics</em>
+</p>
 
 ---
 
@@ -63,7 +103,7 @@
 ### Build & Run
 ```bash
 # Clone repository
-git clone https://github.com/your-username/TrayTrigger.git
+git clone https://github.com/stephenh678/TrayTrigger.git
 cd TrayTrigger
 
 # Build solution
