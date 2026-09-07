@@ -104,7 +104,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 ## High
 
 ### H-01 Hotkey text boxes register partial and unmodified hotkeys system-wide on every keystroke
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Changed both hotkey TextBox bindings (`MainWindow.xaml` GlobalManageHotkey, `Views/GameEditDialog.xaml` per-game Hotkey) from `UpdateSourceTrigger=PropertyChanged` to `LostFocus`, so intermediate keystrokes no longer flow to the ViewModel/`RegisterHotkeys` at all. Also hardened `HotkeyManager.ParseHotkey` to reject any combo with no modifier unless the key is a standalone F1-F24, closing the remaining case where a user tabs away with an unmodified single key (or the recommended "F10" typed alone). Release build: 0 warnings, 0 errors. Could not run the manual GUI verification (type in Settings, switch to Notepad, inspect debug.log) — no tool available in this session to drive native WPF window focus/typing; verified by code inspection only (the setter path from TextBox -> `_onHotkeySettingChanged` -> `RegisterHotkeys` -> `ParseHotkey` no longer fires per-character, and `ParseHotkey("c", ...)` now returns false).
 - **Confidence:** CONFIRMED
 - **Category:** correctness / system side effect
 - **Files:** `MainWindow.xaml:1345`, `Views/GameEditDialog.xaml:296-300`, `ViewModels/SettingsViewModel.cs:706-719`, `ViewModels/MainViewModel.cs:2118-2121`, `Services/HotkeyManager.cs:67-101,121-151`

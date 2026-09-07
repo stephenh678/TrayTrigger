@@ -296,7 +296,7 @@
                                     <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
                                     <TextBlock Text="Press to launch anytime (e.g. Ctrl+Alt+D, F10)" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"/>
                                 </StackPanel>
-                                <TextBox DockPanel.Dock="Right" Text="{Binding Hotkey, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox DockPanel.Dock="Right" Text="{Binding Hotkey, UpdateSourceTrigger=LostFocus}"
                                          Style="{StaticResource ModernTextBox}" Width="160" HorizontalAlignment="Right"/>
                             </DockPanel>
 

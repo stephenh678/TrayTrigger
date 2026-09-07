@@ -143,6 +143,12 @@ public partial class HotkeyManager : IDisposable
 
         if (Enum.TryParse<Key>(mainKeyStr, true, out var key))
         {
+            // Require a modifier unless the key is a standalone function key (F1-F24),
+            // otherwise a partially-typed string like "c" would register a bare key globally.
+            bool isFunctionKey = key >= Key.F1 && key <= Key.F24;
+            if (modifiers == 0 && !isFunctionKey)
+                return false;
+
             virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
             return virtualKey != 0;
         }
