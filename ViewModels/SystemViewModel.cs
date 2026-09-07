@@ -168,6 +168,7 @@ public class SystemViewModel : ViewModelBase
 {
     private readonly SystemInfoService _infoService;
     private readonly SystemTweaksService _tweaksService;
+    private readonly AppSettings _settings;
     private readonly DispatcherTimer _telemetryTimer;
 
     // Sub-section Navigation
@@ -184,6 +185,8 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsTweaksTab));
                 OnPropertyChanged(nameof(ShowSpecsSection));
                 OnPropertyChanged(nameof(ShowTweaksSection));
+                OnPropertyChanged(nameof(RestorePointBadgeText));
+                OnPropertyChanged(nameof(RestorePointBadgeColor));
             }
         }
     }
@@ -244,6 +247,45 @@ public class SystemViewModel : ViewModelBase
     public int TotalTweakCount => Tweaks.Count;
     public string TweaksOptimizationScoreDisplay => $"{OptimalTweakCount} / {TotalTweakCount} Optimizations Active";
 
+    // Restore Point Protection status - read-only here; configured in Settings > Performance Tweaks.
+    public string RestorePointBadgeText => _settings.CreateRestorePointBeforeTweaks ? "RESTORE POINT: ON" : "RESTORE POINT: OFF";
+    public string RestorePointBadgeColor => _settings.CreateRestorePointBeforeTweaks ? "#238636" : "#6E6E7A";
+
+    // Busy state for the Apply Preset / Reset Defaults bulk actions. These can take anywhere
+    // from a couple seconds to well over a minute (elevated UAC prompts, powercfg, a restore
+    // point snapshot), so the actual work runs off the UI thread and this drives a floating
+    // toast + disables the action buttons for the duration instead of the window looking frozen.
+    private bool _isApplyingTweaks;
+    public bool IsApplyingTweaks
+    {
+        get => _isApplyingTweaks;
+        set
+        {
+            if (_isApplyingTweaks != value)
+            {
+                _isApplyingTweaks = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanRunBulkAction));
+            }
+        }
+    }
+
+    public bool CanRunBulkAction => !IsApplyingTweaks;
+
+    private string _busyToastMessage = "";
+    public string BusyToastMessage
+    {
+        get => _busyToastMessage;
+        set
+        {
+            if (_busyToastMessage != value)
+            {
+                _busyToastMessage = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     // UI State
     private bool _isLoadingSpecs;
     public bool IsLoadingSpecs
@@ -288,18 +330,19 @@ public class SystemViewModel : ViewModelBase
     public ICommand OpenGraphicsSettingsCommand { get; }
     public ICommand OpenDxDiagCommand { get; }
 
-    public SystemViewModel(SystemInfoService infoService, SystemTweaksService tweaksService)
+    public SystemViewModel(SystemInfoService infoService, SystemTweaksService tweaksService, AppSettings settings)
     {
         _infoService = infoService;
         _tweaksService = tweaksService;
+        _settings = settings;
 
         SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
         SelectTweaksTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.PerformanceTweaks);
         RefreshSpecsCommand = new AsyncRelayCommand(async () => await LoadHardwareSpecsAsync());
         RefreshTweaksCommand = new RelayCommand(RefreshAllTweaks);
-        ApplyRecommendedPresetCommand = new RelayCommand(ExecuteApplyPreset);
-        ResetDefaultsCommand = new RelayCommand(ExecuteResetDefaults);
+        ApplyRecommendedPresetCommand = new AsyncRelayCommand(ExecuteApplyPresetAsync, () => CanRunBulkAction);
+        ResetDefaultsCommand = new AsyncRelayCommand(ExecuteResetDefaultsAsync, () => CanRunBulkAction);
 
         OpenTaskManagerCommand = new RelayCommand(() => SafeLaunchProcess("taskmgr.exe"));
         OpenDeviceManagerCommand = new RelayCommand(() => SafeLaunchProcess("devmgmt.msc"));
@@ -414,10 +457,12 @@ public class SystemViewModel : ViewModelBase
         }
         OnPropertyChanged(nameof(OptimalTweakCount));
         OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        OnPropertyChanged(nameof(RestorePointBadgeText));
+        OnPropertyChanged(nameof(RestorePointBadgeColor));
         StatusMessage = "Checked current Windows settings.";
     }
 
-    private void ExecuteApplyPreset()
+    private async Task ExecuteApplyPresetAsync()
     {
         var changing = Tweaks.Where(t => t.CanToggle && !t.IsOptimal).Select(t => t.Name).ToList();
         if (!ConfirmBulkAction(
@@ -428,14 +473,27 @@ public class SystemViewModel : ViewModelBase
             return;
         }
 
-        StatusMessage = "Applying recommended performance optimizations...";
-        _tweaksService.ApplyRecommendedPerformancePreset();
-        RefreshAllTweaks();
-        StatusMessage = "Recommended Performance Preset applied successfully!";
+        IsApplyingTweaks = true;
+        try
+        {
+            await TryCreateRestorePointAsync("TrayTrigger: Before Performance Preset");
+
+            BusyToastMessage = "Applying recommended performance optimizations...";
+            StatusMessage = BusyToastMessage;
+            await Task.Run(() => _tweaksService.ApplyRecommendedPerformancePreset());
+
+            RefreshAllTweaks();
+            StatusMessage = "Recommended Performance Preset applied successfully!";
+        }
+        finally
+        {
+            IsApplyingTweaks = false;
+        }
+
         PromptRestartForBulkAction();
     }
 
-    private void ExecuteResetDefaults()
+    private async Task ExecuteResetDefaultsAsync()
     {
         var changing = Tweaks.Where(t => t.CanToggle && t.IsOptimal).Select(t => t.Name).ToList();
         if (!ConfirmBulkAction(
@@ -446,11 +504,39 @@ public class SystemViewModel : ViewModelBase
             return;
         }
 
-        StatusMessage = "Resetting optimizations to standard Windows defaults...";
-        _tweaksService.ResetAllToDefaults();
-        RefreshAllTweaks();
-        StatusMessage = "Reset all settings to Windows defaults.";
+        IsApplyingTweaks = true;
+        try
+        {
+            await TryCreateRestorePointAsync("TrayTrigger: Before Reset to Defaults");
+
+            BusyToastMessage = "Resetting optimizations to standard Windows defaults...";
+            StatusMessage = BusyToastMessage;
+            await Task.Run(() => _tweaksService.ResetAllToDefaults());
+
+            RefreshAllTweaks();
+            StatusMessage = "Reset all settings to Windows defaults.";
+        }
+        finally
+        {
+            IsApplyingTweaks = false;
+        }
+
         PromptRestartForBulkAction();
+    }
+
+    private async Task TryCreateRestorePointAsync(string description)
+    {
+        if (!_settings.CreateRestorePointBeforeTweaks) return;
+
+        BusyToastMessage = "Creating a System Restore Point before applying changes...";
+        StatusMessage = BusyToastMessage;
+        bool created = await Task.Run(() => SystemTweaksService.CreateSystemRestorePoint(description));
+        if (!created)
+        {
+            LoggingService.Warn("SystemViewModel", "Could not create a System Restore Point (System Restore may be disabled, throttled by Windows to one per 24h, or elevation was cancelled). Continuing anyway.");
+            BusyToastMessage = "Could not create a restore point - continuing...";
+            StatusMessage = "Could not create a restore point (may be disabled or already created recently). Continuing...";
+        }
     }
 
     private static bool ConfirmBulkAction(string title, string message, List<string> changingTweakNames)

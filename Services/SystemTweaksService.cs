@@ -344,6 +344,60 @@ public partial class SystemTweaksService
     }
 
     // =========================================================================
+    // System Restore Point (safety net before bulk tweak changes)
+    // =========================================================================
+
+    /// <summary>
+    /// Creates a Windows System Restore checkpoint via PowerShell's Checkpoint-Computer so bulk
+    /// tweak changes (preset apply / reset-all) can be rolled back from Windows' own Recovery UI
+    /// if something goes wrong. Best-effort: returns false (never throws) if System Restore is
+    /// disabled for the volume, the user cancels an elevation prompt, or Windows silently skips
+    /// the checkpoint under its built-in "one restore point per 24h" throttle.
+    /// </summary>
+    public static bool CreateSystemRestorePoint(string description)
+    {
+        try
+        {
+            string safeDescription = description.Replace("'", "''");
+            string psCommand = $"try {{ Checkpoint-Computer -Description '{safeDescription}' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop }} catch {{ exit 1 }}";
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{psCommand}\"",
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
+            if (IsElevated)
+            {
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+            }
+            else
+            {
+                psi.UseShellExecute = true;
+                psi.Verb = "runas";
+            }
+
+            using var proc = Process.Start(psi);
+            if (proc == null) return false;
+
+            // Snapshot creation can take several seconds - give it a generous timeout, matching
+            // the elevated-write pattern used elsewhere in this service.
+            proc.WaitForExit(60000);
+            if (!proc.HasExited) return false;
+            return proc.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"CreateSystemRestorePoint failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    // =========================================================================
     // Tweak Application & Reversion
     // =========================================================================
 

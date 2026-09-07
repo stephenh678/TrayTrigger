@@ -249,7 +249,7 @@ public class LibraryViewModel : ViewModelBase
         RebuildCategories();
         UpdateHotkeys();
         ApplySort();
-        StatusMessage = $"{Games.Count} game(s) in library";
+        StatusMessage = "Ready";
         OnPropertyChanged(nameof(TotalGameCount));
         OnPropertyChanged(nameof(TotalGameCountDisplay));
         NotifyLibraryUpdated();
