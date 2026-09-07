@@ -338,7 +338,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **How to verify:** Disable TrayTrigger in Task Manager > Startup, reopen Settings; the toggle shows off.
 
 ### M-19 Title normalisation maps `X` to `10` and `I` to `1`, so distinct games collide
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Re-verified: `NormalizeForMatching` still rewrote standalone `x`->`10` and `i`->`1`. Removed only those two regex replacements (single "I"/"X" now pass through unchanged); kept `ii`-`ix` (two-letter) roman numeral conversions intact, per the suggested fix's "treat single I/X as ambiguous" option (simpler and safer than the position-dependent alternative, and sufficient to fix the collision). Release build: 0 warnings, 0 errors. Verified with a standalone harness (`C:\hkt1`, referencing the built `TrayTrigger.dll`): `CalculateSimilarity("Mega Man X", "Mega Man 10")` now scores 0.720 (< 0.9, was 1.0 before the fix), while `NormalizeForMatching("Final Fantasy VII")` still correctly yields "final fantasy 7" (multi-letter roman numerals unaffected). Did not run a live Steam-search end-to-end check (matching against the real Steam catalog) since that needs network access to the Steam API from an unattended session; the unit-level harness directly exercises the changed function.
 - **Confidence:** CONFIRMED
 - **Category:** correctness (matching heuristic)
 - **Files:** `Services/SteamSearchService.cs:422-450`
