@@ -40,6 +40,65 @@ maintainability.
 Things that were checked and are **correct as written** are listed at the end under
 "Verified OK - do not change". Do not "fix" those.
 
+## Project facts for implementers
+
+Read this before touching code. There is no CLAUDE.md; this section is the substitute.
+
+**What it is.** A single-project .NET 10 WPF desktop app (`TrayTrigger.csproj`, `net10.0-windows`,
+`win-x64`, single-file self-contained publish). No solution file, no test project, no DI container.
+Services are constructed in `App.OnStartup` and handed to `MainViewModel`. UI is MVVM with
+`ViewModelBase` / `RelayCommand`; dialogs are in `Views/` and are shown via events raised by the
+ViewModel and handled in `MainWindow.xaml.cs`.
+
+**Build (must be clean):**
+```bash
+dotnet build TrayTrigger.csproj -c Release -nologo -v q
+```
+Output: `bin\Release\net10.0-windows\win-x64\TrayTrigger.exe`. If the build fails to copy the exe,
+a TrayTrigger instance is running from that folder; close it first (tray icon > Exit).
+
+**Run for manual verification:**
+```bash
+"bin/Release/net10.0-windows/win-x64/TrayTrigger.exe"
+```
+`--minimized` starts to the tray only. The app is single-instance (mutex); a second launch just
+activates the first. Do **not** run `publish\` or an installed copy to verify a fix; those are stale.
+
+**Where runtime data lives** (safe to inspect, back up before deliberately corrupting for H-03):
+- Library + settings: `%AppData%\TrayTrigger\games.json`, `settings.json` (+ `.bak`)
+- Icon/poster cache: `%LocalAppData%\TrayTrigger\Icons`, `...\Covers`
+- Log: `%LocalAppData%\TrayTrigger\debug.log` (turn on Settings > Diagnostics > Verbose for traces)
+
+**Conventions to match:**
+- File-scoped namespaces, nullable enabled, `ImplicitUsings` on.
+- P/Invoke uses `[LibraryImport]` on `partial` classes, not `[DllImport]` (one legacy exception in
+  `SystemInfoService`). Regexes use `[GeneratedRegex]`.
+- Logging goes through `LoggingService.Info/Warn/Error/Verbose("Category", msg)`.
+- JSON uses the source-generated `AppJsonContext`; a new persisted type must be added there.
+- Dialogs: use `ModernDialog.Confirm/ShowInfo/ShowWarning(owner, ...)`, never `MessageBox`.
+- New windows must call `WindowThemeService.PrepareForFirstShow(this)` right after
+  `InitializeComponent()` (see any dialog in `Views/`).
+
+**Hard constraints:**
+- Do not add NuGet packages without asking. Current: `H.NotifyIcon.Wpf`, `System.Management`.
+- Do not edit `App.DevDiagnostics.cs`, `setup.iss`, or `.github/workflows/release.yml` unless a
+  finding names them.
+- Do not change the `<Version>` in the csproj; releases are cut separately.
+- Do not commit anything under `bin/`, `obj/`, `publish/`, or `*.bak` (already git-ignored).
+- Keep changes on a branch (`git checkout -b review-fixes` first) and never force-push.
+
+**Suggested kickoff prompt for the implementing session:**
+
+> Open `CODE_REVIEW_FINDINGS.md` in this repo and read the "How to use this file" and
+> "Project facts for implementers" sections in full. Then work through the findings in order,
+> starting with `<ID>`, following the loop exactly: re-verify, fix only what is described, build
+> clean, run the verification steps, record Status and Resolution in the file, commit one finding
+> per commit as `Fix <ID>: <summary>`. Stop and report if a finding is marked "Needs human decision"
+> or if you disagree with a suggested fix.
+
+Give a session a contiguous range (for example "H-01 through H-03" or "M-06 through M-12") rather
+than the whole file, so its context stays small and its commits stay reviewable.
+
 ---
 
 ## High
