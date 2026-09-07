@@ -25,10 +25,7 @@ public partial class SteamImportDialog : Window
             mainViewModel.ImportSteamGames(selectedGames);
         };
 
-        if (Application.Current?.MainWindow is { IsVisible: true } main)
-        {
-            Owner = main;
-        }
+        Owner = WindowHelper.ActiveOwner();
 
         Loaded += (s, e) =>
         {

@@ -19,10 +19,7 @@ public partial class FolderBatchImportDialog : Window
         _viewModel = new FolderBatchImportViewModel(folderPath, candidates, existingExePaths);
         DataContext = _viewModel;
 
-        if (Application.Current?.MainWindow is { IsVisible: true } main)
-        {
-            Owner = main;
-        }
+        Owner = WindowHelper.ActiveOwner();
 
         Loaded += (s, e) =>
         {

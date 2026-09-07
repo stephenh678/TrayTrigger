@@ -162,7 +162,7 @@ public partial class ModernDialog : Window
 
     public static DialogResultOption PromptExitAction(Window? owner)
     {
-        var activeOwner = owner ?? (Application.Current?.MainWindow is { IsVisible: true } w ? w : null);
+        var activeOwner = owner ?? WindowHelper.ActiveOwner();
         var dialog = new ModernDialog(
             "Exit TrayTrigger",
             "Exit or Minimize to Tray?",
@@ -259,7 +259,7 @@ public partial class ModernDialog : Window
         string? cancelText,
         DialogIconType iconType)
     {
-        var activeOwner = owner ?? (Application.Current?.MainWindow is { IsVisible: true } w ? w : null);
+        var activeOwner = owner ?? WindowHelper.ActiveOwner();
         var dialog = new ModernDialog(title, message, detail, confirmText, cancelText, iconType);
 
         if (activeOwner != null)

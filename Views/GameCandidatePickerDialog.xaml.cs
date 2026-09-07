@@ -81,10 +81,7 @@ public partial class GameCandidatePickerDialog : Window
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
 
-        if (Application.Current?.MainWindow is { IsVisible: true } main)
-        {
-            Owner = main;
-        }
+        Owner = WindowHelper.ActiveOwner();
 
         Loaded += (s, e) =>
         {

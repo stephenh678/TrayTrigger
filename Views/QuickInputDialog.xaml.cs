@@ -18,10 +18,7 @@ public partial class QuickInputDialog : Window
         HeadingTextBlock.Text = heading;
         PromptTextBlock.Text = prompt;
 
-        if (Application.Current?.MainWindow is { IsVisible: true } main)
-        {
-            Owner = main;
-        }
+        Owner = WindowHelper.ActiveOwner();
 
         bool useComboBox = suggestions != null && suggestions.Any();
         if (useComboBox)

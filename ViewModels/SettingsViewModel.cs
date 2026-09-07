@@ -762,7 +762,7 @@ public class SettingsViewModel : ViewModelBase
     {
         if (promptConfirm)
         {
-            Window? owner = Application.Current?.MainWindow is { IsVisible: true } w ? w : null;
+            Window? owner = WindowHelper.ActiveOwner();
             var confirmed = ModernDialog.Confirm(
                 owner,
                 "Reset Settings",

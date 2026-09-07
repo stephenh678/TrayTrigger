@@ -23,10 +23,7 @@ public partial class GameEditDialog : Window
         _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence);
         DataContext = _viewModel;
 
-        if (Application.Current?.MainWindow is { IsVisible: true } main)
-        {
-            Owner = main;
-        }
+        Owner = WindowHelper.ActiveOwner();
 
         Loaded += (s, e) =>
         {
