@@ -28,10 +28,13 @@ public partial class MainWindow : Window
         }
         catch { }
 
+        // Dark title bar is applied at SourceInitialized and the window stays cloaked
+        // until its first frame renders, so the user never sees an unpainted white frame.
+        WindowThemeService.PrepareForFirstShow(this);
+
         SourceInitialized += (s, e) =>
         {
             var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            WindowThemeService.ApplyDarkTitleBar(this);
             LoggingService.Verbose("MainWindow", $"SourceInitialized. HWnd={handle}");
         };
 

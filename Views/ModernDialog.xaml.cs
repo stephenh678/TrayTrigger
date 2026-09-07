@@ -35,6 +35,7 @@ public partial class ModernDialog : Window
         DialogIconType iconType)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
 
         Title = title;
         PrimaryMessageText.Text = message;
@@ -65,7 +66,6 @@ public partial class ModernDialog : Window
 
         Loaded += (s, e) =>
         {
-            WindowThemeService.ApplyDarkTitleBar(this);
             WindowThemeService.CenterOverOwner(this);
             Activate();
             if (ConfirmBtn.Visibility == Visibility.Visible)

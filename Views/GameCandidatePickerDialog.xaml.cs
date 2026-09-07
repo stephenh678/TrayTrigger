@@ -79,6 +79,7 @@ public partial class GameCandidatePickerDialog : Window
     public GameCandidatePickerDialog(string folderPath, List<GameCandidate> candidates)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
 
         if (Application.Current?.MainWindow is { IsVisible: true } main)
         {

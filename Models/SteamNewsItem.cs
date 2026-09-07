@@ -10,5 +10,8 @@ public class SteamNewsItem
     public DateTime Date { get; set; }
     public string Snippet { get; set; } = string.Empty;
 
+    /// <summary>True when Steam tagged the announcement as "patchnotes" (developer-marked patch notes).</summary>
+    public bool IsPatchNotes { get; set; }
+
     public string DateDisplay => Date > DateTime.MinValue ? Date.ToString("MMM d, yyyy") : string.Empty;
 }

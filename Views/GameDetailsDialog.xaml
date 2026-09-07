@@ -300,8 +300,17 @@
                         </Style>
                     </Border.Style>
                     <StackPanel>
-                        <TextBlock Text="LATEST PATCH NOTES &amp; COMMUNITY NEWS" FontSize="11" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,10"/>
+                        <DockPanel Margin="0,0,0,10" LastChildFill="True">
+                            <!-- Link to the full Steam news hub for this app (all announcements, not just the latest 3) -->
+                            <Button DockPanel.Dock="Right" Content="View All News on Steam ↗"
+                                    Command="{Binding OpenNewsHubCommand}"
+                                    Style="{StaticResource ModernGhostButton}"
+                                    Padding="0" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0"
+                                    Foreground="{StaticResource BrushAccentHover}"
+                                    ToolTip="{Binding NewsHubUrl}"/>
+                            <TextBlock Text="LATEST DEVELOPER NEWS &amp; PATCH NOTES" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </DockPanel>
 
                         <ItemsControl ItemsSource="{Binding NewsItems}">
                             <ItemsControl.ItemTemplate>
@@ -316,10 +325,17 @@
 
                                             <!-- News Title & Date -->
                                             <DockPanel Grid.Row="0" Margin="0,0,0,4">
-                                                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" 
+                                                <TextBlock Text="{Binding DateDisplay}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                                                           DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                <!-- PATCH badge: shown only when Steam tagged the post as patch notes -->
+                                                <Border DockPanel.Dock="Left" Background="#1B2E1F" BorderBrush="#2E7D3A" BorderThickness="1"
+                                                        CornerRadius="4" Padding="6,1" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                        Visibility="{Binding IsPatchNotes, Converter={StaticResource BoolToVis}}"
+                                                        ToolTip="Developer-flagged patch notes">
+                                                    <TextBlock Text="PATCH" FontSize="9.5" FontWeight="Bold" Foreground="#6FCF7F"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
                                                            Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding DateDisplay}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" 
-                                                           DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="8,0,0,0"/>
                                             </DockPanel>
 
                                             <!-- News Snippet -->

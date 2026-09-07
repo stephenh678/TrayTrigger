@@ -12,6 +12,7 @@ public partial class QuickInputDialog : Window
     public QuickInputDialog(string title, string heading, string prompt, string initialValue, IEnumerable<string>? suggestions = null)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
 
         Title = title;
         HeadingTextBlock.Text = heading;

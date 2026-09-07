@@ -18,6 +18,7 @@ public partial class UpdateDialog : Window
     public UpdateDialog(GitHubReleaseInfo release, Version currentVersion)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
 
         _release = release;
         _currentVersion = currentVersion;
@@ -56,7 +57,6 @@ public partial class UpdateDialog : Window
 
         Loaded += (s, e) =>
         {
-            WindowThemeService.ApplyDarkTitleBar(this);
             WindowThemeService.CenterOverOwner(this);
             Activate();
             InstallBtn.Focus();

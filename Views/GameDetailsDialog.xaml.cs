@@ -9,15 +9,13 @@ public partial class GameDetailsDialog : Window
     public GameDetailsDialog(GameDetailsViewModel viewModel)
     {
         InitializeComponent();
+        WindowThemeService.PrepareForFirstShow(this);
         DataContext = viewModel;
 
         viewModel.RequestClose += () =>
         {
             Dispatcher.Invoke(Close);
         };
-
-        // Apply dark titlebar
-        WindowThemeService.ApplyDarkTitleBar(this);
 
         if (Application.Current?.MainWindow is { IsVisible: true } main && main != this)
         {

@@ -206,11 +206,16 @@ public class GameDetailsViewModel : ViewModelBase
 
     public string StoreUrl => _details?.StoreUrl ?? (!string.IsNullOrWhiteSpace(Game.SteamAppId) ? $"https://store.steampowered.com/app/{Game.SteamAppId}" : string.Empty);
 
+    /// <summary>Steam's news hub for this app: every announcement and patch note, not just the latest 3.</summary>
+    public string NewsHubUrl => !string.IsNullOrWhiteSpace(Game.SteamAppId) ? $"https://store.steampowered.com/news/app/{Game.SteamAppId}" : string.Empty;
+    public bool HasNewsHub => !string.IsNullOrWhiteSpace(NewsHubUrl);
+
     public ICommand LaunchGameCommand { get; }
     public ICommand EditGameCommand { get; }
     public ICommand DeleteGameCommand { get; }
     public ICommand OpenStorePageCommand { get; }
     public ICommand OpenNewsUrlCommand { get; }
+    public ICommand OpenNewsHubCommand { get; }
     public ICommand ShowMinReqsCommand { get; }
     public ICommand ShowRecReqsCommand { get; }
 
@@ -249,6 +254,7 @@ public class GameDetailsViewModel : ViewModelBase
         DeleteGameCommand = new RelayCommand(ExecuteDelete);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
+        OpenNewsHubCommand = new RelayCommand(() => ExecuteOpenUrl(NewsHubUrl), () => HasNewsHub);
         ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);
         ShowRecReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = true);
 
