@@ -21,6 +21,7 @@ public class GameEntry
     public string? SteamAppId { get; set; }
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
+    public DateTime? LastEnrichmentAttemptUtc { get; set; }
 
     [JsonIgnore]
     public bool HasSteamOverlay => IsSteamGame || ForceSteamOverlayTag;

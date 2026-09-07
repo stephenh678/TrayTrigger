@@ -1221,6 +1221,7 @@ public class MainViewModel : ViewModelBase
     }
 
     private const int MaxConcurrentEnrichments = 4;
+    private static readonly TimeSpan EnrichmentRetryInterval = TimeSpan.FromDays(7);
 
     private bool _isRefreshingAllPosters;
     public bool IsRefreshingAllPosters
@@ -1331,7 +1332,9 @@ public class MainViewModel : ViewModelBase
         try
         {
             var candidates = Games
-                .Where(card => card.Game.Category == "Uncategorized" || card.Game.Category == "Steam" || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId))
+                .Where(card =>
+                    (card.Game.Category == "Uncategorized" || card.Game.Category == "Steam" || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId)) &&
+                    (card.Game.LastEnrichmentAttemptUtc == null || DateTime.UtcNow - card.Game.LastEnrichmentAttemptUtc.Value >= EnrichmentRetryInterval))
                 .ToList();
 
             if (candidates.Count == 0)
@@ -1350,11 +1353,15 @@ public class MainViewModel : ViewModelBase
                     string? oldAppId = card.Game.SteamAppId;
 
                     await EnrichGameWithSteamMetadataAsync(card.Game);
+                    // Record the attempt regardless of outcome so a game that legitimately never
+                    // matches (indie, emulator, tool) isn't re-searched online every single launch -
+                    // and so this needs saving even when nothing else about the game changed.
+                    card.Game.LastEnrichmentAttemptUtc = DateTime.UtcNow;
+                    changed = true;
 
                     if (card.Game.Category != oldCat || card.Game.CoverImagePath != oldCover || card.Game.SteamAppId != oldAppId)
                     {
                         card.RefreshProperties();
-                        changed = true;
                     }
                 }
                 finally
