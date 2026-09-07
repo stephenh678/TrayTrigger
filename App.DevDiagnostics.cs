@@ -192,35 +192,35 @@ public partial class App
 
             if (e.Args[i].Equals("--test-view-modes", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"[TEST-VIEW-MODES] Initial mode: {_mainViewModel.LibraryViewMode} (IsGrid={_mainViewModel.IsGridView}, IsIcons={_mainViewModel.IsIconsView}, IsList={_mainViewModel.IsListView})");
-                if (!_mainViewModel.IsGridView || _mainViewModel.LibraryViewMode != MainViewModel.ViewModePosterGrid)
+                Console.WriteLine($"[TEST-VIEW-MODES] Initial mode: {_mainViewModel.SettingsVM.LibraryViewMode} (IsGrid={_mainViewModel.SettingsVM.IsGridView}, IsIcons={_mainViewModel.SettingsVM.IsIconsView}, IsList={_mainViewModel.SettingsVM.IsListView})");
+                if (!_mainViewModel.SettingsVM.IsGridView || _mainViewModel.SettingsVM.LibraryViewMode != SettingsViewModel.ViewModePosterGrid)
                 {
                     Console.WriteLine("[TEST-VIEW-MODES-ERROR] Expected initial mode to default to Poster Grid");
                     ExitApplication();
                     return;
                 }
 
-                _mainViewModel.SetViewModeCommand.Execute(MainViewModel.ViewModeCompactIcons);
-                Console.WriteLine($"[TEST-VIEW-MODES] After Compact Icons: {_mainViewModel.LibraryViewMode} (IsGrid={_mainViewModel.IsGridView}, IsIcons={_mainViewModel.IsIconsView}, IsList={_mainViewModel.IsListView})");
-                if (!_mainViewModel.IsIconsView || _mainViewModel.LibraryViewMode != MainViewModel.ViewModeCompactIcons)
+                _mainViewModel.SettingsVM.SetViewModeCommand.Execute(SettingsViewModel.ViewModeCompactIcons);
+                Console.WriteLine($"[TEST-VIEW-MODES] After Compact Icons: {_mainViewModel.SettingsVM.LibraryViewMode} (IsGrid={_mainViewModel.SettingsVM.IsGridView}, IsIcons={_mainViewModel.SettingsVM.IsIconsView}, IsList={_mainViewModel.SettingsVM.IsListView})");
+                if (!_mainViewModel.SettingsVM.IsIconsView || _mainViewModel.SettingsVM.LibraryViewMode != SettingsViewModel.ViewModeCompactIcons)
                 {
                     Console.WriteLine("[TEST-VIEW-MODES-ERROR] Failed switching to Compact Icons");
                     ExitApplication();
                     return;
                 }
 
-                _mainViewModel.SetViewModeCommand.Execute(MainViewModel.ViewModeDetailsList);
-                Console.WriteLine($"[TEST-VIEW-MODES] After Details List: {_mainViewModel.LibraryViewMode} (IsGrid={_mainViewModel.IsGridView}, IsIcons={_mainViewModel.IsIconsView}, IsList={_mainViewModel.IsListView})");
-                if (!_mainViewModel.IsListView || _mainViewModel.LibraryViewMode != MainViewModel.ViewModeDetailsList)
+                _mainViewModel.SettingsVM.SetViewModeCommand.Execute(SettingsViewModel.ViewModeDetailsList);
+                Console.WriteLine($"[TEST-VIEW-MODES] After Details List: {_mainViewModel.SettingsVM.LibraryViewMode} (IsGrid={_mainViewModel.SettingsVM.IsGridView}, IsIcons={_mainViewModel.SettingsVM.IsIconsView}, IsList={_mainViewModel.SettingsVM.IsListView})");
+                if (!_mainViewModel.SettingsVM.IsListView || _mainViewModel.SettingsVM.LibraryViewMode != SettingsViewModel.ViewModeDetailsList)
                 {
                     Console.WriteLine("[TEST-VIEW-MODES-ERROR] Failed switching to Details List");
                     ExitApplication();
                     return;
                 }
 
-                _mainViewModel.SetViewModeCommand.Execute(MainViewModel.ViewModePosterGrid);
-                Console.WriteLine($"[TEST-VIEW-MODES] After Poster Grid: {_mainViewModel.LibraryViewMode} (IsGrid={_mainViewModel.IsGridView}, IsIcons={_mainViewModel.IsIconsView}, IsList={_mainViewModel.IsListView})");
-                if (!_mainViewModel.IsGridView || _mainViewModel.LibraryViewMode != MainViewModel.ViewModePosterGrid)
+                _mainViewModel.SettingsVM.SetViewModeCommand.Execute(SettingsViewModel.ViewModePosterGrid);
+                Console.WriteLine($"[TEST-VIEW-MODES] After Poster Grid: {_mainViewModel.SettingsVM.LibraryViewMode} (IsGrid={_mainViewModel.SettingsVM.IsGridView}, IsIcons={_mainViewModel.SettingsVM.IsIconsView}, IsList={_mainViewModel.SettingsVM.IsListView})");
+                if (!_mainViewModel.SettingsVM.IsGridView || _mainViewModel.SettingsVM.LibraryViewMode != SettingsViewModel.ViewModePosterGrid)
                 {
                     Console.WriteLine("[TEST-VIEW-MODES-ERROR] Failed switching to Poster Grid");
                     ExitApplication();
@@ -228,14 +228,14 @@ public partial class App
                 }
 
                 // Backward compatibility normalization test
-                _mainViewModel.SetViewModeCommand.Execute("Icons");
-                if (!_mainViewModel.IsIconsView) { Console.WriteLine("[TEST-VIEW-MODES-ERROR] 'Icons' alias failed"); ExitApplication(); return; }
-                _mainViewModel.SetViewModeCommand.Execute("List");
-                if (!_mainViewModel.IsListView) { Console.WriteLine("[TEST-VIEW-MODES-ERROR] 'List' alias failed"); ExitApplication(); return; }
-                _mainViewModel.SetViewModeCommand.Execute("Grid");
-                if (!_mainViewModel.IsGridView) { Console.WriteLine("[TEST-VIEW-MODES-ERROR] 'Grid' alias failed"); ExitApplication(); return; }
-                _mainViewModel.SetViewModeCommand.Execute("invalid_xyz");
-                if (!_mainViewModel.IsGridView || _mainViewModel.LibraryViewMode != MainViewModel.ViewModePosterGrid)
+                _mainViewModel.SettingsVM.SetViewModeCommand.Execute("Icons");
+                if (!_mainViewModel.SettingsVM.IsIconsView) { Console.WriteLine("[TEST-VIEW-MODES-ERROR] 'Icons' alias failed"); ExitApplication(); return; }
+                _mainViewModel.SettingsVM.SetViewModeCommand.Execute("List");
+                if (!_mainViewModel.SettingsVM.IsListView) { Console.WriteLine("[TEST-VIEW-MODES-ERROR] 'List' alias failed"); ExitApplication(); return; }
+                _mainViewModel.SettingsVM.SetViewModeCommand.Execute("Grid");
+                if (!_mainViewModel.SettingsVM.IsGridView) { Console.WriteLine("[TEST-VIEW-MODES-ERROR] 'Grid' alias failed"); ExitApplication(); return; }
+                _mainViewModel.SettingsVM.SetViewModeCommand.Execute("invalid_xyz");
+                if (!_mainViewModel.SettingsVM.IsGridView || _mainViewModel.SettingsVM.LibraryViewMode != SettingsViewModel.ViewModePosterGrid)
                 {
                     Console.WriteLine("[TEST-VIEW-MODES-ERROR] Invalid mode fallback failed");
                     ExitApplication();
@@ -347,13 +347,13 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                string previousMode = _mainViewModel.LibraryViewMode;
+                string previousMode = _mainViewModel.SettingsVM.LibraryViewMode;
                 _mainViewModel.CurrentSection = NavSection.Library;
-                _mainViewModel.LibraryViewMode = MainViewModel.ViewModeCompactIcons;
+                _mainViewModel.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModeCompactIcons;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 700, targetPng);
-                _mainViewModel.LibraryViewMode = previousMode;
+                _mainViewModel.SettingsVM.LibraryViewMode = previousMode;
                 ExitApplication();
                 return;
             }
@@ -363,13 +363,13 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                string previousMode = _mainViewModel.LibraryViewMode;
+                string previousMode = _mainViewModel.SettingsVM.LibraryViewMode;
                 _mainViewModel.CurrentSection = NavSection.Library;
-                _mainViewModel.LibraryViewMode = MainViewModel.ViewModeDetailsList;
+                _mainViewModel.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModeDetailsList;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 700, targetPng);
-                _mainViewModel.LibraryViewMode = previousMode;
+                _mainViewModel.SettingsVM.LibraryViewMode = previousMode;
                 ExitApplication();
                 return;
             }
@@ -693,10 +693,10 @@ public partial class App
                 if (card3.IsSteamGame || !card3.ShowCategoryBadge)
                     throw new Exception("Test 3 failed: nonSteamGame should have IsSteamGame=false and ShowCategoryBadge=true");
 
-                if (!_mainViewModel.MinimizeOnGameLaunch)
+                if (!_mainViewModel.SettingsVM.MinimizeOnGameLaunch)
                     throw new Exception("Test 4 failed: MinimizeOnGameLaunch should default to true");
 
-                Console.WriteLine($"[TEST_STEAM_EXIT_PASSED] card1 ShowCategoryBadge={card1.ShowCategoryBadge}, card2 ShowCategoryBadge={card2.ShowCategoryBadge}, MinimizeOnGameLaunch={_mainViewModel.MinimizeOnGameLaunch}");
+                Console.WriteLine($"[TEST_STEAM_EXIT_PASSED] card1 ShowCategoryBadge={card1.ShowCategoryBadge}, card2 ShowCategoryBadge={card2.ShowCategoryBadge}, MinimizeOnGameLaunch={_mainViewModel.SettingsVM.MinimizeOnGameLaunch}");
                 ExitApplication();
                 return;
             }
@@ -924,28 +924,28 @@ public partial class App
             if (e.Args[i].Equals("--test-reset-settings", StringComparison.OrdinalIgnoreCase))
             {
                 // Mutate some settings
-                _mainViewModel.ShowRecentInTray = false;
-                _mainViewModel.MaxRecentInTray = 15;
-                _mainViewModel.GroupTrayMenuByCategory = false;
-                _mainViewModel.TrayMenuSortOption = "Cumulative Playtime";
-                _mainViewModel.VerboseLoggingEnabled = true;
+                _mainViewModel.SettingsVM.ShowRecentInTray = false;
+                _mainViewModel.SettingsVM.MaxRecentInTray = 15;
+                _mainViewModel.SettingsVM.GroupTrayMenuByCategory = false;
+                _mainViewModel.SettingsVM.TrayMenuSortOption = "Cumulative Playtime";
+                _mainViewModel.SettingsVM.VerboseLoggingEnabled = true;
 
                 // Reset to defaults without prompt
-                _mainViewModel.ResetSettingsToDefaults(promptConfirm: false);
+                _mainViewModel.SettingsVM.ResetSettingsToDefaults(promptConfirm: false);
 
                 // Assert expected defaults
-                if (!_mainViewModel.ShowRecentInTray) throw new Exception("Expected ShowRecentInTray=true after reset");
-                if (_mainViewModel.MaxRecentInTray != 5) throw new Exception($"Expected MaxRecentInTray=5 after reset, got {_mainViewModel.MaxRecentInTray}");
-                if (!_mainViewModel.GroupTrayMenuByCategory) throw new Exception("Expected GroupTrayMenuByCategory=true after reset");
-                if (_mainViewModel.TrayMenuSortOption != "Alphabetical (A - Z)") throw new Exception($"Expected TrayMenuSortOption='Alphabetical (A - Z)' after reset, got {_mainViewModel.TrayMenuSortOption}");
-                if (_mainViewModel.VerboseLoggingEnabled) throw new Exception("Expected VerboseLoggingEnabled=false after reset");
-                if (!_mainViewModel.AlwaysShowTrayIcon) throw new Exception("Expected AlwaysShowTrayIcon=true after reset");
-                if (!_mainViewModel.AutoCategorizeFromSteam) throw new Exception("Expected AutoCategorizeFromSteam=true after reset");
-                if (!_mainViewModel.SearchOfficialTitleOnline) throw new Exception("Expected SearchOfficialTitleOnline=true after reset");
-                if (!_mainViewModel.PreferExeForGameName) throw new Exception("Expected PreferExeForGameName=true after reset");
-                if (!_mainViewModel.UseVerticalPosterArt) throw new Exception("Expected UseVerticalPosterArt=true after reset");
-                if (_mainViewModel.StartWithWindows) throw new Exception("Expected StartWithWindows=false after reset");
-                if (!_mainViewModel.StartMinimizedToTray) throw new Exception("Expected StartMinimizedToTray=true after reset");
+                if (!_mainViewModel.SettingsVM.ShowRecentInTray) throw new Exception("Expected ShowRecentInTray=true after reset");
+                if (_mainViewModel.SettingsVM.MaxRecentInTray != 5) throw new Exception($"Expected MaxRecentInTray=5 after reset, got {_mainViewModel.SettingsVM.MaxRecentInTray}");
+                if (!_mainViewModel.SettingsVM.GroupTrayMenuByCategory) throw new Exception("Expected GroupTrayMenuByCategory=true after reset");
+                if (_mainViewModel.SettingsVM.TrayMenuSortOption != "Alphabetical (A - Z)") throw new Exception($"Expected TrayMenuSortOption='Alphabetical (A - Z)' after reset, got {_mainViewModel.SettingsVM.TrayMenuSortOption}");
+                if (_mainViewModel.SettingsVM.VerboseLoggingEnabled) throw new Exception("Expected VerboseLoggingEnabled=false after reset");
+                if (!_mainViewModel.SettingsVM.AlwaysShowTrayIcon) throw new Exception("Expected AlwaysShowTrayIcon=true after reset");
+                if (!_mainViewModel.SettingsVM.AutoCategorizeFromSteam) throw new Exception("Expected AutoCategorizeFromSteam=true after reset");
+                if (!_mainViewModel.SettingsVM.SearchOfficialTitleOnline) throw new Exception("Expected SearchOfficialTitleOnline=true after reset");
+                if (!_mainViewModel.SettingsVM.PreferExeForGameName) throw new Exception("Expected PreferExeForGameName=true after reset");
+                if (!_mainViewModel.SettingsVM.UseVerticalPosterArt) throw new Exception("Expected UseVerticalPosterArt=true after reset");
+                if (_mainViewModel.SettingsVM.StartWithWindows) throw new Exception("Expected StartWithWindows=false after reset");
+                if (!_mainViewModel.SettingsVM.StartMinimizedToTray) throw new Exception("Expected StartMinimizedToTray=true after reset");
 
                 Console.WriteLine("TEST_RESET_SETTINGS_PASSED");
                 ExitApplication();
