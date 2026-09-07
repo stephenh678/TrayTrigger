@@ -407,7 +407,7 @@ public partial class App : Application
                         .Take(maxFavorites)
                         .ToList();
 
-                    menu.Items.Add(CreateSectionHeader("Favorites"));
+                    menu.Items.Add(CreateSectionHeader(LibraryConstants.FavoritesCategory));
 
                     if (favoriteGames.Count > 0)
                     {
@@ -465,14 +465,14 @@ public partial class App : Application
                 {
                     // Group games by category (excluding any user category named 'Recent' only if the dynamic Recent section is active)
                     var grouped = games
-                        .GroupBy(g => string.IsNullOrWhiteSpace(g.Category) ? "Uncategorized" : g.Category)
+                        .GroupBy(g => string.IsNullOrWhiteSpace(g.Category) ? LibraryConstants.Uncategorized : g.Category)
                         .Where(g => !_mainViewModel.Settings.ShowRecentInTray || !string.Equals(g.Key, "Recent", StringComparison.OrdinalIgnoreCase))
-                        .Where(g => !_mainViewModel.Settings.ShowFavoritesInTray || !string.Equals(g.Key, "Favorites", StringComparison.OrdinalIgnoreCase))
+                        .Where(g => !_mainViewModel.Settings.ShowFavoritesInTray || !string.Equals(g.Key, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase))
                         .OrderBy(g => g.Key)
                         .ToList();
 
                     // Only list directly if all games in library are "Uncategorized"
-                    if (grouped.Count == 1 && string.Equals(grouped[0].Key, "Uncategorized", StringComparison.OrdinalIgnoreCase))
+                    if (grouped.Count == 1 && string.Equals(grouped[0].Key, LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase))
                     {
                         if (_mainViewModel.Settings.ShowRecentInTray)
                         {

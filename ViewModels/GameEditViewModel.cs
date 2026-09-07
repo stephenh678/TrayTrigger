@@ -80,7 +80,7 @@ public class GameEditViewModel : ViewModelBase
         _arguments = game.Arguments;
         _workingDirectory = game.WorkingDirectory;
         _runAsAdmin = game.RunAsAdmin;
-        _category = string.IsNullOrWhiteSpace(game.Category) ? "Uncategorized" : game.Category;
+        _category = string.IsNullOrWhiteSpace(game.Category) ? LibraryConstants.Uncategorized : game.Category;
         _hotkey = game.Hotkey;
         _isSteamGame = game.IsSteamGame;
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
@@ -88,13 +88,13 @@ public class GameEditViewModel : ViewModelBase
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
 
-        foreach (var cat in categories.Where(c => c != "All").Distinct())
+        foreach (var cat in categories.Where(c => c != LibraryConstants.AllCategory).Distinct())
         {
             ExistingCategories.Add(cat);
         }
-        if (!ExistingCategories.Contains("Uncategorized"))
+        if (!ExistingCategories.Contains(LibraryConstants.Uncategorized))
         {
-            ExistingCategories.Insert(0, "Uncategorized");
+            ExistingCategories.Insert(0, LibraryConstants.Uncategorized);
         }
 
         BrowseExeCommand = new RelayCommand(BrowseExe);
@@ -528,7 +528,7 @@ public class GameEditViewModel : ViewModelBase
             }
             ApplyFetchedCover(details.CoverImagePath);
 
-            if ((string.IsNullOrWhiteSpace(Category) || Category.Equals("Uncategorized", StringComparison.OrdinalIgnoreCase)) &&
+            if ((string.IsNullOrWhiteSpace(Category) || Category.Equals(LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase)) &&
                 !string.IsNullOrWhiteSpace(details.PrimaryGenre))
             {
                 Category = details.PrimaryGenre;
@@ -659,7 +659,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.Arguments = Arguments?.Trim() ?? string.Empty;
         SourceGame.WorkingDirectory = WorkingDirectory?.Trim() ?? string.Empty;
         SourceGame.RunAsAdmin = RunAsAdmin;
-        SourceGame.Category = string.IsNullOrWhiteSpace(Category) ? "Uncategorized" : Category.Trim();
+        SourceGame.Category = string.IsNullOrWhiteSpace(Category) ? LibraryConstants.Uncategorized : Category.Trim();
         SourceGame.Hotkey = Hotkey?.Trim() ?? string.Empty;
         SourceGame.IsSteamGame = IsSteamGame;
         SourceGame.ForceSteamOverlayTag = ForceSteamOverlayTag;
