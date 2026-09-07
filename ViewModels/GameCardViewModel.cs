@@ -47,7 +47,8 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onEditSteamAppId = null,
         Action<GameCardViewModel>? onRefreshMetadata = null,
         Action<GameCardViewModel>? onToggleFavorite = null,
-        Func<bool>? getUseVerticalPosterArt = null)
+        Func<bool>? getUseVerticalPosterArt = null,
+        bool deferHeavyInit = false)
     {
         Game = game;
         _onLaunch = onLaunch;
@@ -89,9 +90,39 @@ public class GameCardViewModel : ViewModelBase
         OpenInSteamLibraryCommand = new RelayCommand(OpenInSteamLibrary);
         VerifyFilesCommand = new RelayCommand(VerifyFiles);
 
-        CheckIsMissing();
-        ReloadIcon();
-        ReloadCover();
+        // Skipped when loading the whole library at startup - the caller runs these off the UI
+        // thread for every card at once instead (see ComputeHeavyState/ApplyHeavyState), so a
+        // large library doesn't decode every icon/cover and stat every exe synchronously here.
+        if (!deferHeavyInit)
+        {
+            CheckIsMissing();
+            ReloadIcon();
+            ReloadCover();
+        }
+    }
+
+    /// <summary>
+    /// Computes the "missing" flag and decodes both bitmaps without touching any UI-bound
+    /// property - safe to call from a background thread (File.Exists is thread-safe and
+    /// IconExtractorService.LoadBitmapSafely freezes the BitmapImages it returns). Pair with
+    /// <see cref="ApplyHeavyState"/> on the UI thread to actually update the card.
+    /// </summary>
+    public (bool IsMissing, BitmapImage? Icon, BitmapImage? Cover) ComputeHeavyState()
+    {
+        bool isMissing = !IsSteamGame && !string.IsNullOrWhiteSpace(Game.ExecutablePath) && !File.Exists(Game.ExecutablePath);
+        var icon = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 64);
+        var cover = !string.IsNullOrWhiteSpace(Game.CoverImagePath)
+            ? IconExtractorService.LoadBitmapSafely(Game.CoverImagePath, decodePixelWidth: 368)
+            : null;
+        return (isMissing, icon, cover);
+    }
+
+    /// <summary>Applies a result from <see cref="ComputeHeavyState"/>. Must run on the UI thread.</summary>
+    public void ApplyHeavyState(bool isMissing, BitmapImage? icon, BitmapImage? cover)
+    {
+        IsMissing = isMissing;
+        IconImage = icon;
+        CoverImage = cover;
     }
 
     public string Id => Game.Id;
