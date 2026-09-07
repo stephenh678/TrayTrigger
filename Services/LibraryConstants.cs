@@ -11,4 +11,12 @@ public static class LibraryConstants
     public const string FavoritesCategory = "Favorites";
     public const string Uncategorized = "Uncategorized";
     public const string SteamCategory = "Steam";
+
+    /// <summary>
+    /// Fallback tray item count used when a persisted MaxRecentInTray/MaxFavoritesInTray value
+    /// is zero or negative (e.g. pre-migration data). Matches AppSettings' own default for both
+    /// - the two fallbacks had drifted to 3 (Recent) and 3 (Favorites) while AppSettings itself
+    /// defaults both to 5 and App.xaml.cs's own Favorites fallback was already 5. See L-20.
+    /// </summary>
+    public const int DefaultTrayItemCount = 5;
 }

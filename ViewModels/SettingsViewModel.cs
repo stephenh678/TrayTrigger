@@ -375,7 +375,7 @@ public class SettingsViewModel : ViewModelBase
 
     public int MaxRecentInTray
     {
-        get => _settings.MaxRecentInTray > 0 ? _settings.MaxRecentInTray : 3;
+        get => _settings.MaxRecentInTray > 0 ? _settings.MaxRecentInTray : LibraryConstants.DefaultTrayItemCount;
         set
         {
             if (_settings.MaxRecentInTray != value)
@@ -420,7 +420,7 @@ public class SettingsViewModel : ViewModelBase
 
     public int MaxFavoritesInTray
     {
-        get => _settings.MaxFavoritesInTray > 0 ? _settings.MaxFavoritesInTray : 3;
+        get => _settings.MaxFavoritesInTray > 0 ? _settings.MaxFavoritesInTray : LibraryConstants.DefaultTrayItemCount;
         set
         {
             if (_settings.MaxFavoritesInTray != value)

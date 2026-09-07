@@ -364,7 +364,7 @@ public partial class App : Application
                 // 1. Persistent "Recent" section directly in root menu
                 if (_mainViewModel.Settings.ShowRecentInTray)
                 {
-                    int maxRecent = _mainViewModel.Settings.MaxRecentInTray > 0 ? _mainViewModel.Settings.MaxRecentInTray : 3;
+                    int maxRecent = _mainViewModel.Settings.MaxRecentInTray > 0 ? _mainViewModel.Settings.MaxRecentInTray : LibraryConstants.DefaultTrayItemCount;
                     var recentGames = ApplySortOption(
                         games
                             .Where(g => g.Game.LastPlayed.HasValue)
@@ -400,7 +400,7 @@ public partial class App : Application
                 // 1b. Persistent "Favorites" section directly in root menu
                 if (_mainViewModel.Settings.ShowFavoritesInTray)
                 {
-                    int maxFavorites = _mainViewModel.Settings.MaxFavoritesInTray > 0 ? _mainViewModel.Settings.MaxFavoritesInTray : 5;
+                    int maxFavorites = _mainViewModel.Settings.MaxFavoritesInTray > 0 ? _mainViewModel.Settings.MaxFavoritesInTray : LibraryConstants.DefaultTrayItemCount;
                     var favoriteGames = ApplySortOption(
                         games.Where(g => g.Game.IsFavorite),
                         _mainViewModel.Settings.FavoritesTraySortOption)
