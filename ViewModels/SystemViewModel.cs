@@ -93,11 +93,17 @@ public class SystemTweakViewModel : ViewModelBase
     private void ExecuteToggle()
     {
         bool targetState = !IsOptimal;
-        bool success = _service.ApplyTweak(Id, targetState);
-        if (success)
+        _service.ApplyTweak(Id, targetState);
+
+        // Trust a fresh read of the real system state over ApplyTweak's own return value: an
+        // elevated write can report "failed" (e.g. a slow UAC prompt) while it actually went
+        // through moments later, or report "succeeded" without the underlying state matching.
+        bool actualState = _service.GetTweakState(Id);
+        IsOptimal = actualState;
+        StatusText = actualState ? "Optimal configuration applied" : "Reverted to standard Windows default";
+
+        if (actualState == targetState)
         {
-            IsOptimal = targetState;
-            StatusText = targetState ? "Optimal configuration applied" : "Reverted to standard Windows default";
             _notifyParent($"Toggled '{Name}' to {(targetState ? "Optimal" : "Default")}.");
 
             if (RequiresReboot)
@@ -307,11 +313,10 @@ public class SystemViewModel : ViewModelBase
         };
         _telemetryTimer.Tick += OnTelemetryTick;
 
-        // Initialize tweaks collection
-        LoadTweaks();
-
-        // Initial async load
-        _ = LoadHardwareSpecsAsync();
+        // Tweaks and hardware specs are loaded lazily on first visit to the System tab (see
+        // MainViewModel.CurrentSection) rather than here, so launching - especially with
+        // --minimized - doesn't pay for ~20 registry reads and a hardware/network probe that
+        // may never be looked at this session.
     }
 
     public void StartTelemetry()
@@ -373,10 +378,11 @@ public class SystemViewModel : ViewModelBase
         }
     }
 
-    private void LoadTweaks()
+    public async Task LoadTweaksAsync()
     {
+        var all = await Task.Run(() => _tweaksService.GetAllTweaks());
+
         Tweaks.Clear();
-        var all = _tweaksService.GetAllTweaks();
         foreach (var item in all)
         {
             Tweaks.Add(new SystemTweakViewModel(item, _tweaksService, msg =>
@@ -413,6 +419,15 @@ public class SystemViewModel : ViewModelBase
 
     private void ExecuteApplyPreset()
     {
+        var changing = Tweaks.Where(t => t.CanToggle && !t.IsOptimal).Select(t => t.Name).ToList();
+        if (!ConfirmBulkAction(
+            "Apply Performance Preset",
+            "This will change the following settings:",
+            changing))
+        {
+            return;
+        }
+
         StatusMessage = "Applying recommended performance optimizations...";
         _tweaksService.ApplyRecommendedPerformancePreset();
         RefreshAllTweaks();
@@ -422,11 +437,30 @@ public class SystemViewModel : ViewModelBase
 
     private void ExecuteResetDefaults()
     {
+        var changing = Tweaks.Where(t => t.CanToggle && t.IsOptimal).Select(t => t.Name).ToList();
+        if (!ConfirmBulkAction(
+            "Reset Defaults",
+            "This will restore the following settings to their Windows defaults:",
+            changing))
+        {
+            return;
+        }
+
         StatusMessage = "Resetting optimizations to standard Windows defaults...";
         _tweaksService.ResetAllToDefaults();
         RefreshAllTweaks();
         StatusMessage = "Reset all settings to Windows defaults.";
         PromptRestartForBulkAction();
+    }
+
+    private static bool ConfirmBulkAction(string title, string message, List<string> changingTweakNames)
+    {
+        if (changingTweakNames.Count == 0) return true;
+
+        string detail = "Affected: " + string.Join(", ", changingTweakNames) +
+            ". This may require admin approval and a restart to fully take effect.";
+
+        return ModernDialog.Confirm(null, title, message, detail, confirmText: "Continue", cancelText: "Cancel");
     }
 
     private void PromptRestartForBulkAction()

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -51,6 +52,16 @@ public partial class ProcessLauncherService
         }
     }
 
+    /// <summary>
+    /// True for a launcher protocol URL (e.g. "com.epicgames.launcher://...", "goggalaxy://...")
+    /// as opposed to a filesystem path - including a plain "C:\..." path, which Uri also parses
+    /// successfully but as the "file" scheme.
+    /// </summary>
+    internal static bool IsNonFileProtocolUrl(string path)
+    {
+        return Uri.TryCreate(path, UriKind.Absolute, out var uri) && !uri.IsFile;
+    }
+
     public bool LaunchGame(GameEntry game, out string? errorMessage)
     {
         return LaunchGame(game, out errorMessage, out _);
@@ -88,6 +99,20 @@ public partial class ProcessLauncherService
                 isMissing = true;
                 LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Executable path is blank.");
                 return false;
+            }
+
+            // Non-Steam protocol shortcut (Epic, GOG Galaxy, Ubisoft Connect, etc. desktop
+            // shortcuts resolve to a "scheme://..." URL, not a file). Hand it to the shell the
+            // same way as the Steam branch above instead of treating it as a missing exe.
+            if (IsNonFileProtocolUrl(game.ExecutablePath))
+            {
+                LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
+                Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });
+
+                game.LastPlayed = DateTime.Now;
+                GameUpdated?.Invoke(game);
+                LoggingService.Info("Launcher", $"Dispatched protocol launch for '{game.Name}'.");
+                return true;
             }
 
             if (!File.Exists(game.ExecutablePath))
@@ -179,32 +204,56 @@ public partial class ProcessLauncherService
                 LoggingService.Info("Launcher", $"Started '{game.Name}' (PID {process.Id}).");
                 DateTime startTime = DateTime.Now;
                 bool exitHandlerAttached = false;
+                int exitHandled = 0; // guards against running the handler twice (see below)
+
+                void OnExited(object? s, EventArgs e)
+                {
+                    if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
+                    try
+                    {
+                        TimeSpan playedDuration = DateTime.Now - startTime;
+                        long minutes = (long)Math.Max(0, Math.Round(playedDuration.TotalMinutes));
+                        if (minutes > 0)
+                        {
+                            game.CumulativePlaytimeMinutes += minutes;
+                            GameUpdated?.Invoke(game);
+                            LoggingService.Info("Launcher", $"'{game.Name}' session ended. +{minutes}m playtime recorded.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Error("Launcher", $"Error updating playtime for '{game.Name}': {ex.Message}");
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+
                 try
                 {
+                    // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited
+                    // on a thread-pool thread almost immediately for a process that already exited,
+                    // and doing it the other way around left a real window where that fire found
+                    // no subscriber yet and playtime for the session was silently never recorded.
+                    process.Exited += OnExited;
                     process.EnableRaisingEvents = true;
-                    process.Exited += (s, e) =>
-                    {
-                        try
-                        {
-                            TimeSpan playedDuration = DateTime.Now - startTime;
-                            long minutes = (long)Math.Max(0, Math.Round(playedDuration.TotalMinutes));
-                            if (minutes > 0)
-                            {
-                                game.CumulativePlaytimeMinutes += minutes;
-                                GameUpdated?.Invoke(game);
-                                LoggingService.Info("Launcher", $"'{game.Name}' session ended. +{minutes}m playtime recorded.");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LoggingService.Error("Launcher", $"Error updating playtime for '{game.Name}': {ex.Message}");
-                        }
-                        finally
-                        {
-                            process.Dispose();
-                        }
-                    };
                     exitHandlerAttached = true;
+
+                    // Handle it inline too in case the process had already exited before the line
+                    // above and the async callback hasn't run yet - exitHandled guards against
+                    // double-processing if it fires anyway.
+                    try
+                    {
+                        if (process.HasExited)
+                        {
+                            OnExited(process, EventArgs.Empty);
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Already handled by the async Exited callback in the tiny window above.
+                    }
                 }
                 catch (Exception ex)
                 {

@@ -3,13 +3,50 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace TrayTrigger.Services;
 
-public class IconExtractorService
+public partial class IconExtractorService
 {
+    [LibraryImport("shell32.dll", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int SHDefExtractIconW(string pszIconFile, int iIndex, uint uFlags, out IntPtr phiconLarge, out IntPtr phiconSmall, uint nIconSize);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool DestroyIcon(IntPtr hIcon);
+
+    /// <summary>
+    /// Extracts an executable/DLL's icon at up to 256x256, instead of the small (typically 32x32)
+    /// frame Icon.ExtractAssociatedIcon returns - that default looked blurry once upscaled for
+    /// display at 64px or in Compact Icons view. Returns null (falling back to the caller's own
+    /// smaller-icon path) if the shell can't produce a large icon for this file.
+    /// </summary>
+    private static Bitmap? ExtractLargeIconBitmap(string path, int size = 256)
+    {
+        IntPtr hLarge = IntPtr.Zero;
+        IntPtr hSmall = IntPtr.Zero;
+        try
+        {
+            uint packedSize = (uint)size | ((uint)Math.Min(size, 48) << 16);
+            int hr = SHDefExtractIconW(path, 0, 0, out hLarge, out hSmall, packedSize);
+            if (hr != 0 || hLarge == IntPtr.Zero) return null;
+
+            using var icon = Icon.FromHandle(hLarge);
+            return icon.ToBitmap();
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            if (hLarge != IntPtr.Zero) DestroyIcon(hLarge);
+            if (hSmall != IntPtr.Zero) DestroyIcon(hSmall);
+        }
+    }
     private readonly StorageService _storageService;
 
     public IconExtractorService(StorageService storageService)
@@ -44,7 +81,9 @@ public class IconExtractorService
 
                 if (ext == ".ico")
                 {
-                    using var ico = new Icon(sourcePath);
+                    // Requesting 256x256 makes GDI+ pick the closest (i.e. largest available)
+                    // frame in the .ico instead of the system's small-icon default.
+                    using var ico = new Icon(sourcePath, new System.Drawing.Size(256, 256));
                     using var bmp = ico.ToBitmap();
                     bmp.Save(cachedIconPath, ImageFormat.Png);
                     return cachedIconPath;
@@ -58,7 +97,16 @@ public class IconExtractorService
                     return cachedIconPath;
                 }
 
-                // Try ExtractAssociatedIcon for .exe, .dll, .lnk
+                // Prefer the large (up to 256x256) shell icon for .exe/.dll/.lnk over
+                // ExtractAssociatedIcon's small default, falling back to the latter if the shell
+                // couldn't produce one (e.g. an unusual file type it doesn't recognize).
+                using var largeBmp = ExtractLargeIconBitmap(sourcePath);
+                if (largeBmp != null)
+                {
+                    largeBmp.Save(cachedIconPath, ImageFormat.Png);
+                    return cachedIconPath;
+                }
+
                 using var associatedIcon = Icon.ExtractAssociatedIcon(sourcePath);
                 if (associatedIcon != null)
                 {

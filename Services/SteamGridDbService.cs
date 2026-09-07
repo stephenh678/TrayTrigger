@@ -16,14 +16,26 @@ public class SteamGridDbService
 {
     private const string BaseUrl = "https://www.steamgriddb.com/api/v2";
 
+    // No client-wide Timeout: it would also cap the grid image download below, which needs
+    // longer than the JSON lookup call. Each call applies its own per-request timeout instead.
     private static readonly HttpClient HttpClient = new(new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(15),
         EnableMultipleHttp2Connections = true
     })
     {
-        Timeout = TimeSpan.FromSeconds(5)
+        Timeout = Timeout.InfiniteTimeSpan
     };
+
+    private static readonly TimeSpan JsonCallTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ImageDownloadTimeout = TimeSpan.FromSeconds(30);
+
+    private static CancellationTokenSource LinkedTimeoutCts(CancellationToken ct, TimeSpan timeout)
+    {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(timeout);
+        return cts;
+    }
 
     /// <summary>
     /// Fetches the highest-scoring static vertical (600x900) grid image for a Steam AppId,
@@ -40,11 +52,12 @@ public class SteamGridDbService
             if (string.IsNullOrWhiteSpace(gridUrl))
                 return null;
 
-            using var imageResponse = await HttpClient.GetAsync(gridUrl, ct).ConfigureAwait(false);
+            using var timeoutCts = LinkedTimeoutCts(ct, ImageDownloadTimeout);
+            using var imageResponse = await HttpClient.GetAsync(gridUrl, timeoutCts.Token).ConfigureAwait(false);
             if (!imageResponse.IsSuccessStatusCode)
                 return null;
 
-            return await imageResponse.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+            return await imageResponse.Content.ReadAsByteArrayAsync(timeoutCts.Token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -58,15 +71,16 @@ public class SteamGridDbService
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/grids/steam/{appId}?dimensions=600x900");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        using var response = await HttpClient.SendAsync(request, ct).ConfigureAwait(false);
+        using var timeoutCts = LinkedTimeoutCts(ct, JsonCallTimeout);
+        using var response = await HttpClient.SendAsync(request, timeoutCts.Token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
             LoggingService.Verbose("SteamGridDbService", $"Grid lookup for AppId {appId} returned HTTP {(int)response.StatusCode}.");
             return null;
         }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(timeoutCts.Token).ConfigureAwait(false);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: timeoutCts.Token).ConfigureAwait(false);
 
         if (!doc.RootElement.TryGetProperty("success", out var successProp) || !successProp.GetBoolean())
             return null;

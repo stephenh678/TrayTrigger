@@ -34,6 +34,7 @@ public class GameEditViewModel : ViewModelBase
     private string? _customIconPath;
     private BitmapImage? _iconPreview;
     private string? _customCoverPath;
+    private string? _fetchedCoverPath;
     private BitmapImage? _coverPreview;
     private string? _statusMessage;
 
@@ -228,6 +229,8 @@ public class GameEditViewModel : ViewModelBase
             if (_customCoverPath != value)
             {
                 _customCoverPath = value;
+                // A manual pick or removal supersedes an earlier fetched cover from this session.
+                _fetchedCoverPath = null;
                 OnPropertyChanged();
                 UpdateCoverPreview();
             }
@@ -404,7 +407,11 @@ public class GameEditViewModel : ViewModelBase
 
     private void UpdateCoverPreview()
     {
-        if (!string.IsNullOrEmpty(_customCoverPath) && File.Exists(_customCoverPath))
+        if (!string.IsNullOrEmpty(_fetchedCoverPath) && File.Exists(_fetchedCoverPath))
+        {
+            CoverPreview = IconExtractorService.LoadBitmapSafely(_fetchedCoverPath, decodePixelWidth: 340);
+        }
+        else if (!string.IsNullOrEmpty(_customCoverPath) && File.Exists(_customCoverPath))
         {
             CoverPreview = IconExtractorService.LoadBitmapSafely(_customCoverPath, decodePixelWidth: 340);
         }
@@ -591,7 +598,10 @@ public class GameEditViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(coverPath) || !File.Exists(coverPath)) return;
 
-        SourceGame.CoverImagePath = coverPath;
+        // Staged like CustomCoverPath: only committed to SourceGame in Save(), so Cancel leaves
+        // the game's on-disk CoverImagePath reference untouched. The downloaded file itself is
+        // already written to the covers cache dir by the metadata fetch, which is fine to keep.
+        _fetchedCoverPath = coverPath;
         // Clear any earlier manual "Change..." pick so the freshly fetched official art wins,
         // both in the preview and in Save()'s custom-cover-copy check.
         _customCoverPath = null;
@@ -699,6 +709,11 @@ public class GameEditViewModel : ViewModelBase
         else if (CustomCoverPath == string.Empty)
         {
             SourceGame.CoverImagePath = null;
+        }
+        else if (!string.IsNullOrEmpty(_fetchedCoverPath) && File.Exists(_fetchedCoverPath))
+        {
+            // Already written into the covers cache dir by the fetch itself - just point at it.
+            SourceGame.CoverImagePath = _fetchedCoverPath;
         }
 
         RequestClose?.Invoke(true);

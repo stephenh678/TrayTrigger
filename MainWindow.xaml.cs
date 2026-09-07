@@ -202,6 +202,7 @@ public partial class MainWindow : Window
             _viewModel.RebuildCategories();
             _viewModel.SaveLibrary();
             _viewModel.UpdateHotkeys();
+            _viewModel.FilteredGames.Refresh();
         }
     }
 

@@ -413,6 +413,37 @@ public partial class SystemTweaksService
     }
 
     /// <summary>
+    /// Re-reads the real current state of a tweak straight from the system, the same Check used
+    /// to build <see cref="GetAllTweaks"/>. Callers should trust this over an <see cref="ApplyTweak"/>
+    /// return value, since an elevated write's success/failure can be reported wrong (e.g. a slow
+    /// UAC prompt) while the underlying registry/system state is the ground truth.
+    /// </summary>
+    public bool GetTweakState(string tweakId)
+    {
+        return tweakId switch
+        {
+            "mouse_accel" => CheckMouseAccelerationDisabled(),
+            "hags" => CheckHagsEnabled(),
+            "windowed_opts" => CheckWindowedOptsEnabled(),
+            "fse_behavior" => CheckFseDisabled(),
+            "game_mode" => CheckGameModeEnabled(),
+            "power_plan" => CheckUltimatePlanActive(),
+            "sys_responsiveness" => CheckSystemResponsivenessOptimal(),
+            "mmcss_games_priority" => CheckMmcssGamesPriorityOptimal(),
+            "timer_resolution" => CheckTimerResolutionOptimal(),
+            "visual_fx" => CheckVisualFxPerformance(),
+            "net_throttling" => CheckNetworkThrottlingDisabled(),
+            "nagle_disable" => CheckNagleDisabled(),
+            "delivery_opt" => CheckDeliveryOptimizationDisabled(),
+            "game_dvr" => CheckGameDvrDisabled(),
+            "telemetry_sweeps" => CheckTelemetryDisabled(),
+            "game_bar_overlay" => CheckGameBarDisabled(),
+            "core_isolation" => !CheckHvciActive(),
+            _ => false
+        };
+    }
+
+    /// <summary>
     /// Tweak IDs the preset/reset actions apply that require a restart to fully take effect -
     /// used by the UI to decide whether to show a single consolidated restart prompt.
     /// </summary>
@@ -448,7 +479,7 @@ public partial class SystemTweaksService
     public void ResetAllToDefaults()
     {
         ApplyTweak("mouse_accel", false);
-        ApplyTweak("hags", false);
+        ResetHagsToDefault();
         ApplyTweak("windowed_opts", false);
         ApplyTweak("fse_behavior", false);
         ApplyTweak("game_mode", false);
@@ -458,11 +489,55 @@ public partial class SystemTweaksService
         ApplyTweak("mmcss_games_priority", false);
         ApplyTweak("timer_resolution", false);
         ApplyTweak("net_throttling", false);
-        ApplyTweak("nagle_disable", false);
-        ApplyTweak("delivery_opt", false);
-        ApplyTweak("telemetry_sweeps", false);
+        ResetNagleToDefault();
+        ResetDeliveryOptimizationToDefault();
+        ResetTelemetryToDefault();
         ApplyTweak("game_bar_overlay", false);
         ApplyTweak("visual_fx", false);
+    }
+
+    // These four tweaks write a Windows *policy* value or force a hardware feature off; on a
+    // stock machine the value is simply absent (Windows/the driver decides). "Reset" must restore
+    // that absence, not write a different fixed number - unlike disabling the tweak from its own
+    // toggle, which is a deliberate "force off" and legitimately writes a value. Until a full
+    // snapshot/restore of prior values exists, deleting these four values is the minimum safe reset.
+    private static bool ResetHagsToDefault() =>
+        DeleteHklmValue(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode");
+
+    private static bool ResetDeliveryOptimizationToDefault() =>
+        DeleteHklmValue(@"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode");
+
+    private static bool ResetTelemetryToDefault() =>
+        DeleteHklmValue(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry");
+
+    private static bool ResetNagleToDefault()
+    {
+        try
+        {
+            List<string> interfaceNames;
+            using (var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath))
+            {
+                if (interfacesKey == null) return false;
+                interfaceNames = new List<string>(interfacesKey.GetSubKeyNames());
+            }
+
+            if (interfaceNames.Count == 0) return false;
+
+            var deletes = new List<(string SubKey, string ValueName)>();
+            foreach (var name in interfaceNames)
+            {
+                string subKey = $@"{TcpInterfacesPath}\{name}";
+                deletes.Add((subKey, "TcpAckFrequency"));
+                deletes.Add((subKey, "TCPNoDelay"));
+            }
+
+            return DeleteHklmValuesBatch(deletes.ToArray());
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"ResetNagleToDefault failed: {ex.Message}");
+            return false;
+        }
     }
 
     // =========================================================================
@@ -928,7 +1003,7 @@ public partial class SystemTweaksService
             {
                 RunPowercfg($"/setactive {BalancedPlanGuid}");
                 NotifySettingsChanged();
-                return true;
+                return string.Equals(GetActivePowerSchemeGuid(), BalancedPlanGuid, StringComparison.OrdinalIgnoreCase);
             }
 
             string? schemeGuid = FindExistingUltimatePlanGuid() ?? CreateUltimateTrayTriggerPlan();
@@ -942,10 +1017,11 @@ public partial class SystemTweaksService
             // lock CPU min/max state at 100%, disable core parking, aggressive turbo boost,
             // active cooling, and disable PCIe/USB power-saving states that otherwise cause
             // frame-time spikes and input lag when cores or devices wake from an idle state.
-            ApplyUltimatePlanTweaks(schemeGuid);
+            bool tweaksApplied = ApplyUltimatePlanTweaks(schemeGuid);
             RunPowercfg($"/setactive {schemeGuid}");
             NotifySettingsChanged();
-            return true;
+            bool activated = string.Equals(GetActivePowerSchemeGuid(), schemeGuid, StringComparison.OrdinalIgnoreCase);
+            return tweaksApplied && activated;
         }
         catch (Exception ex)
         {
@@ -1111,7 +1187,7 @@ public partial class SystemTweaksService
         }
     }
 
-    private static void ApplyUltimatePlanTweaks(string schemeGuid)
+    private static bool ApplyUltimatePlanTweaks(string schemeGuid)
     {
         var settings = new (string Subgroup, string Setting, int Val)[]
         {
@@ -1131,10 +1207,10 @@ public partial class SystemTweaksService
             commands.Add($"powercfg /setdcvalueindex {schemeGuid} {subgroup} {setting} {val}");
         }
 
-        RunCommandBatch(commands);
+        return RunCommandBatch(commands);
     }
 
-    private static void RunCommandBatch(IEnumerable<string> commands)
+    private static bool RunCommandBatch(IEnumerable<string> commands)
     {
         try
         {
@@ -1147,9 +1223,14 @@ public partial class SystemTweaksService
                 UseShellExecute = false
             };
             using var proc = Process.Start(psi);
-            proc?.WaitForExit(5000);
+            if (proc == null) return false;
+            proc.WaitForExit(5000);
+            return proc.HasExited && proc.ExitCode == 0;
         }
-        catch { }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string RunPowercfg(string arguments)
@@ -1404,8 +1485,85 @@ public partial class SystemTweaksService
                 WindowStyle = ProcessWindowStyle.Hidden
             };
             using var proc = Process.Start(psi);
-            proc?.WaitForExit(5000);
-            return proc?.ExitCode == 0;
+            if (proc == null) return false;
+
+            // A generous timeout: WaitForExit(5000) used to return while the user was still
+            // looking at the UAC prompt, after which reading ExitCode on a still-running
+            // process threw and got swallowed by the catch below as a false "failed".
+            proc.WaitForExit(120000);
+            if (!proc.HasExited) return false;
+            return proc.ExitCode == 0;
+        }
+        catch
+        {
+            // User likely cancelled UAC prompt
+            return false;
+        }
+    }
+
+    private static bool DeleteHklmValue(string subKey, string valueName)
+    {
+        return DeleteHklmValuesBatch((subKey, valueName));
+    }
+
+    /// <summary>
+    /// Deletes multiple HKLM values, restoring them to "absent" (the real Windows default for
+    /// policy values and driver-decides hardware switches). A value that is already absent counts
+    /// as success. Mirrors <see cref="SetHklmValuesBatch"/>'s elevated/non-elevated split.
+    /// </summary>
+    private static bool DeleteHklmValuesBatch(params (string SubKey, string ValueName)[] deletes)
+    {
+        if (deletes.Length == 0) return true;
+
+        if (IsElevated)
+        {
+            bool allOk = true;
+            foreach (var (subKey, valueName) in deletes)
+            {
+                try
+                {
+                    using var key = Registry.LocalMachine.OpenSubKey(subKey, writable: true);
+                    key?.DeleteValue(valueName, throwOnMissingValue: false);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn("SystemTweaksService", $"Direct HKLM delete failed for '{subKey}\\{valueName}': {ex.Message}");
+                    allOk = false;
+                }
+            }
+            return allOk;
+        }
+
+        try
+        {
+            var commands = new List<string>();
+            foreach (var (subKey, valueName) in deletes)
+            {
+                string fullPath = @"HKLM\" + subKey;
+                commands.Add($"reg delete \"{fullPath}\" /v \"{valueName}\" /f");
+            }
+            // A missing value is not a failure here (it means the default was already restored),
+            // so make the overall exit code reflect that the deletes were attempted, not whether
+            // every one of them found something to remove.
+            string combined = string.Join(" & ", commands) + " & exit /b 0";
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{combined}\"",
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            using var proc = Process.Start(psi);
+            if (proc == null) return false;
+
+            // A generous timeout: WaitForExit(5000) used to return while the user was still
+            // looking at the UAC prompt, after which reading ExitCode on a still-running
+            // process threw and got swallowed by the catch below as a false "failed".
+            proc.WaitForExit(120000);
+            if (!proc.HasExited) return false;
+            return proc.ExitCode == 0;
         }
         catch
         {
