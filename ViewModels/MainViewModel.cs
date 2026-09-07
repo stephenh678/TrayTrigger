@@ -711,7 +711,7 @@ public class MainViewModel : ViewModelBase
 
         foreach (var g in rawGames)
         {
-            Games.Add(CreateCardViewModel(g));
+            Games.Add(CreateCardViewModel(g, deferHeavyInit: true));
         }
 
         RebuildCategories();
@@ -722,10 +722,39 @@ public class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalGameCountDisplay));
         LibraryUpdated?.Invoke();
 
+        LoadCardHeavyStateInBackground();
         _ = EnrichLibraryAsync();
     }
 
-    public GameCardViewModel CreateCardViewModel(GameEntry game)
+    /// <summary>
+    /// Checks "missing" status and decodes icon/cover for every card off the UI thread, then
+    /// applies the results in one dispatcher hop. Startup used to do this per-card, synchronously,
+    /// inside the constructor loop above, so the window stayed hidden until every File.Exists and
+    /// bitmap decode in the whole library finished.
+    /// </summary>
+    private void LoadCardHeavyStateInBackground()
+    {
+        var cardsSnapshot = Games.ToList();
+        _ = Task.Run(() =>
+        {
+            var results = new List<(GameCardViewModel Card, bool IsMissing, System.Windows.Media.Imaging.BitmapImage? Icon, System.Windows.Media.Imaging.BitmapImage? Cover)>();
+            foreach (var card in cardsSnapshot)
+            {
+                var (isMissing, icon, cover) = card.ComputeHeavyState();
+                results.Add((card, isMissing, icon, cover));
+            }
+
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                foreach (var (card, isMissing, icon, cover) in results)
+                {
+                    card.ApplyHeavyState(isMissing, icon, cover);
+                }
+            });
+        });
+    }
+
+    public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false)
     {
         return new GameCardViewModel(
             game,
@@ -742,7 +771,8 @@ public class MainViewModel : ViewModelBase
             onEditSteamAppId: EditSteamAppId,
             onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
             onToggleFavorite: ToggleFavorite,
-            getUseVerticalPosterArt: () => UseVerticalPosterArt
+            getUseVerticalPosterArt: () => UseVerticalPosterArt,
+            deferHeavyInit: deferHeavyInit
         );
     }
 
