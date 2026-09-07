@@ -22,6 +22,7 @@
                      DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
             <MenuItem Header="Game Info (Steam Details)..." Command="{Binding ViewDetailsCommand}" FontWeight="SemiBold"/>
             <MenuItem Header="Play" Command="{Binding LaunchCommand}"/>
+            <MenuItem Header="Favorite" IsCheckable="True" IsChecked="{Binding IsFavorite, Mode=OneWay}" Command="{Binding ToggleFavoriteCommand}"/>
             <MenuItem Header="Open Containing Folder" Command="{Binding OpenFolderCommand}"/>
 
             <!-- Broken Game Relocate Option -->
@@ -67,7 +68,7 @@
                     <Style TargetType="Separator">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                            <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -79,7 +80,7 @@
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                            <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -91,7 +92,7 @@
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                            <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -103,7 +104,7 @@
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                            <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -653,6 +654,8 @@
                                                 <!-- 3. Top Badges (Category, Steam Overlay, Missing, Hotkey) -->
                                                 <DockPanel VerticalAlignment="Top" Margin="10,10,10,0">
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" DockPanel.Dock="Left">
+                                                        <Button Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0"/>
+
                                                         <!-- Category Pill (Hidden if category is Steam to prevent duplicate badges) -->
                                                         <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1" 
                                                                 CornerRadius="4" Padding="6,2">
@@ -678,12 +681,12 @@
                                                                 <Style TargetType="Border">
                                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                                                                        <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
                                                                             <Setter Property="Visibility" Value="Visible"/>
                                                                         </DataTrigger>
                                                                         <MultiDataTrigger>
                                                                             <MultiDataTrigger.Conditions>
-                                                                                <Condition Binding="{Binding IsSteamGame}" Value="True"/>
+                                                                                <Condition Binding="{Binding HasSteamOverlay}" Value="True"/>
                                                                                 <Condition Binding="{Binding ShowCategoryBadge}" Value="True"/>
                                                                             </MultiDataTrigger.Conditions>
                                                                             <Setter Property="Margin" Value="5,0,0,0"/>
@@ -804,12 +807,34 @@
 
                                                 <!-- Top Badges -->
                                                 <DockPanel Grid.Row="0" Height="14">
+                                                    <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}"
+                                                            Width="14" Height="14" Padding="0" Margin="0,0,3,0"
+                                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                                            ToolTip="Toggle Favorite" VerticalAlignment="Center">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <TextBlock x:Name="StarGlyph" Text="&#xE735;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
+                                                                           FontSize="10" Foreground="#99FFFFFF"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                <ControlTemplate.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                        <Setter TargetName="StarGlyph" Property="Text" Value="&#xE734;"/>
+                                                                        <Setter TargetName="StarGlyph" Property="Foreground" Value="#FFD700"/>
+                                                                    </DataTrigger>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="StarGlyph" Property="Foreground" Value="#FFD700"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+
                                                     <Border Background="#1C2E3D" CornerRadius="3" Padding="4,0" HorizontalAlignment="Left">
                                                         <Border.Style>
                                                             <Style TargetType="Border">
                                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                                                                    <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
                                                                         <Setter Property="Visibility" Value="Visible"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
@@ -991,6 +1016,7 @@
 
                                             <!-- Title & Badges -->
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0"/>
                                                 <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
                                                            Foreground="{StaticResource BrushTextPrimary}" 
                                                            FontFamily="{StaticResource AppFont}"
@@ -1017,7 +1043,7 @@
                                                         <Style TargetType="Border">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
+                                                                <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
                                                                     <Setter Property="Visibility" Value="Visible"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>

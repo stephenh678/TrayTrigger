@@ -12,13 +12,18 @@ public class GameEntry
     public string WorkingDirectory { get; set; } = string.Empty;
     public bool RunAsAdmin { get; set; }
     public string Category { get; set; } = "Uncategorized";
+    public bool IsFavorite { get; set; }
     public string Hotkey { get; set; } = string.Empty;
     public string IconPath { get; set; } = string.Empty;
     public string? CoverImagePath { get; set; }
     public bool IsSteamGame { get; set; }
+    public bool ForceSteamOverlayTag { get; set; }
     public string? SteamAppId { get; set; }
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
+
+    [JsonIgnore]
+    public bool HasSteamOverlay => IsSteamGame || ForceSteamOverlayTag;
 
     [JsonIgnore]
     public string PlaytimeDisplay

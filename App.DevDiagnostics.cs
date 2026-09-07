@@ -701,6 +701,45 @@ public partial class App
                 return;
             }
 
+            if (e.Args[i].Equals("--test-force-steam-overlay", StringComparison.OrdinalIgnoreCase))
+            {
+                var nonSteamGame = new GameEntry { Name = "GOG Witcher 3", Category = "RPG", IsSteamGame = false, ForceSteamOverlayTag = false };
+                var card1 = new GameCardViewModel(nonSteamGame, _ => {}, _ => {}, _ => {});
+                if (card1.HasSteamOverlay)
+                    throw new Exception("Test failed: nonSteamGame should have HasSteamOverlay=false");
+
+                var forcedGame = new GameEntry { Name = "GOG Witcher 3", Category = "RPG", IsSteamGame = false, ForceSteamOverlayTag = true };
+                var card2 = new GameCardViewModel(forcedGame, _ => {}, _ => {}, _ => {});
+                if (!card2.HasSteamOverlay || !card2.ShowCategoryBadge)
+                    throw new Exception("Test failed: forcedGame should have HasSteamOverlay=true and ShowCategoryBadge=true");
+
+                var forcedSteamCatGame = new GameEntry { Name = "GOG Witcher 3", Category = "Steam", IsSteamGame = false, ForceSteamOverlayTag = true };
+                var card3 = new GameCardViewModel(forcedSteamCatGame, _ => {}, _ => {}, _ => {});
+                if (!card3.HasSteamOverlay || card3.ShowCategoryBadge)
+                    throw new Exception("Test failed: forcedSteamCatGame with Category=Steam should have HasSteamOverlay=true and ShowCategoryBadge=false");
+
+                // Test GameEditViewModel mapping and saving
+                var editVm = new GameEditViewModel(nonSteamGame, _mainViewModel.Categories, _iconExtractorService);
+                if (editVm.ForceSteamOverlayTag)
+                    throw new Exception("Test failed: editVm.ForceSteamOverlayTag should initially be false");
+
+                editVm.ForceSteamOverlayTag = true;
+                var saveMethod = typeof(GameEditViewModel).GetMethod("Save", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                saveMethod?.Invoke(editVm, null);
+
+                if (!nonSteamGame.ForceSteamOverlayTag || !nonSteamGame.HasSteamOverlay)
+                    throw new Exception("Test failed: saving editVm should set SourceGame.ForceSteamOverlayTag to true");
+
+                // Test card RefreshProperties reflects saved state
+                card1.RefreshProperties();
+                if (!card1.HasSteamOverlay)
+                    throw new Exception("Test failed: card1 should have HasSteamOverlay=true after RefreshProperties");
+
+                Console.WriteLine("[TEST_FORCE_STEAM_OVERLAY_PASSED] All tests passed for ForceSteamOverlayTag!");
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-edit", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-edit", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -766,6 +805,28 @@ public partial class App
                 string? pDir = Path.GetDirectoryName(targetPng);
                 if (!string.IsNullOrEmpty(pDir) && !Directory.Exists(pDir)) Directory.CreateDirectory(pDir);
                 composite.Save(targetPng, System.Drawing.Imaging.ImageFormat.Png);
+                ExitApplication();
+                return;
+            }
+
+            if (e.Args[i].Equals("--screenshot-forced-card", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.Games.Clear();
+                var forcedSample = new GameEntry
+                {
+                    Name = "GOG Baldur's Gate 3",
+                    ExecutablePath = @"C:\Games\BG3\bin\bg3.exe",
+                    Category = "RPG",
+                    IsSteamGame = false,
+                    ForceSteamOverlayTag = true
+                };
+                string fallbackExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+                forcedSample.IconPath = _iconExtractorService.ExtractAndCacheIcon(forcedSample.Id, fallbackExe, forcedSample.Name);
+                _mainViewModel.Games.Add(new GameCardViewModel(forcedSample, _mainViewModel.LaunchGame, _ => { }, _mainViewModel.DeleteGame));
+                _mainViewModel.RebuildCategories();
+
+                CaptureVisual(_mainWindow, 960, 600, targetPng);
                 ExitApplication();
                 return;
             }

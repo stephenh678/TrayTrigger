@@ -24,6 +24,7 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onViewDetails;
     private readonly Action<GameCardViewModel>? _onEditSteamAppId;
     private readonly Action<GameCardViewModel>? _onRefreshMetadata;
+    private readonly Action<GameCardViewModel>? _onToggleFavorite;
     private readonly Func<bool>? _getUseVerticalPosterArt;
     private BitmapImage? _iconImage;
     private BitmapImage? _coverImage;
@@ -45,6 +46,7 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onViewDetails = null,
         Action<GameCardViewModel>? onEditSteamAppId = null,
         Action<GameCardViewModel>? onRefreshMetadata = null,
+        Action<GameCardViewModel>? onToggleFavorite = null,
         Func<bool>? getUseVerticalPosterArt = null)
     {
         Game = game;
@@ -60,6 +62,7 @@ public class GameCardViewModel : ViewModelBase
         _onViewDetails = onViewDetails;
         _onEditSteamAppId = onEditSteamAppId;
         _onRefreshMetadata = onRefreshMetadata;
+        _onToggleFavorite = onToggleFavorite;
         _getUseVerticalPosterArt = getUseVerticalPosterArt;
 
         LaunchCommand = new RelayCommand(() => _onLaunch(this));
@@ -74,6 +77,12 @@ public class GameCardViewModel : ViewModelBase
         FetchExeNameCommand = new RelayCommand(() => _onFetchExeName?.Invoke(this));
         EditSteamAppIdCommand = new RelayCommand(() => _onEditSteamAppId?.Invoke(this));
         RefreshMetadataCommand = new RelayCommand(() => _onRefreshMetadata?.Invoke(this));
+        ToggleFavoriteCommand = new RelayCommand(() =>
+        {
+            Game.IsFavorite = !Game.IsFavorite;
+            OnPropertyChanged(nameof(IsFavorite));
+            _onToggleFavorite?.Invoke(this);
+        });
         OpenFolderCommand = new RelayCommand(OpenContainingFolder);
         OpenStoreCommand = new RelayCommand(OpenStorePage);
         OpenInSteamLibraryCommand = new RelayCommand(OpenInSteamLibrary);
@@ -90,7 +99,10 @@ public class GameCardViewModel : ViewModelBase
     public string? Hotkey => Game.Hotkey;
     public bool HasHotkey => !string.IsNullOrWhiteSpace(Game.Hotkey);
     public bool IsSteamGame => Game.IsSteamGame;
-    public bool ShowCategoryBadge => !IsSteamGame || !string.Equals(Category, "Steam", StringComparison.OrdinalIgnoreCase);
+    public bool ForceSteamOverlayTag => Game.ForceSteamOverlayTag;
+    public bool HasSteamOverlay => Game.HasSteamOverlay;
+    public bool ShowCategoryBadge => !HasSteamOverlay || !string.Equals(Category, "Steam", StringComparison.OrdinalIgnoreCase);
+    public bool IsFavorite => Game.IsFavorite;
     public bool IsMissing
     {
         get => _isMissing;
@@ -159,6 +171,7 @@ public class GameCardViewModel : ViewModelBase
     public ICommand OpenStoreCommand { get; }
     public ICommand OpenInSteamLibraryCommand { get; }
     public ICommand VerifyFilesCommand { get; }
+    public ICommand ToggleFavoriteCommand { get; }
 
     public string? SteamAppId => Game.SteamAppId;
     public bool HasSteamAppId => !string.IsNullOrWhiteSpace(Game.SteamAppId);
@@ -188,7 +201,10 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(Hotkey));
         OnPropertyChanged(nameof(HasHotkey));
         OnPropertyChanged(nameof(IsSteamGame));
+        OnPropertyChanged(nameof(ForceSteamOverlayTag));
+        OnPropertyChanged(nameof(HasSteamOverlay));
         OnPropertyChanged(nameof(ShowCategoryBadge));
+        OnPropertyChanged(nameof(IsFavorite));
         OnPropertyChanged(nameof(SteamAppId));
         OnPropertyChanged(nameof(HasSteamAppId));
         OnPropertyChanged(nameof(SteamAppIdDisplay));
