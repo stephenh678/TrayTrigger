@@ -11,13 +11,10 @@ public class CpuHardwareInfo
     public double MaxClockSpeedGhz { get; set; }
     public double CurrentClockSpeedGhz { get; set; }
     public int CurrentUsagePercent { get; set; }
-    public string ClockSpeedDisplay
-    {
-        get => CurrentClockSpeedGhz > 0
+    public string ClockSpeedDisplay =>
+        CurrentClockSpeedGhz > 0
             ? $"{CurrentClockSpeedGhz:0.00} GHz Current, {MaxClockSpeedGhz:0.0} GHz Max"
             : $"{MaxClockSpeedGhz:0.0} GHz Max Clock";
-        set { }
-    }
 }
 
 public class GpuHardwareInfo
@@ -48,7 +45,6 @@ public class RamHardwareInfo
                 : (IsXmpActive ? " (XMP/EXPO Active)" : "");
             return $"{SpeedMhz} MHz{profileNote}";
         }
-        set { }
     }
     public bool HasSpeedInfo => SpeedMhz > 0;
 }

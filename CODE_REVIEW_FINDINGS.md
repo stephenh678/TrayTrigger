@@ -477,7 +477,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **What:** `Application.Current?.MainWindow is { IsVisible: true } w ? w : null` -> `WindowHelper.ActiveOwner()`.
 
 ### L-17 Empty setters on computed display properties
-- [ ] Status: Open | Resolution:
+- [x] Status: Fixed | Resolution: Re-verified: `CpuHardwareInfo.ClockSpeedDisplay` and `RamHardwareInfo.SpeedDisplay` still had `set { }`. Confirmed via repo-wide grep that nothing ever assigns to either property and neither type is registered in the source-generated `AppJsonContext` (so no JSON deserializer needs a setter), so making them get-only was safe. Made `ClockSpeedDisplay` an expression-bodied get-only property and removed `SpeedDisplay`'s empty setter. Release build: 0 warnings, 0 errors - the build itself is the verification here (removing a setter is fully safe once nothing in the codebase references it, which the compiler would have flagged as a build error if false).
 - **Files:** `Models/HardwareModels.cs` (`ClockSpeedDisplay`, `SpeedDisplay`)
 - **What:** `set { }` hides binding mistakes; make them get-only.
 
