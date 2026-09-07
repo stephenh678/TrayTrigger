@@ -19,7 +19,8 @@ public enum SystemSubSection
 {
     All,
     HardwareSpecs,
-    PerformanceTweaks
+    PerformanceTweaks,
+    GameProfiles
 }
 
 public class SystemTweakViewModel : ViewModelBase
@@ -38,6 +39,7 @@ public class SystemTweakViewModel : ViewModelBase
     public bool RequiresReboot => Model.RequiresReboot;
     public bool CanToggle => Model.CanToggle;
     public bool HasCustomAction => Model.HasCustomAction;
+    public bool IsOptIn => Model.IsOptIn;
     public string CustomActionLabel => Model.CustomActionLabel;
 
     private bool _isOptimal;
@@ -164,11 +166,62 @@ public class SystemTweakViewModel : ViewModelBase
     }
 }
 
+/// <summary>
+/// One toggleable tweak within a single Performance Profile tier (Optimized or Aggressive).
+/// Reads/writes a bool on that tier's own <see cref="PerformanceProfileTweakConfig"/> via
+/// delegates, so adding a new profile tweak later is just one more instance of this class -
+/// no new bound property or XAML template needed.
+/// </summary>
+public class ProfileTweakToggleViewModel : ViewModelBase
+{
+    private readonly Func<bool> _getter;
+    private readonly Action<bool> _setter;
+
+    public string Name { get; }
+    public string ShortDescription { get; }
+    public string WhyItMatters { get; }
+    public bool IsOptIn { get; }
+
+    public string StatusBadgeText => IsEnabled ? "ENABLED" : "DISABLED";
+    public string StatusBadgeColor => IsEnabled ? "#238636" : "#6E6E7A";
+    public string ActionButtonText => IsEnabled ? "Disable" : "Enable";
+
+    public ICommand ToggleCommand { get; }
+
+    public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, Func<bool> getter, Action<bool> setter, bool isOptIn = false)
+    {
+        Name = name;
+        ShortDescription = shortDescription;
+        WhyItMatters = whyItMatters;
+        _getter = getter;
+        _setter = setter;
+        IsOptIn = isOptIn;
+        ToggleCommand = new RelayCommand(() => IsEnabled = !IsEnabled);
+    }
+
+    public bool IsEnabled
+    {
+        get => _getter();
+        set
+        {
+            if (_getter() != value)
+            {
+                _setter(value);
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(StatusBadgeText));
+                OnPropertyChanged(nameof(StatusBadgeColor));
+                OnPropertyChanged(nameof(ActionButtonText));
+            }
+        }
+    }
+}
+
 public class SystemViewModel : ViewModelBase
 {
     private readonly SystemInfoService _infoService;
     private readonly SystemTweaksService _tweaksService;
     private readonly AppSettings _settings;
+    private readonly StorageService _storageService;
     private readonly DispatcherTimer _telemetryTimer;
 
     // Sub-section Navigation
@@ -183,8 +236,10 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsAllTab));
                 OnPropertyChanged(nameof(IsSpecsTab));
                 OnPropertyChanged(nameof(IsTweaksTab));
+                OnPropertyChanged(nameof(IsGameProfilesTab));
                 OnPropertyChanged(nameof(ShowSpecsSection));
                 OnPropertyChanged(nameof(ShowTweaksSection));
+                OnPropertyChanged(nameof(ShowGameProfilesSection));
                 OnPropertyChanged(nameof(RestorePointBadgeText));
                 OnPropertyChanged(nameof(RestorePointBadgeColor));
             }
@@ -194,9 +249,11 @@ public class SystemViewModel : ViewModelBase
     public bool IsAllTab => CurrentSubSection == SystemSubSection.All;
     public bool IsSpecsTab => CurrentSubSection == SystemSubSection.HardwareSpecs;
     public bool IsTweaksTab => CurrentSubSection == SystemSubSection.PerformanceTweaks;
+    public bool IsGameProfilesTab => CurrentSubSection == SystemSubSection.GameProfiles;
 
     public bool ShowSpecsSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.HardwareSpecs;
     public bool ShowTweaksSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.PerformanceTweaks;
+    public bool ShowGameProfilesSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.GameProfiles;
 
     // Hardware Report
     private SystemHardwareReport _report = new();
@@ -250,6 +307,64 @@ public class SystemViewModel : ViewModelBase
     // Restore Point Protection status - read-only here; configured in Settings > Performance Tweaks.
     public string RestorePointBadgeText => _settings.CreateRestorePointBeforeTweaks ? "RESTORE POINT: ON" : "RESTORE POINT: OFF";
     public string RestorePointBadgeColor => _settings.CreateRestorePointBeforeTweaks ? "#238636" : "#6E6E7A";
+
+    // Game-Level Performance Profiles: per-game Optimized/Aggressive tweak sets (see
+    // GameEditDialog). Aggressive always applies every tweak Optimized has enabled, plus its own
+    // extras below - a tweak is only ever configured once, under whichever tier introduces it.
+    // Add a new bool to OptimizedProfileTweakConfig or AggressiveProfileTweakConfig (plus a
+    // matching apply/restore pair in PerformanceProfileService) and one more toggle entry below
+    // when a new profile tweak ships.
+    public ObservableCollection<ProfileTweakToggleViewModel> OptimizedProfileTweaks { get; }
+    public ObservableCollection<ProfileTweakToggleViewModel> AggressiveProfileTweaks { get; }
+
+    private ObservableCollection<ProfileTweakToggleViewModel> BuildOptimizedProfileToggles(OptimizedProfileTweakConfig config)
+    {
+        void Save() => _storageService.SaveSettings(_settings);
+
+        return new ObservableCollection<ProfileTweakToggleViewModel>
+        {
+            new("\"Ultimate Plan - TrayTrigger\" Power Plan",
+                "Creates and activates a custom power plan (based on Windows' hidden Ultimate Performance scheme) with CPU locked at 100%, core parking disabled, and PCIe/USB power-saving states turned off.",
+                "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5–15ms to ramp back up and inducing 1% low frame drops when action begins. \"Ultimate Plan - TrayTrigger\" pins the CPU at 100% min/max state with aggressive boost and active cooling, and disables PCIe Link State Power Management and USB selective suspend so the GPU and input devices never stutter through a power-state transition mid-match.",
+                () => config.PowerPlanEnabled,
+                v => { config.PowerPlanEnabled = v; Save(); }),
+            new("Windows High-Performance GPU Preference",
+                "Forces the game's executable to use your high-performance GPU instead of an integrated one, via Windows' own Settings > Display > Graphics preference.",
+                "On laptops with both an integrated and discrete GPU, Windows or the driver sometimes defaults an unrecognized game to the integrated GPU. This writes the same per-executable preference the Settings app itself uses, so the discrete GPU is used without you having to set it manually. No effect on single-GPU desktops. Only applies when TrayTrigger knows the game's real executable path - not available for Steam-launched games, which report a steam:// launch URL rather than a file path.",
+                () => config.GpuPreferenceEnabled,
+                v => { config.GpuPreferenceEnabled = v; Save(); }),
+        };
+    }
+
+    private ObservableCollection<ProfileTweakToggleViewModel> BuildAggressiveProfileToggles(AggressiveProfileTweakConfig config)
+    {
+        void Save() => _storageService.SaveSettings(_settings);
+
+        return new ObservableCollection<ProfileTweakToggleViewModel>
+        {
+            new("System Responsiveness (MMCSS Gaming Reserve)",
+                "Reduces the CPU reserve for lower-priority MMCSS tasks to the supported minimum.",
+                "Windows reserves 20% of CPU resources for low-priority background tasks by default. Microsoft's MMCSS documentation clamps any value below 10 back up to 20, so 10 is the lowest reserve Windows actually honors - it leaves more scheduling headroom for latency-sensitive foreground workloads like games.",
+                () => config.SystemResponsivenessEnabled,
+                v => { config.SystemResponsivenessEnabled = v; Save(); }),
+            new("MMCSS \"Games\" Task Scheduling Tuning",
+                "Raises the Multimedia Class Scheduler's built-in \"Games\" task from its Medium default to High.",
+                "Officially documented by Microsoft, MMCSS grants time-sensitive threads registered under the \"Games\" task category prioritized CPU access - the same mechanism game engines request via AvSetMmThreadCharacteristics. Windows ships this task at Scheduling Category=Medium by default; raising it to High uses the same sanctioned mechanism with more headroom. This is scheduling tuning, not a guaranteed FPS boost - the effect depends on what else is contending for the CPU. (Other fields some optimizer tools also touch here, like SFIO Priority, are documented by Microsoft as not used, so this tweak leaves them alone.)",
+                () => config.MmcssGamesPriorityEnabled,
+                v => { config.MmcssGamesPriorityEnabled = v; Save(); }),
+            new("Above Normal Process Priority",
+                "Raises the game's own process to Above Normal CPU scheduling priority for the duration of the session.",
+                "A real Windows scheduling class (SetPriorityClass), not a registry trick. Community benchmarking consistently finds Above Normal reduces worst-case frame-time stutters with low risk, while pushing further to High priority shows only marginal extra gain and a real risk of starving audio/input threads. Effect varies by game and is not guaranteed. Only takes effect for direct .exe launches - TrayTrigger has no handle to the actual game process for Steam-launched games, so this silently does nothing for those.",
+                () => config.AboveNormalPriorityEnabled,
+                v => { config.AboveNormalPriorityEnabled = v; Save(); }),
+            new("Windows Defender Exclusion for Game Files",
+                "Excludes the game's executable from Microsoft Defender real-time scanning while it's running.",
+                "Real, Microsoft-supported mechanism (Add-MpPreference), not a workaround - and it measurably reduces CPU/I-O hitches during shader compilation and asset streaming on some games. This is a genuine security tradeoff, not just a performance one: it narrows antivirus coverage for that specific file while the profile is active. Defaults off even under Aggressive for that reason - only enable it if you understand and accept the tradeoff. Only applies when TrayTrigger knows the game's real executable path (not Steam launches). If the path was already excluded before this ran, that exclusion is left alone on restore.",
+                () => config.DefenderExclusionEnabled,
+                v => { config.DefenderExclusionEnabled = v; Save(); },
+                isOptIn: true),
+        };
+    }
 
     // Busy state for the Apply Preset / Reset Defaults bulk actions. These can take anywhere
     // from a couple seconds to well over a minute (elevated UAC prompts, powercfg, a restore
@@ -319,6 +434,7 @@ public class SystemViewModel : ViewModelBase
     public ICommand SelectAllTabCommand { get; }
     public ICommand SelectSpecsTabCommand { get; }
     public ICommand SelectTweaksTabCommand { get; }
+    public ICommand SelectGameProfilesTabCommand { get; }
     public ICommand RefreshSpecsCommand { get; }
     public ICommand RefreshTweaksCommand { get; }
     public ICommand ApplyRecommendedPresetCommand { get; }
@@ -330,15 +446,20 @@ public class SystemViewModel : ViewModelBase
     public ICommand OpenGraphicsSettingsCommand { get; }
     public ICommand OpenDxDiagCommand { get; }
 
-    public SystemViewModel(SystemInfoService infoService, SystemTweaksService tweaksService, AppSettings settings)
+    public SystemViewModel(SystemInfoService infoService, SystemTweaksService tweaksService, AppSettings settings, StorageService storageService)
     {
         _infoService = infoService;
         _tweaksService = tweaksService;
         _settings = settings;
+        _storageService = storageService;
+
+        OptimizedProfileTweaks = BuildOptimizedProfileToggles(_settings.OptimizedProfileTweaks);
+        AggressiveProfileTweaks = BuildAggressiveProfileToggles(_settings.AggressiveProfileTweaks);
 
         SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
         SelectTweaksTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.PerformanceTweaks);
+        SelectGameProfilesTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.GameProfiles);
         RefreshSpecsCommand = new AsyncRelayCommand(async () => await LoadHardwareSpecsAsync());
         RefreshTweaksCommand = new RelayCommand(RefreshAllTweaks);
         ApplyRecommendedPresetCommand = new AsyncRelayCommand(ExecuteApplyPresetAsync, () => CanRunBulkAction);

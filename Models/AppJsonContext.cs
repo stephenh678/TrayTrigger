@@ -12,6 +12,11 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(GitHubReleaseInfo))]
 [JsonSerializable(typeof(GitHubReleaseAsset))]
 [JsonSerializable(typeof(List<GitHubReleaseAsset>))]
+[JsonSerializable(typeof(PerformanceProfileSessionSnapshot))]
+[JsonSerializable(typeof(OptimizedProfileTweakConfig))]
+[JsonSerializable(typeof(AggressiveProfileTweakConfig))]
+[JsonSerializable(typeof(PerGameProfileSnapshot))]
+[JsonSerializable(typeof(List<PerGameProfileSnapshot>))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

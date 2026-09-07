@@ -23,6 +23,7 @@ public class StorageService
     private readonly string _gamesBakFilePath;
     private readonly string _settingsFilePath;
     private readonly string _settingsBakFilePath;
+    private readonly string _profileSessionFilePath;
 
     private bool _gamesPrimaryUnreadableThisSession;
     private bool _settingsPrimaryUnreadableThisSession;
@@ -41,6 +42,7 @@ public class StorageService
         _gamesBakFilePath = Path.Combine(_baseDirectory, "games.json.bak");
         _settingsFilePath = Path.Combine(_baseDirectory, "settings.json");
         _settingsBakFilePath = Path.Combine(_baseDirectory, "settings.json.bak");
+        _profileSessionFilePath = Path.Combine(_baseDirectory, "profile-session.json");
 
         EnsureDirectories();
         MigrateLegacyData();
@@ -362,6 +364,62 @@ public class StorageService
             finally
             {
                 settings.SteamGridDbApiKey = plainApiKey;
+            }
+        }
+    }
+
+    private readonly Lock _profileSessionLock = new();
+
+    /// <summary>Null if no Performance Profile session is currently recorded (none active, or already restored).</summary>
+    public PerformanceProfileSessionSnapshot? LoadProfileSessionSnapshot()
+    {
+        lock (_profileSessionLock)
+        {
+            if (!File.Exists(_profileSessionFilePath)) return null;
+            try
+            {
+                string json = File.ReadAllText(_profileSessionFilePath);
+                return JsonSerializer.Deserialize(json, AppJsonContext.Default.PerformanceProfileSessionSnapshot);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Storage", $"Failed to read '{_profileSessionFilePath}': {ex.Message}");
+                return null;
+            }
+        }
+    }
+
+    public void SaveProfileSessionSnapshot(PerformanceProfileSessionSnapshot snapshot)
+    {
+        lock (_profileSessionLock)
+        {
+            try
+            {
+                EnsureDirectories();
+                string json = JsonSerializer.Serialize(snapshot, AppJsonContext.Default.PerformanceProfileSessionSnapshot);
+                File.WriteAllText(_profileSessionFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error("Storage", $"Error saving '{_profileSessionFilePath}': {ex.Message}", ex);
+            }
+        }
+    }
+
+    public void DeleteProfileSessionSnapshot()
+    {
+        lock (_profileSessionLock)
+        {
+            try
+            {
+                if (File.Exists(_profileSessionFilePath))
+                {
+                    File.Delete(_profileSessionFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Storage", $"Failed to delete '{_profileSessionFilePath}': {ex.Message}");
             }
         }
     }

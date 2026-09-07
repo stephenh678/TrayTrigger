@@ -200,10 +200,18 @@
                             <!-- Category -->
                             <TextBlock Text="Category (choose existing or type a custom tag)" FontSize="11.5" 
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding ExistingCategories}" 
-                                      Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                            <ComboBox ItemsSource="{Binding ExistingCategories}"
+                                      Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True"
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,12"/>
+
+                            <!-- Performance Profile -->
+                            <TextBlock Text="Performance Profile (applied only while this game is running)" FontSize="11.5"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding PerformanceProfileOptions}"
+                                      SelectedItem="{Binding PerformanceProfile}"
+                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,12"
+                                      ToolTip="Configured in System &amp; Performance &#x2192; Performance Profiles"/>
 
                             <!-- Steam App ID Search & Linking -->
                             <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">

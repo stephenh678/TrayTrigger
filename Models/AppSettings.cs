@@ -31,8 +31,11 @@ public class AppSettings
     public bool AutoCheckForUpdates { get; set; } = true;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
     public bool HasSeenSteamGridDbPrompt { get; set; } = false;
+    public bool HasSeenPerformanceProfileMigrationPrompt { get; set; } = false;
     public string? SkippedUpdateVersion { get; set; }
     public System.DateTime? RemindAfterUtc { get; set; }
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
+    public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new() { PowerPlanEnabled = true, GpuPreferenceEnabled = true };
+    public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new() { SystemResponsivenessEnabled = true, MmcssGamesPriorityEnabled = true, AboveNormalPriorityEnabled = true, DefenderExclusionEnabled = false };
 }
 

@@ -16,9 +16,25 @@ public partial class SystemTweaksService
     private const uint SPIF_UPDATEINIFILE = 0x0001;
     private const uint SPIF_SENDCHANGE = 0x0002;
 
+    private const uint SPI_GETANIMATION = 0x0048;
+    private const uint SPI_SETANIMATION = 0x0049;
+    private const uint SPI_GETDROPSHADOW = 0x1024;
+    private const uint SPI_SETDROPSHADOW = 0x1025;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ANIMATIONINFO
+    {
+        public uint cbSize;
+        public int iMinAnimate; // nonzero = minimize/restore window animation enabled
+    }
+
     [LibraryImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
+    [LibraryImport("user32.dll", EntryPoint = "SystemParametersInfoW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SystemParametersInfoAnimation(uint uiAction, uint uiParam, ref ANIMATIONINFO pvParam, uint fWinIni);
 
     [LibraryImport("user32.dll", EntryPoint = "PostMessageW")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -125,8 +141,9 @@ public partial class SystemTweaksService
 
         // ---------------------------------------------------------------------
         // Category 2: CPU & Scheduling
-        // Ordered from foundational (power plan, Game Mode) down to fine-grained
-        // scheduler/timer tuning, ending with the purely cosmetic visual effects tweak.
+        // Game Mode thread prioritization and system timer resolution. Power plan, System
+        // Responsiveness, and MMCSS Games priority moved to per-game Performance Profiles
+        // (see PerformanceProfileService) and are no longer permanent System tweaks.
         // ---------------------------------------------------------------------
 
         bool ultimatePlanActive = CheckUltimatePlanActive();
@@ -135,12 +152,13 @@ public partial class SystemTweaksService
             Id = "power_plan",
             Name = "\"Ultimate Plan - TrayTrigger\" Power Plan",
             Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Creates and activates a custom power plan (based on Windows' hidden Ultimate Performance scheme) with CPU locked at 100%, core parking disabled, and PCIe/USB power-saving states turned off.",
-            WhyItMatters = "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5–15ms to ramp back up and inducing 1% low frame drops when action begins. \"Ultimate Plan - TrayTrigger\" pins the CPU at 100% min/max state with aggressive boost and active cooling, and disables PCIe Link State Power Management and USB selective suspend so the GPU and input devices never stutter through a power-state transition mid-match.",
+            ShortDescription = "Creates and activates a custom power plan (based on Windows' hidden Ultimate Performance scheme) with CPU locked at 100%, core parking disabled, and PCIe/USB power-saving states turned off, all the time - not just while a specific game is running.",
+            WhyItMatters = "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5-15ms to ramp back up. This pins the CPU at 100% min/max state and disables PCIe/USB power-saving states so nothing stutters through a power-state transition. Running this 24/7 (rather than only during a game session via a Performance Profile) trades away idle power savings, heat, and laptop battery life for that headroom at all times, so it's off by default.",
             IsOptimal = ultimatePlanActive,
             StatusText = ultimatePlanActive ? "Optimal (Ultimate Plan - TrayTrigger Active)" : $"Standard ({GetActivePlanFriendlyName()})",
             RequiresAdmin = false,
-            RequiresReboot = false
+            RequiresReboot = false,
+            IsOptIn = true
         });
 
         bool gameModeEnabled = CheckGameModeEnabled();
@@ -157,34 +175,6 @@ public partial class SystemTweaksService
             RequiresReboot = false
         });
 
-        bool sysResponsivenessOptimal = CheckSystemResponsivenessOptimal();
-        list.Add(new SystemTweakItem
-        {
-            Id = "sys_responsiveness",
-            Name = "System Responsiveness (MMCSS Gaming Reserve)",
-            Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Reduces the CPU reserve for lower-priority MMCSS tasks to the supported minimum.",
-            WhyItMatters = "Windows reserves 20% of CPU resources for low-priority background tasks by default. Microsoft's MMCSS documentation clamps any value below 10 back up to 20, so 10 is the lowest reserve Windows actually honors - it leaves more scheduling headroom for latency-sensitive foreground workloads like games.",
-            IsOptimal = sysResponsivenessOptimal,
-            StatusText = sysResponsivenessOptimal ? "Optimal (10% Reserved - Minimum Supported)" : "Standard (20% Reserved)",
-            RequiresAdmin = true,
-            RequiresReboot = false
-        });
-
-        bool mmcssGamesPriorityOptimal = CheckMmcssGamesPriorityOptimal();
-        list.Add(new SystemTweakItem
-        {
-            Id = "mmcss_games_priority",
-            Name = "MMCSS \"Games\" Task Scheduling Tuning",
-            Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Raises the Multimedia Class Scheduler's built-in \"Games\" task from its Medium default to High.",
-            WhyItMatters = "Officially documented by Microsoft, MMCSS grants time-sensitive threads registered under the \"Games\" task category prioritized CPU access - the same mechanism game engines request via AvSetMmThreadCharacteristics. Windows ships this task at Scheduling Category=Medium by default; raising it to High uses the same sanctioned mechanism with more headroom. This is scheduling tuning, not a guaranteed FPS boost - the effect depends on what else is contending for the CPU. (Other fields some optimizer tools also touch here, like SFIO Priority, are documented by Microsoft as not used, so this tweak leaves them alone.)",
-            IsOptimal = mmcssGamesPriorityOptimal,
-            StatusText = mmcssGamesPriorityOptimal ? "Optimal (High Priority)" : "Standard (Medium Priority)",
-            RequiresAdmin = true,
-            RequiresReboot = true
-        });
-
         bool timerResolutionOptimal = CheckTimerResolutionOptimal();
         list.Add(new SystemTweakItem
         {
@@ -197,6 +187,21 @@ public partial class SystemTweaksService
             StatusText = timerResolutionOptimal ? "Optimal (System-Wide High Precision)" : "Standard (Per-Process Default)",
             RequiresAdmin = true,
             RequiresReboot = true
+        });
+
+        bool visualFxPerformance = CheckVisualFxPerformance();
+        list.Add(new SystemTweakItem
+        {
+            Id = "visual_fx",
+            Name = "Windows Visual Effects (Performance Mode for DWM)",
+            Category = TweakCategory.CpuAndPower,
+            ShortDescription = "Disables desktop window minimize animations and drop shadows to reduce compositor load.",
+            WhyItMatters = "Frees a small amount of Desktop Window Manager (DWM) GPU overhead. On modern GPUs/compositors the gaming performance impact is marginal - this is mostly a visual-polish-for-a-small-gain tradeoff, so it's off by default and left to you to decide.",
+            IsOptimal = visualFxPerformance,
+            StatusText = visualFxPerformance ? "Optimal (Performance Profile)" : "Standard (Visual Effects On)",
+            RequiresAdmin = false,
+            RequiresReboot = false,
+            IsOptIn = true
         });
 
         // ---------------------------------------------------------------------
@@ -217,6 +222,21 @@ public partial class SystemTweaksService
             StatusText = netThrottlingDisabled ? "Optimal (Uncapped Packet Rate)" : "Standard (Throttled)",
             RequiresAdmin = true,
             RequiresReboot = false
+        });
+
+        bool nagleDisabled = CheckNagleDisabled();
+        list.Add(new SystemTweakItem
+        {
+            Id = "nagle_disable",
+            Name = "Disable Nagle's Algorithm (TCP Send Delay)",
+            Category = TweakCategory.NetworkAndBackground,
+            ShortDescription = "Disables TCP's Nagle buffering delay on your network adapter(s) so small, latency-sensitive packets send immediately instead of being batched.",
+            WhyItMatters = "Real-time multiplayer games (FPS/MOBA-style) overwhelmingly use UDP for latency-sensitive traffic specifically to avoid Nagle/ACK-delay coupling in the first place - TCP in a modern game is typically reserved for matchmaking/chat/patching, where the delay doesn't matter. A TCP-based app that actually cares about latency can also request TCP_NODELAY itself. This makes the tweak largely situational rather than a broad win, so it's off by default.",
+            IsOptimal = nagleDisabled,
+            StatusText = nagleDisabled ? "Optimal (Nagle Disabled)" : "Standard (Nagle Enabled)",
+            RequiresAdmin = true,
+            RequiresReboot = false,
+            IsOptIn = true
         });
 
         bool deliveryOptDisabled = CheckDeliveryOptimizationDisabled();
@@ -375,23 +395,23 @@ public partial class SystemTweaksService
                 case "fse_behavior":
                     return SetFseDisabled(enableOptimal);
 
-                case "game_mode":
-                    return SetGameMode(enableOptimal);
-
                 case "power_plan":
                     return SetPowerPlan(enableOptimal);
 
-                case "sys_responsiveness":
-                    return SetSystemResponsiveness(enableOptimal);
-
-                case "mmcss_games_priority":
-                    return SetMmcssGamesPriority(enableOptimal);
+                case "game_mode":
+                    return SetGameMode(enableOptimal);
 
                 case "timer_resolution":
                     return SetTimerResolution(enableOptimal);
 
+                case "visual_fx":
+                    return SetVisualFx(enableOptimal);
+
                 case "net_throttling":
                     return SetNetworkThrottling(enableOptimal);
+
+                case "nagle_disable":
+                    return SetNagleDisabled(enableOptimal);
 
                 case "delivery_opt":
                     return SetDeliveryOptimization(enableOptimal);
@@ -430,12 +450,12 @@ public partial class SystemTweaksService
             "hags" => CheckHagsEnabled(),
             "windowed_opts" => CheckWindowedOptsEnabled(),
             "fse_behavior" => CheckFseDisabled(),
-            "game_mode" => CheckGameModeEnabled(),
             "power_plan" => CheckUltimatePlanActive(),
-            "sys_responsiveness" => CheckSystemResponsivenessOptimal(),
-            "mmcss_games_priority" => CheckMmcssGamesPriorityOptimal(),
+            "game_mode" => CheckGameModeEnabled(),
             "timer_resolution" => CheckTimerResolutionOptimal(),
+            "visual_fx" => CheckVisualFxPerformance(),
             "net_throttling" => CheckNetworkThrottlingDisabled(),
+            "nagle_disable" => CheckNagleDisabled(),
             "delivery_opt" => CheckDeliveryOptimizationDisabled(),
             "game_dvr" => CheckGameDvrDisabled(),
             "telemetry_sweeps" => CheckTelemetryDisabled(),
@@ -449,7 +469,7 @@ public partial class SystemTweaksService
     /// Tweak IDs the preset/reset actions apply that require a restart to fully take effect -
     /// used by the UI to decide whether to show a single consolidated restart prompt.
     /// </summary>
-    public static readonly string[] RebootRequiredTweakIds = { "hags", "mmcss_games_priority", "timer_resolution" };
+    public static readonly string[] RebootRequiredTweakIds = { "hags", "timer_resolution" };
 
     public void ApplyRecommendedPerformancePreset()
     {
@@ -458,35 +478,32 @@ public partial class SystemTweaksService
         ApplyTweak("windowed_opts", true);
         ApplyTweak("fse_behavior", true);
         ApplyTweak("game_mode", true);
-        ApplyTweak("power_plan", true);
         ApplyTweak("game_dvr", true);
 
         // Tweaks that write to HKLM. Applying each individually via ApplyTweak would spawn a
         // separate elevated reg.exe (and UAC prompt) per tweak when not already running as
         // admin - batch them into a single elevated call so the preset needs at most one prompt.
         SetHklmValuesBatch(
-            (@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "SystemResponsiveness", 10, RegistryValueKind.DWord),
             (@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF), RegistryValueKind.DWord),
             (@"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization", "DODownloadMode", 0, RegistryValueKind.DWord),
             (@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0, RegistryValueKind.DWord),
             (@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2, RegistryValueKind.DWord),
-            (@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", 1, RegistryValueKind.DWord),
-            (MmcssGamesTaskPath, "Scheduling Category", "High", RegistryValueKind.String));
+            (@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", 1, RegistryValueKind.DWord));
     }
 
     public void ResetAllToDefaults()
     {
         ApplyTweak("mouse_accel", false);
+        ApplyTweak("power_plan", false);
         ResetHagsToDefault();
         ApplyTweak("windowed_opts", false);
         ApplyTweak("fse_behavior", false);
         ApplyTweak("game_mode", false);
-        ApplyTweak("power_plan", false);
         ApplyTweak("game_dvr", false);
-        ApplyTweak("sys_responsiveness", false);
-        ApplyTweak("mmcss_games_priority", false);
         ApplyTweak("timer_resolution", false);
+        ApplyTweak("visual_fx", false);
         ApplyTweak("net_throttling", false);
+        ResetNagleToDefault();
         ResetDeliveryOptimizationToDefault();
         ResetTelemetryToDefault();
         ApplyTweak("game_bar_overlay", false);
@@ -505,6 +522,36 @@ public partial class SystemTweaksService
 
     private static bool ResetTelemetryToDefault() =>
         DeleteHklmValue(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry");
+
+    private static bool ResetNagleToDefault()
+    {
+        try
+        {
+            List<string> interfaceNames;
+            using (var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath))
+            {
+                if (interfacesKey == null) return false;
+                interfaceNames = new List<string>(interfacesKey.GetSubKeyNames());
+            }
+
+            if (interfaceNames.Count == 0) return false;
+
+            var deletes = new List<(string SubKey, string ValueName)>();
+            foreach (var name in interfaceNames)
+            {
+                string subKey = $@"{TcpInterfacesPath}\{name}";
+                deletes.Add((subKey, "TcpAckFrequency"));
+                deletes.Add((subKey, "TCPNoDelay"));
+            }
+
+            return DeleteHklmValuesBatch(deletes.ToArray());
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"ResetNagleToDefault failed: {ex.Message}");
+            return false;
+        }
+    }
 
     // =========================================================================
     // Check Implementations
@@ -575,23 +622,6 @@ public partial class SystemTweaksService
         return false;
     }
 
-    private static bool CheckGameModeEnabled()
-    {
-        try
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar");
-            if (key != null)
-            {
-                var val = key.GetValue("AllowAutoGameMode");
-                return val == null || (val is int i && i != 0);
-            }
-        }
-        catch { }
-        return true;
-    }
-
-    private const string UltimatePlanName = "Ultimate Plan - TrayTrigger";
-
     private static bool CheckUltimatePlanActive()
     {
         try
@@ -624,37 +654,60 @@ public partial class SystemTweaksService
         return false;
     }
 
-    private static bool CheckSystemResponsivenessOptimal()
+    private static string GetActivePlanFriendlyName()
     {
         try
         {
-            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile");
-            if (key != null)
+            string? activeGuid = GetActivePowerSchemeGuid();
+            if (!string.IsNullOrWhiteSpace(activeGuid))
             {
-                var val = key.GetValue("SystemResponsiveness");
-                return val is int i && i == 10;
+                using var schemeKey = Registry.LocalMachine.OpenSubKey(
+                    $@"SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes\{activeGuid}");
+                string? friendlyName = schemeKey?.GetValue("FriendlyName") as string;
+                if (!string.IsNullOrWhiteSpace(friendlyName) && !friendlyName.StartsWith('@'))
+                {
+                    return friendlyName;
+                }
             }
         }
         catch { }
-        return false;
+
+        try
+        {
+            string output = RunPowercfg("/getactivescheme");
+            int startParen = output.IndexOf('(');
+            int endParen = output.LastIndexOf(')');
+            if (startParen >= 0 && endParen > startParen)
+            {
+                string name = output.Substring(startParen + 1, endParen - startParen - 1).Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    return name;
+                }
+            }
+        }
+        catch { }
+
+        return "Balanced";
     }
 
-    private const string MmcssGamesTaskPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games";
-
-    private static bool CheckMmcssGamesPriorityOptimal()
+    private static bool CheckGameModeEnabled()
     {
         try
         {
-            using var key = Registry.LocalMachine.OpenSubKey(MmcssGamesTaskPath);
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar");
             if (key != null)
             {
-                string? category = key.GetValue("Scheduling Category") as string;
-                return string.Equals(category, "High", StringComparison.OrdinalIgnoreCase);
+                var val = key.GetValue("AllowAutoGameMode");
+                return val == null || (val is int i && i != 0);
             }
         }
         catch { }
-        return false;
+        return true;
     }
+
+    internal const string UltimatePlanName = "Ultimate Plan - TrayTrigger";
+    internal const string MmcssGamesTaskPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games";
 
     private static bool CheckTimerResolutionOptimal()
     {
@@ -671,6 +724,47 @@ public partial class SystemTweaksService
         return false;
     }
 
+    private static bool CheckVisualFxPerformance()
+    {
+        // VisualFXSetting alone is just a status marker Windows' own dialog writes - it doesn't
+        // reliably reflect whether animations/shadows are actually off. Query the live OS state
+        // of the two effects this tweak actually controls instead.
+        try
+        {
+            return !GetMinimizeAnimationEnabled() && !GetDropShadowEnabled();
+        }
+        catch { }
+        return false;
+    }
+
+    private static bool GetMinimizeAnimationEnabled()
+    {
+        var info = new ANIMATIONINFO { cbSize = (uint)Marshal.SizeOf<ANIMATIONINFO>() };
+        if (SystemParametersInfoAnimation(SPI_GETANIMATION, info.cbSize, ref info, 0))
+        {
+            return info.iMinAnimate != 0;
+        }
+        return true; // assume Windows' default (on) if the query fails
+    }
+
+    private static bool GetDropShadowEnabled()
+    {
+        IntPtr buffer = Marshal.AllocHGlobal(sizeof(int));
+        try
+        {
+            Marshal.WriteInt32(buffer, 1);
+            if (SystemParametersInfo(SPI_GETDROPSHADOW, 0, buffer, 0))
+            {
+                return Marshal.ReadInt32(buffer) != 0;
+            }
+            return true; // assume Windows' default (on) if the query fails
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
     private static bool CheckNetworkThrottlingDisabled()
     {
         try
@@ -681,6 +775,38 @@ public partial class SystemTweaksService
                 var val = key.GetValue("NetworkThrottlingIndex");
                 if (val is int i) return (uint)i == 0xFFFFFFFF || i == -1;
             }
+        }
+        catch { }
+        return false;
+    }
+
+    private const string TcpInterfacesPath = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";
+
+    private static bool CheckNagleDisabled()
+    {
+        try
+        {
+            using var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath);
+            if (interfacesKey == null) return false;
+
+            var subKeyNames = interfacesKey.GetSubKeyNames();
+            if (subKeyNames.Length == 0) return false;
+
+            // Optimal only when every network adapter interface has both values set - a single
+            // untouched adapter (e.g. a VPN or virtual adapter added later) means Nagle is still
+            // in effect for traffic routed through it.
+            foreach (var name in subKeyNames)
+            {
+                using var ifaceKey = interfacesKey.OpenSubKey(name);
+                if (ifaceKey == null) continue;
+
+                var ack = ifaceKey.GetValue("TcpAckFrequency");
+                var noDelay = ifaceKey.GetValue("TCPNoDelay");
+                bool ackOk = ack is int a && a == 1;
+                bool noDelayOk = noDelay is int nd && nd == 1;
+                if (!ackOk || !noDelayOk) return false;
+            }
+            return true;
         }
         catch { }
         return false;
@@ -886,42 +1012,7 @@ public partial class SystemTweaksService
     [GeneratedRegex(@"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})")]
     private static partial Regex GuidRegex();
 
-    private static bool SetPowerPlan(bool useUltimatePlan)
-    {
-        try
-        {
-            if (!useUltimatePlan)
-            {
-                RunPowercfg($"/setactive {BalancedPlanGuid}");
-                NotifySettingsChanged();
-                return string.Equals(GetActivePowerSchemeGuid(), BalancedPlanGuid, StringComparison.OrdinalIgnoreCase);
-            }
-
-            string? schemeGuid = FindExistingUltimatePlanGuid() ?? CreateUltimateTrayTriggerPlan();
-            if (string.IsNullOrWhiteSpace(schemeGuid))
-            {
-                LoggingService.Warn("SystemTweaksService", "Could not create or locate the 'Ultimate Plan - TrayTrigger' power scheme.");
-                return false;
-            }
-
-            // Tuned per community gaming guidance (drxoptimizer.com/blog/best-power-plan-gaming):
-            // lock CPU min/max state at 100%, disable core parking, aggressive turbo boost,
-            // active cooling, and disable PCIe/USB power-saving states that otherwise cause
-            // frame-time spikes and input lag when cores or devices wake from an idle state.
-            bool tweaksApplied = ApplyUltimatePlanTweaks(schemeGuid);
-            RunPowercfg($"/setactive {schemeGuid}");
-            NotifySettingsChanged();
-            bool activated = string.Equals(GetActivePowerSchemeGuid(), schemeGuid, StringComparison.OrdinalIgnoreCase);
-            return tweaksApplied && activated;
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SystemTweaksService", $"SetPowerPlan failed: {ex.Message}");
-            return false;
-        }
-    }
-
-    private static string? GetActivePowerSchemeGuid()
+    internal static string? GetActivePowerSchemeGuid()
     {
         try
         {
@@ -946,43 +1037,6 @@ public partial class SystemTweaksService
         catch { }
 
         return null;
-    }
-
-    private static string GetActivePlanFriendlyName()
-    {
-        try
-        {
-            string? activeGuid = GetActivePowerSchemeGuid();
-            if (!string.IsNullOrWhiteSpace(activeGuid))
-            {
-                using var schemeKey = Registry.LocalMachine.OpenSubKey(
-                    $@"SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes\{activeGuid}");
-                string? friendlyName = schemeKey?.GetValue("FriendlyName") as string;
-                if (!string.IsNullOrWhiteSpace(friendlyName) && !friendlyName.StartsWith('@'))
-                {
-                    return friendlyName;
-                }
-            }
-        }
-        catch { }
-
-        try
-        {
-            string output = RunPowercfg("/getactivescheme");
-            int startParen = output.IndexOf('(');
-            int endParen = output.LastIndexOf(')');
-            if (startParen >= 0 && endParen > startParen)
-            {
-                string name = output.Substring(startParen + 1, endParen - startParen - 1).Trim();
-                if (!string.IsNullOrWhiteSpace(name))
-                {
-                    return name;
-                }
-            }
-        }
-        catch { }
-
-        return "Balanced";
     }
 
     private static List<string> FindAllUltimatePlanGuids()
@@ -1029,7 +1083,7 @@ public partial class SystemTweaksService
         return guids.ToList();
     }
 
-    private static string? FindExistingUltimatePlanGuid()
+    internal static string? FindExistingUltimatePlanGuid()
     {
         var allGuids = FindAllUltimatePlanGuids();
         if (allGuids.Count == 0) return null;
@@ -1055,7 +1109,7 @@ public partial class SystemTweaksService
         return primaryGuid;
     }
 
-    private static string? CreateUltimateTrayTriggerPlan()
+    internal static string? CreateUltimateTrayTriggerPlan()
     {
         try
         {
@@ -1078,7 +1132,38 @@ public partial class SystemTweaksService
         }
     }
 
-    private static bool ApplyUltimatePlanTweaks(string schemeGuid)
+    private static bool SetPowerPlan(bool useUltimatePlan)
+    {
+        try
+        {
+            if (!useUltimatePlan)
+            {
+                RunPowercfg($"/setactive {BalancedPlanGuid}");
+                NotifySettingsChanged();
+                return string.Equals(GetActivePowerSchemeGuid(), BalancedPlanGuid, StringComparison.OrdinalIgnoreCase);
+            }
+
+            string? schemeGuid = FindExistingUltimatePlanGuid() ?? CreateUltimateTrayTriggerPlan();
+            if (string.IsNullOrWhiteSpace(schemeGuid))
+            {
+                LoggingService.Warn("SystemTweaksService", "Could not create or locate the 'Ultimate Plan - TrayTrigger' power scheme.");
+                return false;
+            }
+
+            bool tweaksApplied = ApplyUltimatePlanTweaks(schemeGuid);
+            RunPowercfg($"/setactive {schemeGuid}");
+            NotifySettingsChanged();
+            bool activated = string.Equals(GetActivePowerSchemeGuid(), schemeGuid, StringComparison.OrdinalIgnoreCase);
+            return tweaksApplied && activated;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"SetPowerPlan failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    internal static bool ApplyUltimatePlanTweaks(string schemeGuid)
     {
         var settings = new (string Subgroup, string Setting, int Val)[]
         {
@@ -1124,7 +1209,7 @@ public partial class SystemTweaksService
         }
     }
 
-    private static string RunPowercfg(string arguments)
+    internal static string RunPowercfg(string arguments)
     {
         try
         {
@@ -1150,32 +1235,99 @@ public partial class SystemTweaksService
         }
     }
 
-    private static bool SetSystemResponsiveness(bool optimal)
-    {
-        // Microsoft's MMCSS docs: values below 10 are clamped back up to 20, so 10 - not 0 -
-        // is the lowest reserve Windows actually honors. See CheckSystemResponsivenessOptimal.
-        int val = optimal ? 10 : 20;
-        return SetHklmDword(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "SystemResponsiveness", val);
-    }
-
-    private static bool SetMmcssGamesPriority(bool highPriority)
-    {
-        // SFIO Priority is intentionally not written here - Microsoft's MMCSS docs state it
-        // "is not used", so setting it would be a no-op that only misrepresents what this does.
-        string category = highPriority ? "High" : "Medium";
-        return SetHklmValuesBatch(
-            (MmcssGamesTaskPath, "Scheduling Category", category, RegistryValueKind.String));
-    }
-
     private static bool SetTimerResolution(bool enableGlobal)
     {
         return SetHklmDword(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", enableGlobal ? 1 : 0);
+    }
+
+    private static bool SetVisualFx(bool performanceMode)
+    {
+        bool ok = true;
+
+        // Status marker: what Windows' own Advanced System Settings dialog also writes so it
+        // shows the matching radio button selected. Not relied on for our own Check anymore.
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects");
+            key?.SetValue("VisualFXSetting", performanceMode ? 2 : 1, RegistryValueKind.DWord);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to write VisualFXSetting marker: {ex.Message}");
+            ok = false;
+        }
+
+        // The actual effects: minimize/restore window animation and window drop shadows.
+        try
+        {
+            var info = new ANIMATIONINFO
+            {
+                cbSize = (uint)Marshal.SizeOf<ANIMATIONINFO>(),
+                iMinAnimate = performanceMode ? 0 : 1
+            };
+            ok &= SystemParametersInfoAnimation(SPI_SETANIMATION, info.cbSize, ref info, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to set minimize animation: {ex.Message}");
+            ok = false;
+        }
+
+        try
+        {
+            var dropShadowValue = new IntPtr(performanceMode ? 0 : 1);
+            ok &= SystemParametersInfo(SPI_SETDROPSHADOW, 0, dropShadowValue, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to set drop shadow: {ex.Message}");
+            ok = false;
+        }
+
+        return ok;
     }
 
     private static bool SetNetworkThrottling(bool disableThrottle)
     {
         int val = disableThrottle ? unchecked((int)0xFFFFFFFF) : 10;
         return SetHklmDword(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", val);
+    }
+
+    private static bool SetNagleDisabled(bool disableNagle)
+    {
+        // Reverting to "Nagle enabled" means restoring the machine default of no value
+        // present, not writing 0 (TcpAckFrequency=0 is outside the documented 1-255 range).
+        if (!disableNagle)
+        {
+            return ResetNagleToDefault();
+        }
+
+        try
+        {
+            List<string> interfaceNames;
+            using (var interfacesKey = Registry.LocalMachine.OpenSubKey(TcpInterfacesPath))
+            {
+                if (interfacesKey == null) return false;
+                interfaceNames = new List<string>(interfacesKey.GetSubKeyNames());
+            }
+
+            if (interfaceNames.Count == 0) return false;
+
+            var writes = new List<(string, string, object, RegistryValueKind)>();
+            foreach (var name in interfaceNames)
+            {
+                string subKey = $@"{TcpInterfacesPath}\{name}";
+                writes.Add((subKey, "TcpAckFrequency", 1, RegistryValueKind.DWord));
+                writes.Add((subKey, "TCPNoDelay", 1, RegistryValueKind.DWord));
+            }
+
+            return SetHklmValuesBatch(writes.ToArray());
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"SetNagleDisabled failed: {ex.Message}");
+            return false;
+        }
     }
 
     private static bool SetDeliveryOptimization(bool disableP2P)
@@ -1234,7 +1386,7 @@ public partial class SystemTweaksService
     // Safe HKLM Modifier (Direct if admin, elevated reg.exe if not)
     // =========================================================================
 
-    private static bool SetHklmDword(string subKey, string valueName, int value)
+    internal static bool SetHklmDword(string subKey, string valueName, int value)
     {
         return SetHklmValuesBatch((subKey, valueName, value, RegistryValueKind.DWord));
     }
@@ -1244,7 +1396,7 @@ public partial class SystemTweaksService
     /// directly with no prompt. When not elevated, all writes are chained into a single elevated
     /// reg.exe/cmd.exe invocation so the caller only sees one UAC prompt instead of one per value.
     /// </summary>
-    private static bool SetHklmValuesBatch(params (string SubKey, string ValueName, object Value, RegistryValueKind Kind)[] writes)
+    internal static bool SetHklmValuesBatch(params (string SubKey, string ValueName, object Value, RegistryValueKind Kind)[] writes)
     {
         if (writes.Length == 0) return true;
 
@@ -1315,7 +1467,7 @@ public partial class SystemTweaksService
         }
     }
 
-    private static bool DeleteHklmValue(string subKey, string valueName)
+    internal static bool DeleteHklmValue(string subKey, string valueName)
     {
         return DeleteHklmValuesBatch((subKey, valueName));
     }

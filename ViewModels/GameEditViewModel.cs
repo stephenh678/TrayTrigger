@@ -31,6 +31,7 @@ public class GameEditViewModel : ViewModelBase
     private bool _isSteamGame;
     private bool _forceSteamOverlayTag;
     private string? _steamAppId;
+    private PerformanceProfileMode _performanceProfile;
     private string? _customIconPath;
     private BitmapImage? _iconPreview;
     private string? _customCoverPath;
@@ -85,6 +86,7 @@ public class GameEditViewModel : ViewModelBase
         _isSteamGame = game.IsSteamGame;
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
+        _performanceProfile = game.PerformanceProfile;
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
 
@@ -155,6 +157,15 @@ public class GameEditViewModel : ViewModelBase
         get => _hotkey;
         set { _hotkey = value; OnPropertyChanged(); }
     }
+
+    public PerformanceProfileMode PerformanceProfile
+    {
+        get => _performanceProfile;
+        set { _performanceProfile = value; OnPropertyChanged(); }
+    }
+
+    public IReadOnlyList<PerformanceProfileMode> PerformanceProfileOptions { get; } =
+        new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };
 
     public bool IsSteamGame
     {
@@ -664,6 +675,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.IsSteamGame = IsSteamGame;
         SourceGame.ForceSteamOverlayTag = ForceSteamOverlayTag;
         SourceGame.SteamAppId = string.IsNullOrWhiteSpace(SteamAppId) ? null : SteamAppId.Trim();
+        SourceGame.PerformanceProfile = PerformanceProfile;
 
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))
