@@ -487,7 +487,7 @@ than the whole file, so its context stays small and its commits stay reviewable.
 - **What:** `DisplayCoverImage` decodes the file each time WPF reads it. The `HeaderImageUrl` branch calls `Freeze()` on a `BitmapImage` that is still downloading, which throws and is swallowed, so the fallback returns null. Cache the decoded image in a field; for the remote case either skip `Freeze()` or download bytes via `HttpClient` first.
 
 ### L-19 No automated tests
-- [ ] Status: Open | Resolution:
+- [ ] Status: Needs human decision | Resolution: Requires adding a new NuGet package (xUnit), which needs explicit approval before adding, per prior decision.
 - **What:** Add `TrayTrigger.Tests` (xUnit). Pure functions worth covering first: `HotkeyManager.ParseHotkey`, `GitHubReleaseInfo.ParsedVersion`, `SteamSearchService.CalculateSimilarity/NormalizeForMatching/SanitizeSearchQuery`, `GameNameExtractor.CleanFolderName/CleanExecutableStem/IsAcceptableTitle`, `SteamMetadataService.CleanHtmlText` (make internal + `InternalsVisibleTo`), `FolderScannerService.IsDisqualified`. Several findings above include test cases.
 
 ### L-20 Inconsistent fallback for tray item counts
