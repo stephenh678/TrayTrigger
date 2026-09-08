@@ -82,6 +82,58 @@ public class HelpContentServiceTests
         Assert.True(HelpContentService.HasTopic("tweaks/" + tweakId), $"Help/tweaks/{tweakId}.md is missing");
     }
 
+    [Theory]
+    // Topic ids referenced from XAML CommandParameter="..." or view-model HelpTopicId values.
+    // If a link is added in the UI, add its id here so it can never dead-end.
+    [InlineData("tweaks/overview")]
+    [InlineData("tweaks/restore_point")]
+    [InlineData("profiles/overview")]
+    [InlineData("profiles/power_plan")]
+    [InlineData("profiles/gpu_preference")]
+    [InlineData("profiles/system_responsiveness")]
+    [InlineData("profiles/mmcss_games_priority")]
+    [InlineData("profiles/above_normal_priority")]
+    [InlineData("profiles/defender_exclusion")]
+    [InlineData("scripts/overview")]
+    [InlineData("updates/prerelease")]
+    [InlineData("library/artwork")]
+    [InlineData("library/titles")]
+    [InlineData("troubleshooting/logs")]
+    public void EveryLinkedTopic_Exists(string topicId)
+    {
+        Assert.True(HelpContentService.HasTopic(topicId), $"Help/{topicId}.md is missing");
+    }
+
+    [Fact]
+    public void GetIndex_GroupsBySectionInDisplayOrder_WithOverviewFirst()
+    {
+        var index = HelpContentService.GetIndex();
+
+        Assert.Equal(
+            new[] { "tweaks", "profiles", "scripts", "library", "updates", "troubleshooting" },
+            index.Select(g => g.Section).ToArray());
+
+        var tweaks = index.First(g => g.Section == "tweaks");
+        Assert.Equal("Performance Tweaks", tweaks.Label);
+        Assert.Equal("tweaks/overview", tweaks.Topics[0].Id);
+        Assert.Equal("How Performance Tweaks work", tweaks.Topics[0].Title);
+        Assert.True(tweaks.Topics.Count >= 17);
+
+        // Everything after the overview is alphabetical by title.
+        var rest = tweaks.Topics.Skip(1).Select(t => t.Title).ToList();
+        Assert.Equal(rest.OrderBy(t => t, StringComparer.OrdinalIgnoreCase), rest);
+    }
+
+    [Theory]
+    [InlineData("tweaks/hags", "Performance Tweaks")]
+    [InlineData("profiles/overview", "Performance Profiles")]
+    [InlineData("scripts/overview", "Game Scripts")]
+    [InlineData("misc/thing", "Misc")]
+    public void SectionLabel_MapsKnownSections(string id, string expected)
+    {
+        Assert.Equal(expected, HelpContentService.SectionLabel(id));
+    }
+
     [Fact]
     public void MissingTopic_ReturnsNull()
     {

@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
         xmlns:views="clr-namespace:TrayTrigger.Views"
+        xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="TrayTrigger - Game Launcher"
         Height="700" Width="1020"
@@ -1402,9 +1403,11 @@
                                     <CheckBox Content="Receive pre-release (beta) updates"
                                               IsChecked="{Binding IncludePrereleaseUpdates}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Also offer beta and release-candidate builds (e.g. v1.3.0-beta.1) published as GitHub pre-releases. These get new features first but may be less stable. Leave off to receive only stable releases."
+                                    <TextBlock Text="Also offer beta builds. New features first, but they may be less stable."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="About the beta channel" Margin="24,0,0,10"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
 
                                     <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                                     <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}" 
@@ -1488,14 +1491,16 @@
                                         <TextBlock Text="{Binding PosterRefreshStatus}" Foreground="{StaticResource BrushAccentHover}"
                                                    FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,4"/>
                                     </StackPanel>
-                                    <TextBlock Text="Re-checks poster art for every game in your library, even ones that already have a cover. Picks up Steam's official artwork once it's published (e.g. a game you added before release has since launched) as well as any newly added/changed art sources like SteamGridDB below."
+                                    <TextBlock Text="Re-checks every game for better art, including ones that already have a cover."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="0,4,0,12" TextWrapping="Wrap"/>
+                                               Margin="0,4,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How artwork is found" Margin="0,0,0,12"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/artwork"/>
 
                                     <CheckBox Content="Use SteamGridDB for fallback poster art (optional)"
                                               IsChecked="{Binding UseSteamGridDbArt}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Uses community-submitted vertical box art from SteamGridDB.com as a fallback when official Steam artwork is not available yet (e.g. new, indie, or upcoming games). Requires a free API key." 
+                                    <TextBlock Text="Community box art for games Steam has no poster for yet. Needs a free API key."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                                Margin="24,3,0,8" TextWrapping="Wrap"/>
 
@@ -1520,13 +1525,15 @@
                                 <StackPanel>
                                     <TextBlock Text="Game Titles &amp; Metadata Detection" FontSize="13.5" FontWeight="SemiBold" 
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Configure how game titles and categories are determined when importing files or scanning folders." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                                    <TextBlock Text="How game titles and categories are determined when importing files or scanning folders."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,0,10"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
 
-                                    <CheckBox Content="Search official game titles online (Steam Database)" 
+                                    <CheckBox Content="Search official game titles online (Steam Database)"
                                               IsChecked="{Binding SearchOfficialTitleOnline}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Queries the Steam Store database to match official commercial titles, correct capitalization, and store IDs (e.g. 'The Blood of Dawnwalker' instead of raw binary stems)." 
+                                    <TextBlock Text="Looks up the official title and Steam App ID instead of using the file name."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                                Margin="24,3,0,8" TextWrapping="Wrap"/>
 
@@ -1541,14 +1548,14 @@
                                     <CheckBox Content="Local title fallback: Prefer executable (.exe) over folder name" 
                                               IsChecked="{Binding PreferExeForGameName}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="When querying online (or as fallback when offline / unmatched), derives the base title from the executable's metadata and file name rather than the parent folder." 
+                                    <TextBlock Text="Builds the title from the exe's name and metadata rather than its parent folder."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                                     <CheckBox Content="Automatically categorize games from store genres" 
                                               IsChecked="{Binding AutoCategorizeFromSteam}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Assigns primary official genres (e.g. Action, RPG, Strategy) to newly added games instead of leaving them Uncategorized." 
+                                    <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                                Margin="24,3,0,2" TextWrapping="Wrap"/>
                                 </StackPanel>
@@ -1715,9 +1722,11 @@
                                     <CheckBox Content="Create a System Restore Point before applying a preset or reset"
                                               IsChecked="{Binding CreateRestorePointBeforeTweaks}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Gives you a one-click Windows recovery rollback if 'Apply Performance Preset' or 'Reset Defaults' causes issues. Recommended: on. (Windows allows at most one automatic restore point per 24 hours.)"
+                                    <TextBlock Text="A Windows rollback point in case a bulk change causes problems. Recommended on."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="About restore points" Margin="24,0,0,2"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/restore_point"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -1759,9 +1768,11 @@
                                     <CheckBox Content="Enable Verbose Logging" 
                                               IsChecked="{Binding VerboseLoggingEnabled}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="When enabled, logs comprehensive traces including process launch parameters, heuristic scoring breakdown, icon extractions, and registry checks." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,12" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Adds detailed traces (launch parameters, scoring, registry checks) to the log. Turn on when reproducing a problem."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="Reading the log &amp; reporting a problem" Margin="24,0,0,12"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/logs"/>
 
                                     <!-- Active Debug Log Info Box -->
                                     <Border Background="#16161B" CornerRadius="6" BorderBrush="#252530" BorderThickness="1" Padding="12,10">
@@ -2405,12 +2416,49 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- Card 0: Help Topics index (every embedded Help/**.md, grouped by section) -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="Help Topics" FontSize="13.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="The same explanations that sit behind every Learn more link, in one place."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,10" TextWrapping="Wrap"/>
+                                    <ItemsControl ItemsSource="{Binding HelpTopicIndex}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,0,0,8">
+                                                    <TextBlock Text="{Binding Label}" FontSize="10.5" FontWeight="Bold"
+                                                               Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
+                                                    <ItemsControl ItemsSource="{Binding Topics}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Button Style="{StaticResource HelpLinkButton}" Content="{Binding Title}" FontSize="11.5"
+                                                                        Margin="0,0,18,5"
+                                                                        Command="{x:Static services:HelpCommands.ShowTopic}"
+                                                                        CommandParameter="{Binding Id}"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Card 1: Centralized Diagnostics Link -->
-                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                     Padding="14,12" Margin="0,0,0,10">
                                 <DockPanel LastChildFill="True">
-                                    <Button DockPanel.Dock="Right" Content="Open Storage &amp; Logs in Settings →" 
+                                    <Button DockPanel.Dock="Right" Content="Open Storage &amp; Logs in Settings →"
                                             Command="{Binding OpenDiagnosticsSettingsCommand}" 
                                             Style="{StaticResource ModernAccentButton}" 
                                             VerticalAlignment="Center" Padding="12,5"/>

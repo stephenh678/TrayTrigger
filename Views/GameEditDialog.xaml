@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="Edit Game Configuration"
         Height="660" Width="820"
@@ -297,7 +298,7 @@
                         <StackPanel>
                             <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Run your own .bat, .cmd, .ps1, or .exe before this game starts and after it exits - close background apps, switch audio devices, set RGB, and so on. Runs alongside the built-in Performance Profile."
+                            <TextBlock Text="Run your own .bat, .cmd, .ps1, or .exe before this game starts and after it exits."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Pre-launch script -->
@@ -327,7 +328,7 @@
                                 <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
-                            <TextBlock Text="Post-exit needs a trackable session: direct .exe launches and Steam games. Other launcher protocols (Epic, GOG, Ubisoft) only support the pre-launch script."
+                            <TextBlock Text="Post-exit runs for .exe and Steam launches only. Epic, GOG, and other launcher links support pre-launch only."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <CheckBox Content="Wait for the pre-launch script to finish before starting the game (up to 30s)"
@@ -340,19 +341,10 @@
                                       IsChecked="{Binding RunScriptsAsAdmin}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,8"/>
 
-                            <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
-                                <StackPanel>
-                                    <TextBlock Text="Optional: game info your script can read" FontSize="11" FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
-                                    <TextBlock FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap">
-                                        <Run Text="Any script works as-is; nothing below is required. If you want one script to behave differently per game, TrayTrigger also passes these details, which your script is free to ignore:"/>
-                                        <LineBreak/>
-                                        <Run Text="• Command-line arguments: %1 = prelaunch or postexit, %2 = game name, %3 = game executable path."/>
-                                        <LineBreak/>
-                                        <Run Text="• Environment variables: TRAYTRIGGER_PHASE, TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_ID, TRAYTRIGGER_GAME_EXE, and TRAYTRIGGER_PLAYTIME_MINUTES after exit. (Not set when running as Administrator.)"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
+                            <TextBlock Text="Any script works as-is. Optionally, your script can read the game name and phase it was called for."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="0,4,0,0"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
                         </StackPanel>
                     </Border>
 

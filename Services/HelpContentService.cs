@@ -23,6 +23,12 @@ public sealed class HelpTopic
     public IReadOnlyList<HelpBlock> Blocks { get; init; } = Array.Empty<HelpBlock>();
 }
 
+/// <summary>One entry in the About tab's help index.</summary>
+public sealed record HelpTopicLink(string Id, string Title);
+
+/// <summary>A section of the help index: its display label and the topics under it.</summary>
+public sealed record HelpTopicGroup(string Section, string Label, IReadOnlyList<HelpTopicLink> Topics);
+
 /// <summary>
 /// Loads "Learn more" help topics from files embedded in the exe. Topics live in the repo under
 /// Help/&lt;section&gt;/&lt;name&gt;.md and are addressed as "section/name" (e.g. "tweaks/hags").
@@ -60,6 +66,62 @@ public static class HelpContentService
     }
 
     public static bool HasTopic(string topicId) => GetTopic(topicId) != null;
+
+    /// <summary>Display order and labels for the help index and the dialog breadcrumb.</summary>
+    private static readonly (string Section, string Label)[] SectionOrder =
+    {
+        ("tweaks", "Performance Tweaks"),
+        ("profiles", "Performance Profiles"),
+        ("scripts", "Game Scripts"),
+        ("library", "Library & Artwork"),
+        ("updates", "Updates"),
+        ("troubleshooting", "Troubleshooting"),
+    };
+
+    /// <summary>Friendly section label for a topic id, e.g. "tweaks/hags" -> "Performance Tweaks".</summary>
+    public static string SectionLabel(string topicId)
+    {
+        int slash = topicId.IndexOf('/');
+        string section = slash < 0 ? topicId : topicId.Substring(0, slash);
+        foreach (var (s, label) in SectionOrder)
+        {
+            if (string.Equals(s, section, StringComparison.OrdinalIgnoreCase)) return label;
+        }
+        return section.Length == 0 ? "Help" : char.ToUpperInvariant(section[0]) + section.Substring(1);
+    }
+
+    /// <summary>
+    /// Every embedded topic grouped by section, in display order, with "overview"-style topics
+    /// first within each group and the rest alphabetical by title.
+    /// </summary>
+    public static IReadOnlyList<HelpTopicGroup> GetIndex()
+    {
+        var groups = new List<HelpTopicGroup>();
+        var bySection = ListTopicIds()
+            .Select(id => (Id: id, Topic: GetTopic(id)))
+            .Where(t => t.Topic != null)
+            .GroupBy(t => t.Id.Contains('/') ? t.Id.Substring(0, t.Id.IndexOf('/')) : t.Id, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        IEnumerable<string> orderedSections = SectionOrder.Select(s => s.Section)
+            .Concat(bySection.Keys.Where(k => !SectionOrder.Any(s => string.Equals(s.Section, k, StringComparison.OrdinalIgnoreCase)))
+                                  .OrderBy(k => k, StringComparer.OrdinalIgnoreCase));
+
+        foreach (string section in orderedSections)
+        {
+            if (!bySection.TryGetValue(section, out var items)) continue;
+
+            var links = items
+                .OrderBy(t => t.Id.EndsWith("/overview", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .ThenBy(t => t.Topic!.Title, StringComparer.OrdinalIgnoreCase)
+                .Select(t => new HelpTopicLink(t.Id, t.Topic!.Title))
+                .ToList();
+
+            groups.Add(new HelpTopicGroup(section, SectionLabel(section + "/"), links));
+        }
+
+        return groups;
+    }
 
     /// <summary>Returns the parsed topic, or null if no such embedded file exists.</summary>
     public static HelpTopic? GetTopic(string topicId)

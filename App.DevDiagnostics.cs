@@ -620,6 +620,46 @@ public partial class App
                 return;
             }
 
+            // --screenshot-system-profiles <out.png>: the Performance Profiles sub-tab.
+            if ((e.Args[i].Equals("--screenshot-system-profiles", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-system-profiles", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.CurrentSection = NavSection.System;
+                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.GameProfiles;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 820, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-edit-bottom <out.png>: the Edit Game dialog scrolled to its end
+            // (scripts card and privileges card).
+            if ((e.Args[i].Equals("--screenshot-edit-bottom", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-edit-bottom", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                var sampleGame = _mainViewModel.Games.FirstOrDefault()?.Game ?? new GameEntry
+                {
+                    Name = "DOOM Eternal",
+                    Category = "Action",
+                    ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe",
+                    WorkingDirectory = @"C:\Games\DOOM Eternal"
+                };
+                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
+                dlg.Show();
+                dlg.UpdateLayout();
+                var sv = FindVisualChild<ScrollViewer>(dlg, s => s.ScrollableHeight > 0);
+                sv?.ScrollToBottom();
+                dlg.UpdateLayout();
+                CaptureVisual(dlg, 820, 660, targetPng);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-help <topicId> <out.png>: renders the HelpDialog for one topic.
             if ((e.Args[i].Equals("--screenshot-help", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-help", StringComparison.OrdinalIgnoreCase)) &&
