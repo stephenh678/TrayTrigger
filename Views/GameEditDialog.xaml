@@ -331,14 +331,16 @@
                             <TextBlock Text="Post-exit runs for .exe and Steam launches only. Epic, GOG, and other launcher links support pre-launch only."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
+                            <!-- Options stay greyed out until a script path is set, so an empty
+                                 card doesn't read as "something is configured". -->
                             <CheckBox Content="Wait for the pre-launch script to finish before starting the game (up to 30s)"
-                                      IsChecked="{Binding WaitForPreLaunchScript}"
+                                      IsChecked="{Binding WaitForPreLaunchScript}" IsEnabled="{Binding HasPreLaunchScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                             <CheckBox Content="Run scripts hidden (no console window)"
-                                      IsChecked="{Binding RunScriptsHidden}"
+                                      IsChecked="{Binding RunScriptsHidden}" IsEnabled="{Binding HasAnyScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                             <CheckBox Content="Run scripts as Administrator (UAC prompt on every launch)"
-                                      IsChecked="{Binding RunScriptsAsAdmin}"
+                                      IsChecked="{Binding RunScriptsAsAdmin}" IsEnabled="{Binding HasAnyScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,8"/>
 
                             <TextBlock Text="Any script works as-is. Optionally, your script can read the game name and phase it was called for."
