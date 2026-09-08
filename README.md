@@ -73,6 +73,7 @@
 - **Single-Source of Truth**: Unified settings for startup, window behaviors, sort options, and theme preferences.
 - **Robust Storage**: Fast atomic JSON persistence with automatic `.bak` backups in `%AppData%\TrayTrigger`.
 - **Global Hotkey Support**: Quickly toggle TrayTrigger with a customizable global hotkey from anywhere in Windows.
+- **Built-In Updater with Opt-In Betas**: Checks GitHub Releases for stable updates and installs them in one click. Turn on *Receive pre-release (beta) updates* in Settings to get beta and release-candidate builds first; leave it off to receive only stable releases.
 
 ---
 

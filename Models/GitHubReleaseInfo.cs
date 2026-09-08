@@ -56,12 +56,23 @@ public class GitHubReleaseInfo
     [JsonPropertyName("prerelease")]
     public bool Prerelease { get; set; }
 
+    [JsonPropertyName("draft")]
+    public bool Draft { get; set; }
+
     [JsonPropertyName("assets")]
     public List<GitHubReleaseAsset> Assets { get; set; } = new();
 
     /// <summary>
-    /// Parses the semantic version from TagName (stripping any leading 'v' or 'V').
-    /// Returns null if unable to parse.
+    /// Full semantic version parsed from TagName, including any pre-release suffix
+    /// (e.g. "v1.3.0-beta.1"). Use this for ordering releases; see <see cref="SemanticVersion"/>.
+    /// </summary>
+    [JsonIgnore]
+    public SemanticVersion? SemVer => SemanticVersion.TryParse(TagName);
+
+    /// <summary>
+    /// Parses the numeric version from TagName (stripping any leading 'v' or 'V' and any
+    /// pre-release suffix). Returns null if unable to parse. Prefer <see cref="SemVer"/> for
+    /// comparisons, since this deliberately treats "1.3.0-beta.1" as equal to "1.3.0".
     /// </summary>
     [JsonIgnore]
     public Version? ParsedVersion

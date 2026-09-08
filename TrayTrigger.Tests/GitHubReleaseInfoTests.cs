@@ -23,4 +23,12 @@ public class GitHubReleaseInfoTests
         var release = new GitHubReleaseInfo { TagName = tagName };
         Assert.Null(release.ParsedVersion);
     }
+
+    [Fact]
+    public void SemVer_KeepsPrereleaseSuffix()
+    {
+        var release = new GitHubReleaseInfo { TagName = "v1.5.0-beta.2" };
+        Assert.Equal("1.5.0-beta.2", release.SemVer?.ToString());
+        Assert.True(release.SemVer!.IsPrerelease);
+    }
 }

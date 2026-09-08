@@ -23,8 +23,13 @@ public partial class UpdateDialog : Window
         _release = release;
         _currentVersion = currentVersion;
 
-        CurrentVersionText.Text = $"v{currentVersion.Major}.{currentVersion.Minor}.{currentVersion.Build}";
+        CurrentVersionText.Text = UpdateService.CurrentVersionDisplay;
         NewVersionText.Text = release.TagName;
+        if (release.Prerelease)
+        {
+            LatestBadge.Visibility = Visibility.Collapsed;
+            PrereleaseBadge.Visibility = Visibility.Visible;
+        }
         ReleaseTitleText.Text = string.IsNullOrWhiteSpace(release.Name) ? release.TagName : release.Name;
 
         string body = release.Body;

@@ -58,8 +58,11 @@
                                        Foreground="#4EC9B0" FontWeight="SemiBold"/>
                         </Border>
 
-                        <Border Background="#1C2E3D" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <Border x:Name="LatestBadge" Background="#1C2E3D" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="LATEST" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
+                        </Border>
+                        <Border x:Name="PrereleaseBadge" Background="#3D2E1C" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock Text="PRE-RELEASE" FontSize="8.5" FontWeight="Bold" Foreground="#E5A94B"/>
                         </Border>
                     </StackPanel>
 
