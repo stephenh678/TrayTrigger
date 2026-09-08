@@ -284,10 +284,73 @@
                             </Grid>
 
                             <!-- Launch Arguments -->
-                            <TextBlock Text="Launch Arguments (optional command-line parameters)" FontSize="11.5" 
+                            <TextBlock Text="Launch Arguments (optional command-line parameters)" FontSize="11.5"
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" 
+                            <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CARD 2b: PRE-LAUNCH / POST-EXIT SCRIPTS -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Run your own .bat, .cmd, .ps1, or .exe before this game starts and after it exits - close background apps, switch audio devices, set RGB, and so on. Runs alongside the built-in Performance Profile."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <!-- Pre-launch script -->
+                            <TextBlock Text="Pre-Launch Script (runs just before the game starts)" FontSize="11.5"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding PreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
+                                        Style="{StaticResource ModernOutlineButton}"/>
+                            </Grid>
+
+                            <!-- Post-exit script -->
+                            <TextBlock Text="Post-Exit Script (runs after the game closes)" FontSize="11.5"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding PostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
+                                        Style="{StaticResource ModernOutlineButton}"/>
+                            </Grid>
+                            <TextBlock Text="Post-exit needs a trackable session: direct .exe launches and Steam games. Other launcher protocols (Epic, GOG, Ubisoft) only support the pre-launch script."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <CheckBox Content="Wait for the pre-launch script to finish before starting the game (up to 30s)"
+                                      IsChecked="{Binding WaitForPreLaunchScript}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                            <CheckBox Content="Run scripts hidden (no console window)"
+                                      IsChecked="{Binding RunScriptsHidden}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                            <CheckBox Content="Run scripts as Administrator (UAC prompt on every launch)"
+                                      IsChecked="{Binding RunScriptsAsAdmin}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,8"/>
+
+                            <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
+                                <StackPanel>
+                                    <TextBlock Text="What your script receives" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
+                                    <TextBlock FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap">
+                                        <Run Text="Arguments: %1 = phase (prelaunch / postexit), %2 = game name, %3 = game executable."/>
+                                        <LineBreak/>
+                                        <Run Text="Environment (not available when running as Administrator): TRAYTRIGGER_PHASE, TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_ID, TRAYTRIGGER_GAME_EXE, TRAYTRIGGER_PLAYTIME_MINUTES (post-exit only)."/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
 

@@ -32,6 +32,11 @@ public class GameEditViewModel : ViewModelBase
     private bool _forceSteamOverlayTag;
     private string? _steamAppId;
     private PerformanceProfileMode _performanceProfile;
+    private string _preLaunchScriptPath;
+    private string _postExitScriptPath;
+    private bool _waitForPreLaunchScript;
+    private bool _runScriptsHidden;
+    private bool _runScriptsAsAdmin;
     private string? _customIconPath;
     private BitmapImage? _iconPreview;
     private string? _customCoverPath;
@@ -87,6 +92,11 @@ public class GameEditViewModel : ViewModelBase
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
         _performanceProfile = game.PerformanceProfile;
+        _preLaunchScriptPath = game.PreLaunchScriptPath;
+        _postExitScriptPath = game.PostExitScriptPath;
+        _waitForPreLaunchScript = game.WaitForPreLaunchScript;
+        _runScriptsHidden = game.RunScriptsHidden;
+        _runScriptsAsAdmin = game.RunScriptsAsAdmin;
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
 
@@ -101,6 +111,8 @@ public class GameEditViewModel : ViewModelBase
 
         BrowseExeCommand = new RelayCommand(BrowseExe);
         BrowseWorkDirCommand = new RelayCommand(BrowseWorkDir);
+        BrowsePreLaunchScriptCommand = new RelayCommand(() => BrowseScript(isPreLaunch: true));
+        BrowsePostExitScriptCommand = new RelayCommand(() => BrowseScript(isPreLaunch: false));
         BrowseIconCommand = new RelayCommand(BrowseIcon);
         ResetIconCommand = new RelayCommand(ResetIcon);
         BrowseCoverCommand = new RelayCommand(BrowseCover);
@@ -166,6 +178,38 @@ public class GameEditViewModel : ViewModelBase
 
     public IReadOnlyList<PerformanceProfileMode> PerformanceProfileOptions { get; } =
         new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };
+
+    // --- Pre-launch / post-exit scripts ---
+
+    public string PreLaunchScriptPath
+    {
+        get => _preLaunchScriptPath;
+        set { _preLaunchScriptPath = value; OnPropertyChanged(); }
+    }
+
+    public string PostExitScriptPath
+    {
+        get => _postExitScriptPath;
+        set { _postExitScriptPath = value; OnPropertyChanged(); }
+    }
+
+    public bool WaitForPreLaunchScript
+    {
+        get => _waitForPreLaunchScript;
+        set { _waitForPreLaunchScript = value; OnPropertyChanged(); }
+    }
+
+    public bool RunScriptsHidden
+    {
+        get => _runScriptsHidden;
+        set { _runScriptsHidden = value; OnPropertyChanged(); }
+    }
+
+    public bool RunScriptsAsAdmin
+    {
+        get => _runScriptsAsAdmin;
+        set { _runScriptsAsAdmin = value; OnPropertyChanged(); }
+    }
 
     public bool IsSteamGame
     {
@@ -263,6 +307,8 @@ public class GameEditViewModel : ViewModelBase
 
     public ICommand BrowseExeCommand { get; }
     public ICommand BrowseWorkDirCommand { get; }
+    public ICommand BrowsePreLaunchScriptCommand { get; }
+    public ICommand BrowsePostExitScriptCommand { get; }
     public ICommand BrowseIconCommand { get; }
     public ICommand ResetIconCommand { get; }
     public ICommand BrowseCoverCommand { get; }
@@ -658,6 +704,22 @@ public class GameEditViewModel : ViewModelBase
         }
     }
 
+    private void BrowseScript(bool isPreLaunch)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = isPreLaunch ? "Select Pre-Launch Script" : "Select Post-Exit Script",
+            Filter = "Scripts & Programs (*.bat;*.cmd;*.ps1;*.exe)|*.bat;*.cmd;*.ps1;*.exe|All Files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            if (isPreLaunch) PreLaunchScriptPath = dialog.FileName;
+            else PostExitScriptPath = dialog.FileName;
+        }
+    }
+
     private void Save()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -676,6 +738,11 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.ForceSteamOverlayTag = ForceSteamOverlayTag;
         SourceGame.SteamAppId = string.IsNullOrWhiteSpace(SteamAppId) ? null : SteamAppId.Trim();
         SourceGame.PerformanceProfile = PerformanceProfile;
+        SourceGame.PreLaunchScriptPath = PreLaunchScriptPath?.Trim().Trim('"') ?? string.Empty;
+        SourceGame.PostExitScriptPath = PostExitScriptPath?.Trim().Trim('"') ?? string.Empty;
+        SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript;
+        SourceGame.RunScriptsHidden = RunScriptsHidden;
+        SourceGame.RunScriptsAsAdmin = RunScriptsAsAdmin;
 
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))

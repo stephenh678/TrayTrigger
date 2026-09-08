@@ -24,6 +24,20 @@ public class GameEntry
     public DateTime? LastEnrichmentAttemptUtc { get; set; }
     public PerformanceProfileMode PerformanceProfile { get; set; } = PerformanceProfileMode.Off;
 
+    /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
+    public string PreLaunchScriptPath { get; set; } = string.Empty;
+    /// <summary>Optional script run after the game exits (direct .exe and Steam launches only).</summary>
+    public string PostExitScriptPath { get; set; } = string.Empty;
+    /// <summary>Hold the game launch until the pre-launch script finishes (capped at 30s).</summary>
+    public bool WaitForPreLaunchScript { get; set; } = true;
+    /// <summary>Run scripts without a visible console window.</summary>
+    public bool RunScriptsHidden { get; set; } = true;
+    /// <summary>Run scripts elevated (UAC prompt). Environment variables are unavailable in this mode.</summary>
+    public bool RunScriptsAsAdmin { get; set; }
+
+    [JsonIgnore]
+    public bool HasScripts => !string.IsNullOrWhiteSpace(PreLaunchScriptPath) || !string.IsNullOrWhiteSpace(PostExitScriptPath);
+
     [JsonIgnore]
     public bool HasSteamOverlay => IsSteamGame || ForceSteamOverlayTag;
 
