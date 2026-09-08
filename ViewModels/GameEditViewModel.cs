@@ -184,14 +184,31 @@ public class GameEditViewModel : ViewModelBase
     public string PreLaunchScriptPath
     {
         get => _preLaunchScriptPath;
-        set { _preLaunchScriptPath = value; OnPropertyChanged(); }
+        set
+        {
+            _preLaunchScriptPath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasPreLaunchScript));
+            OnPropertyChanged(nameof(HasAnyScript));
+        }
     }
 
     public string PostExitScriptPath
     {
         get => _postExitScriptPath;
-        set { _postExitScriptPath = value; OnPropertyChanged(); }
+        set
+        {
+            _postExitScriptPath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasAnyScript));
+        }
     }
+
+    /// <summary>Gates the "wait for pre-launch script" option, which only means something with a pre-launch script set.</summary>
+    public bool HasPreLaunchScript => !string.IsNullOrWhiteSpace(_preLaunchScriptPath);
+
+    /// <summary>Gates the hidden/admin options, which apply to whichever scripts are set.</summary>
+    public bool HasAnyScript => HasPreLaunchScript || !string.IsNullOrWhiteSpace(_postExitScriptPath);
 
     public bool WaitForPreLaunchScript
     {

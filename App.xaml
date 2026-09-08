@@ -648,6 +648,14 @@
             <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,2"/>
+            <Style.Triggers>
+                <!-- Disabled = "not relevant yet": keep the tick visible so the default is still
+                     readable, but fade the whole row so it isn't mistaken for an active choice. -->
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.45"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
 
