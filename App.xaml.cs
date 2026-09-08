@@ -232,9 +232,16 @@ public partial class App : Application
             _startupManager,
             _trayPromotionService);
 
-        Log("Initializing MainWindow...");
-        _mainWindow = new MainWindow(_mainViewModel);
-        MainWindow = _mainWindow;
+        // Constructing MainWindow initializes WPF's D3D render stack (GPU driver DLLs load
+        // immediately) even if it's never shown, so skip it when starting minimized to the tray -
+        // ShowMainWindow() constructs it lazily on first use. Screenshot mode still needs it up
+        // front since the dev args processed below operate on _mainWindow directly.
+        if (!startMinimized || isScreenshot)
+        {
+            Log("Initializing MainWindow...");
+            _mainWindow = new MainWindow(_mainViewModel);
+            MainWindow = _mainWindow;
+        }
 
 #if DEBUG
         ProcessDevArguments(e);
