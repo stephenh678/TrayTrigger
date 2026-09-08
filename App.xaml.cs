@@ -38,6 +38,7 @@ public partial class App : Application
     private SteamScannerService _steamScannerService = null!;
     private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
+    private GameScriptService? _gameScriptService;
     private HotkeyManager _hotkeyManager = null!;
     private StartupManager _startupManager = null!;
     private TrayPromotionService _trayPromotionService = null!;
@@ -213,7 +214,8 @@ public partial class App : Application
         _steamScannerService = new SteamScannerService();
         _performanceProfileService = new PerformanceProfileService(_storageService);
         _performanceProfileService.RecoverFromCrashIfNeeded();
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService);
+        _gameScriptService = new GameScriptService();
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -738,6 +740,7 @@ public partial class App : Application
         try
         {
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
+            _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
 
             if (_mainViewModel != null && _storageService != null)
             {

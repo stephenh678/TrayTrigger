@@ -28,12 +28,14 @@ public partial class ProcessLauncherService
 
     private readonly StorageService _storageService;
     private readonly PerformanceProfileService _performanceProfileService;
+    private readonly GameScriptService _scriptService;
     public event Action<GameEntry>? GameUpdated;
 
-    public ProcessLauncherService(StorageService storageService, PerformanceProfileService performanceProfileService)
+    public ProcessLauncherService(StorageService storageService, PerformanceProfileService performanceProfileService, GameScriptService scriptService)
     {
         _storageService = storageService;
         _performanceProfileService = performanceProfileService;
+        _scriptService = scriptService;
     }
 
     /// <summary>
@@ -86,6 +88,8 @@ public partial class ProcessLauncherService
                     ? $"steam://rungameid/{game.SteamAppId}"
                     : game.ExecutablePath;
 
+                _scriptService.RunPreLaunch(game);
+
                 LoggingService.Verbose("Launcher", $"Launching Steam URL: {launchUrl}");
                 Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
 
@@ -110,6 +114,10 @@ public partial class ProcessLauncherService
             // same way as the Steam branch above instead of treating it as a missing exe.
             if (IsNonFileProtocolUrl(game.ExecutablePath))
             {
+                // Pre-launch only: there's no process handle or running flag to detect the exit,
+                // so a post-exit script can't be honoured for protocol launches.
+                _scriptService.RunPreLaunch(game);
+
                 LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
                 Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });
 
@@ -198,6 +206,8 @@ public partial class ProcessLauncherService
                 startInfo.Verb = "runas";
             }
 
+            _scriptService.RunPreLaunch(game);
+
             LoggingService.Verbose("Launcher", $"Spawning process: '{game.ExecutablePath}', Args='{game.Arguments}', WorkDir='{workingDir}', RunAsAdmin={game.RunAsAdmin}");
             var process = Process.Start(startInfo);
             game.LastPlayed = DateTime.Now;
@@ -206,6 +216,7 @@ public partial class ProcessLauncherService
             if (process != null)
             {
                 _performanceProfileService.BeginGameSession(game, process);
+                _scriptService.TrackPostExit(game);
                 LoggingService.Info("Launcher", $"Started '{game.Name}' (PID {process.Id}).");
                 DateTime startTime = DateTime.Now;
                 bool exitHandlerAttached = false;
@@ -214,10 +225,11 @@ public partial class ProcessLauncherService
                 void OnExited(object? s, EventArgs e)
                 {
                     if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
+                    long minutes = 0;
                     try
                     {
                         TimeSpan playedDuration = DateTime.Now - startTime;
-                        long minutes = (long)Math.Max(0, Math.Round(playedDuration.TotalMinutes));
+                        minutes = (long)Math.Max(0, Math.Round(playedDuration.TotalMinutes));
                         if (minutes > 0)
                         {
                             game.CumulativePlaytimeMinutes += minutes;
@@ -231,7 +243,10 @@ public partial class ProcessLauncherService
                     }
                     finally
                     {
+                        // Built-in tweaks restore first so the user's script sees the machine
+                        // back in its normal state.
                         _performanceProfileService.EndGameSession(game.Id);
+                        _scriptService.RunPostExit(game, minutes);
                         process.Dispose();
                     }
                 }
@@ -273,6 +288,7 @@ public partial class ProcessLauncherService
                         // never run for this launch - end the session immediately instead of
                         // leaving a Performance Profile applied with no way to know when to undo it.
                         _performanceProfileService.EndGameSession(game.Id);
+                        _scriptService.RunPostExit(game, playedMinutes: 0);
                         process.Dispose();
                     }
                 }
@@ -302,7 +318,8 @@ public partial class ProcessLauncherService
     /// </summary>
     private void TrackSteamSession(GameEntry game)
     {
-        if (game.PerformanceProfile == PerformanceProfileMode.Off || string.IsNullOrWhiteSpace(game.SteamAppId))
+        bool hasPostExitScript = !string.IsNullOrWhiteSpace(game.PostExitScriptPath);
+        if ((game.PerformanceProfile == PerformanceProfileMode.Off && !hasPostExitScript) || string.IsNullOrWhiteSpace(game.SteamAppId))
         {
             return;
         }
@@ -329,6 +346,7 @@ public partial class ProcessLauncherService
                     {
                         sessionBegun = true;
                         _performanceProfileService.BeginGameSession(game);
+                        _scriptService.TrackPostExit(game);
                         LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' now running; Performance Profile applied if configured.");
                     }
                     else if (DateTime.UtcNow - waitStartedUtc > SteamSessionStartTimeout)
@@ -340,6 +358,7 @@ public partial class ProcessLauncherService
                 else if (!isRunning)
                 {
                     _performanceProfileService.EndGameSession(gameId);
+                    _scriptService.RunPostExit(game, playedMinutes: 0);
                     LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' session ended.");
                     timer?.Dispose();
                 }
