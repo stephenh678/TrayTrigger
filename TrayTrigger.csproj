@@ -38,4 +38,10 @@
     <Resource Include="Assets\app_icon.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- In-app "Learn more" help topics. Help\tweaks\hags.md becomes the embedded resource
+         TrayTrigger.Help.tweaks.hags.md, addressed by HelpContentService as "tweaks/hags". -->
+    <EmbeddedResource Include="Help\**\*.md" />
+  </ItemGroup>
+
 </Project>

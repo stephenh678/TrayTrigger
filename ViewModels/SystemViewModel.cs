@@ -42,6 +42,9 @@ public class SystemTweakViewModel : ViewModelBase
     public bool IsOptIn => Model.IsOptIn;
     public string CustomActionLabel => Model.CustomActionLabel;
 
+    /// <summary>"Learn more" target: Help/tweaks/&lt;id&gt;.md, embedded at build time.</summary>
+    public string HelpTopicId => "tweaks/" + Model.Id;
+
     private bool _isOptimal;
     public bool IsOptimal
     {
