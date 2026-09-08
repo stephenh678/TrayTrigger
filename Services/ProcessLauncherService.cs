@@ -88,6 +88,10 @@ public partial class ProcessLauncherService
                     ? $"steam://rungameid/{game.SteamAppId}"
                     : game.ExecutablePath;
 
+                // Order: profile → user's pre-launch script → game. See PerformanceProfileService
+                // for why the profile goes first. TrackSteamSession ends the session if Steam
+                // never reports the game running.
+                _performanceProfileService.BeginGameSession(game);
                 _scriptService.RunPreLaunch(game);
 
                 LoggingService.Verbose("Launcher", $"Launching Steam URL: {launchUrl}");
@@ -206,6 +210,9 @@ public partial class ProcessLauncherService
                 startInfo.Verb = "runas";
             }
 
+            // Order: profile → user's pre-launch script → game → process-bound tweaks.
+            // See PerformanceProfileService for why the profile goes first.
+            _performanceProfileService.BeginGameSession(game);
             _scriptService.RunPreLaunch(game);
 
             LoggingService.Verbose("Launcher", $"Spawning process: '{game.ExecutablePath}', Args='{game.Arguments}', WorkDir='{workingDir}', RunAsAdmin={game.RunAsAdmin}");
@@ -213,9 +220,16 @@ public partial class ProcessLauncherService
             game.LastPlayed = DateTime.Now;
             GameUpdated?.Invoke(game);
 
+            if (process == null)
+            {
+                // Shell reused an existing instance or gave us nothing to track: nothing will
+                // ever signal an exit, so undo the pre-launch profile now.
+                _performanceProfileService.EndGameSession(game.Id);
+            }
+
             if (process != null)
             {
-                _performanceProfileService.BeginGameSession(game, process);
+                _performanceProfileService.OnGameProcessStarted(game, process);
                 _scriptService.TrackPostExit(game);
                 LoggingService.Info("Launcher", $"Started '{game.Name}' (PID {process.Id}).");
                 DateTime startTime = DateTime.Now;
@@ -300,6 +314,9 @@ public partial class ProcessLauncherService
         {
             errorMessage = ex.Message;
             LoggingService.Error("Launcher", $"Failed to launch '{game.Name}': {ex.Message}", ex);
+            // The profile is applied before the process starts, so a failed start (UAC cancelled,
+            // missing DLL, etc.) must roll it back. No-op if nothing was applied.
+            _performanceProfileService.EndGameSession(game.Id);
             return false;
         }
     }
@@ -312,15 +329,26 @@ public partial class ProcessLauncherService
     /// A Steam launch is a fire-and-forget "steam://" dispatch with no Process handle - the
     /// Performance Profile can't be tied to the launcher exiting (Steam itself keeps running).
     /// Steam maintains its own "Running" flag per AppId while a game is actually in session, so
-    /// poll that instead: begin the profile once it flips on, end it once it flips back off. If
-    /// it never turns on (user cancels the Steam launch, game isn't actually installed, etc.),
-    /// give up after a few minutes rather than polling forever.
+    /// poll that: the profile was already applied pre-dispatch, so this just waits for the flag to
+    /// flip on and then ends the session (and fires the post-exit script) once it flips back off.
+    /// If it never turns on (user cancels the Steam launch, game isn't actually installed, etc.),
+    /// give up after a few minutes and roll the profile back rather than leaving it applied.
     /// </summary>
     private void TrackSteamSession(GameEntry game)
     {
         bool hasPostExitScript = !string.IsNullOrWhiteSpace(game.PostExitScriptPath);
-        if ((game.PerformanceProfile == PerformanceProfileMode.Off && !hasPostExitScript) || string.IsNullOrWhiteSpace(game.SteamAppId))
+        bool hasProfile = game.PerformanceProfile != PerformanceProfileMode.Off;
+        if (!hasProfile && !hasPostExitScript)
         {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(game.SteamAppId))
+        {
+            // No AppId means no "Running" flag to watch, so the session can never be ended.
+            // Roll back whatever BeginGameSession applied instead of leaving it on forever.
+            _performanceProfileService.EndGameSession(game.Id);
+            LoggingService.Verbose("Launcher", $"'{game.Name}' has no Steam AppId; cannot track its session, so no Performance Profile or post-exit script will run for it.");
             return;
         }
 
@@ -345,13 +373,13 @@ public partial class ProcessLauncherService
                     if (isRunning)
                     {
                         sessionBegun = true;
-                        _performanceProfileService.BeginGameSession(game);
                         _scriptService.TrackPostExit(game);
-                        LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' now running; Performance Profile applied if configured.");
+                        LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' now running.");
                     }
                     else if (DateTime.UtcNow - waitStartedUtc > SteamSessionStartTimeout)
                     {
-                        LoggingService.Verbose("Launcher", $"'{game.Name}' never reported running via Steam within {SteamSessionStartTimeout.TotalMinutes:0}m; abandoning Performance Profile tracking for this launch.");
+                        LoggingService.Verbose("Launcher", $"'{game.Name}' never reported running via Steam within {SteamSessionStartTimeout.TotalMinutes:0}m; rolling back its Performance Profile.");
+                        _performanceProfileService.EndGameSession(gameId);
                         timer?.Dispose();
                     }
                 }

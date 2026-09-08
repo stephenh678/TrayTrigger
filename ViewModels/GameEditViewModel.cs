@@ -704,12 +704,30 @@ public class GameEditViewModel : ViewModelBase
         }
     }
 
+    private static string? ValidateScriptPath(string? rawPath, string label)
+    {
+        string path = rawPath?.Trim().Trim('"') ?? string.Empty;
+        if (path.Length == 0) return null;
+
+        if (!GameScriptService.IsSupportedScript(path))
+        {
+            return $"{label} script must be one of: {string.Join(", ", GameScriptService.SupportedExtensions)}. Wrap other file types in a .bat.";
+        }
+
+        if (!File.Exists(path))
+        {
+            return $"{label} script not found: {path}";
+        }
+
+        return null;
+    }
+
     private void BrowseScript(bool isPreLaunch)
     {
         var dialog = new OpenFileDialog
         {
             Title = isPreLaunch ? "Select Pre-Launch Script" : "Select Post-Exit Script",
-            Filter = "Scripts & Programs (*.bat;*.cmd;*.ps1;*.exe)|*.bat;*.cmd;*.ps1;*.exe|All Files (*.*)|*.*",
+            Filter = $"Scripts & Programs ({GameScriptService.SupportedExtensionsFilterPattern})|{GameScriptService.SupportedExtensionsFilterPattern}",
             CheckFileExists = true
         };
 
@@ -725,6 +743,16 @@ public class GameEditViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(Name))
         {
             Name = "Unnamed Game";
+        }
+
+        // Scripts are validated at save time rather than silently skipped at launch, so a typo
+        // or an unsupported file type is caught while the user is still looking at the field.
+        string? scriptProblem = ValidateScriptPath(PreLaunchScriptPath, "Pre-launch")
+                             ?? ValidateScriptPath(PostExitScriptPath, "Post-exit");
+        if (scriptProblem != null)
+        {
+            StatusMessage = scriptProblem;
+            return;
         }
 
         SourceGame.Name = Name.Trim();

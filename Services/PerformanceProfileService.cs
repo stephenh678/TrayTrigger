@@ -55,17 +55,36 @@ public class PerformanceProfileService
         _storageService.DeleteProfileSessionSnapshot();
     }
 
+    // ------------------------------------------------------------------------------------------
+    // SESSION LIFECYCLE - the launcher calls these in this exact order:
+    //
+    //   1. BeginGameSession(game)              PRE-LAUNCH. Runs before the game process exists.
+    //                                          Everything that can be applied here, is: the game
+    //                                          then starts up already on the fast power plan, with
+    //                                          its GPU preference and Defender exclusion in place
+    //                                          before it loads a single shader.
+    //   2. (launcher runs the user's pre-launch script, then starts the game)
+    //   3. OnGameProcessStarted(game, process) POST-START. Only for tweaks that need a live
+    //                                          handle to the game process (currently just
+    //                                          Above Normal priority). Never runs for Steam
+    //                                          launches, where TrayTrigger has no handle.
+    //   4. EndGameSession(gameId)              RESTORE. Per-game tweaks immediately; machine-wide
+    //                                          tweaks once the last tracked session ends.
+    //
+    // ADDING A TWEAK: put it in ApplyPreLaunchTweaks unless it genuinely needs the Process object,
+    // in which case it goes in ApplyProcessTweaks. Anything that must be undone needs a snapshot
+    // field and a matching Restore* call - see RestoreGlobalTweaks / RestorePerGameTweaks.
+    // ------------------------------------------------------------------------------------------
+
     /// <summary>
-    /// Begins tracking a gaming session for this game. Machine-wide tweaks (Power Plan, System
-    /// Responsiveness, MMCSS Scheduling) are only captured/applied by the first tracked session
-    /// ("first wins") - a second concurrent game just joins it. Per-executable tweaks (GPU
-    /// Preference, Defender Exclusion) apply independently every time, since they're keyed to
-    /// that game's own exe path and don't conflict with another game's.
+    /// PRE-LAUNCH phase. Captures the snapshot and applies every tweak that doesn't need the game
+    /// process. Machine-wide tweaks (Power Plan, System Responsiveness, MMCSS Scheduling) are only
+    /// captured/applied by the first tracked session ("first wins") - a second concurrent game just
+    /// joins it. Per-executable tweaks (GPU Preference, Defender Exclusion) apply independently
+    /// every time, since they're keyed to that game's own exe path and don't conflict with another
+    /// game's. If the launch subsequently fails, the launcher must call <see cref="EndGameSession"/>.
     /// </summary>
-    /// <param name="process">The actual game process, when known (direct .exe launches only) -
-    /// needed for the Above Normal priority tweak, which has no effect for Steam-launched games
-    /// since TrayTrigger never holds a handle to the real game process in that case.</param>
-    public void BeginGameSession(GameEntry game, Process? process = null)
+    public void BeginGameSession(GameEntry game)
     {
         if (game.PerformanceProfile == PerformanceProfileMode.Off) return;
 
@@ -75,68 +94,14 @@ public class PerformanceProfileService
 
             var settings = _storageService.LoadSettings();
             bool isFirstSession = _activeSessionKeys.Count == 0;
-            bool appliedAnything = false;
 
             _snapshot ??= new PerformanceProfileSessionSnapshot();
 
-            if (isFirstSession)
-            {
-                if (settings.OptimizedProfileTweaks.PowerPlanEnabled)
-                {
-                    ApplyPowerPlan(_snapshot);
-                    appliedAnything = true;
-                }
-
-                if (game.PerformanceProfile == PerformanceProfileMode.Aggressive)
-                {
-                    if (settings.AggressiveProfileTweaks.SystemResponsivenessEnabled)
-                    {
-                        ApplySystemResponsiveness(_snapshot);
-                        appliedAnything = true;
-                    }
-
-                    if (settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled)
-                    {
-                        ApplySchedulingCategory(_snapshot);
-                        appliedAnything = true;
-                    }
-                }
-            }
-
-            string? resolvedExePath = ResolveRealExecutablePath(game);
-            PerGameProfileSnapshot? perGame = null;
-
-            if (settings.OptimizedProfileTweaks.GpuPreferenceEnabled && resolvedExePath != null)
-            {
-                perGame = new PerGameProfileSnapshot { GameId = game.Id };
-                ApplyGpuPreference(perGame, resolvedExePath);
-                appliedAnything = true;
-            }
-
-            if (game.PerformanceProfile == PerformanceProfileMode.Aggressive)
-            {
-                if (settings.AggressiveProfileTweaks.AboveNormalPriorityEnabled && process != null)
-                {
-                    ApplyAboveNormalPriority(process, game.Name);
-                    appliedAnything = true;
-                }
-
-                if (settings.AggressiveProfileTweaks.DefenderExclusionEnabled && resolvedExePath != null)
-                {
-                    perGame ??= new PerGameProfileSnapshot { GameId = game.Id };
-                    ApplyDefenderExclusion(perGame, resolvedExePath);
-                    appliedAnything = true;
-                }
-            }
-
-            if (perGame != null)
-            {
-                _snapshot.PerGameSnapshots.Add(perGame);
-            }
+            bool appliedAnything = ApplyPreLaunchTweaks(game, settings, isFirstSession, _snapshot);
 
             if (!appliedAnything)
             {
-                LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' requested {game.PerformanceProfile} but every applicable tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
+                LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
                 if (isFirstSession && _snapshot.PerGameSnapshots.Count == 0 && !_snapshot.PowerPlanCaptured
                     && !_snapshot.SystemResponsivenessCaptured && !_snapshot.SchedulingCategoryCaptured)
                 {
@@ -147,7 +112,85 @@ public class PerformanceProfileService
 
             _storageService.SaveProfileSessionSnapshot(_snapshot);
             _activeSessionKeys.Add(game.Id);
-            LoggingService.Info("PerformanceProfile", $"Applied {game.PerformanceProfile} profile for '{game.Name}'.");
+            LoggingService.Info("PerformanceProfile", $"Applied {game.PerformanceProfile} profile for '{game.Name}' (pre-launch).");
+        }
+    }
+
+    /// <summary>
+    /// POST-START phase. Applies the tweaks that need the actual game process. These need no
+    /// snapshot or restore - they die with the process - so this doesn't touch session tracking
+    /// and is safe to call even when <see cref="BeginGameSession"/> applied nothing.
+    /// </summary>
+    public void OnGameProcessStarted(GameEntry game, Process process)
+    {
+        if (game.PerformanceProfile == PerformanceProfileMode.Off) return;
+
+        var settings = _storageService.LoadSettings();
+        ApplyProcessTweaks(game, settings, process);
+    }
+
+    /// <summary>All pre-launch tweaks, in application order. Returns true if anything was applied.</summary>
+    private static bool ApplyPreLaunchTweaks(GameEntry game, AppSettings settings, bool isFirstSession, PerformanceProfileSessionSnapshot snapshot)
+    {
+        bool applied = false;
+        bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
+
+        // --- Machine-wide (first session only) ---
+        if (isFirstSession)
+        {
+            if (settings.OptimizedProfileTweaks.PowerPlanEnabled)
+            {
+                ApplyPowerPlan(snapshot);
+                applied = true;
+            }
+
+            if (aggressive && settings.AggressiveProfileTweaks.SystemResponsivenessEnabled)
+            {
+                ApplySystemResponsiveness(snapshot);
+                applied = true;
+            }
+
+            if (aggressive && settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled)
+            {
+                ApplySchedulingCategory(snapshot);
+                applied = true;
+            }
+        }
+
+        // --- Per-executable (every session; needs a real file path) ---
+        string? resolvedExePath = ResolveRealExecutablePath(game);
+        PerGameProfileSnapshot? perGame = null;
+
+        if (settings.OptimizedProfileTweaks.GpuPreferenceEnabled && resolvedExePath != null)
+        {
+            perGame = new PerGameProfileSnapshot { GameId = game.Id };
+            ApplyGpuPreference(perGame, resolvedExePath);
+            applied = true;
+        }
+
+        if (aggressive && settings.AggressiveProfileTweaks.DefenderExclusionEnabled && resolvedExePath != null)
+        {
+            perGame ??= new PerGameProfileSnapshot { GameId = game.Id };
+            ApplyDefenderExclusion(perGame, resolvedExePath);
+            applied = true;
+        }
+
+        if (perGame != null)
+        {
+            snapshot.PerGameSnapshots.Add(perGame);
+        }
+
+        return applied;
+    }
+
+    /// <summary>All post-start tweaks (those that need the live process).</summary>
+    private static void ApplyProcessTweaks(GameEntry game, AppSettings settings, Process process)
+    {
+        bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
+
+        if (aggressive && settings.AggressiveProfileTweaks.AboveNormalPriorityEnabled)
+        {
+            ApplyAboveNormalPriority(process, game.Name);
         }
     }
 

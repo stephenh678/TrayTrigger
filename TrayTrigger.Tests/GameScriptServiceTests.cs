@@ -135,14 +135,35 @@ public class GameScriptServiceTests : IDisposable
         Assert.Equal(path, psi!.ArgumentList[1]);
     }
 
-    [Fact]
-    public void UnknownExtension_FallsBackToShell()
+    [Theory]
+    [InlineData("macro.ahk")]
+    [InlineData("tool.py")]
+    [InlineData("noext")]
+    public void UnsupportedExtension_IsRefused(string fileName)
     {
-        string path = MakeScript("macro.ahk");
-        var psi = GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+        string path = MakeScript(fileName);
+        Assert.False(GameScriptService.IsSupportedScript(path));
+        Assert.Null(GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null));
+    }
 
-        Assert.Equal(path, psi.FileName);
-        Assert.True(psi.UseShellExecute);
+    [Theory]
+    [InlineData(@"C:\s\a.bat", true)]
+    [InlineData(@"C:\s\a.CMD", true)]
+    [InlineData(@"C:\s\a.ps1", true)]
+    [InlineData(@"C:\s\a.exe", true)]
+    [InlineData("\"C:\\s\\a.exe\"", true)]
+    [InlineData(@"C:\s\a.vbs", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsSupportedScript_ChecksExtensionOnly(string? path, bool expected)
+    {
+        Assert.Equal(expected, GameScriptService.IsSupportedScript(path));
+    }
+
+    [Fact]
+    public void FilterPattern_ListsEverySupportedExtension()
+    {
+        Assert.Equal("*.bat;*.cmd;*.ps1;*.exe;*.com", GameScriptService.SupportedExtensionsFilterPattern);
     }
 
     [Fact]
