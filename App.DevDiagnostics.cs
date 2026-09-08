@@ -620,6 +620,25 @@ public partial class App
                 return;
             }
 
+            // --screenshot-help <topicId> <out.png>: renders the HelpDialog for one topic.
+            if ((e.Args[i].Equals("--screenshot-help", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-help", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string topicId = e.Args[i + 1];
+                string targetPng = e.Args[i + 2];
+                _mainViewModel.CurrentSection = NavSection.System;
+                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.PerformanceTweaks;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                Views.HelpDialog.ShowTopic(_mainWindow, topicId);
+                var helpWindow = Current.Windows.OfType<Views.HelpDialog>().First();
+                helpWindow.UpdateLayout();
+                CaptureVisual(helpWindow, (int)helpWindow.Width, (int)helpWindow.Height, targetPng);
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-collapsed", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-collapsed", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)

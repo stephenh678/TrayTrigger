@@ -203,6 +203,45 @@
         </Style>
 
 
+        <!-- Help Link: the inline "Learn more" text link that opens a HelpDialog topic. Plain accent
+             text, underline on hover, no chrome - sits under a control's one-line hint. Use with
+             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="section/topic". -->
+        <Style x:Key="HelpLinkButton" TargetType="Button">
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Focusable" Value="True"/>
+            <Setter Property="Content" Value="Learn more"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="txt" Text="{TemplateBinding Content}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   FontSize="{TemplateBinding FontSize}"
+                                   FontFamily="{TemplateBinding FontFamily}"
+                                   Padding="{TemplateBinding Padding}"
+                                   VerticalAlignment="Center"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="txt" Property="TextDecorations" Value="Underline"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="txt" Property="TextDecorations" Value="Underline"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource BrushAccentPressed}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Segmented Tab Button: for pill/segmented switchers (System page's Specs/Tweaks
              tabs, library view-mode switcher). Bind Tag to a bool indicating "this segment is
              active". Background/Foreground are driven by MultiBinding converters (not XAML

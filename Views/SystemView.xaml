@@ -4,7 +4,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
-             mc:Ignorable="d" 
+             xmlns:services="clr-namespace:TrayTrigger.Services"
+             mc:Ignorable="d"
              d:DesignHeight="900" d:DesignWidth="1100"
              Background="Transparent">
 
@@ -47,13 +48,15 @@
                                 <TextBlock Text="⟳ RESTART" FontSize="9" FontWeight="Bold" Foreground="#E8B84E"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" 
+                        <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding WhyItMatters, StringFormat='Impact: {0}'}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" 
-                                   Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <!-- The "why" and trade-offs live in Help/tweaks/<id>.md, opened here. -->
+                        <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
+                                Command="{x:Static services:HelpCommands.ShowTopic}"
+                                CommandParameter="{Binding HelpTopicId}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="{Binding CustomActionLabel}" Command="{Binding CustomActionCommand}" 
+                        <Button Content="{Binding CustomActionLabel}" Command="{Binding CustomActionCommand}"
                                 Visibility="{Binding HasCustomAction, Converter={StaticResource BoolToVis}}" 
                                 Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,4" FontSize="11.5"/>
                         <Button Content="{Binding ActionButtonText}" Command="{Binding ToggleCommand}" 
@@ -401,8 +404,13 @@
                             </DockPanel>
 
                             <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
-                                <TextBlock Text="💡 Verified, low-overhead OS configurations for latency, frame pacing, and scheduling. No destructive registry cleaners or snake oil."
-                                           Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap"/>
+                                <DockPanel LastChildFill="False">
+                                    <TextBlock Text="💡 Documented Windows settings only - no registry cleaners. Badges flag the ones that need a restart or are opt-in."
+                                               Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="12,0,0,0"
+                                            VerticalAlignment="Center" DockPanel.Dock="Right"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
+                                </DockPanel>
                             </Border>
                         </StackPanel>
                     </Border>
