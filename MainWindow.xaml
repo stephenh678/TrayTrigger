@@ -1375,8 +1375,34 @@
                                                 Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
                                     <TextBox Text="{Binding GlobalManageHotkey, UpdateSourceTrigger=LostFocus}"
                                              Style="{StaticResource ModernTextBox}" Margin="0,0,0,6" Width="150" HorizontalAlignment="Left"/>
-                                    <TextBlock Text="Press this key combination anywhere in Windows to toggle the Manage Games window (default: Ctrl+Alt+G)." 
+                                    <TextBlock Text="Press this key combination anywhere in Windows to toggle the Manage Games window (default: Ctrl+Alt+G)."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 1.2b Advanced: per-game launch scripts (off by default; gates the Edit Game card) -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="Game Launch Scripts" FontSize="13.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                        <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="ADVANCED" FontSize="9" FontWeight="Bold" Foreground="#9A9AB0"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="Run your own script or program before a game starts and after it exits."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox Content="Show Pre-Launch &amp; Post-Exit Scripts in Edit Game"
+                                              IsChecked="{Binding EnableGameScripts}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Off by default to keep Edit Game simple. Games that already have a script keep it either way."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="24,0,0,2"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
                                 </StackPanel>
                             </Border>
 

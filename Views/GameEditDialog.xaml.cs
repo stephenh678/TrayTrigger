@@ -16,11 +16,12 @@ public partial class GameEditDialog : Window
         IconExtractorService iconExtractorService, 
         bool isNewGame = false, 
         string? steamGridDbApiKey = null,
-        double minConfidence = SteamSearchService.DefaultMinConfidence)
+        double minConfidence = SteamSearchService.DefaultMinConfidence,
+        bool scriptsEnabled = false)
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
-        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence);
+        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled);
         DataContext = _viewModel;
 
         Owner = WindowHelper.ActiveOwner();

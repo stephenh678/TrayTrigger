@@ -649,7 +649,7 @@ public partial class App
                     ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe",
                     WorkingDirectory = @"C:\Games\DOOM Eternal"
                 };
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService);
+                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
                 dlg.Show();
                 dlg.UpdateLayout();
                 var sv = FindVisualChild<ScrollViewer>(dlg, s => s.ScrollableHeight > 0);

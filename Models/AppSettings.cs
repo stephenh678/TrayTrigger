@@ -28,6 +28,11 @@ public class AppSettings
     public string SteamGridDbApiKey { get; set; } = string.Empty;
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
+    /// <summary>
+    /// Shows the Pre-Launch &amp; Post-Exit Scripts card in Edit Game. Visibility only: a game
+    /// that already has a script keeps running it (and keeps showing the card) regardless.
+    /// </summary>
+    public bool EnableGameScripts { get; set; } = false;
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";

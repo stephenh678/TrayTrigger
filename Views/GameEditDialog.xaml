@@ -292,13 +292,15 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- CARD 2b: PRE-LAUNCH / POST-EXIT SCRIPTS -->
+                    <!-- CARD 2b: PRE-LAUNCH / POST-EXIT SCRIPTS (opt-in via Settings > General, or
+                         always shown for a game that already has a script) -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowScriptsCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Run your own .bat, .cmd, .ps1, or .exe before this game starts and after it exits."
+                            <TextBlock Text="Run your own .bat, .cmd, .ps1, or .exe before this game starts and after it exits. Hide this card under Settings, General."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Pre-launch script -->
