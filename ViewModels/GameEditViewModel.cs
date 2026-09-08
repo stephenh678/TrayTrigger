@@ -71,11 +71,15 @@ public class GameEditViewModel : ViewModelBase
         GameEntry game, 
         IEnumerable<string> categories, 
         IconExtractorService iconExtractorService, 
-        bool isNewGame = false, 
+        bool isNewGame = false,
         string? steamGridDbApiKey = null,
-        double minConfidence = SteamSearchService.DefaultMinConfidence)
+        double minConfidence = SteamSearchService.DefaultMinConfidence,
+        bool scriptsEnabled = false)
     {
         SourceGame = game;
+        // The card is opt-in (Settings > General), but a game that already has a script must
+        // stay editable even if the setting was later turned off or reset.
+        ShowScriptsCard = scriptsEnabled || game.HasScripts;
         _iconExtractorService = iconExtractorService;
         _steamGridDbApiKey = steamGridDbApiKey;
         _minConfidence = minConfidence;
@@ -180,6 +184,8 @@ public class GameEditViewModel : ViewModelBase
         new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };
 
     // --- Pre-launch / post-exit scripts ---
+
+    public bool ShowScriptsCard { get; }
 
     public string PreLaunchScriptPath
     {

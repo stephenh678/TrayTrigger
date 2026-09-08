@@ -688,6 +688,20 @@ public class SettingsViewModel : ViewModelBase
 
     // --- Global Manage Hotkey ---
 
+    public bool EnableGameScripts
+    {
+        get => _settings.EnableGameScripts;
+        set
+        {
+            if (_settings.EnableGameScripts != value)
+            {
+                _settings.EnableGameScripts = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public string GlobalManageHotkey
     {
         get => _settings.GlobalManageHotkey;
@@ -852,6 +866,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(IncludePrereleaseUpdates));
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
+        OnPropertyChanged(nameof(EnableGameScripts));
         OnPropertyChanged(nameof(CreateRestorePointBeforeTweaks));
         OnPropertyChanged(nameof(VerboseLoggingEnabled));
         OnPropertyChanged(nameof(LibraryViewMode));
