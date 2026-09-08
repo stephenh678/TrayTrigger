@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -13,7 +14,8 @@ namespace TrayTrigger.Services;
 /// audio device, toggling RGB, remapping a controller, and so on.
 ///
 /// Supported script types: .bat/.cmd (via cmd.exe), .ps1 (via powershell.exe with
-/// -ExecutionPolicy Bypass), .exe/.com (run directly). Anything else is handed to the shell.
+/// -ExecutionPolicy Bypass), .exe/.com (run directly). Anything else is refused - a shell
+/// fallback would depend on the user's file associations and couldn't honour "run hidden".
 ///
 /// Each script receives three positional arguments - phase ("prelaunch" or "postexit"), game
 /// name, game executable path - and, when not elevated, the same data as TRAYTRIGGER_* environment
@@ -28,6 +30,19 @@ public class GameScriptService
     /// <summary>Upper bound on how long a "wait for it" pre-launch script can hold up the game launch.</summary>
     public static readonly TimeSpan PreLaunchWaitTimeout = TimeSpan.FromSeconds(30);
 
+    public static readonly IReadOnlyList<string> SupportedExtensions = new[] { ".bat", ".cmd", ".ps1", ".exe", ".com" };
+
+    /// <summary>"*.bat;*.cmd;*.ps1;*.exe;*.com" - for file-dialog filters.</summary>
+    public static string SupportedExtensionsFilterPattern => string.Join(";", SupportedExtensions.Select(e => "*" + e));
+
+    /// <summary>True if the path has one of the <see cref="SupportedExtensions"/>. Does not check existence.</summary>
+    public static bool IsSupportedScript(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        string ext = Path.GetExtension(path.Trim().Trim('"'));
+        return SupportedExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
+    }
+
     private readonly Lock _lock = new();
     private readonly Dictionary<string, GameEntry> _pendingPostExit = new(StringComparer.Ordinal);
 
@@ -39,6 +54,12 @@ public class GameScriptService
     public void RunPreLaunch(GameEntry game)
     {
         if (string.IsNullOrWhiteSpace(game.PreLaunchScriptPath)) return;
+
+        if (!IsSupportedScript(game.PreLaunchScriptPath))
+        {
+            LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' has an unsupported type and was skipped: {game.PreLaunchScriptPath} (supported: {string.Join(", ", SupportedExtensions)})");
+            return;
+        }
 
         var psi = BuildStartInfo(game.PreLaunchScriptPath, game, PhasePreLaunch, game.RunScriptsHidden, game.RunScriptsAsAdmin, playedMinutes: null);
         if (psi == null)
@@ -106,6 +127,12 @@ public class GameScriptService
 
         if (string.IsNullOrWhiteSpace(game.PostExitScriptPath)) return;
 
+        if (!IsSupportedScript(game.PostExitScriptPath))
+        {
+            LoggingService.Warn("GameScript", $"Post-exit script for '{game.Name}' has an unsupported type and was skipped: {game.PostExitScriptPath} (supported: {string.Join(", ", SupportedExtensions)})");
+            return;
+        }
+
         var psi = BuildStartInfo(game.PostExitScriptPath, game, PhasePostExit, game.RunScriptsHidden, game.RunScriptsAsAdmin, playedMinutes);
         if (psi == null)
         {
@@ -149,8 +176,8 @@ public class GameScriptService
     }
 
     /// <summary>
-    /// Builds the process start info for a script. Returns null if the script file doesn't exist.
-    /// Pure and side-effect free so it can be unit tested.
+    /// Builds the process start info for a script. Returns null if the script file doesn't exist
+    /// or has an unsupported extension. Pure and side-effect free so it can be unit tested.
     /// </summary>
     internal static ProcessStartInfo? BuildStartInfo(
         string scriptPath,
@@ -161,7 +188,7 @@ public class GameScriptService
         long? playedMinutes)
     {
         string path = scriptPath.Trim().Trim('"');
-        if (!File.Exists(path)) return null;
+        if (!IsSupportedScript(path) || !File.Exists(path)) return null;
 
         string ext = Path.GetExtension(path).ToLowerInvariant();
         string workDir = Path.GetDirectoryName(path) ?? string.Empty;
@@ -210,11 +237,8 @@ public class GameScriptService
                 break;
 
             default:
-                // Unknown type (e.g. a .py or .ahk with a registered handler): let the shell decide.
-                psi.FileName = path;
-                psi.UseShellExecute = true;
-                psi.CreateNoWindow = false;
-                break;
+                // Unreachable: IsSupportedScript filtered this above. Keep the switch exhaustive.
+                return null;
         }
 
         // Positional arguments work for every script type and every privilege level.

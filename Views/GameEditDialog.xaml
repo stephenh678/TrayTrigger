@@ -342,12 +342,14 @@
 
                             <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
                                 <StackPanel>
-                                    <TextBlock Text="What your script receives" FontSize="11" FontWeight="SemiBold"
+                                    <TextBlock Text="Optional: game info your script can read" FontSize="11" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                                     <TextBlock FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap">
-                                        <Run Text="Arguments: %1 = phase (prelaunch / postexit), %2 = game name, %3 = game executable."/>
+                                        <Run Text="Any script works as-is; nothing below is required. If you want one script to behave differently per game, TrayTrigger also passes these details, which your script is free to ignore:"/>
                                         <LineBreak/>
-                                        <Run Text="Environment (not available when running as Administrator): TRAYTRIGGER_PHASE, TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_ID, TRAYTRIGGER_GAME_EXE, TRAYTRIGGER_PLAYTIME_MINUTES (post-exit only)."/>
+                                        <Run Text="• Command-line arguments: %1 = prelaunch or postexit, %2 = game name, %3 = game executable path."/>
+                                        <LineBreak/>
+                                        <Run Text="• Environment variables: TRAYTRIGGER_PHASE, TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_ID, TRAYTRIGGER_GAME_EXE, and TRAYTRIGGER_PLAYTIME_MINUTES after exit. (Not set when running as Administrator.)"/>
                                     </TextBlock>
                                 </StackPanel>
                             </Border>
