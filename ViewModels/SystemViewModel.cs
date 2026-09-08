@@ -185,17 +185,21 @@ public class ProfileTweakToggleViewModel : ViewModelBase
     public string WhyItMatters { get; }
     public bool IsOptIn { get; }
 
+    /// <summary>"Learn more" target, e.g. "profiles/power_plan" -> Help/profiles/power_plan.md.</summary>
+    public string HelpTopicId { get; }
+
     public string StatusBadgeText => IsEnabled ? "ENABLED" : "DISABLED";
     public string StatusBadgeColor => IsEnabled ? "#238636" : "#6E6E7A";
     public string ActionButtonText => IsEnabled ? "Disable" : "Enable";
 
     public ICommand ToggleCommand { get; }
 
-    public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, Func<bool> getter, Action<bool> setter, bool isOptIn = false)
+    public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, string helpTopicId, Func<bool> getter, Action<bool> setter, bool isOptIn = false)
     {
         Name = name;
         ShortDescription = shortDescription;
         WhyItMatters = whyItMatters;
+        HelpTopicId = helpTopicId;
         _getter = getter;
         _setter = setter;
         IsOptIn = isOptIn;
@@ -327,13 +331,15 @@ public class SystemViewModel : ViewModelBase
         return new ObservableCollection<ProfileTweakToggleViewModel>
         {
             new("\"Ultimate Plan - TrayTrigger\" Power Plan",
-                "Creates and activates a custom power plan (based on Windows' hidden Ultimate Performance scheme) with CPU locked at 100%, core parking disabled, and PCIe/USB power-saving states turned off.",
+                "Switches to a full-clock power plan (no core parking, no PCIe/USB power saving) while the game runs, then switches back.",
                 "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5–15ms to ramp back up and inducing 1% low frame drops when action begins. \"Ultimate Plan - TrayTrigger\" pins the CPU at 100% min/max state with aggressive boost and active cooling, and disables PCIe Link State Power Management and USB selective suspend so the GPU and input devices never stutter through a power-state transition mid-match.",
+                "profiles/power_plan",
                 () => config.PowerPlanEnabled,
                 v => { config.PowerPlanEnabled = v; Save(); }),
             new("Windows High-Performance GPU Preference",
-                "Forces the game's executable to use your high-performance GPU instead of an integrated one, via Windows' own Settings > Display > Graphics preference.",
+                "Tells Windows to run this game's exe on the high-performance GPU instead of an integrated one.",
                 "On laptops with both an integrated and discrete GPU, Windows or the driver sometimes defaults an unrecognized game to the integrated GPU. This writes the same per-executable preference the Settings app itself uses, so the discrete GPU is used without you having to set it manually. No effect on single-GPU desktops. Only applies when TrayTrigger knows the game's real executable path - not available for Steam-launched games, which report a steam:// launch URL rather than a file path.",
+                "profiles/gpu_preference",
                 () => config.GpuPreferenceEnabled,
                 v => { config.GpuPreferenceEnabled = v; Save(); }),
         };
@@ -348,21 +354,25 @@ public class SystemViewModel : ViewModelBase
             new("System Responsiveness (MMCSS Gaming Reserve)",
                 "Reduces the CPU reserve for lower-priority MMCSS tasks to the supported minimum.",
                 "Windows reserves 20% of CPU resources for low-priority background tasks by default. Microsoft's MMCSS documentation clamps any value below 10 back up to 20, so 10 is the lowest reserve Windows actually honors - it leaves more scheduling headroom for latency-sensitive foreground workloads like games.",
+                "profiles/system_responsiveness",
                 () => config.SystemResponsivenessEnabled,
                 v => { config.SystemResponsivenessEnabled = v; Save(); }),
             new("MMCSS \"Games\" Task Scheduling Tuning",
                 "Raises the Multimedia Class Scheduler's built-in \"Games\" task from its Medium default to High.",
                 "Officially documented by Microsoft, MMCSS grants time-sensitive threads registered under the \"Games\" task category prioritized CPU access - the same mechanism game engines request via AvSetMmThreadCharacteristics. Windows ships this task at Scheduling Category=Medium by default; raising it to High uses the same sanctioned mechanism with more headroom. This is scheduling tuning, not a guaranteed FPS boost - the effect depends on what else is contending for the CPU. (Other fields some optimizer tools also touch here, like SFIO Priority, are documented by Microsoft as not used, so this tweak leaves them alone.)",
+                "profiles/mmcss_games_priority",
                 () => config.MmcssGamesPriorityEnabled,
                 v => { config.MmcssGamesPriorityEnabled = v; Save(); }),
             new("Above Normal Process Priority",
                 "Raises the game's own process to Above Normal CPU scheduling priority for the duration of the session.",
                 "A real Windows scheduling class (SetPriorityClass), not a registry trick. Community benchmarking consistently finds Above Normal reduces worst-case frame-time stutters with low risk, while pushing further to High priority shows only marginal extra gain and a real risk of starving audio/input threads. Effect varies by game and is not guaranteed. Only takes effect for direct .exe launches - TrayTrigger has no handle to the actual game process for Steam-launched games, so this silently does nothing for those.",
+                "profiles/above_normal_priority",
                 () => config.AboveNormalPriorityEnabled,
                 v => { config.AboveNormalPriorityEnabled = v; Save(); }),
             new("Windows Defender Exclusion for Game Files",
                 "Excludes the game's executable from Microsoft Defender real-time scanning while it's running.",
                 "Real, Microsoft-supported mechanism (Add-MpPreference), not a workaround - and it measurably reduces CPU/I-O hitches during shader compilation and asset streaming on some games. This is a genuine security tradeoff, not just a performance one: it narrows antivirus coverage for that specific file while the profile is active. Defaults off even under Aggressive for that reason - only enable it if you understand and accept the tradeoff. Only applies when TrayTrigger knows the game's real executable path (not Steam launches). If the path was already excluded before this ran, that exclusion is left alone on restore.",
+                "profiles/defender_exclusion",
                 () => config.DefenderExclusionEnabled,
                 v => { config.DefenderExclusionEnabled = v; Save(); },
                 isOptIn: true),

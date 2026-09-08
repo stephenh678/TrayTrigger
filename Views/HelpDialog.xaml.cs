@@ -61,7 +61,7 @@ public partial class HelpDialog : Window
         }
 
         Title = $"{topic.Title} - TrayTrigger Help";
-        BreadcrumbText.Text = "TRAYTRIGGER HELP  ·  " + SectionLabel(topic.Id);
+        BreadcrumbText.Text = "TRAYTRIGGER HELP  ·  " + HelpContentService.SectionLabel(topic.Id).ToUpperInvariant();
         TitleText.Text = topic.Title;
 
         bool first = true;
@@ -77,22 +77,6 @@ public partial class HelpDialog : Window
             BodyPanel.Children.Add(element);
             first = false;
         }
-    }
-
-    private static string SectionLabel(string topicId)
-    {
-        int slash = topicId.IndexOf('/');
-        string section = slash < 0 ? topicId : topicId.Substring(0, slash);
-        return section.ToLowerInvariant() switch
-        {
-            "tweaks" => "PERFORMANCE TWEAKS",
-            "profiles" => "PERFORMANCE PROFILES",
-            "scripts" => "GAME SCRIPTS",
-            "library" => "LIBRARY",
-            "tray" => "TRAY MENU",
-            "updates" => "UPDATES",
-            _ => section.ToUpperInvariant()
-        };
     }
 
     // --- Block factories. Colors/fonts come from App.xaml resources so the dialog tracks the theme. ---

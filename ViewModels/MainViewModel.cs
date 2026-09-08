@@ -390,6 +390,9 @@ public class MainViewModel : ViewModelBase
 
     public string AppVersionDisplay => Update.AppVersionDisplay;
 
+    /// <summary>About tab's "Help Topics" card: every embedded help topic, grouped by section.</summary>
+    public IReadOnlyList<HelpTopicGroup> HelpTopicIndex { get; } = HelpContentService.GetIndex();
+
     public string UpdateStatusBadgeText => Update.UpdateStatusBadgeText;
 
     public string UpdateStatusIcon => Update.UpdateStatusIcon;
