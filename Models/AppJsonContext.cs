@@ -10,6 +10,7 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(List<GameEntry>))]
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(GitHubReleaseInfo))]
+[JsonSerializable(typeof(List<GitHubReleaseInfo>))]
 [JsonSerializable(typeof(GitHubReleaseAsset))]
 [JsonSerializable(typeof(List<GitHubReleaseAsset>))]
 [JsonSerializable(typeof(PerformanceProfileSessionSnapshot))]

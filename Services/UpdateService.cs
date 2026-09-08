@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -55,8 +56,24 @@ public class UpdateService
         }
     }
 
-    public static string CurrentVersionDisplay =>
-        $"v{CurrentVersion.Major}.{CurrentVersion.Minor}.{CurrentVersion.Build}";
+    /// <summary>
+    /// Full semantic version of the running build, including any pre-release suffix baked in
+    /// by the CI build (e.g. "1.3.0-beta.1" from /p:Version=1.3.0-beta.1 lands in
+    /// AssemblyInformationalVersion). Falls back to the numeric assembly version.
+    /// </summary>
+    public static SemanticVersion CurrentSemVer
+    {
+        get
+        {
+            string? info = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            return SemanticVersion.TryParse(info) ?? SemanticVersion.FromVersion(CurrentVersion);
+        }
+    }
+
+    public static bool IsPrereleaseBuild => CurrentSemVer.IsPrerelease;
+
+    public static string CurrentVersionDisplay => CurrentSemVer.ToDisplayString();
 
     public UpdateService()
     {
@@ -75,16 +92,48 @@ public class UpdateService
     }
 
     /// <summary>
-    /// Checks GitHub for the latest release in the specified repository (e.g. "stephenh678/TrayTrigger").
+    /// Picks the newest installable release from a list, honouring SemVer pre-release ordering.
+    /// Drafts and releases with unparsable tags are ignored; pre-releases are ignored unless
+    /// <paramref name="includePrerelease"/> is set. Returns null if nothing qualifies.
     /// </summary>
-    public async Task<UpdateCheckResult> CheckForUpdatesAsync(string? repository)
+    public static GitHubReleaseInfo? SelectLatest(IEnumerable<GitHubReleaseInfo> releases, bool includePrerelease)
+    {
+        GitHubReleaseInfo? best = null;
+        SemanticVersion? bestVer = null;
+
+        foreach (var r in releases)
+        {
+            if (r.Draft) continue;
+            var v = r.SemVer;
+            if (v == null) continue;
+            if (!includePrerelease && (r.Prerelease || v.IsPrerelease)) continue;
+
+            if (bestVer == null || v > bestVer)
+            {
+                best = r;
+                bestVer = v;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Checks GitHub for the latest release in the specified repository (e.g. "stephenh678/TrayTrigger").
+    /// When <paramref name="includePrerelease"/> is true, the full releases list is consulted and
+    /// the newest version wins even if it is flagged as a pre-release; otherwise GitHub's
+    /// /releases/latest endpoint is used, which already excludes pre-releases and drafts.
+    /// </summary>
+    public async Task<UpdateCheckResult> CheckForUpdatesAsync(string? repository, bool includePrerelease = false)
     {
         string targetRepo = string.IsNullOrWhiteSpace(repository) ? "stephenh678/TrayTrigger" : repository.Trim();
 
         try
         {
-            string url = $"https://api.github.com/repos/{targetRepo}/releases/latest";
-            LoggingService.Info("UpdateService", $"Checking for updates at {url}");
+            string url = includePrerelease
+                ? $"https://api.github.com/repos/{targetRepo}/releases?per_page=30"
+                : $"https://api.github.com/repos/{targetRepo}/releases/latest";
+            LoggingService.Info("UpdateService", $"Checking for updates at {url} (prerelease={includePrerelease})");
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token).ConfigureAwait(false);
@@ -107,17 +156,41 @@ public class UpdateService
             }
 
             string json = await response.Content.ReadAsStringAsync(timeoutCts.Token).ConfigureAwait(false);
-            var release = JsonSerializer.Deserialize(json, AppJsonContext.Default.GitHubReleaseInfo);
+
+            GitHubReleaseInfo? release;
+            if (includePrerelease)
+            {
+                var list = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListGitHubReleaseInfo);
+                if (list == null)
+                {
+                    return new UpdateCheckResult(UpdateStatus.Error, null, "Failed to parse release list from GitHub.", CurrentVersion);
+                }
+                if (list.Count == 0)
+                {
+                    LoggingService.Info("UpdateService", $"Release list for {targetRepo} is empty.");
+                    return new UpdateCheckResult(
+                        UpdateStatus.NoReleasesFound,
+                        null,
+                        $"No GitHub releases found for '{targetRepo}'. Once published, updates will appear here.",
+                        CurrentVersion);
+                }
+                release = SelectLatest(list, includePrerelease: true);
+            }
+            else
+            {
+                release = JsonSerializer.Deserialize(json, AppJsonContext.Default.GitHubReleaseInfo);
+            }
 
             if (release == null || string.IsNullOrWhiteSpace(release.TagName))
             {
                 return new UpdateCheckResult(UpdateStatus.Error, null, "Failed to parse release information from GitHub.", CurrentVersion);
             }
 
-            var remoteVersion = release.ParsedVersion;
-            if (remoteVersion != null && remoteVersion > CurrentVersion)
+            var remoteVersion = release.SemVer;
+            var current = CurrentSemVer;
+            if (remoteVersion != null && remoteVersion > current)
             {
-                LoggingService.Info("UpdateService", $"New release detected: {release.TagName} (Current: {CurrentVersionDisplay})");
+                LoggingService.Info("UpdateService", $"New release detected: {release.TagName} (Current: {CurrentVersionDisplay}, prerelease={release.Prerelease})");
                 return new UpdateCheckResult(UpdateStatus.UpdateAvailable, release, null, CurrentVersion);
             }
 

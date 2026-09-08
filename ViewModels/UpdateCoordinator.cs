@@ -78,11 +78,13 @@ public class UpdateCoordinator : ViewModelBase
             }
 
             string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
-            var result = await UpdateService.Instance.CheckForUpdatesAsync(repo);
+            var result = await UpdateService.Instance.CheckForUpdatesAsync(repo, _settings.IncludePrereleaseUpdates);
 
             if (result.IsUpdateAvailable && result.LatestRelease != null)
             {
-                UpdateStatusBadgeText = $"{result.LatestRelease.TagName} available!";
+                UpdateStatusBadgeText = result.LatestRelease.Prerelease
+                    ? $"{result.LatestRelease.TagName} pre-release available!"
+                    : $"{result.LatestRelease.TagName} available!";
                 UpdateStatusIcon = "";
                 if (Application.Current?.TryFindResource("BrushAccentHover") is Brush acBrush)
                 {

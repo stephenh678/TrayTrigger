@@ -320,6 +320,20 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public bool IncludePrereleaseUpdates
+    {
+        get => _settings.IncludePrereleaseUpdates;
+        set
+        {
+            if (_settings.IncludePrereleaseUpdates != value)
+            {
+                _settings.IncludePrereleaseUpdates = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public string GitHubRepository
     {
         get => string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository;
@@ -835,6 +849,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
         OnPropertyChanged(nameof(AutoCheckForUpdates));
+        OnPropertyChanged(nameof(IncludePrereleaseUpdates));
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
         OnPropertyChanged(nameof(CreateRestorePointBeforeTweaks));

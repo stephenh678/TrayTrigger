@@ -29,6 +29,7 @@ public class AppSettings
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
     public bool AutoCheckForUpdates { get; set; } = true;
+    public bool IncludePrereleaseUpdates { get; set; } = false;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
     public bool HasSeenSteamGridDbPrompt { get; set; } = false;
     public bool HasSeenPerformanceProfileMigrationPrompt { get; set; } = false;

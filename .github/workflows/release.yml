@@ -36,9 +36,14 @@ jobs:
             $tag = "${{ github.ref_name }}"
             $ver = $tag.TrimStart('v', 'V')
           }
-          Write-Host "Releasing version: $ver with tag $tag"
+          # Any SemVer pre-release suffix (v1.3.0-beta.1, v1.3.0-rc.2) publishes as a GitHub
+          # pre-release. GitHub excludes those from /releases/latest, so only users who opt in
+          # to "Receive pre-release updates" in Settings are offered them.
+          $isPre = $ver.Contains('-')
+          Write-Host "Releasing version: $ver with tag $tag (prerelease=$isPre)"
           "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
           "TAG_NAME=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "IS_PRERELEASE=$($isPre.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -79,7 +84,13 @@ jobs:
       - name: Generate Release Notes
         shell: pwsh
         run: |
-          $prevTag = git tag --sort=-creatordate | Where-Object { $_ -ne $env:TAG_NAME } | Select-Object -First 1
+          # A stable release diffs against the previous *stable* tag so its notes cover every
+          # beta that led up to it. A pre-release diffs against whatever came right before it.
+          $candidates = git tag --sort=-creatordate | Where-Object { $_ -ne $env:TAG_NAME }
+          if ($env:IS_PRERELEASE -ne 'true') {
+            $candidates = $candidates | Where-Object { $_ -notmatch '-' }
+          }
+          $prevTag = $candidates | Select-Object -First 1
 
           if ($prevTag) {
             $range = "$prevTag..$env:TAG_NAME"
@@ -104,7 +115,7 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           name: "TrayTrigger v${{ env.VERSION }}"
           draft: false
-          prerelease: false
+          prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           body_path: release_notes.md
           files: |
             publish/installer/TrayTrigger-v*-Setup.exe
