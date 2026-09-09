@@ -155,7 +155,16 @@ public class GameCardViewModel : ViewModelBase
     public bool IsSteamGame => Game.IsSteamGame;
     public bool ForceSteamOverlayTag => Game.ForceSteamOverlayTag;
     public bool HasSteamOverlay => Game.HasSteamOverlay;
-    public bool ShowCategoryBadge => !HasSteamOverlay || !string.Equals(Category, "Steam", StringComparison.OrdinalIgnoreCase);
+    public bool IsGogGame => Game.IsGogGame;
+    public bool IsEaGame => Game.IsEaGame;
+    public bool IsEpicGame => Game.IsEpicGame;
+    public bool IsUbisoftGame => Game.IsUbisoftGame;
+    public bool ShowCategoryBadge =>
+        (!HasSteamOverlay || !string.Equals(Category, LibraryConstants.SteamCategory, StringComparison.OrdinalIgnoreCase)) &&
+        (!IsGogGame || !string.Equals(Category, LibraryConstants.GogCategory, StringComparison.OrdinalIgnoreCase)) &&
+        (!IsEaGame || !string.Equals(Category, LibraryConstants.EaCategory, StringComparison.OrdinalIgnoreCase)) &&
+        (!IsEpicGame || !string.Equals(Category, LibraryConstants.EpicCategory, StringComparison.OrdinalIgnoreCase)) &&
+        (!IsUbisoftGame || !string.Equals(Category, LibraryConstants.UbisoftCategory, StringComparison.OrdinalIgnoreCase));
     public bool IsFavorite => Game.IsFavorite;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public bool IsHidden => Game.IsHidden;
@@ -303,6 +312,10 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsSteamGame));
         OnPropertyChanged(nameof(ForceSteamOverlayTag));
         OnPropertyChanged(nameof(HasSteamOverlay));
+        OnPropertyChanged(nameof(IsGogGame));
+        OnPropertyChanged(nameof(IsEaGame));
+        OnPropertyChanged(nameof(IsEpicGame));
+        OnPropertyChanged(nameof(IsUbisoftGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));
         OnPropertyChanged(nameof(FavoriteMenuLabel));

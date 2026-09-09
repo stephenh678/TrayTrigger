@@ -706,7 +706,7 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                var dlg = new ScanForGamesDialog(_mainViewModel, new List<DiscoveredSteamGame>(), new List<GameCandidate>());
+                var dlg = new ScanForGamesDialog(_mainViewModel, new List<DiscoveredSteamGame>(), new List<DiscoveredGogGame>(), new List<DiscoveredEaGame>(), new List<DiscoveredEpicGame>(), new List<DiscoveredUbisoftGame>(), new List<GameCandidate>());
                 CaptureVisual(dlg, 680, 580, targetPng);
                 ExitApplication();
                 return;

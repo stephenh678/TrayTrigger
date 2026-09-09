@@ -46,6 +46,7 @@ Open a [Feature Request](https://github.com/stephenh678/TrayTrigger/issues/new?t
 - `ViewModels/` / `Views/` — WPF UI
 - `Help/` — in-app "Learn more" content, embedded as resources
 - `TrayTrigger.Tests/` — unit tests
+- `docs/` — developer-facing playbooks not tied to any single file (e.g. [adding a new game-platform integration](docs/adding-a-platform-integration.md))
 
 ## Code of Conduct
 

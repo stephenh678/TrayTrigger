@@ -362,10 +362,12 @@ public class PerformanceProfileService
     /// Turns on Windows' native HDR mode via the CCD advanced-color API (see
     /// <see cref="HdrControlService"/>) on every display that reports HDR support. Displays already
     /// in HDR are left alone but still recorded, so restore doesn't force them off either. Returns
-    /// false (and captures nothing) if there's no HDR-capable display, or every capable display is
-    /// currently in Auto Color Management's WCG mode - those are left untouched entirely, since the
-    /// on/off-only HDR API used to restore afterward would drop them to plain SDR instead of back
-    /// to WCG (see RestoreHdr).
+    /// false (and captures nothing) if there's no HDR-capable display. A display currently in Auto
+    /// Color Management's WCG mode IS forced to full HDR too (opt-in trade-off, by user request):
+    /// the on/off-only HDR API has no direct "set WCG" call, so RestoreHdr can only put a
+    /// WCG-at-session-start display back to plain "off," not back to WCG - it may render flat SDR
+    /// after the game closes until Windows/ACM re-negotiates on its own (e.g. on the next app
+    /// switch). See docs/Help/profiles/hdr.md and this tweak's Settings description.
     /// </summary>
     private static bool ApplyHdr(PerformanceProfileSessionSnapshot snapshot)
     {
@@ -376,14 +378,7 @@ public class PerformanceProfileService
             return false;
         }
 
-        var touchable = states.Where(s => !s.IsWcg).ToList();
-        if (touchable.Count == 0)
-        {
-            LoggingService.Verbose("PerformanceProfile", "Every HDR-capable display is in WCG mode; leaving as-is.");
-            return false;
-        }
-
-        snapshot.PreviousHdrStates = touchable.Select(s => new HdrDisplaySnapshot
+        snapshot.PreviousHdrStates = states.Select(s => new HdrDisplaySnapshot
         {
             AdapterIdLowPart = s.AdapterId.LowPart,
             AdapterIdHighPart = s.AdapterId.HighPart,
@@ -392,13 +387,14 @@ public class PerformanceProfileService
         }).ToList();
         snapshot.HdrCaptured = true;
 
-        LoggingService.Info("PerformanceProfile", $"Enable HDR: found {touchable.Count} HDR-capable display(s) ({touchable.Count(s => s.Enabled)} already on, {states.Count - touchable.Count} left alone in WCG mode).");
+        int wcgCount = states.Count(s => s.IsWcg);
+        LoggingService.Info("PerformanceProfile", $"Enable HDR: found {states.Count} HDR-capable display(s) ({states.Count(s => s.Enabled)} already on, {wcgCount} currently in WCG mode and being forced to HDR).");
 
-        foreach (var s in touchable.Where(s => !s.Enabled))
+        foreach (var s in states.Where(s => !s.Enabled))
         {
             if (HdrControlService.SetDisplayHdrEnabled(s.AdapterId, s.TargetId, true))
             {
-                LoggingService.Info("PerformanceProfile", $"Enabled HDR on display target {s.TargetId}.");
+                LoggingService.Info("PerformanceProfile", $"Enabled HDR on display target {s.TargetId}{(s.IsWcg ? " (was in WCG mode)" : "")}.");
             }
             else
             {

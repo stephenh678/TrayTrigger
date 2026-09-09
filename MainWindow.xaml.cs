@@ -247,9 +247,9 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<GameCandidate> folderCandidates)
+    private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<GameCandidate> folderCandidates)
     {
-        var dialog = new ScanForGamesDialog(_viewModel, steamGames, folderCandidates);
+        var dialog = new ScanForGamesDialog(_viewModel, steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates);
         dialog.Owner = this;
         dialog.ShowDialog();
     }

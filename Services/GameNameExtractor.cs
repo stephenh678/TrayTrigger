@@ -157,26 +157,51 @@ public static partial class GameNameExtractor
     /// Resolves game match with dual-pass search (Pass 1: local/exe name, Pass 2: parent folder fallback).
     /// Enforces fuzzy confidence threshold to reject incorrect matches.
     /// </summary>
+    /// <param name="knownName">
+    /// An already-trusted display name for this game (e.g. a platform's own metadata - GOG/EA/Epic
+    /// manifests and Steam's own listings all carry an authoritative title), tried as its own search
+    /// pass before falling back to a name guessed from the exe filename or folder. A guess like
+    /// "OMD" (from OMD.exe) or "OrcsMustDie3" (the install folder) can easily miss a real Steam
+    /// listing that a search on the actual title "Orcs Must Die! 3" finds immediately - pass the
+    /// known name whenever the caller has one instead of relying on the exe/folder heuristics alone.
+    /// </param>
     public static async Task<GameResolutionResult> ResolveGameMatchAsync(
-        string exePath, 
-        string? folderFallback = null, 
-        bool preferExe = true, 
-        bool searchOnline = true, 
+        string exePath,
+        string? folderFallback = null,
+        bool preferExe = true,
+        bool searchOnline = true,
         SteamSearchService? steamSearch = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
+        string? knownName = null,
         CancellationToken cancellationToken = default)
     {
         string localName = ExtractGameName(exePath, folderFallback, preferExe);
 
-        LoggingService.Verbose("GameNameExtractor", $"Resolving match: localName='{localName}', exe='{exePath}', folderFallback='{folderFallback}', preferExe={preferExe}, minConfidence={minConfidence:F2}");
+        LoggingService.Verbose("GameNameExtractor", $"Resolving match: localName='{localName}', knownName='{knownName}', exe='{exePath}', folderFallback='{folderFallback}', preferExe={preferExe}, minConfidence={minConfidence:F2}");
 
         if (!searchOnline)
-            return new GameResolutionResult(localName, null, null);
+            return new GameResolutionResult(knownName ?? localName, null, null);
 
         steamSearch ??= new SteamSearchService();
 
         try
         {
+            // Pass 0: the caller's own trusted name, if any - normally a far better search term
+            // than anything derived from the exe filename or folder name (see the knownName doc
+            // comment above). Skips straight to a result if it clears the confidence bar, since
+            // there's no reason to also try weaker exe/folder guesses once a trusted name matched.
+            if (!string.IsNullOrWhiteSpace(knownName))
+            {
+                var knownMatch = await steamSearch.FindBestMatchAsync(knownName, minConfidence, cancellationToken).ConfigureAwait(false);
+                LoggingService.Verbose("GameNameExtractor", $"Pass 0 (known name) result for '{knownName}': {(knownMatch != null ? $"{knownMatch.Name} (score {knownMatch.SimilarityScore:F2})" : "None")}");
+
+                if (knownMatch != null && knownMatch.SimilarityScore >= Math.Max(0.85, minConfidence))
+                {
+                    LoggingService.Verbose("GameNameExtractor", $"Pass 0 match accepted: '{knownMatch.Name}' ({knownMatch.AppId})");
+                    return new GameResolutionResult(knownMatch.Name, knownMatch.AppId, knownMatch.ThumbnailUrl);
+                }
+            }
+
             // Pass 1: Search using local extracted name
             var match1 = await steamSearch.FindBestMatchAsync(localName, minConfidence, cancellationToken).ConfigureAwait(false);
             LoggingService.Verbose("GameNameExtractor", $"Pass 1 result for '{localName}': {(match1 != null ? $"{match1.Name} (score {match1.SimilarityScore:F2})" : "None")}");
@@ -220,9 +245,10 @@ public static partial class GameNameExtractor
             LoggingService.Warn("GameNameExtractor", $"Online matching failed for '{localName}': {ex.Message}");
         }
 
-        // Safe fallback: preserve clean local name, do not attach incorrect SteamAppId
-        LoggingService.Verbose("GameNameExtractor", $"No online match reached confidence threshold {minConfidence:F2}. Preserving local name='{localName}'.");
-        return new GameResolutionResult(localName, null, null);
+        // Safe fallback: preserve the caller's trusted name if it gave us one, otherwise the
+        // clean local guess - do not attach an incorrect SteamAppId either way.
+        LoggingService.Verbose("GameNameExtractor", $"No online match reached confidence threshold {minConfidence:F2}. Preserving name='{knownName ?? localName}'.");
+        return new GameResolutionResult(knownName ?? localName, null, null);
     }
 
     [GeneratedRegex(@"\s+")]
