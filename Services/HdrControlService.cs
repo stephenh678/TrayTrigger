@@ -21,7 +21,9 @@ public static class HdrControlService
         public int HighPart;
     }
 
-    public readonly record struct DisplayColorState(LUID AdapterId, uint TargetId, bool Supported, bool Enabled);
+    /// <summary>IsWcg is only ever true on the 24H2+ path (see s_useHdrState2Api) - the legacy
+    /// API has no way to distinguish WCG from HDR, so it's always false there.</summary>
+    public readonly record struct DisplayColorState(LUID AdapterId, uint TargetId, bool Supported, bool Enabled, bool IsWcg = false);
 
     // Windows 11 24H2 (build 26100) shipped "Automatically manage color for apps" (Auto Color
     // Management). With it on, the legacy advancedColorEnabled bit reflects whether the
@@ -82,7 +84,8 @@ public static class HdrControlService
 
                 bool supported2 = (colorInfo2.value & 0x1) != 0; // advancedColorSupported
                 bool enabled2 = colorInfo2.activeColorMode == DISPLAYCONFIG_ADVANCED_COLOR_MODE_HDR;
-                result.Add(new DisplayColorState(target.adapterId, target.id, supported2, enabled2));
+                bool isWcg2 = colorInfo2.activeColorMode == DISPLAYCONFIG_ADVANCED_COLOR_MODE_WCG;
+                result.Add(new DisplayColorState(target.adapterId, target.id, supported2, enabled2, isWcg2));
                 continue;
             }
 
@@ -171,6 +174,7 @@ public static class HdrControlService
     // Auto Color Management issue (xbmc/xbmc PR #26096, SDK_26100.h).
     private const int DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO_2 = 15;
     private const int DISPLAYCONFIG_DEVICE_INFO_SET_HDR_STATE = 16;
+    private const int DISPLAYCONFIG_ADVANCED_COLOR_MODE_WCG = 1;
     private const int DISPLAYCONFIG_ADVANCED_COLOR_MODE_HDR = 2;
 
     [StructLayout(LayoutKind.Sequential)]
