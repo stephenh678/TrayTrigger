@@ -144,6 +144,12 @@ public class PerformanceProfileService
                 applied = true;
             }
 
+            if (settings.OptimizedProfileTweaks.HdrEnabled)
+            {
+                ApplyHdr(snapshot);
+                applied = true;
+            }
+
             if (aggressive && settings.AggressiveProfileTweaks.SystemResponsivenessEnabled)
             {
                 ApplySystemResponsiveness(snapshot);
@@ -273,12 +279,14 @@ public class PerformanceProfileService
 
         SystemTweaksService.ApplyUltimatePlanTweaks(schemeGuid);
         SystemTweaksService.RunPowercfg($"/setactive {schemeGuid}");
+        LoggingService.Verbose("PerformanceProfile", $"Power Plan: switched active scheme to 'Ultimate Plan - TrayTrigger' (was {snapshot.PreviousPowerSchemeGuid ?? "unknown"}).");
     }
 
     private static void RestorePowerPlan(PerformanceProfileSessionSnapshot snapshot)
     {
         if (!snapshot.PowerPlanCaptured || string.IsNullOrWhiteSpace(snapshot.PreviousPowerSchemeGuid)) return;
         SystemTweaksService.RunPowercfg($"/setactive {snapshot.PreviousPowerSchemeGuid}");
+        LoggingService.Verbose("PerformanceProfile", $"Power Plan: restored active scheme to {snapshot.PreviousPowerSchemeGuid}.");
     }
 
     private static void ApplySystemResponsiveness(PerformanceProfileSessionSnapshot snapshot)
@@ -289,6 +297,7 @@ public class PerformanceProfileService
         // Microsoft's MMCSS docs: values below 10 are clamped back up to 20, so 10 is the
         // lowest reserve Windows actually honors.
         SystemTweaksService.SetHklmDword(SystemResponsivenessPath, "SystemResponsiveness", 10);
+        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: set to 10 (was {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}).");
     }
 
     private static void RestoreSystemResponsiveness(PerformanceProfileSessionSnapshot snapshot)
@@ -303,6 +312,7 @@ public class PerformanceProfileService
         {
             SystemTweaksService.DeleteHklmValue(SystemResponsivenessPath, "SystemResponsiveness");
         }
+        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: restored to {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}.");
     }
 
     private static void ApplySchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
@@ -313,6 +323,7 @@ public class PerformanceProfileService
         // SFIO Priority is intentionally not written - Microsoft's MMCSS docs state it "is not used".
         SystemTweaksService.SetHklmValuesBatch(
             (SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", "High", RegistryValueKind.String));
+        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: set to 'High' (was '{snapshot.PreviousSchedulingCategory ?? "unset"}').");
     }
 
     private static void RestoreSchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
@@ -328,13 +339,67 @@ public class PerformanceProfileService
         {
             SystemTweaksService.DeleteHklmValue(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category");
         }
+        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: restored to '{snapshot.PreviousSchedulingCategory ?? "unset"}'.");
     }
 
     private static void RestoreGlobalTweaks(PerformanceProfileSessionSnapshot snapshot)
     {
         RestorePowerPlan(snapshot);
+        RestoreHdr(snapshot);
         RestoreSystemResponsiveness(snapshot);
         RestoreSchedulingCategory(snapshot);
+    }
+
+    /// <summary>
+    /// Turns on Windows' native HDR mode via the CCD advanced-color API (see
+    /// <see cref="HdrControlService"/>) on every display that reports HDR support. Displays already
+    /// in HDR are left alone but still recorded, so restore doesn't force them off either.
+    /// </summary>
+    private static void ApplyHdr(PerformanceProfileSessionSnapshot snapshot)
+    {
+        var states = HdrControlService.GetDisplayStates().Where(s => s.Supported).ToList();
+        if (states.Count == 0)
+        {
+            LoggingService.Verbose("PerformanceProfile", "No HDR-capable display detected; skipping Enable HDR.");
+            return;
+        }
+
+        snapshot.PreviousHdrStates = states.Select(s => new HdrDisplaySnapshot
+        {
+            AdapterIdLowPart = s.AdapterId.LowPart,
+            AdapterIdHighPart = s.AdapterId.HighPart,
+            TargetId = s.TargetId,
+            WasEnabled = s.Enabled
+        }).ToList();
+        snapshot.HdrCaptured = true;
+
+        LoggingService.Info("PerformanceProfile", $"Enable HDR: found {states.Count} HDR-capable display(s) ({states.Count(s => s.Enabled)} already on).");
+
+        foreach (var s in states.Where(s => !s.Enabled))
+        {
+            if (HdrControlService.SetDisplayHdrEnabled(s.AdapterId, s.TargetId, true))
+            {
+                LoggingService.Info("PerformanceProfile", $"Enabled HDR on display target {s.TargetId}.");
+            }
+            else
+            {
+                LoggingService.Warn("PerformanceProfile", $"Failed to enable HDR on display target {s.TargetId}.");
+            }
+        }
+    }
+
+    private static void RestoreHdr(PerformanceProfileSessionSnapshot snapshot)
+    {
+        if (!snapshot.HdrCaptured) return;
+
+        foreach (var s in snapshot.PreviousHdrStates)
+        {
+            var adapterId = new HdrControlService.LUID { LowPart = s.AdapterIdLowPart, HighPart = s.AdapterIdHighPart };
+            bool ok = HdrControlService.SetDisplayHdrEnabled(adapterId, s.TargetId, s.WasEnabled);
+            LoggingService.Info("PerformanceProfile", ok
+                ? $"Restored display target {s.TargetId} HDR state to {(s.WasEnabled ? "On" : "Off")}."
+                : $"Failed to restore display target {s.TargetId} HDR state.");
+        }
     }
 
     /// <summary>
@@ -351,6 +416,7 @@ public class PerformanceProfileService
             snapshot.PreviousGpuPreferenceValue = key?.GetValue(exePath) as string;
             snapshot.GpuPreferenceCaptured = true;
             key?.SetValue(exePath, "GpuPreference=2;", RegistryValueKind.String);
+            LoggingService.Verbose("PerformanceProfile", $"GPU Preference: set 'High performance' for '{exePath}' (was '{snapshot.PreviousGpuPreferenceValue ?? "unset"}').");
         }
         catch (Exception ex)
         {
@@ -373,6 +439,7 @@ public class PerformanceProfileService
             {
                 key?.DeleteValue(snapshot.GpuPreferenceExecutablePath, throwOnMissingValue: false);
             }
+            LoggingService.Verbose("PerformanceProfile", $"GPU Preference: restored for '{snapshot.GpuPreferenceExecutablePath}' to '{snapshot.PreviousGpuPreferenceValue ?? "unset"}'.");
         }
         catch (Exception ex)
         {
@@ -392,6 +459,7 @@ public class PerformanceProfileService
         try
         {
             process.PriorityClass = ProcessPriorityClass.AboveNormal;
+            LoggingService.Verbose("PerformanceProfile", $"Set '{gameName}' process priority to Above Normal.");
         }
         catch (Exception ex)
         {
@@ -418,6 +486,11 @@ public class PerformanceProfileService
             if (!alreadyExcluded)
             {
                 RunElevatedPowerShell($"Add-MpPreference -ExclusionPath '{EscapeForPowerShellSingleQuoted(exePath)}'");
+                LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: added '{exePath}'.");
+            }
+            else
+            {
+                LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: '{exePath}' was already excluded; leaving as-is.");
             }
         }
         catch (Exception ex)
@@ -440,6 +513,7 @@ public class PerformanceProfileService
         try
         {
             RunElevatedPowerShell($"Remove-MpPreference -ExclusionPath '{EscapeForPowerShellSingleQuoted(snapshot.DefenderExclusionPath)}'");
+            LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: removed '{snapshot.DefenderExclusionPath}'.");
         }
         catch (Exception ex)
         {

@@ -205,7 +205,10 @@ public partial class FolderScannerService
                 .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
                 .ToList();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("FolderScanner", $"Failed to enumerate subdirectories of '{folderPath}': {ex.Message}");
+        }
 
         var detectedSubGames = new List<GameCandidate>();
 
@@ -227,6 +230,7 @@ public partial class FolderScannerService
         // 2. If 1 subdirectory is a game AND the parent folder is named like a games library (e.g. "Games", "SteamLibrary") -> Multi-Game Library!
         if (detectedSubGames.Count >= 2 || (detectedSubGames.Count == 1 && isNamedLikeLibrary))
         {
+            LoggingService.Verbose("FolderScanner", $"'{folderPath}': {detectedSubGames.Count} sub-game(s) detected, isNamedLikeLibrary={isNamedLikeLibrary} -> treating as multi-game library.");
             return new FolderScanResult
             {
                 IsMultiGameLibrary = true,
@@ -237,12 +241,62 @@ public partial class FolderScannerService
         }
 
         // Otherwise, treat as a single game folder
+        LoggingService.Verbose("FolderScanner", $"'{folderPath}': {detectedSubGames.Count} sub-game(s) detected, isNamedLikeLibrary={isNamedLikeLibrary} -> treating as a single game folder.");
         var singleCandidates = ScanFolder(folderPath, preferExe);
         return new FolderScanResult
         {
             IsMultiGameLibrary = false,
             SingleGameCandidates = singleCandidates
         };
+    }
+
+    /// <summary>
+    /// For a folder the caller already knows is a library of many games - a user-configured Scan
+    /// Location, not a folder of unknown shape - so unlike <see cref="ScanFolderOrLibrary"/> this
+    /// doesn't need to guess whether the root itself is a single game or a library first. That
+    /// guess requires each subfolder's best candidate to clear a 45-point confidence bar before
+    /// it counts as "a real game", which exists to avoid misreading an ordinary single game's own
+    /// bin/data/saves subfolders as separate games when the folder's identity is unknown. Here the
+    /// identity is already known, so every immediate subfolder's own best-scoring candidate is
+    /// taken directly - a new, correctly-installed but modestly-scored game no longer needs to
+    /// outscore that bar just to be seen at all.
+    /// </summary>
+    public List<GameCandidate> ScanKnownLibraryLocation(string folderPath, bool preferExe = true)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            return new List<GameCandidate>();
+
+        List<string> subdirs;
+        try
+        {
+            subdirs = Directory.GetDirectories(folderPath)
+                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("FolderScannerService", $"Error listing subdirectories of '{folderPath}': {ex.Message}");
+            return new List<GameCandidate>();
+        }
+
+        // No subfolders at all - the scan location itself is (or currently only holds) one
+        // game's own install tree rather than a container of many game folders.
+        if (subdirs.Count == 0)
+        {
+            return ScanFolder(folderPath, preferExe);
+        }
+
+        var results = new List<GameCandidate>();
+        foreach (var sub in subdirs)
+        {
+            var candidates = ScanFolder(sub, preferExe);
+            if (candidates.Count > 0)
+            {
+                results.Add(candidates[0]);
+            }
+        }
+
+        return results.OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     public static bool IsDisqualified(string exePath, string rootFolderName)
@@ -256,8 +310,9 @@ public partial class FolderScannerService
             if (fi.Length < 60 * 1024)
                 return true;
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Verbose("FolderScanner", $"IsDisqualified: could not read file size for '{exePath}' ({ex.Message}) - treating as disqualified.");
             return true;
         }
 
@@ -303,7 +358,10 @@ public partial class FolderScannerService
                 return true;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("FolderScanner", $"IsDisqualified: could not read FileVersionInfo for '{exePath}': {ex.Message}");
+        }
 
         return false;
     }
@@ -412,7 +470,10 @@ public partial class FolderScannerService
             else if (bytes > 3 * 1024 * 1024) score += 10;  // > 3 MB
             else if (bytes < 1024 * 1024) score -= 15;      // < 1 MB penalty
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("FolderScanner", $"ScoreExecutable: could not read file size for '{exePath}': {ex.Message}");
+        }
 
         // ------------------------------------------------------------------
         // Factor 5: Windows GUI Subsystem vs Console (-25 to +15 points)
@@ -442,7 +503,10 @@ public partial class FolderScannerService
                 score += 25;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("FolderScanner", $"ScoreExecutable: could not read FileVersionInfo for '{exePath}': {ex.Message}");
+        }
 
         // ------------------------------------------------------------------
         // Factor 7: Penalized Keywords Check
@@ -518,7 +582,10 @@ public partial class FolderScannerService
                 return reader.ReadUInt16();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("FolderScanner", $"GetPeSubsystem: could not parse PE header of '{exePath}': {ex.Message}");
+        }
 
         return 0;
     }

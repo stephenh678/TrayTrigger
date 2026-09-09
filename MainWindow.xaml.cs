@@ -47,7 +47,7 @@ public partial class MainWindow : Window
             MaybeShowPerformanceProfileMigrationPrompt();
         };
 
-        _viewModel.RequestOpenSteamDialog += OnRequestOpenSteamDialog;
+        _viewModel.RequestScanResultsPicker += OnRequestScanResultsPicker;
         _viewModel.RequestEditGameDialog += OnRequestEditGameDialog;
         _viewModel.RequestCandidatePicker += OnRequestCandidatePicker;
         _viewModel.RequestFolderBatchImport += OnRequestFolderBatchImport;
@@ -58,7 +58,7 @@ public partial class MainWindow : Window
 
         Closed += (s, e) =>
         {
-            _viewModel.RequestOpenSteamDialog -= OnRequestOpenSteamDialog;
+            _viewModel.RequestScanResultsPicker -= OnRequestScanResultsPicker;
             _viewModel.RequestEditGameDialog -= OnRequestEditGameDialog;
             _viewModel.RequestCandidatePicker -= OnRequestCandidatePicker;
             _viewModel.RequestFolderBatchImport -= OnRequestFolderBatchImport;
@@ -121,13 +121,16 @@ public partial class MainWindow : Window
         bool setAllToOptimized = ModernDialog.PromptOptimizedProfileMigration(this);
         if (setAllToOptimized)
         {
+            int migratedCount = 0;
             foreach (var card in _viewModel.Games)
             {
                 if (card.Game.PerformanceProfile == PerformanceProfileMode.Off)
                 {
                     card.Game.PerformanceProfile = PerformanceProfileMode.Optimized;
+                    migratedCount++;
                 }
             }
+            LoggingService.Info("GameEdit", $"Performance Profile migration prompt: switched {migratedCount} game(s) from Off to Optimized.");
             _viewModel.SaveLibrary();
         }
     }
@@ -244,11 +247,11 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnRequestOpenSteamDialog()
+    private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<GameCandidate> folderCandidates)
     {
-        var steamDialog = new SteamImportDialog(_viewModel);
-        steamDialog.Owner = this;
-        steamDialog.ShowDialog();
+        var dialog = new ScanForGamesDialog(_viewModel, steamGames, folderCandidates);
+        dialog.Owner = this;
+        dialog.ShowDialog();
     }
 
     private void OnRequestMinimizeToTray()
@@ -291,11 +294,17 @@ public partial class MainWindow : Window
     private void OnRequestFolderBatchImport(string folderPath, List<GameCandidate> candidates)
     {
         var existingPaths = _viewModel.Games.Select(g => g.Game.ExecutablePath);
-        var dialog = new FolderBatchImportDialog(folderPath, candidates, existingPaths);
+        bool isAlreadyScanLocation = _viewModel.IsScanLocation(folderPath);
+        var dialog = new FolderBatchImportDialog(folderPath, candidates, existingPaths, isAlreadyScanLocation,
+            onIgnoreCandidate: c => _viewModel.IgnoreGamePath(c.ExePath, c.Name));
         dialog.Owner = this;
         if (dialog.ShowDialog() == true && dialog.SelectedGames != null && dialog.SelectedGames.Count > 0)
         {
             _viewModel.ImportBatchGames(dialog.SelectedGames);
+            if (dialog.RememberAsScanLocation)
+            {
+                _viewModel.AddManualScanLocationIfNew(folderPath);
+            }
         }
     }
 

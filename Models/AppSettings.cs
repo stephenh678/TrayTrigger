@@ -2,6 +2,17 @@ namespace TrayTrigger.Models;
 
 public class AppSettings
 {
+    /// <summary>
+    /// Folders "Scan for Games" looks in for installed games - Steam library folders (auto-synced
+    /// by <see cref="Services.ScanLocationService"/>) plus any the user added by hand. See
+    /// <see cref="ScanLocation"/>.
+    /// </summary>
+    public List<ScanLocation> ScanLocations { get; set; } = new();
+    /// <summary>Runs "Scan for Games" silently at startup - skips the "no scan locations" prompt if none are configured, and only surfaces the install prompt when it actually finds something.</summary>
+    public bool AutoScanForGamesOnStartup { get; set; } = false;
+    /// <summary>Executable paths permanently excluded from "Add Folder" and "Scan for Games" results. See <see cref="IgnoredGamePath"/>.</summary>
+    public List<IgnoredGamePath> IgnoredGamePaths { get; set; } = new();
+
     public bool StartWithWindows { get; set; } = false;
     public bool StartMinimizedToTray { get; set; } = true;
     public bool GroupTrayMenuByCategory { get; set; } = true;

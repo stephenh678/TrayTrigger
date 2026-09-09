@@ -115,6 +115,7 @@ public class GameScriptService
         {
             _pendingPostExit[game.Id] = game;
         }
+        LoggingService.Verbose("GameScript", $"Tracking post-exit script for '{game.Name}' in case of early shutdown.");
     }
 
     /// <summary>Runs the game's post-exit script, if configured. Fire-and-forget; never throws.</summary>

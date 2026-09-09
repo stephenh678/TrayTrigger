@@ -133,11 +133,9 @@
                             <Button Grid.Column="0" Content="Change..." Command="{Binding BrowseCoverCommand}"
                                     Style="{StaticResource ModernOutlineButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
                             <Button Grid.Column="1" Content="Reset" Command="{Binding ResetCoverCommand}"
-                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"
-                                    ToolTip="Clear custom poster artwork"/>
+                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
                             <Button Grid.Column="2" Content="🔄" Command="{Binding RefreshPosterCommand}"
-                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"
-                                    ToolTip="Re-download official poster from Steam"/>
+                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"/>
                         </Grid>
                     </StackPanel>
 
@@ -161,9 +159,8 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Button Content="Change..." Command="{Binding BrowseIconCommand}" 
                                             Style="{StaticResource ModernOutlineButton}" Padding="6,3" FontSize="11" Margin="0,0,4,0"/>
-                                    <Button Content="Reset" Command="{Binding ResetIconCommand}" 
-                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11"
-                                            ToolTip="Extract icon from executable"/>
+                                    <Button Content="Reset" Command="{Binding ResetIconCommand}"
+                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11"/>
                                 </StackPanel>
                             </StackPanel>
                         </DockPanel>
@@ -187,12 +184,12 @@
                                 <TextBlock Text="Game Title" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
                                            VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                                    <Button Content="Search Online 🔍" Command="{Binding FetchOfficialNameOnlineCommand}" 
+                                    <Button Content="Search Online 🔍" Command="{Binding FetchOfficialNameOnlineCommand}"
                                             Style="{StaticResource ModernGhostButton}" Margin="0,0,6,0"
-                                            Padding="8,2" FontSize="10.5" ToolTip="Search Steam store for official game title"/>
-                                    <Button Content="From .exe" Command="{Binding FetchNameFromExeCommand}" 
-                                            Style="{StaticResource ModernGhostButton}" 
-                                            Padding="8,2" FontSize="10.5" ToolTip="Extract title metadata directly from the executable file"/>
+                                            Padding="8,2" FontSize="10.5"/>
+                                    <Button Content="From .exe" Command="{Binding FetchNameFromExeCommand}"
+                                            Style="{StaticResource ModernGhostButton}"
+                                            Padding="8,2" FontSize="10.5"/>
                                 </StackPanel>
                             </DockPanel>
                             <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
@@ -211,8 +208,7 @@
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <ComboBox ItemsSource="{Binding PerformanceProfileOptions}"
                                       SelectedItem="{Binding PerformanceProfile}"
-                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,12"
-                                      ToolTip="Configured in System &amp; Performance &#x2192; Performance Profiles"/>
+                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,12"/>
 
                             <!-- Steam App ID Search & Linking -->
                             <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
@@ -231,11 +227,9 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBox Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
-                                                 ToolTip="Steam App ID (numeric ID found in store.steampowered.com/app/&lt;id&gt;/)"/>
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                         <Button Grid.Column="1" Content="Fetch by ID" Command="{Binding FetchBySteamIdCommand}"
-                                                Style="{StaticResource ModernOutlineButton}" Padding="12,4"
-                                                ToolTip="Look up title and download poster artwork from Steam without changing launch protocol"/>
+                                                Style="{StaticResource ModernOutlineButton}" Padding="12,4"/>
                                     </Grid>
 
                                     <!-- Force Apply Steam Overlay Tag Option -->
@@ -382,6 +376,21 @@
                                 <TextBlock Text="Check this only if the game is installed in your local Steam library. Leave unchecked for standalone or non-Steam local executables."
                                            FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                             </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CARD 4: HIDDEN -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="8" Padding="14">
+                        <StackPanel>
+                            <TextBlock Text="Hidden" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
+
+                            <CheckBox Content="Hide this game from the library"
+                                      IsChecked="{Binding IsHidden}"
+                                      Style="{StaticResource ModernCheckBox}"/>
+                            <TextBlock Text="Removed from the library grid and tray menu, but kept on record - Scan for Games and Add Folder will still recognize it and won't suggest it again. Unhide it anytime from the Library's &quot;Hidden&quot; filter tab or this game's right-click menu."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                         </StackPanel>
                     </Border>
 

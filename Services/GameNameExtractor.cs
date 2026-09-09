@@ -68,7 +68,13 @@ public static partial class GameNameExtractor
 
         if (string.IsNullOrWhiteSpace(exePath))
         {
-            return !string.IsNullOrWhiteSpace(resolvedFolder) ? CleanFolderName(resolvedFolder) : "Unnamed Game";
+            if (!string.IsNullOrWhiteSpace(resolvedFolder))
+            {
+                LoggingService.Verbose("GameNameExtractor", $"Name for '{exePath}' resolved via folder name (no exePath) -> '{resolvedFolder}'.");
+                return CleanFolderName(resolvedFolder);
+            }
+            LoggingService.Verbose("GameNameExtractor", "No exePath and no resolvable folder name -> 'Unnamed Game'.");
+            return "Unnamed Game";
         }
 
         // If user explicitly prefers folder names over exe
@@ -76,7 +82,10 @@ public static partial class GameNameExtractor
         {
             string cleanedFolder = CleanFolderName(resolvedFolder);
             if (!string.IsNullOrWhiteSpace(cleanedFolder) && !IsGenericFolder(cleanedFolder))
+            {
+                LoggingService.Verbose("GameNameExtractor", $"Name for '{exePath}' resolved via preferred folder name -> '{cleanedFolder}'.");
                 return cleanedFolder;
+            }
         }
 
         string rawStem = Path.GetFileNameWithoutExtension(exePath);
@@ -91,12 +100,14 @@ public static partial class GameNameExtractor
                 string? desc = CleanMetadataTitle(vi.FileDescription);
                 if (!string.IsNullOrWhiteSpace(desc) && IsAcceptableTitle(desc))
                 {
+                    LoggingService.Verbose("GameNameExtractor", $"Name for '{exePath}' resolved via FileDescription -> '{desc}'.");
                     return desc;
                 }
 
                 string? prod = CleanMetadataTitle(vi.ProductName);
                 if (!string.IsNullOrWhiteSpace(prod) && IsAcceptableTitle(prod))
                 {
+                    LoggingService.Verbose("GameNameExtractor", $"Name for '{exePath}' resolved via ProductName -> '{prod}'.");
                     return prod;
                 }
             }
@@ -112,6 +123,7 @@ public static partial class GameNameExtractor
         // 3. If clean stem is not generic, use it
         if (!string.IsNullOrWhiteSpace(cleanStem) && !GenericNames.Contains(cleanStem))
         {
+            LoggingService.Verbose("GameNameExtractor", $"Name for '{exePath}' resolved via cleaned exe stem -> '{cleanStem}'.");
             return cleanStem;
         }
 
@@ -121,12 +133,15 @@ public static partial class GameNameExtractor
             string cleanedFolder = CleanFolderName(resolvedFolder);
             if (!string.IsNullOrWhiteSpace(cleanedFolder) && !IsGenericFolder(cleanedFolder))
             {
+                LoggingService.Verbose("GameNameExtractor", $"Name for '{exePath}' resolved via folder-name fallback (generic stem '{cleanStem}') -> '{cleanedFolder}'.");
                 return cleanedFolder;
             }
         }
 
         // 5. Ultimate fallback
-        return string.IsNullOrWhiteSpace(cleanStem) ? rawStem : cleanStem;
+        string ultimateFallback = string.IsNullOrWhiteSpace(cleanStem) ? rawStem : cleanStem;
+        LoggingService.Verbose("GameNameExtractor", $"Name for '{exePath}' resolved via ultimate fallback -> '{ultimateFallback}'.");
+        return ultimateFallback;
     }
 
     /// <summary>
@@ -395,7 +410,10 @@ public static partial class GameNameExtractor
                         return dir.Name;
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    LoggingService.Verbose("GameNameExtractor", $"FindMeaningfulFolderName: failed walking up from '{candidate}': {ex.Message}");
+                }
             }
             else if (!IsGenericFolder(candidate) && !IsLibraryFolder(candidate))
             {
@@ -434,7 +452,10 @@ public static partial class GameNameExtractor
                     return topNonLibrary;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.Verbose("GameNameExtractor", $"FindMeaningfulFolderName: failed walking up from '{exePath}': {ex.Message}");
+            }
         }
 
         return folderFallback ?? string.Empty;

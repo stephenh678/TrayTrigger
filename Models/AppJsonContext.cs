@@ -18,6 +18,12 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(AggressiveProfileTweakConfig))]
 [JsonSerializable(typeof(PerGameProfileSnapshot))]
 [JsonSerializable(typeof(List<PerGameProfileSnapshot>))]
+[JsonSerializable(typeof(HdrDisplaySnapshot))]
+[JsonSerializable(typeof(List<HdrDisplaySnapshot>))]
+[JsonSerializable(typeof(ScanLocation))]
+[JsonSerializable(typeof(List<ScanLocation>))]
+[JsonSerializable(typeof(IgnoredGamePath))]
+[JsonSerializable(typeof(List<IgnoredGamePath>))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

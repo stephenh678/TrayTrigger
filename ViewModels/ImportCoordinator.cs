@@ -26,6 +26,7 @@ public class ImportCoordinator : ViewModelBase
     private readonly ShortcutService _shortcutService;
     private readonly IconExtractorService _iconExtractorService;
     private readonly FolderScannerService _folderScannerService;
+    private readonly SteamScannerService _steamScannerService;
     private readonly SteamSearchService _steamSearchService;
     private readonly SteamMetadataService _steamMetadataService;
     private readonly StorageService _storageService;
@@ -40,6 +41,7 @@ public class ImportCoordinator : ViewModelBase
     // re-triggering enrichment mid-import) could interleave duplicate-check and add logic.
     private bool _isImportInProgress;
     private bool _isEnrichmentInProgress;
+    private bool _isScanningForGames;
 
     private bool _isRefreshingAllPosters;
     public bool IsRefreshingAllPosters
@@ -50,13 +52,13 @@ public class ImportCoordinator : ViewModelBase
 
     public bool CanRefreshAllPosters => !IsRefreshingAllPosters;
 
-    public event Action? RequestOpenSteamDialog;
+    public event Action<List<DiscoveredSteamGame>, List<GameCandidate>>? RequestScanResultsPicker;
     public event Action<string, List<GameCandidate>>? RequestCandidatePicker;
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
 
     public ICommand AddGameCommand { get; }
     public ICommand AddFolderCommand { get; }
-    public ICommand OpenSteamImportCommand { get; }
+    public ICommand OpenScanForGamesCommand { get; }
     public ICommand RefreshAllPostersCommand { get; }
 
     public ImportCoordinator(
@@ -64,6 +66,7 @@ public class ImportCoordinator : ViewModelBase
         ShortcutService shortcutService,
         IconExtractorService iconExtractorService,
         FolderScannerService folderScannerService,
+        SteamScannerService steamScannerService,
         SteamSearchService steamSearchService,
         SteamMetadataService steamMetadataService,
         StorageService storageService,
@@ -74,6 +77,7 @@ public class ImportCoordinator : ViewModelBase
         _shortcutService = shortcutService;
         _iconExtractorService = iconExtractorService;
         _folderScannerService = folderScannerService;
+        _steamScannerService = steamScannerService;
         _steamSearchService = steamSearchService;
         _steamMetadataService = steamMetadataService;
         _storageService = storageService;
@@ -82,7 +86,7 @@ public class ImportCoordinator : ViewModelBase
 
         AddGameCommand = new RelayCommand(AddGameBrowse);
         AddFolderCommand = new RelayCommand(AddGameFolderBrowse);
-        OpenSteamImportCommand = new RelayCommand(OpenSteamImport);
+        OpenScanForGamesCommand = new AsyncRelayCommand(() => ScanForGamesAsync());
         RefreshAllPostersCommand = new AsyncRelayCommand(async () => await RefreshAllPostersAsync());
     }
 
@@ -103,7 +107,7 @@ public class ImportCoordinator : ViewModelBase
 
     // Shared commit step of every import pipeline: add the prepared entries to the visible
     // library and refresh everything that depends on it. See L-12.
-    private void CommitImportedEntries(IEnumerable<GameEntry> entries, string statusMessage)
+    private void CommitImportedEntries(IEnumerable<GameEntry> entries, string? statusMessage)
     {
         foreach (var entry in entries)
         {
@@ -114,7 +118,10 @@ public class ImportCoordinator : ViewModelBase
         _library.SaveLibrary();
         _library.UpdateHotkeys();
         _library.ApplySort();
-        _library.StatusMessage = statusMessage;
+        if (statusMessage != null)
+        {
+            _library.StatusMessage = statusMessage;
+        }
         _library.NotifyGameCountChanged();
     }
 
@@ -407,12 +414,18 @@ public class ImportCoordinator : ViewModelBase
 
             if (scanResult.IsMultiGameLibrary)
             {
-                aggregated.AddRange(scanResult.DiscoveredGames);
+                aggregated.AddRange(FilterIgnored(scanResult.DiscoveredGames));
             }
-            else if (scanResult.SingleGameCandidates.Count > 0)
+            else
             {
-                // Represent this individual game folder with its single best-scoring candidate.
-                aggregated.Add(scanResult.SingleGameCandidates[0]);
+                // Filter ignored candidates before picking the single best-scoring one, not
+                // after - otherwise an ignored candidate that happens to score highest silently
+                // drops this whole folder instead of falling back to the next-best real one.
+                var fresh = FilterIgnored(scanResult.SingleGameCandidates).ToList();
+                if (fresh.Count > 0)
+                {
+                    aggregated.Add(fresh[0]);
+                }
             }
         }
 
@@ -445,6 +458,8 @@ public class ImportCoordinator : ViewModelBase
 
         _library.StatusMessage = "Scanning folder...";
         var scanResult = await Task.Run(() => _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName));
+        scanResult.DiscoveredGames = FilterIgnored(scanResult.DiscoveredGames).ToList();
+        scanResult.SingleGameCandidates = FilterIgnored(scanResult.SingleGameCandidates).ToList();
 
         // A. Multi-game parent folder detected (e.g. C:\Games, D:\SteamLibrary\steamapps\common, C:\GOG Games)
         if (scanResult.IsMultiGameLibrary)
@@ -504,14 +519,21 @@ public class ImportCoordinator : ViewModelBase
 
     public void ImportBatchGames(List<GameCandidate> candidates) => _ = ImportBatchGamesAsync(candidates);
 
-    public async Task ImportBatchGamesAsync(List<GameCandidate> candidates)
+    /// <param name="announceProgress">
+    /// False when this is one leg of a combined import (see ImportScanResultsAsync) - suppresses
+    /// this method's own progress/completion status messages so a batch spanning multiple sources
+    /// doesn't overwrite the caller's single running total mid-way (e.g. "Importing 1..." then
+    /// "Importing 2..." instead of one steady "Importing 3...").
+    /// </param>
+    /// <returns>The number of games actually added; 0 if none (e.g. all were duplicates); -1 if the import itself threw (logged separately - callers should not treat this the same as "0, all duplicates").</returns>
+    public async Task<int> ImportBatchGamesAsync(List<GameCandidate> candidates, bool announceProgress = true)
     {
-        if (candidates == null || candidates.Count == 0) return;
+        if (candidates == null || candidates.Count == 0) return 0;
 
         if (_isImportInProgress)
         {
             _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
-            return;
+            return 0;
         }
 
         _isImportInProgress = true;
@@ -526,11 +548,17 @@ public class ImportCoordinator : ViewModelBase
 
             if (toProcess.Count == 0)
             {
-                _library.StatusMessage = "All selected games are already in your library.";
-                return;
+                if (announceProgress)
+                {
+                    _library.StatusMessage = "All selected games are already in your library.";
+                }
+                return 0;
             }
 
-            _library.StatusMessage = $"Importing {toProcess.Count} game(s)...";
+            if (announceProgress)
+            {
+                _library.StatusMessage = $"Importing {toProcess.Count} game(s)...";
+            }
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
@@ -589,15 +617,22 @@ public class ImportCoordinator : ViewModelBase
 
             if (!preparedEntries.IsEmpty)
             {
-                string status = skippedDuplicates > 0
-                    ? $"Added {preparedEntries.Count} games from folder! ({skippedDuplicates} already in library, skipped)"
-                    : $"Added {preparedEntries.Count} games from folder!";
+                string? status = null;
+                if (announceProgress)
+                {
+                    status = skippedDuplicates > 0
+                        ? $"Added {preparedEntries.Count} games from folder! ({skippedDuplicates} already in library, skipped)"
+                        : $"Added {preparedEntries.Count} games from folder!";
+                }
                 CommitImportedEntries(preparedEntries, status);
             }
+
+            return preparedEntries.Count;
         }
         catch (Exception ex)
         {
             LoggingService.Error("ImportCoordinator", "Error in ImportBatchGames", ex);
+            return -1;
         }
         finally
         {
@@ -709,41 +744,250 @@ public class ImportCoordinator : ViewModelBase
         }
     }
 
-    public void OpenSteamImport()
+    /// <summary>
+    /// Single-click "Scan for Games" entry point: scans every enabled scan location (Steam
+    /// libraries, if Steam integration is on, plus any manually-added folders from Settings &gt;
+    /// Game Scanner) and, if it finds any game not already in the library, opens the bulk install
+    /// prompt so the user can pick which to add - even a single result goes through that same
+    /// prompt, since a scan can just as easily turn up several at once. If nothing new turns up,
+    /// no dialog is shown at all.
+    /// </summary>
+    /// <param name="silent">
+    /// True for the automatic startup run (see AppSettings.AutoScanForGamesOnStartup): skips the
+    /// "No Scan Locations" prompt instead of greeting the user with a dialog the moment the app
+    /// opens. The install prompt still opens normally if the scan actually finds something.
+    /// </param>
+    public async Task ScanForGamesAsync(bool silent = false)
     {
-        if (!_settings.SteamIntegrationEnabled)
+        if (_isScanningForGames)
         {
-            Window? owner = WindowHelper.ActiveOwner();
-            var res = ModernDialog.Confirm(
-                owner,
-                "Steam Integration Disabled",
-                "Steam library integration is currently disabled in Settings.",
-                "Would you like to enable it now and scan your Steam library?",
-                confirmText: "Enable & Scan",
-                cancelText: "Cancel");
+            if (!silent) _library.StatusMessage = "A scan is already in progress. Please wait for it to finish.";
+            return;
+        }
 
-            if (res)
+        var enabledLocations = _settings.ScanLocations.Where(l => l.IsEnabled).ToList();
+        if (enabledLocations.Count == 0)
+        {
+            if (!silent)
             {
-                _settings.SteamIntegrationEnabled = true;
-                _storageService.SaveSettings(_settings);
-                RequestOpenSteamDialog?.Invoke();
+                Window? owner = WindowHelper.ActiveOwner();
+                ModernDialog.ShowInfo(
+                    owner,
+                    "No Scan Locations",
+                    "You haven't added any scan locations yet.",
+                    "Add one in Settings → Game Scanner, then try again.");
             }
             return;
         }
 
-        RequestOpenSteamDialog?.Invoke();
+        _isScanningForGames = true;
+        try
+        {
+            _library.StatusMessage = "Scanning for games...";
+
+            var existingAppIds = _library.Games
+                .Where(g => g.IsSteamGame && !string.IsNullOrEmpty(g.Game.SteamAppId))
+                .Select(g => g.Game.SteamAppId!)
+                .ToList();
+            var existingExePaths = new HashSet<string>(_library.Games.Select(g => g.Game.ExecutablePath), StringComparer.OrdinalIgnoreCase);
+            var ignoredAppIds = new HashSet<string>(
+                _settings.IgnoredGamePaths.Where(p => p.SteamAppId != null).Select(p => p.SteamAppId!),
+                StringComparer.OrdinalIgnoreCase);
+
+            var steamLocations = _settings.SteamIntegrationEnabled
+                ? enabledLocations.Where(l => l.Source == ScanLocationSource.Steam).ToList()
+                : new List<ScanLocation>();
+            var folderLocations = enabledLocations.Where(l => l.Source != ScanLocationSource.Steam).ToList();
+
+            var (steamGames, folderCandidates) = await Task.Run(() =>
+            {
+                var steamResults = new List<DiscoveredSteamGame>();
+                if (steamLocations.Count > 0)
+                {
+                    string? steamPath = _steamScannerService.GetSteamInstallPath();
+                    if (!string.IsNullOrEmpty(steamPath))
+                    {
+                        steamResults = _steamScannerService
+                            .ScanInstalledGames(steamLocations.Select(l => l.Path), steamPath, existingAppIds)
+                            .Where(g => !g.IsAlreadyImported && !ignoredAppIds.Contains(g.AppId))
+                            .ToList();
+                    }
+                }
+
+                var folderResults = new List<GameCandidate>();
+                var ignoredExePaths = BuildIgnoredExePathSet();
+                foreach (var loc in folderLocations)
+                {
+                    if (!Directory.Exists(loc.Path)) continue;
+
+                    // A scan location's identity is already known (the user configured it as a
+                    // game library), so this skips ScanFolderOrLibrary's is-this-a-library
+                    // confidence gating entirely and takes every immediate subfolder's own best
+                    // candidate directly - see ScanKnownLibraryLocation.
+                    var candidates = FilterIgnored(_folderScannerService.ScanKnownLibraryLocation(loc.Path, _settings.PreferExeForGameName), ignoredExePaths);
+                    folderResults.AddRange(candidates.Where(c => !existingExePaths.Contains(c.ExePath)));
+                }
+
+                return (steamResults, folderResults);
+            }).ConfigureAwait(true);
+
+            if (steamGames.Count == 0 && folderCandidates.Count == 0)
+            {
+                _library.StatusMessage = "No new games found.";
+                return;
+            }
+
+            _library.StatusMessage = $"Found {steamGames.Count + folderCandidates.Count} new game(s).";
+            RequestScanResultsPicker?.Invoke(steamGames, folderCandidates);
+        }
+        finally
+        {
+            _isScanningForGames = false;
+        }
+    }
+
+    /// <summary>Drops any candidate whose exe path the user has permanently ignored (see <see cref="IgnoreGamePath"/>).</summary>
+    private IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates)
+        => FilterIgnored(candidates, BuildIgnoredExePathSet());
+
+    /// <summary>Same as the single-arg overload, but takes a pre-built set - for a caller that
+    /// filters multiple lists (or scan locations) in one pass, so the ignore list isn't rebuilt
+    /// into a fresh HashSet on every call.</summary>
+    private static IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates, HashSet<string> ignoredExePaths)
+        => candidates.Where(c => !ignoredExePaths.Contains(c.ExePath));
+
+    private HashSet<string> BuildIgnoredExePathSet()
+        => new(
+            _settings.IgnoredGamePaths.Where(p => p.ExePath != null).Select(p => p.ExePath!),
+            StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Permanently excludes an exe from future "Add Folder" and "Scan for Games" results - for a
+    /// bundled non-game tool the folder scanner's heuristics keep mistaking for a game (e.g. an
+    /// installer or utility living alongside real games in a scan location).
+    /// </summary>
+    public void IgnoreGamePath(string exePath, string name)
+    {
+        if (_settings.IgnoredGamePaths.Any(p => string.Equals(p.ExePath, exePath, StringComparison.OrdinalIgnoreCase))) return;
+
+        _settings.IgnoredGamePaths.Add(new IgnoredGamePath { ExePath = exePath, Name = name });
+        _storageService.SaveSettings(_settings);
+        LoggingService.Info("ImportCoordinator", $"Ignored scan candidate '{name}' ('{exePath}') - will be excluded from future scans.");
+    }
+
+    /// <summary>Permanently excludes a Steam AppId from future "Scan for Games" results - e.g. a tool/demo/soundtrack Steam also lists as an "app" that the user never wants suggested as a game.</summary>
+    public void IgnoreSteamGame(string appId, string name)
+    {
+        if (_settings.IgnoredGamePaths.Any(p => string.Equals(p.SteamAppId, appId, StringComparison.OrdinalIgnoreCase))) return;
+
+        _settings.IgnoredGamePaths.Add(new IgnoredGamePath { SteamAppId = appId, Name = name });
+        _storageService.SaveSettings(_settings);
+        LoggingService.Info("ImportCoordinator", $"Ignored Steam scan candidate '{name}' (AppId {appId}) - will be excluded from future scans.");
+    }
+
+    public void RemoveIgnoredGamePath(string id)
+    {
+        var removed = _settings.IgnoredGamePaths.FirstOrDefault(p => p.Id == id);
+        _settings.IgnoredGamePaths.RemoveAll(p => p.Id == id);
+        _storageService.SaveSettings(_settings);
+        if (removed != null)
+        {
+            LoggingService.Info("ImportCoordinator", $"Un-ignored '{removed.Name}' - will be considered again in future scans.");
+        }
+    }
+
+    public bool IsScanLocation(string path)
+    {
+        string normalized = path.TrimEnd('\\', '/');
+        return _settings.ScanLocations.Any(l => string.Equals(l.Path, normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Adds a folder as a manual scan location if it isn't tracked already - used when the user
+    /// checks "remember this folder" in the batch-import dialog after Add Folder turned out to be
+    /// a multi-game library, so future "Scan for Games" runs pick up new installs there too.
+    /// </summary>
+    public void AddManualScanLocationIfNew(string path)
+    {
+        if (IsScanLocation(path)) return;
+
+        _settings.ScanLocations.Add(new ScanLocation { Path = path.TrimEnd('\\', '/'), Source = ScanLocationSource.Manual, IsEnabled = true });
+        _storageService.SaveSettings(_settings);
+        LoggingService.Info("ImportCoordinator", $"Added manual scan location: '{path}'.");
+    }
+
+    /// <summary>
+    /// Imports both halves of a "Scan for Games" selection. Awaits the Steam import fully before
+    /// starting the folder one rather than firing both at once - ImportSteamGamesAsync and
+    /// ImportBatchGamesAsync share the same _isImportInProgress reentrancy guard, so kicking them
+    /// off back-to-back (fire-and-forget) makes the second one see the first still in flight and
+    /// silently no-op instead of importing anything.
+    /// </summary>
+    public async Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<GameCandidate> folderCandidates)
+    {
+        int total = steamGames.Count + folderCandidates.Count;
+        if (total == 0) return;
+
+        // announceProgress: false on both legs - each one's own "Importing N..."/"Imported N!"
+        // status would otherwise stomp over the other's as they run one after another (e.g.
+        // "Importing 1..." followed by "Importing 2...") instead of one steady running total.
+        _library.StatusMessage = $"Importing {total} game(s)...";
+
+        int steamAdded = steamGames.Count > 0 ? await ImportSteamGamesAsync(steamGames, announceProgress: false) : 0;
+        int folderAdded = folderCandidates.Count > 0 ? await ImportBatchGamesAsync(folderCandidates, announceProgress: false) : 0;
+
+        // -1 means that leg's import threw (already logged) rather than everything just being a
+        // duplicate - don't let a real failure hide behind the same reassuring "already in your
+        // library" text a legitimate all-duplicates result gets.
+        if (steamAdded < 0 || folderAdded < 0)
+        {
+            int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(folderAdded, 0);
+            _library.StatusMessage = addedSoFar > 0
+                ? $"Imported {addedSoFar} game(s), but part of the import failed - check the log for details."
+                : "Import failed - check the log for details.";
+            return;
+        }
+
+        int addedTotal = steamAdded + folderAdded;
+        _library.StatusMessage = addedTotal > 0
+            ? $"Imported {addedTotal} game(s)!"
+            : "All selected games are already in your library.";
+    }
+
+    /// <summary>
+    /// Call once at startup so newly-detected Steam libraries are already in the scan-location
+    /// list before the user ever opens Scan for Games. No-ops if Steam integration is off - the
+    /// scan-location list is only ever synced from Steam while that's enabled.
+    /// </summary>
+    public void SyncSteamScanLocationsOnStartup()
+    {
+        if (!_settings.SteamIntegrationEnabled) return;
+
+        try
+        {
+            if (ScanLocationService.SyncSteamLocations(_settings, _steamScannerService))
+            {
+                _storageService.SaveSettings(_settings);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("ImportCoordinator", $"Failed to sync Steam scan locations at startup: {ex.Message}");
+        }
     }
 
     public void ImportSteamGames(List<DiscoveredSteamGame> discoveredGames) => _ = ImportSteamGamesAsync(discoveredGames);
 
-    public async Task ImportSteamGamesAsync(List<DiscoveredSteamGame> discoveredGames)
+    /// <param name="announceProgress">See the matching parameter on <see cref="ImportBatchGamesAsync"/>.</param>
+    /// <returns>The number of games actually added; 0 if none (e.g. all were duplicates); -1 if the import itself threw (logged separately - callers should not treat this the same as "0, all duplicates").</returns>
+    public async Task<int> ImportSteamGamesAsync(List<DiscoveredSteamGame> discoveredGames, bool announceProgress = true)
     {
-        if (discoveredGames == null || discoveredGames.Count == 0) return;
+        if (discoveredGames == null || discoveredGames.Count == 0) return 0;
 
         if (_isImportInProgress)
         {
             _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
-            return;
+            return 0;
         }
 
         _isImportInProgress = true;
@@ -757,11 +1001,17 @@ public class ImportCoordinator : ViewModelBase
 
             if (toProcess.Count == 0)
             {
-                _library.StatusMessage = "All selected Steam games are already in your library.";
-                return;
+                if (announceProgress)
+                {
+                    _library.StatusMessage = "All selected Steam games are already in your library.";
+                }
+                return 0;
             }
 
-            _library.StatusMessage = $"Importing {toProcess.Count} Steam game(s)...";
+            if (announceProgress)
+            {
+                _library.StatusMessage = $"Importing {toProcess.Count} Steam game(s)...";
+            }
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
@@ -799,15 +1049,22 @@ public class ImportCoordinator : ViewModelBase
 
             if (!preparedEntries.IsEmpty)
             {
-                string status = skippedDuplicates > 0
-                    ? $"Imported {preparedEntries.Count} Steam game(s)! ({skippedDuplicates} already in library, skipped)"
-                    : $"Imported {preparedEntries.Count} Steam game(s)!";
+                string? status = null;
+                if (announceProgress)
+                {
+                    status = skippedDuplicates > 0
+                        ? $"Imported {preparedEntries.Count} Steam game(s)! ({skippedDuplicates} already in library, skipped)"
+                        : $"Imported {preparedEntries.Count} Steam game(s)!";
+                }
                 CommitImportedEntries(preparedEntries, status);
             }
+
+            return preparedEntries.Count;
         }
         catch (Exception ex)
         {
             LoggingService.Error("ImportCoordinator", "Error in ImportSteamGames", ex);
+            return -1;
         }
         finally
         {

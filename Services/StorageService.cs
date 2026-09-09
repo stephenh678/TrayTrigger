@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +13,13 @@ namespace TrayTrigger.Services;
 
 public class StorageService
 {
+    // Every save/load logs who triggered it via [CallerMemberName]/[CallerFilePath] - with ~30
+    // call sites across the app (many of them generic AutoSaveSettings()/SaveLibrary() wrappers),
+    // a bare "Saved settings" line gave no way to tell which of them fired without instrumenting
+    // every call site by hand.
+    private static string CallerTag(string callerFilePath, string callerMember) =>
+        $"{Path.GetFileNameWithoutExtension(callerFilePath)}.{callerMember}";
+
     private readonly Lock _gamesLock = new();
     private readonly Lock _settingsLock = new();
 
@@ -240,7 +248,7 @@ public class StorageService
         }
     }
 
-    public void SaveGames(IEnumerable<GameEntry> games)
+    public void SaveGames(IEnumerable<GameEntry> games, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
     {
         lock (_gamesLock)
         {
@@ -261,7 +269,7 @@ public class StorageService
                 _gamesPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _gamesFilePath);
-                LoggingService.Verbose("Storage", $"Saved {list.Count} game(s) to '{_gamesFilePath}'.");
+                LoggingService.Verbose("Storage", $"Saved {list.Count} game(s) to '{_gamesFilePath}' (from {CallerTag(callerFile, callerMember)}).");
             }
             catch (Exception ex)
             {
@@ -270,7 +278,7 @@ public class StorageService
         }
     }
 
-    public AppSettings LoadSettings()
+    public AppSettings LoadSettings([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
     {
         lock (_settingsLock)
         {
@@ -286,7 +294,7 @@ public class StorageService
                     if (settings != null)
                     {
                         settings.SteamGridDbApiKey = DecryptApiKey(settings.SteamGridDbApiKey);
-                        LoggingService.Verbose("Storage", $"Loaded settings from '{_settingsFilePath}'.");
+                        LoggingService.Verbose("Storage", $"Loaded settings from '{_settingsFilePath}' (from {CallerTag(callerFile, callerMember)}).");
                         return settings;
                     }
                 }
@@ -330,7 +338,7 @@ public class StorageService
         }
     }
 
-    public void SaveSettings(AppSettings settings)
+    public void SaveSettings(AppSettings settings, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
     {
         lock (_settingsLock)
         {
@@ -355,7 +363,7 @@ public class StorageService
                 _settingsPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _settingsFilePath);
-                LoggingService.Verbose("Storage", $"Saved settings to '{_settingsFilePath}'.");
+                LoggingService.Verbose("Storage", $"Saved settings to '{_settingsFilePath}' (from {CallerTag(callerFile, callerMember)}).");
             }
             catch (Exception ex)
             {

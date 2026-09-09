@@ -25,6 +25,7 @@
             <MenuItem Header="Game Info (Steam Details)..." Command="{Binding ViewDetailsCommand}" FontWeight="SemiBold"/>
             <MenuItem Header="Play" Command="{Binding LaunchCommand}"/>
             <MenuItem Header="{Binding FavoriteMenuLabel}" IsCheckable="True" IsChecked="{Binding IsFavorite, Mode=OneWay}" Command="{Binding ToggleFavoriteCommand}"/>
+            <MenuItem Header="{Binding HideMenuLabel}" IsCheckable="True" IsChecked="{Binding IsHidden, Mode=OneWay}" Command="{Binding ToggleHiddenCommand}"/>
             <MenuItem Header="Open Containing Folder" Command="{Binding OpenFolderCommand}"/>
 
             <!-- Broken Game Relocate Option -->
@@ -117,6 +118,54 @@
             <Separator/>
             <MenuItem Header="Remove from Library" Command="{Binding DeleteCommand}" Foreground="#E06C75"/>
         </ContextMenu>
+
+        <!-- Settings > Game Scanner: one row in the editable Scan Locations list -->
+        <DataTemplate x:Key="ScanLocationRowTemplate" DataType="{x:Type vm:ScanLocationRowViewModel}">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
+                          Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
+
+                <Border Grid.Column="1" Background="#22222A" CornerRadius="3" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SourceLabel}" FontSize="9.5" FontWeight="Bold" Foreground="#9A9AB0"/>
+                </Border>
+
+                <TextBlock Grid.Column="2" Text="{Binding Path}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/>
+
+                <Button Grid.Column="3" Content="Remove"
+                        Command="{Binding DataContext.RemoveScanLocationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        CommandParameter="{Binding}" Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="11.5"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Settings > Game Scanner: one row in the Ignored Games list -->
+        <DataTemplate x:Key="IgnoredGamePathRowTemplate" DataType="{x:Type vm:IgnoredGamePathRowViewModel}">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding DisplayPath}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                               TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="Remove"
+                        Command="{Binding DataContext.RemoveIgnoredGamePathCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        CommandParameter="{Binding}" Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="11.5"
+                        VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -371,13 +420,13 @@
 
                 <!-- 2. Category Tabs & Action Buttons -->
                 <DockPanel Grid.Row="1" Margin="0,0,0,16">
-                    <!-- Right: Action Buttons (+ Add Game, Add Folder, Import Steam) -->
+                    <!-- Right: Action Buttons (+ Add Game, Add Folder, Scan for Games) -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Content="+ Add Game" Command="{Binding AddGameCommand}"
                                 Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0"/>
                         <Button Content="📁 Add Folder" Command="{Binding AddFolderCommand}"
                                 Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0"/>
-                        <Button Content="Import Steam" Command="{Binding OpenSteamImportCommand}"
+                        <Button Content="🔍 Scan for Games" Command="{Binding OpenScanForGamesCommand}"
                                 Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0"/>
                         <Button Content="Refresh Posters" Command="{Binding RefreshAllPostersCommand}"
                                 IsEnabled="{Binding CanRefreshAllPosters}"
@@ -405,6 +454,9 @@
                                                 <TextBlock Text="&#x2605;" FontFamily="Segoe UI Symbol, Segoe UI"
                                                            FontSize="13" Foreground="#FFD700" Margin="0,0,5,0" VerticalAlignment="Center"
                                                            Visibility="{Binding IsFavoritesTab, Converter={StaticResource BoolToVis}}"/>
+                                                <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
+                                                           FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                           Visibility="{Binding IsHiddenTab, Converter={StaticResource BoolToVis}}"/>
                                                 <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
@@ -427,13 +479,13 @@
                              Style="{StaticResource ModernTextBox}" Margin="0,0,10,0"
                              Tag="Search games by title, category, or path..."/>
 
-                    <ComboBox Grid.Column="1" 
-                              ItemsSource="{Binding SortOptions}" 
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding SortOptions}"
                               SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                               Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
 
                     <!-- View Mode Switcher (Grid, Icons, List) -->
-                    <Border Grid.Column="2" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
+                    <Border Grid.Column="2" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="6" Padding="3">
                         <StackPanel Orientation="Horizontal">
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
@@ -500,7 +552,7 @@
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="+ Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0"/>
                                 <Button Content="📁 Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0"/>
-                                <Button Content="Import Steam" Command="{Binding OpenSteamImportCommand}" Style="{StaticResource ModernOutlineButton}"/>
+                                <Button Content="🔍 Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -740,6 +792,24 @@
                                                                        FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                         </Border>
 
+                                                        <!-- Hidden Pill -->
+                                                        <Border Background="#2A2A3A" BorderBrush="#33FFFFFF" BorderThickness="1"
+                                                                CornerRadius="4" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
+                                                                       Foreground="#9A9AB0"
+                                                                       FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                                        </Border>
+
                                                         <!-- Steam Game Indicator Badge Overlay -->
                                                         <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
                                                                 CornerRadius="4" Padding="6,2" Height="19" VerticalAlignment="Center">
@@ -939,11 +1009,15 @@
                                                            ToolTip="{Binding Name}"/>
 
                                                 <!-- Playtime / Category Subtext -->
-                                                <TextBlock Grid.Row="3" Text="{Binding Category}" FontSize="9.5"
-                                                           Foreground="{StaticResource BrushTextMuted}"
-                                                           FontFamily="{StaticResource AppFont}"
-                                                           TextAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                           HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                                    <TextBlock Text="{Binding Category}" FontSize="9.5"
+                                                               Foreground="{StaticResource BrushTextMuted}"
+                                                               FontFamily="{StaticResource AppFont}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text=" &#x2022; HIDDEN" FontSize="9.5" FontWeight="Bold"
+                                                               Foreground="#9A9AB0" FontFamily="{StaticResource AppFont}"
+                                                               Visibility="{Binding IsHidden, Converter={StaticResource BoolToVis}}"/>
+                                                </StackPanel>
 
                                                 <!-- Hover Play Button Overlay -->
                                                 <Button Grid.Row="1" Command="{Binding LaunchCommand}"
@@ -1128,14 +1202,28 @@
                                                             <Path Fill="{StaticResource BrushAccentHover}" Stretch="Uniform"
                                                                   Data="M12,2A10,10 0 0,0 2,12C2,16.4 4.9,20.1 8.9,21.5L11.7,17.7C11.5,17.2 11.4,16.6 11.4,16A4,4 0 0,1 15.4,12C15.5,12 15.6,12 15.7,12L18.6,7.8C16.8,6.7 14.5,6 12,6A6,6 0 0,0 6,12C6,12.3 6,12.7 6.1,13L2.4,14.5C2.1,13.7 2,12.9 2,12A10,10 0 0,1 12,2M15.4,13.5A2.5,2.5 0 0,0 12.9,16A2.5,2.5 0 0,0 15.4,18.5A2.5,2.5 0 0,0 17.9,16A2.5,2.5 0 0,0 15.4,13.5Z"/>
                                                         </Viewbox>
-                                                        <TextBlock Text="STEAM" FontSize="8.5" Foreground="{StaticResource BrushAccentHover}" 
+                                                        <TextBlock Text="STEAM" FontSize="8.5" Foreground="{StaticResource BrushAccentHover}"
                                                                    FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                     </StackPanel>
+                                                </Border>
+                                                <Border Background="#2A2A3A" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="HIDDEN" FontSize="8.5" FontWeight="Bold"
+                                                               Foreground="#9A9AB0" FontFamily="{StaticResource AppFont}"/>
                                                 </Border>
                                             </StackPanel>
 
                                             <!-- Category Pill -->
-                                            <Border Grid.Column="2" Background="#1D1D24" BorderBrush="#33FFFFFF" BorderThickness="1" 
+                                            <Border Grid.Column="2" Background="#1D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
                                                     CornerRadius="4" Padding="7,2" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Category}" FontSize="10" 
                                                            Foreground="{StaticResource BrushTextSecondary}" 
@@ -1587,28 +1675,82 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 2.3 Steam Library Scanner -->
-                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            <!-- 2.3 Game Scanner -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                     Padding="14,12" Margin="0,0,0,10">
                                 <StackPanel>
-                                    <TextBlock Text="Steam Library Scanner" FontSize="13.5" FontWeight="SemiBold" 
+                                    <TextBlock Text="Game Scanner" FontSize="13.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Discover and launch games installed through your local Steam client." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Discover games installed through Steam and any folders you add as scan locations."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How the Game Scanner works" Margin="0,0,0,10"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
 
                                     <DockPanel LastChildFill="False">
-                                        <CheckBox Content="Enable Steam Library Integration" 
-                                                  IsChecked="{Binding SteamIntegrationEnabled}" 
-                                                  Style="{StaticResource ModernCheckBox}" FontSize="13" 
+                                        <CheckBox Content="Enable Steam Library Integration"
+                                                  IsChecked="{Binding SteamIntegrationEnabled}"
+                                                  Style="{StaticResource ModernCheckBox}" FontSize="13"
                                                   VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                        <Button Content="Import Games..." Command="{Binding OpenSteamImportCommand}" 
-                                                Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right" 
+                                        <Button Content="Scan for Games..." Command="{Binding OpenScanForGamesCommand}"
+                                                Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
                                                 VerticalAlignment="Center" Padding="10,5"/>
                                     </DockPanel>
-                                    <TextBlock Text="Automatically scan installed Steam games, VDF library manifests, and official Steam artwork caches." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,0" TextWrapping="Wrap"/>
+                                    <TextBlock Text="When enabled, Steam library folders are automatically kept in your scan locations - VDF manifests and official Steam artwork caches are used to identify and enrich installed games."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox Content="Automatically scan for new games on startup"
+                                              IsChecked="{Binding AutoScanForGamesOnStartup}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens - only interrupts you with the install prompt if it actually finds a new game."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <!-- Scan Locations manager -->
+                                    <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                            CornerRadius="6" Padding="12,10" Margin="0,4,0,0">
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                                <TextBlock Text="Scan Locations" FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                                <Button Content="Refresh Steam Locations" Command="{Binding RefreshSteamScanLocationsCommand}"
+                                                        Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"
+                                                        Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}"/>
+                                            </DockPanel>
+
+                                            <TextBlock Text="No scan locations yet. Add one below, or turn on Steam integration above."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                                       Visibility="{Binding HasNoScanLocations, Converter={StaticResource BoolToVis}}"/>
+
+                                            <ItemsControl ItemsSource="{Binding ScanLocations}" ItemTemplate="{StaticResource ScanLocationRowTemplate}" Margin="0,0,0,4"/>
+
+                                            <Button Content="+ Add a Scan Location" Command="{Binding AddScanLocationCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}" HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Ignored Games manager -->
+                                    <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                            CornerRadius="6" Padding="12,10" Margin="0,10,0,0">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasNoIgnoredGamePaths}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <TextBlock Text="Ignored Games" FontSize="12.5" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Never suggested by Add Folder or Scan for Games. Remove one to let it be detected again."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                            <ItemsControl ItemsSource="{Binding IgnoredGamePaths}" ItemTemplate="{StaticResource IgnoredGamePathRowTemplate}"/>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -1642,10 +1784,12 @@
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
                                     Padding="14,12" Margin="0,0,0,10">
                                 <StackPanel>
-                                    <TextBlock Text="Tray Context Menu Preferences" FontSize="13.5" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="Tray Context Menu Preferences" FontSize="13.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How the tray menu works" Margin="0,0,0,8"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="traymenu/overview"/>
 
-                                    <CheckBox Content="Include 'Recent' category in tray menu" 
+                                    <CheckBox Content="Include 'Recent' category in tray menu"
                                               IsChecked="{Binding ShowRecentInTray}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                     <TextBlock Text="Adds a persistent 'Recent' category submenu to the tray menu for quick access to recently played games, whether category grouping is enabled or not." 

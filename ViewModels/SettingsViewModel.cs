@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using Microsoft.Win32;
 using TrayTrigger.Models;
 using TrayTrigger.Services;
 using TrayTrigger.Views;
@@ -33,6 +35,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly StorageService _storageService;
     private readonly StartupManager _startupManager;
     private readonly TrayPromotionService _trayPromotionService;
+    private readonly SteamScannerService _steamScannerService;
 
     // Callbacks to notify parent/services of external side-effects
     private readonly Action? _onTrayMenuSettingChanged;
@@ -40,7 +43,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly Action? _onHotkeySettingChanged;
     private readonly Func<Task>? _onRequestEnrichLibrary;
     private readonly Func<IProgress<string>, Task>? _onRequestRefreshAllPosters;
-    private readonly Action? _onRequestOpenSteamImport;
+    private readonly Action? _onRequestOpenScanForGames;
     private readonly Func<Task>? _onCheckForUpdates;
     private readonly Func<string>? _getUpdateStatusText;
 
@@ -140,20 +143,31 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SetViewModeCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
     public ICommand OpenSteamGridDbSiteCommand { get; }
-    public ICommand OpenSteamImportCommand { get; }
+    public ICommand OpenScanForGamesCommand { get; }
     public ICommand RefreshAllPostersCommand { get; }
+    public ICommand AddScanLocationCommand { get; }
+    public ICommand RemoveScanLocationCommand { get; }
+    public ICommand RefreshSteamScanLocationsCommand { get; }
+    public ICommand RemoveIgnoredGamePathCommand { get; }
+
+    public ObservableCollection<ScanLocationRowViewModel> ScanLocations { get; } = new();
+    public bool HasNoScanLocations => ScanLocations.Count == 0;
+
+    public ObservableCollection<IgnoredGamePathRowViewModel> IgnoredGamePaths { get; } = new();
+    public bool HasNoIgnoredGamePaths => IgnoredGamePaths.Count == 0;
 
     public SettingsViewModel(
         AppSettings settings,
         StorageService storageService,
         StartupManager startupManager,
         TrayPromotionService trayPromotionService,
+        SteamScannerService steamScannerService,
         Action? onTrayMenuSettingChanged = null,
         Action? onPosterArtSettingChanged = null,
         Action? onHotkeySettingChanged = null,
         Func<Task>? onRequestEnrichLibrary = null,
         Func<IProgress<string>, Task>? onRequestRefreshAllPosters = null,
-        Action? onRequestOpenSteamImport = null,
+        Action? onRequestOpenScanForGames = null,
         Func<Task>? onCheckForUpdates = null,
         Func<string>? getUpdateStatusText = null)
     {
@@ -161,13 +175,14 @@ public class SettingsViewModel : ViewModelBase
         _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
         _startupManager = startupManager ?? throw new ArgumentNullException(nameof(startupManager));
         _trayPromotionService = trayPromotionService ?? throw new ArgumentNullException(nameof(trayPromotionService));
+        _steamScannerService = steamScannerService ?? throw new ArgumentNullException(nameof(steamScannerService));
 
         _onTrayMenuSettingChanged = onTrayMenuSettingChanged;
         _onPosterArtSettingChanged = onPosterArtSettingChanged;
         _onHotkeySettingChanged = onHotkeySettingChanged;
         _onRequestEnrichLibrary = onRequestEnrichLibrary;
         _onRequestRefreshAllPosters = onRequestRefreshAllPosters;
-        _onRequestOpenSteamImport = onRequestOpenSteamImport;
+        _onRequestOpenScanForGames = onRequestOpenScanForGames;
         _onCheckForUpdates = onCheckForUpdates;
         _getUpdateStatusText = getUpdateStatusText;
 
@@ -189,7 +204,20 @@ public class SettingsViewModel : ViewModelBase
         SetViewModeCommand = new RelayCommand(mode => LibraryViewMode = mode?.ToString() ?? ViewModePosterGrid);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
-        OpenSteamImportCommand = new RelayCommand(() => _onRequestOpenSteamImport?.Invoke());
+        OpenScanForGamesCommand = new RelayCommand(() => _onRequestOpenScanForGames?.Invoke());
+        AddScanLocationCommand = new RelayCommand(AddScanLocation);
+        RemoveScanLocationCommand = new RelayCommand(param =>
+        {
+            if (param is ScanLocationRowViewModel row) RemoveScanLocation(row);
+        });
+        RefreshSteamScanLocationsCommand = new RelayCommand(RefreshSteamScanLocations);
+        RebuildScanLocationRows();
+
+        RemoveIgnoredGamePathCommand = new RelayCommand(param =>
+        {
+            if (param is IgnoredGamePathRowViewModel row) RemoveIgnoredGamePath(row);
+        });
+        RebuildIgnoredGamePathRows();
         RefreshAllPostersCommand = new AsyncRelayCommand(async () =>
         {
             if (_onRequestRefreshAllPosters == null || IsRefreshingAllPosters)
@@ -212,6 +240,99 @@ public class SettingsViewModel : ViewModelBase
                 await _onCheckForUpdates();
             }
         });
+    }
+
+    // --- Scan for Games: Scan Locations ---
+    // The editable folder list "Scan for Games" (Library page) looks in. Steam library folders
+    // are auto-managed by ScanLocationService and shown here read-only-ish (removable, but they
+    // reappear on the next Steam sync); manually-added folders are fully user-owned.
+
+    /// <summary>Re-reads AppSettings.ScanLocations - call after something outside SettingsViewModel
+    /// (e.g. ImportCoordinator adding a "remembered" folder) has changed it.</summary>
+    public void RefreshScanLocations() => RebuildScanLocationRows();
+
+    private void RebuildScanLocationRows()
+    {
+        ScanLocations.Clear();
+        foreach (var loc in _settings.ScanLocations
+                     .OrderByDescending(l => l.Source == ScanLocationSource.Steam)
+                     .ThenBy(l => l.Path, StringComparer.OrdinalIgnoreCase))
+        {
+            ScanLocations.Add(new ScanLocationRowViewModel(loc, () => AutoSaveSettings()));
+        }
+        OnPropertyChanged(nameof(HasNoScanLocations));
+    }
+
+    private void AddScanLocation()
+    {
+        var dialog = new OpenFolderDialog { Title = "Add a Scan Location", Multiselect = false };
+        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
+
+        string path = dialog.FolderName.TrimEnd('\\', '/');
+        if (_settings.ScanLocations.Any(l => string.Equals(l.Path, path, StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusMessage = "That folder is already a scan location.";
+            return;
+        }
+
+        _settings.ScanLocations.Add(new ScanLocation { Path = path, Source = ScanLocationSource.Manual, IsEnabled = true });
+        AutoSaveSettings();
+        RebuildScanLocationRows();
+        LoggingService.Info("Settings", $"Added scan location: '{path}'.");
+        StatusMessage = "Added scan location.";
+    }
+
+    private void RemoveScanLocation(ScanLocationRowViewModel row)
+    {
+        _settings.ScanLocations.RemoveAll(l => l.Id == row.Model.Id);
+        AutoSaveSettings();
+        RebuildScanLocationRows();
+        LoggingService.Info("Settings", $"Removed scan location: '{row.Path}'.");
+    }
+
+    private void RefreshSteamScanLocations()
+    {
+        if (!_settings.SteamIntegrationEnabled)
+        {
+            StatusMessage = "Steam integration is disabled - enable it above first.";
+            return;
+        }
+
+        if (ScanLocationService.SyncSteamLocations(_settings, _steamScannerService))
+        {
+            AutoSaveSettings();
+            RebuildScanLocationRows();
+            StatusMessage = "Steam scan locations refreshed.";
+        }
+        else
+        {
+            StatusMessage = "Steam scan locations are already up to date.";
+        }
+    }
+
+    // --- Scan for Games: Ignored Paths ---
+    // Executables permanently excluded from "Add Folder" and "Scan for Games" results after the
+    // user clicks "Ignore" on a false-positive candidate (e.g. a bundled non-game tool).
+
+    /// <summary>Re-reads AppSettings.IgnoredGamePaths - call after something outside SettingsViewModel
+    /// (e.g. ImportCoordinator recording a new ignore) has changed it.</summary>
+    public void RefreshIgnoredGamePaths() => RebuildIgnoredGamePathRows();
+
+    private void RebuildIgnoredGamePathRows()
+    {
+        IgnoredGamePaths.Clear();
+        foreach (var p in _settings.IgnoredGamePaths.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            IgnoredGamePaths.Add(new IgnoredGamePathRowViewModel(p));
+        }
+        OnPropertyChanged(nameof(HasNoIgnoredGamePaths));
+    }
+
+    private void RemoveIgnoredGamePath(IgnoredGamePathRowViewModel row)
+    {
+        _settings.IgnoredGamePaths.RemoveAll(p => p.Id == row.Model.Id);
+        AutoSaveSettings();
+        RebuildIgnoredGamePathRows();
     }
 
     // --- Windows Startup & System Tray Integration ---
@@ -686,6 +807,20 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public bool AutoScanForGamesOnStartup
+    {
+        get => _settings.AutoScanForGamesOnStartup;
+        set
+        {
+            if (_settings.AutoScanForGamesOnStartup != value)
+            {
+                _settings.AutoScanForGamesOnStartup = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     // --- Global Manage Hotkey ---
 
     public bool EnableGameScripts
@@ -769,9 +904,9 @@ public class SettingsViewModel : ViewModelBase
 
     // --- Operations ---
 
-    public void AutoSaveSettings()
+    public void AutoSaveSettings([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
     {
-        _storageService.SaveSettings(_settings);
+        _storageService.SaveSettings(_settings, callerMember, callerFile);
         LoggingService.Verbose("Settings", "Settings auto-saved.");
     }
 

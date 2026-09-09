@@ -74,7 +74,8 @@ public class MainViewModel : ViewModelBase
 
     public AppSettings Settings => _settings;
     public IconExtractorService IconExtractorService => _iconExtractorService;
-    public event Action? RequestOpenSteamDialog;
+    public StorageService StorageService => _storageService;
+    public event Action<List<DiscoveredSteamGame>, List<GameCandidate>>? RequestScanResultsPicker;
     public event Action<GameCardViewModel>? RequestEditGameDialog;
     public event Action<string, List<GameCandidate>>? RequestCandidatePicker;
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
@@ -135,6 +136,7 @@ public class MainViewModel : ViewModelBase
             _shortcutService,
             _iconExtractorService,
             _folderScannerService,
+            _steamScannerService,
             _steamSearchService,
             _steamMetadataService,
             _storageService,
@@ -142,17 +144,22 @@ public class MainViewModel : ViewModelBase
             getSteamGridDbApiKeyOrNull: () => SettingsVM?.SteamGridDbApiKeyOrNull
         );
 
+        // Runs before SettingsVM is constructed so its initial Scan Locations list already
+        // reflects any newly-detected Steam libraries, rather than needing a manual refresh.
+        Import.SyncSteamScanLocationsOnStartup();
+
         SettingsVM = new SettingsViewModel(
             _settings,
             _storageService,
             _startupManager,
             _trayPromotionService,
+            _steamScannerService,
             onTrayMenuSettingChanged: () => Library.NotifyLibraryUpdated(),
             onPosterArtSettingChanged: () => Library.NotifyAllCardsPosterArtChanged(),
             onHotkeySettingChanged: UpdateHotkeys,
             onRequestEnrichLibrary: Import.EnrichLibraryAsync,
             onRequestRefreshAllPosters: progress => Import.RefreshAllPostersAsync(progress),
-            onRequestOpenSteamImport: Import.OpenSteamImport,
+            onRequestOpenScanForGames: () => _ = Import.ScanForGamesAsync(),
             onCheckForUpdates: () => Update.CheckForUpdatesAsync(true),
             getUpdateStatusText: () => Update.UpdateStatusBadgeText
         );
@@ -164,7 +171,7 @@ public class MainViewModel : ViewModelBase
         Library.RequestMinimizeToTray += () => RequestMinimizeToTray?.Invoke();
         Library.LibraryUpdated += () => LibraryUpdated?.Invoke();
 
-        Import.RequestOpenSteamDialog += () => RequestOpenSteamDialog?.Invoke();
+        Import.RequestScanResultsPicker += (steamGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, folderCandidates);
         Import.RequestCandidatePicker += (path, candidates) => RequestCandidatePicker?.Invoke(path, candidates);
         Import.RequestFolderBatchImport += (path, candidates) => RequestFolderBatchImport?.Invoke(path, candidates);
 
@@ -251,6 +258,11 @@ public class MainViewModel : ViewModelBase
 
         Library.LoadLibrary();
         _ = Import.EnrichLibraryAsync();
+
+        if (_settings.AutoScanForGamesOnStartup)
+        {
+            _ = Import.ScanForGamesAsync(silent: true);
+        }
 
         if (_storageService.SettingsLoadWarning != null || _storageService.GamesLoadWarning != null)
         {
@@ -441,7 +453,7 @@ public class MainViewModel : ViewModelBase
 
     public ICommand AddGameCommand => Import.AddGameCommand;
     public ICommand AddFolderCommand => Import.AddFolderCommand;
-    public ICommand OpenSteamImportCommand => Import.OpenSteamImportCommand;
+    public ICommand OpenScanForGamesCommand => Import.OpenScanForGamesCommand;
     public ICommand RefreshAllPostersCommand => Import.RefreshAllPostersCommand;
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
@@ -483,6 +495,31 @@ public class MainViewModel : ViewModelBase
     public Task AddCandidateAsync(GameCandidate candidate) => Import.AddCandidateAsync(candidate);
     public void ImportSteamGames(List<DiscoveredSteamGame> discoveredGames) => Import.ImportSteamGames(discoveredGames);
     public Task ImportSteamGamesAsync(List<DiscoveredSteamGame> discoveredGames) => Import.ImportSteamGamesAsync(discoveredGames);
+    public Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<GameCandidate> folderCandidates) => Import.ImportScanResultsAsync(steamGames, folderCandidates);
+    public bool IsScanLocation(string path) => Import.IsScanLocation(path);
+
+    public void IgnoreGamePath(string exePath, string name)
+    {
+        Import.IgnoreGamePath(exePath, name);
+        // Import mutates the same AppSettings.IgnoredGamePaths list SettingsVM displays in its
+        // own management list - see the matching comment on AddManualScanLocationIfNew above.
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreSteamGame(string appId, string name)
+    {
+        Import.IgnoreSteamGame(appId, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void AddManualScanLocationIfNew(string path)
+    {
+        Import.AddManualScanLocationIfNew(path);
+        // Import mutates the same AppSettings.ScanLocations list SettingsVM displays, but
+        // SettingsVM's own ObservableCollection only refreshes itself - it has no way to know
+        // about a change made from outside it, so it has to be told explicitly here.
+        SettingsVM.RefreshScanLocations();
+    }
 
     private void PromptExitApplication()
     {
@@ -505,7 +542,7 @@ public class MainViewModel : ViewModelBase
     }
 
     // --- Forwarded to LibraryViewModel; see L-13 ---
-    public void SaveLibrary() => Library.SaveLibrary();
+    public void SaveLibrary([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "") => Library.SaveLibrary(callerMember, callerFile);
     public void UpdateHotkeys() => Library.UpdateHotkeys();
     public void RebuildCategories() => Library.RebuildCategories();
     public void RebuildCategoryTabs() => Library.RebuildCategoryTabs();

@@ -94,6 +94,8 @@ public class HelpContentServiceTests
     [InlineData("profiles/mmcss_games_priority")]
     [InlineData("profiles/above_normal_priority")]
     [InlineData("profiles/defender_exclusion")]
+    [InlineData("scanner/overview")]
+    [InlineData("traymenu/overview")]
     [InlineData("scripts/overview")]
     [InlineData("updates/prerelease")]
     [InlineData("library/artwork")]
@@ -110,7 +112,7 @@ public class HelpContentServiceTests
         var index = HelpContentService.GetIndex();
 
         Assert.Equal(
-            new[] { "tweaks", "profiles", "scripts", "library", "updates", "troubleshooting" },
+            new[] { "tweaks", "profiles", "scanner", "traymenu", "scripts", "library", "updates", "troubleshooting" },
             index.Select(g => g.Section).ToArray());
 
         var tweaks = index.First(g => g.Section == "tweaks");

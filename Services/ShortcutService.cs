@@ -85,29 +85,34 @@ public class ShortcutService
         string cleanName = CleanGameName(Path.GetFileNameWithoutExtension(filePath));
         string ext = Path.GetExtension(filePath).ToLowerInvariant();
 
+        ShortcutResolution resolution;
         if (ext == ".url")
         {
-            return ResolveUrlShortcut(filePath, cleanName);
+            resolution = ResolveUrlShortcut(filePath, cleanName);
         }
-
-        if (ext == ".lnk")
+        else if (ext == ".lnk")
         {
-            return ResolveShellLink(filePath, cleanName);
+            resolution = ResolveShellLink(filePath, cleanName);
+        }
+        else
+        {
+            // Direct executable
+            string workingDir = Path.GetDirectoryName(filePath) ?? string.Empty;
+            string exeGameName = GameNameExtractor.ExtractGameName(filePath, Path.GetFileName(workingDir), preferExe: true);
+            resolution = new ShortcutResolution(
+                Name: exeGameName,
+                TargetPath: filePath,
+                Arguments: string.Empty,
+                WorkingDirectory: workingDir,
+                IconLocation: filePath,
+                IconIndex: 0,
+                IsSteamUrl: false,
+                SteamAppId: null
+            );
         }
 
-        // Direct executable
-        string workingDir = Path.GetDirectoryName(filePath) ?? string.Empty;
-        string exeGameName = GameNameExtractor.ExtractGameName(filePath, Path.GetFileName(workingDir), preferExe: true);
-        return new ShortcutResolution(
-            Name: exeGameName,
-            TargetPath: filePath,
-            Arguments: string.Empty,
-            WorkingDirectory: workingDir,
-            IconLocation: filePath,
-            IconIndex: 0,
-            IsSteamUrl: false,
-            SteamAppId: null
-        );
+        LoggingService.Verbose("ShortcutService", $"Resolved '{filePath}' -> Name='{resolution.Name}', Target='{resolution.TargetPath}', IsSteamUrl={resolution.IsSteamUrl}.");
+        return resolution;
     }
 
     private ShortcutResolution ResolveUrlShortcut(string urlPath, string cleanName)
@@ -250,7 +255,10 @@ public class ShortcutService
                 {
                     Marshal.FinalReleaseComObject(link);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    LoggingService.Verbose("ShortcutService", $"FinalReleaseComObject failed while resolving '{lnkPath}': {ex.Message}");
+                }
             }
         }
     }

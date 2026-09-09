@@ -90,16 +90,25 @@ public partial class SteamScannerService
 
     public List<DiscoveredSteamGame> ScanInstalledGames(IEnumerable<string> existingAppIds)
     {
-        var existingSet = new HashSet<string>(existingAppIds, StringComparer.OrdinalIgnoreCase);
-        var results = new List<DiscoveredSteamGame>();
-
         string? steamPath = GetSteamInstallPath();
         if (string.IsNullOrEmpty(steamPath))
         {
-            return results;
+            return new List<DiscoveredSteamGame>();
         }
 
-        var libraryFolders = GetLibraryFolders(steamPath);
+        return ScanInstalledGames(GetLibraryFolders(steamPath), steamPath, existingAppIds);
+    }
+
+    /// <summary>
+    /// Same manifest scan as <see cref="ScanInstalledGames(IEnumerable{string})"/>, but scoped to
+    /// an explicit set of library folders - used by "Scan for Games" so a Steam library the user
+    /// disabled in their scan locations is skipped rather than always scanning every library Steam
+    /// itself reports.
+    /// </summary>
+    public List<DiscoveredSteamGame> ScanInstalledGames(IEnumerable<string> libraryFolders, string steamPath, IEnumerable<string> existingAppIds)
+    {
+        var existingSet = new HashSet<string>(existingAppIds, StringComparer.OrdinalIgnoreCase);
+        var results = new List<DiscoveredSteamGame>();
 
         foreach (var folder in libraryFolders)
         {
@@ -268,16 +277,40 @@ public partial class SteamScannerService
 
     public static void OpenStorePage(string appId)
     {
-        Process.Start(new ProcessStartInfo($"https://store.steampowered.com/app/{appId}") { UseShellExecute = true });
+        try
+        {
+            Process.Start(new ProcessStartInfo($"https://store.steampowered.com/app/{appId}") { UseShellExecute = true });
+            LoggingService.Verbose("SteamScannerService", $"Opened store page for App ID {appId}.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamScannerService", $"Failed to open store page for App ID {appId}: {ex.Message}");
+        }
     }
 
     public static void OpenInSteamLibrary(string appId)
     {
-        Process.Start(new ProcessStartInfo($"steam://nav/games/details/{appId}") { UseShellExecute = true });
+        try
+        {
+            Process.Start(new ProcessStartInfo($"steam://nav/games/details/{appId}") { UseShellExecute = true });
+            LoggingService.Verbose("SteamScannerService", $"Opened Steam library page for App ID {appId}.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamScannerService", $"Failed to open Steam library for App ID {appId} (is Steam installed?): {ex.Message}");
+        }
     }
 
     public static void VerifyGameFiles(string appId)
     {
-        Process.Start(new ProcessStartInfo($"steam://validate/{appId}") { UseShellExecute = true });
+        try
+        {
+            Process.Start(new ProcessStartInfo($"steam://validate/{appId}") { UseShellExecute = true });
+            LoggingService.Info("SteamScannerService", $"Requested file verification via Steam for App ID {appId}.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamScannerService", $"Failed to request file verification for App ID {appId} (is Steam installed?): {ex.Message}");
+        }
     }
 }

@@ -9,6 +9,7 @@ public static class LibraryConstants
 {
     public const string AllCategory = "All";
     public const string FavoritesCategory = "Favorites";
+    public const string HiddenCategory = "Hidden";
     public const string Uncategorized = "Uncategorized";
     public const string SteamCategory = "Steam";
 }
