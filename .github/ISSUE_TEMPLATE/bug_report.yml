@@ -1,0 +1,71 @@
+name: Bug Report
+description: Something in TrayTrigger isn't working right
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: TrayTrigger version
+      description: Settings → About, or the installer/portable filename you downloaded
+      placeholder: v1.3.0
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: game-source
+    attributes:
+      label: If this involves a specific game, is it Steam or non-Steam?
+      options:
+        - Not applicable
+        - Steam
+        - Non-Steam (.exe / .lnk)
+    validations:
+      required: false
+
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Was a Performance Profile enabled for that game?
+      options:
+        - Not applicable
+        - "Off"
+        - Optimized
+        - Aggressive
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional but very helpful)
+      description: Settings → Troubleshooting → open log folder. Paste relevant lines or attach the file.
+      render: text
+    validations:
+      required: false
