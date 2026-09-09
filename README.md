@@ -1,25 +1,68 @@
-﻿<p align="center">
+<p align="center">
   <img src="Assets/app_icon.png" width="96" alt="TrayTrigger icon">
 </p>
 
-<h1 align="center">TrayTrigger</h1>
+<h1 align="center">TrayTrigger — Windows Game Launcher & Gaming Optimizer</h1>
 
 <p align="center">
-  <strong>A modern, ultra-fast system tray game launcher and performance companion for Windows.</strong>
+  <strong>Your PC games. One tray. Launch, organize, optimize.</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/stephenh678/TrayTrigger?style=flat-square&label=release" alt="Latest release">
+  <img src="https://img.shields.io/github/downloads/stephenh678/TrayTrigger/total?style=flat-square&label=downloads" alt="Downloads">
   <img src="https://img.shields.io/github/license/stephenh678/TrayTrigger?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square" alt=".NET 10">
 </p>
 
+<p align="center">
+  <a href="https://github.com/stephenh678/TrayTrigger/releases/latest"><strong>⬇ Download for Windows</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
+  &nbsp;·&nbsp;
+  <a href="#screenshots">Screenshots</a>
+  &nbsp;·&nbsp;
+  <a href="#faq">FAQ</a>
+</p>
+
+<p align="center">
+  Windows 10/11 &nbsp;·&nbsp; Free &nbsp;·&nbsp; Open Source (MIT) &nbsp;·&nbsp; No account required
+</p>
+
 ---
 
-## Overview
+TrayTrigger is a lightweight Windows game launcher that lives in your system tray. It automatically imports your Steam library with full artwork and metadata, organizes every game you own in one place, and can apply — then automatically revert — per-game performance optimizations, all without another full-screen launcher window competing for your attention.
 
-**TrayTrigger** is a lightweight, high-performance Windows desktop application designed to streamline how you launch, organize, and optimize PC games. Inspired by modern Windows 11 Fluent design and Steam jump lists, TrayTrigger lives quietly in your system notification tray while giving you instant 1-click access to your library, system specs, and gaming tweaks.
+The installer and portable download are both **self-contained** — no separate .NET runtime install required.
+
+<p align="center">
+  <img src="Assets/screenshots/library-grid.png" width="800" alt="Games library, poster grid view">
+</p>
+
+---
+
+## Why TrayTrigger?
+
+TrayTrigger isn't trying to replace Steam, or compete with a full-screen library manager like Playnite. It stays out of the way in your system tray and combines instant game launching with automatic, reversible per-game optimization — the two things a Steam client or a library manager wasn't really built to do together.
+
+**⚡ Instant Access**
+Launch any game from the tray's right-click menu in one click — no separate window to open, find, and close.
+
+**🎯 Automatic Optimization**
+Assign a game an Optimized or Aggressive performance profile once. TrayTrigger applies it the moment the game launches and reverts your system to exactly how it was the moment the game closes — no manual undo, no config left behind.
+
+**🪶 Lightweight Companion**
+TrayTrigger isn't another always-on-top launcher. It's a tray icon until you need it.
+
+## Features at a Glance
+
+- 🎮 **Tray Game Launcher** — 1-click launch from the tray's jump list, no full UI required
+- 📚 **Automatic Steam Library** — Steam games detected and imported automatically, metadata included
+- 🖼️ **SteamGridDB Artwork** — high-res poster art fetched automatically for your whole library
+- 🎯 **Per-Game Performance Profiles** — Optimized/Aggressive tweaks applied on launch, reverted on exit
+- ⚡ **Verified Windows Gaming Tweaks** — 15 tweaks grounded in documented Windows behavior, not folklore
+- 📊 **Live Hardware Monitoring** — CPU, GPU, VRAM, RAM, displays, motherboard, and BIOS at a glance
 
 ---
 
@@ -42,39 +85,96 @@
 
 ---
 
-## Key Features
+## Game Library
 
-### 🎮 Modern System Tray Jump List
-- **1-Click Launch**: Launch your favorite and recently played games directly from the system tray context menu without opening the full UI.
-- **Dedicated Recent Section**: Directly accessible at the top of the tray menu with high-resolution 24x24 icons.
-- **Category Organization**: Keep games structured in folders (Action, RPG, Strategy, Steam, etc.) or view as a flat list.
-- **Steam & Windows 11 Aesthetics**: Dark slate elevated surfaces, smooth rounded selection highlights, and drop shadows.
+- **Automatic Steam discovery and artwork** — no manually building your library one game at a time. TrayTrigger scans your installed Steam library and fetches official metadata (name, description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB.
+- **Multiple Layout Views** — Grid view (vertical poster cards), Large Icons view, and Detailed List view.
+- **Automated Icon Extraction** — crisp 32-bit icons pulled from executables, shortcuts (`.lnk`), and game folders, with procedural fallback badge generation when nothing better is available.
+- **Drag & Drop Importing** — drag an executable or shortcut onto the window to add it.
+- **Batch Folder Scanner** — scan an entire game drive with intelligent executable scoring that filters out uninstallers and launcher binaries.
+- **Favorites & Categories** — pin favorites to the top of the tray menu and library, organize the rest into custom categories (Action, RPG, Strategy, Steam, etc.) or view as a flat list.
 
-### 📚 Comprehensive Game Library
-- **Multiple Layout Views**: Grid view (vertical poster cards), Large Icons view, and Detailed List view.
-- **Automatic Metadata & Art**: Integrates with Steam APIs and SteamGridDB to fetch official high-res poster art, descriptions, developers, release dates, and Metacritic scores.
-- **Automated Icon Extraction**: Extracts crisp 32-bit icons directly from executables, shortcuts (`.lnk`), and game folders with procedural fallback badge generation.
-- **Drag & Drop Importing**: Simply drag executables or shortcuts onto the window to automatically add games to your library.
-- **Batch Folder Scanner**: Scan entire game drives or directories with intelligent executable scoring to filter out uninstaller and launcher binaries.
-- **Favorites & Categories**: Pin favorite games to the top of the tray menu and library, and organize the rest into custom categories.
+## Performance Profiles
 
-### 🎯 Game-Level Performance Profiles
-- **Per-Game Optimized / Aggressive Profiles**: Assign each game its own tweak tier from Edit Game. Optimized applies your custom high-performance power plan and GPU preference; Aggressive layers on System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, and an off-by-default Windows Defender exclusion.
-- **Session-Scoped, Zero Manual Cleanup**: Tweaks apply the moment a game launches (Steam or direct `.exe`) and revert to your exact prior settings the moment it closes - nothing is ever assumed back to a generic default.
-- **Crash-Safe**: If TrayTrigger or your PC crashes mid-session, the next launch detects and restores your pre-game state automatically.
-- **Custom Pre-Launch & Post-Exit Scripts** (advanced, enable in Settings): Attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game from Edit Game. The pre-launch script runs just before the game starts (optionally holding the launch until it finishes), and the post-exit script runs the moment the game closes. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, can run hidden, and can be elevated.
+Assign each game its own tweak tier from Edit Game:
 
-### ⚡ Verified System-Wide Performance Tweaks
-- **Live Hardware Telemetry**: Instant breakdown of CPU, GPU, VRAM, RAM, Displays, Motherboard, BIOS, OS version, and DirectX capability.
-- **15 Verified Windows Tweaks** across Input & Display, CPU & Scheduling, Network & Background, and Security & Advanced - each grounded in Microsoft documentation rather than folklore: mouse acceleration, Hardware-Accelerated GPU Scheduling (HAGS), Game Mode, System Timer Resolution, MMCSS network throttling, Delivery Optimization, Game DVR, Xbox Game Bar, telemetry, and more.
-- **Opt-In Tweaks**: Situational or tradeoff-heavy tweaks (Windows Visual Effects, Disable Nagle's Algorithm, a permanent Ultimate Performance power plan) stay off by default and clearly badged, so nothing with a real downside applies without you choosing it.
-- **System Restore Point Safety Net**: Optional automatic restore point before any bulk tweak apply or reset.
+| Tier | What it does |
+|---|---|
+| **Off** | No per-game tweaks — TrayTrigger just launches the game |
+| **Optimized** | Applies your custom high-performance power plan and GPU preference for that game |
+| **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, and an off-by-default Microsoft Defender exclusion |
 
-### ⚙️ Customizable Settings & Reliable Storage
-- **Single-Source of Truth**: Unified settings for startup, window behaviors, sort options, and theme preferences.
-- **Robust Storage**: Fast atomic JSON persistence with automatic `.bak` backups in `%AppData%\TrayTrigger`.
-- **Global Hotkey Support**: Quickly toggle TrayTrigger with a customizable global hotkey from anywhere in Windows.
-- **Built-In Updater with Opt-In Betas**: Checks GitHub Releases for stable updates and installs them in one click. Turn on *Receive pre-release (beta) updates* in Settings to get beta and release-candidate builds first; leave it off to receive only stable releases.
+- **Session-scoped, zero manual cleanup** — tweaks apply the moment a game launches (Steam or direct `.exe`) and revert to your exact prior settings the moment it closes.
+- **Crash-safe** — if TrayTrigger or your PC crashes mid-session, the next launch detects and restores your pre-game state automatically.
+- **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes); the post-exit script runs the moment the game closes. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, and can run hidden or elevated.
+
+## Verified Windows Gaming Optimizations
+
+Gaming optimization without mystery registry hacks. Each tweak below is toggled individually, shows Windows' real current state before you touch anything, and can be reverted at any time. TrayTrigger's in-app "Learn more" for each tweak explains the exact tradeoff — most aren't a guaranteed win for every game, and are presented that way rather than oversold.
+
+| Tweak | Category | What it changes |
+|---|---|---|
+| Mouse Acceleration | Input & Display | Disables "Enhance pointer precision" so cursor movement is 1:1 with physical mouse movement |
+| Optimizations for Windowed Games | Input & Display | Enables flip-model presentation for borderless/windowed DX10/11 games — same low input latency as exclusive fullscreen |
+| Disable Fullscreen Optimizations | Input & Display | Restores true exclusive fullscreen instead of Windows' managed borderless shim |
+| Hardware-Accelerated GPU Scheduling (HAGS) | Input & Display | Lets the GPU manage its own command queue instead of the CPU scheduling every batch |
+| Windows Game Mode | CPU & Scheduling | Holds Windows Update/driver installs during play and prioritizes game threads |
+| System Timer Resolution | CPU & Scheduling | Restores system-wide high-precision timer behavior for engines that don't request it themselves |
+| Windows Visual Effects *(opt-in)* | CPU & Scheduling | Switches to "Adjust for best performance" — reduces Desktop Window Manager compositing load |
+| "Ultimate Plan – TrayTrigger" Power Plan *(opt-in)* | CPU & Scheduling | Pins the CPU at 100% min/max state and disables PCIe/USB power-saving, permanently rather than only during a session |
+| Disable MMCSS Network Throttling | Network & Background | Lifts the packet-rate cap Windows applies to non-multimedia traffic while audio/video is active |
+| Disable Nagle's Algorithm *(opt-in)* | Network & Background | Sends small TCP packets immediately instead of batching — situational, most games use UDP already |
+| Disable Delivery Optimization | Network & Background | Stops Windows silently uploading updates to other PCs on your network or the internet |
+| Disable Background Game DVR | Network & Background | Stops the hardware-encoder recording buffer Xbox Game Bar keeps running for "last 30 seconds" capture |
+| Disable Xbox Game Bar Overlay | Network & Background | Stops the Game Bar overlay and its background processes from loading with your game |
+| Disable Diagnostic Telemetry Sweeps | Network & Background | Lowers the Windows diagnostic data policy so background scan tasks (e.g. CompatTelRunner) run less often |
+| Core Isolation / Memory Integrity | Security & Advanced | Reports HVCI status (documented CPU cost in some games) — links to Windows Security to change it; TrayTrigger doesn't toggle this one directly |
+
+An optional **System Restore point** is created automatically before any bulk Apply Preset or Reset Defaults, if enabled in Settings (on by default) — a rollback path if anything ever misbehaves.
+
+## Hardware Monitoring
+
+Instant breakdown of CPU, GPU, VRAM, RAM, Displays, Motherboard, BIOS, OS version, and DirectX capability — no separate tool needed to sanity-check your specs before deciding which profile to use.
+
+---
+
+## Installation
+
+### Installer (recommended)
+Download `TrayTrigger-Setup.exe` from the [latest release](https://github.com/stephenh678/TrayTrigger/releases/latest) and run it. No .NET runtime install required — TrayTrigger ships self-contained.
+
+### Portable
+Download the portable `.zip` from the [latest release](https://github.com/stephenh678/TrayTrigger/releases/latest), extract it anywhere, and run `TrayTrigger.exe`. No installation, no registry footprint beyond what you explicitly enable in Settings.
+
+### Updates
+TrayTrigger checks GitHub Releases for updates and installs them in one click. Enable *Receive pre-release (beta) updates* in Settings to get beta and release-candidate builds first; leave it off for stable releases only.
+
+## Requirements
+
+- Windows 10 (version 1809+) or Windows 11 (64-bit recommended)
+- No separate .NET install needed (self-contained build)
+
+---
+
+## FAQ
+
+**Why TrayTrigger instead of just using Steam?**
+Steam covers Steam games. TrayTrigger sits in your tray for one-click access to your whole library — Steam and non-Steam alike — and adds per-game performance tweaks Steam doesn't offer.
+
+**Why TrayTrigger instead of Playnite?**
+Playnite is a full-featured library manager with its own window and a plugin ecosystem. TrayTrigger is intentionally narrower: a tray-first launcher with built-in, reversible performance tweaking, for people who want quick access and optimization rather than another big library UI.
+
+**Is it safe?**
+TrayTrigger doesn't collect telemetry or personal data. Its only outbound network calls are to Steam's public APIs, SteamGridDB (for artwork), and GitHub Releases (for update checks). See [SECURITY.md](SECURITY.md) for the full breakdown.
+
+**Does it modify Windows?**
+Only tweaks you explicitly enable. Some require an admin (UAC) prompt because they write to `HKEY_LOCAL_MACHINE`; tweaks scoped to your user account don't.
+
+**Can changes be reverted?**
+Yes — every tweak records the prior state and restores it automatically, including after a crash mid-session. An optional System Restore point adds another layer of safety before bulk changes.
+
+**Does it need administrator access?**
+Only for specific tweaks that touch machine-wide settings or the Microsoft Defender exclusion list. TrayTrigger does not run elevated by default.
 
 ---
 
@@ -86,9 +186,7 @@
 - **Serialization**: `System.Text.Json` Source Generation (`AppJsonContext`)
 - **Native Interop**: Modern `[LibraryImport]` P/Invoke (User32, DwmApi)
 
----
-
-## Getting Started
+## Building From Source
 
 ### Prerequisites
 - Windows 10 (version 1809+) or Windows 11 (64-bit recommended)
@@ -96,14 +194,9 @@
 
 ### Build & Run
 ```bash
-# Clone repository
 git clone https://github.com/stephenh678/TrayTrigger.git
 cd TrayTrigger
-
-# Build solution
 dotnet build
-
-# Run application
 dotnet run
 ```
 
@@ -112,7 +205,15 @@ dotnet run
 dotnet publish -c Release -r win-x64 --self-contained true
 ```
 
----
+See [CONTRIBUTING.md](CONTRIBUTING.md) for running tests and PR guidelines.
+
+## Contributing
+
+Bug reports, feature requests, and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+## Security
+
+If you find a security issue, please see [SECURITY.md](SECURITY.md) for how to report it privately.
 
 ## License
 

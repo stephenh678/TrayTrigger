@@ -1,0 +1,54 @@
+name: Game Detection / Steam Import Issue
+description: A game isn't being detected, scanned, imported, or matched with the right metadata/art
+labels: ["bug", "game-detection"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: TrayTrigger version
+    validations:
+      required: true
+
+  - type: input
+    id: game
+    attributes:
+      label: Game name
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      options:
+        - Steam
+        - Non-Steam (.exe / .lnk)
+        - Batch folder scan
+        - Drag & drop import
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What's wrong?
+      description: e.g. not detected, wrong executable picked, missing/wrong artwork, missing metadata, duplicate entry
+    validations:
+      required: true
+
+  - type: input
+    id: install-path
+    attributes:
+      label: Install location (optional)
+      description: Helps if the issue is path-related — e.g. a non-default Steam library folder, a network drive, or an unusual folder structure
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional but very helpful)
+      description: Settings → Troubleshooting → open log folder
+      render: text
+    validations:
+      required: false
