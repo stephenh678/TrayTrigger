@@ -43,6 +43,9 @@ publish/
 *original*.txt
 test_*.png
 
+## Local code-review notes (scratch, not part of the repo)
+/review-notes/
+
 ## OS generated files
 Thumbs.db
 ehthumbs.db
