@@ -61,7 +61,8 @@ TrayTrigger isn't another always-on-top launcher. It's a tray icon until you nee
 - 📚 **Automatic Steam Library** — Steam games detected and imported automatically, metadata included
 - 🖼️ **SteamGridDB Artwork** — high-res poster art fetched automatically for your whole library
 - 🎯 **Per-Game Performance Profiles** — Optimized/Aggressive tweaks applied on launch, reverted on exit
-- ⚡ **Verified Windows Gaming Tweaks** — 15 tweaks grounded in documented Windows behavior, not folklore
+- 🤖 **Per-Game Automation** — optional pre-launch and post-exit scripts, scoped to a single game
+- ⚡ **Verified & Reversible Windows Gaming Optimizations** — 15 tweaks grounded in documented Windows behavior, not folklore
 - 📊 **Live Hardware Monitoring** — CPU, GPU, VRAM, RAM, displays, motherboard, and BIOS at a glance
 
 ---
@@ -108,9 +109,9 @@ Assign each game its own tweak tier from Edit Game:
 - **Crash-safe** — if TrayTrigger or your PC crashes mid-session, the next launch detects and restores your pre-game state automatically.
 - **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes); the post-exit script runs the moment the game closes. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, and can run hidden or elevated.
 
-## Verified Windows Gaming Optimizations
+## Verified & Reversible Windows Gaming Optimizations
 
-Gaming optimization without mystery registry hacks. Each tweak below is toggled individually, shows Windows' real current state before you touch anything, and can be reverted at any time. TrayTrigger's in-app "Learn more" for each tweak explains the exact tradeoff — most aren't a guaranteed win for every game, and are presented that way rather than oversold.
+Gaming optimization without mystery registry hacks. 15 documented Windows gaming settings, each toggled individually, each showing Windows' real current state before you touch anything, and each reversible at any time. TrayTrigger's in-app "Learn more" for every tweak explains the exact tradeoff — most aren't a guaranteed win for every game, and are presented that way rather than oversold.
 
 | Tweak | Category | What it changes |
 |---|---|---|
