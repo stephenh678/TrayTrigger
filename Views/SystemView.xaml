@@ -492,22 +492,30 @@
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="Assigned per game in Edit Game. Applied at launch, reverted at exit. Changing a tweak here affects every game on that profile."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                            <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work" Margin="0,0,0,12"
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
+                        </StackPanel>
+                    </Border>
 
-                            <StackPanel Margin="0,0,0,16">
-                                <TextBlock Text="OPTIMIZED" FontSize="11" FontWeight="Bold"
-                                           Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,8"/>
-                                <ItemsControl ItemsSource="{Binding OptimizedProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
-                            </StackPanel>
+                    <!-- Optimized Profile -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Optimized" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="Balanced tweaks that are safe to apply to any game."
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding OptimizedProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
+                        </StackPanel>
+                    </Border>
 
-                            <StackPanel>
-                                <TextBlock Text="AGGRESSIVE" FontSize="11" FontWeight="Bold"
-                                           Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
-                                <TextBlock Text="Aggressive always applies every Optimized tweak above too - only the additional tweaks it adds on top are listed here."
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                                <ItemsControl ItemsSource="{Binding AggressiveProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
-                            </StackPanel>
+                    <!-- Aggressive Profile -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <TextBlock Text="Aggressive" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="Always applies every Optimized tweak above too - only the additional tweaks it adds on top are listed here."
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding AggressiveProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

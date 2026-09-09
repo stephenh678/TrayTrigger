@@ -381,53 +381,27 @@ public partial class SystemTweaksService
     {
         try
         {
-            switch (tweakId)
+            bool result = tweakId switch
             {
-                case "mouse_accel":
-                    return SetMouseAcceleration(!enableOptimal);
+                "mouse_accel" => SetMouseAcceleration(!enableOptimal),
+                "hags" => SetHags(enableOptimal),
+                "windowed_opts" => SetWindowedOpts(enableOptimal),
+                "fse_behavior" => SetFseDisabled(enableOptimal),
+                "power_plan" => SetPowerPlan(enableOptimal),
+                "game_mode" => SetGameMode(enableOptimal),
+                "timer_resolution" => SetTimerResolution(enableOptimal),
+                "visual_fx" => SetVisualFx(enableOptimal),
+                "net_throttling" => SetNetworkThrottling(enableOptimal),
+                "nagle_disable" => SetNagleDisabled(enableOptimal),
+                "delivery_opt" => SetDeliveryOptimization(enableOptimal),
+                "game_dvr" => SetGameDvr(!enableOptimal),
+                "telemetry_sweeps" => SetTelemetry(!enableOptimal),
+                "game_bar_overlay" => SetGameBar(!enableOptimal),
+                _ => false
+            };
 
-                case "hags":
-                    return SetHags(enableOptimal);
-
-                case "windowed_opts":
-                    return SetWindowedOpts(enableOptimal);
-
-                case "fse_behavior":
-                    return SetFseDisabled(enableOptimal);
-
-                case "power_plan":
-                    return SetPowerPlan(enableOptimal);
-
-                case "game_mode":
-                    return SetGameMode(enableOptimal);
-
-                case "timer_resolution":
-                    return SetTimerResolution(enableOptimal);
-
-                case "visual_fx":
-                    return SetVisualFx(enableOptimal);
-
-                case "net_throttling":
-                    return SetNetworkThrottling(enableOptimal);
-
-                case "nagle_disable":
-                    return SetNagleDisabled(enableOptimal);
-
-                case "delivery_opt":
-                    return SetDeliveryOptimization(enableOptimal);
-
-                case "game_dvr":
-                    return SetGameDvr(!enableOptimal);
-
-                case "telemetry_sweeps":
-                    return SetTelemetry(!enableOptimal);
-
-                case "game_bar_overlay":
-                    return SetGameBar(!enableOptimal);
-
-                default:
-                    return false;
-            }
+            LoggingService.Info("SystemTweaksService", $"Tweak '{tweakId}' -> {(enableOptimal ? "Optimal" : "Default")}: {(result ? "succeeded" : "failed")}.");
+            return result;
         }
         catch (Exception ex)
         {

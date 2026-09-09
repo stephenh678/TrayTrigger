@@ -18,6 +18,13 @@ public class OptimizedProfileTweakConfig
 {
     public bool PowerPlanEnabled { get; set; }
     public bool GpuPreferenceEnabled { get; set; }
+
+    /// <summary>
+    /// Defaults to false even within Optimized - forcing HDR on changes how the screen looks for
+    /// every app while the game runs, and can look worse if the game itself doesn't render HDR
+    /// content well, so it's an explicit opt-in rather than something Optimized enables outright.
+    /// </summary>
+    public bool HdrEnabled { get; set; }
 }
 
 /// <summary>
@@ -62,6 +69,19 @@ public class PerGameProfileSnapshot
 }
 
 /// <summary>
+/// Crash-recovery record of one display's advanced-color (HDR) state, captured before Enable HDR
+/// turns it on so restore can put that exact display back the way it was - a display already in
+/// HDR before the game launched must stay in HDR after, not get forced off.
+/// </summary>
+public class HdrDisplaySnapshot
+{
+    public uint AdapterIdLowPart { get; set; }
+    public int AdapterIdHighPart { get; set; }
+    public uint TargetId { get; set; }
+    public bool WasEnabled { get; set; }
+}
+
+/// <summary>
 /// Crash-recovery record for an in-progress Performance Profile session: written to disk right
 /// before any registry/power-plan value is changed, and deleted once everything is restored.
 /// If found on the next startup, it means TrayTrigger was closed abnormally while a profile was
@@ -84,6 +104,9 @@ public class PerformanceProfileSessionSnapshot
 
     public bool SchedulingCategoryCaptured { get; set; }
     public string? PreviousSchedulingCategory { get; set; }
+
+    public bool HdrCaptured { get; set; }
+    public List<HdrDisplaySnapshot> PreviousHdrStates { get; set; } = new();
 
     public List<PerGameProfileSnapshot> PerGameSnapshots { get; set; } = new();
 }

@@ -185,25 +185,21 @@
                 <!-- Action Buttons: Primary & Constructive on Left, Destructive on Far Right -->
                 <DockPanel Grid.Row="4" VerticalAlignment="Bottom" Margin="0,4,0,0" LastChildFill="False">
                     <!-- Destructive Action (Safely Isolated on Far Right) -->
-                    <Button DockPanel.Dock="Right" Content="🗑 Remove" Command="{Binding DeleteGameCommand}" 
-                            Style="{StaticResource ModernOutlineButton}" Foreground="#E06C75" BorderBrush="#66E06C75" 
-                            Padding="12,7" Margin="0,0,0,6" FontSize="12"
-                            ToolTip="Remove this game shortcut from TrayTrigger"/>
+                    <Button DockPanel.Dock="Right" Content="🗑 Remove" Command="{Binding DeleteGameCommand}"
+                            Style="{StaticResource ModernOutlineButton}" Foreground="#E06C75" BorderBrush="#66E06C75"
+                            Padding="12,7" Margin="0,0,0,6" FontSize="12"/>
 
                     <!-- Primary & Constructive Actions (Left Aligned) -->
                     <WrapPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                        <Button Content="▶ Launch Game" Command="{Binding LaunchGameCommand}" 
+                        <Button Content="▶ Launch Game" Command="{Binding LaunchGameCommand}"
                                 Style="{StaticResource ModernAccentButton}" Padding="16,7" Margin="0,0,10,6"
-                                FontWeight="SemiBold" FontSize="12.5"
-                                ToolTip="Launch game executable immediately"/>
-                        <Button Content="🌐 Steam Store" Command="{Binding OpenStorePageCommand}" 
+                                FontWeight="SemiBold" FontSize="12.5"/>
+                        <Button Content="🌐 Steam Store" Command="{Binding OpenStorePageCommand}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="12"
-                                ToolTip="Open the official Steam Store web page"/>
-                        <Button Content="⚙ Edit Properties" Command="{Binding EditGameCommand}" 
+                                FontSize="12"/>
+                        <Button Content="⚙ Edit Properties" Command="{Binding EditGameCommand}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="12"
-                                ToolTip="Edit game title, executable path, arguments, hotkey, and icon"/>
+                                FontSize="12"/>
                     </WrapPanel>
                 </DockPanel>
             </Grid>

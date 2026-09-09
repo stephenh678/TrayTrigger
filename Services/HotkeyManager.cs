@@ -52,11 +52,13 @@ public partial class HotkeyManager : IDisposable
             int id = wParam.ToInt32();
             if (id == MANAGE_WINDOW_HOTKEY_ID)
             {
+                LoggingService.Info("HotkeyManager", "Global manage-window hotkey triggered.");
                 ManageHotkeyTriggered?.Invoke();
                 handled = true;
             }
             else if (_registeredGameHotkeys.TryGetValue(id, out string? gameId))
             {
+                LoggingService.Info("HotkeyManager", $"Hotkey triggered for game id '{gameId}'.");
                 GameHotkeyTriggered?.Invoke(gameId);
                 handled = true;
             }
@@ -74,30 +76,45 @@ public partial class HotkeyManager : IDisposable
             if (RegisterHotKey(_hwndSource.Handle, MANAGE_WINDOW_HOTKEY_ID, mod | MOD_NOREPEAT, vk))
             {
                 _isManageHotkeyRegistered = true;
+                LoggingService.Verbose("HotkeyManager", $"Registered global manage-window hotkey: {globalManageHotkeyStr}");
             }
             else
             {
                 LoggingService.Warn("HotkeyManager", $"Failed to register global hotkey: {globalManageHotkeyStr}");
             }
         }
+        else if (!string.IsNullOrWhiteSpace(globalManageHotkeyStr))
+        {
+            LoggingService.Warn("HotkeyManager", $"Global hotkey '{globalManageHotkeyStr}' failed to parse - not registered.");
+        }
 
         // Register Per-Game Hotkeys
         int currentId = GAME_HOTKEY_BASE_ID;
         foreach (var game in games)
         {
-            if (!string.IsNullOrWhiteSpace(game.Hotkey) && ParseHotkey(game.Hotkey, out uint gMod, out uint gVk))
+            if (!string.IsNullOrWhiteSpace(game.Hotkey))
             {
-                if (RegisterHotKey(_hwndSource.Handle, currentId, gMod | MOD_NOREPEAT, gVk))
+                if (ParseHotkey(game.Hotkey, out uint gMod, out uint gVk))
                 {
-                    _registeredGameHotkeys[currentId] = game.Id;
-                    currentId++;
+                    if (RegisterHotKey(_hwndSource.Handle, currentId, gMod | MOD_NOREPEAT, gVk))
+                    {
+                        _registeredGameHotkeys[currentId] = game.Id;
+                        LoggingService.Verbose("HotkeyManager", $"Registered hotkey '{game.Hotkey}' for game '{game.Name}'.");
+                        currentId++;
+                    }
+                    else
+                    {
+                        LoggingService.Warn("HotkeyManager", $"Failed to register hotkey '{game.Hotkey}' for game '{game.Name}'");
+                    }
                 }
                 else
                 {
-                    LoggingService.Warn("HotkeyManager", $"Failed to register hotkey '{game.Hotkey}' for game '{game.Name}'");
+                    LoggingService.Warn("HotkeyManager", $"Hotkey '{game.Hotkey}' for game '{game.Name}' failed to parse - not registered.");
                 }
             }
         }
+
+        LoggingService.Info("HotkeyManager", $"Hotkey registration complete: global={(_isManageHotkeyRegistered ? "on" : "off")}, {_registeredGameHotkeys.Count} game hotkey(s) active.");
     }
 
     public void UnregisterAll()
@@ -111,11 +128,17 @@ public partial class HotkeyManager : IDisposable
             _isManageHotkeyRegistered = false;
         }
 
+        int unregisteredCount = _registeredGameHotkeys.Count;
         foreach (var id in _registeredGameHotkeys.Keys)
         {
             UnregisterHotKey(_hwndSource.Handle, id);
         }
         _registeredGameHotkeys.Clear();
+
+        if (unregisteredCount > 0)
+        {
+            LoggingService.Verbose("HotkeyManager", $"Unregistered {unregisteredCount} game hotkey(s).");
+        }
     }
 
     public static bool ParseHotkey(string hotkeyStr, out uint modifiers, out uint virtualKey)
@@ -128,7 +151,10 @@ public partial class HotkeyManager : IDisposable
 
         var tokens = hotkeyStr.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length == 0)
+        {
+            LoggingService.Verbose("HotkeyManager", $"ParseHotkey('{hotkeyStr}'): no tokens after split - rejected.");
             return false;
+        }
 
         string mainKeyStr = tokens[^1];
 
@@ -152,10 +178,12 @@ public partial class HotkeyManager : IDisposable
         {
             // No real key corresponds to a multi-digit number; reject rather than let
             // Enum.TryParse map it to whatever enum value happens to share that ordinal.
+            LoggingService.Verbose("HotkeyManager", $"ParseHotkey('{hotkeyStr}'): multi-digit main key '{mainKeyStr}' has no matching key - rejected.");
             return false;
         }
         else if (!Enum.TryParse(mainKeyStr, true, out key))
         {
+            LoggingService.Verbose("HotkeyManager", $"ParseHotkey('{hotkeyStr}'): unrecognized main key '{mainKeyStr}' - rejected.");
             return false;
         }
 
@@ -163,9 +191,16 @@ public partial class HotkeyManager : IDisposable
         // otherwise a partially-typed string like "c" would register a bare key globally.
         bool isFunctionKey = key >= Key.F1 && key <= Key.F24;
         if (modifiers == 0 && !isFunctionKey)
+        {
+            LoggingService.Verbose("HotkeyManager", $"ParseHotkey('{hotkeyStr}'): no modifier and '{mainKeyStr}' is not a standalone-allowed function key - rejected.");
             return false;
+        }
 
         virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
+        if (virtualKey == 0)
+        {
+            LoggingService.Verbose("HotkeyManager", $"ParseHotkey('{hotkeyStr}'): key '{key}' has no virtual-key mapping - rejected.");
+        }
         return virtualKey != 0;
     }
 

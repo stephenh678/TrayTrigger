@@ -82,7 +82,10 @@ public partial class App : Application
                     _storageService.SaveSettings(_mainViewModel.Settings);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("App", $"Failed to save settings during ProcessExit: {ex.Message}");
+            }
             LoggingService.Info("App", "ProcessExit triggered and finished.");
         };
 
@@ -341,7 +344,7 @@ public partial class App : Application
         {
             var menu = new ContextMenu();
 
-            var games = _mainViewModel.Games.ToList();
+            var games = _mainViewModel.Games.Where(g => !g.Game.IsHidden).ToList();
 
             if (games.Count == 0)
             {
@@ -761,7 +764,10 @@ public partial class App : Application
             {
                 _singleInstanceMutex?.ReleaseMutex();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.Verbose("App", $"ReleaseMutex on shutdown failed (usually benign): {ex.Message}");
+            }
 
             _singleInstanceMutex?.Dispose();
             _showWindowEvent?.Dispose();
@@ -787,7 +793,10 @@ public partial class App : Application
                 _storageService.SaveSettings(_mainViewModel.Settings);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("App", $"Failed to save settings during OnExit: {ex.Message}");
+        }
         _hotkeyManager?.Dispose();
         _trayIcon?.Dispose();
         base.OnExit(e);

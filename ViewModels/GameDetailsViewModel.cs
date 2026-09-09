@@ -315,6 +315,11 @@ public class GameDetailsViewModel : ViewModelBase
                     if (match.SimilarityScore >= Math.Max(0.85, _minConfidence))
                     {
                         Game.SteamAppId = targetAppId;
+                        LoggingService.Info("GameDetailsViewModel", $"Auto-linked '{Game.Name}' to Steam App ID {targetAppId} (similarity {match.SimilarityScore:F2}).");
+                    }
+                    else
+                    {
+                        LoggingService.Verbose("GameDetailsViewModel", $"Steam match for '{Game.Name}' (App ID {targetAppId}, similarity {match.SimilarityScore:F2}) below decisive threshold - showing details without persisting the link.");
                     }
                 }
             }
@@ -365,6 +370,7 @@ public class GameDetailsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            LoggingService.Warn("GameDetailsViewModel", $"Error loading Steam details for '{Game.Name}': {ex.Message}");
             if (_details == null)
             {
                 ErrorMessage = $"Error loading Steam information: {ex.Message}";

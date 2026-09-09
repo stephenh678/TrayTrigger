@@ -72,6 +72,8 @@ public static class HelpContentService
     {
         ("tweaks", "Performance Tweaks"),
         ("profiles", "Performance Profiles"),
+        ("scanner", "Game Scanner"),
+        ("traymenu", "Tray Menu"),
         ("scripts", "Game Scripts"),
         ("library", "Library & Artwork"),
         ("updates", "Updates"),

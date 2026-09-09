@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -20,6 +21,7 @@ public class CategoryTabItem : ViewModelBase
     public string Name { get; }
     public string DisplayName { get; }
     public bool IsFavoritesTab { get; }
+    public bool IsHiddenTab { get; }
 
     private bool _isSelected;
     public bool IsSelected
@@ -42,6 +44,7 @@ public class CategoryTabItem : ViewModelBase
         Name = name;
         DisplayName = displayName;
         IsFavoritesTab = string.Equals(name, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase);
+        IsHiddenTab = string.Equals(name, LibraryConstants.HiddenCategory, StringComparison.OrdinalIgnoreCase);
         _isSelected = isSelected;
         SelectCommand = new RelayCommand(() => onSelect(Name));
     }
@@ -302,6 +305,7 @@ public class LibraryViewModel : ViewModelBase
             onEditSteamAppId: EditSteamAppId,
             onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
             onToggleFavorite: ToggleFavorite,
+            onToggleHidden: ToggleHidden,
             getUseVerticalPosterArt: () => _getUseVerticalPosterArt(),
             deferHeavyInit: deferHeavyInit
         );
@@ -309,7 +313,21 @@ public class LibraryViewModel : ViewModelBase
 
     private void ToggleFavorite(GameCardViewModel card)
     {
+        LoggingService.Info("Library", $"'{card.Name}' favorite: {(card.Game.IsFavorite ? "on" : "off")}.");
         SaveLibrary();
+        FilteredGames.Refresh();
+    }
+
+    private void ToggleHidden(GameCardViewModel card)
+    {
+        LoggingService.Info("Library", $"'{card.Name}' hidden: {(card.Game.IsHidden ? "on" : "off")}.");
+        SaveLibrary();
+        // The "Hidden" filter tab only appears once at least one game is hidden (see
+        // RebuildCategories), so toggling the very first/last hidden game needs the tab list
+        // rebuilt. RebuildCategories doesn't always refresh FilteredGames itself (it skips it
+        // when the selected category is still valid), so that's done explicitly too - the card
+        // needs to disappear from view the instant it's hidden.
+        RebuildCategories();
         FilteredGames.Refresh();
     }
 
@@ -373,9 +391,11 @@ public class LibraryViewModel : ViewModelBase
 
         if (_launcherService.LaunchGame(card.Game, out string? err, out bool isMissing))
         {
+            // No RefreshProperties()/SaveLibrary() here: LaunchGame already raised GameUpdated
+            // synchronously (LastPlayed change), which OnGameUpdatedFromLauncher just handled -
+            // doing it again here was a redundant second full games.json + settings.json rewrite
+            // on every launch.
             StatusMessage = $"Launched {card.Name}";
-            card.RefreshProperties();
-            SaveLibrary();
 
             if (_settings.MinimizeOnGameLaunch)
             {
@@ -431,6 +451,7 @@ public class LibraryViewModel : ViewModelBase
             card.RefreshProperties();
             SaveLibrary();
             UpdateHotkeys();
+            LoggingService.Info("Library", $"'{card.Name}' relocated to '{dialog.FileName}'.");
             StatusMessage = $"Updated location for {card.Name}";
         }
     }
@@ -452,6 +473,7 @@ public class LibraryViewModel : ViewModelBase
                 card.Game.IconPath = cachedIcon;
                 card.RefreshProperties();
                 SaveLibrary();
+                LoggingService.Info("Library", $"'{card.Name}' icon updated from '{dialog.FileName}'.");
                 StatusMessage = $"Updated icon for \"{card.Name}\"";
             }
         }
@@ -484,10 +506,12 @@ public class LibraryViewModel : ViewModelBase
                 card.Game.CoverImagePath = destFile;
                 card.ReloadCover();
                 SaveLibrary();
+                LoggingService.Info("Library", $"'{card.Name}' poster artwork updated from '{dialog.FileName}'.");
                 StatusMessage = $"Updated poster artwork for \"{card.Name}\"";
             }
             catch (Exception ex)
             {
+                LoggingService.Error("Library", $"Failed to set poster artwork for '{card.Name}' from '{dialog.FileName}'", ex);
                 ModernDialog.ShowWarning(null, "Poster Artwork Error", $"Failed to set poster artwork: {ex.Message}");
             }
         }
@@ -506,6 +530,7 @@ public class LibraryViewModel : ViewModelBase
             card.Game.SteamAppId = null;
             card.RefreshProperties();
             SaveLibrary();
+            LoggingService.Info("Library", $"'{card.Name}' Steam App ID cleared.");
             StatusMessage = $"Cleared Steam App ID for \"{card.Name}\"";
             return;
         }
@@ -551,6 +576,7 @@ public class LibraryViewModel : ViewModelBase
         card.RefreshProperties();
         RebuildCategories();
         SaveLibrary();
+        LoggingService.Info("Library", $"'{card.Name}' Steam App ID set to {trimmed}{(details != null ? " (metadata refreshed)" : "")}.");
     }
 
     public async Task RefreshGameMetadataAsync(GameCardViewModel card)
@@ -724,10 +750,12 @@ public class LibraryViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(newName)) return;
 
+        string oldName = card.Name;
         card.Game.Name = newName.Trim();
         card.RefreshProperties();
         SaveLibrary();
         FilteredGames.Refresh();
+        LoggingService.Info("Library", $"Renamed \"{oldName}\" to \"{card.Name}\".");
         StatusMessage = $"Renamed to \"{card.Name}\"";
     }
 
@@ -736,11 +764,13 @@ public class LibraryViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(newCategory))
             newCategory = LibraryConstants.Uncategorized;
 
+        string oldCategory = card.Category;
         card.Game.Category = newCategory.Trim();
         card.RefreshProperties();
         RebuildCategories();
         SaveLibrary();
         FilteredGames.Refresh();
+        LoggingService.Info("Library", $"'{card.Name}' category changed: '{oldCategory}' -> '{card.Category}'.");
         StatusMessage = $"Updated category for \"{card.Name}\" to {card.Category}";
     }
 
@@ -777,6 +807,7 @@ public class LibraryViewModel : ViewModelBase
         RebuildCategories();
         SaveLibrary();
         UpdateHotkeys();
+        LoggingService.Info("Library", $"Removed '{card.Name}' from library (undoable for 6s).");
 
         UndoToastMessage = $"Removed \"{card.Name}\"";
         IsUndoToastVisible = true;
@@ -791,6 +822,7 @@ public class LibraryViewModel : ViewModelBase
             // the game's cached icon/cover files instead of leaving them orphaned forever.
             if (_lastRemovedGame != null)
             {
+                LoggingService.Verbose("Library", $"Undo window expired for '{_lastRemovedGame.Name}' - deleting cached artwork.");
                 DeleteCachedArtwork(_lastRemovedGame);
                 _lastRemovedGame = null;
             }
@@ -823,6 +855,7 @@ public class LibraryViewModel : ViewModelBase
             SaveLibrary();
             UpdateHotkeys();
             ApplySort();
+            LoggingService.Info("Library", $"Undid removal of '{card.Name}'.");
 
             StatusMessage = $"Restored \"{card.Name}\" to library.";
             OnPropertyChanged(nameof(TotalGameCount));
@@ -898,10 +931,10 @@ public class LibraryViewModel : ViewModelBase
             (!string.IsNullOrWhiteSpace(executablePath) && string.Equals(g.Game.ExecutablePath, executablePath, StringComparison.OrdinalIgnoreCase)));
     }
 
-    public void SaveLibrary()
+    public void SaveLibrary([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
     {
-        _storageService.SaveGames(Games.Select(g => g.Game));
-        _storageService.SaveSettings(_settings);
+        _storageService.SaveGames(Games.Select(g => g.Game), callerMember, callerFile);
+        _storageService.SaveSettings(_settings, callerMember, callerFile);
         NotifyLibraryUpdated();
     }
 
@@ -928,7 +961,12 @@ public class LibraryViewModel : ViewModelBase
             var card = Games.FirstOrDefault(g => g.Id == gameId);
             if (card != null)
             {
+                LoggingService.Info("Library", $"Hotkey triggered launch for '{card.Name}'.");
                 LaunchGame(card);
+            }
+            else
+            {
+                LoggingService.Warn("Library", $"Hotkey fired for unknown game id '{gameId}' - no matching card in library.");
             }
         });
     }
@@ -940,15 +978,26 @@ public class LibraryViewModel : ViewModelBase
         Categories.Add(LibraryConstants.AllCategory);
         Categories.Add(LibraryConstants.FavoritesCategory);
 
+        // Excludes hidden games - a category only hidden games belong to would otherwise still
+        // show as a tab (since FilterGameItem excludes hidden games from every non-Hidden tab),
+        // leaving a clickable tab that always renders empty.
         var distinctCategories = Games
+            .Where(g => !g.Game.IsHidden)
             .Select(g => g.Category)
-            .Where(c => !string.IsNullOrWhiteSpace(c) && c != LibraryConstants.AllCategory && c != LibraryConstants.FavoritesCategory)
+            .Where(c => !string.IsNullOrWhiteSpace(c) && c != LibraryConstants.AllCategory && c != LibraryConstants.FavoritesCategory && c != LibraryConstants.HiddenCategory)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(c => c);
 
         foreach (var cat in distinctCategories)
         {
             Categories.Add(cat);
+        }
+
+        // Hidden is a filter, not a real category, so it's pinned last rather than sorted in
+        // alphabetically among actual categories - same treatment as All/Favorites up front.
+        if (Games.Any(g => g.Game.IsHidden))
+        {
+            Categories.Add(LibraryConstants.HiddenCategory);
         }
 
         if (Categories.Contains(previous))
@@ -1018,15 +1067,27 @@ public class LibraryViewModel : ViewModelBase
     {
         if (obj is not GameCardViewModel card) return false;
 
-        // Category filter
-        if (SelectedCategory == LibraryConstants.FavoritesCategory)
+        // "Hidden" is its own filter tab, like Favorites, rather than a separate toggle - a
+        // hidden game only ever shows there, and every other tab (including All) excludes it.
+        // The record itself is untouched either way, so scans never treat it as new.
+        if (SelectedCategory == LibraryConstants.HiddenCategory)
         {
-            if (!card.Game.IsFavorite) return false;
+            if (!card.Game.IsHidden) return false;
         }
-        else if (SelectedCategory != LibraryConstants.AllCategory &&
-            !card.Category.Equals(SelectedCategory, StringComparison.OrdinalIgnoreCase))
+        else
         {
-            return false;
+            if (card.Game.IsHidden) return false;
+
+            // Category filter
+            if (SelectedCategory == LibraryConstants.FavoritesCategory)
+            {
+                if (!card.Game.IsFavorite) return false;
+            }
+            else if (SelectedCategory != LibraryConstants.AllCategory &&
+                !card.Category.Equals(SelectedCategory, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
         }
 
         // Search text filter

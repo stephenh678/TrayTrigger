@@ -13,6 +13,12 @@ public class GameEntry
     public bool RunAsAdmin { get; set; }
     public string Category { get; set; } = "Uncategorized";
     public bool IsFavorite { get; set; }
+    /// <summary>
+    /// Hidden from the library grid and tray menu, but the record itself is kept - unlike
+    /// deleting, this means "Scan for Games"/"Add Folder" still recognize this exe/AppId as
+    /// already known and never re-suggest it.
+    /// </summary>
+    public bool IsHidden { get; set; }
     public string Hotkey { get; set; } = string.Empty;
     public string IconPath { get; set; } = string.Empty;
     public string? CoverImagePath { get; set; }

@@ -35,8 +35,13 @@ public class BatchGameItemViewModel : ViewModelBase
     }
     public bool IsAlreadyImported { get; }
 
+    /// <summary>Raised when the user clicks "Ignore" - the parent VM removes this row and persists the ignore.</summary>
+    public event Action<BatchGameItemViewModel>? IgnoreRequested;
+    public ICommand IgnoreCommand { get; }
+
     public BatchGameItemViewModel(GameCandidate candidate, bool isAlreadyImported)
     {
+        IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
         Candidate = candidate;
         _name = candidate.Name;
         IsAlreadyImported = isAlreadyImported;
@@ -103,12 +108,43 @@ public class FolderBatchImportViewModel : ViewModelBase
     private string _filterText = string.Empty;
     private readonly string _folderPath;
     private readonly HashSet<string> _existingExePaths;
+    private bool _rememberAsScanLocation = true;
 
     public string FolderName { get; }
     public ObservableCollection<BatchGameItemViewModel> Games { get; } = new();
     public ICollectionView FilteredGames { get; }
 
-    public event Action<List<GameCandidate>>? ImportConfirmed;
+    /// <summary>
+    /// True when this batch came from one real, still-existing folder on disk rather than an
+    /// aggregated multi-folder drop (see ImportCoordinator.ProcessFolderAddBatchAsync, which
+    /// passes a synthetic "N folders" label instead of a path) - only then does "remember as a
+    /// scan location" make sense to offer.
+    /// </summary>
+    public bool CanRememberAsScanLocation { get; }
+
+    /// <summary>Whether the "remember as scan location" row shows at all - see <see cref="CanRememberAsScanLocation"/>.</summary>
+    public bool ShowScanLocationRow => CanRememberAsScanLocation;
+
+    public bool IsAlreadyScanLocation { get; }
+
+    /// <summary>
+    /// False (and the checkbox disabled) when this folder is already tracked - shown checked and
+    /// read-only rather than removed entirely, so it's clear *why* there's nothing to toggle
+    /// instead of the option just silently disappearing.
+    /// </summary>
+    public bool CanToggleRememberAsScanLocation => !IsAlreadyScanLocation;
+
+    public string RememberScanLocationLabel => IsAlreadyScanLocation
+        ? $"\"{FolderName}\" is already a scan location"
+        : $"Remember \"{FolderName}\" as a scan location (auto-detect new games here)";
+
+    public bool RememberAsScanLocation
+    {
+        get => IsAlreadyScanLocation || _rememberAsScanLocation;
+        set => SetProperty(ref _rememberAsScanLocation, value);
+    }
+
+    public event Action<List<GameCandidate>, bool>? ImportConfirmed;
     public event Action? RequestClose;
 
     public ICommand SelectAllCommand { get; }
@@ -116,11 +152,16 @@ public class FolderBatchImportViewModel : ViewModelBase
     public ICommand ImportCommand { get; }
     public ICommand CancelCommand { get; }
 
-    public FolderBatchImportViewModel(string folderPath, List<GameCandidate> candidates, IEnumerable<string> existingExePaths)
+    private readonly Action<GameCandidate> _onIgnoreCandidate;
+
+    public FolderBatchImportViewModel(string folderPath, List<GameCandidate> candidates, IEnumerable<string> existingExePaths, bool canRememberAsScanLocation, bool isAlreadyScanLocation, Action<GameCandidate> onIgnoreCandidate)
     {
         _folderPath = folderPath;
         FolderName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         _existingExePaths = new HashSet<string>(existingExePaths, StringComparer.OrdinalIgnoreCase);
+        CanRememberAsScanLocation = canRememberAsScanLocation;
+        IsAlreadyScanLocation = isAlreadyScanLocation;
+        _onIgnoreCandidate = onIgnoreCandidate;
 
         foreach (var c in candidates)
         {
@@ -135,6 +176,7 @@ public class FolderBatchImportViewModel : ViewModelBase
                     OnPropertyChanged(nameof(CanImport));
                 }
             };
+            item.IgnoreRequested += OnItemIgnoreRequested;
             Games.Add(item);
         }
 
@@ -145,6 +187,17 @@ public class FolderBatchImportViewModel : ViewModelBase
         DeselectAllCommand = new RelayCommand(DeselectAll);
         ImportCommand = new RelayCommand(ConfirmImport);
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke());
+    }
+
+    private void OnItemIgnoreRequested(BatchGameItemViewModel item)
+    {
+        _onIgnoreCandidate(item.Candidate);
+        item.IgnoreRequested -= OnItemIgnoreRequested;
+        Games.Remove(item);
+        OnPropertyChanged(nameof(SubtitleText));
+        OnPropertyChanged(nameof(SelectedCountDisplay));
+        OnPropertyChanged(nameof(ImportButtonLabel));
+        OnPropertyChanged(nameof(CanImport));
     }
 
     public string SubtitleText => $"Found {Games.Count} games in \"{FolderName}\". Select the games to add to TrayTrigger:";
@@ -223,7 +276,13 @@ public class FolderBatchImportViewModel : ViewModelBase
 
         if (selectedCandidates.Count > 0)
         {
-            ImportConfirmed?.Invoke(selectedCandidates);
+            bool remember = CanRememberAsScanLocation && CanToggleRememberAsScanLocation && RememberAsScanLocation;
+            LoggingService.Info("FolderBatchImportViewModel", $"Confirmed import of {selectedCandidates.Count}/{Games.Count} game(s) from '{FolderName}' (remember as scan location: {remember}).");
+            ImportConfirmed?.Invoke(selectedCandidates, remember);
+        }
+        else
+        {
+            LoggingService.Verbose("FolderBatchImportViewModel", $"Import dialog for '{FolderName}' closed with 0 games selected - nothing imported.");
         }
         RequestClose?.Invoke();
     }

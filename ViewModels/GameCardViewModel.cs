@@ -25,6 +25,7 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onEditSteamAppId;
     private readonly Action<GameCardViewModel>? _onRefreshMetadata;
     private readonly Action<GameCardViewModel>? _onToggleFavorite;
+    private readonly Action<GameCardViewModel>? _onToggleHidden;
     private readonly Func<bool>? _getUseVerticalPosterArt;
     private BitmapImage? _iconImage;
     private BitmapImage? _coverImage;
@@ -51,6 +52,7 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onEditSteamAppId = null,
         Action<GameCardViewModel>? onRefreshMetadata = null,
         Action<GameCardViewModel>? onToggleFavorite = null,
+        Action<GameCardViewModel>? onToggleHidden = null,
         Func<bool>? getUseVerticalPosterArt = null,
         bool deferHeavyInit = false)
     {
@@ -68,6 +70,7 @@ public class GameCardViewModel : ViewModelBase
         _onEditSteamAppId = onEditSteamAppId;
         _onRefreshMetadata = onRefreshMetadata;
         _onToggleFavorite = onToggleFavorite;
+        _onToggleHidden = onToggleHidden;
         _getUseVerticalPosterArt = getUseVerticalPosterArt;
 
         LaunchCommand = new RelayCommand(() => _onLaunch(this));
@@ -88,6 +91,13 @@ public class GameCardViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsFavorite));
             OnPropertyChanged(nameof(FavoriteMenuLabel));
             _onToggleFavorite?.Invoke(this);
+        });
+        ToggleHiddenCommand = new RelayCommand(() =>
+        {
+            Game.IsHidden = !Game.IsHidden;
+            OnPropertyChanged(nameof(IsHidden));
+            OnPropertyChanged(nameof(HideMenuLabel));
+            _onToggleHidden?.Invoke(this);
         });
         OpenFolderCommand = new RelayCommand(OpenContainingFolder);
         OpenStoreCommand = new RelayCommand(OpenStorePage);
@@ -148,6 +158,8 @@ public class GameCardViewModel : ViewModelBase
     public bool ShowCategoryBadge => !HasSteamOverlay || !string.Equals(Category, "Steam", StringComparison.OrdinalIgnoreCase);
     public bool IsFavorite => Game.IsFavorite;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
+    public bool IsHidden => Game.IsHidden;
+    public string HideMenuLabel => IsHidden ? "Unhide" : "Hide";
     public bool IsMissing
     {
         get => _isMissing;
@@ -230,6 +242,7 @@ public class GameCardViewModel : ViewModelBase
     public ICommand OpenInSteamLibraryCommand { get; }
     public ICommand VerifyFilesCommand { get; }
     public ICommand ToggleFavoriteCommand { get; }
+    public ICommand ToggleHiddenCommand { get; }
 
     public string? SteamAppId => Game.SteamAppId;
     public bool HasSteamAppId => !string.IsNullOrWhiteSpace(Game.SteamAppId);
@@ -293,6 +306,8 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));
         OnPropertyChanged(nameof(FavoriteMenuLabel));
+        OnPropertyChanged(nameof(IsHidden));
+        OnPropertyChanged(nameof(HideMenuLabel));
         OnPropertyChanged(nameof(SteamAppId));
         OnPropertyChanged(nameof(HasSteamAppId));
         OnPropertyChanged(nameof(SteamAppIdDisplay));

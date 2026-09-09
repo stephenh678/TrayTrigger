@@ -108,6 +108,7 @@ public class UpdateCoordinator : ViewModelBase
                         _settings.SkippedUpdateVersion = result.LatestRelease.TagName;
                         _settings.RemindAfterUtc = DateTime.UtcNow.AddHours(24);
                         _storageService.SaveSettings(_settings);
+                        LoggingService.Info("UpdateCoordinator", $"User snoozed update {result.LatestRelease.TagName} for 24h.");
                     }
                 }
                 else if (!alreadySnoozed)
@@ -115,6 +116,7 @@ public class UpdateCoordinator : ViewModelBase
                     // Background check, window hidden (e.g. a full-screen game): a modal dialog
                     // here would steal focus mid-match. Use a tray balloon instead so the user
                     // isn't interrupted but still finds out.
+                    LoggingService.Info("UpdateCoordinator", $"Update {result.LatestRelease.TagName} available - notifying via tray balloon (main window hidden).");
                     _onTrayNotification?.Invoke("Update Available", $"{result.LatestRelease.TagName} is ready to install. Open TrayTrigger to update.");
                 }
             }
@@ -209,9 +211,9 @@ public class UpdateCoordinator : ViewModelBase
                     await Task.Delay(TimeSpan.FromHours(24));
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore silent update check exceptions
+                LoggingService.Warn("UpdateCoordinator", $"Background update check loop terminated unexpectedly: {ex.Message}");
             }
         });
     }

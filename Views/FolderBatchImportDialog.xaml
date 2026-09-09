@@ -17,6 +17,7 @@
             <RowDefinition Height="Auto"/> <!-- Header -->
             <RowDefinition Height="Auto"/> <!-- Search & Bulk Selection -->
             <RowDefinition Height="*"/>    <!-- Games List -->
+            <RowDefinition Height="Auto"/> <!-- Remember as Scan Location -->
             <RowDefinition Height="Auto"/> <!-- Status & Action Buttons -->
         </Grid.RowDefinitions>
 
@@ -112,8 +113,22 @@
 
                             <!-- Badges (Right Dock) -->
                             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0" HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
+                                <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                            HorizontalAlignment="Right"/>
+                                <Button Content="Ignore" Command="{Binding IgnoreCommand}"
+                                        FontSize="10.5" Padding="0" Margin="0,4,0,0"
+                                        HorizontalAlignment="Right" ToolTip="Never suggest this exe again in Add Folder or Scan for Games">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource ModernGhostButton}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAlreadyImported}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                                 <Border Margin="0,3,0,0">
                                     <Border.Style>
                                         <Style TargetType="Border">
@@ -147,10 +162,16 @@
             </ListBox>
         </Border>
 
+        <!-- Remember as Scan Location -->
+        <CheckBox Grid.Row="3" Content="{Binding RememberScanLocationLabel}" IsChecked="{Binding RememberAsScanLocation}"
+                  IsEnabled="{Binding CanToggleRememberAsScanLocation}"
+                  Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,0,0,12"
+                  Visibility="{Binding ShowScanLocationRow, Converter={StaticResource BoolToVis}}"/>
+
         <!-- Footer -->
-        <DockPanel Grid.Row="3">
-            <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="12" 
-                       Foreground="{StaticResource BrushTextSecondary}" 
+        <DockPanel Grid.Row="4">
+            <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="12"
+                       Foreground="{StaticResource BrushTextSecondary}"
                        VerticalAlignment="Center"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

@@ -123,6 +123,7 @@ public class SystemTweakViewModel : ViewModelBase
         }
         else
         {
+            LoggingService.Warn("SystemTweakViewModel", $"Toggle '{Name}' ({Id}) to {(targetState ? "Optimal" : "Default")} did not take effect - actual state read back as {(actualState ? "Optimal" : "Default")}.");
             _notifyParent($"Failed to update '{Name}'. Administrator privileges may be required.");
         }
     }
@@ -214,6 +215,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
             if (_getter() != value)
             {
                 _setter(value);
+                LoggingService.Info("SystemViewModel", $"Performance Profile tweak '{Name}' {(value ? "enabled" : "disabled")}.");
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(StatusBadgeText));
                 OnPropertyChanged(nameof(StatusBadgeColor));
@@ -342,6 +344,13 @@ public class SystemViewModel : ViewModelBase
                 "profiles/gpu_preference",
                 () => config.GpuPreferenceEnabled,
                 v => { config.GpuPreferenceEnabled = v; Save(); }),
+            new("Enable HDR",
+                "Turns on Windows' native HDR display mode while the game runs, then reverts every display to its prior setting on exit.",
+                "Uses the same Connecting and Configuring Displays (CCD) API behind Settings > System > Display > HDR - not a registry hack, since HDR is a live per-display color pipeline negotiated with the monitor over EDID rather than a static value. Only touches displays Windows already reports as HDR-capable; a display already in HDR is left alone (and left in HDR on exit) rather than being forced off. A game that doesn't render HDR content well can look washed out or over-bright with this on, so it's your call.",
+                "profiles/hdr",
+                () => config.HdrEnabled,
+                v => { config.HdrEnabled = v; Save(); },
+                isOptIn: true),
         };
     }
 

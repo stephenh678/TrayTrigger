@@ -37,6 +37,7 @@ public class GameEditViewModel : ViewModelBase
     private bool _waitForPreLaunchScript;
     private bool _runScriptsHidden;
     private bool _runScriptsAsAdmin;
+    private bool _isHidden;
     private string? _customIconPath;
     private BitmapImage? _iconPreview;
     private string? _customCoverPath;
@@ -101,6 +102,7 @@ public class GameEditViewModel : ViewModelBase
         _waitForPreLaunchScript = game.WaitForPreLaunchScript;
         _runScriptsHidden = game.RunScriptsHidden;
         _runScriptsAsAdmin = game.RunScriptsAsAdmin;
+        _isHidden = game.IsHidden;
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
 
@@ -160,6 +162,12 @@ public class GameEditViewModel : ViewModelBase
     {
         get => _runAsAdmin;
         set { _runAsAdmin = value; OnPropertyChanged(); }
+    }
+
+    public bool IsHidden
+    {
+        get => _isHidden;
+        set { _isHidden = value; OnPropertyChanged(); }
     }
 
     public string Category
@@ -788,12 +796,17 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.IsSteamGame = IsSteamGame;
         SourceGame.ForceSteamOverlayTag = ForceSteamOverlayTag;
         SourceGame.SteamAppId = string.IsNullOrWhiteSpace(SteamAppId) ? null : SteamAppId.Trim();
+        if (SourceGame.PerformanceProfile != PerformanceProfile)
+        {
+            LoggingService.Info("GameEdit", $"'{SourceGame.Name}' Performance Profile changed: {SourceGame.PerformanceProfile} -> {PerformanceProfile}.");
+        }
         SourceGame.PerformanceProfile = PerformanceProfile;
         SourceGame.PreLaunchScriptPath = PreLaunchScriptPath?.Trim().Trim('"') ?? string.Empty;
         SourceGame.PostExitScriptPath = PostExitScriptPath?.Trim().Trim('"') ?? string.Empty;
         SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript;
         SourceGame.RunScriptsHidden = RunScriptsHidden;
         SourceGame.RunScriptsAsAdmin = RunScriptsAsAdmin;
+        SourceGame.IsHidden = IsHidden;
 
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))
