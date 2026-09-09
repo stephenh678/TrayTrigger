@@ -7,7 +7,12 @@ public class IgnoredGamePathRowViewModel : ViewModelBase
 {
     public IgnoredGamePath Model { get; }
     public string Name => Model.Name;
-    public string DisplayPath => Model.ExePath ?? $"Steam AppId {Model.SteamAppId}";
+    public string DisplayPath => Model.ExePath
+        ?? (Model.SteamAppId != null ? $"Steam AppId {Model.SteamAppId}" : null)
+        ?? (Model.GogGameId != null ? $"GOG GameId {Model.GogGameId}" : null)
+        ?? (Model.EaContentId != null ? $"EA ContentId {Model.EaContentId}" : null)
+        ?? (Model.EpicAppName != null ? $"Epic AppName {Model.EpicAppName}" : null)
+        ?? $"Ubisoft GameId {Model.UbisoftGameId}";
 
     public IgnoredGamePathRowViewModel(IgnoredGamePath model)
     {

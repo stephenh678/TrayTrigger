@@ -80,6 +80,15 @@ public class LibraryViewModel : ViewModelBase
     private int _lastRemovedIndex = -1;
     private DispatcherTimer? _undoToastTimer;
 
+    // Launch toast state
+    private bool _isLaunchToastVisible = false;
+    private string _launchToastMessage = string.Empty;
+    private DispatcherTimer? _launchToastTimer;
+
+    // Tracks which just-launched game we're waiting to minimize for (see DispatchLaunch/OnGameWindowReady)
+    private string? _pendingMinimizeGameId;
+    private DispatcherTimer? _minimizeFallbackTimer;
+
     public ObservableCollection<GameCardViewModel> Games { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
     public ObservableCollection<CategoryTabItem> CategoryTabs { get; } = new();
@@ -138,6 +147,7 @@ public class LibraryViewModel : ViewModelBase
         RefreshCategoriesCommand = new RelayCommand(RebuildCategories);
         UndoDeleteCommand = new RelayCommand(UndoDelete);
         DismissUndoToastCommand = new RelayCommand(() => IsUndoToastVisible = false);
+        DismissLaunchToastCommand = new RelayCommand(() => IsLaunchToastVisible = false);
     }
 
     // --- LIBRARY & SEARCH PROPERTIES ---
@@ -201,6 +211,18 @@ public class LibraryViewModel : ViewModelBase
         set { _undoToastMessage = value; OnPropertyChanged(); }
     }
 
+    public bool IsLaunchToastVisible
+    {
+        get => _isLaunchToastVisible;
+        set { _isLaunchToastVisible = value; OnPropertyChanged(); }
+    }
+
+    public string LaunchToastMessage
+    {
+        get => _launchToastMessage;
+        set { _launchToastMessage = value; OnPropertyChanged(); }
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -213,6 +235,7 @@ public class LibraryViewModel : ViewModelBase
     public ICommand RefreshCategoriesCommand { get; }
     public ICommand UndoDeleteCommand { get; }
     public ICommand DismissUndoToastCommand { get; }
+    public ICommand DismissLaunchToastCommand { get; }
 
     /// <summary>
     /// Called by the composition root when a settings toggle affects the tray context menu
@@ -389,6 +412,23 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
+        // Shown before dispatching, then held for a moment via a non-blocking timer before the
+        // actual launch happens - a fast-launching game (e.g. Steam) can take focus/fullscreen
+        // within a few hundred ms of the process spawning, which would cover this window before
+        // the toast is ever noticed if it were shown at the same instant as the launch call.
+        ShowLaunchToast($"Launching \"{card.Name}\"...");
+
+        var launchDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+        launchDelayTimer.Tick += (s, e) =>
+        {
+            launchDelayTimer.Stop();
+            DispatchLaunch(card, owner);
+        };
+        launchDelayTimer.Start();
+    }
+
+    private void DispatchLaunch(GameCardViewModel card, Window? owner)
+    {
         if (_launcherService.LaunchGame(card.Game, out string? err, out bool isMissing))
         {
             // No RefreshProperties()/SaveLibrary() here: LaunchGame already raised GameUpdated
@@ -399,11 +439,28 @@ public class LibraryViewModel : ViewModelBase
 
             if (_settings.MinimizeOnGameLaunch)
             {
-                RequestMinimizeToTray?.Invoke();
+                // Don't minimize on a fixed guess - the actual game window (as opposed to its
+                // process existing) can take many seconds to appear, and hiding TrayTrigger
+                // before then just hands focus to whatever other window was next in line instead
+                // of the game. Wait for ProcessLauncherService's confirmation that the game's
+                // window has been found and given focus (see OnGameWindowReady below); the
+                // fallback timer covers launch paths with no process to track at all (e.g. a bare
+                // Steam dispatch) so TrayTrigger still eventually hides either way.
+                _pendingMinimizeGameId = card.Game.Id;
+                _minimizeFallbackTimer?.Stop();
+                _minimizeFallbackTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
+                _minimizeFallbackTimer.Tick += (s, e) =>
+                {
+                    _minimizeFallbackTimer?.Stop();
+                    _pendingMinimizeGameId = null;
+                    RequestMinimizeToTray?.Invoke();
+                };
+                _minimizeFallbackTimer.Start();
             }
         }
         else if (isMissing)
         {
+            IsLaunchToastVisible = false;
             card.RefreshProperties();
             var res = ModernDialog.Confirm(
                 owner,
@@ -420,9 +477,28 @@ public class LibraryViewModel : ViewModelBase
         }
         else
         {
+            IsLaunchToastVisible = false;
             StatusMessage = $"Error: {err}";
             ModernDialog.ShowWarning(owner, "Launch Error", err ?? "Failed to launch game.");
         }
+    }
+
+    /// <summary>Shows the floating launch toast for a few seconds - same non-blocking overlay
+    /// pattern as the undo-delete toast, but auto-dismissing since there's no action to take.</summary>
+    private void ShowLaunchToast(string message)
+    {
+        _launchToastTimer?.Stop();
+
+        LaunchToastMessage = message;
+        IsLaunchToastVisible = true;
+
+        _launchToastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _launchToastTimer.Tick += (s, e) =>
+        {
+            _launchToastTimer.Stop();
+            IsLaunchToastVisible = false;
+        };
+        _launchToastTimer.Start();
     }
 
     public void RelocateGame(GameCardViewModel card)
@@ -699,7 +775,7 @@ public class LibraryViewModel : ViewModelBase
                     var details = await _steamMetadataService.GetAppDetailsAsync(entry.SteamAppId, _getSteamGridDbApiKeyOrNull());
                     if (details != null)
                     {
-                        if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                        if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory || entry.Category == LibraryConstants.GogCategory || entry.Category == LibraryConstants.EaCategory || entry.Category == LibraryConstants.EpicCategory || entry.Category == LibraryConstants.UbisoftCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                             entry.Category = details.PrimaryGenre;
                         if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                             entry.CoverImagePath = details.CoverImagePath;
@@ -713,13 +789,20 @@ public class LibraryViewModel : ViewModelBase
 
             string folder = GameNameExtractor.FindMeaningfulFolderName(entry.ExecutablePath, entry.WorkingDirectory);
 
+            // entry.Name is already an authoritative title for a platform import (GOG/EA/Epic all
+            // set it from the platform's own metadata before this runs) - pass it as the known
+            // name so the search tries it directly instead of relying solely on a guess derived
+            // from the exe filename/folder (e.g. "OMD.exe"/"OrcsMustDie3" missing the real Steam
+            // listing that searching "Orcs Must Die! 3" finds immediately). Harmless to pass for a
+            // plain folder-scan/manual-drop entry too - it's just whatever guess was already there.
             var res = await GameNameExtractor.ResolveGameMatchAsync(
                 entry.ExecutablePath,
                 folder,
                 preferExe: _settings.PreferExeForGameName,
                 searchOnline: true,
                 steamSearch: _steamSearchService,
-                minConfidence: _settings.OnlineMatchConfidenceThreshold);
+                minConfidence: _settings.OnlineMatchConfidenceThreshold,
+                knownName: entry.Name);
 
             if (!string.IsNullOrWhiteSpace(res.ResolvedTitle) && _settings.SearchOfficialTitleOnline)
             {
@@ -733,7 +816,7 @@ public class LibraryViewModel : ViewModelBase
                 var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, _getSteamGridDbApiKeyOrNull());
                 if (details != null)
                 {
-                    if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                    if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory || entry.Category == LibraryConstants.GogCategory || entry.Category == LibraryConstants.EaCategory || entry.Category == LibraryConstants.EpicCategory || entry.Category == LibraryConstants.UbisoftCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                         entry.Category = details.PrimaryGenre;
                     if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                         entry.CoverImagePath = details.CoverImagePath;
@@ -951,6 +1034,25 @@ public class LibraryViewModel : ViewModelBase
             card?.RefreshProperties();
             SaveLibrary();
             ApplySort();
+        });
+    }
+
+    /// <summary>
+    /// Fired by ProcessLauncherService once the just-launched game's window has been found and
+    /// given focus (or a bounded wait for it gave up) - see DispatchLaunch. Only acts if it's for
+    /// the game we're actually waiting on, in case a second launch started before this one's
+    /// signal arrived.
+    /// </summary>
+    public void OnGameWindowReady(GameEntry game)
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            if (_pendingMinimizeGameId == null || game.Id != _pendingMinimizeGameId) return;
+
+            _pendingMinimizeGameId = null;
+            _minimizeFallbackTimer?.Stop();
+            _minimizeFallbackTimer = null;
+            RequestMinimizeToTray?.Invoke();
         });
     }
 

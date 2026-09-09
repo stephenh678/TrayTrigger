@@ -807,6 +807,71 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Unlike SteamIntegrationEnabled, this has no matching ScanLocations sync to trigger - GOG
+    /// has no library-folder concept (every installed game's path is already pinned in its own
+    /// registry entry), so this toggle alone gates whether "Scan for Games" looks for GOG titles.
+    /// See ImportCoordinator.ScanForGamesAsync.
+    /// </summary>
+    public bool GogIntegrationEnabled
+    {
+        get => _settings.GogIntegrationEnabled;
+        set
+        {
+            if (_settings.GogIntegrationEnabled != value)
+            {
+                _settings.GogIntegrationEnabled = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool EaIntegrationEnabled
+    {
+        get => _settings.EaIntegrationEnabled;
+        set
+        {
+            if (_settings.EaIntegrationEnabled != value)
+            {
+                _settings.EaIntegrationEnabled = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool EpicIntegrationEnabled
+    {
+        get => _settings.EpicIntegrationEnabled;
+        set
+        {
+            if (_settings.EpicIntegrationEnabled != value)
+            {
+                _settings.EpicIntegrationEnabled = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool UbisoftIntegrationEnabled
+    {
+        get => _settings.UbisoftIntegrationEnabled;
+        set
+        {
+            if (_settings.UbisoftIntegrationEnabled != value)
+            {
+                _settings.UbisoftIntegrationEnabled = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public bool AutoScanForGamesOnStartup
     {
         get => _settings.AutoScanForGamesOnStartup;

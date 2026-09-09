@@ -12,4 +12,8 @@ public static class LibraryConstants
     public const string HiddenCategory = "Hidden";
     public const string Uncategorized = "Uncategorized";
     public const string SteamCategory = "Steam";
+    public const string GogCategory = "GOG";
+    public const string EaCategory = "EA";
+    public const string EpicCategory = "Epic";
+    public const string UbisoftCategory = "Ubisoft";
 }

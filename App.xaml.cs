@@ -36,6 +36,10 @@ public partial class App : Application
     private ShortcutService _shortcutService = null!;
     private IconExtractorService _iconExtractorService = null!;
     private SteamScannerService _steamScannerService = null!;
+    private GogScannerService _gogScannerService = null!;
+    private EaScannerService _eaScannerService = null!;
+    private EpicScannerService _epicScannerService = null!;
+    private UbisoftScannerService _ubisoftScannerService = null!;
     private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
     private GameScriptService? _gameScriptService;
@@ -215,10 +219,14 @@ public partial class App : Application
         _shortcutService = new ShortcutService();
         _iconExtractorService = new IconExtractorService(_storageService);
         _steamScannerService = new SteamScannerService();
+        _gogScannerService = new GogScannerService();
+        _eaScannerService = new EaScannerService();
+        _epicScannerService = new EpicScannerService();
+        _ubisoftScannerService = new UbisoftScannerService();
         _performanceProfileService = new PerformanceProfileService(_storageService);
         _performanceProfileService.RecoverFromCrashIfNeeded();
         _gameScriptService = new GameScriptService();
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService);
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -232,6 +240,10 @@ public partial class App : Application
             _shortcutService,
             _iconExtractorService,
             _steamScannerService,
+            _gogScannerService,
+            _eaScannerService,
+            _epicScannerService,
+            _ubisoftScannerService,
             _launcherService,
             _hotkeyManager,
             _startupManager,

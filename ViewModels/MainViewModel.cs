@@ -43,6 +43,10 @@ public class MainViewModel : ViewModelBase
     private readonly ShortcutService _shortcutService;
     private readonly IconExtractorService _iconExtractorService;
     private readonly SteamScannerService _steamScannerService;
+    private readonly GogScannerService _gogScannerService;
+    private readonly EaScannerService _eaScannerService;
+    private readonly EpicScannerService _epicScannerService;
+    private readonly UbisoftScannerService _ubisoftScannerService;
     private readonly ProcessLauncherService _launcherService;
     private readonly HotkeyManager _hotkeyManager;
     private readonly StartupManager _startupManager;
@@ -75,7 +79,7 @@ public class MainViewModel : ViewModelBase
     public AppSettings Settings => _settings;
     public IconExtractorService IconExtractorService => _iconExtractorService;
     public StorageService StorageService => _storageService;
-    public event Action<List<DiscoveredSteamGame>, List<GameCandidate>>? RequestScanResultsPicker;
+    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<GameCandidate>>? RequestScanResultsPicker;
     public event Action<GameCardViewModel>? RequestEditGameDialog;
     public event Action<string, List<GameCandidate>>? RequestCandidatePicker;
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
@@ -92,6 +96,10 @@ public class MainViewModel : ViewModelBase
         ShortcutService shortcutService,
         IconExtractorService iconExtractorService,
         SteamScannerService steamScannerService,
+        GogScannerService gogScannerService,
+        EaScannerService eaScannerService,
+        EpicScannerService epicScannerService,
+        UbisoftScannerService ubisoftScannerService,
         ProcessLauncherService launcherService,
         HotkeyManager hotkeyManager,
         StartupManager startupManager,
@@ -102,6 +110,10 @@ public class MainViewModel : ViewModelBase
         _shortcutService = shortcutService;
         _iconExtractorService = iconExtractorService;
         _steamScannerService = steamScannerService;
+        _gogScannerService = gogScannerService;
+        _eaScannerService = eaScannerService;
+        _epicScannerService = epicScannerService;
+        _ubisoftScannerService = ubisoftScannerService;
         _launcherService = launcherService;
         _hotkeyManager = hotkeyManager;
         _startupManager = startupManager;
@@ -137,6 +149,10 @@ public class MainViewModel : ViewModelBase
             _iconExtractorService,
             _folderScannerService,
             _steamScannerService,
+            _gogScannerService,
+            _eaScannerService,
+            _epicScannerService,
+            _ubisoftScannerService,
             _steamSearchService,
             _steamMetadataService,
             _storageService,
@@ -171,7 +187,7 @@ public class MainViewModel : ViewModelBase
         Library.RequestMinimizeToTray += () => RequestMinimizeToTray?.Invoke();
         Library.LibraryUpdated += () => LibraryUpdated?.Invoke();
 
-        Import.RequestScanResultsPicker += (steamGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, folderCandidates);
+        Import.RequestScanResultsPicker += (steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates);
         Import.RequestCandidatePicker += (path, candidates) => RequestCandidatePicker?.Invoke(path, candidates);
         Import.RequestFolderBatchImport += (path, candidates) => RequestFolderBatchImport?.Invoke(path, candidates);
 
@@ -254,6 +270,7 @@ public class MainViewModel : ViewModelBase
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
 
         _launcherService.GameUpdated += Library.OnGameUpdatedFromLauncher;
+        _launcherService.GameWindowReady += Library.OnGameWindowReady;
         _hotkeyManager.GameHotkeyTriggered += Library.OnGameHotkeyTriggered;
 
         Library.LoadLibrary();
@@ -442,6 +459,18 @@ public class MainViewModel : ViewModelBase
         set => Library.UndoToastMessage = value;
     }
 
+    public bool IsLaunchToastVisible
+    {
+        get => Library.IsLaunchToastVisible;
+        set => Library.IsLaunchToastVisible = value;
+    }
+
+    public string LaunchToastMessage
+    {
+        get => Library.LaunchToastMessage;
+        set => Library.LaunchToastMessage = value;
+    }
+
     public string StatusMessage
     {
         get => Library.StatusMessage;
@@ -461,6 +490,7 @@ public class MainViewModel : ViewModelBase
     public ICommand RefreshCategoriesCommand => Library.RefreshCategoriesCommand;
     public ICommand UndoDeleteCommand => Library.UndoDeleteCommand;
     public ICommand DismissUndoToastCommand => Library.DismissUndoToastCommand;
+    public ICommand DismissLaunchToastCommand => Library.DismissLaunchToastCommand;
 
     public void LoadLibrary() => Library.LoadLibrary();
     public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false) => Library.CreateCardViewModel(game, deferHeavyInit);
@@ -495,7 +525,15 @@ public class MainViewModel : ViewModelBase
     public Task AddCandidateAsync(GameCandidate candidate) => Import.AddCandidateAsync(candidate);
     public void ImportSteamGames(List<DiscoveredSteamGame> discoveredGames) => Import.ImportSteamGames(discoveredGames);
     public Task ImportSteamGamesAsync(List<DiscoveredSteamGame> discoveredGames) => Import.ImportSteamGamesAsync(discoveredGames);
-    public Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<GameCandidate> folderCandidates) => Import.ImportScanResultsAsync(steamGames, folderCandidates);
+    public void ImportGogGames(List<DiscoveredGogGame> discoveredGames) => Import.ImportGogGames(discoveredGames);
+    public Task ImportGogGamesAsync(List<DiscoveredGogGame> discoveredGames) => Import.ImportGogGamesAsync(discoveredGames);
+    public void ImportEaGames(List<DiscoveredEaGame> discoveredGames) => Import.ImportEaGames(discoveredGames);
+    public Task ImportEaGamesAsync(List<DiscoveredEaGame> discoveredGames) => Import.ImportEaGamesAsync(discoveredGames);
+    public void ImportEpicGames(List<DiscoveredEpicGame> discoveredGames) => Import.ImportEpicGames(discoveredGames);
+    public Task ImportEpicGamesAsync(List<DiscoveredEpicGame> discoveredGames) => Import.ImportEpicGamesAsync(discoveredGames);
+    public void ImportUbisoftGames(List<DiscoveredUbisoftGame> discoveredGames) => Import.ImportUbisoftGames(discoveredGames);
+    public Task ImportUbisoftGamesAsync(List<DiscoveredUbisoftGame> discoveredGames) => Import.ImportUbisoftGamesAsync(discoveredGames);
+    public Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<GameCandidate> folderCandidates) => Import.ImportScanResultsAsync(steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates);
     public bool IsScanLocation(string path) => Import.IsScanLocation(path);
 
     public void IgnoreGamePath(string exePath, string name)
@@ -509,6 +547,30 @@ public class MainViewModel : ViewModelBase
     public void IgnoreSteamGame(string appId, string name)
     {
         Import.IgnoreSteamGame(appId, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreGogGame(string gameId, string name)
+    {
+        Import.IgnoreGogGame(gameId, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreEaGame(string contentId, string name)
+    {
+        Import.IgnoreEaGame(contentId, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreEpicGame(string appName, string name)
+    {
+        Import.IgnoreEpicGame(appName, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreUbisoftGame(string gameId, string name)
+    {
+        Import.IgnoreUbisoftGame(gameId, name);
         SettingsVM.RefreshIgnoredGamePaths();
     }
 

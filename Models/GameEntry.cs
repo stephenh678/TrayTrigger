@@ -25,6 +25,24 @@ public class GameEntry
     public bool IsSteamGame { get; set; }
     public bool ForceSteamOverlayTag { get; set; }
     public string? SteamAppId { get; set; }
+    /// <summary>True for a game imported via GOG scanning. Unlike Steam, this doesn't change how
+    /// ExecutablePath is interpreted - it's always a real local exe - it only changes how the game
+    /// is launched (through GOG Galaxy when available; see ProcessLauncherService) and how re-scans
+    /// dedupe against it.</summary>
+    public bool IsGogGame { get; set; }
+    public string? GogGameId { get; set; }
+    /// <summary>True for a game imported via EA scanning. Same semantics as IsGogGame - only
+    /// changes how the game is launched (through EA App when available) and how re-scans dedupe.</summary>
+    public bool IsEaGame { get; set; }
+    public string? EaContentId { get; set; }
+    /// <summary>True for a game imported via Epic Games Store scanning. Same semantics as
+    /// IsGogGame/IsEaGame.</summary>
+    public bool IsEpicGame { get; set; }
+    public string? EpicAppName { get; set; }
+    /// <summary>True for a game imported via Ubisoft Connect scanning. Same semantics as
+    /// IsGogGame/IsEaGame/IsEpicGame.</summary>
+    public bool IsUbisoftGame { get; set; }
+    public string? UbisoftGameId { get; set; }
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
     public DateTime? LastEnrichmentAttemptUtc { get; set; }

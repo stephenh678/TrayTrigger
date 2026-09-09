@@ -18,6 +18,10 @@ public class AppSettings
     public bool GroupTrayMenuByCategory { get; set; } = true;
     public bool AlwaysShowTrayIcon { get; set; } = true;
     public bool SteamIntegrationEnabled { get; set; } = true;
+    public bool GogIntegrationEnabled { get; set; } = true;
+    public bool EaIntegrationEnabled { get; set; } = true;
+    public bool EpicIntegrationEnabled { get; set; } = true;
+    public bool UbisoftIntegrationEnabled { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
     public bool IsSidebarExpanded { get; set; } = false;
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
