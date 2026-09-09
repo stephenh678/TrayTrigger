@@ -97,20 +97,22 @@ public class PerformanceProfileService
 
             _snapshot ??= new PerformanceProfileSessionSnapshot();
 
-            bool appliedAnything = ApplyPreLaunchTweaks(game, settings, isFirstSession, _snapshot);
+            // Persists the snapshot after each individual tweak below (not once at the end),
+            // so a crash mid-sequence still leaves a recovery record for whatever was already
+            // applied instead of leaving mutated system state with nothing on disk to undo it.
+            bool appliedAnything = ApplyPreLaunchTweaks(game, settings, isFirstSession, _snapshot, _storageService);
 
             if (!appliedAnything)
             {
                 LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
                 if (isFirstSession && _snapshot.PerGameSnapshots.Count == 0 && !_snapshot.PowerPlanCaptured
-                    && !_snapshot.SystemResponsivenessCaptured && !_snapshot.SchedulingCategoryCaptured)
+                    && !_snapshot.SystemResponsivenessCaptured && !_snapshot.SchedulingCategoryCaptured && !_snapshot.HdrCaptured)
                 {
                     _snapshot = null;
                 }
                 return;
             }
 
-            _storageService.SaveProfileSessionSnapshot(_snapshot);
             _activeSessionKeys.Add(game.Id);
             LoggingService.Info("PerformanceProfile", $"Applied {game.PerformanceProfile} profile for '{game.Name}' (pre-launch).");
         }
@@ -129,8 +131,10 @@ public class PerformanceProfileService
         ApplyProcessTweaks(game, settings, process);
     }
 
-    /// <summary>All pre-launch tweaks, in application order. Returns true if anything was applied.</summary>
-    private static bool ApplyPreLaunchTweaks(GameEntry game, AppSettings settings, bool isFirstSession, PerformanceProfileSessionSnapshot snapshot)
+    /// <summary>All pre-launch tweaks, in application order. Returns true if anything was applied.
+    /// Persists the snapshot to disk after each tweak that actually changed something, so a crash
+    /// between two tweaks doesn't leave the earlier one's system change unrecoverable.</summary>
+    private static bool ApplyPreLaunchTweaks(GameEntry game, AppSettings settings, bool isFirstSession, PerformanceProfileSessionSnapshot snapshot, StorageService storageService)
     {
         bool applied = false;
         bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
@@ -142,24 +146,27 @@ public class PerformanceProfileService
             {
                 ApplyPowerPlan(snapshot);
                 applied = true;
+                storageService.SaveProfileSessionSnapshot(snapshot);
             }
 
-            if (settings.OptimizedProfileTweaks.HdrEnabled)
+            if (settings.OptimizedProfileTweaks.HdrEnabled && ApplyHdr(snapshot))
             {
-                ApplyHdr(snapshot);
                 applied = true;
+                storageService.SaveProfileSessionSnapshot(snapshot);
             }
 
             if (aggressive && settings.AggressiveProfileTweaks.SystemResponsivenessEnabled)
             {
                 ApplySystemResponsiveness(snapshot);
                 applied = true;
+                storageService.SaveProfileSessionSnapshot(snapshot);
             }
 
             if (aggressive && settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled)
             {
                 ApplySchedulingCategory(snapshot);
                 applied = true;
+                storageService.SaveProfileSessionSnapshot(snapshot);
             }
         }
 
@@ -184,6 +191,7 @@ public class PerformanceProfileService
         if (perGame != null)
         {
             snapshot.PerGameSnapshots.Add(perGame);
+            storageService.SaveProfileSessionSnapshot(snapshot);
         }
 
         return applied;
@@ -353,18 +361,29 @@ public class PerformanceProfileService
     /// <summary>
     /// Turns on Windows' native HDR mode via the CCD advanced-color API (see
     /// <see cref="HdrControlService"/>) on every display that reports HDR support. Displays already
-    /// in HDR are left alone but still recorded, so restore doesn't force them off either.
+    /// in HDR are left alone but still recorded, so restore doesn't force them off either. Returns
+    /// false (and captures nothing) if there's no HDR-capable display, or every capable display is
+    /// currently in Auto Color Management's WCG mode - those are left untouched entirely, since the
+    /// on/off-only HDR API used to restore afterward would drop them to plain SDR instead of back
+    /// to WCG (see RestoreHdr).
     /// </summary>
-    private static void ApplyHdr(PerformanceProfileSessionSnapshot snapshot)
+    private static bool ApplyHdr(PerformanceProfileSessionSnapshot snapshot)
     {
         var states = HdrControlService.GetDisplayStates().Where(s => s.Supported).ToList();
         if (states.Count == 0)
         {
             LoggingService.Verbose("PerformanceProfile", "No HDR-capable display detected; skipping Enable HDR.");
-            return;
+            return false;
         }
 
-        snapshot.PreviousHdrStates = states.Select(s => new HdrDisplaySnapshot
+        var touchable = states.Where(s => !s.IsWcg).ToList();
+        if (touchable.Count == 0)
+        {
+            LoggingService.Verbose("PerformanceProfile", "Every HDR-capable display is in WCG mode; leaving as-is.");
+            return false;
+        }
+
+        snapshot.PreviousHdrStates = touchable.Select(s => new HdrDisplaySnapshot
         {
             AdapterIdLowPart = s.AdapterId.LowPart,
             AdapterIdHighPart = s.AdapterId.HighPart,
@@ -373,9 +392,9 @@ public class PerformanceProfileService
         }).ToList();
         snapshot.HdrCaptured = true;
 
-        LoggingService.Info("PerformanceProfile", $"Enable HDR: found {states.Count} HDR-capable display(s) ({states.Count(s => s.Enabled)} already on).");
+        LoggingService.Info("PerformanceProfile", $"Enable HDR: found {touchable.Count} HDR-capable display(s) ({touchable.Count(s => s.Enabled)} already on, {states.Count - touchable.Count} left alone in WCG mode).");
 
-        foreach (var s in states.Where(s => !s.Enabled))
+        foreach (var s in touchable.Where(s => !s.Enabled))
         {
             if (HdrControlService.SetDisplayHdrEnabled(s.AdapterId, s.TargetId, true))
             {
@@ -386,6 +405,8 @@ public class PerformanceProfileService
                 LoggingService.Warn("PerformanceProfile", $"Failed to enable HDR on display target {s.TargetId}.");
             }
         }
+
+        return true;
     }
 
     private static void RestoreHdr(PerformanceProfileSessionSnapshot snapshot)

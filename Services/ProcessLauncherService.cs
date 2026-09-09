@@ -356,6 +356,11 @@ public partial class ProcessLauncherService
         string gameId = game.Id;
         DateTime waitStartedUtc = DateTime.UtcNow;
         bool sessionBegun = false;
+        // Timer callbacks are re-entrant: EndGameSession can block for a while (e.g. an elevated
+        // Remove-MpPreference for a Defender exclusion), during which further ticks would otherwise
+        // re-enter the same "ended"/"timed out" branch and run EndGameSession/RunPostExit again.
+        // Guards both terminal branches below so each fires at most once.
+        int sessionHandled = 0;
         Timer? timer = null;
 
         timer = new Timer(_ =>
@@ -378,17 +383,19 @@ public partial class ProcessLauncherService
                     }
                     else if (DateTime.UtcNow - waitStartedUtc > SteamSessionStartTimeout)
                     {
+                        if (Interlocked.Exchange(ref sessionHandled, 1) != 0) return;
+                        timer?.Dispose();
                         LoggingService.Verbose("Launcher", $"'{game.Name}' never reported running via Steam within {SteamSessionStartTimeout.TotalMinutes:0}m; rolling back its Performance Profile.");
                         _performanceProfileService.EndGameSession(gameId);
-                        timer?.Dispose();
                     }
                 }
                 else if (!isRunning)
                 {
+                    if (Interlocked.Exchange(ref sessionHandled, 1) != 0) return;
+                    timer?.Dispose();
                     _performanceProfileService.EndGameSession(gameId);
                     _scriptService.RunPostExit(game, playedMinutes: 0);
                     LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' session ended.");
-                    timer?.Dispose();
                 }
             }
             catch (Exception ex)

@@ -960,6 +960,14 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
+            // Manually-curated, not a "preference" in the dialog's sense - same bucket as the
+            // library/categories/artwork the confirmation text already promises to leave alone.
+            nameof(AppSettings.ScanLocations),
+            nameof(AppSettings.IgnoredGamePaths),
+            // UI layout state / one-time-prompt state, same as LastCategoryFilter and
+            // HasSeenSteamGridDbPrompt above.
+            nameof(AppSettings.IsSidebarExpanded),
+            nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
         };
         foreach (var prop in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {

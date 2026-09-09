@@ -405,7 +405,9 @@ public class StorageService
             {
                 EnsureDirectories();
                 string json = JsonSerializer.Serialize(snapshot, AppJsonContext.Default.PerformanceProfileSessionSnapshot);
-                File.WriteAllText(_profileSessionFilePath, json);
+                string tempFile = _profileSessionFilePath + ".tmp";
+                File.WriteAllText(tempFile, json);
+                SafeReplaceFile(tempFile, _profileSessionFilePath);
             }
             catch (Exception ex)
             {
@@ -497,9 +499,12 @@ public class StorageService
                 File.Move(tempFile, targetFile, overwrite: true);
                 return;
             }
-            catch (IOException) when (i < 2)
+            catch (IOException)
             {
-                Thread.Sleep(50);
+                // Only the first two failures sleep-and-retry via Move; the third must fall
+                // through to the Copy+Delete fallback below rather than propagate, or a
+                // briefly-locked target (AV scan, backup tool) drops the save entirely.
+                if (i < 2) Thread.Sleep(50);
             }
         }
 
