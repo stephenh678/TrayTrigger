@@ -1,14 +1,50 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
+
+/// <summary>
+/// One game launched by TrayTrigger whose lifetime is still being tracked: from the moment its
+/// Performance Profile is applied until its exit signal (process exit, Steam's Running flag,
+/// install-directory tracking, or the user's "End session") finishes it. Exposed so the UI can show
+/// a "Playing" state, restore tweaks on demand, and force-close a hung game.
+/// </summary>
+public sealed class ActiveGameSession
+{
+    internal ActiveGameSession(GameEntry game, LaunchRoute route)
+    {
+        Game = game;
+        Route = route;
+        LaunchedAt = DateTime.Now;
+        StartedAt = LaunchedAt;
+    }
+
+    public GameEntry Game { get; }
+    public string GameId => Game.Id;
+    public LaunchRoute Route { get; }
+    public string PlatformLabel => LaunchRouter.PlatformLabelFor(Route);
+    /// <summary>When TrayTrigger dispatched the launch.</summary>
+    public DateTime LaunchedAt { get; }
+    /// <summary>When the real game was first seen running (playtime starts here, not at dispatch).</summary>
+    public DateTime StartedAt { get; internal set; }
+    /// <summary>True once the real game process (or Steam's Running flag) has been observed.</summary>
+    public bool GameStarted { get; internal set; }
+    /// <summary>The game's process when TrayTrigger has a handle to it; null for a Steam session whose
+    /// process hasn't been located (yet).</summary>
+    public Process? Process { get; internal set; }
+    public bool CanForceClose => Process != null || GameStarted;
+
+    internal Action? CancelTracking;
+    internal int Finished;
+    internal int WindowReadySignalled;
+}
 
 public partial class ProcessLauncherService
 {
@@ -47,48 +83,48 @@ public partial class ProcessLauncherService
     private readonly StorageService _storageService;
     private readonly PerformanceProfileService _performanceProfileService;
     private readonly GameScriptService _scriptService;
+    private readonly SteamScannerService _steamScannerService;
     private readonly GogScannerService _gogScannerService;
     private readonly EaScannerService _eaScannerService;
     private readonly EpicScannerService _epicScannerService;
     private readonly UbisoftScannerService _ubisoftScannerService;
+
+    private readonly Lock _sessionsLock = new();
+    private readonly Dictionary<string, ActiveGameSession> _sessions = new(StringComparer.Ordinal);
+
+    /// <summary>LastPlayed/playtime changed - the library should refresh and save.</summary>
     public event Action<GameEntry>? GameUpdated;
 
     /// <summary>
     /// Fired once a freshly-launched game's window has been found and given foreground focus (or,
     /// failing that, once a bounded wait for it gives up) - the signal LibraryViewModel uses to
-    /// minimize TrayTrigger to tray instead of guessing with a fixed delay. See
-    /// <see cref="WaitForWindowAndActivate"/>.
+    /// minimize TrayTrigger to tray instead of guessing with a fixed delay.
     /// </summary>
     public event Action<GameEntry>? GameWindowReady;
 
-    public ProcessLauncherService(StorageService storageService, PerformanceProfileService performanceProfileService, GameScriptService scriptService, GogScannerService gogScannerService, EaScannerService eaScannerService, EpicScannerService epicScannerService, UbisoftScannerService ubisoftScannerService)
+    /// <summary>A tracked session began (profile applied / launch dispatched). Raised on a background thread.</summary>
+    public event Action<ActiveGameSession>? SessionStarted;
+    /// <summary>A tracked session ended (tweaks restored, post-exit script dispatched). Raised on a background thread.</summary>
+    public event Action<ActiveGameSession>? SessionEnded;
+
+    public ProcessLauncherService(
+        StorageService storageService,
+        PerformanceProfileService performanceProfileService,
+        GameScriptService scriptService,
+        SteamScannerService steamScannerService,
+        GogScannerService gogScannerService,
+        EaScannerService eaScannerService,
+        EpicScannerService epicScannerService,
+        UbisoftScannerService ubisoftScannerService)
     {
         _storageService = storageService;
         _performanceProfileService = performanceProfileService;
         _scriptService = scriptService;
+        _steamScannerService = steamScannerService;
         _gogScannerService = gogScannerService;
         _eaScannerService = eaScannerService;
         _epicScannerService = epicScannerService;
         _ubisoftScannerService = ubisoftScannerService;
-    }
-
-    /// <summary>
-    /// Confirms a running process actually corresponds to the given executable path, rather
-    /// than just sharing its file name with an unrelated program.
-    /// </summary>
-    private static bool IsSameExecutable(Process process, string executablePath)
-    {
-        try
-        {
-            return string.Equals(process.MainModule?.FileName, executablePath, StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            // MainModule can throw (e.g. access denied for an elevated process, or a
-            // 32/64-bit mismatch). Fall back to matching on name alone rather than
-            // silently excluding a process we simply couldn't inspect.
-            return true;
-        }
     }
 
     /// <summary>
@@ -101,11 +137,280 @@ public partial class ProcessLauncherService
         return Uri.TryCreate(path, UriKind.Absolute, out var uri) && !uri.IsFile;
     }
 
+    // ==========================================================================================
+    // Session registry
+    // ==========================================================================================
+
+    public IReadOnlyList<ActiveGameSession> GetActiveSessions()
+    {
+        lock (_sessionsLock) { return _sessions.Values.OrderBy(s => s.LaunchedAt).ToList(); }
+    }
+
+    public bool IsSessionActive(string gameId)
+    {
+        lock (_sessionsLock) { return _sessions.ContainsKey(gameId); }
+    }
+
+    private ActiveGameSession? GetSession(string gameId)
+    {
+        lock (_sessionsLock) { return _sessions.GetValueOrDefault(gameId); }
+    }
+
+    /// <summary>
+    /// Ends a tracked session on the user's request: stops tracking, restores the Performance
+    /// Profile, runs the post-exit script if the game actually ran. With
+    /// <paramref name="forceCloseGame"/> the game process (or every non-helper process under its
+    /// install folder, when no handle is held) is killed first.
+    /// </summary>
+    public bool EndSessionNow(string gameId, bool forceCloseGame)
+    {
+        var session = GetSession(gameId);
+        if (session == null) return false;
+
+        if (forceCloseGame)
+        {
+            TerminateSessionProcesses(session);
+        }
+
+        FinishSession(session, gameRan: session.GameStarted, forceCloseGame ? "force-closed by user" : "ended by user");
+        return true;
+    }
+
+    private void TerminateSessionProcesses(ActiveGameSession session)
+    {
+        try
+        {
+            if (session.Process != null)
+            {
+                try
+                {
+                    if (!session.Process.HasExited)
+                    {
+                        session.Process.Kill(entireProcessTree: true);
+                        LoggingService.Info("Launcher", $"Force-closed '{session.Game.Name}' (PID {session.Process.Id}).");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn("Launcher", $"Could not kill '{session.Game.Name}' by handle: {ex.Message}; trying by install folder.");
+                }
+            }
+
+            string? installDir = session.Route == LaunchRoute.Steam
+                ? (UrlProtocolHelper.IsValidSteamAppId(session.Game.SteamAppId) ? _steamScannerService.FindInstallDirForAppId(session.Game.SteamAppId!) : null)
+                : ResolveInstallDir(session.Game);
+            if (string.IsNullOrWhiteSpace(installDir)) return;
+
+            string normalized = ProcessPathResolver.NormalizeDirectory(installDir);
+            foreach (var candidate in ProcessPathResolver.FindProcessesUnderDirectory(normalized))
+            {
+                try
+                {
+                    using var proc = Process.GetProcessById(candidate.Pid);
+                    proc.Kill(entireProcessTree: true);
+                    LoggingService.Info("Launcher", $"Force-closed '{Path.GetFileName(candidate.Path)}' (PID {candidate.Pid}) for '{session.Game.Name}'.");
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Verbose("Launcher", $"Could not kill PID {candidate.Pid}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Launcher", $"Force-close failed for '{session.Game.Name}': {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Applies the profile, runs the pre-launch script, and registers the session. Returns null
+    /// (with <paramref name="abortReason"/> set) if the pre-launch script asked to cancel the launch,
+    /// in which case everything already applied has been rolled back.
+    /// Order: profile → pre-launch script → game. See PerformanceProfileService for why the
+    /// profile goes first.
+    /// </summary>
+    private ActiveGameSession? BeginSession(GameEntry game, LaunchRoute route, out string? abortReason)
+    {
+        abortReason = null;
+        var session = new ActiveGameSession(game, route);
+        lock (_sessionsLock)
+        {
+            _sessions[game.Id] = session;
+        }
+
+        _performanceProfileService.BeginGameSession(game);
+
+        var scriptResult = _scriptService.RunPreLaunch(game);
+        if (!scriptResult.ProceedWithLaunch)
+        {
+            abortReason = $"Launch of \"{game.Name}\" was cancelled because {scriptResult.AbortReason}.";
+            LoggingService.Warn("Launcher", abortReason);
+            RollbackSession(session);
+            return null;
+        }
+
+        SessionStarted?.Invoke(session);
+        return session;
+    }
+
+    /// <summary>Undo a session that never got as far as dispatching the game (or whose dispatch threw).</summary>
+    private void RollbackSession(ActiveGameSession session)
+    {
+        FinishSession(session, gameRan: false, "launch did not complete");
+    }
+
+    /// <summary>
+    /// The single exit path for every session. Idempotent: timers, the Exited handler, the
+    /// shutdown path and the user's "End session" can all race here and only the first wins.
+    /// Built-in tweaks restore first so the user's post-exit script sees the machine back in its
+    /// normal state.
+    /// </summary>
+    private void FinishSession(ActiveGameSession session, bool gameRan, string reason)
+    {
+        if (Interlocked.Exchange(ref session.Finished, 1) != 0) return;
+
+        try { session.CancelTracking?.Invoke(); } catch { }
+
+        lock (_sessionsLock)
+        {
+            if (_sessions.TryGetValue(session.GameId, out var current) && ReferenceEquals(current, session))
+            {
+                _sessions.Remove(session.GameId);
+            }
+        }
+
+        var game = session.Game;
+        long minutes = 0;
+        try
+        {
+            if (gameRan)
+            {
+                TimeSpan played = DateTime.Now - session.StartedAt;
+                minutes = (long)Math.Max(0, Math.Round(played.TotalMinutes));
+                if (minutes > 0)
+                {
+                    game.CumulativePlaytimeMinutes += minutes;
+                    GameUpdated?.Invoke(game);
+                }
+                LoggingService.Info("Launcher", $"'{game.Name}' session ended ({reason}). +{minutes}m playtime recorded.");
+            }
+            else
+            {
+                LoggingService.Verbose("Launcher", $"'{game.Name}' session closed without the game running ({reason}); rolling back its Performance Profile.");
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Launcher", $"Error updating playtime for '{game.Name}': {ex.Message}");
+        }
+
+        try
+        {
+            _performanceProfileService.EndGameSession(game.Id);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Launcher", $"Error restoring profile for '{game.Name}': {ex.Message}", ex);
+        }
+
+        if (gameRan)
+        {
+            _scriptService.RunPostExit(game, minutes);
+        }
+        else
+        {
+            _scriptService.UntrackPostExit(game);
+        }
+
+        // Make sure a window-ready waiter never hangs on a session that ended before a window appeared.
+        SignalWindowReady(session);
+
+        try { session.Process?.Dispose(); } catch { }
+        session.Process = null;
+
+        try { SessionEnded?.Invoke(session); } catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionEnded handler failed: {ex.Message}"); }
+
+        if (gameRan && game.CloseLauncherOnExit && LaunchRouter.ClientPlatformFor(session.Route) is LauncherPlatform platform)
+        {
+            LauncherClientCloser.Close(platform, _steamScannerService.GetSteamInstallPath());
+        }
+    }
+
+    private void SignalWindowReady(ActiveGameSession session)
+    {
+        if (Interlocked.Exchange(ref session.WindowReadySignalled, 1) != 0) return;
+        GameWindowReady?.Invoke(session.Game);
+    }
+
+    /// <summary>
+    /// A <see cref="Timer"/> that never overlaps its own callback: the period is infinite and the
+    /// timer is re-armed only after the callback returns. The old pattern (periodic timer,
+    /// re-entrant callbacks) let a slow tick - process enumeration, an elevated restore - overlap
+    /// with the next one and corrupt the debounce counters.
+    /// </summary>
+    private sealed class Poller
+    {
+        private readonly TimeSpan _interval;
+        private readonly Func<bool> _tick;
+        private readonly Timer _timer;
+        private int _stopped;
+
+        /// <param name="tick">Return true to be called again after <paramref name="interval"/>, false to stop.</param>
+        public Poller(TimeSpan interval, Func<bool> tick)
+        {
+            _interval = interval;
+            _tick = tick;
+            _timer = new Timer(OnTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            _timer.Change(interval, Timeout.InfiniteTimeSpan);
+        }
+
+        private void OnTick(object? _)
+        {
+            if (Volatile.Read(ref _stopped) != 0) return;
+            bool again = true;
+            try
+            {
+                again = _tick();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Verbose("Launcher", $"Session tracking tick failed: {ex.Message}");
+            }
+
+            if (again && Volatile.Read(ref _stopped) == 0)
+            {
+                try { _timer.Change(_interval, Timeout.InfiniteTimeSpan); }
+                catch (ObjectDisposedException) { }
+            }
+            else
+            {
+                Stop();
+            }
+        }
+
+        public void Stop()
+        {
+            if (Interlocked.Exchange(ref _stopped, 1) != 0) return;
+            _timer.Dispose();
+        }
+    }
+
+    // ==========================================================================================
+    // Launch entry point
+    // ==========================================================================================
+
     public bool LaunchGame(GameEntry game, out string? errorMessage)
     {
         return LaunchGame(game, out errorMessage, out _);
     }
 
+    /// <summary>
+    /// Launches a game. Safe to call from a background thread - and it should be, since applying
+    /// a profile (UAC prompts, Defender cmdlets) and waiting for a pre-launch script can take
+    /// anywhere from milliseconds to minutes. All events are raised on whatever thread ends up
+    /// observing the change; subscribers marshal to the UI thread themselves.
+    /// </summary>
     public bool LaunchGame(GameEntry game, out string? errorMessage, out bool isMissing)
     {
         errorMessage = null;
@@ -115,318 +420,498 @@ public partial class ProcessLauncherService
         {
             LoggingService.Info("Launcher", $"Attempting to launch '{game.Name}' (ID: {game.Id}).");
 
-            // Steam game handling. A Steam-tagged entry whose user asked for a direct launch and
-            // whose ExecutablePath is a real file (not a steam:// URL) is treated as a plain exe
-            // below instead - Edit Game's "launch this executable directly" option.
-            bool directSteamExe = game.LaunchDirectly && !game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase) && File.Exists(game.ExecutablePath);
-            if ((game.IsSteamGame || game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase)) && !directSteamExe)
+            // A session already tracked for this game means a launch is in flight (or the game is
+            // running). Re-dispatching would re-run the pre-launch script and start a second
+            // tracker; focus what's there instead. "End session" in the tray clears a stuck one.
+            var inFlight = GetSession(game.Id);
+            if (inFlight != null)
             {
-                string launchUrl = !string.IsNullOrEmpty(game.SteamAppId)
-                    ? $"steam://rungameid/{game.SteamAppId}"
-                    : game.ExecutablePath;
-
-                // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-                // for why the profile goes first. TrackSteamSession ends the session if Steam
-                // never reports the game running.
-                _performanceProfileService.BeginGameSession(game);
-                _scriptService.RunPreLaunch(game);
-
-                LoggingService.Verbose("Launcher", $"Launching Steam URL: {launchUrl}");
-                Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
-
-                game.LastPlayed = DateTime.Now;
-                GameUpdated?.Invoke(game);
-                LoggingService.Info("Launcher", $"Dispatched Steam launch for '{game.Name}'.");
-                TrackSteamSession(game);
+                IntPtr hWnd = IntPtr.Zero;
+                try { hWnd = inFlight.Process?.MainWindowHandle ?? IntPtr.Zero; } catch { }
+                if (hWnd != IntPtr.Zero) ActivateWindow(hWnd);
+                LoggingService.Info("Launcher", inFlight.GameStarted
+                    ? $"'{game.Name}' is already running (tracked session); activated its window instead of relaunching."
+                    : $"'{game.Name}' launch is still in progress (waiting for {inFlight.PlatformLabel}); not dispatching again.");
+                GameWindowReady?.Invoke(game);
                 return true;
             }
 
-            // GOG game handling: launch through Galaxy when it's installed, so its overlay,
-            // achievement sync, and cloud saves engage the same way Steam's do for a steam://
-            // launch. Falls through to the normal executable handling below (direct exe launch)
-            // when Galaxy isn't installed - covers DRM-free/offline-installer users - and also
-            // when Galaxy is already running: Galaxy's command-line launch only starts the game
-            // silently on a cold start, confirmed on GOG's own forums - if Galaxy is already open
-            // (the common case once a user has logged in once), the exact same command line just
-            // brings its window to the game's page with a Play button instead, requiring a manual
-            // click. Galaxy running in the background is enough for achievements/cloud saves
-            // regardless of what actually started the game process, so a direct exe launch gets
-            // the same features without the extra click.
-            if (game.IsGogGame && !string.IsNullOrWhiteSpace(game.GogGameId))
-            {
-                string? galaxyClientPath = game.LaunchDirectly ? null : _gogScannerService.GetGalaxyClientPath();
-                if (galaxyClientPath != null && !IsGalaxyClientRunning())
-                {
-                    return LaunchGogGameViaGalaxy(game, galaxyClientPath, out errorMessage);
-                }
-                LoggingService.Verbose("Launcher", game.LaunchDirectly
-                    ? $"'{game.Name}' is set to launch directly; skipping GOG Galaxy."
-                    : galaxyClientPath == null
-                        ? $"GOG Galaxy not found; launching '{game.Name}' directly instead."
-                        : $"GOG Galaxy already running; launching '{game.Name}' directly instead to skip its Play-button prompt.");
-                // Not the generic "normal executable handling" below - GOG's registered exe is
-                // often a short-lived prelauncher stub (e.g. Cyberpunk 2077's REDprelauncher.exe)
-                // that spawns the real game and exits within milliseconds, so this needs the same
-                // install-dir polling/debounce LaunchGogGameViaGalaxy uses, not a single-PID watch.
-                return LaunchGogGameDirectly(game, out errorMessage);
-            }
+            var route = LaunchRouter.Resolve(game, GetClientAvailability(game));
+            LoggingService.Verbose("Launcher", $"Launch route for '{game.Name}': {route}.");
 
-            // EA game handling: launch through EA App when it's installed, for the same reasons
-            // as the GOG branch above - some EA titles even enforce this at the DRM level and
-            // will fail (or try to launch EA App themselves) if only run directly. Falls through
-            // to direct exe when EA App isn't installed.
-            if (game.IsEaGame && !string.IsNullOrWhiteSpace(game.EaContentId))
+            switch (route)
             {
-                if (!game.LaunchDirectly && _eaScannerService.IsEaAppInstalled())
-                {
-                    return LaunchEaGameViaClient(game, out errorMessage);
-                }
-                LoggingService.Verbose("Launcher", game.LaunchDirectly
-                    ? $"'{game.Name}' is set to launch directly; skipping EA App."
-                    : $"EA App not found; launching '{game.Name}' directly instead.");
-                // Not the generic "normal executable handling" below - like GOG, EA's registered
-                // exe can be a short-lived prelauncher/anti-cheat stub that spawns the real game
-                // and exits within milliseconds, so this needs install-dir polling, not a
-                // single-PID watch.
-                return LaunchEaGameDirectly(game, out errorMessage);
-            }
+                case LaunchRoute.MissingPath:
+                    errorMessage = "Executable path is not configured.";
+                    isMissing = true;
+                    LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Executable path is blank.");
+                    return false;
 
-            // Epic Games Store handling: launch through Epic Games Launcher when it's installed,
-            // for the same reasons as the GOG/EA branches above. Falls through to direct exe when
-            // the launcher isn't installed.
-            if (game.IsEpicGame && !string.IsNullOrWhiteSpace(game.EpicAppName))
-            {
-                if (!game.LaunchDirectly && _epicScannerService.IsEpicLauncherInstalled())
-                {
-                    return LaunchEpicGameViaClient(game, out errorMessage);
-                }
-                LoggingService.Verbose("Launcher", game.LaunchDirectly
-                    ? $"'{game.Name}' is set to launch directly; skipping Epic Games Launcher."
-                    : $"Epic Games Launcher not found; launching '{game.Name}' directly instead.");
-                // See the EA branch above for why this needs install-dir polling instead of the
-                // generic single-PID handling below.
-                return LaunchEpicGameDirectly(game, out errorMessage);
-            }
-
-            // Ubisoft Connect handling: launch through Ubisoft Connect when it's installed, for
-            // the same reasons as the GOG/EA/Epic branches above. Falls through to direct exe when
-            // it isn't installed.
-            if (game.IsUbisoftGame && !string.IsNullOrWhiteSpace(game.UbisoftGameId))
-            {
-                if (!game.LaunchDirectly && _ubisoftScannerService.IsUbisoftConnectInstalled())
-                {
-                    return LaunchUbisoftGameViaClient(game, out errorMessage);
-                }
-                LoggingService.Verbose("Launcher", game.LaunchDirectly
-                    ? $"'{game.Name}' is set to launch directly; skipping Ubisoft Connect."
-                    : $"Ubisoft Connect not found; launching '{game.Name}' directly instead.");
-                // See the EA branch above for why this needs install-dir polling instead of the
-                // generic single-PID handling below.
-                return LaunchUbisoftGameDirectly(game, out errorMessage);
-            }
-
-            // Normal executable handling
-            if (string.IsNullOrWhiteSpace(game.ExecutablePath))
-            {
-                errorMessage = "Executable path is not configured.";
-                isMissing = true;
-                LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Executable path is blank.");
-                return false;
-            }
-
-            // Non-Steam protocol shortcut (Epic, GOG Galaxy, Ubisoft Connect, etc. desktop
-            // shortcuts resolve to a "scheme://..." URL, not a file). Hand it to the shell the
-            // same way as the Steam branch above instead of treating it as a missing exe.
-            if (IsNonFileProtocolUrl(game.ExecutablePath))
-            {
-                // Import already refuses these, but games.json is user-editable and older
-                // libraries predate the check - never hand an unknown scheme to ShellExecute.
-                if (!UrlProtocolHelper.IsAllowedLaunchUrl(game.ExecutablePath))
-                {
+                case LaunchRoute.RefusedUrl:
+                    // Import already refuses these, but games.json is user-editable and older
+                    // libraries predate the check - never hand an unknown scheme to ShellExecute.
                     errorMessage = $"\"{game.Name}\" points at a URL type TrayTrigger won't launch ({game.ExecutablePath}). Edit the game and set a real executable or a launcher link.";
                     LoggingService.Warn("Launcher", $"Refused to launch '{game.Name}': URL scheme not in the allow-list ({game.ExecutablePath}).");
                     return false;
-                }
 
-                // Pre-launch only: there's no process handle or running flag to detect the exit,
-                // so a post-exit script can't be honoured for protocol launches.
-                _scriptService.RunPreLaunch(game);
+                case LaunchRoute.ProtocolUrl:
+                    return LaunchProtocolUrl(game, out errorMessage);
 
-                LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
-                Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });
+                case LaunchRoute.Steam:
+                    return LaunchSteamGame(game, out errorMessage);
 
-                game.LastPlayed = DateTime.Now;
-                GameUpdated?.Invoke(game);
-                LoggingService.Info("Launcher", $"Dispatched protocol launch for '{game.Name}'.");
-                return true;
+                case LaunchRoute.DirectExe:
+                    return LaunchDirectExe(game, out errorMessage, out isMissing);
+
+                case LaunchRoute.GogGalaxy:
+                    return LaunchGogGameViaGalaxy(game, out errorMessage);
+
+                case LaunchRoute.EaClient:
+                    return LaunchViaClientUrl(game, route,
+                        $"origin2://game/launch/?offerIds={Uri.EscapeDataString(game.EaContentId ?? string.Empty)}", out errorMessage);
+
+                case LaunchRoute.EpicClient:
+                    return LaunchViaClientUrl(game, route,
+                        $"com.epicgames.launcher://apps/{Uri.EscapeDataString(game.EpicAppName ?? string.Empty)}?action=launch&silent=true", out errorMessage);
+
+                case LaunchRoute.UbisoftClient:
+                    return LaunchViaClientUrl(game, route,
+                        $"uplay://launch/{Uri.EscapeDataString(game.UbisoftGameId ?? string.Empty)}/0", out errorMessage);
+
+                case LaunchRoute.GogDirect:
+                case LaunchRoute.EaDirect:
+                case LaunchRoute.EpicDirect:
+                case LaunchRoute.UbisoftDirect:
+                    LogDirectFallback(game, route);
+                    return LaunchPlatformExeDirectly(game, route, out errorMessage, out isMissing);
+
+                default:
+                    errorMessage = $"Unsupported launch route {route}.";
+                    return false;
             }
-
-            if (!File.Exists(game.ExecutablePath))
-            {
-                errorMessage = $"Executable not found at:\n{game.ExecutablePath}";
-                isMissing = true;
-                LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Executable missing at '{game.ExecutablePath}'.");
-                return false;
-            }
-
-            // If game is already running, bring window to foreground instead of duplicate launch
-            Process[]? existingProcesses = null;
-            try
-            {
-                string procName = Path.GetFileNameWithoutExtension(game.ExecutablePath);
-                existingProcesses = Process.GetProcessesByName(procName);
-
-                // Matching by process name alone is ambiguous: unrelated games/tools can share
-                // a generic exe name (e.g. "Game.exe"). Confirm the running process actually
-                // points at this game's executable before treating it as "already running".
-                var matchingProcesses = existingProcesses
-                    .Where(p => IsSameExecutable(p, game.ExecutablePath))
-                    .ToList();
-
-                if (matchingProcesses.Count > 0)
-                {
-                    var activeProc = matchingProcesses.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero)
-                                     ?? matchingProcesses[0];
-
-                    IntPtr hWnd = activeProc.MainWindowHandle;
-                    if (hWnd != IntPtr.Zero)
-                    {
-                        ActivateWindow(hWnd);
-                    }
-
-                    game.LastPlayed = DateTime.Now;
-                    GameUpdated?.Invoke(game);
-                    LoggingService.Info("Launcher", $"'{game.Name}' already running (PID {activeProc.Id}). Activated existing window.");
-                    GameWindowReady?.Invoke(game);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Verbose("Launcher", $"Note: Could not check or activate running process: {ex.Message}");
-            }
-            finally
-            {
-                if (existingProcesses != null)
-                {
-                    foreach (var p in existingProcesses)
-                    {
-                        p.Dispose();
-                    }
-                }
-            }
-
-            string workingDir = !string.IsNullOrWhiteSpace(game.WorkingDirectory) && Directory.Exists(game.WorkingDirectory)
-                ? game.WorkingDirectory
-                : (Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = game.ExecutablePath,
-                Arguments = game.Arguments ?? string.Empty,
-                WorkingDirectory = workingDir,
-                UseShellExecute = true
-            };
-
-            if (game.RunAsAdmin)
-            {
-                startInfo.Verb = "runas";
-            }
-
-            // Order: profile → user's pre-launch script → game → process-bound tweaks.
-            // See PerformanceProfileService for why the profile goes first.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Spawning process: '{game.ExecutablePath}', Args='{game.Arguments}', WorkDir='{workingDir}', RunAsAdmin={game.RunAsAdmin}");
-            var process = Process.Start(startInfo);
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-
-            if (process == null)
-            {
-                // Shell reused an existing instance or gave us nothing to track: nothing will
-                // ever signal an exit, so undo the pre-launch profile now.
-                _performanceProfileService.EndGameSession(game.Id);
-            }
-
-            if (process != null)
-            {
-                LoggingService.Info("Launcher", $"Started '{game.Name}' (PID {process.Id}).");
-                AttachExitTracking(game, process, DateTime.Now);
-            }
-
-            return true;
         }
         catch (Exception ex)
         {
             errorMessage = ex.Message;
             LoggingService.Error("Launcher", $"Failed to launch '{game.Name}': {ex.Message}", ex);
-            // The profile is applied before the process starts, so a failed start (UAC cancelled,
-            // missing DLL, etc.) must roll it back. No-op if nothing was applied.
-            _performanceProfileService.EndGameSession(game.Id);
+            var stray = GetSession(game.Id);
+            if (stray != null) RollbackSession(stray);
             return false;
         }
     }
 
-    /// <summary>
-    /// Shared tail of every launch path that ends up with a real Process handle to watch (direct
-    /// exe launches, and a GOG game's process once <see cref="TrackGogGalaxySession"/> finds it) -
-    /// records playtime and restores Performance Profile tweaks/runs the post-exit script exactly
-    /// once, whenever that process exits.
-    /// </summary>
-    private void AttachExitTracking(GameEntry game, Process process, DateTime startTime)
+    private LaunchClientAvailability GetClientAvailability(GameEntry game)
     {
-        bool exitHandlerAttached = false;
-        int exitHandled = 0; // guards against running the handler twice (see below)
+        return new LaunchClientAvailability(
+            GogGalaxyInstalled: game.IsGogGame && _gogScannerService.GetGalaxyClientPath() != null,
+            GogGalaxyRunning: game.IsGogGame && IsGalaxyClientRunning(),
+            EaAppInstalled: game.IsEaGame && _eaScannerService.IsEaAppInstalled(),
+            EpicLauncherInstalled: game.IsEpicGame && _epicScannerService.IsEpicLauncherInstalled(),
+            UbisoftConnectInstalled: game.IsUbisoftGame && _ubisoftScannerService.IsUbisoftConnectInstalled());
+    }
 
-        void OnExited(object? s, EventArgs e)
+    private static void LogDirectFallback(GameEntry game, LaunchRoute route)
+    {
+        string client = route switch
         {
-            if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
-            long minutes = 0;
-            try
+            LaunchRoute.GogDirect => "GOG Galaxy",
+            LaunchRoute.EaDirect => "EA App",
+            LaunchRoute.EpicDirect => "Epic Games Launcher",
+            _ => "Ubisoft Connect"
+        };
+        LoggingService.Verbose("Launcher", game.LaunchDirectly
+            ? $"'{game.Name}' is set to launch directly; skipping {client}."
+            : $"{client} not available for a silent launch; launching '{game.Name}' directly instead.");
+    }
+
+    private void MarkLaunched(GameEntry game)
+    {
+        game.LastPlayed = DateTime.Now;
+        GameUpdated?.Invoke(game);
+    }
+
+    // ==========================================================================================
+    // Protocol shortcut (http/https/goggalaxy:// etc. with no platform ID): fire-and-forget
+    // ==========================================================================================
+
+    private bool LaunchProtocolUrl(GameEntry game, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        // Pre-launch only: there's no process handle or running flag to detect the exit, so
+        // neither a Performance Profile nor a post-exit script can be honoured for these.
+        var scriptResult = _scriptService.RunPreLaunch(game);
+        if (!scriptResult.ProceedWithLaunch)
+        {
+            errorMessage = $"Launch of \"{game.Name}\" was cancelled because {scriptResult.AbortReason}.";
+            return false;
+        }
+
+        LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
+        Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });
+
+        MarkLaunched(game);
+        LoggingService.Info("Launcher", $"Dispatched protocol launch for '{game.Name}'.");
+        return true;
+    }
+
+    // ==========================================================================================
+    // Steam
+    // ==========================================================================================
+
+    private const string SteamRunningKeyRoot = @"Software\Valve\Steam\Apps\";
+    private static readonly TimeSpan SteamSessionPollInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan SteamSessionStartTimeout = TimeSpan.FromMinutes(3);
+    // How many polls after Steam reports "running" to keep looking for the game's own process
+    // (for window focus / priority / force-close) before giving up on finding one.
+    private const int SteamProcessSearchTicks = 15;
+
+    private static bool ReadSteamRunningFlag(string appId)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(SteamRunningKeyRoot + appId);
+            return key?.GetValue("Running") is int i && i != 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool LaunchSteamGame(GameEntry game, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        // The AppId is interpolated into a URL and a registry path: only a digits-only value
+        // (the shape Edit Game and every scanner already enforce) is trusted from games.json.
+        string? appId = UrlProtocolHelper.IsValidSteamAppId(game.SteamAppId) ? game.SteamAppId : null;
+        if (!string.IsNullOrWhiteSpace(game.SteamAppId) && appId == null)
+        {
+            LoggingService.Warn("Launcher", $"'{game.Name}' has a malformed Steam AppId '{game.SteamAppId}'; ignoring it.");
+        }
+
+        // Already running (launched by TrayTrigger or by Steam itself)? Every other route checks
+        // this before dispatching; without it a double-click re-ran the pre-launch script and
+        // started a second tracker whose post-exit script fired a second time.
+        if (appId != null && ReadSteamRunningFlag(appId))
+        {
+            var existing = GetSession(game.Id);
+            IntPtr hWnd = IntPtr.Zero;
+            try { hWnd = existing?.Process?.MainWindowHandle ?? IntPtr.Zero; } catch { }
+            if (hWnd == IntPtr.Zero)
             {
-                TimeSpan playedDuration = DateTime.Now - startTime;
-                minutes = (long)Math.Max(0, Math.Round(playedDuration.TotalMinutes));
-                if (minutes > 0)
+                string? installDir = _steamScannerService.FindInstallDirForAppId(appId);
+                if (installDir != null)
                 {
-                    game.CumulativePlaytimeMinutes += minutes;
-                    GameUpdated?.Invoke(game);
-                    LoggingService.Info("Launcher", $"'{game.Name}' session ended. +{minutes}m playtime recorded.");
+                    using var proc = ProcessPathResolver.FindBestProcessUnderDirectory(ProcessPathResolver.NormalizeDirectory(installDir));
+                    try { hWnd = proc?.MainWindowHandle ?? IntPtr.Zero; } catch { }
                 }
             }
-            catch (Exception ex)
-            {
-                LoggingService.Error("Launcher", $"Error updating playtime for '{game.Name}': {ex.Message}");
-            }
-            finally
-            {
-                // Built-in tweaks restore first so the user's script sees the machine
-                // back in its normal state.
-                _performanceProfileService.EndGameSession(game.Id);
-                _scriptService.RunPostExit(game, minutes);
-                process.Dispose();
-            }
+            if (hWnd != IntPtr.Zero) ActivateWindow(hWnd);
+
+            MarkLaunched(game);
+            LoggingService.Info("Launcher", $"'{game.Name}' is already running according to Steam{(existing != null ? " (tracked session)" : "")}; activated its window instead of relaunching.");
+            GameWindowReady?.Invoke(game);
+            return true;
+        }
+
+        var session = BeginSession(game, LaunchRoute.Steam, out string? abortReason);
+        if (session == null)
+        {
+            errorMessage = abortReason;
+            return false;
         }
 
         try
         {
-            // OnGameProcessStarted/TrackPostExit run inside this try (not before it) so a
-            // failure in either one is caught by the same catch/finally rollback below - this
-            // matters for the GOG-Galaxy path, where AttachExitTracking is called from a Timer
-            // callback rather than from inside LaunchGame's own outer try/catch.
+            string launchUrl = appId != null
+                ? LaunchRouter.BuildSteamLaunchUrl(appId, game.Arguments)
+                : game.ExecutablePath;
+
+            LoggingService.Verbose("Launcher", $"Launching Steam URL: {launchUrl}");
+            Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
+
+            MarkLaunched(game);
+            LoggingService.Info("Launcher", $"Dispatched Steam launch for '{game.Name}'.");
+
+            if (appId == null)
+            {
+                // No AppId means no "Running" flag to watch, so the session can never be ended.
+                LoggingService.Verbose("Launcher", $"'{game.Name}' has no Steam AppId; cannot track its session, so no Performance Profile or post-exit script will run for it.");
+                FinishSession(session, gameRan: false, "no Steam AppId to track");
+                return true;
+            }
+
+            TrackSteamSession(session, appId);
+            return true;
+        }
+        catch
+        {
+            RollbackSession(session);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// A Steam launch is a fire-and-forget "steam://" dispatch with no Process handle. Steam
+    /// maintains its own "Running" flag per AppId while a game is actually in session, so poll
+    /// that: wait for it to flip on (the real start of playtime), then end the session once it
+    /// flips back off. While it's on, also try to locate the game's own process under its Steam
+    /// install folder so the window can be focused, Above Normal priority applied, and a hung game
+    /// force-closed. If the flag never turns on (user cancels the Steam launch, game isn't
+    /// actually installed, etc.), give up after a few minutes and roll the profile back.
+    /// </summary>
+    private void TrackSteamSession(ActiveGameSession session, string appId)
+    {
+        var game = session.Game;
+        string? installDir = null;
+        bool installDirResolved = false;
+        int processSearchTicks = 0;
+
+        // Registered up front (not on the Running flip) so a TrayTrigger exit during Steam's
+        // own startup still runs the post-exit script on shutdown.
+        _scriptService.TrackPostExit(game);
+
+        Poller? poller = null;
+        poller = new Poller(SteamSessionPollInterval, () =>
+        {
+            if (Volatile.Read(ref session.Finished) != 0) return false;
+
+            bool isRunning = ReadSteamRunningFlag(appId);
+
+            if (!session.GameStarted)
+            {
+                if (isRunning)
+                {
+                    session.GameStarted = true;
+                    session.StartedAt = DateTime.Now;
+                    LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' now running.");
+                    return true;
+                }
+
+                if (DateTime.Now - session.LaunchedAt > SteamSessionStartTimeout)
+                {
+                    LoggingService.Verbose("Launcher", $"'{game.Name}' never reported running via Steam within {SteamSessionStartTimeout.TotalMinutes:0}m; rolling back its Performance Profile.");
+                    FinishSession(session, gameRan: false, "Steam never reported the game running");
+                    return false;
+                }
+                return true;
+            }
+
+            if (!isRunning)
+            {
+                LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' session ended.");
+                FinishSession(session, gameRan: true, "Steam reports the game closed");
+                return false;
+            }
+
+            if (session.Process == null && processSearchTicks < SteamProcessSearchTicks)
+            {
+                processSearchTicks++;
+                if (!installDirResolved)
+                {
+                    installDirResolved = true;
+                    installDir = _steamScannerService.FindInstallDirForAppId(appId);
+                    if (installDir == null)
+                    {
+                        LoggingService.Verbose("Launcher", $"No Steam install folder found for AppId {appId}; window focus and priority are unavailable for '{game.Name}'.");
+                    }
+                }
+
+                if (installDir != null)
+                {
+                    var proc = ProcessPathResolver.FindBestProcessUnderDirectory(ProcessPathResolver.NormalizeDirectory(installDir));
+                    if (proc != null)
+                    {
+                        session.Process = proc;
+                        LoggingService.Verbose("Launcher", $"Found Steam game process for '{game.Name}' (PID {proc.Id}).");
+                        _performanceProfileService.OnGameProcessStarted(game, proc);
+                        CpuTopologyService.ApplyAffinity(proc, game);
+                        WaitForWindowAndActivate(session, proc);
+                    }
+                }
+
+                if (session.Process == null && (installDir == null || processSearchTicks >= SteamProcessSearchTicks))
+                {
+                    // Nothing to focus - let the library minimize anyway rather than wait forever.
+                    SignalWindowReady(session);
+                }
+            }
+            return true;
+        });
+        session.CancelTracking = () => poller?.Stop();
+    }
+
+    // ==========================================================================================
+    // Plain local executable
+    // ==========================================================================================
+
+    // A launched exe that exits this quickly is treated as a bootstrap stub (Rockstar/Bethesda/
+    // Paradox launchers, some Unity and UE bootstraps) and the session hands off to whatever it
+    // spawned under the install folder instead of ending.
+    private static readonly TimeSpan StubHandoffWindow = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan StubHandoffSearchTimeout = TimeSpan.FromSeconds(30);
+
+    private bool LaunchDirectExe(GameEntry game, out string? errorMessage, out bool isMissing)
+    {
+        errorMessage = null;
+        isMissing = false;
+
+        if (!File.Exists(game.ExecutablePath))
+        {
+            errorMessage = $"Executable not found at:\n{game.ExecutablePath}";
+            isMissing = true;
+            LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Executable missing at '{game.ExecutablePath}'.");
+            return false;
+        }
+
+        // If the game is already running, bring its window to the foreground instead of a
+        // duplicate launch. Matching by process name alone is ambiguous (unrelated tools share
+        // generic names like "Game.exe"), so the running process's real image path must match.
+        if (TryActivateRunningExecutable(game))
+        {
+            return true;
+        }
+
+        string workingDir = ResolveInstallDir(game);
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = game.ExecutablePath,
+            Arguments = game.Arguments ?? string.Empty,
+            WorkingDirectory = workingDir,
+            UseShellExecute = true
+        };
+        if (game.RunAsAdmin)
+        {
+            startInfo.Verb = "runas";
+        }
+
+        var session = BeginSession(game, LaunchRoute.DirectExe, out string? abortReason);
+        if (session == null)
+        {
+            errorMessage = abortReason;
+            return false;
+        }
+
+        try
+        {
+            LoggingService.Verbose("Launcher", $"Spawning process: '{game.ExecutablePath}', Args='{game.Arguments}', WorkDir='{workingDir}', RunAsAdmin={game.RunAsAdmin}");
+            var process = Process.Start(startInfo);
+            MarkLaunched(game);
+
+            if (process == null)
+            {
+                // Shell reused an existing instance or gave us nothing to track: nothing will
+                // ever signal an exit, so undo the pre-launch profile now.
+                LoggingService.Warn("Launcher", $"'{game.Name}' started but the shell returned no process to track.");
+                FinishSession(session, gameRan: false, "no process handle returned");
+                return true;
+            }
+
+            LoggingService.Info("Launcher", $"Started '{game.Name}' (PID {process.Id}).");
+            AttachExitTracking(session, process, allowStubHandoff: true);
+            return true;
+        }
+        catch
+        {
+            // The profile is applied before the process starts, so a failed start (UAC
+            // cancelled, missing DLL, etc.) must roll it back.
+            RollbackSession(session);
+            throw;
+        }
+    }
+
+    private bool TryActivateRunningExecutable(GameEntry game)
+    {
+        Process[]? candidates = null;
+        try
+        {
+            string procName = Path.GetFileNameWithoutExtension(game.ExecutablePath);
+            candidates = Process.GetProcessesByName(procName);
+
+            var matching = candidates
+                .Where(p => ProcessPathResolver.IsSamePath(ProcessPathResolver.GetProcessPath(p.Id), game.ExecutablePath))
+                .ToList();
+            if (matching.Count == 0) return false;
+
+            var activeProc = matching.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero) ?? matching[0];
+            IntPtr hWnd = activeProc.MainWindowHandle;
+            if (hWnd != IntPtr.Zero)
+            {
+                ActivateWindow(hWnd);
+            }
+
+            MarkLaunched(game);
+            LoggingService.Info("Launcher", $"'{game.Name}' already running (PID {activeProc.Id}). Activated existing window.");
+            GameWindowReady?.Invoke(game);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("Launcher", $"Note: Could not check or activate running process: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            if (candidates != null)
+            {
+                foreach (var p in candidates) p.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Shared tail of every launch path that ends up with a real Process handle to watch: applies
+    /// the post-start tweaks, focuses the window, and finishes the session exactly once when the
+    /// process exits. With <paramref name="allowStubHandoff"/>, an exit inside
+    /// <see cref="StubHandoffWindow"/> is treated as a bootstrap stub and the session moves to the
+    /// real game found under the install folder instead of ending.
+    /// </summary>
+    private void AttachExitTracking(ActiveGameSession session, Process process, bool allowStubHandoff)
+    {
+        var game = session.Game;
+        session.Process = process;
+        session.GameStarted = true;
+        try { session.StartedAt = process.StartTime; } catch { session.StartedAt = DateTime.Now; }
+
+        int exitHandled = 0;
+
+        void OnExited(object? s, EventArgs e)
+        {
+            if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
+
+            if (allowStubHandoff && DateTime.Now - session.StartedAt < StubHandoffWindow)
+            {
+                string installDir = ResolveInstallDir(game);
+                if (!string.IsNullOrWhiteSpace(installDir))
+                {
+                    LoggingService.Info("Launcher", $"'{game.Name}' exited {(DateTime.Now - session.StartedAt).TotalSeconds:0.0}s after starting - treating it as a launcher stub and looking for the real game under '{installDir}'.");
+                    try { process.Dispose(); } catch { }
+                    if (ReferenceEquals(session.Process, process)) session.Process = null;
+                    TrackInstallDirSession(session, installDir, "direct launch", StubHandoffSearchTimeout, ownsProcessAlready: true);
+                    return;
+                }
+            }
+
+            FinishSession(session, gameRan: true, "process exited");
+        }
+
+        bool exitHandlerAttached = false;
+        try
+        {
             _performanceProfileService.OnGameProcessStarted(game, process);
+            CpuTopologyService.ApplyAffinity(process, game);
             _scriptService.TrackPostExit(game);
 
-            // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited
-            // on a thread-pool thread almost immediately for a process that already exited,
-            // and doing it the other way around left a real window where that fire found
-            // no subscriber yet and playtime for the session was silently never recorded.
+            // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited on a
+            // thread-pool thread almost immediately for a process that already exited.
             process.Exited += OnExited;
             process.EnableRaisingEvents = true;
             exitHandlerAttached = true;
 
-            WaitForWindowAndActivate(game, process);
+            WaitForWindowAndActivate(session, process);
 
             // Handle it inline too in case the process had already exited before the line
             // above and the async callback hasn't run yet - exitHandled guards against
@@ -451,12 +936,9 @@ public partial class ProcessLauncherService
         {
             if (!exitHandlerAttached)
             {
-                // No Exited handler means OnExited (and its EndGameSession call) will
-                // never run for this launch - end the session immediately instead of
+                // No Exited handler means the session would never end - end it now instead of
                 // leaving a Performance Profile applied with no way to know when to undo it.
-                _performanceProfileService.EndGameSession(game.Id);
-                _scriptService.RunPostExit(game, playedMinutes: 0);
-                process.Dispose();
+                FinishSession(session, gameRan: true, "could not watch the process");
             }
         }
     }
@@ -466,72 +948,56 @@ public partial class ProcessLauncherService
 
     /// <summary>
     /// Polls briefly for a freshly-launched game process to create its main window, then gives it
-    /// foreground focus and fires <see cref="GameWindowReady"/>. A process existing and having a
+    /// foreground focus and signals <see cref="GameWindowReady"/>. A process existing and having a
     /// window are two different moments - confirmed via real launches where the gap was several
-    /// seconds - and nothing else in the launch pipeline tracks the second one, which is what
-    /// LibraryViewModel actually needs before it's safe to minimize TrayTrigger without other
-    /// windows (or the taskbar) ending up in front of the game. Bounded so a console-only process,
-    /// or a game slow enough to blow past the window, still eventually fires the event instead of
-    /// leaving LibraryViewModel waiting forever.
+    /// seconds - and this is what LibraryViewModel needs before it's safe to minimize TrayTrigger
+    /// without other windows ending up in front of the game. Bounded so a console-only process,
+    /// or a game slow enough to blow past the window, still eventually signals.
     /// </summary>
-    private void WaitForWindowAndActivate(GameEntry game, Process process)
+    private void WaitForWindowAndActivate(ActiveGameSession session, Process process)
     {
         DateTime waitStartedUtc = DateTime.UtcNow;
-        int handled = 0;
-        Timer? timer = null;
+        var game = session.Game;
 
-        timer = new Timer(_ =>
+        _ = new Poller(WindowActivationPollInterval, () =>
         {
+            if (Volatile.Read(ref session.Finished) != 0 || Volatile.Read(ref session.WindowReadySignalled) != 0) return false;
+
+            IntPtr hWnd = IntPtr.Zero;
+            bool exited;
             try
             {
-                IntPtr hWnd = IntPtr.Zero;
-                bool exited;
-                try
+                exited = process.HasExited;
+                if (!exited)
                 {
-                    exited = process.HasExited;
-                    if (!exited)
-                    {
-                        process.Refresh();
-                        hWnd = process.MainWindowHandle;
-                    }
+                    process.Refresh();
+                    hWnd = process.MainWindowHandle;
                 }
-                catch (InvalidOperationException)
-                {
-                    exited = true;
-                }
-
-                bool timedOut = DateTime.UtcNow - waitStartedUtc > WindowActivationTimeout;
-
-                if (hWnd == IntPtr.Zero && !exited && !timedOut)
-                {
-                    return;
-                }
-
-                if (Interlocked.Exchange(ref handled, 1) != 0) return;
-                timer?.Dispose();
-
-                if (hWnd != IntPtr.Zero)
-                {
-                    ActivateWindow(hWnd);
-                    LoggingService.Verbose("Launcher", $"Activated window for '{game.Name}'.");
-                }
-                else
-                {
-                    LoggingService.Verbose("Launcher", $"No window found to activate for '{game.Name}' ({(exited ? "process exited" : "timed out")}).");
-                }
-
-                GameWindowReady?.Invoke(game);
             }
-            catch (Exception ex)
+            catch (InvalidOperationException)
             {
-                LoggingService.Verbose("Launcher", $"Window activation error for '{game.Name}': {ex.Message}");
-                if (Interlocked.Exchange(ref handled, 1) == 0)
-                {
-                    timer?.Dispose();
-                    GameWindowReady?.Invoke(game);
-                }
+                exited = true;
             }
-        }, null, WindowActivationPollInterval, WindowActivationPollInterval);
+
+            bool timedOut = DateTime.UtcNow - waitStartedUtc > WindowActivationTimeout;
+            if (hWnd == IntPtr.Zero && !exited && !timedOut)
+            {
+                return true;
+            }
+
+            if (hWnd != IntPtr.Zero)
+            {
+                ActivateWindow(hWnd);
+                LoggingService.Verbose("Launcher", $"Activated window for '{game.Name}'.");
+            }
+            else
+            {
+                LoggingService.Verbose("Launcher", $"No window found to activate for '{game.Name}' ({(exited ? "process exited" : "timed out")}).");
+            }
+
+            SignalWindowReady(session);
+            return false;
+        });
     }
 
     /// <summary>
@@ -539,9 +1005,7 @@ public partial class ProcessLauncherService
     /// AutoIt's WinActivate use. A plain SetForegroundWindow call is silently denied by Windows'
     /// foreground-lock heuristic once meaningful time/input has passed since the calling process
     /// itself had focus - exactly the situation here, since TrayTrigger hides itself and the real
-    /// game window can appear many seconds later. Attaching to the current foreground thread's
-    /// input queue makes the OS treat the call as if it came from that already-foregrounded
-    /// thread, which it always allows.
+    /// game window can appear many seconds later.
     /// </summary>
     private static void ActivateWindow(IntPtr hWnd)
     {
@@ -554,14 +1018,7 @@ public partial class ProcessLauncherService
 
         try
         {
-            if (IsIconic(hWnd))
-            {
-                ShowWindowAsync(hWnd, SW_RESTORE);
-            }
-            else
-            {
-                ShowWindowAsync(hWnd, SW_SHOW);
-            }
+            ShowWindowAsync(hWnd, IsIconic(hWnd) ? SW_RESTORE : SW_SHOW);
             BringWindowToTop(hWnd);
             SetForegroundWindow(hWnd);
         }
@@ -574,796 +1031,309 @@ public partial class ProcessLauncherService
         }
     }
 
-    private const string SteamRunningKeyRoot = @"Software\Valve\Steam\Apps\";
-    private static readonly TimeSpan SteamSessionPollInterval = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan SteamSessionStartTimeout = TimeSpan.FromMinutes(3);
-
-    /// <summary>
-    /// A Steam launch is a fire-and-forget "steam://" dispatch with no Process handle - the
-    /// Performance Profile can't be tied to the launcher exiting (Steam itself keeps running).
-    /// Steam maintains its own "Running" flag per AppId while a game is actually in session, so
-    /// poll that: the profile was already applied pre-dispatch, so this just waits for the flag to
-    /// flip on and then ends the session (and fires the post-exit script) once it flips back off.
-    /// If it never turns on (user cancels the Steam launch, game isn't actually installed, etc.),
-    /// give up after a few minutes and roll the profile back rather than leaving it applied.
-    /// </summary>
-    private void TrackSteamSession(GameEntry game)
-    {
-        bool hasPostExitScript = !string.IsNullOrWhiteSpace(game.PostExitScriptPath);
-        bool hasProfile = game.PerformanceProfile != PerformanceProfileMode.Off;
-        if (!hasProfile && !hasPostExitScript)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(game.SteamAppId))
-        {
-            // No AppId means no "Running" flag to watch, so the session can never be ended.
-            // Roll back whatever BeginGameSession applied instead of leaving it on forever.
-            _performanceProfileService.EndGameSession(game.Id);
-            LoggingService.Verbose("Launcher", $"'{game.Name}' has no Steam AppId; cannot track its session, so no Performance Profile or post-exit script will run for it.");
-            return;
-        }
-
-        string runningKeyPath = SteamRunningKeyRoot + game.SteamAppId;
-        string gameId = game.Id;
-        DateTime waitStartedUtc = DateTime.UtcNow;
-        bool sessionBegun = false;
-        // Timer callbacks are re-entrant: EndGameSession can block for a while (e.g. an elevated
-        // Remove-MpPreference for a Defender exclusion), during which further ticks would otherwise
-        // re-enter the same "ended"/"timed out" branch and run EndGameSession/RunPostExit again.
-        // Guards both terminal branches below so each fires at most once.
-        int sessionHandled = 0;
-        Timer? timer = null;
-
-        timer = new Timer(_ =>
-        {
-            try
-            {
-                bool isRunning;
-                using (var key = Registry.CurrentUser.OpenSubKey(runningKeyPath))
-                {
-                    isRunning = key?.GetValue("Running") is int i && i != 0;
-                }
-
-                if (!sessionBegun)
-                {
-                    if (isRunning)
-                    {
-                        sessionBegun = true;
-                        _scriptService.TrackPostExit(game);
-                        LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' now running.");
-                    }
-                    else if (DateTime.UtcNow - waitStartedUtc > SteamSessionStartTimeout)
-                    {
-                        if (Interlocked.Exchange(ref sessionHandled, 1) != 0) return;
-                        timer?.Dispose();
-                        LoggingService.Verbose("Launcher", $"'{game.Name}' never reported running via Steam within {SteamSessionStartTimeout.TotalMinutes:0}m; rolling back its Performance Profile.");
-                        _performanceProfileService.EndGameSession(gameId);
-                    }
-                }
-                else if (!isRunning)
-                {
-                    if (Interlocked.Exchange(ref sessionHandled, 1) != 0) return;
-                    timer?.Dispose();
-                    _performanceProfileService.EndGameSession(gameId);
-                    _scriptService.RunPostExit(game, playedMinutes: 0);
-                    LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' session ended.");
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Verbose("Launcher", $"Steam session tracking error for '{game.Name}': {ex.Message}");
-            }
-        }, null, SteamSessionPollInterval, SteamSessionPollInterval);
-    }
+    // ==========================================================================================
+    // GOG / EA / Epic / Ubisoft - client launches and platform-direct launches, tracked by
+    // install directory
+    // ==========================================================================================
 
     private static readonly TimeSpan InstallDirLaunchPollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan InstallDirLaunchTimeout = TimeSpan.FromMinutes(3);
 
-    // How many consecutive polls (see InstallDirLaunchPollInterval) the same PID must be seen
-    // under the install directory before it's trusted as the real game and handed off to
-    // AttachExitTracking. 3 was chosen over the original 2 after a real Ubisoft title
+    // How many consecutive polls the same PID must be seen under the install directory before
+    // it's trusted as the real game. 3 was chosen over the original 2 after a real Ubisoft title
     // (R6-Extraction_Plus.exe) turned out to itself be a handoff stub that outlived a 2-poll
-    // (~2s) window but still exited (~1.85s later) before the real game took over - see
+    // window but still exited (~1.85s later) before the real game took over - see
     // docs/adding-a-platform-integration.md.
     private const int RequiredStableSightings = 3;
 
-    /// <summary>
-    /// Resolves a client-launched game's install directory (GOG/EA), for use as the process-match
-    /// key by <see cref="TryActivateRunningProcessUnderDirectory"/> and <see cref="TrackInstallDirSession"/>.
-    /// </summary>
+    /// <summary>The game's install directory: its configured working directory, else the exe's folder.</summary>
     private static string ResolveInstallDir(GameEntry game) =>
         !string.IsNullOrWhiteSpace(game.WorkingDirectory) && Directory.Exists(game.WorkingDirectory)
             ? game.WorkingDirectory
             : (Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
 
     /// <summary>
-    /// If a process is already running under the game's install directory, brings its window to
-    /// the foreground and returns true - callers should skip dispatching a new client launch in
-    /// that case. Matches by directory rather than exe name/PID because the client-registered exe
-    /// is often a short-lived prelauncher stub, not the real game (see
-    /// <see cref="TrackInstallDirSession"/>), so a name-based check (as the plain direct-exe path
-    /// below uses) would almost always miss an already-running game.
+    /// If a (non-helper) process is already running under the game's install directory, brings
+    /// its window to the foreground and returns true - callers should skip dispatching a new
+    /// launch in that case. Matches by directory rather than exe name because the client-registered
+    /// exe is often a short-lived prelauncher stub, not the real game.
     /// </summary>
-    private bool TryActivateRunningProcessUnderDirectory(GameEntry game, string normalizedInstallDir, string platformLabel)
+    private bool TryActivateRunningProcessUnderDirectory(GameEntry game, string installDir, string platformLabel)
     {
-        var alreadyRunning = FindRunningProcessUnderDirectory(normalizedInstallDir);
-        if (alreadyRunning == null) return false;
+        if (string.IsNullOrWhiteSpace(installDir)) return false;
 
-        using (alreadyRunning)
+        var existing = GetSession(game.Id);
+        using var alreadyRunning = ProcessPathResolver.FindBestProcessUnderDirectory(ProcessPathResolver.NormalizeDirectory(installDir));
+        if (alreadyRunning == null)
         {
-            IntPtr hWnd = alreadyRunning.MainWindowHandle;
-            if (hWnd != IntPtr.Zero)
-            {
-                ActivateWindow(hWnd);
-            }
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"'{game.Name}' already running via {platformLabel} (PID {alreadyRunning.Id}). Activated existing window.");
-            GameWindowReady?.Invoke(game);
-            return true;
+            return false;
         }
+
+        IntPtr hWnd = IntPtr.Zero;
+        try { hWnd = alreadyRunning.MainWindowHandle; } catch { }
+        if (hWnd != IntPtr.Zero)
+        {
+            ActivateWindow(hWnd);
+        }
+
+        MarkLaunched(game);
+        LoggingService.Info("Launcher", $"'{game.Name}' already running via {platformLabel} (PID {alreadyRunning.Id}{(existing != null ? ", tracked session" : "")}). Activated existing window.");
+        GameWindowReady?.Invoke(game);
+        return true;
     }
 
-    /// <summary>
-    /// True if GalaxyClient.exe is already running - callers should launch the game's exe
-    /// directly instead of going through Galaxy's command line in that case, since the launch-args
-    /// invocation only starts the game silently on a cold start (see the GOG branch of LaunchGame).
-    /// </summary>
     private static bool IsGalaxyClientRunning()
     {
         var processes = Process.GetProcessesByName("GalaxyClient");
-        try
-        {
-            return processes.Length > 0;
-        }
-        finally
-        {
-            foreach (var p in processes)
-            {
-                p.Dispose();
-            }
-        }
+        try { return processes.Length > 0; }
+        finally { foreach (var p in processes) p.Dispose(); }
     }
 
     /// <summary>
     /// Launches a GOG game through GalaxyClient.exe (the same "/command=runGame /gameId=&lt;id&gt;
     /// /path=&lt;installDir&gt;" invocation Galaxy's own shortcuts use - there's no public URL scheme
-    /// like Steam's steam://). Only reached when Galaxy isn't already running - see the GOG branch
-    /// of LaunchGame. GalaxyClient.exe is only a launcher stub, not the game itself, so this hands
-    /// off to <see cref="TrackInstallDirSession"/> to find the real game process before
-    /// playtime/Performance Profile/post-exit-script tracking can begin.
+    /// like Steam's steam://). Only reached when Galaxy isn't already running (see LaunchRouter).
     /// </summary>
-    private bool LaunchGogGameViaGalaxy(GameEntry game, string galaxyClientPath, out string? errorMessage)
+    private bool LaunchGogGameViaGalaxy(GameEntry game, out string? errorMessage)
     {
         errorMessage = null;
+        string? galaxyClientPath = _gogScannerService.GetGalaxyClientPath();
+        if (galaxyClientPath == null)
+        {
+            return LaunchPlatformExeDirectly(game, LaunchRoute.GogDirect, out errorMessage, out _);
+        }
+
+        string installDir = ResolveInstallDir(game);
+        if (TryActivateRunningProcessUnderDirectory(game, installDir, "GOG Galaxy"))
+        {
+            return true;
+        }
+
+        var galaxyStartInfo = new ProcessStartInfo { FileName = galaxyClientPath, UseShellExecute = false };
+        // Each flag must be a single "/name=value" token - Galaxy's parser silently ignores
+        // anything it doesn't recognize instead of erroring.
+        galaxyStartInfo.ArgumentList.Add("/command=runGame");
+        galaxyStartInfo.ArgumentList.Add($"/gameId={game.GogGameId}");
+        if (!string.IsNullOrWhiteSpace(installDir))
+        {
+            galaxyStartInfo.ArgumentList.Add($"/path={installDir}");
+        }
+
+        var session = BeginSession(game, LaunchRoute.GogGalaxy, out string? abortReason);
+        if (session == null)
+        {
+            errorMessage = abortReason;
+            return false;
+        }
+
         try
         {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "GOG Galaxy"))
-                {
-                    return true;
-                }
-            }
-
-            var galaxyStartInfo = new ProcessStartInfo
-            {
-                FileName = galaxyClientPath,
-                UseShellExecute = false
-            };
-            // Each flag must be a single "/name=value" token, not "/name" and "value" as separate
-            // arguments - Galaxy's parser silently ignores anything it doesn't recognize instead of
-            // erroring, so a malformed invocation just opens the client to its normal UI rather than
-            // running the game, with no indication anything was wrong.
-            galaxyStartInfo.ArgumentList.Add("/command=runGame");
-            galaxyStartInfo.ArgumentList.Add($"/gameId={game.GogGameId}");
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                galaxyStartInfo.ArgumentList.Add($"/path={installDir}");
-            }
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
             LoggingService.Verbose("Launcher", $"Launching '{game.Name}' via GOG Galaxy (gameId {game.GogGameId}).");
             Process.Start(galaxyStartInfo);
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
+            MarkLaunched(game);
             LoggingService.Info("Launcher", $"Dispatched GOG Galaxy launch for '{game.Name}'.");
 
-            TrackInstallDirSession(game, installDir, "GOG Galaxy");
+            TrackInstallDirSession(session, installDir, "GOG Galaxy", InstallDirLaunchTimeout);
             return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' via GOG Galaxy: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Launches a GOG game by spawning its own registered exe directly - used when Galaxy isn't
-    /// installed, or is already running (see the GOG branch of LaunchGame). The registered exe is
-    /// often a short-lived prelauncher stub (e.g. Cyberpunk 2077's REDprelauncher.exe) that spawns
-    /// the real game and exits within milliseconds, so - like <see cref="LaunchGogGameViaGalaxy"/> -
-    /// this hands off to <see cref="TrackInstallDirSession"/> instead of watching the spawned PID
-    /// directly; the generic "normal executable handling" path assumes a 1:1 process/session
-    /// relationship that doesn't hold here, and would restore the Performance Profile the instant
-    /// the stub exits, well before the real game has actually started.
-    /// </summary>
-    private bool LaunchGogGameDirectly(GameEntry game, out string? errorMessage)
-    {
-        errorMessage = null;
-        try
-        {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "GOG"))
-                {
-                    return true;
-                }
-            }
-
-            string workingDir = !string.IsNullOrWhiteSpace(game.WorkingDirectory) && Directory.Exists(game.WorkingDirectory)
-                ? game.WorkingDirectory
-                : (Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = game.ExecutablePath,
-                Arguments = game.Arguments ?? string.Empty,
-                WorkingDirectory = workingDir,
-                UseShellExecute = true
-            };
-            if (game.RunAsAdmin)
-            {
-                startInfo.Verb = "runas";
-            }
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' directly (GOG, no Galaxy dispatch): '{game.ExecutablePath}'.");
-            Process.Start(startInfo);
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"Dispatched direct GOG launch for '{game.Name}'.");
-
-            TrackInstallDirSession(game, installDir, "GOG");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' directly: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Launches an EA game through EA App's "origin2://" launch protocol (a real registered URL
-    /// scheme, unlike GOG - see the origin2\shell\open\command registry key EA App installs).
-    /// Some EA titles enforce this at the DRM level and will fail if launched directly. Like GOG,
-    /// the dispatch is fire-and-forget with no Process handle, and the real game process (not
-    /// necessarily the registered exe, which can itself be a stub) has to be found separately -
-    /// reuses the exact same install-directory polling as the GOG path.
-    /// </summary>
-    private bool LaunchEaGameViaClient(GameEntry game, out string? errorMessage)
-    {
-        errorMessage = null;
-        try
-        {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "EA App"))
-                {
-                    return true;
-                }
-            }
-
-            string launchUrl = $"origin2://game/launch/?offerIds={Uri.EscapeDataString(game.EaContentId ?? string.Empty)}";
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Launching EA URL: {launchUrl}");
-            Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"Dispatched EA App launch for '{game.Name}'.");
-
-            TrackInstallDirSession(game, installDir, "EA App");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' via EA App: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Launches an EA game by spawning its own registered exe directly - used when EA App isn't
-    /// installed. Like GOG's registered exe, EA's can be a short-lived prelauncher/anti-cheat stub
-    /// that spawns the real game and exits within milliseconds, so - like
-    /// <see cref="LaunchGogGameDirectly"/> - this hands off to <see cref="TrackInstallDirSession"/>
-    /// instead of watching the spawned PID directly.
-    /// </summary>
-    private bool LaunchEaGameDirectly(GameEntry game, out string? errorMessage)
-    {
-        errorMessage = null;
-        try
-        {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "EA"))
-                {
-                    return true;
-                }
-            }
-
-            string workingDir = !string.IsNullOrWhiteSpace(game.WorkingDirectory) && Directory.Exists(game.WorkingDirectory)
-                ? game.WorkingDirectory
-                : (Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = game.ExecutablePath,
-                Arguments = game.Arguments ?? string.Empty,
-                WorkingDirectory = workingDir,
-                UseShellExecute = true
-            };
-            if (game.RunAsAdmin)
-            {
-                startInfo.Verb = "runas";
-            }
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' directly (EA, no EA App dispatch): '{game.ExecutablePath}'.");
-            Process.Start(startInfo);
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"Dispatched direct EA launch for '{game.Name}'.");
-
-            TrackInstallDirSession(game, installDir, "EA");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' directly: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Launches an Epic Games Store title through Epic Games Launcher's "com.epicgames.launcher://"
-    /// protocol (a real registered URL scheme, confirmed via the HKEY_CLASSES_ROOT registry entry
-    /// the launcher installs - same shape as EA's origin2://). Like GOG/EA, the dispatch is
-    /// fire-and-forget with no Process handle, so this reuses the same install-directory polling.
-    /// </summary>
-    private bool LaunchEpicGameViaClient(GameEntry game, out string? errorMessage)
-    {
-        errorMessage = null;
-        try
-        {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "Epic Games"))
-                {
-                    return true;
-                }
-            }
-
-            string launchUrl = $"com.epicgames.launcher://apps/{Uri.EscapeDataString(game.EpicAppName ?? string.Empty)}?action=launch&silent=true";
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Launching Epic URL: {launchUrl}");
-            Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"Dispatched Epic Games launch for '{game.Name}'.");
-
-            TrackInstallDirSession(game, installDir, "Epic Games");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' via Epic Games Launcher: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Launches an Epic Games Store title by spawning its own registered exe directly - used when
-    /// Epic Games Launcher isn't installed. See <see cref="LaunchEaGameDirectly"/> for why this
-    /// hands off to <see cref="TrackInstallDirSession"/> instead of watching the spawned PID
-    /// directly.
-    /// </summary>
-    private bool LaunchEpicGameDirectly(GameEntry game, out string? errorMessage)
-    {
-        errorMessage = null;
-        try
-        {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "Epic Games"))
-                {
-                    return true;
-                }
-            }
-
-            string workingDir = !string.IsNullOrWhiteSpace(game.WorkingDirectory) && Directory.Exists(game.WorkingDirectory)
-                ? game.WorkingDirectory
-                : (Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = game.ExecutablePath,
-                Arguments = game.Arguments ?? string.Empty,
-                WorkingDirectory = workingDir,
-                UseShellExecute = true
-            };
-            if (game.RunAsAdmin)
-            {
-                startInfo.Verb = "runas";
-            }
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' directly (Epic, no launcher dispatch): '{game.ExecutablePath}'.");
-            Process.Start(startInfo);
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"Dispatched direct Epic launch for '{game.Name}'.");
-
-            TrackInstallDirSession(game, installDir, "Epic Games");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' directly: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Launches a Ubisoft Connect game through the "uplay://launch/&lt;gameId&gt;/0" protocol (a
-    /// real registered URL scheme, confirmed via the HKEY_CLASSES_ROOT registry entry Ubisoft
-    /// Connect installs - same shape as EA's origin2:// and Epic's com.epicgames.launcher://).
-    /// Like GOG/EA/Epic, the dispatch is fire-and-forget with no Process handle, so this reuses the
-    /// same install-directory polling.
-    /// </summary>
-    private bool LaunchUbisoftGameViaClient(GameEntry game, out string? errorMessage)
-    {
-        errorMessage = null;
-        try
-        {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "Ubisoft Connect"))
-                {
-                    return true;
-                }
-            }
-
-            string launchUrl = $"uplay://launch/{Uri.EscapeDataString(game.UbisoftGameId ?? string.Empty)}/0";
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Launching Ubisoft URL: {launchUrl}");
-            Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"Dispatched Ubisoft Connect launch for '{game.Name}'.");
-
-            TrackInstallDirSession(game, installDir, "Ubisoft Connect");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' via Ubisoft Connect: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Launches a Ubisoft Connect game by spawning its own registered exe directly - used when
-    /// Ubisoft Connect isn't installed. See <see cref="LaunchEaGameDirectly"/> for why this hands
-    /// off to <see cref="TrackInstallDirSession"/> instead of watching the spawned PID directly.
-    /// </summary>
-    private bool LaunchUbisoftGameDirectly(GameEntry game, out string? errorMessage)
-    {
-        errorMessage = null;
-        try
-        {
-            string installDir = ResolveInstallDir(game);
-
-            if (!string.IsNullOrWhiteSpace(installDir))
-            {
-                string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                if (TryActivateRunningProcessUnderDirectory(game, normalizedInstallDir, "Ubisoft Connect"))
-                {
-                    return true;
-                }
-            }
-
-            string workingDir = !string.IsNullOrWhiteSpace(game.WorkingDirectory) && Directory.Exists(game.WorkingDirectory)
-                ? game.WorkingDirectory
-                : (Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = game.ExecutablePath,
-                Arguments = game.Arguments ?? string.Empty,
-                WorkingDirectory = workingDir,
-                UseShellExecute = true
-            };
-            if (game.RunAsAdmin)
-            {
-                startInfo.Verb = "runas";
-            }
-
-            // Order: profile → user's pre-launch script → game. See PerformanceProfileService
-            // for why the profile goes first. TrackInstallDirSession ends the session if the
-            // game's process never actually appears.
-            _performanceProfileService.BeginGameSession(game);
-            _scriptService.RunPreLaunch(game);
-
-            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' directly (Ubisoft, no Connect dispatch): '{game.ExecutablePath}'.");
-            Process.Start(startInfo);
-
-            game.LastPlayed = DateTime.Now;
-            GameUpdated?.Invoke(game);
-            LoggingService.Info("Launcher", $"Dispatched direct Ubisoft launch for '{game.Name}'.");
-
-            TrackInstallDirSession(game, installDir, "Ubisoft Connect");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            LoggingService.Error("Launcher", $"Failed to launch '{game.Name}' directly: {ex.Message}", ex);
-            _performanceProfileService.EndGameSession(game.Id);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Reads a process's own executable path, falling back to a WMI query when direct access
-    /// throws. MainModule opens a handle at the caller's privilege level and throws for a process
-    /// running at higher integrity (elevated/anti-cheat/DRM-protected games) - WMI's process query
-    /// goes through a broker service and can often see the path even when a direct handle can't,
-    /// so it's worth a second attempt rather than silently treating an inaccessible process as
-    /// "not a match" (the same failure mode <see cref="IsSameExecutable"/> avoids by falling back
-    /// to a lenient match instead of exclusion).
-    /// </summary>
-    private static string? TryGetExecutablePath(Process proc)
-    {
-        try
-        {
-            return proc.MainModule?.FileName;
         }
         catch
         {
-            try
-            {
-                using var searcher = new ManagementObjectSearcher($"SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = {proc.Id}");
-                foreach (ManagementObject obj in searcher.Get())
-                {
-                    using (obj)
-                    {
-                        if (obj["ExecutablePath"] is string wmiPath && !string.IsNullOrWhiteSpace(wmiPath))
-                        {
-                            return wmiPath;
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // WMI can also fail (service unavailable, permissions) - give up on this process.
-            }
-            return null;
+            RollbackSession(session);
+            throw;
         }
     }
 
     /// <summary>
-    /// Finds the first running process whose executable lives under the given directory (already
-    /// normalized with a trailing separator). Used for GOG/EA client-launched games, whose
-    /// registered exe is often a short-lived prelauncher rather than the real game, so matching by
-    /// install directory is the only reliable identity both before launch (is it already running?)
-    /// and while polling for it to appear (see <see cref="TrackInstallDirSession"/>).
+    /// EA App ("origin2://"), Epic Games Launcher ("com.epicgames.launcher://") and Ubisoft
+    /// Connect ("uplay://") all expose a real registered URL scheme. The dispatch is
+    /// fire-and-forget with no Process handle, and the real game process (not necessarily the
+    /// registered exe, which can itself be a stub) is found by install-directory polling.
     /// </summary>
-    private static Process? FindRunningProcessUnderDirectory(string normalizedDir)
+    private bool LaunchViaClientUrl(GameEntry game, LaunchRoute route, string launchUrl, out string? errorMessage)
     {
-        Process? found = null;
-        foreach (var proc in Process.GetProcesses())
+        errorMessage = null;
+        string label = LaunchRouter.PlatformLabelFor(route);
+        string installDir = ResolveInstallDir(game);
+
+        if (TryActivateRunningProcessUnderDirectory(game, installDir, label))
         {
-            if (found != null)
-            {
-                proc.Dispose();
-                continue;
-            }
-
-            string? path = TryGetExecutablePath(proc);
-            if (path != null && path.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase))
-            {
-                found = proc;
-                continue;
-            }
-
-            proc.Dispose();
+            return true;
         }
-        return found;
+
+        var session = BeginSession(game, route, out string? abortReason);
+        if (session == null)
+        {
+            errorMessage = abortReason;
+            return false;
+        }
+
+        try
+        {
+            LoggingService.Verbose("Launcher", $"Launching {label} URL: {launchUrl}");
+            Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
+            MarkLaunched(game);
+            LoggingService.Info("Launcher", $"Dispatched {label} launch for '{game.Name}'.");
+
+            TrackInstallDirSession(session, installDir, label, InstallDirLaunchTimeout);
+            return true;
+        }
+        catch
+        {
+            RollbackSession(session);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Launches a platform game by spawning its own registered exe directly - used when the client
+    /// isn't installed, or the user ticked "launch directly". The registered exe is often a
+    /// short-lived prelauncher stub (e.g. Cyberpunk 2077's REDprelauncher.exe) that spawns the
+    /// real game and exits within milliseconds, so this hands off to install-directory polling
+    /// instead of watching the spawned PID.
+    /// </summary>
+    private bool LaunchPlatformExeDirectly(GameEntry game, LaunchRoute route, out string? errorMessage, out bool isMissing)
+    {
+        errorMessage = null;
+        isMissing = false;
+        string label = LaunchRouter.PlatformLabelFor(route);
+
+        if (string.IsNullOrWhiteSpace(game.ExecutablePath) || !File.Exists(game.ExecutablePath))
+        {
+            errorMessage = $"Executable not found at:\n{game.ExecutablePath}";
+            isMissing = true;
+            LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}' ({label}): Executable missing at '{game.ExecutablePath}'.");
+            return false;
+        }
+
+        string installDir = ResolveInstallDir(game);
+        if (TryActivateRunningProcessUnderDirectory(game, installDir, label))
+        {
+            return true;
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = game.ExecutablePath,
+            Arguments = game.Arguments ?? string.Empty,
+            WorkingDirectory = installDir,
+            UseShellExecute = true
+        };
+        if (game.RunAsAdmin)
+        {
+            startInfo.Verb = "runas";
+        }
+
+        var session = BeginSession(game, route, out string? abortReason);
+        if (session == null)
+        {
+            errorMessage = abortReason;
+            return false;
+        }
+
+        try
+        {
+            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' directly ({label}, no client dispatch): '{game.ExecutablePath}'.");
+            Process.Start(startInfo);
+            MarkLaunched(game);
+            LoggingService.Info("Launcher", $"Dispatched direct {label} launch for '{game.Name}'.");
+
+            TrackInstallDirSession(session, installDir, label, InstallDirLaunchTimeout);
+            return true;
+        }
+        catch
+        {
+            RollbackSession(session);
+            throw;
+        }
     }
 
     /// <summary>
     /// Polls for the actual game process to appear under the game's install directory, then hands
-    /// off to <see cref="AttachExitTracking"/> once found. Matches by install directory rather than
-    /// the registered/launched exe's filename because some client-launched games (e.g. GOG's
-    /// Cyberpunk 2077, via REDprelauncher.exe) run a prelauncher stub that starts the real game
-    /// process and exits - GOGWrapper (a third-party GOG launch tool) uses the same "search running
-    /// processes under the game's path" approach for this reason, and EA's own client has the
-    /// identical handoff ambiguity (Playnite has open issues about EA-launched games appearing to
-    /// stop seconds after actually starting). A single sighting isn't enough to commit to, though:
-    /// the prelauncher itself also lives under the install directory, so this requires the same
-    /// process to be seen on <see cref="RequiredStableSightings"/> consecutive polls before
-    /// treating it as the real game - a prelauncher that's already exited by then never gets
-    /// attached to. Gives up and rolls back the Performance Profile if nothing stable appears
-    /// within a few minutes (e.g. the user cancels a first-run EULA/verify prompt without
-    /// actually starting the game).
+    /// off to <see cref="AttachExitTracking"/> once found. Requires the same PID on
+    /// <see cref="RequiredStableSightings"/> consecutive polls before trusting it, so a prelauncher
+    /// that's already exited by then never gets attached to; known helper processes (crash
+    /// handlers, anti-cheat services) are never candidates. Gives up and rolls the profile back if
+    /// nothing stable appears within <paramref name="timeout"/> - unless
+    /// <paramref name="ownsProcessAlready"/> (a stub handoff), where the game did run and the
+    /// session ends normally instead.
     /// </summary>
-    private void TrackInstallDirSession(GameEntry game, string installDir, string platformLabel)
+    private void TrackInstallDirSession(ActiveGameSession session, string installDir, string platformLabel, TimeSpan timeout, bool ownsProcessAlready = false)
     {
+        var game = session.Game;
         if (string.IsNullOrWhiteSpace(installDir))
         {
-            _performanceProfileService.EndGameSession(game.Id);
             LoggingService.Verbose("Launcher", $"'{game.Name}' has no resolvable install directory; cannot track its {platformLabel} session.");
+            FinishSession(session, gameRan: ownsProcessAlready, "no install directory to track");
             return;
         }
 
-        // Nothing to gain from polling if there's no profile to restore and no script to run -
-        // same reasoning as TrackSteamSession.
-        bool hasPostExitScript = !string.IsNullOrWhiteSpace(game.PostExitScriptPath);
-        bool hasProfile = game.PerformanceProfile != PerformanceProfileMode.Off;
-        if (!hasProfile && !hasPostExitScript)
-        {
-            return;
-        }
-
-        string normalizedInstallDir = installDir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+        string normalizedInstallDir = ProcessPathResolver.NormalizeDirectory(installDir);
         DateTime waitStartedUtc = DateTime.UtcNow;
-        int sessionHandled = 0; // guards against a re-entrant tick redoing this (see TrackSteamSession)
-        int? pendingCandidatePid = null; // debounce: require the same PID on RequiredStableSightings consecutive ticks
+        int? pendingCandidatePid = null;
         int pendingCandidateSightings = 0;
-        Timer? timer = null;
 
-        timer = new Timer(_ =>
+        Poller? poller = null;
+        poller = new Poller(InstallDirLaunchPollInterval, () =>
         {
-            try
+            if (Volatile.Read(ref session.Finished) != 0) return false;
+
+            var candidates = ProcessPathResolver.FindProcessesUnderDirectory(normalizedInstallDir);
+            if (candidates.Count > 0)
             {
-                var candidate = FindRunningProcessUnderDirectory(normalizedInstallDir);
-
-                if (candidate != null)
+                var best = candidates[0];
+                if (pendingCandidatePid == best.Pid)
                 {
-                    if (pendingCandidatePid == candidate.Id)
-                    {
-                        pendingCandidateSightings++;
-                        if (pendingCandidateSightings < RequiredStableSightings)
-                        {
-                            candidate.Dispose();
-                            return;
-                        }
-
-                        if (Interlocked.Exchange(ref sessionHandled, 1) != 0)
-                        {
-                            candidate.Dispose();
-                            return;
-                        }
-                        timer?.Dispose();
-                        LoggingService.Verbose("Launcher", $"Found running process for '{game.Name}' (PID {candidate.Id}) after launching via {platformLabel}.");
-
-                        DateTime startTime;
-                        try { startTime = candidate.StartTime; }
-                        catch { startTime = DateTime.Now; }
-
-                        AttachExitTracking(game, candidate, startTime);
-                        return;
-                    }
-
-                    pendingCandidatePid = candidate.Id;
-                    pendingCandidateSightings = 1;
-                    candidate.Dispose();
+                    pendingCandidateSightings++;
                 }
                 else
                 {
+                    pendingCandidatePid = best.Pid;
+                    pendingCandidateSightings = 1;
+                }
+
+                if (pendingCandidateSightings >= RequiredStableSightings)
+                {
+                    Process? proc = null;
+                    try
+                    {
+                        proc = Process.GetProcessById(best.Pid);
+                        if (proc.HasExited) { proc.Dispose(); proc = null; }
+                    }
+                    catch { proc = null; }
+
+                    if (proc != null)
+                    {
+                        LoggingService.Verbose("Launcher", $"Found running process for '{game.Name}' (PID {proc.Id}, {Path.GetFileName(best.Path)}) after launching via {platformLabel}.");
+                        AttachExitTracking(session, proc, allowStubHandoff: false);
+                        return false;
+                    }
+
                     pendingCandidatePid = null;
                     pendingCandidateSightings = 0;
                 }
-
-                if (DateTime.UtcNow - waitStartedUtc > InstallDirLaunchTimeout)
-                {
-                    if (Interlocked.Exchange(ref sessionHandled, 1) != 0) return;
-                    timer?.Dispose();
-                    LoggingService.Verbose("Launcher", $"'{game.Name}' never appeared as a running process within {InstallDirLaunchTimeout.TotalMinutes:0}m of launching via {platformLabel}; rolling back its Performance Profile.");
-                    _performanceProfileService.EndGameSession(game.Id);
-                }
             }
-            catch (Exception ex)
+            else
             {
-                LoggingService.Verbose("Launcher", $"{platformLabel} session tracking error for '{game.Name}': {ex.Message}");
+                pendingCandidatePid = null;
+                pendingCandidateSightings = 0;
             }
-        }, null, InstallDirLaunchPollInterval, InstallDirLaunchPollInterval);
+
+            if (DateTime.UtcNow - waitStartedUtc > timeout)
+            {
+                if (ownsProcessAlready)
+                {
+                    LoggingService.Verbose("Launcher", $"No successor process appeared under '{installDir}' within {timeout.TotalSeconds:0}s; treating '{game.Name}' as finished.");
+                    FinishSession(session, gameRan: true, "process exited (no successor found)");
+                }
+                else
+                {
+                    LoggingService.Verbose("Launcher", $"'{game.Name}' never appeared as a running process within {timeout.TotalMinutes:0}m of launching via {platformLabel}; rolling back its Performance Profile.");
+                    FinishSession(session, gameRan: false, "game process never appeared");
+                }
+                return false;
+            }
+            return true;
+        });
+        session.CancelTracking = () => poller?.Stop();
     }
 }

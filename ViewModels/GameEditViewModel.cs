@@ -37,6 +37,9 @@ public class GameEditViewModel : ViewModelBase
     private bool _waitForPreLaunchScript;
     private bool _runScriptsHidden;
     private bool _runScriptsAsAdmin;
+    private bool _abortLaunchOnScriptFailure;
+    private string _preLaunchScriptTimeoutSeconds = "30";
+    private bool _closeLauncherOnExit;
     private bool _isHidden;
     private string? _customIconPath;
     private BitmapImage? _iconPreview;
@@ -81,6 +84,13 @@ public class GameEditViewModel : ViewModelBase
         // The card is opt-in (Settings > General), but a game that already has a script must
         // stay editable even if the setting was later turned off or reset.
         ShowScriptsCard = scriptsEnabled || game.HasScripts;
+        // ...and if it has scripts while the feature is off, those scripts are NOT running
+        // (GameScriptService treats the setting as a kill-switch) - say so instead of leaving a
+        // configured-looking card that silently does nothing.
+        ShowScriptsDisabledNotice = !scriptsEnabled && game.HasScripts;
+        _abortLaunchOnScriptFailure = game.AbortLaunchOnScriptFailure;
+        _preLaunchScriptTimeoutSeconds = game.PreLaunchScriptTimeoutSeconds.ToString();
+        _closeLauncherOnExit = game.CloseLauncherOnExit;
         _iconExtractorService = iconExtractorService;
         _steamGridDbApiKey = steamGridDbApiKey;
         _minConfidence = minConfidence;
@@ -99,6 +109,7 @@ public class GameEditViewModel : ViewModelBase
         _launchDirectly = game.LaunchDirectly;
         _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
+        _cpuAffinity = game.CpuAffinity;
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
         _waitForPreLaunchScript = game.WaitForPreLaunchScript;
@@ -193,6 +204,35 @@ public class GameEditViewModel : ViewModelBase
     public IReadOnlyList<PerformanceProfileMode> PerformanceProfileOptions { get; } =
         new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };
 
+    // --- CPU affinity (hybrid CPUs) ---
+
+    private CpuAffinityMode _cpuAffinity;
+    public CpuAffinityMode CpuAffinity
+    {
+        get => _cpuAffinity;
+        set { _cpuAffinity = value; OnPropertyChanged(); }
+    }
+
+    public sealed record CpuAffinityOption(CpuAffinityMode Value, string Label);
+
+    public IReadOnlyList<CpuAffinityOption> CpuAffinityOptions { get; } = new[]
+    {
+        new CpuAffinityOption(CpuAffinityMode.Default, "Default (all cores)"),
+        new CpuAffinityOption(CpuAffinityMode.PerformanceCoresOnly, "Performance cores only (hybrid CPUs)")
+    };
+
+    /// <summary>Tells the user whether the option can do anything on this machine.</summary>
+    public string CpuAffinityHint
+    {
+        get
+        {
+            var topology = CpuTopologyService.GetTopology();
+            return topology.IsHybrid
+                ? $"This CPU is hybrid: {topology.PerformanceCoreCount} performance cores of {topology.LogicalProcessorCount} logical processors. Pinning helps older engines and some anti-cheat titles that stutter when threads land on efficiency cores."
+                : "This CPU is not hybrid (no separate efficiency cores), so this option has no effect here. Kept per game so a library moved to a hybrid machine picks it up.";
+        }
+    }
+
     // --- Pre-launch / post-exit scripts ---
 
     public bool ShowScriptsCard { get; }
@@ -244,10 +284,47 @@ public class GameEditViewModel : ViewModelBase
         set { _runScriptsAsAdmin = value; OnPropertyChanged(); }
     }
 
+    /// <summary>Scripts are configured on this game but the Settings switch is off, so they won't run.</summary>
+    public bool ShowScriptsDisabledNotice { get; }
+
+    /// <summary>Cancel the launch when the pre-launch script fails/times out. Implies waiting for it.</summary>
+    public bool AbortLaunchOnScriptFailure
+    {
+        get => _abortLaunchOnScriptFailure;
+        set
+        {
+            _abortLaunchOnScriptFailure = value;
+            if (value) WaitForPreLaunchScript = true;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Bound as text so a half-typed number doesn't fight the binding; validated on save.</summary>
+    public string PreLaunchScriptTimeoutSeconds
+    {
+        get => _preLaunchScriptTimeoutSeconds;
+        set { _preLaunchScriptTimeoutSeconds = value; OnPropertyChanged(); }
+    }
+
+    public string PreLaunchTimeoutHint => $"Seconds to wait ({GameScriptService.MinPreLaunchTimeoutSeconds}-{GameScriptService.MaxPreLaunchTimeoutSeconds}); default {GameScriptService.DefaultPreLaunchWaitTimeout.TotalSeconds:0}.";
+
+    /// <summary>Close the platform client (Steam, Galaxy, EA App, Epic, Ubisoft Connect) once this game's session ends.</summary>
+    public bool CloseLauncherOnExit
+    {
+        get => _closeLauncherOnExit;
+        set { _closeLauncherOnExit = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Explains where the Arguments box goes for a Steam-by-AppId game, since Steam
+    /// launches can't take a command line the way an exe does.</summary>
+    public string ArgumentsHint => IsSteamGame && !string.IsNullOrWhiteSpace(SteamAppId)
+        ? "For a Steam game these are sent as Steam launch options (steam://run/<id>//<args>/), the same as Properties > Launch Options in Steam."
+        : "Passed to the executable as-is.";
+
     public bool IsSteamGame
     {
         get => _isSteamGame;
-        set { _isSteamGame = value; OnPropertyChanged(); }
+        set { _isSteamGame = value; OnPropertyChanged(); OnPropertyChanged(nameof(ArgumentsHint)); }
     }
 
     // --- Launcher platform (GOG / EA / Epic / Ubisoft / Steam-by-AppId) ---
@@ -856,6 +933,18 @@ public class GameEditViewModel : ViewModelBase
             return;
         }
 
+        int timeoutSeconds = (int)GameScriptService.DefaultPreLaunchWaitTimeout.TotalSeconds;
+        if (!string.IsNullOrWhiteSpace(PreLaunchScriptTimeoutSeconds))
+        {
+            if (!int.TryParse(PreLaunchScriptTimeoutSeconds.Trim(), out timeoutSeconds)
+                || timeoutSeconds < GameScriptService.MinPreLaunchTimeoutSeconds
+                || timeoutSeconds > GameScriptService.MaxPreLaunchTimeoutSeconds)
+            {
+                StatusMessage = $"Pre-launch script timeout must be a whole number of seconds between {GameScriptService.MinPreLaunchTimeoutSeconds} and {GameScriptService.MaxPreLaunchTimeoutSeconds}.";
+                return;
+            }
+        }
+
         SourceGame.Name = Name.Trim();
         SourceGame.ExecutablePath = ExecutablePath.Trim();
         SourceGame.Arguments = Arguments?.Trim() ?? string.Empty;
@@ -887,11 +976,15 @@ public class GameEditViewModel : ViewModelBase
             LoggingService.Info("GameEdit", $"'{SourceGame.Name}' Performance Profile changed: {SourceGame.PerformanceProfile} -> {PerformanceProfile}.");
         }
         SourceGame.PerformanceProfile = PerformanceProfile;
+        SourceGame.CpuAffinity = CpuAffinity;
         SourceGame.PreLaunchScriptPath = PreLaunchScriptPath?.Trim().Trim('"') ?? string.Empty;
         SourceGame.PostExitScriptPath = PostExitScriptPath?.Trim().Trim('"') ?? string.Empty;
-        SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript;
+        SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript || AbortLaunchOnScriptFailure;
         SourceGame.RunScriptsHidden = RunScriptsHidden;
         SourceGame.RunScriptsAsAdmin = RunScriptsAsAdmin;
+        SourceGame.AbortLaunchOnScriptFailure = AbortLaunchOnScriptFailure;
+        SourceGame.PreLaunchScriptTimeoutSeconds = timeoutSeconds;
+        SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
         SourceGame.IsHidden = IsHidden;
 
         // Handle custom icon caching

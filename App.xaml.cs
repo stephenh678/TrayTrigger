@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -229,7 +230,7 @@ public partial class App : Application
         _performanceProfileService.RecoverFromCrashIfNeeded();
         // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
         _gameScriptService = new GameScriptService(() => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts);
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService);
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -274,6 +275,32 @@ public partial class App : Application
 
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;
+        // The "Now Playing" tray section follows the launcher's session registry directly.
+        _launcherService.SessionStarted += _ => UpdateTrayContextMenu();
+        _launcherService.SessionEnded += _ => UpdateTrayContextMenu();
+
+        // Windows shutdown / sign-out: WPF raises SessionEnding instead of going through the tray
+        // Exit path, so without this a running game's Performance Profile (power plan, MMCSS,
+        // HDR) simply stayed applied until the next TrayTrigger start. Anything that would need
+        // a UAC prompt is skipped here (nobody can answer it during shutdown) and finished by the
+        // crash-recovery snapshot on the next start.
+        SessionEnding += (s, args) =>
+        {
+            LoggingService.Info("App", $"Windows session ending ({args.ReasonSessionEnding}); restoring active Performance Profile state.");
+            try
+            {
+                _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
+                _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
+                if (_mainViewModel != null && _storageService != null)
+                {
+                    _storageService.SaveSettings(_mainViewModel.Settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("App", $"Restore during session end failed: {ex.Message}");
+            }
+        };
         _mainViewModel.RequestExitApplication += ExitApplication;
         _mainViewModel.RequestTrayNotification += (title, message) => _trayIcon?.ShowNotification(title, message);
 
@@ -374,6 +401,46 @@ public partial class App : Application
             }
             else
             {
+                // 0. "Now Playing": every session the launcher is tracking, with an escape hatch
+                //    for a stuck one (restore tweaks now) and a way to kill a hung game.
+                var activeSessions = _launcherService?.GetActiveSessions() ?? [];
+                if (activeSessions.Count > 0)
+                {
+                    menu.Items.Add(CreateSectionHeader("Now Playing"));
+                    foreach (var session in activeSessions)
+                    {
+                        var card = games.FirstOrDefault(g => g.Id == session.GameId);
+                        string elapsed = session.GameStarted
+                            ? $"{Math.Max(0, (DateTime.Now - session.StartedAt).TotalMinutes):0}m"
+                            : $"starting via {session.PlatformLabel}";
+                        var sessionItem = card != null
+                            ? CreateGameMenuItem(card)
+                            : new MenuItem { Header = session.Game.Name, FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
+                        sessionItem.Header = $"{session.Game.Name}  ·  {elapsed}";
+                        sessionItem.Command = null;
+                        sessionItem.ToolTip = "Tracked session: Performance Profile applied, post-exit script pending.";
+
+                        string gameId = session.GameId;
+                        sessionItem.Items.Add(CreateNavMenuItem("End session (restore tweaks now)", "", () =>
+                            Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: false))));
+                        var forceClose = CreateNavMenuItem("Force close game", "", () =>
+                        {
+                            if (card != null)
+                            {
+                                card.ForceCloseCommand.Execute(null);
+                            }
+                            else
+                            {
+                                Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: true));
+                            }
+                        }, iconBrush: new SolidColorBrush(Color.FromRgb(255, 120, 100)));
+                        forceClose.IsEnabled = session.CanForceClose;
+                        sessionItem.Items.Add(forceClose);
+                        menu.Items.Add(sessionItem);
+                    }
+                    menu.Items.Add(new Separator());
+                }
+
                 // 1. Persistent "Recent" section directly in root menu
                 if (_mainViewModel.Settings.ShowRecentInTray && _mainViewModel.Settings.MaxRecentInTray > 0)
                 {

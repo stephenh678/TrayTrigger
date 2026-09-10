@@ -1,21 +1,20 @@
-# Windows Visual Effects
+# Windows Visual Effects (Performance Mode)
 
 ## What it changes
 
-Switches Windows to "Adjust for best performance", which turns off window animations, drop shadows, fade effects, and other desktop eye candy.
+Turns off two desktop effects the Desktop Window Manager pays for on every frame: the minimize and restore window animation, and window drop shadows.
 
 ## Why it helps
 
-- The Desktop Window Manager does slightly less compositing work, freeing a small amount of GPU time.
-- On very old or integrated GPUs the difference can be noticeable on the desktop.
+- Frees a small amount of compositor GPU time, which matters most on integrated graphics and older GPUs.
 
 ## Trade-offs
 
-- On any modern GPU the gaming impact is close to zero. The desktop just looks plainer.
-- This is a "looks versus a tiny gain" decision, which is why it is OPT-IN and left out of Apply Performance Preset.
+- On a modern GPU the difference in a game is marginal. This is a visual-polish-for-a-small-gain trade, so it is opt-in.
+- Everything else in Performance Options (font smoothing, taskbar animations, transparency) is left alone.
 - No restart and no administrator rights needed.
 
 ## Details
 
-- Sets VisualFXSetting=2 under HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects.
-- Same setting as System Properties, Advanced, Performance Settings.
+- Uses SystemParametersInfo (SPI_SETANIMATION and SPI_SETDROPSHADOW), the same calls the Performance Options dialog makes, and marks VisualFXSetting=3 ("Custom") under HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects so that dialog does not later apply its full "best performance" set on top.
+- TrayTrigger records what both effects were set to before applying and restores exactly that on revert.

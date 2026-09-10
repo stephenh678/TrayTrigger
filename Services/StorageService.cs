@@ -11,7 +11,7 @@ using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
 
-public class StorageService
+public class StorageService : IProfileSnapshotStore
 {
     // Every save/load logs who triggered it via [CallerMemberName]/[CallerFilePath] - with ~30
     // call sites across the app (many of them generic AutoSaveSettings()/SaveLibrary() wrappers),

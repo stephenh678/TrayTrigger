@@ -1,21 +1,20 @@
-# Core Isolation / Memory Integrity
+# Core Isolation / Memory Integrity (HVCI)
 
-## What this shows
+## What it is
 
-Whether Memory Integrity, also called Hypervisor-protected Code Integrity or HVCI, is currently on. TrayTrigger reports it but does not change it.
+Memory Integrity runs kernel-mode code integrity checks inside a hypervisor-protected environment, so a vulnerable or malicious driver cannot inject code into the kernel. It is a real security boundary.
 
-## Why it matters for gaming
+## Why it is shown here
 
-- Memory Integrity runs kernel driver code inside a virtualisation boundary. Microsoft has documented a CPU cost in some games, typically a few percent, sometimes more on older CPUs.
-- Turning it off recovers that headroom.
+- Microsoft has documented a CPU cost in some games while it is on, roughly 3 to 8 percent in the cases they measured.
+- Whether that trade is worth it is your call, so TrayTrigger only shows the state and links to the Windows Security page.
 
-## Why you might leave it on
+## Reading the badge
 
-- It is a real security feature. It blocks a class of attacks that load a vulnerable or malicious driver to take over the kernel, which is how several game cheats and ransomware families operate.
-- Microsoft enables it by default on new Windows 11 installs for that reason.
-
-> This is a judgement call about security versus a small performance gain, so TrayTrigger will not flip it for you. The Open Core Isolation Settings button takes you to the switch in Windows Security. A restart is required after changing it.
+- ON means Memory Integrity is running right now, read from the DeviceGuard status Windows itself reports.
+- OFF means it is not running. Because Windows applies a change to this setting at the next restart, the badge can differ from the switch in Windows Security until you reboot.
+- This row is informational. It is never counted in the optimization score, and turning a security feature off is not presented as an optimization.
 
 ## Details
 
-- Read from Enabled under HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity.
+- Read from Win32_DeviceGuard SecurityServicesRunning (value 2), falling back to the Enabled value under HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity.

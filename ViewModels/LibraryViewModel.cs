@@ -321,7 +321,7 @@ public class LibraryViewModel : ViewModelBase
 
     public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false)
     {
-        return new GameCardViewModel(
+        var card = new GameCardViewModel(
             game,
             onLaunch: LaunchGame,
             onEdit: card => RequestEditGameDialog?.Invoke(card),
@@ -338,8 +338,79 @@ public class LibraryViewModel : ViewModelBase
             onToggleFavorite: ToggleFavorite,
             onToggleHidden: ToggleHidden,
             getUseVerticalPosterArt: () => _getUseVerticalPosterArt(),
-            deferHeavyInit: deferHeavyInit
+            deferHeavyInit: deferHeavyInit,
+            onEndSession: card => EndGameSession(card, forceClose: false),
+            onForceClose: card => EndGameSession(card, forceClose: true)
         );
+        // Sessions outlive library reloads (a rescan while a game is running), so a fresh card
+        // must pick up the live state rather than wait for the next SessionStarted event.
+        card.IsPlaying = _launcherService.IsSessionActive(game.Id);
+        return card;
+    }
+
+    /// <summary>Fired by ProcessLauncherService (background thread) when a tracked session starts.</summary>
+    public void OnSessionStarted(ActiveGameSession session) => SetPlayingState(session.GameId, true);
+
+    /// <summary>Fired by ProcessLauncherService (background thread) when a tracked session ends.</summary>
+    public void OnSessionEnded(ActiveGameSession session) => SetPlayingState(session.GameId, false);
+
+    private void SetPlayingState(string gameId, bool isPlaying)
+    {
+        RunOnUiThread(() =>
+        {
+            var card = Games.FirstOrDefault(g => g.Id == gameId);
+            if (card != null) card.IsPlaying = isPlaying;
+        });
+    }
+
+    /// <summary>
+    /// "End Session" / "Force Close Game" from a card's menu. Both run off the UI thread since
+    /// restoring a profile can involve an elevated Defender cmdlet.
+    /// </summary>
+    private void EndGameSession(GameCardViewModel card, bool forceClose)
+    {
+        if (forceClose)
+        {
+            bool confirmed = ModernDialog.Confirm(
+                WindowHelper.ActiveOwner(),
+                "Force Close Game",
+                $"Force close \"{card.Name}\"?",
+                "The game process will be killed immediately. Anything not saved in the game will be lost. TrayTrigger then restores the Performance Profile and runs the post-exit script.",
+                confirmText: "Force Close",
+                cancelText: "Cancel");
+            if (!confirmed) return;
+        }
+
+        StatusMessage = forceClose ? $"Force closing {card.Name}..." : $"Ending session for {card.Name}...";
+        string gameId = card.Game.Id;
+        string name = card.Name;
+        _ = Task.Run(() =>
+        {
+            bool ended = _launcherService.EndSessionNow(gameId, forceClose);
+            RunOnUiThread(() =>
+            {
+                StatusMessage = ended
+                    ? (forceClose ? $"Force closed {name}; tweaks restored." : $"Session for {name} ended; tweaks restored.")
+                    : $"{name} has no active session.";
+            });
+        });
+    }
+
+    /// <summary>
+    /// Marshals to the UI thread without throwing when the dispatcher is already shutting down -
+    /// launcher callbacks arrive from thread-pool threads and a game can exit during app shutdown.
+    /// </summary>
+    private static void RunOnUiThread(Action action)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.HasShutdownStarted) return;
+        try
+        {
+            if (dispatcher.CheckAccess()) action();
+            else dispatcher.Invoke(action);
+        }
+        catch (System.Threading.Tasks.TaskCanceledException) { }
+        catch (InvalidOperationException) { }
     }
 
     private void ToggleFavorite(GameCardViewModel card)
@@ -437,7 +508,32 @@ public class LibraryViewModel : ViewModelBase
 
     private void DispatchLaunch(GameCardViewModel card, Window? owner)
     {
-        if (_launcherService.LaunchGame(card.Game, out string? err, out bool isMissing))
+        // LaunchGame can block for a long time - a UAC prompt plus an elevated Defender cmdlet
+        // for an Aggressive profile, then a pre-launch script wait - so it runs off the UI
+        // thread. The launcher's events already marshal back here on their own.
+        _ = Task.Run(() =>
+        {
+            bool ok;
+            string? err;
+            bool isMissing;
+            try
+            {
+                ok = _launcherService.LaunchGame(card.Game, out err, out isMissing);
+            }
+            catch (Exception ex)
+            {
+                ok = false;
+                err = ex.Message;
+                isMissing = false;
+                LoggingService.Error("Library", $"Launch of '{card.Name}' threw: {ex.Message}", ex);
+            }
+            RunOnUiThread(() => OnLaunchDispatched(card, owner, ok, err, isMissing));
+        });
+    }
+
+    private void OnLaunchDispatched(GameCardViewModel card, Window? owner, bool launched, string? err, bool isMissing)
+    {
+        if (launched)
         {
             // No RefreshProperties()/SaveLibrary() here: LaunchGame already raised GameUpdated
             // synchronously (LastPlayed change), which OnGameUpdatedFromLauncher just handled -
@@ -1169,7 +1265,7 @@ public class LibraryViewModel : ViewModelBase
 
     public void OnGameUpdatedFromLauncher(GameEntry game)
     {
-        Application.Current?.Dispatcher.Invoke(() =>
+        RunOnUiThread(() =>
         {
             var card = Games.FirstOrDefault(g => g.Id == game.Id);
             card?.RefreshProperties();
@@ -1186,7 +1282,7 @@ public class LibraryViewModel : ViewModelBase
     /// </summary>
     public void OnGameWindowReady(GameEntry game)
     {
-        Application.Current?.Dispatcher.Invoke(() =>
+        RunOnUiThread(() =>
         {
             if (_pendingMinimizeGameId == null || game.Id != _pendingMinimizeGameId) return;
 

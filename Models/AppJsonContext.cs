@@ -9,6 +9,7 @@ namespace TrayTrigger.Models;
     PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(List<GameEntry>))]
 [JsonSerializable(typeof(AppSettings))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(GitHubReleaseInfo))]
 [JsonSerializable(typeof(List<GitHubReleaseInfo>))]
 [JsonSerializable(typeof(GitHubReleaseAsset))]

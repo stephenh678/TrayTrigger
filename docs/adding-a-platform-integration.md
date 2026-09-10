@@ -11,7 +11,11 @@ EA, Epic, and Ubisoft are all good reference implementations to read alongside t
 - `Services/UrlProtocolHelper.cs` — the shared "is this platform's client installed" check (see
   step 0.6) - EA, Epic, and Ubisoft all call this rather than each having their own copy
 - `Services/ProcessLauncherService.cs` — launching + session tracking (`TrackInstallDirSession` is
-  the shared GOG/EA/Epic/Ubisoft tracking core — see step 1)
+  the shared GOG/EA/Epic/Ubisoft tracking core — see step 1). Since the 1.3.6 launcher rework the
+  *decision* of which path a game takes lives in `Services/LaunchRouting.cs` (`LaunchRouter.Resolve`,
+  pure and unit-tested in `LaunchRoutingTests`), process identity lookups live in
+  `Services/ProcessPathResolver.cs`, and every launch is an `ActiveGameSession` that ends through
+  one `FinishSession` - see "1.3.6 launcher rework" at the end of this doc for the name changes.
 - `ViewModels/ImportCoordinator.cs` — scan/import pipeline
 - `ViewModels/LibraryViewModel.cs` (`EnrichGameWithSteamMetadataAsync`) / `Services/GameNameExtractor.cs`
   (`ResolveGameMatchAsync`'s `knownName` param) — Steam title/genre/cover-art matching for imported
@@ -242,7 +246,7 @@ some entirely different way — see the Xbox caveat at the bottom):
 | 4 | `Models/IgnoredGamePath.cs` | `<Platform>GameId` string?, mirroring `GogGameId`. |
 | 4b | `ViewModels/IgnoredGamePathRowViewModel.cs` | **Easy to miss — not referenced from anywhere the compiler would catch.** `DisplayPath` branches on `ExePath`/`SteamAppId`; add the new `<Platform>GameId` as a further fallback, or an ignored entry from this platform silently displays a broken label (e.g. `"Steam AppId "` with nothing after it) in Settings. Missed entirely in the first GOG pass — caught only by a later code review, not by build/test. |
 | 5 | `Services/LibraryConstants.cs` | `<Platform>Category` const. |
-| 6 | `Services/ProcessLauncherService.cs` | New branch in `LaunchGame` (after the previous platforms' branches, before "Normal executable handling") for the platform, falling through to direct-exe if a client-launch was attempted and the client isn't installed. If client-launch: call the shared `TrackInstallDirSession`/`TryActivateRunningProcessUnderDirectory` (see step 1) with your own `platformLabel` - don't write a new `Track<Platform>Session` method. |
+| 6 | `Services/LaunchRouting.cs` + `Services/ProcessLauncherService.cs` | Add `<Platform>Client` / `<Platform>Direct` values to `LaunchRoute`, a field on `LaunchClientAvailability`, and the branch in `LaunchRouter.Resolve` (add the matrix rows to `LaunchRoutingTests`). In `ProcessLauncherService.LaunchGame`'s switch, a URL-scheme client is one line: `LaunchViaClientUrl(game, route, "<scheme>://...", out errorMessage)`; the direct fallback is `LaunchPlatformExeDirectly(game, route, ...)`. Both already do the already-running check, `BeginSession`, dispatch, and `TrackInstallDirSession` - don't write a new `Launch<Platform>...`/`Track<Platform>Session` method. Add the platform's label to `LaunchRouter.PlatformLabelFor`/`ClientPlatformFor`, and its client process names to `LauncherClientCloser` for "close the launcher after exit". |
 | 7 | `ViewModels/ImportCoordinator.cs` | `_<platform>ScannerService` field + constructor param; a branch in `ScanForGamesAsync` (check whether the platform needs a `ScanLocations`-style per-folder toggle like Steam, or is location-free like GOG — **if location-free, remember to fix the `enabledLocations.Count == 0` early-return gate**, or a platform with no folders configured will incorrectly show "No Scan Locations"); filter the scan results against `existingExePaths` (not just the platform's own game-ID set) so a game the user already added manually — before this platform's integration ever matched it — doesn't get offered again as a duplicate; `Import<Platform>Games`/`Import<Platform>GamesAsync`/`Ignore<Platform>Game`; extend `ImportScanResultsAsync`'s signature with the new list. |
 | 8 | `ViewModels/ScanForGamesViewModel.cs` | Third (or Nth) source on `ScannedGameItemViewModel`; extend the constructor, `ImportConfirmed` event, `ImportSelected`, `OnItemIgnoreRequested`. |
 | 9 | `Views/ScanForGamesDialog.xaml.cs` | Thread the new list through the dialog constructor. |
@@ -302,3 +306,39 @@ would go through `Windows.Management.Deployment.PackageManager`/`Get-AppxPackage
 uses shell activation (`shell:AppsFolder\<PackageFamilyName>!<AppId>`), not `Process.Start` on a
 file path. Don't assume this checklist applies as-is — treat it as its own research pass (step 0
 above) before deciding how much of the pattern actually transfers.
+
+## 1.3.6 launcher rework (2026-09-10) - name changes for readers of the sections above
+
+The per-platform history above is still accurate about *why* things are shaped the way they are;
+only the names moved. Map old to new:
+
+- `LaunchGame`'s chain of `if (game.IsXGame ...)` branches → `LaunchRouter.Resolve(game, clients)`
+  in `Services/LaunchRouting.cs` returns a `LaunchRoute`; `LaunchGame` is now a `switch` on it.
+  The Galaxy-running / client-installed / `LaunchDirectly` decisions are all in the router and
+  covered by `LaunchRoutingTests`.
+- `LaunchEaGameViaClient` / `LaunchEpicGameViaClient` / `LaunchUbisoftGameViaClient` →
+  one `LaunchViaClientUrl(game, route, url)`. `LaunchGogGameViaGalaxy` stays (Galaxy is a
+  command line, not a URL).
+- `Launch<Platform>GameDirectly` (x4) → one `LaunchPlatformExeDirectly(game, route)`.
+- `FindRunningProcessUnderDirectory` / `TryGetExecutablePath` (MainModule + WMI fallback) →
+  `ProcessPathResolver.FindProcessesUnderDirectory` / `GetProcessPath` (OpenProcess with
+  PROCESS_QUERY_LIMITED_INFORMATION + QueryFullProcessImageName: no exceptions, no WMI, works on
+  elevated targets). Candidates are ranked (has a main window, then newest start time) and
+  known helpers (crash handlers, anti-cheat services, redistributable installers) are excluded -
+  see `ProcessPathResolver.IsKnownHelperProcess`. That ranking is what makes the "chained
+  handoff" case above (R6 Extraction) less timing-dependent: the real game is the newest process
+  with a window.
+- Raw `System.Threading.Timer` polling → the `Poller` class (period infinite, re-armed after the
+  callback returns) so ticks never overlap; the "handled" interlocked guards are gone with it.
+- `EndGameSession` + `RunPostExit` + playtime scattered across timer callbacks → one
+  `FinishSession(session, gameRan, reason)`, guarded by `ActiveGameSession.Finished`. Every
+  launch path creates its session through `BeginSession` (profile → pre-launch script, which may
+  now abort the launch) and ends it through `FinishSession`; `EndSessionNow` is the user-facing
+  "restore now / force close" entry point used by the tray "Now Playing" section and the card menu.
+- The generic direct-exe path gained the stub handoff the platform paths always had: if the
+  launched process exits within `StubHandoffWindow`, tracking moves to whatever it spawned under
+  the install folder (`TrackInstallDirSession` with `ownsProcessAlready: true`).
+- Steam: `TrackSteamSession` now also locates the game's process via
+  `SteamScannerService.FindInstallDirForAppId` once Steam's Running flag flips, so priority,
+  window focus and force-close work for Steam games; it checks the Running flag *before*
+  dispatching so a second click never re-runs scripts or starts a second tracker.

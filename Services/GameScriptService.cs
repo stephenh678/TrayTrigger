@@ -7,6 +7,13 @@ using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
 
+/// <summary>What happened to the pre-launch script, and whether the launch should go ahead.</summary>
+public readonly record struct PreLaunchScriptResult(bool ProceedWithLaunch, string? AbortReason)
+{
+    public static readonly PreLaunchScriptResult Proceed = new(true, null);
+    public static PreLaunchScriptResult Abort(string reason) => new(false, reason);
+}
+
 /// <summary>
 /// Runs a game's optional user-supplied pre-launch and post-exit scripts. Sits alongside
 /// <see cref="PerformanceProfileService"/> (the built-in, snapshot-and-restore tweaks) and
@@ -21,14 +28,20 @@ namespace TrayTrigger.Services;
 /// name, game executable path - and, when not elevated, the same data as TRAYTRIGGER_* environment
 /// variables (see <see cref="BuildStartInfo"/>). Elevated launches go through ShellExecute, which
 /// cannot carry a custom environment, so those scripts should read the arguments instead.
+///
+/// When a script runs hidden (and not elevated) its stdout/stderr are captured into the
+/// TrayTrigger log under the GameScript category, so a misbehaving script can be diagnosed
+/// without editing it to redirect its own output.
 /// </summary>
 public class GameScriptService
 {
     public const string PhasePreLaunch = "prelaunch";
     public const string PhasePostExit = "postexit";
 
-    /// <summary>Upper bound on how long a "wait for it" pre-launch script can hold up the game launch.</summary>
-    public static readonly TimeSpan PreLaunchWaitTimeout = TimeSpan.FromSeconds(30);
+    /// <summary>Default upper bound on how long a "wait for it" pre-launch script can hold up the game launch.</summary>
+    public static readonly TimeSpan DefaultPreLaunchWaitTimeout = TimeSpan.FromSeconds(30);
+    public const int MinPreLaunchTimeoutSeconds = 1;
+    public const int MaxPreLaunchTimeoutSeconds = 600;
 
     public static readonly IReadOnlyList<string> SupportedExtensions = new[] { ".bat", ".cmd", ".ps1", ".exe", ".com" };
 
@@ -41,6 +54,17 @@ public class GameScriptService
         if (string.IsNullOrWhiteSpace(path)) return false;
         string ext = Path.GetExtension(path.Trim().Trim('"'));
         return SupportedExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>The effective wait for a game's pre-launch script, clamped to the supported range.</summary>
+    public static TimeSpan EffectivePreLaunchTimeout(GameEntry game)
+    {
+        int seconds = game.PreLaunchScriptTimeoutSeconds;
+        if (seconds < MinPreLaunchTimeoutSeconds || seconds > MaxPreLaunchTimeoutSeconds)
+        {
+            seconds = (int)DefaultPreLaunchWaitTimeout.TotalSeconds;
+        }
+        return TimeSpan.FromSeconds(seconds);
     }
 
     private readonly Lock _lock = new();
@@ -59,72 +83,100 @@ public class GameScriptService
     }
 
     /// <summary>
-    /// Runs the game's pre-launch script, if configured. Never throws and never blocks the launch
-    /// on failure - a broken script is logged and the game starts anyway. If the game asks to wait,
-    /// this returns once the script exits or <see cref="PreLaunchWaitTimeout"/> elapses.
+    /// Runs the game's pre-launch script, if configured. Never throws. Unless the game opts into
+    /// <see cref="GameEntry.AbortLaunchOnScriptFailure"/>, a broken script is logged and the
+    /// launch proceeds; with it, a non-zero exit code, a timeout, or a script that fails to start
+    /// returns an abort result the launcher honours. If the game asks to wait (or to abort on
+    /// failure, which implies waiting), this returns once the script exits or its timeout elapses.
     /// </summary>
-    public void RunPreLaunch(GameEntry game)
+    public PreLaunchScriptResult RunPreLaunch(GameEntry game)
     {
-        if (string.IsNullOrWhiteSpace(game.PreLaunchScriptPath)) return;
+        if (string.IsNullOrWhiteSpace(game.PreLaunchScriptPath)) return PreLaunchScriptResult.Proceed;
 
         if (!_isFeatureEnabled())
         {
             LoggingService.Info("GameScript", $"Pre-launch script for '{game.Name}' skipped: game scripts are disabled in Settings.");
-            return;
+            return PreLaunchScriptResult.Proceed;
         }
+
+        bool abortOnFailure = game.AbortLaunchOnScriptFailure;
+        bool wait = game.WaitForPreLaunchScript || abortOnFailure;
+        TimeSpan timeout = EffectivePreLaunchTimeout(game);
 
         if (!IsSupportedScript(game.PreLaunchScriptPath))
         {
             LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' has an unsupported type and was skipped: {game.PreLaunchScriptPath} (supported: {string.Join(", ", SupportedExtensions)})");
-            return;
+            return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script has an unsupported file type") : PreLaunchScriptResult.Proceed;
         }
 
         var psi = BuildStartInfo(game.PreLaunchScriptPath, game, PhasePreLaunch, game.RunScriptsHidden, game.RunScriptsAsAdmin, playedMinutes: null);
         if (psi == null)
         {
             LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' not found: {game.PreLaunchScriptPath}");
-            return;
+            return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script file was not found") : PreLaunchScriptResult.Proceed;
         }
 
+        Process? process = null;
         try
         {
-            LoggingService.Info("GameScript", $"Running pre-launch script for '{game.Name}': {game.PreLaunchScriptPath} (wait={game.WaitForPreLaunchScript}, hidden={game.RunScriptsHidden}, admin={game.RunScriptsAsAdmin})");
-            using var process = Process.Start(psi);
+            LoggingService.Info("GameScript", $"Running pre-launch script for '{game.Name}': {game.PreLaunchScriptPath} (wait={wait}, timeout={timeout.TotalSeconds:0}s, hidden={game.RunScriptsHidden}, admin={game.RunScriptsAsAdmin}, abortOnFailure={abortOnFailure})");
+            process = Process.Start(psi);
             if (process == null)
             {
                 LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' did not start.");
-                return;
+                return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script did not start") : PreLaunchScriptResult.Proceed;
             }
 
-            if (!game.WaitForPreLaunchScript) return;
+            AttachOutputLogging(process, psi, game, PhasePreLaunch);
 
-            if (process.WaitForExit((int)PreLaunchWaitTimeout.TotalMilliseconds))
+            if (!wait)
             {
-                if (process.ExitCode != 0)
-                {
-                    LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' exited with code {process.ExitCode}; launching anyway.");
-                }
-                else
-                {
-                    LoggingService.Verbose("GameScript", $"Pre-launch script for '{game.Name}' completed.");
-                }
+                DisposeOnExit(process);
+                process = null;
+                return PreLaunchScriptResult.Proceed;
             }
-            else
+
+            if (process.WaitForExit((int)timeout.TotalMilliseconds))
             {
-                LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' is still running after {PreLaunchWaitTimeout.TotalSeconds:0}s; launching the game without waiting further.");
+                // With redirected output the timed overload can return before the async
+                // readers have drained; the untimed one waits for them.
+                if (psi.RedirectStandardOutput) process.WaitForExit();
+
+                int exitCode = process.ExitCode;
+                if (exitCode != 0)
+                {
+                    LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' exited with code {exitCode}{(abortOnFailure ? "; cancelling the launch." : "; launching anyway.")}");
+                    return abortOnFailure ? PreLaunchScriptResult.Abort($"the pre-launch script exited with code {exitCode}") : PreLaunchScriptResult.Proceed;
+                }
+
+                LoggingService.Verbose("GameScript", $"Pre-launch script for '{game.Name}' completed.");
+                return PreLaunchScriptResult.Proceed;
             }
+
+            LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' is still running after {timeout.TotalSeconds:0}s; {(abortOnFailure ? "cancelling the launch." : "launching the game without waiting further.")}");
+            DisposeOnExit(process);
+            process = null;
+            return abortOnFailure
+                ? PreLaunchScriptResult.Abort($"the pre-launch script did not finish within {timeout.TotalSeconds:0}s")
+                : PreLaunchScriptResult.Proceed;
         }
         catch (Exception ex)
         {
             // Includes the user cancelling a UAC prompt (Win32Exception 1223) for elevated scripts.
             LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' failed: {ex.Message}");
+            return abortOnFailure ? PreLaunchScriptResult.Abort($"the pre-launch script failed to run ({ex.Message})") : PreLaunchScriptResult.Proceed;
+        }
+        finally
+        {
+            process?.Dispose();
         }
     }
 
     /// <summary>
     /// Registers that this game's session is being tracked, so its post-exit script can still run
-    /// if TrayTrigger shuts down before the game does. Call only when a real exit signal exists
-    /// (direct .exe launch or Steam session polling), never for fire-and-forget protocol launches.
+    /// if TrayTrigger shuts down before the game does. Call as soon as a session with a real exit
+    /// signal begins (direct .exe launch, Steam session, or client launch tracked by install
+    /// directory), never for fire-and-forget protocol launches.
     /// </summary>
     public void TrackPostExit(GameEntry game)
     {
@@ -134,6 +186,15 @@ public class GameScriptService
             _pendingPostExit[game.Id] = game;
         }
         LoggingService.Verbose("GameScript", $"Tracking post-exit script for '{game.Name}' in case of early shutdown.");
+    }
+
+    /// <summary>Forgets a tracked post-exit script without running it (the game never actually started).</summary>
+    public void UntrackPostExit(GameEntry game)
+    {
+        lock (_lock)
+        {
+            _pendingPostExit.Remove(game.Id);
+        }
     }
 
     /// <summary>Runs the game's post-exit script, if configured. Fire-and-forget; never throws.</summary>
@@ -167,12 +228,15 @@ public class GameScriptService
 
         try
         {
-            LoggingService.Info("GameScript", $"Running post-exit script for '{game.Name}': {game.PostExitScriptPath}");
-            using var process = Process.Start(psi);
+            LoggingService.Info("GameScript", $"Running post-exit script for '{game.Name}': {game.PostExitScriptPath} (playtime {playedMinutes}m)");
+            var process = Process.Start(psi);
             if (process == null)
             {
                 LoggingService.Warn("GameScript", $"Post-exit script for '{game.Name}' did not start.");
+                return;
             }
+            AttachOutputLogging(process, psi, game, PhasePostExit);
+            DisposeOnExit(process);
         }
         catch (Exception ex)
         {
@@ -197,6 +261,63 @@ public class GameScriptService
         {
             LoggingService.Info("GameScript", $"Running post-exit script for '{game.Name}' on application exit.");
             RunPostExit(game, playedMinutes: 0);
+        }
+    }
+
+    /// <summary>
+    /// Streams a hidden script's stdout/stderr into the log. Only possible when the process was
+    /// started with redirected streams (hidden and not elevated - see <see cref="BuildStartInfo"/>).
+    /// </summary>
+    private static void AttachOutputLogging(Process process, ProcessStartInfo psi, GameEntry game, string phase)
+    {
+        if (!psi.RedirectStandardOutput) return;
+        string tag = $"[{game.Name} {phase}]";
+        try
+        {
+            process.OutputDataReceived += (_, e) => { if (e.Data != null) LoggingService.Verbose("GameScript", $"{tag} {e.Data}"); };
+            process.ErrorDataReceived += (_, e) => { if (e.Data != null) LoggingService.Warn("GameScript", $"{tag} {e.Data}"); };
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("GameScript", $"{tag} could not capture script output: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Keeps the Process object (and therefore its redirected pipes) alive until the script exits,
+    /// then logs the exit code and disposes it. Disposing early would close the script's stdout
+    /// and make a chatty script die with a broken pipe.
+    /// </summary>
+    private static void DisposeOnExit(Process process)
+    {
+        try
+        {
+            process.EnableRaisingEvents = true;
+            process.Exited += (s, _) =>
+            {
+                if (s is not Process p) return;
+                try
+                {
+                    LoggingService.Verbose("GameScript", $"Script process {p.Id} exited with code {p.ExitCode}.");
+                }
+                catch { }
+                finally
+                {
+                    p.Dispose();
+                }
+            };
+            if (process.HasExited)
+            {
+                // Exited may already have fired (or never will if it raced EnableRaisingEvents);
+                // disposing twice is harmless.
+                process.Dispose();
+            }
+        }
+        catch
+        {
+            process.Dispose();
         }
     }
 
@@ -232,6 +353,13 @@ public class GameScriptService
         {
             psi.Verb = "runas";
         }
+        else if (hidden)
+        {
+            // A hidden script has nowhere to show its output; capture it into the log instead.
+            // (A visible console keeps its output on screen where the user can read it.)
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+        }
 
         switch (ext)
         {
@@ -243,9 +371,12 @@ public class GameScriptService
                 // argument is force-quoted here and the whole thing wrapped for /s (strip the
                 // outer quotes, keep the inner ones). Quotes can't appear in a Windows path, and
                 // are replaced in the free-text arguments so they can't terminate a quoted span.
+                // cmd also expands %NAME% before it parses quotes, so a game called "%TEMP%" would
+                // reach the script as the temp folder - the display name has its percent signs
+                // stripped (the exact value is still in TRAYTRIGGER_GAME_NAME).
                 psi.FileName = "cmd.exe";
                 psi.Arguments = "/d /s /c \"" + string.Join(' ',
-                    new[] { path, phase, game.Name, game.ExecutablePath }.Select(a => "\"" + a.Replace('"', '\'') + "\"")) + "\"";
+                    new[] { path, phase, SanitizeForCmdLine(game.Name), game.ExecutablePath }.Select(a => "\"" + a.Replace('"', '\'') + "\"")) + "\"";
                 break;
 
             case ".ps1":
@@ -296,4 +427,7 @@ public class GameScriptService
 
         return psi;
     }
+
+    /// <summary>Strips the one character cmd.exe expands before quote parsing ('%').</summary>
+    internal static string SanitizeForCmdLine(string value) => value.Replace("%", string.Empty);
 }

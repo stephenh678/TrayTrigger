@@ -18,4 +18,4 @@ Sets the Windows diagnostic data policy to its lowest level, which reduces how o
 ## Details
 
 - Sets AllowTelemetry=0 under HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection.
-- This is the same policy Group Policy sets under Data Collection and Preview Builds.
+- Revert removes the policy value entirely, so the Diagnostics page in Windows Settings returns to your own choice instead of being locked to a policy.

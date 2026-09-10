@@ -47,9 +47,17 @@
                                     ToolTip="Requires a restart to take effect">
                                 <TextBlock Text="⟳ RESTART" FontSize="9" FontWeight="Bold" Foreground="#E8B84E"/>
                             </Border>
+                            <Border Background="#2B2340" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Changing this writes a machine-wide (HKLM) value, so Windows shows a User Account Control prompt.">
+                                <TextBlock Text="🛡 ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0"/>
+                            </Border>
                         </StackPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding UnavailableReason}" FontSize="10.5" Foreground="#E8B84E"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding ShowUnavailableReason, Converter={StaticResource BoolToVis}}"/>
                         <!-- The "why" and trade-offs live in Help/tweaks/<id>.md, opened here. -->
                         <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
                                 Command="{x:Static services:HelpCommands.ShowTopic}"
@@ -57,10 +65,11 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Content="{Binding CustomActionLabel}" Command="{Binding CustomActionCommand}"
-                                Visibility="{Binding HasCustomAction, Converter={StaticResource BoolToVis}}" 
+                                Visibility="{Binding HasCustomAction, Converter={StaticResource BoolToVis}}"
                                 Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,4" FontSize="11.5"/>
-                        <Button Content="{Binding ActionButtonText}" Command="{Binding ToggleCommand}" 
-                                Visibility="{Binding CanToggle, Converter={StaticResource BoolToVis}}" 
+                        <Button Content="{Binding ActionButtonText}" Command="{Binding ToggleCommand}"
+                                Visibility="{Binding CanToggle, Converter={StaticResource BoolToVis}}"
+                                IsEnabled="{Binding CanExecuteToggle}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="10,4" FontSize="11.5"/>
                     </StackPanel>
                 </Grid>

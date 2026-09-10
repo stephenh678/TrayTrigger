@@ -729,6 +729,16 @@ public partial class SystemInfoService
     // Battery / Power State
     // =========================================================================
 
+    /// <summary>Cheap "is this a laptop" check for copy that should warn about battery/thermal cost.</summary>
+    public static bool HasBattery()
+    {
+        try
+        {
+            return GetSystemPowerStatus(out var status) && status.BatteryFlag != 128 && status.BatteryLifePercent <= 100;
+        }
+        catch { return false; }
+    }
+
     private PowerBatteryInfo GetPowerInfo()
     {
         var info = new PowerBatteryInfo();

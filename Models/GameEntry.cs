@@ -65,12 +65,36 @@ public class GameEntry
     public DateTime? LastEnrichmentAttemptUtc { get; set; }
     public PerformanceProfileMode PerformanceProfile { get; set; } = PerformanceProfileMode.Off;
 
+    /// <summary>
+    /// Which cores the game's process may run on. Independent of the profile tier: on an Intel
+    /// hybrid CPU (12th gen+) some engines and anti-cheat titles run worse when threads land on
+    /// E-cores, and pinning to P-cores is the standard fix. No-op on non-hybrid CPUs.
+    /// </summary>
+    public CpuAffinityMode CpuAffinity { get; set; } = CpuAffinityMode.Default;
+
     /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
     public string PreLaunchScriptPath { get; set; } = string.Empty;
-    /// <summary>Optional script run after the game exits (direct .exe and Steam launches only).</summary>
+    /// <summary>
+    /// Optional script run after the game exits. Runs for every launch path that has an exit
+    /// signal: direct .exe launches, Steam (via Steam's own "running" flag), and GOG/EA/Epic/Ubisoft
+    /// client launches (via install-directory process tracking). Only a bare protocol shortcut
+    /// (a dropped .url with no platform ID) has no exit signal and skips it.
+    /// </summary>
     public string PostExitScriptPath { get; set; } = string.Empty;
-    /// <summary>Hold the game launch until the pre-launch script finishes (capped at 30s).</summary>
+    /// <summary>Hold the game launch until the pre-launch script finishes (see <see cref="PreLaunchScriptTimeoutSeconds"/>).</summary>
     public bool WaitForPreLaunchScript { get; set; } = true;
+    /// <summary>How long "wait for the pre-launch script" holds the launch before giving up. 1-600; default 30.</summary>
+    public int PreLaunchScriptTimeoutSeconds { get; set; } = 30;
+    /// <summary>
+    /// Cancel the launch (and roll back the Performance Profile) when the pre-launch script exits
+    /// non-zero, times out, or fails to start. Implies waiting for the script.
+    /// </summary>
+    public bool AbortLaunchOnScriptFailure { get; set; }
+    /// <summary>
+    /// After this game's session ends, close the platform client it was launched through (Steam,
+    /// GOG Galaxy, EA App, Epic Games Launcher, Ubisoft Connect). Off by default.
+    /// </summary>
+    public bool CloseLauncherOnExit { get; set; }
     /// <summary>Run scripts without a visible console window.</summary>
     public bool RunScriptsHidden { get; set; } = true;
     /// <summary>Run scripts elevated (UAC prompt). Environment variables are unavailable in this mode.</summary>

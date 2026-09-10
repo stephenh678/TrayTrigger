@@ -62,7 +62,7 @@ TrayTrigger isn't another always-on-top launcher. It's a tray icon until you nee
 - 🖼️ **SteamGridDB Artwork** — high-res poster art fetched automatically for your whole library
 - 🎯 **Per-Game Performance Profiles** — Optimized/Aggressive tweaks applied on launch, reverted on exit
 - 🤖 **Per-Game Automation** — optional pre-launch and post-exit scripts, scoped to a single game
-- ⚡ **Verified & Reversible Windows Gaming Optimizations** — 15 tweaks grounded in documented Windows behavior, not folklore
+- ⚡ **Verified & Reversible Windows Gaming Optimizations** — 21 tweaks grounded in documented Windows behavior, not folklore, each reverting to the exact prior state
 - 📊 **Live Hardware Monitoring** — CPU, GPU, VRAM, RAM, displays, motherboard, and BIOS at a glance
 
 ---
@@ -102,34 +102,42 @@ Assign each game its own tweak tier from Edit Game:
 | Tier | What it does |
 |---|---|
 | **Off** | No per-game tweaks — TrayTrigger just launches the game |
-| **Optimized** | Applies your custom high-performance power plan and GPU preference for that game |
-| **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, and an off-by-default Microsoft Defender exclusion |
+| **Optimized** | Applies your custom high-performance power plan and GPU preference for that game, plus opt-in Enable HDR and Do Not Disturb |
+| **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, and an off-by-default Microsoft Defender exclusion |
+
+Independently of the tier, any game can be pinned to the performance cores of a hybrid CPU (Edit Game → CPU Cores) for older engines and anti-cheat titles that stutter on E-cores.
 
 - **Session-scoped, zero manual cleanup** — tweaks apply the moment a game launches (Steam or direct `.exe`) and revert to your exact prior settings the moment it closes.
 - **Crash-safe** — if TrayTrigger or your PC crashes mid-session, the next launch detects and restores your pre-game state automatically.
-- **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes); the post-exit script runs the moment the game closes. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, and can run hidden or elevated.
+- **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes, with a configurable timeout, and optionally cancelling the launch if it fails); the post-exit script runs the moment the game closes, for direct, Steam, and GOG/EA/Epic/Ubisoft launches alike. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, can run hidden (with their output captured to the log) or elevated.
 
 ## Verified & Reversible Windows Gaming Optimizations
 
-Gaming optimization without mystery registry hacks. 15 documented Windows gaming settings, each toggled individually, each showing Windows' real current state before you touch anything, and each reversible at any time. TrayTrigger's in-app "Learn more" for every tweak explains the exact tradeoff — most aren't a guaranteed win for every game, and are presented that way rather than oversold.
+Gaming optimization without mystery registry hacks. 21 documented Windows gaming settings, each toggled individually, each showing Windows' real current state before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found — not a hard-coded "default". TrayTrigger's in-app "Learn more" for every tweak explains the exact tradeoff — most aren't a guaranteed win for every game, and are presented that way rather than oversold. Tweaks that can't apply on your machine (a Windows 11-only graphics setting on Windows 10, HAGS on an unsupported GPU) say so instead of pretending.
 
 | Tweak | Category | What it changes |
 |---|---|---|
 | Mouse Acceleration | Input & Display | Disables "Enhance pointer precision" so cursor movement is 1:1 with physical mouse movement |
-| Optimizations for Windowed Games | Input & Display | Enables flip-model presentation for borderless/windowed DX10/11 games — same low input latency as exclusive fullscreen |
-| Disable Fullscreen Optimizations | Input & Display | Restores true exclusive fullscreen instead of Windows' managed borderless shim |
+| Sticky / Filter / Toggle Keys shortcuts | Input & Display | Stops five Shift taps or a long Shift hold from popping an accessibility dialog over your game |
+| Optimizations for Windowed Games | Input & Display | Enables flip-model presentation for borderless/windowed DX10/11 games — same low input latency as exclusive fullscreen (Windows 11) |
+| Variable Refresh Rate for Windowed Games | Input & Display | Lets G-SYNC/FreeSync engage for borderless DX11 games, not just exclusive fullscreen (Windows 11) |
+| Auto HDR *(opt-in)* | Input & Display | Windows 11's Auto HDR for SDR-only DX11/12 games on an HDR display |
 | Hardware-Accelerated GPU Scheduling (HAGS) | Input & Display | Lets the GPU manage its own command queue instead of the CPU scheduling every batch |
+| Disable Fullscreen Optimizations *(opt-in)* | Input & Display | Restores true exclusive fullscreen instead of Windows' managed borderless shim — helps some old DX9/11 engines, hurts most modern ones |
+| Disable Multiplane Overlay *(opt-in)* | Input & Display | NVIDIA's documented workaround for stutter/flicker/black screens in borderless games |
 | Windows Game Mode | CPU & Scheduling | Holds Windows Update/driver installs during play and prioritizes game threads |
 | System Timer Resolution | CPU & Scheduling | Restores system-wide high-precision timer behavior for engines that don't request it themselves |
-| Windows Visual Effects *(opt-in)* | CPU & Scheduling | Switches to "Adjust for best performance" — reduces Desktop Window Manager compositing load |
+| Foreground Priority Boost *(opt-in)* | CPU & Scheduling | The documented `Win32PrioritySeparation` "Programs" scheduling preference — foreground game keeps its core over background apps |
+| Windows Visual Effects *(opt-in)* | CPU & Scheduling | Turns off minimize animations and drop shadows to reduce Desktop Window Manager compositing load |
 | "Ultimate Plan – TrayTrigger" Power Plan *(opt-in)* | CPU & Scheduling | Pins the CPU at 100% min/max state and disables PCIe/USB power-saving, permanently rather than only during a session |
 | Disable MMCSS Network Throttling | Network & Background | Lifts the packet-rate cap Windows applies to non-multimedia traffic while audio/video is active |
 | Disable Nagle's Algorithm *(opt-in)* | Network & Background | Sends small TCP packets immediately instead of batching — situational, most games use UDP already |
 | Disable Delivery Optimization | Network & Background | Stops Windows silently uploading updates to other PCs on your network or the internet |
-| Disable Background Game DVR | Network & Background | Stops the hardware-encoder recording buffer Xbox Game Bar keeps running for "last 30 seconds" capture |
+| Exclude Drivers from Windows Update *(opt-in)* | Network & Background | Stops Windows Update replacing your pinned GPU/chipset/audio drivers |
+| Disable Game Bar Captures | Network & Background | Stops the hardware-encoder background recording buffer Xbox Game Bar keeps running |
 | Disable Xbox Game Bar Overlay | Network & Background | Stops the Game Bar overlay and its background processes from loading with your game |
 | Disable Diagnostic Telemetry Sweeps | Network & Background | Lowers the Windows diagnostic data policy so background scan tasks (e.g. CompatTelRunner) run less often |
-| Core Isolation / Memory Integrity | Security & Advanced | Reports HVCI status (documented CPU cost in some games) — links to Windows Security to change it; TrayTrigger doesn't toggle this one directly |
+| Core Isolation / Memory Integrity *(status only)* | Security & Advanced | Shows whether HVCI is running (documented CPU cost in some games) — links to Windows Security; never counted as an "optimization" |
 
 An optional **System Restore point** is created automatically before any bulk Apply Preset or Reset Defaults, if enabled in Settings (on by default) — a rollback path if anything ever misbehaves.
 

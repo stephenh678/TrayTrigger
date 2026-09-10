@@ -24,6 +24,30 @@
                      DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
             <MenuItem Header="Game Info (Steam Details)..." Command="{Binding ViewDetailsCommand}" FontWeight="SemiBold"/>
             <MenuItem Header="Play" Command="{Binding LaunchCommand}"/>
+            <MenuItem Header="End Session (restore tweaks)" Command="{Binding EndSessionCommand}" ToolTip="Stop tracking this game now: restores its Performance Profile and runs the post-exit script. Use it if a session looks stuck.">
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
+            <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}" ToolTip="Kill the game's process (unsaved progress is lost), then end the session.">
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
             <MenuItem Header="{Binding FavoriteMenuLabel}" IsCheckable="True" IsChecked="{Binding IsFavorite, Mode=OneWay}" Command="{Binding ToggleFavoriteCommand}"/>
             <MenuItem Header="{Binding HideMenuLabel}" IsCheckable="True" IsChecked="{Binding IsHidden, Mode=OneWay}" Command="{Binding ToggleHiddenCommand}"/>
             <MenuItem Header="Open Containing Folder" Command="{Binding OpenFolderCommand}"/>
@@ -952,6 +976,10 @@
                                                     </StackPanel>
 
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                                                        <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                                            <TextBlock Text="&#9654; PLAYING" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                        </Border>
                                                         <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1"
                                                                 CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
                                                             <Border.Style>
@@ -1332,6 +1360,10 @@
                                                     </StackPanel>
 
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                                                        <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                                            <TextBlock Text="&#9654; PLAYING" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                        </Border>
                                                         <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1"
                                                                 CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
                                                             <Border.Style>
@@ -1572,6 +1604,10 @@
                                                         </StackPanel>
                                                     </Border>
 
+                                                    <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="4,0" Margin="0,0,3,0" HorizontalAlignment="Right">
+                                                        <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                                        <TextBlock Text="&#9654; PLAYING" FontSize="7.5" FontWeight="SemiBold" Foreground="#7FE08A"/>
+                                                    </Border>
                                                     <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1"
                                                             CornerRadius="3" Padding="4,0" HorizontalAlignment="Right">
                                                         <Border.Style>
@@ -1767,6 +1803,10 @@
                                                            TextTrimming="CharacterEllipsis"
                                                            VerticalAlignment="Center"
                                                            ToolTip="{Binding Name}"/>
+                                                <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                    <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                                    <TextBlock Text="&#9654; PLAYING" FontSize="8.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                </Border>
                                                 <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1" 
                                                         CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                     <Border.Style>

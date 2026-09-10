@@ -213,6 +213,27 @@ public partial class SteamScannerService
         return entries;
     }
 
+    /// <summary>
+    /// The install folder (steamapps\common\&lt;installdir&gt;) of one AppId across every library,
+    /// or null if it isn't installed. Manifest-header read only; used by the launcher to find a
+    /// Steam game's real process (window focus, priority, force-close) since a steam:// dispatch
+    /// gives no process handle.
+    /// </summary>
+    public string? FindInstallDirForAppId(string appId)
+    {
+        if (!UrlProtocolHelper.IsValidSteamAppId(appId)) return null;
+        string manifestName = $"appmanifest_{appId}.acf";
+        foreach (var entry in GetInstalledGameEntries())
+        {
+            if (string.Equals(Path.GetFileName(entry.ManifestPath), manifestName, StringComparison.OrdinalIgnoreCase)
+                && Directory.Exists(entry.CommonDir))
+            {
+                return entry.CommonDir;
+            }
+        }
+        return null;
+    }
+
     /// <summary>The full discovery record (exe, icon, name) for one <see cref="SteamInstallEntry"/>,
     /// or null for a non-game manifest (redistributables, Proton) or an unreadable one.</summary>
     public DiscoveredSteamGame? ResolveInstalledGame(SteamInstallEntry entry)
