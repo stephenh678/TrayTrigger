@@ -267,6 +267,23 @@ public partial class IconExtractorService
     }
 
     /// <summary>
+    /// Loads an icon from a path that could be either a real image file (a platform's own cached
+    /// artwork - .ico/.png/.jpg) or an executable to extract an icon from. Every platform scanner
+    /// (Steam/GOG/EA/Epic/Ubisoft) falls back to the game's own exe path as its "IconPath" when no
+    /// dedicated artwork file is found - <see cref="LoadBitmapSafely"/> can only decode the former;
+    /// asking WIC to decode a .exe throws "No imaging component suitable" instead of returning
+    /// null, since a PE executable isn't a recognized image container at all.
+    /// </summary>
+    public static System.Windows.Media.ImageSource? LoadIconOrExtractFromExe(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        string ext = Path.GetExtension(path);
+        return ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) || ext.Equals(".dll", StringComparison.OrdinalIgnoreCase)
+            ? ExtractAssociatedBitmapSource(path)
+            : LoadBitmapSafely(path);
+    }
+
+    /// <summary>
     /// Extracts an executable's associated icon as a frozen WPF BitmapSource, ensuring the native Win32 HICON handle is released.
     /// </summary>
     public static System.Windows.Media.ImageSource? ExtractAssociatedBitmapSource(string path)

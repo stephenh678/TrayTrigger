@@ -41,6 +41,19 @@
   <ItemGroup>
     <Resource Include="Assets\app_icon.ico" />
     <Resource Include="Assets\app_icon.png" />
+    <Resource Include="Assets\LauncherLogos\steam.png" />
+    <Resource Include="Assets\LauncherLogos\gog_galaxy.png" />
+    <Resource Include="Assets\LauncherLogos\ea_app.png" />
+    <Resource Include="Assets\LauncherLogos\epic_games.png" />
+    <Resource Include="Assets\LauncherLogos\ubisoft_connect.png" />
+    <Resource Include="Assets\LauncherLogos\local_games.png" />
+    <!-- Not wired into any UI yet - kept available for a future platform integration. -->
+    <Resource Include="Assets\LauncherLogos\amazon_games.png" />
+    <Resource Include="Assets\LauncherLogos\battlenet.png" />
+    <Resource Include="Assets\LauncherLogos\itchio.png" />
+    <Resource Include="Assets\LauncherLogos\riot_client.png" />
+    <Resource Include="Assets\LauncherLogos\rockstar_games.png" />
+    <Resource Include="Assets\LauncherLogos\xbox.png" />
   </ItemGroup>
 
   <ItemGroup>

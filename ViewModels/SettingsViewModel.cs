@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -48,6 +49,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly Func<string>? _getUpdateStatusText;
 
     public const string ViewModePosterGrid = "Poster Grid";
+    public const string ViewModeExtraLarge = "Extra Large";
     public const string ViewModeCompactIcons = "Compact Icons";
     public const string ViewModeDetailsList = "Details List";
 
@@ -106,6 +108,7 @@ public class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<string> ViewModeOptions { get; } = new()
     {
+        ViewModeExtraLarge,
         ViewModePosterGrid,
         ViewModeCompactIcons,
         ViewModeDetailsList
@@ -688,6 +691,7 @@ public class SettingsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(mode)) return ViewModePosterGrid;
         if (mode.Contains("Icon", StringComparison.OrdinalIgnoreCase)) return ViewModeCompactIcons;
         if (mode.Contains("List", StringComparison.OrdinalIgnoreCase)) return ViewModeDetailsList;
+        if (mode.Contains("Large", StringComparison.OrdinalIgnoreCase)) return ViewModeExtraLarge;
         return ViewModePosterGrid;
     }
 
@@ -702,6 +706,7 @@ public class SettingsViewModel : ViewModelBase
                 _settings.LibraryViewMode = normalized;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsGridView));
+                OnPropertyChanged(nameof(IsExtraLargeView));
                 OnPropertyChanged(nameof(IsIconsView));
                 OnPropertyChanged(nameof(IsListView));
                 AutoSaveSettings();
@@ -713,6 +718,12 @@ public class SettingsViewModel : ViewModelBase
     {
         get => NormalizeViewMode(LibraryViewMode) == ViewModePosterGrid;
         set { if (value) LibraryViewMode = ViewModePosterGrid; }
+    }
+
+    public bool IsExtraLargeView
+    {
+        get => NormalizeViewMode(LibraryViewMode) == ViewModeExtraLarge;
+        set { if (value) LibraryViewMode = ViewModeExtraLarge; }
     }
 
     public bool IsIconsView
@@ -1014,14 +1025,13 @@ public class SettingsViewModel : ViewModelBase
         // un-reset if someone forgets to add it here. Excludes properties that aren't a
         // user "preference" in the sense this dialog means - library view state
         // (LastCategoryFilter/LastSortOption), one-time-prompt/update-snooze state
-        // (HasSeenSteamGridDbPrompt/SkippedUpdateVersion/RemindAfterUtc), and the API key
-        // (preserved explicitly below, same as before). See L-23.
+        // (SkippedUpdateVersion/RemindAfterUtc), and the API key (preserved explicitly below,
+        // same as before). See L-23.
         var defaults = new AppSettings();
         var excludedFromReset = new HashSet<string>
         {
             nameof(AppSettings.LastCategoryFilter),
             nameof(AppSettings.LastSortOption),
-            nameof(AppSettings.HasSeenSteamGridDbPrompt),
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
@@ -1029,10 +1039,20 @@ public class SettingsViewModel : ViewModelBase
             // library/categories/artwork the confirmation text already promises to leave alone.
             nameof(AppSettings.ScanLocations),
             nameof(AppSettings.IgnoredGamePaths),
-            // UI layout state / one-time-prompt state, same as LastCategoryFilter and
-            // HasSeenSteamGridDbPrompt above.
+            // Set once from actual detected launchers on the first "Scan for Games" press (see
+            // ImportCoordinator.DetectInstalledLaunchers) rather than a real "preference" default -
+            // resetting to the AppSettings class default would blindly re-enable every
+            // platform regardless of what's actually installed. Same bucket as ScanLocations.
+            nameof(AppSettings.SteamIntegrationEnabled),
+            nameof(AppSettings.GogIntegrationEnabled),
+            nameof(AppSettings.EaIntegrationEnabled),
+            nameof(AppSettings.EpicIntegrationEnabled),
+            nameof(AppSettings.UbisoftIntegrationEnabled),
+            // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
+            nameof(AppSettings.HasSeenLauncherDetectionPrompt),
+            nameof(AppSettings.HasSeenWelcomePrompt),
         };
         foreach (var prop in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -1079,6 +1099,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(VerboseLoggingEnabled));
         OnPropertyChanged(nameof(LibraryViewMode));
         OnPropertyChanged(nameof(IsGridView));
+        OnPropertyChanged(nameof(IsExtraLargeView));
         OnPropertyChanged(nameof(IsIconsView));
         OnPropertyChanged(nameof(IsListView));
 

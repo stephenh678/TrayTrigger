@@ -65,13 +65,15 @@ public partial class App : Application
 
         LoggingService.EnsureLogFileExists();
         _storageService = new StorageService();
+        AppSettings startupSettings;
         try
         {
-            var startupSettings = _storageService.LoadSettings();
+            startupSettings = _storageService.LoadSettings();
             LoggingService.Initialize(startupSettings.VerboseLoggingEnabled);
         }
         catch
         {
+            startupSettings = new AppSettings();
             LoggingService.Initialize(false);
         }
         void Log(string msg) => LoggingService.Info("App", msg);
@@ -237,6 +239,7 @@ public partial class App : Application
         Log("Initializing ViewModel...");
         _mainViewModel = new MainViewModel(
             _storageService,
+            startupSettings,
             _shortcutService,
             _iconExtractorService,
             _steamScannerService,

@@ -229,18 +229,6 @@ public partial class ModernDialog : Window
             cancelText: "Restart Later");
     }
 
-    public static bool PromptSteamGridDbSetup(Window? owner)
-    {
-        return ShowModal(
-            owner,
-            "Improve Your Poster Art",
-            "Steam doesn't have official box art for every game yet - new, indie, and upcoming titles often fall back to a lower-quality poster.",
-            "TrayTrigger can optionally pull higher-quality vertical art from SteamGridDB.com for those games. It's free and takes a minute to set up with your own API key. You can always do this later from Settings > Library.",
-            confirmText: "Set Up Now",
-            cancelText: "Maybe Later",
-            DialogIconType.Info);
-    }
-
     public static bool PromptOptimizedProfileMigration(Window? owner)
     {
         return ShowModal(

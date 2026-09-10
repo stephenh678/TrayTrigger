@@ -1,0 +1,136 @@
+<Window x:Class="TrayTrigger.Views.WelcomeDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Welcome to TrayTrigger"
+        Width="520" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{StaticResource BrushDialogBg}"
+        Foreground="{StaticResource BrushTextPrimary}"
+        FontFamily="{StaticResource AppFont}">
+
+    <Border BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="0,1,0,0">
+        <Grid Margin="24,20,24,18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="Auto"/> <!-- Divider -->
+                <RowDefinition Height="Auto"/> <!-- Body -->
+                <RowDefinition Height="Auto"/> <!-- Footer -->
+            </Grid.RowDefinitions>
+
+            <!-- Header: same icon badge + breadcrumb + title layout as the in-app Help window -->
+            <Grid Grid.Row="0" Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- The app icon already has its own rich background art, so no extra badge circle
+                     behind it (same reasoning as the launcher logos elsewhere in the app). -->
+                <Image Grid.Column="0" Source="pack://application:,,,/Assets/app_icon.png"
+                       Width="48" Height="48" Stretch="Uniform" Margin="0,0,16,0" VerticalAlignment="Top"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="GETTING STARTED" FontSize="10" FontWeight="Bold"
+                               Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,3"/>
+                    <TextBlock Text="Welcome to TrayTrigger" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"/>
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" Height="1" Background="{StaticResource BrushBorderDark}" Margin="0,0,0,12"/>
+
+            <!-- Body -->
+            <StackPanel Grid.Row="2" Margin="0,0,0,16">
+                <TextBlock FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                           Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"
+                           Text="TrayTrigger is a tray-first game launcher for your Steam, GOG, EA, Epic, and Ubisoft libraries - quick access from the system tray, plus reversible performance tweaks applied automatically while you play."/>
+
+                <TextBlock Text="A few things to know" FontSize="11" FontWeight="Bold"
+                           Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,6"/>
+
+                <Grid Margin="6,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Text="Scan for Games pulls in what's already installed - you'll pick which of your launchers to include the first time you use it."/>
+                </Grid>
+
+                <Grid Margin="6,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Text="You can also just drag and drop a game's exe, shortcut, or install folder onto this window to add it instantly."/>
+                </Grid>
+
+                <Grid Margin="6,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Text="Performance Profiles apply power and GPU tweaks automatically per game - nothing to configure unless you want to."/>
+                </Grid>
+
+                <Grid Margin="6,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Text="The tray icon keeps your library and hotkeys one click away, even with the window closed."/>
+                </Grid>
+
+                <Grid Margin="6,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Text="Missing box art? Settings &gt; Library can pull higher-quality poster art from SteamGridDB.com with your own free API key."/>
+                </Grid>
+
+                <Grid Margin="6,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                               Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Text="Every screen has a Learn more link if you want the details behind a setting."/>
+                </Grid>
+            </StackPanel>
+
+            <!-- Footer -->
+            <DockPanel Grid.Row="3" LastChildFill="False">
+                <Button Content="Get Started" Style="{StaticResource ModernAccentButton}" Padding="16,6"
+                        DockPanel.Dock="Right" IsDefault="True" IsCancel="True" Click="OnGetStartedClick"/>
+            </DockPanel>
+        </Grid>
+    </Border>
+</Window>

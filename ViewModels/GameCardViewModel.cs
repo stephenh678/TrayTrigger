@@ -159,6 +159,10 @@ public class GameCardViewModel : ViewModelBase
     public bool IsEaGame => Game.IsEaGame;
     public bool IsEpicGame => Game.IsEpicGame;
     public bool IsUbisoftGame => Game.IsUbisoftGame;
+    /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
+    /// supported launcher - shown with the generic "Local Games" badge instead of a platform
+    /// one.</summary>
+    public bool IsLocalGame => !IsSteamGame && !IsGogGame && !IsEaGame && !IsEpicGame && !IsUbisoftGame;
     public bool ShowCategoryBadge =>
         (!HasSteamOverlay || !string.Equals(Category, LibraryConstants.SteamCategory, StringComparison.OrdinalIgnoreCase)) &&
         (!IsGogGame || !string.Equals(Category, LibraryConstants.GogCategory, StringComparison.OrdinalIgnoreCase)) &&
@@ -316,6 +320,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEaGame));
         OnPropertyChanged(nameof(IsEpicGame));
         OnPropertyChanged(nameof(IsUbisoftGame));
+        OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));
         OnPropertyChanged(nameof(FavoriteMenuLabel));

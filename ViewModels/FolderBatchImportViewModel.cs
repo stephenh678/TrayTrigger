@@ -82,7 +82,6 @@ public class BatchGameItemViewModel : ViewModelBase
 
     public string ExePath => Candidate.ExePath;
     public string DisplayPath => Candidate.DisplayPath;
-    public string DisplaySize => Candidate.DisplaySize;
 
     public bool IsSelected
     {

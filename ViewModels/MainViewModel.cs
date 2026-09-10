@@ -80,6 +80,12 @@ public class MainViewModel : ViewModelBase
     public IconExtractorService IconExtractorService => _iconExtractorService;
     public StorageService StorageService => _storageService;
     public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<GameCandidate>>? RequestScanResultsPicker;
+    /// <summary>
+    /// Forwarded from <see cref="ImportCoordinator.RequestLauncherDetectionPrompt"/>: raised the
+    /// first time the user ever presses "Scan for Games", if at least one platform's own scanner
+    /// found an installed game. See <see cref="Views.LauncherDetectionDialog"/>.
+    /// </summary>
+    public event Action<List<DetectedLauncherOption>>? RequestLauncherDetectionPrompt;
     public event Action<GameCardViewModel>? RequestEditGameDialog;
     public event Action<string, List<GameCandidate>>? RequestCandidatePicker;
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
@@ -93,6 +99,7 @@ public class MainViewModel : ViewModelBase
 
     public MainViewModel(
         StorageService storageService,
+        AppSettings settings,
         ShortcutService shortcutService,
         IconExtractorService iconExtractorService,
         SteamScannerService steamScannerService,
@@ -120,7 +127,7 @@ public class MainViewModel : ViewModelBase
         _trayPromotionService = trayPromotionService;
         _folderScannerService = folderScannerService ?? new FolderScannerService();
 
-        _settings = _storageService.LoadSettings();
+        _settings = settings;
         _settings.LibraryViewMode = SettingsViewModel.NormalizeViewMode(_settings.LibraryViewMode);
         _isSidebarExpanded = false; // Left panel is collapsed at startup per user preference
 
@@ -188,6 +195,7 @@ public class MainViewModel : ViewModelBase
         Library.LibraryUpdated += () => LibraryUpdated?.Invoke();
 
         Import.RequestScanResultsPicker += (steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates);
+        Import.RequestLauncherDetectionPrompt += detected => RequestLauncherDetectionPrompt?.Invoke(detected);
         Import.RequestCandidatePicker += (path, candidates) => RequestCandidatePicker?.Invoke(path, candidates);
         Import.RequestFolderBatchImport += (path, candidates) => RequestFolderBatchImport?.Invoke(path, candidates);
 

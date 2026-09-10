@@ -111,12 +111,17 @@
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Border>
 
+                            <!-- Local Games badge - same launcher-style treatment "Scan for Games"
+                                 gives Steam/GOG/EA/Epic/Ubisoft results, at the same size used on
+                                 poster cards, since a folder-added game has no real launcher. -->
+                            <Image DockPanel.Dock="Right" Source="pack://application:,,,/Assets/LauncherLogos/local_games.png"
+                                   Width="25" Height="25" Stretch="Uniform" VerticalAlignment="Center" Margin="12,0,0,0"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+
                             <!-- Badges (Right Dock) -->
                             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0" HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
-                                           HorizontalAlignment="Right"/>
                                 <Button Content="Ignore" Command="{Binding IgnoreCommand}"
-                                        FontSize="10.5" Padding="0" Margin="0,4,0,0"
+                                        FontSize="10.5" Padding="0"
                                         HorizontalAlignment="Right" ToolTip="Never suggest this exe again in Add Folder or Scan for Games">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource ModernGhostButton}">

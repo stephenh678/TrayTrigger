@@ -51,8 +51,17 @@ public class AppSettings
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
-    public bool HasSeenSteamGridDbPrompt { get; set; } = false;
     public bool HasSeenPerformanceProfileMigrationPrompt { get; set; } = false;
+    /// <summary>Gates the one-time "Welcome to TrayTrigger" dialog to the first time the main
+    /// window is actually shown on a fresh install - see MainWindow.MaybeShowWelcomePrompt.</summary>
+    public bool HasSeenWelcomePrompt { get; set; } = false;
+    /// <summary>
+    /// Gates the one-time "Game Launchers Found" prompt (see ImportCoordinator.ScanForGamesAsync)
+    /// to the first time the user explicitly presses "Scan for Games" - set the moment that first
+    /// press happens, before the prompt is even shown, so it never asks a second time regardless
+    /// of what the user chooses.
+    /// </summary>
+    public bool HasSeenLauncherDetectionPrompt { get; set; } = false;
     public string? SkippedUpdateVersion { get; set; }
     public System.DateTime? RemindAfterUtc { get; set; }
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
