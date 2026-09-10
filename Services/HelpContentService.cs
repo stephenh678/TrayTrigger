@@ -14,7 +14,8 @@ public enum HelpBlockKind
     Note        // "> Text" - rendered as a highlighted callout
 }
 
-public sealed record HelpBlock(HelpBlockKind Kind, string Text);
+/// <param name="Indent">Bullet nesting: 0 for "- text", 1 for "  - text" (two or more leading spaces).</param>
+public sealed record HelpBlock(HelpBlockKind Kind, string Text, int Indent = 0);
 
 public sealed class HelpTopic
 {
@@ -202,6 +203,15 @@ public static class HelpContentService
             {
                 FlushParagraph();
                 blocks.Add(new HelpBlock(HelpBlockKind.Bullet, line.Substring(2).Trim()));
+                continue;
+            }
+
+            // "  - text" (indented two or more spaces) is a nested bullet under the previous one.
+            string unindented = line.TrimStart(' ');
+            if (line.Length - unindented.Length >= 2 && unindented.StartsWith("- ", StringComparison.Ordinal))
+            {
+                FlushParagraph();
+                blocks.Add(new HelpBlock(HelpBlockKind.Bullet, unindented.Substring(2).Trim(), Indent: 1));
                 continue;
             }
 

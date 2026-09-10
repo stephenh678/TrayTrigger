@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
         mc:Ignorable="d"
-        Title="Game Details &amp; Steam Info"
+        Title="Game Details"
         Height="680" Width="820"
         MinHeight="560" MinWidth="720"
         WindowStartupLocation="CenterOwner"
@@ -43,7 +43,7 @@
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <Image Source="{Binding DisplayCoverImage}" Width="64" Height="64" Margin="0,0,0,8"
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
-                            <TextBlock Text="Steam Game" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" 
+                            <TextBlock Text="No poster yet" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -185,21 +185,43 @@
                 <!-- Action Buttons: Primary & Constructive on Left, Destructive on Far Right -->
                 <DockPanel Grid.Row="4" VerticalAlignment="Bottom" Margin="0,4,0,0" LastChildFill="False">
                     <!-- Destructive Action (Safely Isolated on Far Right) -->
-                    <Button DockPanel.Dock="Right" Content="🗑 Remove" Command="{Binding DeleteGameCommand}"
+                    <Button DockPanel.Dock="Right" Command="{Binding DeleteGameCommand}"
                             Style="{StaticResource ModernOutlineButton}" Foreground="#E06C75" BorderBrush="#66E06C75"
-                            Padding="12,7" Margin="0,0,0,6" FontSize="12"/>
+                            Padding="12,7" Margin="0,0,0,6" FontSize="12">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Remove" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
-                    <!-- Primary & Constructive Actions (Left Aligned) -->
+                    <!-- Primary & Constructive Actions (Left Aligned). MDL2 glyphs rather than
+                         emoji so the buttons match the rest of the app on every Windows build. -->
                     <WrapPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                        <Button Content="▶ Launch Game" Command="{Binding LaunchGameCommand}"
+                        <Button Command="{Binding LaunchGameCommand}"
                                 Style="{StaticResource ModernAccentButton}" Padding="16,7" Margin="0,0,10,6"
-                                FontWeight="SemiBold" FontSize="12.5"/>
-                        <Button Content="🌐 Steam Store" Command="{Binding OpenStorePageCommand}"
+                                FontWeight="SemiBold" FontSize="12.5">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Launch Game" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding OpenStorePageCommand}"
+                                Visibility="{Binding HasStoreUrl, Converter={StaticResource BoolToVis}}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="12"/>
-                        <Button Content="⚙ Edit Properties" Command="{Binding EditGameCommand}"
+                                FontSize="12">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Steam Store" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding EditGameCommand}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
-                                FontSize="12"/>
+                                FontSize="12">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Edit Properties" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                     </WrapPanel>
                 </DockPanel>
             </Grid>

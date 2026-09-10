@@ -40,7 +40,7 @@
                             <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Off by default and skipped by Apply Performance Preset - situational or tradeoff-heavy, so it's your call.">
-                                <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#9A9AB0"/>
+                                <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
                             </Border>
                             <Border Background="#3D2F14" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}"
@@ -85,19 +85,29 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
+                            <!-- The longer rationale is the name's tooltip; Learn more has the full topic. -->
                             <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                       Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"
+                                       ToolTip="{Binding WhyItMatters}" ToolTipService.ShowDuration="20000"/>
                             <Border Background="{Binding StatusBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
                             </Border>
                             <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Off by default within this profile - a real tradeoff, not just a performance win, so it's your call.">
-                                <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#9A9AB0"/>
+                                <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
+                            </Border>
+                            <Border Background="#2B2340" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Applying this at launch writes a machine-wide value or runs an elevated command, so Windows shows a User Account Control prompt.">
+                                <TextBlock Text="🛡 ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0"/>
                             </Border>
                         </StackPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Note}" FontSize="10.5" Foreground="#E8B84E"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
                         <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
                                 Command="{x:Static services:HelpCommands.ShowTopic}"
                                 CommandParameter="{Binding HelpTopicId}"/>
@@ -175,10 +185,34 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE770;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="HARDWARE TELEMETRY &amp; SPECS" FontSize="11.5" FontWeight="SemiBold" 
+                            <TextBlock Text="HARDWARE TELEMETRY &amp; SPECS" FontSize="11.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
+
+                    <!-- Section toolbar: the refresh for the whole specs section lives here, not in
+                         the last card. Shown while loading too, so the placeholder card below has
+                         the same header as the loaded state. -->
+                    <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                        <Button DockPanel.Dock="Right" Content="Refresh Specs" Command="{Binding RefreshSpecsCommand}"
+                                IsEnabled="{Binding IsSpecsLoaded}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="10,3" VerticalAlignment="Center"
+                                ToolTip="Re-read hardware, display, drive, and network details"/>
+                        <TextBlock DockPanel.Dock="Left" Text="{Binding SpecsRefreshedDisplay}" FontSize="11"
+                                   Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <!-- Loading placeholder: shown instead of the spec cards, which would otherwise
+                         paint "Unknown GPU / 0 GB / 0 x 0 @ 0Hz" for the first second or two. -->
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsLoadingSpecs, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="Detecting hardware…" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
 
                     <!-- 1. Graphics Card (GPU) -->
                     <Border Style="{StaticResource SettingsCard}">
@@ -327,20 +361,19 @@
                             <DockPanel Margin="0,0,0,2">
                                 <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}">
                                     <Run Text="{Binding Os.ActivePowerPlan, Mode=OneWay, StringFormat='Power Plan: {0} • '}"/>
-                                    <Run Text="{Binding Power.StatusText, Mode=OneWay, StringFormat='Power Status: {0} • '}"/>
-                                    <Run Text="DirectX 12 Ultimate Ready"/>
+                                    <Run Text="{Binding Power.StatusText, Mode=OneWay, StringFormat='Power Status: {0}'}"/>
                                 </TextBlock>
                             </DockPanel>
                         </StackPanel>
                     </Border>
 
+                    </StackPanel>
+
                     <!-- 8. Windows Gaming Utilities -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Button DockPanel.Dock="Right" Content="Refresh Specs" Command="{Binding RefreshSpecsCommand}" 
-                                        Style="{StaticResource ModernOutlineButton}" Padding="10,3" VerticalAlignment="Center"/>
-                                <TextBlock Text="Windows Gaming Utilities" FontSize="13.5" FontWeight="SemiBold" 
+                                <TextBlock Text="Windows Gaming Utilities" FontSize="13.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             </DockPanel>
                             <TextBlock Text="Quick access to native Windows diagnostic and hardware management tools." 
@@ -403,10 +436,21 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="Performance Optimization Status" FontSize="13.5" FontWeight="SemiBold"
                                                    Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                        <Border Background="{Binding RestorePointBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                ToolTip="Configured in Settings &#x2192; Performance Tweaks">
+                                        <!-- The badge is a link: it opens the setting it reports instead of only
+                                             pointing at it in a tooltip. -->
+                                        <Button Command="{Binding DataContext.OpenPerformanceSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                Background="{Binding RestorePointBadgeColor}" BorderThickness="0" Padding="6,1.5" Margin="8,0,0,0"
+                                                VerticalAlignment="Center" Cursor="Hand"
+                                                ToolTip="Click to change this in Settings &#x2192; Launch &amp; Performance">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
                                             <TextBlock Text="{Binding RestorePointBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
-                                        </Border>
+                                        </Button>
                                     </StackPanel>
                                     <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12"
                                                Foreground="{StaticResource BrushAccentHover}" Margin="0,2,0,0"/>
@@ -430,7 +474,7 @@
                         <StackPanel>
                             <TextBlock Text="Input &amp; Display Latency" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                            <TextBlock Text="Hardware scheduling and pointer precision responsiveness for competitive gaming."
+                            <TextBlock Text="How Windows presents games and reads the mouse: GPU scheduling, flip-model and VRR for windowed games, Auto HDR, pointer precision, and the accessibility shortcuts that steal focus mid-game."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding InputAndDisplayTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
@@ -441,7 +485,7 @@
                         <StackPanel>
                             <TextBlock Text="CPU &amp; Scheduling Priority" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                            <TextBlock Text="Foreground thread prioritization, power plans, and background DVR capture throttling." 
+                            <TextBlock Text="How much CPU the game gets: Game Mode, the system timer, foreground scheduling, the always-on power plan, and desktop effects the compositor pays for."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding CpuAndPowerTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
@@ -452,7 +496,7 @@
                         <StackPanel>
                             <TextBlock Text="Network &amp; Background Telemetry" FontSize="13.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                            <TextBlock Text="Low-latency TCP packet dispatch and non-essential background activity suppression." 
+                            <TextBlock Text="What runs behind the game: network packet throttling and Nagle, update seeding, Game Bar capture and overlay, telemetry sweeps, and driver replacement by Windows Update."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding NetworkAndBackgroundTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
@@ -463,7 +507,7 @@
                         <StackPanel>
                             <TextBlock Text="Security &amp; Virtualization (HVCI)" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                            <TextBlock Text="Hypervisor-protected Code Integrity (VBS) state and Windows Security device settings." 
+                            <TextBlock Text="Status only. Memory Integrity is a real security boundary with a documented cost in some games - the switch stays in Windows Security."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding SecurityAndAdvancedTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>

@@ -2,7 +2,7 @@
 
 ## Where the log is
 
-TrayTrigger writes debug.log to its data folder under %AppData%\TrayTrigger. The Settings page under Storage shows the exact path and has a button to open it. When the log grows large it is archived as debug.old.log and a fresh one starts.
+TrayTrigger writes debug.log to its local cache folder under %LocalAppData%\TrayTrigger. Settings › Diagnostics & Storage shows the exact path and has buttons to open, clear, or reveal it. When the log grows large it is archived as debug.old.log and a fresh one starts.
 
 ## What is in it
 
@@ -12,7 +12,7 @@ TrayTrigger writes debug.log to its data folder under %AppData%\TrayTrigger. The
 
 ## Verbose logging
 
-Turn on Verbose Logging in Settings when you are about to reproduce a problem. It adds detailed traces such as launch parameters, title-matching scores, icon extraction steps, and each registry value read. Turn it back off afterwards, since it makes the log much larger.
+Turn on Verbose Logging under Settings › Diagnostics & Storage when you are about to reproduce a problem. It adds detailed traces such as launch parameters, title-matching scores, icon extraction steps, and each registry value read. Turn it back off afterwards, since it makes the log much larger.
 
 ## Reporting a problem
 

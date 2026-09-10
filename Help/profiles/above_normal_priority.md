@@ -13,7 +13,7 @@ Sets the game's own process to the Above Normal CPU scheduling class as soon as 
 
 - Community testing consistently finds Above Normal gives most of the benefit with low risk. Going further to High or Realtime shows little extra gain and can starve audio and input, so TrayTrigger stops at Above Normal.
 - The effect varies by game and is not guaranteed.
-- Only works for games launched directly from an exe. For Steam games TrayTrigger has no handle to the real process, so this does nothing.
+- Applies once TrayTrigger has found the game's process. For Steam games that happens after Steam reports the game running and its process is found under the install folder, so there can be a few seconds at the coarse priority while the game starts.
 
 ## Details
 

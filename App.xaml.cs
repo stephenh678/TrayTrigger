@@ -421,9 +421,9 @@ public partial class App : Application
                         sessionItem.ToolTip = "Tracked session: Performance Profile applied, post-exit script pending.";
 
                         string gameId = session.GameId;
-                        sessionItem.Items.Add(CreateNavMenuItem("End session (restore tweaks now)", "", () =>
+                        sessionItem.Items.Add(CreateNavMenuItem("End Session (restore tweaks)", "", () =>
                             Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: false))));
-                        var forceClose = CreateNavMenuItem("Force close game", "", () =>
+                        var forceClose = CreateNavMenuItem("Force Close Game", "", () =>
                         {
                             if (card != null)
                             {
@@ -476,7 +476,10 @@ public partial class App : Application
                     menu.Items.Add(new Separator());
                 }
 
-                // 1b. Persistent "Favorites" section directly in root menu
+                // 1b. Persistent "Favorites" section directly in root menu. Unlike Recent, an
+                //     empty Favorites section is simply omitted - the user knows how to star a
+                //     game, and "(No favorites yet)" only made the menu longer.
+                bool favoritesSectionShown = false;
                 if (_mainViewModel.Settings.ShowFavoritesInTray && _mainViewModel.Settings.MaxFavoritesInTray > 0)
                 {
                     var favoriteGames = ApplySortOption(
@@ -485,29 +488,23 @@ public partial class App : Application
                         .Take(_mainViewModel.Settings.MaxFavoritesInTray)
                         .ToList();
 
-                    menu.Items.Add(CreateSectionHeader(LibraryConstants.FavoritesCategory));
-
                     if (favoriteGames.Count > 0)
                     {
+                        favoritesSectionShown = true;
+                        menu.Items.Add(CreateSectionHeader(LibraryConstants.FavoritesCategory));
                         foreach (var card in favoriteGames)
                         {
                             menu.Items.Add(CreateGameMenuItem(card));
                         }
+                        menu.Items.Add(new Separator());
                     }
-                    else
-                    {
-                        menu.Items.Add(new MenuItem
-                        {
-                            Header = "(No favorites yet)",
-                            IsEnabled = false,
-                            IsHitTestVisible = false,
-                            FontSize = 12,
-                            Foreground = (Brush)FindResource("BrushTextMuted")
-                        });
-                    }
-
-                    menu.Items.Add(new Separator());
                 }
+
+                // The main list gets its own "All Games" / "Categories" header whenever any
+                // section precedes it, so it never runs straight on from Recent or Favorites.
+                bool mainListNeedsHeader = activeSessions.Count > 0
+                    || (_mainViewModel.Settings.ShowRecentInTray && _mainViewModel.Settings.MaxRecentInTray > 0)
+                    || favoritesSectionShown;
 
                 // 2. Sorting helper, reused per-section with each section's own sort option
                 IEnumerable<GameCardViewModel> ApplySortOption(IEnumerable<GameCardViewModel> source, string sortOption)
@@ -529,7 +526,7 @@ public partial class App : Application
                 if (!groupByCategory)
                 {
                     // Flat sorted list of all games
-                    if (_mainViewModel.Settings.ShowRecentInTray)
+                    if (mainListNeedsHeader)
                     {
                         menu.Items.Add(CreateSectionHeader("All Games"));
                     }
@@ -552,7 +549,7 @@ public partial class App : Application
                     // Only list directly if all games in library are "Uncategorized"
                     if (grouped.Count == 1 && string.Equals(grouped[0].Key, LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (_mainViewModel.Settings.ShowRecentInTray)
+                        if (mainListNeedsHeader)
                         {
                             menu.Items.Add(CreateSectionHeader("All Games"));
                         }
@@ -564,7 +561,7 @@ public partial class App : Application
                     }
                     else
                     {
-                        if (_mainViewModel.Settings.ShowRecentInTray)
+                        if (mainListNeedsHeader)
                         {
                             menu.Items.Add(CreateSectionHeader("Categories"));
                         }
@@ -612,8 +609,15 @@ public partial class App : Application
 
             menu.Items.Add(new Separator());
 
-            // Navigation & exit items
+            // Navigation & exit items. A tray-first launcher should reach its two most common
+            // non-launch tasks from the tray too, not only after opening the window.
             menu.Items.Add(CreateNavMenuItem("Games Library", "\uE7FC", () => OpenSection(NavSection.Library), (Brush)FindResource("BrushAccentHover")));
+            menu.Items.Add(CreateNavMenuItem("Scan for Games...", "\uE721", () =>
+            {
+                OpenSection(NavSection.Library);
+                _mainViewModel.OpenScanForGamesCommand.Execute(null);
+            }));
+            menu.Items.Add(CreateNavMenuItem("Settings", "\uE713", () => OpenSection(NavSection.Settings)));
 
             menu.Items.Add(new Separator());
 

@@ -37,7 +37,8 @@
             </Grid.ColumnDefinitions>
 
             <TextBox Grid.Column="0" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
-                     Style="{StaticResource ModernTextBox}" Margin="0,0,12,0"/>
+                     Style="{StaticResource ModernTextBox}" Margin="0,0,12,0"
+                     Tag="Search found games..."/>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="Select All" Command="{Binding SelectAllCommand}"
@@ -121,11 +122,15 @@
         </Border>
 
         <!-- Footer -->
-        <DockPanel Grid.Row="3">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <DockPanel Grid.Row="3" LastChildFill="False">
+            <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="12"
+                       Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
+                       VerticalAlignment="Center" DockPanel.Dock="Left"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                 <Button Content="Cancel" Command="{Binding CancelCommand}"
                         Style="{StaticResource ModernGhostButton}" Margin="0,0,8,0"/>
-                <Button Content="Install Selected" Command="{Binding ImportCommand}"
+                <!-- "Add", not "Install": this adds library entries, it installs nothing. -->
+                <Button Content="{Binding ImportButtonLabel}" Command="{Binding ImportCommand}"
                         Style="{StaticResource ModernAccentButton}"/>
             </StackPanel>
         </DockPanel>

@@ -21,6 +21,6 @@ Re-checks every game, including ones that already have a cover. Use it after a g
 
 ## Where art is stored
 
-Downloaded posters and extracted icons are cached under the local app data folder shown in Settings under Storage. Clearing the cache forces everything to download again.
+Downloaded posters and extracted icons are cached under the local app data folder shown in Settings › Diagnostics & Storage. Clearing the cache forces everything to download again.
 
 > SteamGridDB needs a free API key from steamgriddb.com. The key is stored in your settings file and only sent to SteamGridDB.

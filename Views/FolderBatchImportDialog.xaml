@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
         mc:Ignorable="d"
-        Title="Batch Add Games from Folder"
+        Title="Add Games from Folder"
         Height="560" Width="680"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"

@@ -57,6 +57,9 @@ public class AppSettings
     /// <summary>Gates the one-time "Welcome to TrayTrigger" dialog to the first time the main
     /// window is actually shown on a fresh install - see MainWindow.MaybeShowWelcomePrompt.</summary>
     public bool HasSeenWelcomePrompt { get; set; } = false;
+    /// <summary>One-time tray balloon shown the first time the window is hidden via its title-bar
+    /// X, so a new user learns TrayTrigger is still running in the tray.</summary>
+    public bool HasSeenTrayHideNotice { get; set; } = false;
     /// <summary>
     /// Gates the one-time "Game Launchers Found" prompt (see ImportCoordinator.ScanForGamesAsync)
     /// to the first time the user explicitly presses "Scan for Games" - set the moment that first

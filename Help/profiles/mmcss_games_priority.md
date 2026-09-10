@@ -1,4 +1,4 @@
-# MMCSS Games Task Priority (profile)
+# MMCSS "Games" Task Priority (profile)
 
 ## What it changes
 

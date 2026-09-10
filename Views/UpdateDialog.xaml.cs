@@ -39,7 +39,7 @@ public partial class UpdateDialog : Window
         }
         else
         {
-            ReleaseNotesText.Text = body.Trim();
+            ReleaseNotesText.Text = StripMarkdown(body.Trim());
         }
 
         var installer = release.InstallerAsset;
@@ -73,6 +73,23 @@ public partial class UpdateDialog : Window
             _downloadCts?.Dispose();
             _downloadCts = null;
         };
+    }
+
+    /// <summary>
+    /// GitHub release bodies are Markdown but the notes box is plain text, so drop the markers
+    /// that would otherwise show literally ("### Highlights:", "**bold**", "- item").
+    /// </summary>
+    internal static string StripMarkdown(string body)
+    {
+        var lines = body.Replace("\r\n", "\n").Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string l = lines[i].TrimEnd();
+            l = System.Text.RegularExpressions.Regex.Replace(l, @"^\s*#{1,6}\s*", "");
+            l = System.Text.RegularExpressions.Regex.Replace(l, @"^\s*[-*]\s+", "• ");
+            lines[i] = l.Replace("**", "").Replace("`", "");
+        }
+        return string.Join("\n", lines);
     }
 
     private void OnViewOnGitHubClick(object sender, RoutedEventArgs e)

@@ -1,4 +1,4 @@
-# Power Plan (profile)
+# "Ultimate Plan - TrayTrigger" Power Plan (profile)
 
 ## What it changes
 

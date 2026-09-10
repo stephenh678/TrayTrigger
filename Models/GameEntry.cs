@@ -120,9 +120,8 @@ public class GameEntry
                 return $"{hours:0.#}h played";
             }
 
-            if (IsSteamGame)
-                return string.Empty;
-
+            // Steam sessions have recorded real playtime since 1.3.6, so a Steam game with
+            // nothing recorded reads the same as every other platform.
             return "0 min played";
         }
     }

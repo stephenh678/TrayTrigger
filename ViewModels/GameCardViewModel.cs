@@ -232,7 +232,7 @@ public class GameCardViewModel : ViewModelBase
             !File.Exists(game.ExecutablePath);
     }
     public string PlaytimeDisplay => Game.PlaytimeDisplay;
-    public string ListPlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? "—" : Game.PlaytimeDisplay;
+    public string ListPlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? "0 min played" : Game.PlaytimeDisplay;
     public string LastPlayedDisplay => Game.LastPlayedDisplay;
 
     public BitmapImage? IconImage

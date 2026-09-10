@@ -1320,38 +1320,31 @@ public partial class App
                     VerticalAlignment = VerticalAlignment.Center
                 };
 
-                var panel = new StackPanel();
+                // Render the real GameItemContextMenu (not a hand-built mock) against the first
+                // library card, so the preview tracks every later change to the menu. The
+                // items are moved into a StackPanel because a ContextMenu can't be captured
+                // without being opened; their visibility triggers bind to the panel's DataContext.
+                var sampleCard = _mainViewModel.Games.FirstOrDefault();
+                if (sampleCard == null)
+                {
+                    var sample = new GameEntry { Name = "Cyberpunk 2077", Category = "RPG", ExecutablePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe") };
+                    sampleCard = _mainViewModel.CreateCardViewModel(sample);
+                }
 
-                var itemInfo = new MenuItem { Header = "Game Info (Steam Details)...", FontWeight = FontWeights.SemiBold };
-                var itemPlay = new MenuItem { Header = "Play" };
-                var itemFolder = new MenuItem { Header = "Open Containing Folder" };
-                var sep1 = new Separator();
-                var itemRename = new MenuItem { Header = "Rename..." };
-                var itemCat = new MenuItem { Header = "Change Category..." };
-                var itemIcon = new MenuItem { Header = "Change Icon..." };
-                var itemProps = new MenuItem { Header = "Edit Game Properties..." };
-                var sep2 = new Separator();
-                var itemDel = new MenuItem 
-                { 
-                    Header = "Remove from Library", 
-                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E06C75")) 
-                };
-
-                panel.Children.Add(itemInfo);
-                panel.Children.Add(itemPlay);
-                panel.Children.Add(itemFolder);
-                panel.Children.Add(sep1);
-                panel.Children.Add(itemRename);
-                panel.Children.Add(itemCat);
-                panel.Children.Add(itemIcon);
-                panel.Children.Add(itemProps);
-                panel.Children.Add(sep2);
-                panel.Children.Add(itemDel);
+                var realMenu = (ContextMenu)_mainWindow.FindResource("GameItemContextMenu");
+                var panel = new StackPanel { DataContext = sampleCard };
+                var menuItems = realMenu.Items.OfType<UIElement>().ToList();
+                realMenu.Items.Clear();
+                foreach (var item in menuItems)
+                {
+                    panel.Children.Add(item);
+                }
 
                 container.Child = panel;
                 testWin.Content = container;
+                testWin.Height = 700;
 
-                CaptureVisual(testWin, 320, 360, targetPng);
+                CaptureVisual(testWin, 320, 700, targetPng);
                 ExitApplication();
                 return;
             }

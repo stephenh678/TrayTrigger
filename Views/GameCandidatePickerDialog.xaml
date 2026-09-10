@@ -22,7 +22,7 @@
         <!-- Header -->
         <DockPanel Grid.Row="0" Margin="0,0,0,16">
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Select Game Executable" FontSize="18" Foreground="{StaticResource BrushTextPrimary}" 
+                <TextBlock Text="Choose Game Executable" FontSize="18" Foreground="{StaticResource BrushTextPrimary}"
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                 <TextBlock x:Name="SubtitleTextBlock" 
                            Text="Multiple candidates were found. Select the game's executable:" 
