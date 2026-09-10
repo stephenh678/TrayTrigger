@@ -34,7 +34,16 @@ public class ScannedGameItemViewModel : ViewModelBase
 
     public string Name => SteamGame?.Name ?? GogGame?.Name ?? EaGame?.Name ?? EpicGame?.Name ?? UbisoftGame?.Name ?? FolderCandidate!.Name;
     public string PathDisplay => SteamGame?.InstallDir ?? GogGame?.InstallDir ?? EaGame?.InstallDir ?? EpicGame?.InstallDir ?? UbisoftGame?.InstallDir ?? FolderCandidate!.DisplayPath;
-    public string SourceLabel => SteamGame != null ? "Steam" : GogGame != null ? "GOG" : EaGame != null ? "EA" : EpicGame != null ? "Epic" : UbisoftGame != null ? "Ubisoft" : "Folder";
+
+    /// <summary>Pack URI to the same launcher logo used on poster cards and the first-launch
+    /// picker - a folder-scanned candidate has no launcher, so it gets the generic "Local Games"
+    /// mark instead.</summary>
+    public string SourceLogoUri => SteamGame != null ? "pack://application:,,,/Assets/LauncherLogos/steam.png"
+        : GogGame != null ? "pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png"
+        : EaGame != null ? "pack://application:,,,/Assets/LauncherLogos/ea_app.png"
+        : EpicGame != null ? "pack://application:,,,/Assets/LauncherLogos/epic_games.png"
+        : UbisoftGame != null ? "pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
+        : "pack://application:,,,/Assets/LauncherLogos/local_games.png";
 
     /// <summary>Raised when the user clicks "Ignore" - the parent VM removes this row and persists the ignore.</summary>
     public event Action<ScannedGameItemViewModel>? IgnoreRequested;
@@ -70,35 +79,35 @@ public class ScannedGameItemViewModel : ViewModelBase
     {
         IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
         SteamGame = steamGame;
-        LoadIconAsync(() => IconExtractorService.LoadBitmapSafely(steamGame.IconPath));
+        LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(steamGame.IconPath));
     }
 
     public ScannedGameItemViewModel(DiscoveredGogGame gogGame)
     {
         IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
         GogGame = gogGame;
-        LoadIconAsync(() => IconExtractorService.LoadBitmapSafely(gogGame.IconPath));
+        LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(gogGame.IconPath));
     }
 
     public ScannedGameItemViewModel(DiscoveredEaGame eaGame)
     {
         IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
         EaGame = eaGame;
-        LoadIconAsync(() => IconExtractorService.LoadBitmapSafely(eaGame.IconPath));
+        LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(eaGame.IconPath));
     }
 
     public ScannedGameItemViewModel(DiscoveredEpicGame epicGame)
     {
         IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
         EpicGame = epicGame;
-        LoadIconAsync(() => IconExtractorService.LoadBitmapSafely(epicGame.IconPath));
+        LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(epicGame.IconPath));
     }
 
     public ScannedGameItemViewModel(DiscoveredUbisoftGame ubisoftGame)
     {
         IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
         UbisoftGame = ubisoftGame;
-        LoadIconAsync(() => IconExtractorService.LoadBitmapSafely(ubisoftGame.IconPath));
+        LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(ubisoftGame.IconPath));
     }
 
     public ScannedGameItemViewModel(GameCandidate candidate)

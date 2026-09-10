@@ -93,10 +93,12 @@
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Border>
 
-                            <!-- Source badge -->
-                            <Border DockPanel.Dock="Right" Background="#22222A" CornerRadius="3" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding SourceLabel}" FontSize="9.5" FontWeight="Bold" Foreground="#9A9AB0"/>
-                            </Border>
+                            <!-- Source badge - the same launcher logo used on poster cards and the
+                                 first-launch picker (a folder-scanned candidate gets the generic
+                                 "Local Games" mark), same size as the Add Games from Folder dialog's. -->
+                            <Image DockPanel.Dock="Right" Source="{Binding SourceLogoUri}"
+                                   Width="25" Height="25" Stretch="Uniform" VerticalAlignment="Center" Margin="12,0,0,0"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
 
                             <!-- Ignore -->
                             <Button DockPanel.Dock="Right" Content="Ignore" Command="{Binding IgnoreCommand}"

@@ -43,11 +43,12 @@ public partial class MainWindow : Window
         Loaded += (s, e) =>
         {
             LoggingService.Verbose("MainWindow", "Loaded.");
-            MaybeShowSteamGridDbPrompt();
+            MaybeShowWelcomePrompt();
             MaybeShowPerformanceProfileMigrationPrompt();
         };
 
         _viewModel.RequestScanResultsPicker += OnRequestScanResultsPicker;
+        _viewModel.RequestLauncherDetectionPrompt += OnRequestLauncherDetectionPrompt;
         _viewModel.RequestEditGameDialog += OnRequestEditGameDialog;
         _viewModel.RequestCandidatePicker += OnRequestCandidatePicker;
         _viewModel.RequestFolderBatchImport += OnRequestFolderBatchImport;
@@ -59,6 +60,7 @@ public partial class MainWindow : Window
         Closed += (s, e) =>
         {
             _viewModel.RequestScanResultsPicker -= OnRequestScanResultsPicker;
+            _viewModel.RequestLauncherDetectionPrompt -= OnRequestLauncherDetectionPrompt;
             _viewModel.RequestEditGameDialog -= OnRequestEditGameDialog;
             _viewModel.RequestCandidatePicker -= OnRequestCandidatePicker;
             _viewModel.RequestFolderBatchImport -= OnRequestFolderBatchImport;
@@ -75,31 +77,47 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Shows a one-time reminder recommending SteamGridDB setup for better poster art. Gated by
-    /// a persisted flag so it only ever appears once, the first time the window is actually
-    /// shown (not on every process start - a --minimized launch skips Show() entirely, so this
-    /// naturally defers to the next time the user actually opens the window instead of being
-    /// lost). Skipped entirely if SteamGridDB is already enabled.
+    /// The first time the user ever presses "Scan for Games" (see
+    /// ImportCoordinator.ScanForGamesAsync), and only if at least one platform's own scanner
+    /// found an installed game: lets the user confirm which of them TrayTrigger should manage,
+    /// then reports the choice back so the real scan can run - or does nothing further if they
+    /// close/skip the dialog, since HasSeenLauncherDetectionPrompt is already marked seen either
+    /// way and every later press just scans normally.
     /// </summary>
-    private void MaybeShowSteamGridDbPrompt()
+    private void OnRequestLauncherDetectionPrompt(List<DetectedLauncherOption> detected)
     {
-        var settingsVm = _viewModel.SettingsVM;
-        if (settingsVm.Settings.HasSeenSteamGridDbPrompt || settingsVm.UseSteamGridDbArt)
-            return;
+        var dialog = new LauncherDetectionDialog(detected) { Owner = this };
+        bool? shown = dialog.ShowDialog();
 
-        settingsVm.Settings.HasSeenSteamGridDbPrompt = true;
-        settingsVm.AutoSaveSettings();
-
-        bool setUpNow = ModernDialog.PromptSteamGridDbSetup(this);
-        if (setUpNow)
+        if (shown == true && dialog.Confirmed && dialog.EnabledLaunchers.Count > 0)
         {
-            _viewModel.CurrentSection = NavSection.Settings;
-            settingsVm.SelectedTab = SettingsCategoryTab.Library;
+            _viewModel.Import.CompleteFirstTimeLauncherDetection(dialog.EnabledLaunchers);
+        }
+        else
+        {
+            _viewModel.Import.SkipFirstTimeLauncherDetection();
         }
     }
 
     /// <summary>
-    /// One-time prompt (gated like <see cref="MaybeShowSteamGridDbPrompt"/>) offering to bulk-set
+    /// Shows the one-time "Welcome to TrayTrigger" dialog, first among the one-time prompts here
+    /// so a brand-new user sees it before anything else. Gated like the other one-time prompts
+    /// below - the first time the window is actually shown, not on every process start.
+    /// </summary>
+    private void MaybeShowWelcomePrompt()
+    {
+        var settingsVm = _viewModel.SettingsVM;
+        if (settingsVm.Settings.HasSeenWelcomePrompt)
+            return;
+
+        settingsVm.Settings.HasSeenWelcomePrompt = true;
+        settingsVm.AutoSaveSettings();
+
+        new WelcomeDialog { Owner = this }.ShowDialog();
+    }
+
+    /// <summary>
+    /// One-time prompt (gated like <see cref="MaybeShowWelcomePrompt"/>) offering to bulk-set
     /// every existing game to the Optimized performance profile - the new recommended default
     /// applied automatically to any game added from here on. Only relevant to users upgrading
     /// from before this feature existed; skipped entirely if no game is still sitting at Off

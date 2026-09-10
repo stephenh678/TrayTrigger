@@ -1,0 +1,126 @@
+<Window x:Class="TrayTrigger.Views.LauncherDetectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:TrayTrigger.Views"
+        mc:Ignorable="d"
+        Title="Game Launchers Found"
+        Width="516" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{StaticResource BrushDialogBg}"
+        Foreground="{StaticResource BrushTextPrimary}">
+
+    <Window.Resources>
+        <!-- Whole card is the toggle - click anywhere on it, not just a checkbox, and the
+             checkmark badge in the corner reflects the current state. -->
+        <Style x:Key="LauncherCardToggle" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="CardBorder" CornerRadius="8" BorderThickness="1"
+                                Background="{StaticResource BrushSurfaceDark}"
+                                BorderBrush="{StaticResource BrushBorderDark}">
+                            <Grid Margin="12,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Platform logo - the icon already includes its own colored
+                                     background, so no extra badge box around it. -->
+                                <Image Grid.Column="0" Source="{Binding LogoUri}" Width="44" Height="44"
+                                       Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,12,0"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}" FontSize="13.5"
+                                               FontFamily="{StaticResource AppFont}" Foreground="{StaticResource BrushTextPrimary}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding SubLabel}" FontSize="11"
+                                               Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <!-- Selected checkmark badge -->
+                                <Border x:Name="CheckBadge" Grid.Column="1" Width="18" Height="18" CornerRadius="9"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Background="Transparent" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1.5">
+                                    <TextBlock x:Name="CheckGlyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
+                                               FontSize="10" Foreground="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="CardBorder" Property="Background" Value="#1A2230"/>
+                                <Setter TargetName="CheckBadge" Property="Background" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="CheckBadge" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="CheckGlyph" Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Bulk Selection -->
+            <RowDefinition Height="Auto"/> <!-- Cards -->
+            <RowDefinition Height="Auto"/> <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="Game Launchers Found" FontSize="18" Foreground="{StaticResource BrushTextPrimary}"
+                       FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
+            <TextBlock Text="TrayTrigger found these installed with games on this PC. Choose which ones it should manage - you can change this later in Settings."
+                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
+                       FontFamily="{StaticResource AppFont}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <!-- Bulk Selection -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+            <Button Content="Select All" Click="SelectAllButton_Click"
+                    Style="{StaticResource ModernGhostButton}" Margin="0,0,6,0"/>
+            <Button Content="Deselect All" Click="DeselectAllButton_Click"
+                    Style="{StaticResource ModernGhostButton}"/>
+        </StackPanel>
+
+        <!-- Launcher cards - a fixed 2-column UniformGrid so 1-5 found launchers lay out as a
+             compact grid that always wraps at 2-per-row and sizes to fit exactly what's there,
+             instead of a fixed-height scrollable list that's simultaneously too short to show
+             everything and mostly empty space when only one or two are found. -->
+        <ItemsControl Grid.Row="2" x:Name="OptionsItemsControl" Margin="0,0,0,16">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="2"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type views:DetectedLauncherOption}">
+                    <ToggleButton IsChecked="{Binding IsSelected}" Style="{StaticResource LauncherCardToggle}"
+                                  Height="62" Margin="0,0,10,10" HorizontalAlignment="Stretch"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Footer -->
+        <DockPanel Grid.Row="3">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Skip" Click="SkipButton_Click"
+                        Style="{StaticResource ModernGhostButton}" Margin="0,0,8,0"/>
+                <Button Content="Enable Selected" Click="EnableButton_Click"
+                        Style="{StaticResource ModernAccentButton}"/>
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>

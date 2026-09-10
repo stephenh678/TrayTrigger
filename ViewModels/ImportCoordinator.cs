@@ -59,6 +59,14 @@ public class ImportCoordinator : ViewModelBase
     public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<GameCandidate>>? RequestScanResultsPicker;
     public event Action<string, List<GameCandidate>>? RequestCandidatePicker;
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
+    /// <summary>
+    /// Raised the first time the user ever presses "Scan for Games" (see
+    /// <see cref="ScanForGamesAsync"/>), if at least one platform's own scanner found an
+    /// installed game. The view shows <see cref="Views.LauncherDetectionDialog"/> and reports the
+    /// result back via <see cref="CompleteFirstTimeLauncherDetection"/> or
+    /// <see cref="SkipFirstTimeLauncherDetection"/>.
+    /// </summary>
+    public event Action<List<Views.DetectedLauncherOption>>? RequestLauncherDetectionPrompt;
 
     public ICommand AddGameCommand { get; }
     public ICommand AddFolderCommand { get; }
@@ -757,19 +765,119 @@ public class ImportCoordinator : ViewModelBase
     }
 
     /// <summary>
-    /// Single-click "Scan for Games" entry point: scans every enabled scan location (Steam
-    /// libraries, if Steam integration is on, plus any manually-added folders from Settings &gt;
-    /// Game Scanner) and, if it finds any game not already in the library, opens the bulk install
-    /// prompt so the user can pick which to add - even a single result goes through that same
-    /// prompt, since a scan can just as easily turn up several at once. If nothing new turns up,
-    /// no dialog is shown at all.
+    /// Single-click "Scan for Games" entry point. The very first time this is ever pressed
+    /// (tracked by AppSettings.HasSeenLauncherDetectionPrompt, and only for a real button press -
+    /// see the <paramref name="silent"/> guard below), it detects which launchers actually have
+    /// games installed and, if any do, hands off to <see cref="RequestLauncherDetectionPrompt"/>
+    /// instead of scanning immediately - the view shows a picker letting the user choose which of
+    /// them to enable, then calls back into <see cref="CompleteFirstTimeLauncherDetection"/> to
+    /// continue. Every later press (and this one too, if nothing was detected) goes straight to
+    /// <see cref="ScanForGamesCoreAsync"/>.
+    /// </summary>
+    /// <param name="silent">
+    /// True for the automatic startup run (see AppSettings.AutoScanForGamesOnStartup) - skips both
+    /// the first-time launcher-detection prompt (that's reserved for an explicit button press) and
+    /// the "No Scan Locations" prompt, instead of greeting the user with a dialog the moment the
+    /// app opens. The install prompt still opens normally if the scan actually finds something.
+    /// </param>
+    public async Task ScanForGamesAsync(bool silent = false)
+    {
+        if (!silent && !_settings.HasSeenLauncherDetectionPrompt)
+        {
+            // Marked seen before the prompt is even shown - same reasoning as the app's other
+            // one-time prompts (see MainWindow.MaybeShowWelcomePrompt): a crash mid-dialog, or
+            // the user just declining, must not cause this to ask again on the next press.
+            _settings.HasSeenLauncherDetectionPrompt = true;
+            _storageService.SaveSettings(_settings);
+
+            var detected = DetectInstalledLaunchers();
+            if (detected.Count > 0)
+            {
+                RequestLauncherDetectionPrompt?.Invoke(detected);
+                return;
+            }
+        }
+
+        await ScanForGamesCoreAsync(silent);
+    }
+
+    /// <summary>
+    /// Probes each platform's own scanner (the same registry/filesystem footprint it would use
+    /// for a real scan) purely to decide which ones are worth offering in the first-time picker -
+    /// returns only the platforms that actually turned up a game. Uses the same shared scanner
+    /// instances <see cref="ScanForGamesCoreAsync"/> uses, so this doubles up on that work when
+    /// the user goes on to confirm the picker, but it's a one-time cost on the very first press.
+    /// </summary>
+    private List<Views.DetectedLauncherOption> DetectInstalledLaunchers()
+    {
+        var detected = new List<Views.DetectedLauncherOption>();
+        try
+        {
+            AddIfFound(detected, Views.DetectedLauncher.Steam, "Steam", _steamScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+            AddIfFound(detected, Views.DetectedLauncher.Gog, "GOG Galaxy", _gogScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+            AddIfFound(detected, Views.DetectedLauncher.Ea, "EA App", _eaScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+            AddIfFound(detected, Views.DetectedLauncher.Epic, "Epic Games", _epicScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+            AddIfFound(detected, Views.DetectedLauncher.Ubisoft, "Ubisoft Connect", _ubisoftScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+
+            LoggingService.Info("ImportCoordinator", detected.Count == 0
+                ? "First 'Scan for Games' press: no supported launcher had any installed games."
+                : $"First 'Scan for Games' press: detected {string.Join(", ", detected.Select(d => $"{d.DisplayName} ({d.GameCount})"))}.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("ImportCoordinator", $"Error detecting installed launchers: {ex.Message}");
+        }
+        return detected;
+
+        static void AddIfFound(List<Views.DetectedLauncherOption> list, Views.DetectedLauncher launcher, string displayName, int count)
+        {
+            if (count > 0) list.Add(new Views.DetectedLauncherOption(launcher, displayName, count));
+        }
+    }
+
+    /// <summary>
+    /// Called after the user confirms <see cref="Views.LauncherDetectionDialog"/> with at least
+    /// one platform checked: enables only those platforms' toggles (unconditionally, so an
+    /// unchecked one is explicitly turned off rather than left at whatever it was), re-syncs
+    /// Steam's scan locations if Steam was just turned on, then runs the real scan.
+    /// </summary>
+    public void CompleteFirstTimeLauncherDetection(IReadOnlyList<Views.DetectedLauncher> enabledLaunchers)
+    {
+        _settings.SteamIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Steam);
+        _settings.GogIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Gog);
+        _settings.EaIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Ea);
+        _settings.EpicIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Epic);
+        _settings.UbisoftIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Ubisoft);
+        _storageService.SaveSettings(_settings);
+
+        if (_settings.SteamIntegrationEnabled)
+        {
+            SyncSteamScanLocationsOnStartup();
+        }
+
+        _ = ScanForGamesCoreAsync(silent: false);
+    }
+
+    /// <summary>Called if the user closes/skips the first-time launcher-detection prompt without
+    /// confirming - nothing to do, since HasSeenLauncherDetectionPrompt is already marked seen
+    /// and no toggle was touched; the next "Scan for Games" press just runs normally.</summary>
+    public void SkipFirstTimeLauncherDetection()
+    {
+    }
+
+    /// <summary>
+    /// Does the actual scan: every enabled scan location (Steam libraries, if Steam integration
+    /// is on, plus any manually-added folders from Settings &gt; Game Scanner) and, if it finds
+    /// any game not already in the library, opens the bulk install prompt so the user can pick
+    /// which to add - even a single result goes through that same prompt, since a scan can just
+    /// as easily turn up several at once. If nothing new turns up, no dialog is shown at all.
     /// </summary>
     /// <param name="silent">
     /// True for the automatic startup run (see AppSettings.AutoScanForGamesOnStartup): skips the
     /// "No Scan Locations" prompt instead of greeting the user with a dialog the moment the app
     /// opens. The install prompt still opens normally if the scan actually finds something.
     /// </param>
-    public async Task ScanForGamesAsync(bool silent = false)
+    private async Task ScanForGamesCoreAsync(bool silent = false)
     {
         if (_isScanningForGames)
         {
