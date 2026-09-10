@@ -837,19 +837,17 @@ public class ImportCoordinator : ViewModelBase
 
     /// <summary>
     /// Called after the user confirms <see cref="Views.LauncherDetectionDialog"/> with at least
-    /// one platform checked: enables only those platforms' toggles (unconditionally, so an
-    /// unchecked one is explicitly turned off rather than left at whatever it was), re-syncs
-    /// Steam's scan locations if Steam was just turned on, then runs the real scan.
+    /// one platform checked. The caller (MainWindow) must already have applied the chosen
+    /// toggles via SettingsViewModel.ApplyDetectedLauncherChoices *before* calling this - not
+    /// here, because this class mutates the shared AppSettings object directly and has no way to
+    /// raise the property-changed notification SettingsViewModel's own bindings need (setting
+    /// _settings.UbisoftIntegrationEnabled directly leaves Settings > Library's checkbox showing
+    /// its stale old value even though the underlying data, and therefore scanning, is correct -
+    /// confusing regardless of being cosmetic). This method just re-syncs Steam's scan locations
+    /// if Steam was turned on, then runs the real scan.
     /// </summary>
-    public void CompleteFirstTimeLauncherDetection(IReadOnlyList<Views.DetectedLauncher> enabledLaunchers)
+    public void CompleteFirstTimeLauncherDetection()
     {
-        _settings.SteamIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Steam);
-        _settings.GogIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Gog);
-        _settings.EaIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Ea);
-        _settings.EpicIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Epic);
-        _settings.UbisoftIntegrationEnabled = enabledLaunchers.Contains(Views.DetectedLauncher.Ubisoft);
-        _storageService.SaveSettings(_settings);
-
         if (_settings.SteamIntegrationEnabled)
         {
             SyncSteamScanLocationsOnStartup();

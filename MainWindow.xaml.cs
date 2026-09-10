@@ -91,7 +91,11 @@ public partial class MainWindow : Window
 
         if (shown == true && dialog.Confirmed && dialog.EnabledLaunchers.Count > 0)
         {
-            _viewModel.Import.CompleteFirstTimeLauncherDetection(dialog.EnabledLaunchers);
+            // Applied through SettingsVM (not ImportCoordinator) so the toggles' own setters
+            // fire property-changed and Settings > Library's checkboxes don't show a stale
+            // value - see ImportCoordinator.CompleteFirstTimeLauncherDetection's doc comment.
+            _viewModel.SettingsVM.ApplyDetectedLauncherChoices(dialog.EnabledLaunchers);
+            _viewModel.Import.CompleteFirstTimeLauncherDetection();
         }
         else
         {
