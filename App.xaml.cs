@@ -227,7 +227,8 @@ public partial class App : Application
         _ubisoftScannerService = new UbisoftScannerService();
         _performanceProfileService = new PerformanceProfileService(_storageService);
         _performanceProfileService.RecoverFromCrashIfNeeded();
-        _gameScriptService = new GameScriptService();
+        // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
+        _gameScriptService = new GameScriptService(() => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts);
         _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();

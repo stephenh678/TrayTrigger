@@ -16,7 +16,7 @@ public partial class FolderBatchImportDialog : Window
     /// <summary>True if the user checked "remember this folder as a scan location" on confirm.</summary>
     public bool RememberAsScanLocation { get; private set; }
 
-    public FolderBatchImportDialog(string folderPath, List<GameCandidate> candidates, IEnumerable<string> existingExePaths, bool isAlreadyScanLocation, Action<GameCandidate> onIgnoreCandidate)
+    public FolderBatchImportDialog(string folderPath, List<GameCandidate> candidates, Func<GameCandidate, bool> isAlreadyImported, bool isAlreadyScanLocation, Action<GameCandidate> onIgnoreCandidate)
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
@@ -26,7 +26,7 @@ public partial class FolderBatchImportDialog : Window
         // multi-folder drop, which isn't a single path worth remembering as one scan location.
         bool canRememberAsScanLocation = Directory.Exists(folderPath);
 
-        _viewModel = new FolderBatchImportViewModel(folderPath, candidates, existingExePaths, canRememberAsScanLocation, isAlreadyScanLocation, onIgnoreCandidate);
+        _viewModel = new FolderBatchImportViewModel(folderPath, candidates, isAlreadyImported, canRememberAsScanLocation, isAlreadyScanLocation, onIgnoreCandidate);
         DataContext = _viewModel;
 
         Owner = WindowHelper.ActiveOwner();

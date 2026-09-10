@@ -89,13 +89,15 @@ public partial class MainWindow : Window
         var dialog = new LauncherDetectionDialog(detected) { Owner = this };
         bool? shown = dialog.ShowDialog();
 
-        if (shown == true && dialog.Confirmed && dialog.EnabledLaunchers.Count > 0)
+        if (shown == true && dialog.Confirmed)
         {
             // Applied through SettingsVM (not ImportCoordinator) so the toggles' own setters
             // fire property-changed and Settings > Library's checkboxes don't show a stale
             // value - see ImportCoordinator.CompleteFirstTimeLauncherDetection's doc comment.
-            _viewModel.SettingsVM.ApplyDetectedLauncherChoices(dialog.EnabledLaunchers);
-            _viewModel.Import.CompleteFirstTimeLauncherDetection();
+            // Confirming with nothing ticked is honoured too (every probed launcher off), and
+            // reported, instead of being treated as a silent skip.
+            _viewModel.SettingsVM.ApplyDetectedLauncherChoices(dialog.EnabledLaunchers, _viewModel.Import.LastProbedLaunchers);
+            _viewModel.Import.CompleteFirstTimeLauncherDetection(anyLauncherEnabled: dialog.EnabledLaunchers.Count > 0);
         }
         else
         {
@@ -315,10 +317,15 @@ public partial class MainWindow : Window
 
     private void OnRequestFolderBatchImport(string folderPath, List<GameCandidate> candidates)
     {
-        var existingPaths = _viewModel.Games.Select(g => g.Game.ExecutablePath);
+        var existingPaths = new HashSet<string>(_viewModel.Games.Select(g => g.Game.ExecutablePath), StringComparer.OrdinalIgnoreCase);
         bool isAlreadyScanLocation = _viewModel.IsScanLocation(folderPath);
-        var dialog = new FolderBatchImportDialog(folderPath, candidates, existingPaths, isAlreadyScanLocation,
-            onIgnoreCandidate: c => _viewModel.IgnoreGamePath(c.ExePath, c.Name));
+        // "Already in library" by exe path for a local candidate, by platform ID for one that
+        // resolved to a launcher game (a Steam entry's ExecutablePath is a steam:// URL, so the
+        // path comparison alone would pre-select every already-imported Steam game).
+        var dialog = new FolderBatchImportDialog(folderPath, candidates,
+            isAlreadyImported: c => existingPaths.Contains(c.ExePath) || _viewModel.Library.IsPlatformGameInLibrary(c.Platform),
+            isAlreadyScanLocation,
+            onIgnoreCandidate: _viewModel.IgnoreCandidate);
         dialog.Owner = this;
         if (dialog.ShowDialog() == true && dialog.SelectedGames != null && dialog.SelectedGames.Count > 0)
         {

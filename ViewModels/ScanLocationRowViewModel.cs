@@ -4,7 +4,12 @@ using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
-/// <summary>One row in Settings' editable list of folders "Scan for Games" looks in.</summary>
+/// <summary>
+/// One folder row in Settings - either a manual Scan Location (with a Remove button) or an
+/// auto-detected Steam library under the Steam integration toggle (checkbox only). Both share
+/// this view model; the two lists are split by <see cref="ScanLocation.Source"/> in
+/// SettingsViewModel.RebuildScanLocationRows.
+/// </summary>
 public class ScanLocationRowViewModel : ViewModelBase
 {
     private readonly Action _onChanged;
@@ -12,14 +17,6 @@ public class ScanLocationRowViewModel : ViewModelBase
     public ScanLocation Model { get; }
     public string Path => Model.Path;
     public bool IsAutoManaged => Model.IsAutoManaged;
-
-    public string SourceLabel => Model.Source switch
-    {
-        ScanLocationSource.Steam => "STEAM",
-        ScanLocationSource.Gog => "GOG",
-        ScanLocationSource.Ea => "EA",
-        _ => "MANUAL"
-    };
 
     public ScanLocationRowViewModel(ScanLocation model, Action onChanged)
     {

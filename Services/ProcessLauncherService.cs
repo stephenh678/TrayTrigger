@@ -115,8 +115,11 @@ public partial class ProcessLauncherService
         {
             LoggingService.Info("Launcher", $"Attempting to launch '{game.Name}' (ID: {game.Id}).");
 
-            // Steam game handling
-            if (game.IsSteamGame || game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
+            // Steam game handling. A Steam-tagged entry whose user asked for a direct launch and
+            // whose ExecutablePath is a real file (not a steam:// URL) is treated as a plain exe
+            // below instead - Edit Game's "launch this executable directly" option.
+            bool directSteamExe = game.LaunchDirectly && !game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase) && File.Exists(game.ExecutablePath);
+            if ((game.IsSteamGame || game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase)) && !directSteamExe)
             {
                 string launchUrl = !string.IsNullOrEmpty(game.SteamAppId)
                     ? $"steam://rungameid/{game.SteamAppId}"
@@ -151,14 +154,16 @@ public partial class ProcessLauncherService
             // the same features without the extra click.
             if (game.IsGogGame && !string.IsNullOrWhiteSpace(game.GogGameId))
             {
-                string? galaxyClientPath = _gogScannerService.GetGalaxyClientPath();
+                string? galaxyClientPath = game.LaunchDirectly ? null : _gogScannerService.GetGalaxyClientPath();
                 if (galaxyClientPath != null && !IsGalaxyClientRunning())
                 {
                     return LaunchGogGameViaGalaxy(game, galaxyClientPath, out errorMessage);
                 }
-                LoggingService.Verbose("Launcher", galaxyClientPath == null
-                    ? $"GOG Galaxy not found; launching '{game.Name}' directly instead."
-                    : $"GOG Galaxy already running; launching '{game.Name}' directly instead to skip its Play-button prompt.");
+                LoggingService.Verbose("Launcher", game.LaunchDirectly
+                    ? $"'{game.Name}' is set to launch directly; skipping GOG Galaxy."
+                    : galaxyClientPath == null
+                        ? $"GOG Galaxy not found; launching '{game.Name}' directly instead."
+                        : $"GOG Galaxy already running; launching '{game.Name}' directly instead to skip its Play-button prompt.");
                 // Not the generic "normal executable handling" below - GOG's registered exe is
                 // often a short-lived prelauncher stub (e.g. Cyberpunk 2077's REDprelauncher.exe)
                 // that spawns the real game and exits within milliseconds, so this needs the same
@@ -172,11 +177,13 @@ public partial class ProcessLauncherService
             // to direct exe when EA App isn't installed.
             if (game.IsEaGame && !string.IsNullOrWhiteSpace(game.EaContentId))
             {
-                if (_eaScannerService.IsEaAppInstalled())
+                if (!game.LaunchDirectly && _eaScannerService.IsEaAppInstalled())
                 {
                     return LaunchEaGameViaClient(game, out errorMessage);
                 }
-                LoggingService.Verbose("Launcher", $"EA App not found; launching '{game.Name}' directly instead.");
+                LoggingService.Verbose("Launcher", game.LaunchDirectly
+                    ? $"'{game.Name}' is set to launch directly; skipping EA App."
+                    : $"EA App not found; launching '{game.Name}' directly instead.");
                 // Not the generic "normal executable handling" below - like GOG, EA's registered
                 // exe can be a short-lived prelauncher/anti-cheat stub that spawns the real game
                 // and exits within milliseconds, so this needs install-dir polling, not a
@@ -189,11 +196,13 @@ public partial class ProcessLauncherService
             // the launcher isn't installed.
             if (game.IsEpicGame && !string.IsNullOrWhiteSpace(game.EpicAppName))
             {
-                if (_epicScannerService.IsEpicLauncherInstalled())
+                if (!game.LaunchDirectly && _epicScannerService.IsEpicLauncherInstalled())
                 {
                     return LaunchEpicGameViaClient(game, out errorMessage);
                 }
-                LoggingService.Verbose("Launcher", $"Epic Games Launcher not found; launching '{game.Name}' directly instead.");
+                LoggingService.Verbose("Launcher", game.LaunchDirectly
+                    ? $"'{game.Name}' is set to launch directly; skipping Epic Games Launcher."
+                    : $"Epic Games Launcher not found; launching '{game.Name}' directly instead.");
                 // See the EA branch above for why this needs install-dir polling instead of the
                 // generic single-PID handling below.
                 return LaunchEpicGameDirectly(game, out errorMessage);
@@ -204,11 +213,13 @@ public partial class ProcessLauncherService
             // it isn't installed.
             if (game.IsUbisoftGame && !string.IsNullOrWhiteSpace(game.UbisoftGameId))
             {
-                if (_ubisoftScannerService.IsUbisoftConnectInstalled())
+                if (!game.LaunchDirectly && _ubisoftScannerService.IsUbisoftConnectInstalled())
                 {
                     return LaunchUbisoftGameViaClient(game, out errorMessage);
                 }
-                LoggingService.Verbose("Launcher", $"Ubisoft Connect not found; launching '{game.Name}' directly instead.");
+                LoggingService.Verbose("Launcher", game.LaunchDirectly
+                    ? $"'{game.Name}' is set to launch directly; skipping Ubisoft Connect."
+                    : $"Ubisoft Connect not found; launching '{game.Name}' directly instead.");
                 // See the EA branch above for why this needs install-dir polling instead of the
                 // generic single-PID handling below.
                 return LaunchUbisoftGameDirectly(game, out errorMessage);
@@ -228,6 +239,15 @@ public partial class ProcessLauncherService
             // same way as the Steam branch above instead of treating it as a missing exe.
             if (IsNonFileProtocolUrl(game.ExecutablePath))
             {
+                // Import already refuses these, but games.json is user-editable and older
+                // libraries predate the check - never hand an unknown scheme to ShellExecute.
+                if (!UrlProtocolHelper.IsAllowedLaunchUrl(game.ExecutablePath))
+                {
+                    errorMessage = $"\"{game.Name}\" points at a URL type TrayTrigger won't launch ({game.ExecutablePath}). Edit the game and set a real executable or a launcher link.";
+                    LoggingService.Warn("Launcher", $"Refused to launch '{game.Name}': URL scheme not in the allow-list ({game.ExecutablePath}).");
+                    return false;
+                }
+
                 // Pre-launch only: there's no process handle or running flag to detect the exit,
                 // so a post-exit script can't be honoured for protocol launches.
                 _scriptService.RunPreLaunch(game);

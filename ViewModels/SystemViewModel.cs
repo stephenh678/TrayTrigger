@@ -216,12 +216,19 @@ public class ProfileTweakToggleViewModel : ViewModelBase
             {
                 _setter(value);
                 LoggingService.Info("SystemViewModel", $"Performance Profile tweak '{Name}' {(value ? "enabled" : "disabled")}.");
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(StatusBadgeText));
-                OnPropertyChanged(nameof(StatusBadgeColor));
-                OnPropertyChanged(nameof(ActionButtonText));
+                NotifyStateChanged();
             }
         }
+    }
+
+    /// <summary>Re-reads the live config value into the bindings - for when the underlying
+    /// setting was changed from elsewhere (Settings → Reset to Defaults).</summary>
+    public void NotifyStateChanged()
+    {
+        OnPropertyChanged(nameof(IsEnabled));
+        OnPropertyChanged(nameof(StatusBadgeText));
+        OnPropertyChanged(nameof(StatusBadgeColor));
+        OnPropertyChanged(nameof(ActionButtonText));
     }
 }
 
@@ -467,6 +474,17 @@ public class SystemViewModel : ViewModelBase
     public ICommand OpenDeviceManagerCommand { get; }
     public ICommand OpenGraphicsSettingsCommand { get; }
     public ICommand OpenDxDiagCommand { get; }
+
+    /// <summary>
+    /// Refreshes every profile-tweak toggle from the live settings. The toggles read straight
+    /// from the config objects they were built against (which Settings → Reset to Defaults now
+    /// resets in place rather than replacing), so only their change notifications are needed.
+    /// </summary>
+    public void RefreshProfileTweakToggles()
+    {
+        foreach (var t in OptimizedProfileTweaks) t.NotifyStateChanged();
+        foreach (var t in AggressiveProfileTweaks) t.NotifyStateChanged();
+    }
 
     public SystemViewModel(SystemInfoService infoService, SystemTweaksService tweaksService, AppSettings settings, StorageService storageService)
     {

@@ -31,6 +31,7 @@ public class ImportCoordinator : ViewModelBase
     private readonly EaScannerService _eaScannerService;
     private readonly EpicScannerService _epicScannerService;
     private readonly UbisoftScannerService _ubisoftScannerService;
+    private readonly PlatformLookupService _platformLookup;
     private readonly SteamSearchService _steamSearchService;
     private readonly SteamMetadataService _steamMetadataService;
     private readonly StorageService _storageService;
@@ -98,6 +99,7 @@ public class ImportCoordinator : ViewModelBase
         _eaScannerService = eaScannerService;
         _epicScannerService = epicScannerService;
         _ubisoftScannerService = ubisoftScannerService;
+        _platformLookup = new PlatformLookupService(steamScannerService, gogScannerService, eaScannerService, epicScannerService, ubisoftScannerService);
         _steamSearchService = steamSearchService;
         _steamMetadataService = steamMetadataService;
         _storageService = storageService;
@@ -140,7 +142,7 @@ public class ImportCoordinator : ViewModelBase
         _library.ApplySort();
         if (statusMessage != null)
         {
-            _library.StatusMessage = statusMessage;
+            _library.AnnounceImportResult(statusMessage);
         }
         _library.NotifyGameCountChanged();
     }
@@ -317,21 +319,66 @@ public class ImportCoordinator : ViewModelBase
             return;
         }
 
+        // Dropped exes/shortcuts that turn out to live inside a Steam/GOG/EA/Epic/Ubisoft install
+        // are collected here and imported through that platform's own route once the guard is
+        // released (the platform import methods take the guard themselves).
+        var platformDrops = new PlatformImportBuckets();
+        int localAdded = 0;
+        // Files refused by the validation below, with the reason - reported once, after the loop.
+        var skipped = new List<string>();
+
         _isImportInProgress = true;
         try
         {
             var addedEntries = new List<GameEntry>();
+            var lookupIndex = _platformLookup.CreateIndex();
             foreach (var file in nonFolderFiles)
             {
                 if (string.IsNullOrWhiteSpace(file)) continue;
 
                 if (!File.Exists(file)) continue;
 
+                // Only executables and shortcuts become library entries. Anything else (.bat,
+                // .ps1, .hta, .scr, ...) would still be launched through the shell's file
+                // association, so a dropped file is not allowed to smuggle a script in as a
+                // "game" with an extracted icon and a fetched title.
+                string ext = Path.GetExtension(file);
+                if (!DroppableExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                {
+                    skipped.Add($"{Path.GetFileName(file)} - not an .exe, .lnk or .url");
+                    LoggingService.Warn("ImportCoordinator", $"Skipped dropped file '{file}': extension '{ext}' is not importable.");
+                    continue;
+                }
+
                 try
                 {
                     var shortcut = _shortcutService.Resolve(file);
                     string entryName = shortcut.Name;
                     string? onlineAppId = shortcut.SteamAppId;
+
+                    // A shortcut's target is untrusted input: a .url can name any URL scheme and
+                    // a .lnk any target, and both are launched through ShellExecute later.
+                    string? targetProblem = ValidateDroppedTarget(shortcut);
+                    if (targetProblem != null)
+                    {
+                        skipped.Add($"{Path.GetFileName(file)} - {targetProblem}");
+                        LoggingService.Warn("ImportCoordinator", $"Skipped dropped file '{file}': {targetProblem} (target '{shortcut.TargetPath}').");
+                        continue;
+                    }
+
+                    if (!shortcut.IsSteamUrl)
+                    {
+                        var platformMatch = await Task.Run(() => lookupIndex.Match(shortcut.TargetPath));
+                        if (platformMatch != null)
+                        {
+                            LoggingService.Info("ImportCoordinator", $"Dropped '{file}' resolved to {platformMatch.Platform} game '{platformMatch.Name}' - importing via {platformMatch.Platform}.");
+                            UnignoreForExplicitDrop(shortcut.TargetPath, platformMatch);
+                            platformDrops.Add(platformMatch, shortcut.TargetPath);
+                            continue;
+                        }
+                    }
+
+                    UnignoreForExplicitDrop(shortcut.TargetPath, null);
 
                     var existingDuplicate = _library.FindDuplicateGame(shortcut.TargetPath, shortcut.SteamAppId);
                     if (existingDuplicate != null)
@@ -394,6 +441,7 @@ public class ImportCoordinator : ViewModelBase
 
             if (addedEntries.Count > 0)
             {
+                localAdded = addedEntries.Count;
                 CommitImportedEntries(addedEntries, $"Added {addedEntries.Count} new game(s) instantly!");
             }
         }
@@ -407,6 +455,27 @@ public class ImportCoordinator : ViewModelBase
         }
 
         // Processed after the guard above is released - see comment at the top of this method.
+        if (!platformDrops.IsEmpty)
+        {
+            var platformResult = await ImportPlatformBucketsAsync(platformDrops);
+            _library.AnnounceImportResult(platformResult.Added < 0
+                ? "Import failed - check the log for details."
+                : ComposeImportSummary(localAdded, platformResult, "All dropped games are already in your library."));
+        }
+
+        if (skipped.Count > 0)
+        {
+            Window? owner = WindowHelper.ActiveOwner();
+            ModernDialog.ShowWarning(
+                owner,
+                skipped.Count == 1 ? "File Skipped" : "Some Files Were Skipped",
+                skipped.Count == 1
+                    ? "One dropped file wasn't added to the library:"
+                    : $"{skipped.Count} dropped files weren't added to the library:",
+                string.Join("\n", skipped.Select(s => "• " + s)) +
+                "\n\nTrayTrigger only imports game executables (.exe) and shortcuts (.lnk, .url) whose target is a local program or a game-launcher link.");
+        }
+
         if (folders.Count == 1)
         {
             await ProcessFolderAddAsync(folders[0]);
@@ -425,12 +494,13 @@ public class ImportCoordinator : ViewModelBase
     {
         _library.StatusMessage = "Scanning folders...";
         var aggregated = new List<GameCandidate>();
+        var lookupIndex = _platformLookup.CreateIndex();
 
         foreach (var folderPath in folderPaths)
         {
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) continue;
 
-            var scanResult = await Task.Run(() => _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName));
+            var scanResult = await Task.Run(() => ResolveAndFilterIgnored(_folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName), lookupIndex));
 
             if (scanResult.IsMultiGameLibrary)
             {
@@ -477,9 +547,9 @@ public class ImportCoordinator : ViewModelBase
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) return;
 
         _library.StatusMessage = "Scanning folder...";
-        var scanResult = await Task.Run(() => _folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName));
-        scanResult.DiscoveredGames = FilterIgnored(scanResult.DiscoveredGames).ToList();
-        scanResult.SingleGameCandidates = FilterIgnored(scanResult.SingleGameCandidates).ToList();
+        // Platform resolution and ignore filtering happen here, before any picking, so an
+        // ignored exe inside a Steam/GOG install can't hide the game the platform record names.
+        var scanResult = await Task.Run(() => ResolveAndFilterIgnored(_folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName), _platformLookup.CreateIndex()));
 
         // A. Multi-game parent folder detected (e.g. C:\Games, D:\SteamLibrary\steamapps\common, C:\GOG Games)
         if (scanResult.IsMultiGameLibrary)
@@ -556,6 +626,81 @@ public class ImportCoordinator : ViewModelBase
             return 0;
         }
 
+        // Candidates came from the generic folder heuristics; any that actually sit inside a
+        // launcher-owned install go through that platform's own import instead (see
+        // PlatformLookupService). Partitioned per candidate, so a mixed folder resolves correctly.
+        if (announceProgress)
+        {
+            _library.StatusMessage = "Checking for launcher-owned games...";
+        }
+        var (platformBuckets, localCandidates) = await Task.Run(() => PartitionByPlatform(candidates));
+
+        if (platformBuckets.IsEmpty)
+        {
+            return await ImportLocalCandidatesAsync(localCandidates, announceProgress);
+        }
+
+        if (announceProgress)
+        {
+            _library.StatusMessage = $"Importing {candidates.Count} game(s)...";
+        }
+
+        int localAdded = localCandidates.Count > 0 ? await ImportLocalCandidatesAsync(localCandidates, announceProgress: false) : 0;
+        var platformResult = await ImportPlatformBucketsAsync(platformBuckets);
+
+        if (localAdded < 0 || platformResult.Added < 0)
+        {
+            if (announceProgress)
+            {
+                int addedSoFar = Math.Max(localAdded, 0) + Math.Max(platformResult.Added, 0);
+                _library.StatusMessage = addedSoFar > 0
+                    ? $"Imported {addedSoFar} game(s), but part of the import failed - check the log for details."
+                    : "Import failed - check the log for details.";
+            }
+            return -1;
+        }
+
+        int total = localAdded + platformResult.Added + platformResult.Upgraded;
+        if (announceProgress)
+        {
+            _library.AnnounceImportResult(ComposeImportSummary(localAdded, platformResult, "All selected games are already in your library."));
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// One status line for an import that mixed Local entries with platform-routed ones, e.g.
+    /// "Added 4 game(s) and linked 1 existing (2 local, 2 via Steam, 1 linked to GOG)".
+    /// </summary>
+    private static string ComposeImportSummary(int localAdded, PlatformImportResult platform, string nothingNewMessage)
+    {
+        int added = localAdded + platform.Added;
+        if (added == 0 && platform.Upgraded == 0) return nothingNewMessage;
+
+        var parts = new List<string>(6);
+        if (localAdded > 0) parts.Add($"{localAdded} local");
+        if (platform.Description.Length > 0) parts.Add(platform.Description);
+
+        string head = added > 0 ? $"Added {added} game(s)" : "Nothing new to add";
+        if (platform.Upgraded > 0) head += $"{(added > 0 ? " and" : ", but")} linked {platform.Upgraded} existing";
+        return $"{head}! ({string.Join(", ", parts)})";
+    }
+
+    /// <summary>
+    /// The Local-game leg of <see cref="ImportBatchGamesAsync"/>: imports candidates as plain exe
+    /// entries with heuristic/online naming. Callers must already have routed launcher-owned
+    /// candidates elsewhere.
+    /// </summary>
+    private async Task<int> ImportLocalCandidatesAsync(List<GameCandidate> candidates, bool announceProgress)
+    {
+        if (candidates.Count == 0) return 0;
+
+        if (_isImportInProgress)
+        {
+            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            return 0;
+        }
+
         _isImportInProgress = true;
         try
         {
@@ -582,6 +727,7 @@ public class ImportCoordinator : ViewModelBase
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
+            int failed = 0;
 
             var tasks = toProcess.Select(async c =>
             {
@@ -625,6 +771,7 @@ public class ImportCoordinator : ViewModelBase
                 }
                 catch (Exception ex)
                 {
+                    Interlocked.Increment(ref failed);
                     LoggingService.Warn("ImportCoordinator", $"Failed to import candidate '{c.Name}': {ex.Message}");
                 }
                 finally
@@ -634,6 +781,14 @@ public class ImportCoordinator : ViewModelBase
             });
 
             await Task.WhenAll(tasks);
+
+            // Every item threw (logged above) - that's a failure, not "all duplicates". Without
+            // this the caller would print "already in your library" for e.g. an unwritable
+            // icon-cache directory, and the user would never retry.
+            if (preparedEntries.IsEmpty && failed > 0)
+            {
+                return -1;
+            }
 
             if (!preparedEntries.IsEmpty)
             {
@@ -664,6 +819,35 @@ public class ImportCoordinator : ViewModelBase
 
     public async Task AddCandidateAsync(GameCandidate candidate)
     {
+        if (_isImportInProgress)
+        {
+            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            return;
+        }
+
+        // A candidate that sits inside a launcher-owned install is imported through that
+        // platform's own route (real ID/name/art, launcher-aware launch) rather than as a Local
+        // exe. Resolved before taking the guard because the platform import takes it itself.
+        var platformMatch = candidate.Platform ?? await Task.Run(() => _platformLookup.FindByPath(candidate.ExePath));
+        if (platformMatch != null)
+        {
+            LoggingService.Info("ImportCoordinator", $"Candidate '{candidate.ExePath}' resolved to {platformMatch.Platform} game '{platformMatch.Name}' - importing via {platformMatch.Platform}.");
+            var buckets = new PlatformImportBuckets();
+            buckets.Add(platformMatch, candidate.ExePath);
+            var result = await ImportPlatformBucketsAsync(buckets);
+            _library.AnnounceImportResult(result switch
+            {
+                { Added: > 0 } => $"Added \"{platformMatch.Name}\" to library as a {platformMatch.Platform} game!",
+                { Upgraded: > 0 } => $"\"{platformMatch.Name}\" was already in your library - linked it to {platformMatch.Platform}.",
+                { Added: 0 } => $"\"{platformMatch.Name}\" is already in your library.",
+                _ => "Import failed - check the log for details."
+            });
+            return;
+        }
+
+        // Re-checked after the await above: two fire-and-forget AddCandidate calls issued in the
+        // same UI turn both pass the first check, and without this the second would run its own
+        // duplicate check before the first has committed - adding the same exe twice, unprompted.
         if (_isImportInProgress)
         {
             _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
@@ -735,6 +919,286 @@ public class ImportCoordinator : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Per-platform lists of discovery records resolved from manually-imported paths (see
+    /// <see cref="PlatformLookupService"/>), ready to hand to the matching Import*GamesAsync
+    /// method. Same-game hits are collapsed by platform ID, so dragging two exes out of one GOG
+    /// install adds it once.
+    /// </summary>
+    private sealed class PlatformImportBuckets
+    {
+        public List<DiscoveredSteamGame> Steam { get; } = [];
+        public List<DiscoveredGogGame> Gog { get; } = [];
+        public List<DiscoveredEaGame> Ea { get; } = [];
+        public List<DiscoveredEpicGame> Epic { get; } = [];
+        public List<DiscoveredUbisoftGame> Ubisoft { get; } = [];
+
+        public bool IsEmpty => Steam.Count == 0 && Gog.Count == 0 && Ea.Count == 0 && Epic.Count == 0 && Ubisoft.Count == 0;
+
+        // Every exe path that led to a given platform record ("Steam|440" -> {the dropped exe,
+        // the record's own exe}) - so an existing Local entry can be matched by whichever exe
+        // it was originally added from, not only the platform's registered one.
+        private readonly Dictionary<string, HashSet<string>> _sourcePaths = new(StringComparer.OrdinalIgnoreCase);
+
+        public IReadOnlySet<string> SourcePathsFor(string platform, string id)
+            => _sourcePaths.TryGetValue($"{platform}|{id}", out var set) ? set : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private void Remember(string platform, string id, string? recordExe, string sourceExe)
+        {
+            string key = $"{platform}|{id}";
+            if (!_sourcePaths.TryGetValue(key, out var set))
+            {
+                set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                _sourcePaths[key] = set;
+            }
+            if (!string.IsNullOrWhiteSpace(recordExe)) set.Add(recordExe);
+            if (!string.IsNullOrWhiteSpace(sourceExe)) set.Add(sourceExe);
+        }
+
+        /// <param name="sourceExePath">The exe the user actually dropped/the folder scan chose -
+        /// substituted only when the platform record has no exe of its own, so the entry always
+        /// has something to track/launch.</param>
+        public void Add(PlatformMatch match, string sourceExePath)
+        {
+            if (match.Steam is { } s)
+            {
+                Remember("Steam", s.AppId, s.ExePath, sourceExePath);
+                if (!Steam.Any(x => x.AppId.Equals(s.AppId, StringComparison.OrdinalIgnoreCase)))
+                    Steam.Add(s.ExePath == null ? s with { ExePath = sourceExePath, IconPath = s.IconPath ?? sourceExePath } : s);
+            }
+            else if (match.Gog is { } g)
+            {
+                Remember("GOG", g.GameId, g.ExePath, sourceExePath);
+                if (!Gog.Any(x => x.GameId.Equals(g.GameId, StringComparison.OrdinalIgnoreCase)))
+                    Gog.Add(g.ExePath == null ? g with { ExePath = sourceExePath, IconPath = g.IconPath ?? sourceExePath } : g);
+            }
+            else if (match.Ea is { } e)
+            {
+                Remember("EA", e.ContentId, e.ExePath, sourceExePath);
+                if (!Ea.Any(x => x.ContentId.Equals(e.ContentId, StringComparison.OrdinalIgnoreCase)))
+                    Ea.Add(e.ExePath == null ? e with { ExePath = sourceExePath, IconPath = e.IconPath ?? sourceExePath } : e);
+            }
+            else if (match.Epic is { } p)
+            {
+                Remember("Epic", p.AppName, p.ExePath, sourceExePath);
+                if (!Epic.Any(x => x.AppName.Equals(p.AppName, StringComparison.OrdinalIgnoreCase)))
+                    Epic.Add(p.ExePath == null ? p with { ExePath = sourceExePath, IconPath = p.IconPath ?? sourceExePath } : p);
+            }
+            else if (match.Ubisoft is { } u)
+            {
+                Remember("Ubisoft", u.GameId, u.ExePath, sourceExePath);
+                if (!Ubisoft.Any(x => x.GameId.Equals(u.GameId, StringComparison.OrdinalIgnoreCase)))
+                    Ubisoft.Add(u.ExePath == null ? u with { ExePath = sourceExePath, IconPath = u.IconPath ?? sourceExePath } : u);
+            }
+        }
+    }
+
+    /// <summary>Outcome of <see cref="ImportPlatformBucketsAsync"/>.</summary>
+    /// <param name="Added">Games actually added across all platforms, or -1 if any leg threw.</param>
+    /// <param name="Upgraded">Existing Local entries for the same exe that were linked to their
+    /// platform in place (see <see cref="UpgradeExistingEntries"/>) instead of being duplicated.</param>
+    /// <param name="Description">e.g. "2 via Steam, 1 linked to GOG" (counting only games actually
+    /// added or linked, so a duplicate isn't reported as imported). Empty when nothing changed.</param>
+    private readonly record struct PlatformImportResult(int Added, int Upgraded, string Description);
+
+    /// <summary>File types <see cref="HandleFileDropAsync"/> accepts. Matches the Add Game dialog's
+    /// primary filter; its "All Files" escape hatch also lands here and is refused the same way.</summary>
+    private static readonly string[] DroppableExtensions = [".exe", ".lnk", ".url"];
+
+    /// <summary>
+    /// Reasons a resolved shortcut/exe must not become a library entry, or null if it's fine:
+    /// a URL with a scheme outside <see cref="UrlProtocolHelper.IsAllowedLaunchUrl"/>'s allow-list,
+    /// a UNC/network target, or a local target that doesn't exist.
+    /// </summary>
+    private static string? ValidateDroppedTarget(ShortcutResolution shortcut)
+    {
+        string target = shortcut.TargetPath;
+        if (string.IsNullOrWhiteSpace(target)) return "the shortcut has no target";
+
+        if (ProcessLauncherService.IsNonFileProtocolUrl(target))
+        {
+            return UrlProtocolHelper.IsAllowedLaunchUrl(target)
+                ? null
+                : "its link type isn't a supported game launcher (only Steam, Epic, EA, Ubisoft, GOG Galaxy and web links are allowed)";
+        }
+
+        if (target.StartsWith(@"\\", StringComparison.Ordinal) || target.StartsWith("//", StringComparison.Ordinal))
+            return "it points at a network location - copy the game locally first";
+
+        if (!File.Exists(target)) return "its target file doesn't exist";
+
+        return null;
+    }
+
+    /// <summary>
+    /// The manual routes' counterpart of Scan for Games' existingExePaths check: a game that is
+    /// already in the library as a plain Local entry (added before the platform lookup existed, or
+    /// by a route it couldn't resolve) must not become a second card. Instead the existing entry
+    /// is tagged with the platform's ID and flag in place - keeping the user's name, category,
+    /// hotkey, scripts, playtime and artwork - and dropped from the bucket. A Steam record also
+    /// matches a Local entry that already carries the same SteamAppId from online title matching.
+    /// </summary>
+    /// <returns>How many existing entries were linked.</returns>
+    private int UpgradeExistingEntries(PlatformImportBuckets buckets)
+    {
+        int upgraded = 0;
+
+        upgraded += UpgradeBucket(buckets.Steam, "Steam", d => d.AppId,
+            (card, d) => !card.Game.IsSteamGame && string.Equals(card.Game.SteamAppId, d.AppId, StringComparison.OrdinalIgnoreCase),
+            (game, d) =>
+            {
+                game.IsSteamGame = true;
+                game.ImportedFrom = LauncherPlatform.Steam;
+                game.SteamAppId = d.AppId;
+                if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = d.InstallDir;
+                if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.SteamCategory;
+            });
+
+        upgraded += UpgradeBucket(buckets.Gog, "GOG", d => d.GameId, null,
+            (game, d) =>
+            {
+                game.IsGogGame = true;
+                game.ImportedFrom = LauncherPlatform.Gog;
+                game.GogGameId = d.GameId;
+                if (string.IsNullOrWhiteSpace(game.Arguments) && d.LaunchParam != null) game.Arguments = d.LaunchParam;
+                if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = d.InstallDir;
+                if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.GogCategory;
+            });
+
+        upgraded += UpgradeBucket(buckets.Ea, "EA", d => d.ContentId, null,
+            (game, d) =>
+            {
+                game.IsEaGame = true;
+                game.ImportedFrom = LauncherPlatform.Ea;
+                game.EaContentId = d.ContentId;
+                if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = d.InstallDir;
+                if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.EaCategory;
+            });
+
+        upgraded += UpgradeBucket(buckets.Epic, "Epic", d => d.AppName, null,
+            (game, d) =>
+            {
+                game.IsEpicGame = true;
+                game.ImportedFrom = LauncherPlatform.Epic;
+                game.EpicAppName = d.AppName;
+                if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = d.InstallDir;
+                if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.EpicCategory;
+            });
+
+        upgraded += UpgradeBucket(buckets.Ubisoft, "Ubisoft", d => d.GameId, null,
+            (game, d) =>
+            {
+                game.IsUbisoftGame = true;
+                game.ImportedFrom = LauncherPlatform.Ubisoft;
+                game.UbisoftGameId = d.GameId;
+                if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = d.InstallDir;
+                if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.UbisoftCategory;
+            });
+
+        if (upgraded > 0)
+        {
+            _library.RebuildCategories();
+            _library.SaveLibrary();
+            _library.ApplySort();
+        }
+        return upgraded;
+
+        int UpgradeBucket<T>(List<T> bucket, string platform, Func<T, string> id, Func<GameCardViewModel, T, bool>? extraMatch, Action<GameEntry, T> apply)
+        {
+            int count = 0;
+            for (int i = bucket.Count - 1; i >= 0; i--)
+            {
+                var record = bucket[i];
+                var paths = buckets.SourcePathsFor(platform, id(record));
+                var card = _library.Games.FirstOrDefault(g =>
+                    !g.IsLocalGame ? false
+                    : paths.Contains(g.Game.ExecutablePath) || (extraMatch?.Invoke(g, record) ?? false));
+                if (card == null) continue;
+
+                apply(card.Game, record);
+                card.RefreshProperties();
+                bucket.RemoveAt(i);
+                count++;
+                LoggingService.Info("ImportCoordinator", $"Linked existing Local entry '{card.Name}' ({card.Game.ExecutablePath}) to {platform} game ID {id(record)} instead of adding a duplicate.");
+            }
+            return count;
+        }
+    }
+
+    /// <summary>
+    /// Splits folder-scan candidates into launcher-owned ones (bucketed by platform) and genuinely
+    /// local ones. Runs the platform lookups, so call it off the UI thread.
+    /// </summary>
+    private (PlatformImportBuckets Platform, List<GameCandidate> Local) PartitionByPlatform(List<GameCandidate> candidates)
+    {
+        var buckets = new PlatformImportBuckets();
+        var local = new List<GameCandidate>(candidates.Count);
+        var index = _platformLookup.CreateIndex();
+
+        foreach (var candidate in candidates)
+        {
+            var match = candidate.Platform ?? index.Match(candidate.ExePath);
+            if (match != null)
+            {
+                LoggingService.Info("ImportCoordinator", $"Candidate '{candidate.ExePath}' resolved to {match.Platform} game '{match.Name}' - importing via {match.Platform}.");
+                buckets.Add(match, candidate.ExePath);
+            }
+            else
+            {
+                local.Add(candidate);
+            }
+        }
+
+        return (buckets, local);
+    }
+
+    /// <summary>
+    /// Runs each non-empty bucket through its platform's own import (quietly - no per-leg status
+    /// messages; the caller composes one from the returned description).
+    /// </summary>
+    private async Task<PlatformImportResult> ImportPlatformBucketsAsync(PlatformImportBuckets buckets)
+    {
+        // Existing Local entries for the same exe are linked in place and leave the buckets
+        // before any leg runs, so they can't be duplicated by the ID-only dedup in the legs.
+        var linked = new Dictionary<string, int>();
+        int upgraded = 0;
+        foreach (var (platform, before) in new[] { ("Steam", buckets.Steam.Count), ("GOG", buckets.Gog.Count), ("EA", buckets.Ea.Count), ("Epic", buckets.Epic.Count), ("Ubisoft", buckets.Ubisoft.Count) })
+        {
+            linked[platform] = before;
+        }
+        upgraded = UpgradeExistingEntries(buckets);
+        linked["Steam"] -= buckets.Steam.Count;
+        linked["GOG"] -= buckets.Gog.Count;
+        linked["EA"] -= buckets.Ea.Count;
+        linked["Epic"] -= buckets.Epic.Count;
+        linked["Ubisoft"] -= buckets.Ubisoft.Count;
+
+        int steamAdded = buckets.Steam.Count > 0 ? await ImportSteamGamesAsync(buckets.Steam, announceProgress: false) : 0;
+        int gogAdded = buckets.Gog.Count > 0 ? await ImportGogGamesAsync(buckets.Gog, announceProgress: false) : 0;
+        int eaAdded = buckets.Ea.Count > 0 ? await ImportEaGamesAsync(buckets.Ea, announceProgress: false) : 0;
+        int epicAdded = buckets.Epic.Count > 0 ? await ImportEpicGamesAsync(buckets.Epic, announceProgress: false) : 0;
+        int ubisoftAdded = buckets.Ubisoft.Count > 0 ? await ImportUbisoftGamesAsync(buckets.Ubisoft, announceProgress: false) : 0;
+
+        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0)
+        {
+            return new PlatformImportResult(-1, upgraded, string.Empty);
+        }
+
+        var parts = new List<string>(10);
+        void Describe(string platform, int added)
+        {
+            if (added > 0) parts.Add($"{added} via {platform}");
+            if (linked[platform] > 0) parts.Add($"{linked[platform]} linked to {platform}");
+        }
+        Describe("Steam", steamAdded);
+        Describe("GOG", gogAdded);
+        Describe("EA", eaAdded);
+        Describe("Epic", epicAdded);
+        Describe("Ubisoft", ubisoftAdded);
+
+        return new PlatformImportResult(steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded, upgraded, string.Join(", ", parts));
+    }
+
     private void AddGameBrowse()
     {
         var dialog = new OpenFileDialog
@@ -784,15 +1248,17 @@ public class ImportCoordinator : ViewModelBase
     {
         if (!silent && !_settings.HasSeenLauncherDetectionPrompt)
         {
-            // Marked seen before the prompt is even shown - same reasoning as the app's other
-            // one-time prompts (see MainWindow.MaybeShowWelcomePrompt): a crash mid-dialog, or
-            // the user just declining, must not cause this to ask again on the next press.
-            _settings.HasSeenLauncherDetectionPrompt = true;
-            _storageService.SaveSettings(_settings);
-
             var detected = DetectInstalledLaunchers();
             if (detected.Count > 0)
             {
+                // Marked seen before the prompt is shown - same reasoning as the app's other
+                // one-time prompts (see MainWindow.MaybeShowWelcomePrompt): a crash mid-dialog,
+                // or the user just declining, must not cause this to ask again on the next
+                // press. But only once there's something to show: a user who pressed Scan
+                // before installing any launcher still gets the picker when they later do.
+                _settings.HasSeenLauncherDetectionPrompt = true;
+                _storageService.SaveSettings(_settings);
+
                 RequestLauncherDetectionPrompt?.Invoke(detected);
                 return;
             }
@@ -811,29 +1277,58 @@ public class ImportCoordinator : ViewModelBase
     private List<Views.DetectedLauncherOption> DetectInstalledLaunchers()
     {
         var detected = new List<Views.DetectedLauncherOption>();
-        try
-        {
-            AddIfFound(detected, Views.DetectedLauncher.Steam, "Steam", _steamScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
-            AddIfFound(detected, Views.DetectedLauncher.Gog, "GOG Galaxy", _gogScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
-            AddIfFound(detected, Views.DetectedLauncher.Ea, "EA App", _eaScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
-            AddIfFound(detected, Views.DetectedLauncher.Epic, "Epic Games", _epicScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
-            AddIfFound(detected, Views.DetectedLauncher.Ubisoft, "Ubisoft Connect", _ubisoftScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        var probed = new HashSet<Views.DetectedLauncher>();
 
-            LoggingService.Info("ImportCoordinator", detected.Count == 0
-                ? "First 'Scan for Games' press: no supported launcher had any installed games."
-                : $"First 'Scan for Games' press: detected {string.Join(", ", detected.Select(d => $"{d.DisplayName} ({d.GameCount})"))}.");
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("ImportCoordinator", $"Error detecting installed launchers: {ex.Message}");
-        }
+        // Each probe is isolated: one platform's scanner throwing must not stop the others,
+        // and - more importantly - must not make that platform look "not installed" to the
+        // picker, which would silently turn its toggle off. LastProbedLaunchers records which
+        // probes completed so ApplyDetectedLauncherChoices leaves the rest untouched.
+        Probe(Views.DetectedLauncher.Steam, "Steam", () => _steamScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Gog, "GOG Galaxy", () => _gogScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Ea, "EA App", () => _eaScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Epic, "Epic Games", () => _epicScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Ubisoft, "Ubisoft Connect", () => _ubisoftScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+
+        LastProbedLaunchers = probed;
+        LoggingService.Info("ImportCoordinator", detected.Count == 0
+            ? "First 'Scan for Games' press: no supported launcher had any installed games."
+            : $"First 'Scan for Games' press: detected {string.Join(", ", detected.Select(d => $"{d.DisplayName} ({d.GameCount})"))}.");
         return detected;
 
-        static void AddIfFound(List<Views.DetectedLauncherOption> list, Views.DetectedLauncher launcher, string displayName, int count)
+        void Probe(Views.DetectedLauncher launcher, string displayName, Func<int> countGames)
         {
-            if (count > 0) list.Add(new Views.DetectedLauncherOption(launcher, displayName, count));
+            try
+            {
+                int count = countGames();
+                probed.Add(launcher);
+                if (count > 0)
+                {
+                    // Pre-ticked from the toggle's *current* value, so a platform the user has
+                    // already turned off by hand in Settings isn't silently re-enabled by
+                    // confirming the picker.
+                    detected.Add(new Views.DetectedLauncherOption(launcher, displayName, count) { IsSelected = IsIntegrationEnabled(launcher) });
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("ImportCoordinator", $"Error probing {displayName} for installed games: {ex.Message}");
+            }
         }
     }
+
+    /// <summary>The launchers whose probe completed in the most recent
+    /// <see cref="DetectInstalledLaunchers"/> run - see SettingsViewModel.ApplyDetectedLauncherChoices.</summary>
+    public IReadOnlySet<Views.DetectedLauncher> LastProbedLaunchers { get; private set; } = new HashSet<Views.DetectedLauncher>();
+
+    private bool IsIntegrationEnabled(Views.DetectedLauncher launcher) => launcher switch
+    {
+        Views.DetectedLauncher.Steam => _settings.SteamIntegrationEnabled,
+        Views.DetectedLauncher.Gog => _settings.GogIntegrationEnabled,
+        Views.DetectedLauncher.Ea => _settings.EaIntegrationEnabled,
+        Views.DetectedLauncher.Epic => _settings.EpicIntegrationEnabled,
+        Views.DetectedLauncher.Ubisoft => _settings.UbisoftIntegrationEnabled,
+        _ => false
+    };
 
     /// <summary>
     /// Called after the user confirms <see cref="Views.LauncherDetectionDialog"/> with at least
@@ -846,8 +1341,17 @@ public class ImportCoordinator : ViewModelBase
     /// confusing regardless of being cosmetic). This method just re-syncs Steam's scan locations
     /// if Steam was turned on, then runs the real scan.
     /// </summary>
-    public void CompleteFirstTimeLauncherDetection()
+    public void CompleteFirstTimeLauncherDetection(bool anyLauncherEnabled = true)
     {
+        if (!anyLauncherEnabled)
+        {
+            // "Enable Selected" with nothing ticked is a legitimate choice (the user wants no
+            // launcher integrations) - honour it, but say so rather than falling through to a
+            // scan that would only pop the "No Scan Locations" dialog at them.
+            _library.AnnounceImportResult("No launcher integrations enabled. Turn them on any time in Settings → Library, or add a scan location.");
+            return;
+        }
+
         if (_settings.SteamIntegrationEnabled)
         {
             SyncSteamScanLocationsOnStartup();
@@ -857,10 +1361,12 @@ public class ImportCoordinator : ViewModelBase
     }
 
     /// <summary>Called if the user closes/skips the first-time launcher-detection prompt without
-    /// confirming - nothing to do, since HasSeenLauncherDetectionPrompt is already marked seen
-    /// and no toggle was touched; the next "Scan for Games" press just runs normally.</summary>
+    /// confirming. HasSeenLauncherDetectionPrompt is already marked seen and no toggle was
+    /// touched; the next "Scan for Games" press just runs normally - which the status line says,
+    /// since the user pressed Scan and would otherwise see nothing happen at all.</summary>
     public void SkipFirstTimeLauncherDetection()
     {
+        _library.AnnounceImportResult("Launcher setup skipped - press Scan for Games again to scan with the current Settings.");
     }
 
     /// <summary>
@@ -887,16 +1393,25 @@ public class ImportCoordinator : ViewModelBase
         // GOG/EA/Epic/Ubisoft scanning isn't gated by ScanLocations at all (see the
         // gogEnabled/eaEnabled/epicEnabled/ubisoftEnabled comment below), so any one alone is
         // enough to proceed even with zero configured scan locations.
-        if (enabledLocations.Count == 0 && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled)
+        // Steam library rows linger in settings while Steam integration is off (they're hidden
+        // and skipped, not deleted), so they must not count towards "something to scan".
+        bool anySteamLibrary = _settings.SteamIntegrationEnabled && enabledLocations.Any(l => l.Source == ScanLocationSource.Steam);
+        bool anyManualFolder = enabledLocations.Any(l => l.Source != ScanLocationSource.Steam);
+        if (!anySteamLibrary && !anyManualFolder && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled)
         {
             if (!silent)
             {
                 Window? owner = WindowHelper.ActiveOwner();
+                bool steamOnButNoLibraries = _settings.SteamIntegrationEnabled;
                 ModernDialog.ShowInfo(
                     owner,
-                    "No Scan Locations",
-                    "You haven't added any scan locations yet.",
-                    "Add one in Settings → Game Scanner, then try again.");
+                    "Nothing to Scan",
+                    steamOnButNoLibraries
+                        ? "Steam integration is on, but none of its library folders are enabled."
+                        : "No launcher integrations are enabled and no scan locations have been added.",
+                    steamOnButNoLibraries
+                        ? "Tick a Steam library under the Steam toggle in Settings → Library (or click Refresh there if none are listed), then try again."
+                        : "Turn on a launcher integration or add a folder under Scan Locations in Settings → Library, then try again.");
             }
             return;
         }
@@ -962,9 +1477,14 @@ public class ImportCoordinator : ViewModelBase
                     string? steamPath = _steamScannerService.GetSteamInstallPath();
                     if (!string.IsNullOrEmpty(steamPath))
                     {
+                        // The exe-path fallback mirrors the GOG/EA/Epic/Ubisoft tasks below: a
+                        // Steam game that reached the library without a SteamAppId (added by
+                        // some route the platform lookup couldn't resolve) must not be offered
+                        // again as "new" - selecting it would create a second row for the same exe.
                         steamResults = _steamScannerService
                             .ScanInstalledGames(steamLocations.Select(l => l.Path), steamPath, existingAppIds)
-                            .Where(g => !g.IsAlreadyImported && !ignoredAppIds.Contains(g.AppId))
+                            .Where(g => !g.IsAlreadyImported && !ignoredAppIds.Contains(g.AppId) &&
+                                        (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
                             .ToList();
                     }
                 }
@@ -1006,10 +1526,26 @@ public class ImportCoordinator : ViewModelBase
                     .ToList()
                 : new List<DiscoveredUbisoftGame>());
 
+            // "Platform|ID" of every platform-tagged game already in the library, so a folder
+            // candidate that resolves to one of them (e.g. a GOG game found under a manual
+            // "C:\GOG Games" scan location) isn't offered as new just because its exe path
+            // differs from the entry's - a Steam entry's path is a steam:// URL, never the exe.
+            var existingPlatformKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var g in _library.Games.Select(c => c.Game))
+            {
+                if (!string.IsNullOrEmpty(g.SteamAppId)) existingPlatformKeys.Add($"Steam|{g.SteamAppId}");
+                if (!string.IsNullOrEmpty(g.GogGameId)) existingPlatformKeys.Add($"GOG|{g.GogGameId}");
+                if (!string.IsNullOrEmpty(g.EaContentId)) existingPlatformKeys.Add($"EA|{g.EaContentId}");
+                if (!string.IsNullOrEmpty(g.EpicAppName)) existingPlatformKeys.Add($"Epic|{g.EpicAppName}");
+                if (!string.IsNullOrEmpty(g.UbisoftGameId)) existingPlatformKeys.Add($"Ubisoft|{g.UbisoftGameId}");
+            }
+
             var folderTask = Task.Run(() =>
             {
                 var folderResults = new List<GameCandidate>();
                 var ignoredExePaths = BuildIgnoredExePathSet();
+                var ignoredPlatformKeys = BuildIgnoredPlatformKeySet();
+                var index = _platformLookup.CreateIndex();
                 foreach (var loc in folderLocations)
                 {
                     if (!Directory.Exists(loc.Path)) continue;
@@ -1018,8 +1554,12 @@ public class ImportCoordinator : ViewModelBase
                     // game library), so this skips ScanFolderOrLibrary's is-this-a-library
                     // confidence gating entirely and takes every immediate subfolder's own best
                     // candidate directly - see ScanKnownLibraryLocation.
-                    var candidates = FilterIgnored(_folderScannerService.ScanKnownLibraryLocation(loc.Path, _settings.PreferExeForGameName), ignoredExePaths);
-                    folderResults.AddRange(candidates.Where(c => !existingExePaths.Contains(c.ExePath)));
+                    var candidates = FilterIgnored(
+                        ResolvePlatforms(_folderScannerService.ScanKnownLibraryLocation(loc.Path, _settings.PreferExeForGameName), index),
+                        ignoredExePaths, ignoredPlatformKeys);
+                    folderResults.AddRange(candidates.Where(c =>
+                        !existingExePaths.Contains(c.ExePath) &&
+                        (c.Platform == null || !existingPlatformKeys.Contains(PlatformKey(c.Platform)))));
                 }
                 return folderResults;
             });
@@ -1028,9 +1568,23 @@ public class ImportCoordinator : ViewModelBase
             var (steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates) =
                 (steamTask.Result, gogTask.Result, eaTask.Result, epicTask.Result, ubisoftTask.Result, folderTask.Result);
 
+            // A game a platform scan already found in this run must not be listed a second time
+            // as a folder candidate (a manual scan location that overlaps a launcher's install
+            // root) - the picker would show it twice and the import would then dedupe silently.
+            var runPlatformKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            runPlatformKeys.UnionWith(steamGames.Select(g => $"Steam|{g.AppId}"));
+            runPlatformKeys.UnionWith(gogGames.Select(g => $"GOG|{g.GameId}"));
+            runPlatformKeys.UnionWith(eaGames.Select(g => $"EA|{g.ContentId}"));
+            runPlatformKeys.UnionWith(epicGames.Select(g => $"Epic|{g.AppName}"));
+            runPlatformKeys.UnionWith(ubisoftGames.Select(g => $"Ubisoft|{g.GameId}"));
+            folderCandidates = folderCandidates
+                .Where(c => c.Platform == null || !runPlatformKeys.Contains(PlatformKey(c.Platform)))
+                .DistinctBy(c => c.Platform != null ? PlatformKey(c.Platform) : c.ExePath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && folderCandidates.Count == 0)
             {
-                _library.StatusMessage = "No new games found.";
+                _library.AnnounceImportResult("No new games found.");
                 return;
             }
 
@@ -1045,18 +1599,117 @@ public class ImportCoordinator : ViewModelBase
 
     /// <summary>Drops any candidate whose exe path the user has permanently ignored (see <see cref="IgnoreGamePath"/>).</summary>
     private IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates)
-        => FilterIgnored(candidates, BuildIgnoredExePathSet());
+        => FilterIgnored(candidates, BuildIgnoredExePathSet(), BuildIgnoredPlatformKeySet());
 
-    /// <summary>Same as the single-arg overload, but takes a pre-built set - for a caller that
-    /// filters multiple lists (or scan locations) in one pass, so the ignore list isn't rebuilt
-    /// into a fresh HashSet on every call.</summary>
-    private static IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates, HashSet<string> ignoredExePaths)
-        => candidates.Where(c => !ignoredExePaths.Contains(c.ExePath));
+    /// <summary>
+    /// Same as the single-arg overload, but takes pre-built sets - for a caller that filters
+    /// multiple lists (or scan locations) in one pass. A candidate that resolved to a platform
+    /// (see <see cref="ResolvePlatforms"/>) is judged by its platform ID, not its exe path: the
+    /// user ignoring a misdetected exe inside a Steam install must not block importing that
+    /// game through Steam's own record, and ignoring a Steam AppId in the scan picker must also
+    /// apply when the same game arrives via Add Folder.
+    /// </summary>
+    private static IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates, HashSet<string> ignoredExePaths, HashSet<string> ignoredPlatformKeys)
+        => candidates.Where(c => c.Platform != null
+            ? !ignoredPlatformKeys.Contains(PlatformKey(c.Platform))
+            : !ignoredExePaths.Contains(c.ExePath));
 
     private HashSet<string> BuildIgnoredExePathSet()
         => new(
             _settings.IgnoredGamePaths.Where(p => p.ExePath != null).Select(p => p.ExePath!),
             StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>"Steam|440", "GOG|1207658924", ... for every platform-ID ignore.</summary>
+    private HashSet<string> BuildIgnoredPlatformKeySet()
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in _settings.IgnoredGamePaths)
+        {
+            if (p.SteamAppId != null) set.Add($"Steam|{p.SteamAppId}");
+            if (p.GogGameId != null) set.Add($"GOG|{p.GogGameId}");
+            if (p.EaContentId != null) set.Add($"EA|{p.EaContentId}");
+            if (p.EpicAppName != null) set.Add($"Epic|{p.EpicAppName}");
+            if (p.UbisoftGameId != null) set.Add($"Ubisoft|{p.UbisoftGameId}");
+        }
+        return set;
+    }
+
+    /// <summary>"Platform|ID" - the identity used for ignore and dedupe checks on a resolved match.</summary>
+    private static string PlatformKey(PlatformMatch match) => match switch
+    {
+        { Steam: { } s } => $"Steam|{s.AppId}",
+        { Gog: { } g } => $"GOG|{g.GameId}",
+        { Ea: { } e } => $"EA|{e.ContentId}",
+        { Epic: { } p } => $"Epic|{p.AppName}",
+        { Ubisoft: { } u } => $"Ubisoft|{u.GameId}",
+        _ => string.Empty
+    };
+
+    /// <summary>
+    /// Runs the platform lookup over folder-scan candidates up front, so everything downstream
+    /// (ignore checks, the batch dialog's names/badges/"in library" state, the final import)
+    /// sees the same answer. A matched candidate takes the platform's own title.
+    /// </summary>
+    private static List<GameCandidate> ResolvePlatforms(IEnumerable<GameCandidate> candidates, PlatformLookupService.Index index)
+    {
+        var resolved = new List<GameCandidate>();
+        foreach (var c in candidates)
+        {
+            if (c.Platform != null) { resolved.Add(c); continue; }
+            var match = index.Match(c.ExePath);
+            resolved.Add(match == null ? c : c with { Platform = match, Name = match.Name });
+        }
+        return resolved;
+    }
+
+    /// <summary>Resolves platforms for both halves of a folder scan result and drops ignored
+    /// candidates - the shared post-processing for every Add Folder / folder-drop route.</summary>
+    private FolderScanResult ResolveAndFilterIgnored(FolderScanResult scan, PlatformLookupService.Index index)
+    {
+        var ignoredExe = BuildIgnoredExePathSet();
+        var ignoredKeys = BuildIgnoredPlatformKeySet();
+        scan.DiscoveredGames = FilterIgnored(ResolvePlatforms(scan.DiscoveredGames, index), ignoredExe, ignoredKeys).ToList();
+        scan.SingleGameCandidates = FilterIgnored(ResolvePlatforms(scan.SingleGameCandidates, index), ignoredExe, ignoredKeys).ToList();
+        return scan;
+    }
+
+    /// <summary>Ignores a candidate by whatever identity it has: platform ID when it resolved to a
+    /// launcher game, exe path otherwise - so the batch dialog's "Ignore" matches the scan picker's.</summary>
+    public void IgnoreCandidate(GameCandidate candidate)
+    {
+        switch (candidate.Platform)
+        {
+            case { Steam: { } s }: IgnoreSteamGame(s.AppId, candidate.Name); break;
+            case { Gog: { } g }: IgnoreGogGame(g.GameId, candidate.Name); break;
+            case { Ea: { } e }: IgnoreEaGame(e.ContentId, candidate.Name); break;
+            case { Epic: { } p }: IgnoreEpicGame(p.AppName, candidate.Name); break;
+            case { Ubisoft: { } u }: IgnoreUbisoftGame(u.GameId, candidate.Name); break;
+            default: IgnoreGamePath(candidate.ExePath, candidate.Name); break;
+        }
+    }
+
+    /// <summary>
+    /// An explicitly dropped/browsed exe is not a "suggestion" the ignore list can veto - the
+    /// user just told us they want it. Any ignore entry that would have hidden it (its exe path,
+    /// or the platform ID it resolved to) is removed, so a later scan doesn't drop it either.
+    /// </summary>
+    private void UnignoreForExplicitDrop(string exePath, PlatformMatch? match)
+    {
+        string? key = match != null ? PlatformKey(match) : null;
+        int removed = _settings.IgnoredGamePaths.RemoveAll(p =>
+            (p.ExePath != null && string.Equals(p.ExePath, exePath, StringComparison.OrdinalIgnoreCase)) ||
+            (key != null && (
+                (p.SteamAppId != null && key.Equals($"Steam|{p.SteamAppId}", StringComparison.OrdinalIgnoreCase)) ||
+                (p.GogGameId != null && key.Equals($"GOG|{p.GogGameId}", StringComparison.OrdinalIgnoreCase)) ||
+                (p.EaContentId != null && key.Equals($"EA|{p.EaContentId}", StringComparison.OrdinalIgnoreCase)) ||
+                (p.EpicAppName != null && key.Equals($"Epic|{p.EpicAppName}", StringComparison.OrdinalIgnoreCase)) ||
+                (p.UbisoftGameId != null && key.Equals($"Ubisoft|{p.UbisoftGameId}", StringComparison.OrdinalIgnoreCase)))));
+        if (removed > 0)
+        {
+            _storageService.SaveSettings(_settings);
+            LoggingService.Info("ImportCoordinator", $"Removed {removed} ignore entr{(removed == 1 ? "y" : "ies")} for '{exePath}' because it was dropped explicitly.");
+        }
+    }
 
     /// <summary>
     /// Permanently excludes an exe from future "Add Folder" and "Scan for Games" results - for a
@@ -1183,16 +1836,16 @@ public class ImportCoordinator : ViewModelBase
         if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || folderAdded < 0)
         {
             int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(gogAdded, 0) + Math.Max(eaAdded, 0) + Math.Max(epicAdded, 0) + Math.Max(ubisoftAdded, 0) + Math.Max(folderAdded, 0);
-            _library.StatusMessage = addedSoFar > 0
+            _library.AnnounceImportResult(addedSoFar > 0
                 ? $"Imported {addedSoFar} game(s), but part of the import failed - check the log for details."
-                : "Import failed - check the log for details.";
+                : "Import failed - check the log for details.");
             return;
         }
 
         int addedTotal = steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + folderAdded;
-        _library.StatusMessage = addedTotal > 0
+        _library.AnnounceImportResult(addedTotal > 0
             ? $"Imported {addedTotal} game(s)!"
-            : "All selected games are already in your library.";
+            : "All selected games are already in your library.");
     }
 
     /// <summary>
@@ -1256,6 +1909,7 @@ public class ImportCoordinator : ViewModelBase
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
+            int failed = 0;
 
             var tasks = toProcess.Select(async d =>
             {
@@ -1267,6 +1921,7 @@ public class ImportCoordinator : ViewModelBase
                         Name = d.Name,
                         ExecutablePath = $"steam://rungameid/{d.AppId}",
                         IsSteamGame = true,
+                        ImportedFrom = LauncherPlatform.Steam,
                         SteamAppId = d.AppId,
                         Category = LibraryConstants.SteamCategory,
                         WorkingDirectory = d.InstallDir
@@ -1278,6 +1933,7 @@ public class ImportCoordinator : ViewModelBase
                 }
                 catch (Exception ex)
                 {
+                    Interlocked.Increment(ref failed);
                     LoggingService.Warn("ImportCoordinator", $"Failed to import Steam game '{d.Name}': {ex.Message}");
                 }
                 finally
@@ -1287,6 +1943,14 @@ public class ImportCoordinator : ViewModelBase
             });
 
             await Task.WhenAll(tasks);
+
+            // Every item threw (logged above) - that's a failure, not "all duplicates". Without
+            // this the caller would print "already in your library" for e.g. an unwritable
+            // icon-cache directory, and the user would never retry.
+            if (preparedEntries.IsEmpty && failed > 0)
+            {
+                return -1;
+            }
 
             if (!preparedEntries.IsEmpty)
             {
@@ -1352,6 +2016,7 @@ public class ImportCoordinator : ViewModelBase
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
+            int failed = 0;
 
             var tasks = toProcess.Select(async d =>
             {
@@ -1367,6 +2032,7 @@ public class ImportCoordinator : ViewModelBase
                         // see ProcessLauncherService) still passes them.
                         Arguments = d.LaunchParam ?? string.Empty,
                         IsGogGame = true,
+                        ImportedFrom = LauncherPlatform.Gog,
                         GogGameId = d.GameId,
                         Category = LibraryConstants.GogCategory,
                         WorkingDirectory = d.InstallDir
@@ -1378,6 +2044,7 @@ public class ImportCoordinator : ViewModelBase
                 }
                 catch (Exception ex)
                 {
+                    Interlocked.Increment(ref failed);
                     LoggingService.Warn("ImportCoordinator", $"Failed to import GOG game '{d.Name}': {ex.Message}");
                 }
                 finally
@@ -1387,6 +2054,14 @@ public class ImportCoordinator : ViewModelBase
             });
 
             await Task.WhenAll(tasks);
+
+            // Every item threw (logged above) - that's a failure, not "all duplicates". Without
+            // this the caller would print "already in your library" for e.g. an unwritable
+            // icon-cache directory, and the user would never retry.
+            if (preparedEntries.IsEmpty && failed > 0)
+            {
+                return -1;
+            }
 
             if (!preparedEntries.IsEmpty)
             {
@@ -1452,6 +2127,7 @@ public class ImportCoordinator : ViewModelBase
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
+            int failed = 0;
 
             var tasks = toProcess.Select(async d =>
             {
@@ -1463,6 +2139,7 @@ public class ImportCoordinator : ViewModelBase
                         Name = d.Name,
                         ExecutablePath = d.ExePath ?? string.Empty,
                         IsEaGame = true,
+                        ImportedFrom = LauncherPlatform.Ea,
                         EaContentId = d.ContentId,
                         Category = LibraryConstants.EaCategory,
                         WorkingDirectory = d.InstallDir
@@ -1474,6 +2151,7 @@ public class ImportCoordinator : ViewModelBase
                 }
                 catch (Exception ex)
                 {
+                    Interlocked.Increment(ref failed);
                     LoggingService.Warn("ImportCoordinator", $"Failed to import EA game '{d.Name}': {ex.Message}");
                 }
                 finally
@@ -1483,6 +2161,14 @@ public class ImportCoordinator : ViewModelBase
             });
 
             await Task.WhenAll(tasks);
+
+            // Every item threw (logged above) - that's a failure, not "all duplicates". Without
+            // this the caller would print "already in your library" for e.g. an unwritable
+            // icon-cache directory, and the user would never retry.
+            if (preparedEntries.IsEmpty && failed > 0)
+            {
+                return -1;
+            }
 
             if (!preparedEntries.IsEmpty)
             {
@@ -1548,6 +2234,7 @@ public class ImportCoordinator : ViewModelBase
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
+            int failed = 0;
 
             var tasks = toProcess.Select(async d =>
             {
@@ -1559,6 +2246,7 @@ public class ImportCoordinator : ViewModelBase
                         Name = d.Name,
                         ExecutablePath = d.ExePath ?? string.Empty,
                         IsEpicGame = true,
+                        ImportedFrom = LauncherPlatform.Epic,
                         EpicAppName = d.AppName,
                         Category = LibraryConstants.EpicCategory,
                         WorkingDirectory = d.InstallDir
@@ -1570,6 +2258,7 @@ public class ImportCoordinator : ViewModelBase
                 }
                 catch (Exception ex)
                 {
+                    Interlocked.Increment(ref failed);
                     LoggingService.Warn("ImportCoordinator", $"Failed to import Epic game '{d.Name}': {ex.Message}");
                 }
                 finally
@@ -1579,6 +2268,14 @@ public class ImportCoordinator : ViewModelBase
             });
 
             await Task.WhenAll(tasks);
+
+            // Every item threw (logged above) - that's a failure, not "all duplicates". Without
+            // this the caller would print "already in your library" for e.g. an unwritable
+            // icon-cache directory, and the user would never retry.
+            if (preparedEntries.IsEmpty && failed > 0)
+            {
+                return -1;
+            }
 
             if (!preparedEntries.IsEmpty)
             {
@@ -1644,6 +2341,7 @@ public class ImportCoordinator : ViewModelBase
 
             using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
             var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
+            int failed = 0;
 
             var tasks = toProcess.Select(async d =>
             {
@@ -1655,6 +2353,7 @@ public class ImportCoordinator : ViewModelBase
                         Name = d.Name,
                         ExecutablePath = d.ExePath ?? string.Empty,
                         IsUbisoftGame = true,
+                        ImportedFrom = LauncherPlatform.Ubisoft,
                         UbisoftGameId = d.GameId,
                         Category = LibraryConstants.UbisoftCategory,
                         WorkingDirectory = d.InstallDir
@@ -1666,6 +2365,7 @@ public class ImportCoordinator : ViewModelBase
                 }
                 catch (Exception ex)
                 {
+                    Interlocked.Increment(ref failed);
                     LoggingService.Warn("ImportCoordinator", $"Failed to import Ubisoft game '{d.Name}': {ex.Message}");
                 }
                 finally
@@ -1675,6 +2375,14 @@ public class ImportCoordinator : ViewModelBase
             });
 
             await Task.WhenAll(tasks);
+
+            // Every item threw (logged above) - that's a failure, not "all duplicates". Without
+            // this the caller would print "already in your library" for e.g. an unwritable
+            // icon-cache directory, and the user would never retry.
+            if (preparedEntries.IsEmpty && failed > 0)
+            {
+                return -1;
+            }
 
             if (!preparedEntries.IsEmpty)
             {

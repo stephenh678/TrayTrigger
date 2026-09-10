@@ -223,6 +223,14 @@ public class LibraryViewModel : ViewModelBase
         set { _launchToastMessage = value; OnPropertyChanged(); }
     }
 
+    private string _launchToastIcon = "▶";
+    /// <summary>Glyph shown at the left of the floating toast: "▶" for a launch, "✓" for an import result.</summary>
+    public string LaunchToastIcon
+    {
+        get => _launchToastIcon;
+        set { _launchToastIcon = value; OnPropertyChanged(); }
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -483,16 +491,40 @@ public class LibraryViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Set by MainViewModel: whether the Library section (and therefore its status bar) is the one
+    /// currently on screen. Used by <see cref="AnnounceImportResult"/> to decide whether a status
+    /// message needs the floating toast to be seen at all.
+    /// </summary>
+    public Func<bool>? IsLibraryVisible { get; set; }
+
+    /// <summary>
+    /// Reports the outcome of an import/scan the way a completion message should be reported:
+    /// into the Library status bar always, and additionally as the floating toast when the user is
+    /// on another section (Settings, System, About) where that status bar is collapsed - a drop
+    /// onto the Settings page or "Scan for Games" from Settings would otherwise finish silently.
+    /// </summary>
+    public void AnnounceImportResult(string message)
+    {
+        StatusMessage = message;
+        if (IsLibraryVisible?.Invoke() == false)
+        {
+            ShowLaunchToast(message, icon: "✓", seconds: 5);
+        }
+    }
+
     /// <summary>Shows the floating launch toast for a few seconds - same non-blocking overlay
-    /// pattern as the undo-delete toast, but auto-dismissing since there's no action to take.</summary>
-    private void ShowLaunchToast(string message)
+    /// pattern as the undo-delete toast, but auto-dismissing since there's no action to take.
+    /// The toast lives outside the per-section grids, so it renders on every section.</summary>
+    private void ShowLaunchToast(string message, string icon = "▶", int seconds = 3)
     {
         _launchToastTimer?.Stop();
 
+        LaunchToastIcon = icon;
         LaunchToastMessage = message;
         IsLaunchToastVisible = true;
 
-        _launchToastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _launchToastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(seconds) };
         _launchToastTimer.Tick += (s, e) =>
         {
             _launchToastTimer.Stop();
@@ -916,6 +948,115 @@ public class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(TotalGameCount));
         OnPropertyChanged(nameof(TotalGameCountDisplay));
     }
+
+    /// <summary>Games imported through <paramref name="launcher"/>'s integration, whatever
+    /// their current category, and how many of those are hidden from every tab.</summary>
+    public (int Total, int Hidden) CountPlatformGames(DetectedLauncher launcher)
+    {
+        int total = 0, hidden = 0;
+        foreach (var g in Games)
+        {
+            if (!IsPlatformGame(g.Game, launcher)) continue;
+            total++;
+            if (g.Game.IsHidden) hidden++;
+        }
+        return (total, hidden);
+    }
+
+    /// <summary>True if a library entry is already linked to the platform game
+    /// <paramref name="match"/> describes (by platform ID) - the batch dialog's "IN LIBRARY"
+    /// check for a candidate that resolved to a platform, where the exe-path comparison can't
+    /// work (a Steam entry's ExecutablePath is a steam:// URL, not the exe on disk).</summary>
+    public bool IsPlatformGameInLibrary(PlatformMatch? match)
+    {
+        if (match == null) return false;
+        return Games.Any(g => match switch
+        {
+            { Steam: { } s } => string.Equals(g.Game.SteamAppId, s.AppId, StringComparison.OrdinalIgnoreCase),
+            { Gog: { } p } => string.Equals(g.Game.GogGameId, p.GameId, StringComparison.OrdinalIgnoreCase),
+            { Ea: { } e } => string.Equals(g.Game.EaContentId, e.ContentId, StringComparison.OrdinalIgnoreCase),
+            { Epic: { } p } => string.Equals(g.Game.EpicAppName, p.AppName, StringComparison.OrdinalIgnoreCase),
+            { Ubisoft: { } u } => string.Equals(g.Game.UbisoftGameId, u.GameId, StringComparison.OrdinalIgnoreCase),
+            _ => false
+        });
+    }
+
+    /// <summary>
+    /// Bulk-removes every game imported through <paramref name="launcher"/>'s integration - the
+    /// "also remove its games" half of turning that integration off in Settings. Unlike
+    /// <see cref="DeleteGame"/> this is not undoable (the caller has already confirmed it) and
+    /// cleans up cached artwork immediately. Installed game files are never touched.
+    /// </summary>
+    /// <returns>How many games were removed.</returns>
+    public int RemovePlatformGames(DetectedLauncher launcher)
+    {
+        var toRemove = Games.Where(g => IsPlatformGame(g.Game, launcher)).ToList();
+        if (toRemove.Count == 0) return 0;
+
+        // A pending single-game undo would otherwise be able to resurrect a game whose artwork
+        // is about to be cleaned up below (if it shares a cached file) - finalize it first.
+        if (_lastRemovedGame != null)
+        {
+            _undoToastTimer?.Stop();
+            IsUndoToastVisible = false;
+            DeleteCachedArtwork(_lastRemovedGame);
+            _lastRemovedGame = null;
+        }
+
+        foreach (var card in toRemove)
+        {
+            Games.Remove(card);
+        }
+
+        // Persist the removal *before* deleting cached files: a crash between the two would
+        // otherwise leave games.json still listing these games with icon/cover paths that point
+        // at deleted files, and nothing re-fetches art for an entry whose path is merely broken.
+        RebuildCategories();
+        SaveLibrary();
+        UpdateHotkeys();
+        NotifyGameCountChanged();
+
+        foreach (var card in toRemove)
+        {
+            DeleteCachedArtwork(card.Game);
+        }
+        LoggingService.Info("Library", $"Removed {toRemove.Count} {launcher} game(s) from the library after the {launcher} integration was turned off.");
+        return toRemove.Count;
+    }
+
+    /// <summary>
+    /// Provenance, not launch method: an entry belongs to a platform's integration when it was
+    /// imported (or later linked) by it - <see cref="GameEntry.ImportedFrom"/>. Entries from
+    /// before that field existed fall back to the launch flags, which is what set them at the
+    /// time; a hand-dropped Steam shortcut marked "launch via Steam" in Edit Game after this
+    /// change has ImportedFrom == null and is therefore never swept.
+    /// </summary>
+    private static bool IsPlatformGame(GameEntry game, DetectedLauncher launcher)
+    {
+        if (game.ImportedFrom is { } from)
+        {
+            return from == ToPlatform(launcher);
+        }
+
+        return launcher switch
+        {
+            DetectedLauncher.Steam => game.IsSteamGame,
+            DetectedLauncher.Gog => game.IsGogGame,
+            DetectedLauncher.Ea => game.IsEaGame,
+            DetectedLauncher.Epic => game.IsEpicGame,
+            DetectedLauncher.Ubisoft => game.IsUbisoftGame,
+            _ => false
+        };
+    }
+
+    private static LauncherPlatform ToPlatform(DetectedLauncher launcher) => launcher switch
+    {
+        DetectedLauncher.Steam => LauncherPlatform.Steam,
+        DetectedLauncher.Gog => LauncherPlatform.Gog,
+        DetectedLauncher.Ea => LauncherPlatform.Ea,
+        DetectedLauncher.Epic => LauncherPlatform.Epic,
+        _ => LauncherPlatform.Ubisoft
+    };
 
     public void UndoDelete()
     {

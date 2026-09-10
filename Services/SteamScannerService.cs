@@ -142,16 +142,93 @@ public partial class SteamScannerService
         return results.OrderBy(g => g.Name).ToList();
     }
 
-    private DiscoveredSteamGame? ParseManifest(string manifestPath, string libraryFolder, string steamPath, HashSet<string> existingSet)
+    /// <summary>
+    /// Resolves the single installed Steam game whose install folder contains <paramref name="path"/>
+    /// (an exe or any file/folder inside the game's steamapps\common\&lt;installdir&gt; tree), or null
+    /// if the path isn't inside any Steam library's installed game. Used by
+    /// <see cref="PlatformLookupService"/> so a game dropped/browsed into the library from a Steam
+    /// install directory is imported with its real AppId rather than as a Local exe. Only the
+    /// cheap manifest header is read per game; the exe/icon walk runs for the one match only.
+    /// </summary>
+    public DiscoveredSteamGame? FindGameByPath(string path)
+    {
+        foreach (var entry in GetInstalledGameEntries())
+        {
+            if (PlatformLookupService.IsPathUnderDirectory(path, entry.CommonDir))
+            {
+                return ResolveInstalledGame(entry);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>One installed Steam game's location, read from just its manifest header - the
+    /// cheap half of discovery, for containment matching without the per-game exe/icon walk.</summary>
+    public readonly record struct SteamInstallEntry(string ManifestPath, string LibraryFolder, string SteamPath, string CommonDir);
+
+    /// <summary>
+    /// Every installed game's install directory across all Steam libraries, from manifest
+    /// headers only. <see cref="PlatformLookupService"/> caches this once per import operation
+    /// so a batch of N candidates costs one manifest pass, not N.
+    /// </summary>
+    public List<SteamInstallEntry> GetInstalledGameEntries()
+    {
+        var entries = new List<SteamInstallEntry>();
+        string? steamPath = GetSteamInstallPath();
+        if (string.IsNullOrEmpty(steamPath)) return entries;
+
+        foreach (var folder in GetLibraryFolders(steamPath))
+        {
+            // Same tolerance as ScanInstalledGames: a library configured as "...\steamapps"
+            // itself, rather than its parent, is still a library.
+            string steamappsDir = Path.Combine(folder, "steamapps");
+            string libraryFolder = folder;
+            if (!Directory.Exists(steamappsDir))
+            {
+                if (!Directory.Exists(Path.Combine(folder, "common"))) continue;
+                steamappsDir = folder;
+                libraryFolder = Path.GetDirectoryName(folder.TrimEnd('\\', '/')) ?? folder;
+            }
+
+            string[] manifestFiles;
+            try
+            {
+                manifestFiles = Directory.GetFiles(steamappsDir, "appmanifest_*.acf");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("SteamScannerService", $"Error enumerating '{steamappsDir}': {ex.Message}");
+                continue;
+            }
+
+            foreach (var manifest in manifestFiles)
+            {
+                var header = ReadManifestHeader(manifest);
+                if (header == null || string.IsNullOrWhiteSpace(header.Value.InstallDir)) continue;
+
+                string commonDir = Path.Combine(steamappsDir, "common", header.Value.InstallDir);
+                entries.Add(new SteamInstallEntry(manifest, libraryFolder, steamPath, commonDir));
+            }
+        }
+        return entries;
+    }
+
+    /// <summary>The full discovery record (exe, icon, name) for one <see cref="SteamInstallEntry"/>,
+    /// or null for a non-game manifest (redistributables, Proton) or an unreadable one.</summary>
+    public DiscoveredSteamGame? ResolveInstalledGame(SteamInstallEntry entry)
+        => ParseManifest(entry.ManifestPath, entry.LibraryFolder, entry.SteamPath, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>The appid/name/installdir triple from an appmanifest_*.acf, or null if the file
+    /// can't be read or lacks an appid/name. Cheap: no filesystem walk beyond the file itself.</summary>
+    private static (string AppId, string Name, string? InstallDir)? ReadManifestHeader(string manifestPath)
     {
         try
         {
-            var lines = File.ReadAllLines(manifestPath);
             string? appId = null;
             string? name = null;
             string? installdir = null;
 
-            foreach (var line in lines)
+            foreach (var line in File.ReadLines(manifestPath))
             {
                 var match = VdfKeyValueRegex().Match(line);
                 if (match.Success)
@@ -167,6 +244,23 @@ public partial class SteamScannerService
 
             if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(name))
                 return null;
+
+            return (appId, name, installdir);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamScannerService", $"Error reading manifest header '{manifestPath}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private DiscoveredSteamGame? ParseManifest(string manifestPath, string libraryFolder, string steamPath, HashSet<string> existingSet)
+    {
+        try
+        {
+            var header = ReadManifestHeader(manifestPath);
+            if (header == null) return null;
+            var (appId, name, installdir) = header.Value;
 
             // Filter out common Steam redistributables / tool runtimes
             if (name.StartsWith("Steamworks Common", StringComparison.OrdinalIgnoreCase) ||

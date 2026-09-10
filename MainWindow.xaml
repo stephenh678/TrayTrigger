@@ -124,24 +124,39 @@
             <Grid Margin="0,0,0,6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
-                          Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
+                          Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"
+                          ToolTip="Include this folder in Scan for Games"/>
 
-                <Border Grid.Column="1" Background="#22222A" CornerRadius="3" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SourceLabel}" FontSize="9.5" FontWeight="Bold" Foreground="#9A9AB0"/>
-                </Border>
-
-                <TextBlock Grid.Column="2" Text="{Binding Path}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
+                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/>
 
-                <Button Grid.Column="3" Content="Remove"
+                <Button Grid.Column="2" Content="Remove"
                         Command="{Binding DataContext.RemoveScanLocationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                         CommandParameter="{Binding}" Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="11.5"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Settings > Launcher Integrations: one auto-detected Steam library folder under the
+             Steam toggle. Only a checkbox - these rows are owned by the Steam sync, not the user,
+             so there's no Remove (it would just come back on the next sync). -->
+        <DataTemplate x:Key="SteamLibraryRowTemplate" DataType="{x:Type vm:ScanLocationRowViewModel}">
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
+                          Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"
+                          ToolTip="Include this Steam library in Scan for Games"/>
+
+                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/>
             </Grid>
         </DataTemplate>
 
@@ -374,6 +389,37 @@
         <!-- MAIN CONTENT AREA                                              -->
         <!-- ============================================================== -->
         <Grid Grid.Column="1" Margin="18">
+
+            <!-- Floating non-blocking toast: game launches ("▶ Launching...") and, when the user is
+                 on a section other than Library, import/scan results ("✓ Added 3 new game(s)!").
+                 Sits at the content-area level (not inside any one section's grid) so it renders
+                 over whichever section is visible. Offset above the undo toast's anchor point so
+                 the two don't overlap if both happen to be visible at once. -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,70"
+                    Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                    CornerRadius="8" Padding="16,10" Panel.ZIndex="100">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                </Border.Effect>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsLaunchToastVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding LaunchToastIcon}" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center"
+                               Foreground="{StaticResource BrushAccent}"/>
+                    <TextBlock Text="{Binding LaunchToastMessage}" Foreground="{StaticResource BrushTextPrimary}"
+                               FontSize="13" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Content="✕" Command="{Binding DismissLaunchToastCommand}"
+                            Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
 
             <!-- ========================================================== -->
             <!-- 1. GAMES LIBRARY VIEW                                      -->
@@ -1931,33 +1977,8 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Floating Non-Blocking Launch Toast (offset above the undo toast's anchor point
-                         so the two don't overlap if both happen to be visible at once) -->
-                    <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,70"
-                            Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
-                            CornerRadius="8" Padding="16,10" Panel.ZIndex="100">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
-                        </Border.Effect>
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLaunchToastVisible}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="▶" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center"
-                                       Foreground="{StaticResource BrushAccent}"/>
-                            <TextBlock Text="{Binding LaunchToastMessage}" Foreground="{StaticResource BrushTextPrimary}"
-                                       FontSize="13" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                            <Button Content="✕" Command="{Binding DismissLaunchToastCommand}"
-                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
+                    <!-- The floating launch/import toast used to sit here; it now lives at the top of
+                         the MAIN CONTENT AREA grid so it also renders over Settings/System/About. -->
                 </Grid>
 
                 <!-- 5. Status Bar -->
@@ -1994,6 +2015,7 @@
                         <RowDefinition Height="Auto"/> <!-- Header -->
                         <RowDefinition Height="Auto"/> <!-- Category Segmented Tabs -->
                         <RowDefinition Height="*"/>    <!-- Settings ScrollViewer -->
+                        <RowDefinition Height="Auto"/> <!-- Status line -->
                     </Grid.RowDefinitions>
 
                 <!-- Header -->
@@ -2235,7 +2257,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Launcher Integrations" FontSize="13.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Detect games already installed through these launchers. Enabled platforms launch through their official client when installed (keeping cloud saves and achievement sync), falling back to the game's own executable otherwise."
+                                    <TextBlock Text="Each toggle controls whether Scan for Games looks for that launcher's installed games. Games imported from a launcher start through its official client when installed (keeping cloud saves and achievement sync), falling back to the game's own executable otherwise - turning a toggle off doesn't change that for games already in your library. Dropping a game folder from any of these launchers imports it as that launcher's game whether or not its toggle is on."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="How the Game Scanner works" Margin="0,0,0,10"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
@@ -2257,7 +2279,29 @@
                                     </DockPanel>
                                     <TextBlock Text="VDF manifests and official Steam artwork caches identify and enrich installed games."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+                                               Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                                    <!-- Steam's library folders live here, under the toggle that owns them, rather than
+                                         in the manual Scan Locations list below. Untick one to skip that library. -->
+                                    <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                            CornerRadius="6" Padding="10,8" Margin="24,0,0,10"
+                                            Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}">
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="False" Margin="0,0,0,6">
+                                                <TextBlock Text="Steam Libraries" FontSize="12" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                                <Button Content="Refresh" Command="{Binding RefreshSteamScanLocationsCommand}"
+                                                        Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"
+                                                        ToolTip="Re-read Steam's library folder list (after adding or removing a library in Steam)"/>
+                                            </DockPanel>
+
+                                            <TextBlock Text="No Steam libraries detected. Click Refresh after installing Steam."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"
+                                                       Visibility="{Binding HasNoSteamLibraryLocations, Converter={StaticResource BoolToVis}}"/>
+
+                                            <ItemsControl ItemsSource="{Binding SteamLibraryLocations}" ItemTemplate="{StaticResource SteamLibraryRowTemplate}"/>
+                                        </StackPanel>
+                                    </Border>
 
                                     <CheckBox IsChecked="{Binding GogIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
@@ -2331,22 +2375,18 @@
                                 <StackPanel>
                                     <TextBlock Text="Scan Locations &amp; Ignored Games" FontSize="13.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Fine-tune where the scanner looks, and which games it should skip."
+                                    <TextBlock Text="Extra folders to search for games that aren't installed through a launcher above, and games the scanner should skip."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                                    <!-- Scan Locations manager -->
+                                    <!-- Scan Locations manager (manual folders only - Steam's own libraries are listed
+                                         under the Steam integration toggle above) -->
                                     <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                             CornerRadius="6" Padding="12,10">
                                         <StackPanel>
-                                            <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                                                <TextBlock Text="Scan Locations" FontSize="12.5" FontWeight="SemiBold"
-                                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                                <Button Content="Refresh Steam Locations" Command="{Binding RefreshSteamScanLocationsCommand}"
-                                                        Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"
-                                                        Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}"/>
-                                            </DockPanel>
+                                            <TextBlock Text="Scan Locations" FontSize="12.5" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
 
-                                            <TextBlock Text="No scan locations yet. Add one below, or turn on Steam integration above."
+                                            <TextBlock Text="No folders yet. Add one such as D:\Games to have Scan for Games look through its subfolders."
                                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"
                                                        Visibility="{Binding HasNoScanLocations, Converter={StaticResource BoolToVis}}"/>
 
@@ -2769,6 +2809,28 @@
 
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- Settings status line. SettingsViewModel.StatusMessage was previously bound
+                     nowhere (the Library status bar is collapsed while Settings is shown), so
+                     "Settings saved", "Added scan location", and the integration-toggle messages
+                     were all invisible. -->
+                <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" FontSize="12"
+                           Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
+                           TextWrapping="Wrap" Margin="0,0,0,2">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatusMessage}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding StatusMessage}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 </Grid>
             </Grid>
 

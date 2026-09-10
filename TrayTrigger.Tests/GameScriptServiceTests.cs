@@ -49,10 +49,25 @@ public class GameScriptServiceTests : IDisposable
         var psi = GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
 
         Assert.Equal("cmd.exe", psi.FileName);
-        Assert.Equal(new[] { "/c", path, "prelaunch", "Test Game", @"C:\Games\Test\game.exe" }, psi.ArgumentList);
+        // Every argument force-quoted and wrapped for /s - see BuildStartInfo's cmd.exe comment.
+        Assert.Equal($"/d /s /c \"\"{path}\" \"prelaunch\" \"Test Game\" \"C:\\Games\\Test\\game.exe\"\"", psi.Arguments);
+        Assert.Empty(psi.ArgumentList);
         Assert.False(psi.UseShellExecute);
         Assert.True(psi.CreateNoWindow);
         Assert.Equal(_dir, psi.WorkingDirectory);
+    }
+
+    [Fact]
+    public void BatchScripts_QuoteShellMetacharactersInGameName()
+    {
+        string path = MakeScript("pre.bat");
+        var game = new GameEntry { Name = "Portal & calc | \"quoted\"", ExecutablePath = @"C:\Games\P\p.exe" };
+        var psi = GameScriptService.BuildStartInfo(path, game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+
+        // The name stays inside one quoted span (so & and | are literal to cmd.exe) and any
+        // embedded quote is neutralised rather than allowed to close that span early.
+        Assert.Contains("\"Portal & calc | 'quoted'\"", psi.Arguments);
+        Assert.DoesNotContain("\"quoted\"", psi.Arguments);
     }
 
     [Fact]
@@ -121,8 +136,8 @@ public class GameScriptServiceTests : IDisposable
         Assert.False(psi.CreateNoWindow); // not honoured by ShellExecute; WindowStyle is used instead
         Assert.Equal(ProcessWindowStyle.Hidden, psi.WindowStyle);
         Assert.Equal("cmd.exe", psi.FileName);
-        Assert.Contains("prelaunch", psi.ArgumentList);
-        Assert.Contains("Test Game", psi.ArgumentList);
+        Assert.Contains("\"prelaunch\"", psi.Arguments);
+        Assert.Contains("\"Test Game\"", psi.Arguments);
     }
 
     [Fact]
@@ -132,7 +147,21 @@ public class GameScriptServiceTests : IDisposable
         var psi = GameScriptService.BuildStartInfo($"\"{path}\"", _game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null);
 
         Assert.NotNull(psi);
-        Assert.Equal(path, psi!.ArgumentList[1]);
+        // The surrounding quotes are stripped before the path is re-quoted exactly once.
+        Assert.StartsWith($"/d /s /c \"\"{path}\" ", psi!.Arguments);
+    }
+
+    [Fact]
+    public void FeatureSwitch_Off_SkipsScripts()
+    {
+        string path = MakeScript("pre.bat");
+        var game = new GameEntry { Name = "Test", ExecutablePath = @"C:\Games\T\t.exe", PreLaunchScriptPath = path, PostExitScriptPath = path };
+
+        // With the Settings switch off nothing must run - so no exception, no process, and
+        // (observable here) no post-exit tracking either.
+        var svc = new GameScriptService(() => false);
+        svc.RunPreLaunch(game);
+        svc.RunPostExit(game, 1);
     }
 
     [Theory]

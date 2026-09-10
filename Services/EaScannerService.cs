@@ -179,7 +179,9 @@ public partial class EaScannerService
                 int bracketEnd = rawFilePath.IndexOf(']');
                 string relativePath = bracketEnd >= 0 ? rawFilePath[(bracketEnd + 1)..] : rawFilePath;
                 string candidateExe = Path.Combine(installDir, relativePath);
-                if (File.Exists(candidateExe))
+                // Same containment rule as EpicScannerService: a rooted or "..\" filePath must
+                // not be allowed to point outside the install it belongs to.
+                if (File.Exists(candidateExe) && PlatformLookupService.IsPathUnderDirectory(candidateExe, installDir))
                 {
                     exePath = candidateExe;
                     break;

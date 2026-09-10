@@ -195,6 +195,12 @@ public class StorageService
                 catch (Exception ex)
                 {
                     LoggingService.Error("Storage", $"Backup games.json.bak failed to parse: {ex.Message}", ex);
+                    // Same treatment as the corrupt primary above: keep a timestamped copy so
+                    // the only remaining trace of the library isn't destroyed by the next save's
+                    // rolling-backup copy.
+                    string bakArchive = ArchiveCorruptFile(_gamesBakFilePath);
+                    GamesLoadWarning = (GamesLoadWarning ?? string.Empty) +
+                        $" The backup could not be read either; a copy was kept at '{bakArchive}'.";
                 }
             }
 
@@ -261,12 +267,14 @@ public class StorageService
                 File.WriteAllText(tempFile, json);
 
                 // Keep rolling .bak copy, unless the primary was found unreadable earlier this
-                // session - in that case it must not overwrite a still-good backup.
+                // session - in that case it must not overwrite a still-good backup. The flag
+                // stays set for the whole session (it used to clear after one save, so the
+                // *second* save copied the now-empty primary over the last good backup); the
+                // rolling backup resumes on the next launch, once the primary loads cleanly.
                 if (File.Exists(_gamesFilePath) && !_gamesPrimaryUnreadableThisSession)
                 {
                     File.Copy(_gamesFilePath, _gamesBakFilePath, overwrite: true);
                 }
-                _gamesPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _gamesFilePath);
                 LoggingService.Verbose("Storage", $"Saved {list.Count} game(s) to '{_gamesFilePath}' (from {CallerTag(callerFile, callerMember)}).");

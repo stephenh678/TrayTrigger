@@ -71,4 +71,50 @@ public class FolderScannerServiceTests : IDisposable
         string path = CreateFile("crash.exe", 200 * 1024);
         Assert.False(FolderScannerService.IsDisqualified(path, "Crash Bandicoot"));
     }
+
+    private string CreateDir(params string[] segments)
+    {
+        string path = Path.Combine(new[] { _tempDir }.Concat(segments).ToArray());
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    [Fact]
+    public void ExpandLibraryContainers_DescendsThroughSteamappsAndCommon()
+    {
+        // D:\SteamLibrary\steamapps\common\<games> - dropping the library root must reach the
+        // game folders, not collapse the whole steamapps tree into one best-scoring exe.
+        string steamapps = CreateDir("steamapps");
+        string gameA = CreateDir("steamapps", "common", "Game A");
+        string gameB = CreateDir("steamapps", "common", "Game B");
+        CreateDir("steamapps", "shadercache");
+
+        var expanded = FolderScannerService.ExpandLibraryContainers([steamapps]);
+
+        Assert.Contains(gameA, expanded);
+        Assert.Contains(gameB, expanded);
+        Assert.DoesNotContain(steamapps, expanded);
+        Assert.DoesNotContain(Path.Combine(steamapps, "common"), expanded);
+    }
+
+    [Fact]
+    public void ExpandLibraryContainers_LeavesOrdinaryGameFoldersAlone()
+    {
+        string game = CreateDir("Cyberpunk 2077");
+        CreateDir("Cyberpunk 2077", "bin");
+
+        var expanded = FolderScannerService.ExpandLibraryContainers([game]);
+
+        Assert.Equal([game], expanded);
+    }
+
+    [Fact]
+    public void ExpandLibraryContainers_KeepsAnEmptyContainer()
+    {
+        string empty = CreateDir("Games");
+
+        var expanded = FolderScannerService.ExpandLibraryContainers([empty]);
+
+        Assert.Equal([empty], expanded);
+    }
 }

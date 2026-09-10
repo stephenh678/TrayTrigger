@@ -18,6 +18,18 @@ public record GameCandidate(
     string RelativePath = ""
 )
 {
+    /// <summary>
+    /// Set by ImportCoordinator.ResolvePlatforms once the candidate's exe has been matched to an
+    /// installed Steam/GOG/EA/Epic/Ubisoft game (see PlatformLookupService). Null for a genuinely
+    /// local exe. When set, <see cref="Name"/> has already been replaced by the platform's own
+    /// title, ignore checks use the platform ID instead of the exe path, and the batch dialog
+    /// shows the platform's logo - so what the user previews is what gets imported.
+    /// </summary>
+    public PlatformMatch? Platform { get; init; }
+
+    /// <summary>"Steam", "GOG", ... or null for a local exe - for badges and log lines.</summary>
+    public string? PlatformName => Platform?.Platform;
+
     public string DisplaySize
     {
         get
@@ -209,6 +221,14 @@ public partial class FolderScannerService
         {
             LoggingService.Warn("FolderScanner", $"Failed to enumerate subdirectories of '{folderPath}': {ex.Message}");
         }
+
+        // A library root often holds its games one or two container levels down rather than as
+        // immediate children: D:\SteamLibrary -> steamapps -> common -> <games>. Without this, the
+        // whole "steamapps" tree collapsed to a single best-scoring exe and dropping a Steam
+        // library imported exactly one game. Any child that is itself named like a library
+        // container is replaced by its own children (repeatedly, bounded), so the per-subfolder
+        // game detection below runs against the real game folders.
+        subdirs = ExpandLibraryContainers(subdirs);
 
         var detectedSubGames = new List<GameCandidate>();
 
@@ -522,6 +542,55 @@ public partial class FolderScannerService
         }
 
         return score;
+    }
+
+    /// <summary>
+    /// Replaces every directory whose own name is a library-container name (steamapps, common,
+    /// games, ...) with its non-pruned children, up to three levels deep, so a dropped library
+    /// root is scanned at the level where the individual game folders live. Directories that
+    /// aren't containers pass through untouched. Public-static for unit testing.
+    /// </summary>
+    internal static List<string> ExpandLibraryContainers(List<string> subdirs)
+    {
+        const int maxLevels = 3;
+        var current = subdirs;
+        for (int level = 0; level < maxLevels; level++)
+        {
+            bool expandedAny = false;
+            var next = new List<string>(current.Count);
+            foreach (var dir in current)
+            {
+                string name = Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                if (!MultiGameLibraryNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+                {
+                    next.Add(dir);
+                    continue;
+                }
+
+                try
+                {
+                    var children = Directory.GetDirectories(dir)
+                        .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
+                        .ToList();
+                    if (children.Count == 0)
+                    {
+                        next.Add(dir);
+                        continue;
+                    }
+                    LoggingService.Verbose("FolderScanner", $"'{dir}' is a library container - scanning its {children.Count} subfolder(s) instead.");
+                    next.AddRange(children);
+                    expandedAny = true;
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn("FolderScanner", $"Failed to enumerate library container '{dir}': {ex.Message}");
+                    next.Add(dir);
+                }
+            }
+            current = next;
+            if (!expandedAny) break;
+        }
+        return current;
     }
 
     private static bool ShouldPruneDirectory(string dirName)

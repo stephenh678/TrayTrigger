@@ -111,10 +111,11 @@
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Border>
 
-                            <!-- Local Games badge - same launcher-style treatment "Scan for Games"
-                                 gives Steam/GOG/EA/Epic/Ubisoft results, at the same size used on
-                                 poster cards, since a folder-added game has no real launcher. -->
-                            <Image DockPanel.Dock="Right" Source="pack://application:,,,/Assets/LauncherLogos/local_games.png"
+                            <!-- Source badge - the launcher this candidate resolved to (Steam/GOG/EA/
+                                 Epic/Ubisoft, see GameCandidate.Platform) or the generic Local Games
+                                 mark, at the same size used on poster cards. Matches what the import
+                                 will actually produce, name included. -->
+                            <Image DockPanel.Dock="Right" Source="{Binding SourceLogoUri}" ToolTip="{Binding SourceToolTip}"
                                    Width="25" Height="25" Stretch="Uniform" VerticalAlignment="Center" Margin="12,0,0,0"
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
 

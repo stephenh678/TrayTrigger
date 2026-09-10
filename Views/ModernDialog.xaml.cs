@@ -68,12 +68,20 @@ public partial class ModernDialog : Window
         {
             WindowThemeService.CenterOverOwner(this);
             Activate();
-            if (ConfirmBtn.Visibility == Visibility.Visible)
+            var target = InitialFocus ?? ConfirmBtn;
+            if (target.Visibility == Visibility.Visible)
             {
-                ConfirmBtn.Focus();
+                target.Focus();
             }
         };
     }
+
+    /// <summary>
+    /// The button that receives keyboard focus (and Enter) when the dialog opens. Defaults to the
+    /// confirm button. Set to the safe choice for a destructive, non-undoable prompt so a key
+    /// repeat or reflexive Enter can't confirm it.
+    /// </summary>
+    private System.Windows.Controls.Button? InitialFocus { get; set; }
 
     private void ConfigureIconAndStyle(DialogIconType iconType)
     {
@@ -158,6 +166,43 @@ public partial class ModernDialog : Window
         ChoiceResult = DialogResultOption.Cancel;
         DialogResult = false;
         Close();
+    }
+
+    /// <summary>
+    /// Three-way prompt for a destructive choice that has a safe middle option: a danger-styled
+    /// <paramref name="primaryText"/> button (→ <see cref="DialogResultOption.Primary"/>), an
+    /// outline <paramref name="secondaryText"/> button that takes initial focus and Enter
+    /// (→ <see cref="DialogResultOption.Secondary"/>), and a ghost <paramref name="cancelText"/>
+    /// button that Esc and the title-bar close also map to (→ <see cref="DialogResultOption.Cancel"/>).
+    /// </summary>
+    public static DialogResultOption PromptChoice(
+        Window? owner,
+        string title,
+        string message,
+        string detail,
+        string primaryText,
+        string secondaryText,
+        string cancelText,
+        DialogIconType iconType = DialogIconType.Delete)
+    {
+        var activeOwner = owner ?? WindowHelper.ActiveOwner();
+        var dialog = new ModernDialog(title, message, detail, primaryText, cancelText, iconType);
+
+        dialog.SecondaryBtn.Content = secondaryText;
+        dialog.SecondaryBtn.Visibility = Visibility.Visible;
+
+        // Enter and initial focus go to the safe choice, never the destructive one.
+        dialog.ConfirmBtn.IsDefault = false;
+        dialog.SecondaryBtn.IsDefault = true;
+        dialog.InitialFocus = dialog.SecondaryBtn;
+
+        if (activeOwner != null)
+        {
+            dialog.Owner = activeOwner;
+        }
+
+        dialog.ShowDialog();
+        return dialog.ChoiceResult;
     }
 
     public static DialogResultOption PromptExitAction(Window? owner)

@@ -150,7 +150,15 @@ public class ShortcutService
         string? steamAppId = null;
         if (isSteam)
         {
-            steamAppId = targetUrl.Substring("steam://rungameid/".Length).Trim().Split('/')[0];
+            // The App ID ends up in cache filenames and API query strings - only accept the
+            // digits-only shape Steam actually uses.
+            string rawId = targetUrl.Substring("steam://rungameid/".Length).Trim().Split('/')[0];
+            steamAppId = UrlProtocolHelper.IsValidSteamAppId(rawId) ? rawId : null;
+            if (steamAppId == null)
+            {
+                LoggingService.Warn("ShortcutService", $"Ignoring malformed Steam App ID in '{urlPath}'.");
+                isSteam = false;
+            }
         }
 
         return new ShortcutResolution(
@@ -208,7 +216,8 @@ public class ShortcutService
                 var parts = args.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 for (int i = 0; i < parts.Length - 1; i++)
                 {
-                    if (parts[i].Equals("-applaunch", StringComparison.OrdinalIgnoreCase))
+                    if (parts[i].Equals("-applaunch", StringComparison.OrdinalIgnoreCase) &&
+                        UrlProtocolHelper.IsValidSteamAppId(parts[i + 1]))
                     {
                         isSteam = true;
                         steamAppId = parts[i + 1];
