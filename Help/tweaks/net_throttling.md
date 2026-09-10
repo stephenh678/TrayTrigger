@@ -2,22 +2,20 @@
 
 ## What it changes
 
-Removes the packet-rate limit that the Multimedia Class Scheduler Service applies to non-multimedia network traffic while audio or video is playing.
+Removes the cap the Multimedia Class Scheduler puts on non-multimedia network packet processing while a multimedia task (game audio, video playback) is running.
 
 ## Why it helps
 
-- By default Windows caps non-multimedia traffic at roughly 10,000 packets per second whenever a multimedia task is active, to protect audio from glitches.
-- Game audio counts as a multimedia task, so the cap can apply during play. On high tick-rate servers with voice chat running at the same time, it can in theory hold back game traffic.
+- The default index of 10 limits how many non-multimedia packets are processed per millisecond while audio is playing. On a 128-tick competitive server with Discord open, that cap can be reached.
+- Setting the index to its "off" value removes the limit.
 
 ## Trade-offs
 
-- The real-world benefit is not guaranteed and varies by system. Many tests show no measurable change.
-- Some testing has found that disabling it increases network driver DPC activity, which can be counterproductive.
-- Treat it as situational. Try it, measure, and revert if you see no gain.
+- The real-world benefit is not guaranteed and varies by system. Some testing has found more NDIS DPC activity with the cap off.
+- MMCSS reads this value when it starts, so it takes effect after a restart.
 
-> Requires administrator rights. No restart needed.
+> Requires administrator rights and a restart.
 
 ## Details
 
-- Sets NetworkThrottlingIndex to 0xFFFFFFFF under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile.
-- The default value is 10.
+- Sets NetworkThrottlingIndex=0xFFFFFFFF under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile. Revert writes the Windows default of 10.

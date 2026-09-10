@@ -26,10 +26,13 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onRefreshMetadata;
     private readonly Action<GameCardViewModel>? _onToggleFavorite;
     private readonly Action<GameCardViewModel>? _onToggleHidden;
+    private readonly Action<GameCardViewModel>? _onEndSession;
+    private readonly Action<GameCardViewModel>? _onForceClose;
     private readonly Func<bool>? _getUseVerticalPosterArt;
     private BitmapImage? _iconImage;
     private BitmapImage? _coverImage;
     private bool _isMissing;
+    private bool _isPlaying;
     private string? _loadedIconPath;
     private DateTime? _loadedIconWriteTimeUtc;
     private string? _loadedCoverPath;
@@ -54,8 +57,14 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onToggleFavorite = null,
         Action<GameCardViewModel>? onToggleHidden = null,
         Func<bool>? getUseVerticalPosterArt = null,
-        bool deferHeavyInit = false)
+        bool deferHeavyInit = false,
+        Action<GameCardViewModel>? onEndSession = null,
+        Action<GameCardViewModel>? onForceClose = null)
     {
+        _onEndSession = onEndSession;
+        _onForceClose = onForceClose;
+        EndSessionCommand = new RelayCommand(() => _onEndSession?.Invoke(this));
+        ForceCloseCommand = new RelayCommand(() => _onForceClose?.Invoke(this));
         Game = game;
         _onLaunch = onLaunch;
         _onEdit = onEdit;
@@ -190,6 +199,25 @@ public class GameCardViewModel : ViewModelBase
     {
         IsMissing = ComputeIsMissing(Game);
     }
+
+    /// <summary>True while ProcessLauncherService is tracking a session for this game (profile
+    /// applied / launch in flight / game running). Drives the "PLAYING" badge and the End Session
+    /// and Force Close menu items.</summary>
+    public bool IsPlaying
+    {
+        get => _isPlaying;
+        set
+        {
+            if (_isPlaying != value)
+            {
+                _isPlaying = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public ICommand EndSessionCommand { get; }
+    public ICommand ForceCloseCommand { get; }
 
     /// <summary>
     /// A non-Steam launcher protocol shortcut (Epic, GOG Galaxy, Ubisoft Connect, etc.) resolves

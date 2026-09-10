@@ -75,6 +75,12 @@ public class HelpContentServiceTests
     [InlineData("telemetry_sweeps")]
     [InlineData("game_bar_overlay")]
     [InlineData("core_isolation")]
+    [InlineData("vrr_global")]
+    [InlineData("auto_hdr")]
+    [InlineData("sticky_keys")]
+    [InlineData("mpo_disable")]
+    [InlineData("wu_driver_exclude")]
+    [InlineData("priority_separation")]
     public void EverySystemTweak_HasAHelpTopic(string tweakId)
     {
         // Mirrors the Id values in SystemTweaksService.BuildTweaks. If a tweak is added there,
@@ -94,6 +100,10 @@ public class HelpContentServiceTests
     [InlineData("profiles/mmcss_games_priority")]
     [InlineData("profiles/above_normal_priority")]
     [InlineData("profiles/defender_exclusion")]
+    [InlineData("profiles/hdr")]
+    [InlineData("profiles/timer_resolution")]
+    [InlineData("profiles/do_not_disturb")]
+    [InlineData("profiles/cpu_affinity")]
     [InlineData("scanner/overview")]
     [InlineData("traymenu/overview")]
     [InlineData("scripts/overview")]

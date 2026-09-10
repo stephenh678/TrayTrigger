@@ -210,6 +210,17 @@
                                       SelectedItem="{Binding PerformanceProfile}"
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,12"/>
 
+                            <!-- CPU affinity (hybrid CPUs) - independent of the profile tier -->
+                            <TextBlock Text="CPU Cores (hybrid Intel 12th gen+ / similar)" FontSize="11.5"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding CpuAffinityOptions}"
+                                      SelectedValue="{Binding CpuAffinity}" SelectedValuePath="Value" DisplayMemberPath="Label"
+                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CpuAffinityHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                       TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Margin="0,0,0,12"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
+
                             <!-- Steam App ID Search & Linking -->
                             <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
                                 <StackPanel>
@@ -283,6 +294,8 @@
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}"/>
+                            <TextBlock Text="{Binding ArgumentsHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                       TextWrapping="Wrap" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
@@ -324,14 +337,30 @@
                                 <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
-                            <TextBlock Text="Post-exit runs for .exe and Steam launches only. Epic, GOG, and other launcher links support pre-launch only."
+                            <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10"
+                                    Visibility="{Binding ShowScriptsDisabledNotice, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Game scripts are turned off in Settings &gt; General, so these scripts will NOT run until that switch is back on."
+                                           FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                            </Border>
 
                             <!-- Options stay greyed out until a script path is set, so an empty
                                  card doesn't read as "something is configured". -->
-                            <CheckBox Content="Wait for the pre-launch script to finish before starting the game (up to 30s)"
+                            <CheckBox Content="Wait for the pre-launch script to finish before starting the game"
                                       IsChecked="{Binding WaitForPreLaunchScript}" IsEnabled="{Binding HasPreLaunchScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                            <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasPreLaunchScript}">
+                                <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding PreLaunchTimeoutHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                           TextWrapping="Wrap" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <CheckBox Content="Cancel the launch if the pre-launch script fails (non-zero exit code, timeout, or won't start)"
+                                      IsChecked="{Binding AbortLaunchOnScriptFailure}" IsEnabled="{Binding HasPreLaunchScript}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"
+                                      ToolTip="Use this when the script is a precondition - e.g. it must close another app or switch a device before the game may start. Turning it on also turns on waiting."/>
                             <CheckBox Content="Run scripts hidden (no console window)"
                                       IsChecked="{Binding RunScriptsHidden}" IsEnabled="{Binding HasAnyScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
@@ -385,6 +414,11 @@
                                     <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
                                               Style="{StaticResource ModernCheckBox}"/>
                                     <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable above as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
+                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                    <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
+                                              Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"
+                                              ToolTip="When the session ends, Steam is asked to shut down (steam.exe -shutdown) and the other clients (GOG Galaxy, EA App, Epic Games Launcher, Ubisoft Connect) are closed. Platform background services are left running."/>
+                                    <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. Off by default - leave it off if you keep the client open for downloads or chat."
                                                FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                 </StackPanel>
                             </Border>

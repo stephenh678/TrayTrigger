@@ -1182,6 +1182,8 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),
+            // Describes the machine (what a tweak found before it was applied), not a preference.
+            nameof(AppSettings.TweakPriorState),
         };
         foreach (var prop in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {

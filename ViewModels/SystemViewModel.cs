@@ -41,6 +41,30 @@ public class SystemTweakViewModel : ViewModelBase
     public bool HasCustomAction => Model.HasCustomAction;
     public bool IsOptIn => Model.IsOptIn;
     public string CustomActionLabel => Model.CustomActionLabel;
+    public bool IsInformational => Model.IsInformational;
+    public bool IsAvailable => Model.IsAvailable;
+    public string UnavailableReason => Model.UnavailableReason;
+    public bool ShowUnavailableReason => !Model.IsAvailable && !string.IsNullOrWhiteSpace(Model.UnavailableReason);
+    public bool IsRecommended => Model.IsRecommended;
+
+    private bool _isBusy;
+    /// <summary>True while this row's toggle is being applied off the UI thread (UAC prompt, reg import).</summary>
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set
+        {
+            if (_isBusy != value)
+            {
+                _isBusy = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ActionButtonText));
+                OnPropertyChanged(nameof(CanExecuteToggle));
+            }
+        }
+    }
+
+    public bool CanExecuteToggle => CanToggle && IsAvailable && !IsBusy;
 
     /// <summary>"Learn more" target: Help/tweaks/&lt;id&gt;.md, embedded at build time.</summary>
     public string HelpTopicId => "tweaks/" + Model.Id;
@@ -76,9 +100,15 @@ public class SystemTweakViewModel : ViewModelBase
         }
     }
 
-    public string StatusBadgeText => IsOptimal ? "OPTIMAL" : "STANDARD";
-    public string StatusBadgeColor => IsOptimal ? "#238636" : "#6E6E7A";
-    public string ActionButtonText => IsOptimal ? "Revert to Default" : "Optimize";
+    // Informational rows (Core Isolation) get a neutral ON/OFF badge: "optimal" would mean a
+    // security feature is off. Unavailable rows show a grey N/A badge.
+    public string StatusBadgeText => IsInformational ? (IsOptimal ? "ON" : "OFF")
+        : !IsAvailable ? "N/A"
+        : IsOptimal ? "OPTIMAL" : "STANDARD";
+    public string StatusBadgeColor => IsInformational ? "#2F5F8F"
+        : !IsAvailable ? "#4A4A55"
+        : IsOptimal ? "#238636" : "#6E6E7A";
+    public string ActionButtonText => IsBusy ? "Working..." : IsOptimal ? "Revert to Default" : "Optimize";
 
     public ICommand ToggleCommand { get; }
     public ICommand CustomActionCommand { get; }
@@ -91,19 +121,37 @@ public class SystemTweakViewModel : ViewModelBase
         _isOptimal = model.IsOptimal;
         _statusText = model.StatusText;
 
-        ToggleCommand = new RelayCommand(ExecuteToggle, () => CanToggle);
+        ToggleCommand = new AsyncRelayCommand(ExecuteToggleAsync, () => CanExecuteToggle);
         CustomActionCommand = new RelayCommand(ExecuteCustomAction);
     }
 
-    private void ExecuteToggle()
+    /// <summary>
+    /// Applies the toggle off the UI thread: an HKLM tweak is an elevated reg import behind a UAC
+    /// prompt with a two-minute ceiling, and the window must keep painting meanwhile.
+    /// </summary>
+    private async Task ExecuteToggleAsync()
     {
+        if (IsBusy) return;
         bool targetState = !IsOptimal;
-        _service.ApplyTweak(Id, targetState);
+        IsBusy = true;
+        bool actualState;
+        try
+        {
+            actualState = await Task.Run(() =>
+            {
+                _service.ApplyTweak(Id, targetState);
+                // Trust a fresh read of the real system state over ApplyTweak's own return value:
+                // an elevated write can report "failed" (a slow UAC prompt) while it actually went
+                // through moments later, or "succeeded" without the underlying state matching.
+                return _service.GetTweakState(Id);
+            });
+        }
+        finally
+        {
+            IsBusy = false;
+        }
 
-        // Trust a fresh read of the real system state over ApplyTweak's own return value: an
-        // elevated write can report "failed" (e.g. a slow UAC prompt) while it actually went
-        // through moments later, or report "succeeded" without the underlying state matching.
-        bool actualState = _service.GetTweakState(Id);
+        bool changed = actualState != IsOptimal;
         IsOptimal = actualState;
         StatusText = actualState ? "Optimal configuration applied" : "Reverted to standard Windows default";
 
@@ -111,7 +159,7 @@ public class SystemTweakViewModel : ViewModelBase
         {
             _notifyParent($"Toggled '{Name}' to {(targetState ? "Optimal" : "Default")}.");
 
-            if (RequiresReboot)
+            if (RequiresReboot && changed)
             {
                 bool restartNow = ModernDialog.PromptRestart(null,
                     $"\"{Name}\" has been updated, but Windows won't apply it until you restart your PC.");
@@ -124,7 +172,9 @@ public class SystemTweakViewModel : ViewModelBase
         else
         {
             LoggingService.Warn("SystemTweakViewModel", $"Toggle '{Name}' ({Id}) to {(targetState ? "Optimal" : "Default")} did not take effect - actual state read back as {(actualState ? "Optimal" : "Default")}.");
-            _notifyParent($"Failed to update '{Name}'. Administrator privileges may be required.");
+            _notifyParent(RequiresAdmin
+                ? $"Failed to update '{Name}'. The administrator prompt was cancelled or the change was rejected."
+                : $"Failed to update '{Name}'.");
         }
     }
 
@@ -316,9 +366,14 @@ public class SystemViewModel : ViewModelBase
     public IEnumerable<SystemTweakViewModel> SecurityAndAdvancedTweaks => Tweaks.Where(t => t.Category == TweakCategory.SecurityAndAdvanced);
 
     // Optimal count summary
-    public int OptimalTweakCount => Tweaks.Count(t => t.IsOptimal);
-    public int TotalTweakCount => Tweaks.Count;
-    public string TweaksOptimizationScoreDisplay => $"{OptimalTweakCount} / {TotalTweakCount} Optimizations Active";
+    // The score counts only the recommended set (available, toggleable, not opt-in, not
+    // informational) so it reads as "how much of the preset is on", not as a nudge to enable
+    // every trade-off tweak or to turn Memory Integrity off.
+    public int OptimalTweakCount => Tweaks.Count(t => t.IsRecommended && t.IsOptimal);
+    public int TotalTweakCount => Tweaks.Count(t => t.IsRecommended);
+    public int OptInActiveCount => Tweaks.Count(t => t.IsOptIn && t.IsAvailable && t.IsOptimal);
+    public string TweaksOptimizationScoreDisplay =>
+        $"{OptimalTweakCount} / {TotalTweakCount} Recommended Optimizations Active" + (OptInActiveCount > 0 ? $"  ·  {OptInActiveCount} opt-in on" : "");
 
     // Restore Point Protection status - read-only here; configured in Settings > Performance Tweaks.
     public string RestorePointBadgeText => _settings.CreateRestorePointBeforeTweaks ? "RESTORE POINT: ON" : "RESTORE POINT: OFF";
@@ -358,6 +413,13 @@ public class SystemViewModel : ViewModelBase
                 () => config.HdrEnabled,
                 v => { config.HdrEnabled = v; Save(); },
                 isOptIn: true),
+            new("Do Not Disturb While Playing",
+                "Silences Windows toast notifications for the length of the session, then puts the switch back the way it was.",
+                "Windows 11 only auto-enables Do Not Disturb for games it detects as fullscreen; a borderless title still gets Teams/Discord/Update toasts popping over it. This flips the notification centre's global toast switch (the same value its own Do Not Disturb toggle writes) when the game starts and restores your prior setting on exit - a user who already had notifications off stays off. Opt-in because some people are waiting on a message mid-game.",
+                "profiles/do_not_disturb",
+                () => config.DoNotDisturbEnabled,
+                v => { config.DoNotDisturbEnabled = v; Save(); },
+                isOptIn: true),
         };
     }
 
@@ -392,6 +454,12 @@ public class SystemViewModel : ViewModelBase
                 () => config.DefenderExclusionEnabled,
                 v => { config.DefenderExclusionEnabled = v; Save(); },
                 isOptIn: true),
+            new("0.5 ms Timer Resolution Request",
+                "Holds a high-resolution system timer request (NtSetTimerResolution, 0.5 ms) while the game runs, released when the last session ends.",
+                "What TimerTool and ISLC do: a finer scheduler tick means Sleep()/timer waits inside the game and its driver stack wake on time instead of up to 15.6 ms late, which shows up as smoother frame pacing in engines that don't request a fine timer themselves. On Windows 10 2004+ and Windows 11 timer resolution is per-process, so this request only reaches the game when the permanent \"System Timer Resolution\" tweak (GlobalTimerResolutionRequests) is on - turn that on under Performance Tweaks first. Costs a little idle power only while a game is running.",
+                "profiles/timer_resolution",
+                () => config.TimerResolutionEnabled,
+                v => { config.TimerResolutionEnabled = v; Save(); }),
         };
     }
 
@@ -605,9 +673,10 @@ public class SystemViewModel : ViewModelBase
         OnPropertyChanged(nameof(SecurityAndAdvancedTweaks));
     }
 
-    private void RefreshAllTweaks()
+    /// <summary>Re-reads every tweak off the UI thread (GetAllTweaks spawns powercfg and a WMI query).</summary>
+    private async Task RefreshAllTweaksAsync(string? statusOnDone = "Checked current Windows settings.")
     {
-        var updatedList = _tweaksService.GetAllTweaks();
+        var updatedList = await Task.Run(() => _tweaksService.GetAllTweaks());
         foreach (var vm in Tweaks)
         {
             var updated = updatedList.FirstOrDefault(u => u.Id == vm.Id);
@@ -617,15 +686,25 @@ public class SystemViewModel : ViewModelBase
             }
         }
         OnPropertyChanged(nameof(OptimalTweakCount));
+        OnPropertyChanged(nameof(TotalTweakCount));
         OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
         OnPropertyChanged(nameof(RestorePointBadgeText));
         OnPropertyChanged(nameof(RestorePointBadgeColor));
-        StatusMessage = "Checked current Windows settings.";
+        if (statusOnDone != null) StatusMessage = statusOnDone;
     }
+
+    private void RefreshAllTweaks() => _ = RefreshAllTweaksAsync();
+
+    private Dictionary<string, bool> SnapshotOptimalState() => Tweaks.ToDictionary(t => t.Id, t => t.IsOptimal, StringComparer.Ordinal);
 
     private async Task ExecuteApplyPresetAsync()
     {
-        var changing = Tweaks.Where(t => t.CanToggle && !t.IsOptimal).Select(t => t.Name).ToList();
+        var changing = Tweaks.Where(t => t.IsRecommended && !t.IsOptimal).Select(t => t.Name).ToList();
+        if (changing.Count == 0)
+        {
+            StatusMessage = "Every recommended optimization is already active.";
+            return;
+        }
         if (!ConfirmBulkAction(
             "Apply Performance Preset",
             "This will change the following settings:",
@@ -634,6 +713,7 @@ public class SystemViewModel : ViewModelBase
             return;
         }
 
+        var before = SnapshotOptimalState();
         IsApplyingTweaks = true;
         try
         {
@@ -643,46 +723,54 @@ public class SystemViewModel : ViewModelBase
             StatusMessage = BusyToastMessage;
             await Task.Run(() => _tweaksService.ApplyRecommendedPerformancePreset());
 
-            RefreshAllTweaks();
-            StatusMessage = "Recommended Performance Preset applied successfully!";
+            await RefreshAllTweaksAsync("Recommended Performance Preset applied.");
         }
         finally
         {
             IsApplyingTweaks = false;
         }
 
-        PromptRestartForBulkAction();
+        PromptRestartForBulkAction(before);
     }
 
     private async Task ExecuteResetDefaultsAsync()
     {
-        var changing = Tweaks.Where(t => t.CanToggle && t.IsOptimal).Select(t => t.Name).ToList();
+        // Only tweaks that are actually applied are reverted - never a Balanced plan onto a
+        // machine that never used the power-plan tweak, or animations back on for someone who
+        // turned them off in Windows themselves.
+        var applied = Tweaks.Where(t => t.CanToggle && !t.IsInformational && t.IsOptimal).ToList();
+        if (applied.Count == 0)
+        {
+            StatusMessage = "No TrayTrigger optimizations are currently applied.";
+            return;
+        }
         if (!ConfirmBulkAction(
             "Reset Defaults",
-            "This will restore the following settings to their Windows defaults:",
-            changing))
+            "This will restore the following settings to what they were before TrayTrigger changed them:",
+            applied.Select(t => t.Name).ToList()))
         {
             return;
         }
 
+        var before = SnapshotOptimalState();
+        var ids = applied.Select(t => t.Id).ToList();
         IsApplyingTweaks = true;
         try
         {
             await TryCreateRestorePointAsync("TrayTrigger: Before Reset to Defaults");
 
-            BusyToastMessage = "Resetting optimizations to standard Windows defaults...";
+            BusyToastMessage = "Resetting optimizations to their prior values...";
             StatusMessage = BusyToastMessage;
-            await Task.Run(() => _tweaksService.ResetAllToDefaults());
+            await Task.Run(() => _tweaksService.ResetToDefaults(ids));
 
-            RefreshAllTweaks();
-            StatusMessage = "Reset all settings to Windows defaults.";
+            await RefreshAllTweaksAsync("Reset applied optimizations.");
         }
         finally
         {
             IsApplyingTweaks = false;
         }
 
-        PromptRestartForBulkAction();
+        PromptRestartForBulkAction(before);
     }
 
     private async Task TryCreateRestorePointAsync(string description)
@@ -710,10 +798,12 @@ public class SystemViewModel : ViewModelBase
         return ModernDialog.Confirm(null, title, message, detail, confirmText: "Continue", cancelText: "Cancel");
     }
 
-    private void PromptRestartForBulkAction()
+    /// <summary>Prompts for a restart only when a reboot-required tweak actually changed state in this run.</summary>
+    private void PromptRestartForBulkAction(Dictionary<string, bool> before)
     {
         var affected = Tweaks
             .Where(t => SystemTweaksService.RebootRequiredTweakIds.Contains(t.Id))
+            .Where(t => !before.TryGetValue(t.Id, out bool was) || was != t.IsOptimal)
             .Select(t => t.Name)
             .ToList();
 

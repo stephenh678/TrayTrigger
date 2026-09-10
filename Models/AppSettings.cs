@@ -44,8 +44,10 @@ public class AppSettings
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>
-    /// Shows the Pre-Launch &amp; Post-Exit Scripts card in Edit Game. Visibility only: a game
-    /// that already has a script keeps running it (and keeps showing the card) regardless.
+    /// The game-scripts feature switch. Shows the Pre-Launch &amp; Post-Exit Scripts card in Edit
+    /// Game, and is also the runtime kill-switch: while off, no script runs for any game, even
+    /// one that still has script paths configured (that game keeps showing the card, with a
+    /// notice that its scripts are disabled). See <see cref="Services.GameScriptService"/>.
     /// </summary>
     public bool EnableGameScripts { get; set; } = false;
     public bool AutoCheckForUpdates { get; set; } = true;
@@ -66,6 +68,14 @@ public class AppSettings
     public System.DateTime? RemindAfterUtc { get; set; }
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
     public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new() { PowerPlanEnabled = true, GpuPreferenceEnabled = true };
-    public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new() { SystemResponsivenessEnabled = true, MmcssGamesPriorityEnabled = true, AboveNormalPriorityEnabled = true, DefenderExclusionEnabled = false };
+    public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new() { SystemResponsivenessEnabled = true, MmcssGamesPriorityEnabled = true, AboveNormalPriorityEnabled = true, DefenderExclusionEnabled = false, TimerResolutionEnabled = true };
+
+    /// <summary>
+    /// What a permanent System &amp; Performance tweak found on the machine before it was applied,
+    /// keyed by tweak id (e.g. "power_plan" -> the previously active scheme GUID). "Revert to
+    /// Default" restores this exact prior state instead of a hard-coded Windows default. Survives
+    /// "Reset settings to defaults" on purpose: it describes the machine, not a preference.
+    /// </summary>
+    public Dictionary<string, string> TweakPriorState { get; set; } = new();
 }
 

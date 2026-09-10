@@ -11,9 +11,10 @@ Turns off Windows "Fullscreen optimizations" globally. Games that ask for exclus
 
 ## Trade-offs
 
+- Modern games on Windows 11 generally run better with the optimizations on. The optimized path is the flip-model path that Auto HDR and windowed variable refresh rate depend on, so disabling it globally turns those off for fullscreen games.
 - Alt-tab out of an exclusive fullscreen game is slower and may flash the screen.
-- Modern games on Windows 11 generally run better with the optimizations on, because of the flip-model path. This tweak mainly helps older titles.
-- You can instead disable optimizations per game from the exe's Properties, Compatibility tab, which is usually the better choice.
+- Disabling optimizations per game from the exe Properties, Compatibility tab is usually the better choice.
+- Opt-in for these reasons: off by default and skipped by Apply Performance Preset.
 - No restart and no administrator rights needed.
 
 ## Details

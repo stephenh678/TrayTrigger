@@ -53,7 +53,7 @@ public class MainViewModel : ViewModelBase
     private readonly TrayPromotionService _trayPromotionService;
     private readonly FolderScannerService _folderScannerService;
     private readonly SystemInfoService _systemInfoService = new();
-    private readonly SystemTweaksService _systemTweaksService = new();
+    private readonly SystemTweaksService _systemTweaksService;
 
     public SystemViewModel SystemVM { get; }
     public SettingsViewModel SettingsVM { get; }
@@ -214,6 +214,9 @@ public class MainViewModel : ViewModelBase
         // Library status bar isn't the section on screen (see LibraryViewModel.AnnounceImportResult).
         Library.IsLibraryVisible = () => CurrentSection == NavSection.Library;
 
+        // The tweaks service records what it found on the machine before applying a tweak (prior
+        // power plan, prior visual-effects state) into settings so "Revert to Default" is exact.
+        _systemTweaksService = new SystemTweaksService(() => _settings, () => _storageService.SaveSettings(_settings));
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
 
         // Navigation Commands
@@ -287,6 +290,8 @@ public class MainViewModel : ViewModelBase
 
         _launcherService.GameUpdated += Library.OnGameUpdatedFromLauncher;
         _launcherService.GameWindowReady += Library.OnGameWindowReady;
+        _launcherService.SessionStarted += Library.OnSessionStarted;
+        _launcherService.SessionEnded += Library.OnSessionEnded;
         _hotkeyManager.GameHotkeyTriggered += Library.OnGameHotkeyTriggered;
 
         Library.LoadLibrary();

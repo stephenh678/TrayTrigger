@@ -25,6 +25,13 @@ public class OptimizedProfileTweakConfig
     /// content well, so it's an explicit opt-in rather than something Optimized enables outright.
     /// </summary>
     public bool HdrEnabled { get; set; }
+
+    /// <summary>
+    /// Turns Windows toast notifications off for the length of the session (the notification
+    /// centre's global toast switch), restoring the prior value on exit. Defaults to false: a user
+    /// waiting on a message mid-game would rather see it.
+    /// </summary>
+    public bool DoNotDisturbEnabled { get; set; }
 }
 
 /// <summary>
@@ -44,6 +51,14 @@ public class AggressiveProfileTweakConfig
     /// rather than something enabled by picking Aggressive.
     /// </summary>
     public bool DefenderExclusionEnabled { get; set; }
+
+    /// <summary>
+    /// Holds a 0.5 ms system timer resolution request (NtSetTimerResolution) for the length of
+    /// the session - what TimerTool/ISLC do. On Windows 10 2004+/11 this only reaches other
+    /// processes when the permanent "System Timer Resolution" tweak (GlobalTimerResolutionRequests)
+    /// is on; TrayTrigger's own request is released when the last session ends.
+    /// </summary>
+    public bool TimerResolutionEnabled { get; set; }
 }
 
 /// <summary>
@@ -107,6 +122,14 @@ public class PerformanceProfileSessionSnapshot
 
     public bool HdrCaptured { get; set; }
     public List<HdrDisplaySnapshot> PreviousHdrStates { get; set; } = new();
+
+    /// <summary>Do Not Disturb: the global toast switch before the session (null = value absent = on).</summary>
+    public bool ToastsCaptured { get; set; }
+    public int? PreviousToastsEnabled { get; set; }
+
+    /// <summary>A timer-resolution request is held by this TrayTrigger process. Nothing to recover
+    /// after a crash (the request dies with the process) - tracked so the last session releases it.</summary>
+    public bool TimerResolutionRequested { get; set; }
 
     public List<PerGameProfileSnapshot> PerGameSnapshots { get; set; } = new();
 }
