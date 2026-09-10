@@ -1,4 +1,4 @@
-# High-Performance GPU Preference (profile)
+# Windows High-Performance GPU Preference (profile)
 
 ## What it changes
 

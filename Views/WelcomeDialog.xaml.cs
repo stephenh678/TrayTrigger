@@ -23,5 +23,15 @@ public partial class WelcomeDialog : Window
         };
     }
 
+    /// <summary>True when the user chose "Scan for Games" - the caller runs the scan after
+    /// this dialog closes (see MainWindow.MaybeShowWelcomePrompt).</summary>
+    public bool ScanRequested { get; private set; }
+
     private void OnGetStartedClick(object sender, RoutedEventArgs e) => Close();
+
+    private void OnScanClick(object sender, RoutedEventArgs e)
+    {
+        ScanRequested = true;
+        Close();
+    }
 }

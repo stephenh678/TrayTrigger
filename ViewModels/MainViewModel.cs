@@ -97,6 +97,9 @@ public class MainViewModel : ViewModelBase
     public event Action? RequestExitApplication;
     public event Action<string, string>? RequestTrayNotification;
 
+    /// <summary>Shows a tray balloon (title + message) via the App's tray icon.</summary>
+    public void NotifyTray(string title, string message) => RequestTrayNotification?.Invoke(title, message);
+
     public MainViewModel(
         StorageService storageService,
         AppSettings settings,
@@ -227,6 +230,11 @@ public class MainViewModel : ViewModelBase
         OpenDiagnosticsSettingsCommand = new RelayCommand(() =>
         {
             SettingsVM.SelectedTab = SettingsCategoryTab.Diagnostics;
+            CurrentSection = NavSection.Settings;
+        });
+        OpenPerformanceSettingsCommand = new RelayCommand(() =>
+        {
+            SettingsVM.SelectedTab = SettingsCategoryTab.PerformanceTweaks;
             CurrentSection = NavSection.Settings;
         });
         SelectAboutCommand = new RelayCommand(() => CurrentSection = NavSection.About);
@@ -388,7 +396,36 @@ public class MainViewModel : ViewModelBase
     public ICommand SelectLibraryCommand { get; }
     public ICommand SelectSettingsCommand { get; }
     public ICommand OpenDiagnosticsSettingsCommand { get; }
+    /// <summary>System page's RESTORE POINT badge -> Settings > Launch &amp; Performance.</summary>
+    public ICommand OpenPerformanceSettingsCommand { get; }
     public ICommand SelectAboutCommand { get; }
+
+    /// <summary>About > Overview environment strip: the real runtime this build is on.</summary>
+    public string RuntimeDisplay => $".NET {Environment.Version.Major}.{Environment.Version.Minor} · {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}";
+
+    /// <summary>About > Overview environment strip: "Windows 11 Pro 24H2 (build 26200)". Read
+    /// synchronously from the registry so it is right on first paint, unlike the async telemetry.
+    /// Windows 11 still reports ProductName "Windows 10 ..." there, hence the build-number fix-up.</summary>
+    public string OsDisplay
+    {
+        get
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                string product = key?.GetValue("ProductName") as string ?? "Windows";
+                string display = key?.GetValue("DisplayVersion") as string ?? "";
+                string build = key?.GetValue("CurrentBuild") as string ?? "";
+                if (int.TryParse(build, out int b) && b >= 22000) product = product.Replace("Windows 10", "Windows 11");
+                return $"{product} {display} (build {build})".Replace("  ", " ").Trim();
+            }
+            catch
+            {
+                return Environment.OSVersion.VersionString;
+            }
+        }
+    }
+
     public ICommand SelectAboutAllTabCommand { get; }
     public ICommand SelectAboutOverviewTabCommand { get; }
     public ICommand SelectAboutFeaturesTabCommand { get; }

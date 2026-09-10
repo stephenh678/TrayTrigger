@@ -237,6 +237,10 @@ public class GameEditViewModel : ViewModelBase
 
     public bool ShowScriptsCard { get; }
 
+    /// <summary>The one-line "scripts are hidden" stub shown in place of the scripts card, so
+    /// the feature stays discoverable from Edit Game while the Settings switch is off.</summary>
+    public bool ShowScriptsStub => !ShowScriptsCard;
+
     public string PreLaunchScriptPath
     {
         get => _preLaunchScriptPath;
@@ -321,11 +325,32 @@ public class GameEditViewModel : ViewModelBase
         ? "For a Steam game these are sent as Steam launch options (steam://run/<id>//<args>/), the same as Properties > Launch Options in Steam."
         : "Passed to the executable as-is.";
 
+    /// <summary>Launch through the Steam client (steam://rungameid/) rather than the executable.
+    /// Offered inside the Steam App ID box only while the entry has no launcher platform; once
+    /// on, the entry is a Steam-linked game and the launcher box (with "launch this executable
+    /// directly") takes over - so exactly one launch-route control is ever on screen.</summary>
     public bool IsSteamGame
     {
         get => _isSteamGame;
-        set { _isSteamGame = value; OnPropertyChanged(); OnPropertyChanged(nameof(ArgumentsHint)); }
+        set
+        {
+            _isSteamGame = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ArgumentsHint));
+            OnPropertyChanged(nameof(HasPlatform));
+            OnPropertyChanged(nameof(PlatformDescription));
+            OnPropertyChanged(nameof(LaunchDirectlyLabel));
+            OnPropertyChanged(nameof(CanOfferSteamLaunch));
+            OnPropertyChanged(nameof(CanOfferSteamBadge));
+        }
     }
+
+    /// <summary>Shows the "Launch through the Steam client" option: an entry with no launcher tag
+    /// (or one converted to Local in this session) that has a Steam App ID to launch by.</summary>
+    public bool CanOfferSteamLaunch => !HasPlatform && !string.IsNullOrWhiteSpace(SteamAppId);
+
+    /// <summary>"Show the Steam badge" only matters for a game that does not launch through Steam.</summary>
+    public bool CanOfferSteamBadge => !_isSteamGame;
 
     // --- Launcher platform (GOG / EA / Epic / Ubisoft / Steam-by-AppId) ---
     // The card shows a platform badge the dialog previously could neither explain nor change.
@@ -339,17 +364,18 @@ public class GameEditViewModel : ViewModelBase
     /// to Local in this edit session) - shows the platform card.</summary>
     public bool HasPlatform
     {
-        get => _hasPlatform && !_convertToLocal;
-        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); }
+        get => (_hasPlatform || _isSteamGame) && !_convertToLocal;
+        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); OnPropertyChanged(nameof(CanOfferSteamLaunch)); }
     }
 
-    /// <summary>"GOG", "EA", "Epic", "Ubisoft" or "Steam" - whichever tag the entry carries.</summary>
+    /// <summary>"GOG", "EA", "Epic", "Ubisoft" or "Steam" - whichever tag the entry carries.
+    /// Steam reads the edited value so ticking "launch through Steam" relabels the box at once.</summary>
     public string PlatformName =>
         SourceGame.IsGogGame ? "GOG" :
         SourceGame.IsEaGame ? "EA" :
         SourceGame.IsEpicGame ? "Epic" :
         SourceGame.IsUbisoftGame ? "Ubisoft" :
-        SourceGame.IsSteamGame ? "Steam" : "Local";
+        _isSteamGame ? "Steam" : "Local";
 
     /// <summary>e.g. "Imported from GOG (game ID 1207658924)". Where it came from and the ID
     /// the launcher knows it by, so a wrong match is at least diagnosable.</summary>
@@ -361,7 +387,7 @@ public class GameEditViewModel : ViewModelBase
                 : SourceGame.IsEaGame ? SourceGame.EaContentId
                 : SourceGame.IsEpicGame ? SourceGame.EpicAppName
                 : SourceGame.IsUbisoftGame ? SourceGame.UbisoftGameId
-                : SourceGame.SteamAppId;
+                : SteamAppId;
             string via = SourceGame.ImportedFrom != null ? "Imported from" : "Linked to";
             return string.IsNullOrEmpty(id) ? $"{via} {PlatformName}" : $"{via} {PlatformName} (ID {id})";
         }
@@ -385,6 +411,7 @@ public class GameEditViewModel : ViewModelBase
         _convertToLocal = true;
         IsSteamGame = false;
         OnPropertyChanged(nameof(HasPlatform));
+        OnPropertyChanged(nameof(CanOfferSteamLaunch));
         StatusMessage = $"Will be saved as a Local game (no longer linked to {PlatformName}). Click Save to apply.";
     });
 
@@ -399,10 +426,12 @@ public class GameEditViewModel : ViewModelBase
         get => _steamAppId;
         set 
         { 
-            _steamAppId = value; 
-            OnPropertyChanged(); 
-            OnPropertyChanged(nameof(SteamAppIdDisplay)); 
+            _steamAppId = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SteamAppIdDisplay));
             OnPropertyChanged(nameof(HasSteamAppId));
+            OnPropertyChanged(nameof(CanOfferSteamLaunch));
+            OnPropertyChanged(nameof(PlatformDescription));
         }
     }
 

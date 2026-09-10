@@ -21,13 +21,13 @@ Dropping a game folder or exe onto the Library, or using "Add Folder", also reco
 ## Running a scan
 
 - Click "Scan for Games" (Library page or here in Settings) for a single-click scan: it runs immediately, with no extra prompts.
-- If it finds one or more new games, the install picker opens so you can choose which to add - even a single result goes through that picker, since a scan can just as easily turn up several at once.
+- If it finds one or more new games, the New Games Found picker opens so you can choose which to add - even a single result goes through that picker, since a scan can just as easily turn up several at once.
 - If nothing new turns up, or no integrations or scan locations are configured, you just get a status message - no dialog.
 - Turn on "Automatically scan for new games on startup" to run this quietly every time TrayTrigger opens. It stays quiet unless it actually finds something new.
 
 ## Ignoring a false positive
 
-Folder scanning uses heuristics, so it can occasionally offer something that isn't really a game (a bundled tool, an installer, a benchmark). Click "Ignore" next to a candidate in the install picker to permanently exclude that exact file from every future scan. Ignored items are listed under "Ignored Games" here, where you can remove one to let it be detected again.
+Folder scanning uses heuristics, so it can occasionally offer something that isn't really a game (a bundled tool, an installer, a benchmark). Click "Ignore" next to a candidate in the New Games Found picker to permanently exclude that exact file from every future scan. Ignored items are listed under "Ignored Games" here, where you can remove one to let it be detected again.
 
 > Steam, GOG, EA, Epic, and Ubisoft games can be ignored too, by their own platform ID rather than file path - useful for something registered as a "game" that isn't really one (a soundtrack, an SDK, a demo).
 

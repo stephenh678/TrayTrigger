@@ -119,7 +119,15 @@ public partial class MainWindow : Window
         settingsVm.Settings.HasSeenWelcomePrompt = true;
         settingsVm.AutoSaveSettings();
 
-        new WelcomeDialog { Owner = this }.ShowDialog();
+        var welcome = new WelcomeDialog { Owner = this };
+        welcome.ShowDialog();
+
+        // "Scan for Games" straight from the welcome: the single most useful first step for
+        // anyone with a launcher installed, so it shouldn't need a second hunt for the button.
+        if (welcome.ScanRequested)
+        {
+            _viewModel.OpenScanForGamesCommand.Execute(null);
+        }
     }
 
     /// <summary>
@@ -165,6 +173,17 @@ public partial class MainWindow : Window
         {
             e.Cancel = true;
             Hide();
+
+            // First hide via the title-bar X: tell the user the app is still running, once.
+            // Without this the X looked like an exit and the tray icon went unnoticed.
+            var settings = _viewModel.SettingsVM.Settings;
+            if (!settings.HasSeenTrayHideNotice)
+            {
+                settings.HasSeenTrayHideNotice = true;
+                _viewModel.SettingsVM.AutoSaveSettings();
+                _viewModel.NotifyTray("TrayTrigger is still running",
+                    "Your hotkeys and tray menu stay active. Left-click the tray icon to reopen, or right-click it to exit.");
+            }
             return;
         }
 
@@ -339,7 +358,7 @@ public partial class MainWindow : Window
 
     private void OnRequestQuickRename(GameCardViewModel card)
     {
-        var dialog = new QuickInputDialog("Rename Game", "Quick Rename", $"Enter a new title for \"{card.Name}\":", card.Name);
+        var dialog = new QuickInputDialog("Rename Game", "Rename Game", $"Enter a new title for \"{card.Name}\":", card.Name);
         dialog.Owner = this;
         if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.ResultValue))
         {
@@ -362,7 +381,7 @@ public partial class MainWindow : Window
     {
         var dialog = new QuickInputDialog(
             "Link Steam App ID",
-            "Steam Store & Artwork Match",
+            "Link Steam App ID",
             $"Enter numeric Steam App ID for \"{card.Name}\":\n(Found in store.steampowered.com/app/<id>/ - does not require Steam to run)",
             card.Game.SteamAppId ?? "");
         dialog.Owner = this;

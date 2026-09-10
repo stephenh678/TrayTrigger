@@ -90,7 +90,9 @@ public partial class GameCandidatePickerDialog : Window
         };
 
         string folderName = Path.GetFileName(folderPath.TrimEnd('\\', '/'));
-        SubtitleTextBlock.Text = $"Found {candidates.Count} executable(s) across the folder branch. Select the game executable:";
+        SubtitleTextBlock.Text = candidates.Count == 1
+            ? "Found 1 executable in this folder. Confirm it is the game:"
+            : $"Found {candidates.Count} executables in this folder. Pick the one that starts the game:";
 
         var items = new List<CandidatePickerItem>();
         for (int i = 0; i < candidates.Count; i++)

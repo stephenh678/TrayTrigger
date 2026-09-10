@@ -110,7 +110,7 @@
                                Margin="0,0,8,0" VerticalAlignment="Top"/>
                     <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
                                Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Missing box art? Settings &gt; Library can pull higher-quality poster art from SteamGridDB.com with your own free API key."/>
+                               Text="Missing box art? Settings &gt; Library &amp; Art can pull higher-quality poster art from SteamGridDB.com with your own free API key."/>
                 </Grid>
 
                 <Grid Margin="6,0,0,0">
@@ -122,14 +122,17 @@
                                Margin="0,0,8,0" VerticalAlignment="Top"/>
                     <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
                                Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Every screen has a Learn more link if you want the details behind a setting."/>
+                               Text="Every setting with a trade-off has a Learn more link, and About &gt; Support lists every help topic in one place."/>
                 </Grid>
             </StackPanel>
 
             <!-- Footer -->
             <DockPanel Grid.Row="3" LastChildFill="False">
-                <Button Content="Get Started" Style="{StaticResource ModernAccentButton}" Padding="16,6"
-                        DockPanel.Dock="Right" IsDefault="True" IsCancel="True" Click="OnGetStartedClick"/>
+                <Button Content="Scan for Games" Style="{StaticResource ModernAccentButton}" Padding="16,6"
+                        DockPanel.Dock="Right" IsDefault="True" Click="OnScanClick"
+                        ToolTip="Import what's already installed from Steam, GOG, EA, Epic, and Ubisoft Connect"/>
+                <Button Content="Get Started" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
+                        DockPanel.Dock="Right" IsCancel="True" Click="OnGetStartedClick"/>
             </DockPanel>
         </Grid>
     </Border>

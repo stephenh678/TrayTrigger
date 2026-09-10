@@ -284,7 +284,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "game_mode",
-            Name = "Windows Game Mode Thread Priority",
+            Name = "Windows Game Mode",
             Category = TweakCategory.CpuAndPower,
             ShortDescription = "Prioritizes game process threads on high-performance cores and halts background updates.",
             WhyItMatters = "Prevents Windows Update from downloading or installing drivers mid-match and isolates game threads on primary CPU cores.",
@@ -300,7 +300,7 @@ public partial class SystemTweaksService
             Id = "timer_resolution",
             Name = "System Timer Resolution",
             Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Forces Windows to use its highest-precision system timer instead of falling back to the default 15.6ms tick.",
+            ShortDescription = "Lets any program's request for a fine system timer apply system-wide again, instead of only to itself - so games that don't ask for one no longer sit on the coarse 15.6 ms tick.",
             WhyItMatters = "Windows 10 (2004+) and 11 changed timer resolution requests to apply per-process instead of system-wide. Games/engines that don't request a high-resolution timer themselves can silently fall back to the coarse default tick, showing up as stutter or an effective low frame-pacing ceiling. This restores the old system-wide high-precision behavior.",
             IsOptimal = timerResolutionOptimal,
             StatusText = timerResolutionOptimal ? "Optimal (System-Wide High Precision)" : "Standard (Per-Process Default)",
@@ -464,8 +464,10 @@ public partial class SystemTweaksService
             // off is never presented as an "optimization".
             IsOptimal = hvciRunning,
             StatusText = hvciRunning ? "Memory Integrity running" : "Memory Integrity off",
-            RequiresAdmin = true,
-            RequiresReboot = true,
+            // Status-only: TrayTrigger never writes this, so no ADMIN / RESTART badge - those
+            // badges describe what *changing* a row costs, and this row cannot be changed here.
+            RequiresAdmin = false,
+            RequiresReboot = false,
             CanToggle = false, // Must be changed in Windows Defender GUI safely
             HasCustomAction = true,
             CustomActionLabel = "Open Core Isolation Settings",

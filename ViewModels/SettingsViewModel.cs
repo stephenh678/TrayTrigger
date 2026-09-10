@@ -103,10 +103,11 @@ public class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<string> TraySortOptions { get; } = new()
     {
+        // Same order as the Library's sort list.
         "Alphabetical (A - Z)",
+        "Alphabetical (Z - A)",
         "Most Recently Played",
-        "Cumulative Playtime",
-        "Alphabetical (Z - A)"
+        "Cumulative Playtime"
     };
 
     public ObservableCollection<string> ViewModeOptions { get; } = new()

@@ -143,6 +143,11 @@ public class LibraryViewModel : ViewModelBase
         FilteredGames = CollectionViewSource.GetDefaultView(Games);
         FilteredGames.Filter = FilterGameItem;
         ApplySort();
+        Games.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasAnyGames));
+            OnPropertyChanged(nameof(TotalGameCountDisplay));
+        };
 
         RefreshCategoriesCommand = new RelayCommand(RebuildCategories);
         UndoDeleteCommand = new RelayCommand(UndoDelete);
@@ -238,7 +243,11 @@ public class LibraryViewModel : ViewModelBase
     }
 
     public int TotalGameCount => Games.Count;
-    public string TotalGameCountDisplay => $"{Games.Count} game(s)";
+    public string TotalGameCountDisplay => Games.Count == 1 ? "1 game" : $"{Games.Count} games";
+
+    /// <summary>False only when the library itself is empty. Lets the view tell "add your first
+    /// game" apart from "nothing matches this search or category tab".</summary>
+    public bool HasAnyGames => Games.Count > 0;
 
     public ICommand RefreshCategoriesCommand { get; }
     public ICommand UndoDeleteCommand { get; }

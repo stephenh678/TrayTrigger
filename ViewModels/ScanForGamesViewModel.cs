@@ -214,6 +214,14 @@ public class ScanForGamesViewModel : ViewModelBase
             Results.Add(item);
         }
 
+        foreach (var item in Results)
+        {
+            item.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(ScannedGameItemViewModel.IsSelected)) RaiseSelectionChanged();
+            };
+        }
+
         FilteredResults = CollectionViewSource.GetDefaultView(Results);
         FilteredResults.Filter = FilterResult;
 
@@ -226,6 +234,22 @@ public class ScanForGamesViewModel : ViewModelBase
     public string SubtitleText => Results.Count == 1
         ? "Found 1 new game. Select it to add it to your library:"
         : $"Found {Results.Count} new games. Select the ones to add to your library:";
+
+    private int SelectedCount => Results.Count(r => r.IsSelected);
+
+    /// <summary>Footer text, the same shape as the Batch Add dialog's ("3 of 5 games selected").</summary>
+    public string SelectedCountDisplay => Results.Count == 1
+        ? $"{SelectedCount} of 1 game selected"
+        : $"{SelectedCount} of {Results.Count} games selected";
+
+    /// <summary>"Add Selected (3)". It adds library entries; nothing is installed.</summary>
+    public string ImportButtonLabel => SelectedCount > 0 ? $"Add Selected ({SelectedCount})" : "Add Selected";
+
+    private void RaiseSelectionChanged()
+    {
+        OnPropertyChanged(nameof(SelectedCountDisplay));
+        OnPropertyChanged(nameof(ImportButtonLabel));
+    }
 
     private void OnItemIgnoreRequested(ScannedGameItemViewModel item)
     {
@@ -257,6 +281,7 @@ public class ScanForGamesViewModel : ViewModelBase
         item.IgnoreRequested -= OnItemIgnoreRequested;
         Results.Remove(item);
         OnPropertyChanged(nameof(SubtitleText));
+        RaiseSelectionChanged();
     }
 
     public string FilterText

@@ -30,7 +30,7 @@ public class GameDetailsViewModel : ViewModelBase
     public GameEntry Game { get; }
     public string GameTitle => !string.IsNullOrWhiteSpace(_details?.Name) ? _details.Name : Game.Name;
 
-    public string PlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? (Game.IsSteamGame ? "Tracked in Steam" : "0 min played") : Game.PlaytimeDisplay;
+    public string PlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? "0 min played" : Game.PlaytimeDisplay;
     public string LastPlayedDisplay => Game.LastPlayedDisplay;
     public string Category => Game.Category;
     public bool HasHotkey => !string.IsNullOrWhiteSpace(Game.Hotkey);
@@ -231,6 +231,10 @@ public class GameDetailsViewModel : ViewModelBase
     public bool HasNews => NewsItems.Count > 0;
 
     public string StoreUrl => _details?.StoreUrl ?? (!string.IsNullOrWhiteSpace(Game.SteamAppId) ? $"https://store.steampowered.com/app/{Game.SteamAppId}" : string.Empty);
+
+    /// <summary>Hides the Steam Store button outright (not just disabled) for the many
+    /// GOG/EA/Epic/Ubisoft/local games that have no Steam listing to open.</summary>
+    public bool HasStoreUrl => !string.IsNullOrWhiteSpace(StoreUrl);
 
     /// <summary>Steam's news hub for this app: every announcement and patch note, not just the latest 3.</summary>
     public string NewsHubUrl => !string.IsNullOrWhiteSpace(Game.SteamAppId) ? $"https://store.steampowered.com/news/app/{Game.SteamAppId}" : string.Empty;

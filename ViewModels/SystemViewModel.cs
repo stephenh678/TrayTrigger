@@ -236,6 +236,15 @@ public class ProfileTweakToggleViewModel : ViewModelBase
     public string WhyItMatters { get; }
     public bool IsOptIn { get; }
 
+    /// <summary>True when applying this tweak raises a UAC prompt (an HKLM write or an elevated
+    /// PowerShell cmdlet). Shown as the same ADMIN badge the permanent tweak rows use.</summary>
+    public bool RequiresAdmin { get; }
+
+    /// <summary>Optional one-line dependency or caveat shown under the description - e.g. the
+    /// 0.5 ms timer request only reaching the game while the permanent timer tweak is on.</summary>
+    public string Note { get; }
+    public bool HasNote => !string.IsNullOrEmpty(Note);
+
     /// <summary>"Learn more" target, e.g. "profiles/power_plan" -> Help/profiles/power_plan.md.</summary>
     public string HelpTopicId { get; }
 
@@ -245,7 +254,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
 
     public ICommand ToggleCommand { get; }
 
-    public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, string helpTopicId, Func<bool> getter, Action<bool> setter, bool isOptIn = false)
+    public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, string helpTopicId, Func<bool> getter, Action<bool> setter, bool isOptIn = false, bool requiresAdmin = false, string note = "")
     {
         Name = name;
         ShortDescription = shortDescription;
@@ -254,6 +263,8 @@ public class ProfileTweakToggleViewModel : ViewModelBase
         _getter = getter;
         _setter = setter;
         IsOptIn = isOptIn;
+        RequiresAdmin = requiresAdmin;
+        Note = note;
         ToggleCommand = new RelayCommand(() => IsEnabled = !IsEnabled);
     }
 
@@ -360,10 +371,16 @@ public class SystemViewModel : ViewModelBase
 
     // Tweaks
     public ObservableCollection<SystemTweakViewModel> Tweaks { get; } = new();
-    public IEnumerable<SystemTweakViewModel> InputAndDisplayTweaks => Tweaks.Where(t => t.Category == TweakCategory.InputAndDisplay);
-    public IEnumerable<SystemTweakViewModel> CpuAndPowerTweaks => Tweaks.Where(t => t.Category == TweakCategory.CpuAndPower);
-    public IEnumerable<SystemTweakViewModel> NetworkAndBackgroundTweaks => Tweaks.Where(t => t.Category == TweakCategory.NetworkAndBackground);
-    public IEnumerable<SystemTweakViewModel> SecurityAndAdvancedTweaks => Tweaks.Where(t => t.Category == TweakCategory.SecurityAndAdvanced);
+    // Recommended rows first, opt-in rows after, so each card reads in the order the
+    // "N / M Recommended" score counts them. OrderBy is stable: definition order is kept
+    // within each half.
+    private IEnumerable<SystemTweakViewModel> ForCategory(TweakCategory category) =>
+        Tweaks.Where(t => t.Category == category).OrderBy(t => t.IsOptIn ? 1 : 0);
+
+    public IEnumerable<SystemTweakViewModel> InputAndDisplayTweaks => ForCategory(TweakCategory.InputAndDisplay);
+    public IEnumerable<SystemTweakViewModel> CpuAndPowerTweaks => ForCategory(TweakCategory.CpuAndPower);
+    public IEnumerable<SystemTweakViewModel> NetworkAndBackgroundTweaks => ForCategory(TweakCategory.NetworkAndBackground);
+    public IEnumerable<SystemTweakViewModel> SecurityAndAdvancedTweaks => ForCategory(TweakCategory.SecurityAndAdvanced);
 
     // Optimal count summary
     // The score counts only the recommended set (available, toggleable, not opt-in, not
@@ -434,16 +451,18 @@ public class SystemViewModel : ViewModelBase
                 "Windows reserves 20% of CPU resources for low-priority background tasks by default. Microsoft's MMCSS documentation clamps any value below 10 back up to 20, so 10 is the lowest reserve Windows actually honors - it leaves more scheduling headroom for latency-sensitive foreground workloads like games.",
                 "profiles/system_responsiveness",
                 () => config.SystemResponsivenessEnabled,
-                v => { config.SystemResponsivenessEnabled = v; Save(); }),
-            new("MMCSS \"Games\" Task Scheduling Tuning",
+                v => { config.SystemResponsivenessEnabled = v; Save(); },
+                requiresAdmin: true),
+            new("MMCSS \"Games\" Task Priority",
                 "Raises the Multimedia Class Scheduler's built-in \"Games\" task from its Medium default to High.",
                 "Officially documented by Microsoft, MMCSS grants time-sensitive threads registered under the \"Games\" task category prioritized CPU access - the same mechanism game engines request via AvSetMmThreadCharacteristics. Windows ships this task at Scheduling Category=Medium by default; raising it to High uses the same sanctioned mechanism with more headroom. This is scheduling tuning, not a guaranteed FPS boost - the effect depends on what else is contending for the CPU. (Other fields some optimizer tools also touch here, like SFIO Priority, are documented by Microsoft as not used, so this tweak leaves them alone.)",
                 "profiles/mmcss_games_priority",
                 () => config.MmcssGamesPriorityEnabled,
-                v => { config.MmcssGamesPriorityEnabled = v; Save(); }),
+                v => { config.MmcssGamesPriorityEnabled = v; Save(); },
+                requiresAdmin: true),
             new("Above Normal Process Priority",
                 "Raises the game's own process to Above Normal CPU scheduling priority for the duration of the session.",
-                "A real Windows scheduling class (SetPriorityClass), not a registry trick. Community benchmarking consistently finds Above Normal reduces worst-case frame-time stutters with low risk, while pushing further to High priority shows only marginal extra gain and a real risk of starving audio/input threads. Effect varies by game and is not guaranteed. Only takes effect for direct .exe launches - TrayTrigger has no handle to the actual game process for Steam-launched games, so this silently does nothing for those.",
+                "A real Windows scheduling class (SetPriorityClass), not a registry trick. Community benchmarking consistently finds Above Normal reduces worst-case frame-time stutters with low risk, while pushing further to High priority shows only marginal extra gain and a real risk of starving audio/input threads. Effect varies by game and is not guaranteed. Applied as soon as TrayTrigger finds the game's process - for Steam games too, once Steam reports the game running and its process is found under the install folder.",
                 "profiles/above_normal_priority",
                 () => config.AboveNormalPriorityEnabled,
                 v => { config.AboveNormalPriorityEnabled = v; Save(); }),
@@ -453,13 +472,16 @@ public class SystemViewModel : ViewModelBase
                 "profiles/defender_exclusion",
                 () => config.DefenderExclusionEnabled,
                 v => { config.DefenderExclusionEnabled = v; Save(); },
-                isOptIn: true),
+                isOptIn: true,
+                requiresAdmin: true,
+                note: "Expect a User Account Control prompt when the game starts and again when it exits."),
             new("0.5 ms Timer Resolution Request",
                 "Holds a high-resolution system timer request (NtSetTimerResolution, 0.5 ms) while the game runs, released when the last session ends.",
                 "What TimerTool and ISLC do: a finer scheduler tick means Sleep()/timer waits inside the game and its driver stack wake on time instead of up to 15.6 ms late, which shows up as smoother frame pacing in engines that don't request a fine timer themselves. On Windows 10 2004+ and Windows 11 timer resolution is per-process, so this request only reaches the game when the permanent \"System Timer Resolution\" tweak (GlobalTimerResolutionRequests) is on - turn that on under Performance Tweaks first. Costs a little idle power only while a game is running.",
                 "profiles/timer_resolution",
                 () => config.TimerResolutionEnabled,
-                v => { config.TimerResolutionEnabled = v; Save(); }),
+                v => { config.TimerResolutionEnabled = v; Save(); },
+                note: "Only reaches the game while the permanent \"System Timer Resolution\" tweak (Performance Tweaks tab) is on - turn that on first, then restart once."),
         };
     }
 
@@ -509,9 +531,19 @@ public class SystemViewModel : ViewModelBase
             {
                 _isLoadingSpecs = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsSpecsLoaded));
+                OnPropertyChanged(nameof(SpecsRefreshedDisplay));
             }
         }
     }
+
+    /// <summary>Inverse of <see cref="IsLoadingSpecs"/> for the spec cards' visibility.</summary>
+    public bool IsSpecsLoaded => !IsLoadingSpecs;
+
+    private DateTime? _specsRefreshedAt;
+    /// <summary>"Detecting…" while loading, then "Last read 14:02:11" beside the Refresh Specs button.</summary>
+    public string SpecsRefreshedDisplay => IsLoadingSpecs ? "Detecting hardware…"
+        : _specsRefreshedAt is DateTime t ? $"Last read {t:HH:mm:ss}" : "";
 
     private string _statusMessage = "Ready";
     public string StatusMessage
@@ -637,6 +669,7 @@ public class SystemViewModel : ViewModelBase
         try
         {
             Report = await _infoService.GetFullHardwareReportAsync();
+            _specsRefreshedAt = DateTime.Now;
             StatusMessage = $"Hardware refreshed at {DateTime.Now:HH:mm:ss}.";
         }
         catch (Exception ex)
