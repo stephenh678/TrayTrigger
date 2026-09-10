@@ -883,6 +883,23 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Applies the user's choice from the first-launch <see cref="LauncherDetectionDialog"/>:
+    /// enables only the confirmed launchers, through each toggle's own setter above so Settings
+    /// UI bindings and auto-save behave exactly as if the user had flipped them by hand - setting
+    /// the underlying AppSettings fields directly (as ImportCoordinator briefly did) leaves an
+    /// already-bound checkbox showing its stale old value, since nothing raises the property's
+    /// change notification in that case.
+    /// </summary>
+    public void ApplyDetectedLauncherChoices(IReadOnlyList<DetectedLauncher> enabledLaunchers)
+    {
+        SteamIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Steam);
+        GogIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Gog);
+        EaIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ea);
+        EpicIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Epic);
+        UbisoftIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ubisoft);
+    }
+
     public bool AutoScanForGamesOnStartup
     {
         get => _settings.AutoScanForGamesOnStartup;
