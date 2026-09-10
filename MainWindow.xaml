@@ -2112,12 +2112,63 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 1.2 Global Manage Hotkey -->
-                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            <!-- 1.2 Updates & GitHub Releases -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                     Padding="14,12" Margin="0,0,0,10">
                                 <StackPanel>
-                                    <TextBlock Text="Global Manage Window Hotkey" FontSize="13.5" FontWeight="SemiBold" 
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                        <TextBlock Text="Updates &amp; Version Control" FontSize="13.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                        <Button Content="Check for Updates Now" Command="{Binding CheckUpdatesInSettingsCommand}"
+                                                Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
+                                                VerticalAlignment="Center" Padding="10,4"/>
+                                    </DockPanel>
+
+                                    <CheckBox Content="Automatically check for updates on startup"
+                                              IsChecked="{Binding AutoCheckForUpdates}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Periodically checks GitHub Releases in the background and notifies you when an update is available."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox Content="Receive pre-release (beta) updates"
+                                              IsChecked="{Binding IncludePrereleaseUpdates}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Also offer beta builds. New features first, but they may be less stable."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="About the beta channel" Margin="24,0,0,10"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
+
+                                    <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" Width="240" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                    <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: stephenh678/TrayTrigger)."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="{Binding UpdateStatusText}" FontSize="11.5" Foreground="{StaticResource BrushAccentHover}"
+                                               Margin="0,8,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="Text" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 1.3 Global Manage Hotkey -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="Global Manage Window Hotkey" FontSize="13.5" FontWeight="SemiBold"
                                                 Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
                                     <TextBox Text="{Binding GlobalManageHotkey, UpdateSourceTrigger=LostFocus}"
                                              Style="{StaticResource ModernTextBox}" Margin="0,0,0,6" Width="150" HorizontalAlignment="Left"/>
@@ -2126,7 +2177,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 1.2b Advanced: per-game launch scripts (off by default; gates the Edit Game card) -->
+                            <!-- 1.4 Advanced: per-game launch scripts (off by default; gates the Edit Game card) -->
                             <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                     Padding="14,12" Margin="0,0,0,10">
@@ -2149,57 +2200,6 @@
                                                Margin="24,3,0,2" TextWrapping="Wrap"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="24,0,0,2"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- 1.3 Updates & GitHub Releases -->
-                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
-                                    Padding="14,12" Margin="0,0,0,10">
-                                <StackPanel>
-                                    <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                                        <TextBlock Text="Updates &amp; Version Control" FontSize="13.5" FontWeight="SemiBold" 
-                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                        <Button Content="Check for Updates Now" Command="{Binding CheckUpdatesInSettingsCommand}" 
-                                                Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right" 
-                                                VerticalAlignment="Center" Padding="10,4"/>
-                                    </DockPanel>
-
-                                    <CheckBox Content="Automatically check for updates on startup" 
-                                              IsChecked="{Binding AutoCheckForUpdates}" 
-                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Periodically checks GitHub Releases in the background and notifies you when an update is available."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Receive pre-release (beta) updates"
-                                              IsChecked="{Binding IncludePrereleaseUpdates}"
-                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Also offer beta builds. New features first, but they may be less stable."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
-                                    <Button Style="{StaticResource HelpLinkButton}" Content="About the beta channel" Margin="24,0,0,10"
-                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
-
-                                    <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource ModernTextBox}" Width="240" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                    <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: stephenh678/TrayTrigger)."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
-
-                                    <TextBlock Text="{Binding UpdateStatusText}" FontSize="11.5" Foreground="{StaticResource BrushAccentHover}" 
-                                               Margin="0,8,0,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                                <Style.Triggers>
-                                                    <Trigger Property="Text" Value="">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -2228,7 +2228,203 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 2.1 Library Box Art & Visuals -->
+                            <!-- 2.1 Launcher Integrations -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="Launcher Integrations" FontSize="13.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Detect games already installed through these launchers. Enabled platforms launch through their official client when installed (keeping cloud saves and achievement sync), falling back to the game's own executable otherwise."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How the Game Scanner works" Margin="0,0,0,10"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
+
+                                    <DockPanel LastChildFill="False">
+                                        <CheckBox IsChecked="{Binding SteamIntegrationEnabled}"
+                                                  Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                                  VerticalAlignment="Center" DockPanel.Dock="Left">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png"
+                                                       Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <TextBlock Text="Enable Steam Library Integration" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </CheckBox>
+                                        <Button Content="Scan for Games..." Command="{Binding OpenScanForGamesCommand}"
+                                                Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
+                                                VerticalAlignment="Center" Padding="10,5"/>
+                                    </DockPanel>
+                                    <TextBlock Text="VDF manifests and official Steam artwork caches identify and enrich installed games."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox IsChecked="{Binding GogIntegrationEnabled}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                              Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png"
+                                                   Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="Enable GOG Library Integration" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    <TextBlock Text="No scan location needed - GOG already records each game's install path itself."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox IsChecked="{Binding EaIntegrationEnabled}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                              Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png"
+                                                   Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="Enable EA Library Integration" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    <TextBlock Text="Custom install folders (not the default EA Games/Origin Games location) won't be found - EA doesn't record install paths as reliably as Steam and GOG."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox IsChecked="{Binding EpicIntegrationEnabled}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                              Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png"
+                                                   Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="Enable Epic Games Library Integration" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    <TextBlock Text="No scan location needed - Epic Games Launcher records each game's install path directly."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox IsChecked="{Binding UbisoftIntegrationEnabled}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                              Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
+                                                   Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="Enable Ubisoft Connect Library Integration" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    <TextBlock Text="Any install location works, but since Ubisoft doesn't record title or exe info, the name and executable are detected from the install folder instead - very reliable in practice, but occasionally imperfect for a game with multiple executables."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox Content="Automatically scan for new games on startup"
+                                              IsChecked="{Binding AutoScanForGamesOnStartup}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens - only interrupts you with the install prompt if it actually finds a new game."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 2.2 Scan Locations & Ignored Games -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="Scan Locations &amp; Ignored Games" FontSize="13.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Fine-tune where the scanner looks, and which games it should skip."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                                    <!-- Scan Locations manager -->
+                                    <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                            CornerRadius="6" Padding="12,10">
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                                <TextBlock Text="Scan Locations" FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                                <Button Content="Refresh Steam Locations" Command="{Binding RefreshSteamScanLocationsCommand}"
+                                                        Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"
+                                                        Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}"/>
+                                            </DockPanel>
+
+                                            <TextBlock Text="No scan locations yet. Add one below, or turn on Steam integration above."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                                       Visibility="{Binding HasNoScanLocations, Converter={StaticResource BoolToVis}}"/>
+
+                                            <ItemsControl ItemsSource="{Binding ScanLocations}" ItemTemplate="{StaticResource ScanLocationRowTemplate}" Margin="0,0,0,4"/>
+
+                                            <Button Content="+ Add a Scan Location" Command="{Binding AddScanLocationCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}" HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Ignored Games manager -->
+                                    <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                            CornerRadius="6" Padding="12,10" Margin="0,10,0,0">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasNoIgnoredGamePaths}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <TextBlock Text="Ignored Games" FontSize="12.5" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Never suggested by Add Folder or Scan for Games. Remove one to let it be detected again."
+                                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                            <ItemsControl ItemsSource="{Binding IgnoredGamePaths}" ItemTemplate="{StaticResource IgnoredGamePathRowTemplate}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 2.3 Game Titles & Metadata Detection -->
+                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
+                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                                    Padding="14,12" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="Game Titles &amp; Metadata Detection" FontSize="13.5" FontWeight="SemiBold" 
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="How game titles and categories are determined when importing files or scanning folders."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,0,10"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
+
+                                    <CheckBox Content="Search official game titles online (Steam Database)"
+                                              IsChecked="{Binding SearchOfficialTitleOnline}" 
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Looks up the official title and Steam App ID instead of using the file name."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                               Margin="24,3,0,8" TextWrapping="Wrap"/>
+
+                                    <DockPanel Margin="24,0,0,10" LastChildFill="False" IsEnabled="{Binding SearchOfficialTitleOnline}">
+                                        <TextBlock Text="Matching sensitivity:" Foreground="{StaticResource BrushTextSecondary}" 
+                                                   FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <ComboBox ItemsSource="{Binding ConfidenceThresholdOptions}" 
+                                                  SelectedItem="{Binding OnlineMatchSensitivity, Mode=TwoWay}" 
+                                                  Style="{StaticResource ModernComboBox}" Width="190" HorizontalAlignment="Left"/>
+                                    </DockPanel>
+
+                                    <CheckBox Content="Local title fallback: Prefer executable (.exe) over folder name" 
+                                              IsChecked="{Binding PreferExeForGameName}" 
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Builds the title from the exe's name and metadata rather than its parent folder."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox Content="Automatically categorize games from store genres" 
+                                              IsChecked="{Binding AutoCategorizeFromSteam}" 
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 2.4 Library Box Art & Visuals -->
                             <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
                                     Padding="14,12" Margin="0,0,0,10">
@@ -2287,160 +2483,6 @@
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                     </Grid>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- 2.2 Game Titles & Metadata Detection -->
-                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
-                                    Padding="14,12" Margin="0,0,0,10">
-                                <StackPanel>
-                                    <TextBlock Text="Game Titles &amp; Metadata Detection" FontSize="13.5" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="How game titles and categories are determined when importing files or scanning folders."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,2" TextWrapping="Wrap"/>
-                                    <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,0,10"
-                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
-
-                                    <CheckBox Content="Search official game titles online (Steam Database)"
-                                              IsChecked="{Binding SearchOfficialTitleOnline}" 
-                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Looks up the official title and Steam App ID instead of using the file name."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,8" TextWrapping="Wrap"/>
-
-                                    <DockPanel Margin="24,0,0,10" LastChildFill="False" IsEnabled="{Binding SearchOfficialTitleOnline}">
-                                        <TextBlock Text="Matching sensitivity:" Foreground="{StaticResource BrushTextSecondary}" 
-                                                   FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding ConfidenceThresholdOptions}" 
-                                                  SelectedItem="{Binding OnlineMatchSensitivity, Mode=TwoWay}" 
-                                                  Style="{StaticResource ModernComboBox}" Width="190" HorizontalAlignment="Left"/>
-                                    </DockPanel>
-
-                                    <CheckBox Content="Local title fallback: Prefer executable (.exe) over folder name" 
-                                              IsChecked="{Binding PreferExeForGameName}" 
-                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Builds the title from the exe's name and metadata rather than its parent folder."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Automatically categorize games from store genres" 
-                                              IsChecked="{Binding AutoCategorizeFromSteam}" 
-                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- 2.3 Game Scanner -->
-                            <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                    BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
-                                    Padding="14,12" Margin="0,0,0,10">
-                                <StackPanel>
-                                    <TextBlock Text="Game Scanner" FontSize="13.5" FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Discover games installed through Steam and any folders you add as scan locations."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                                    <Button Style="{StaticResource HelpLinkButton}" Content="How the Game Scanner works" Margin="0,0,0,10"
-                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
-
-                                    <DockPanel LastChildFill="False">
-                                        <CheckBox Content="Enable Steam Library Integration"
-                                                  IsChecked="{Binding SteamIntegrationEnabled}"
-                                                  Style="{StaticResource ModernCheckBox}" FontSize="13"
-                                                  VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                        <Button Content="Scan for Games..." Command="{Binding OpenScanForGamesCommand}"
-                                                Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
-                                                VerticalAlignment="Center" Padding="10,5"/>
-                                    </DockPanel>
-                                    <TextBlock Text="When enabled, Steam library folders are automatically kept in your scan locations - VDF manifests and official Steam artwork caches are used to identify and enrich installed games."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Enable GOG Library Integration"
-                                              IsChecked="{Binding GogIntegrationEnabled}"
-                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
-                                              Margin="0,0,0,4"/>
-                                    <TextBlock Text="When enabled, installed GOG games are found automatically - no scan location needed, since GOG already records each game's install path itself. Launches through GOG Galaxy when it's installed (preserving cloud saves and achievement sync), or the game's own executable otherwise."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Enable EA Library Integration"
-                                              IsChecked="{Binding EaIntegrationEnabled}"
-                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
-                                              Margin="0,0,0,4"/>
-                                    <TextBlock Text="When enabled, installed EA games are found automatically and launched through EA App when it's installed (preserving cloud saves and achievement sync), falling back to the game's own executable otherwise. Note: EA games installed to a custom folder (not the default EA Games/Origin Games location) won't be found - EA doesn't record install paths the same reliable way Steam and GOG do."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Enable Epic Games Library Integration"
-                                              IsChecked="{Binding EpicIntegrationEnabled}"
-                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
-                                              Margin="0,0,0,4"/>
-                                    <TextBlock Text="When enabled, installed Epic Games Store titles are found automatically - no scan location needed, since Epic Games Launcher records each game's install path directly. Launches through Epic Games Launcher when it's installed (preserving cloud saves and achievement sync), or the game's own executable otherwise."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Enable Ubisoft Connect Library Integration"
-                                              IsChecked="{Binding UbisoftIntegrationEnabled}"
-                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
-                                              Margin="0,0,0,4"/>
-                                    <TextBlock Text="When enabled, installed Ubisoft Connect games are found automatically (any install location - Ubisoft's own registry records each game's folder directly) and launched through Ubisoft Connect when it's installed, falling back to the game's own executable otherwise. Note: Ubisoft doesn't record a game's title or exe the way other platforms do, so the name and executable are detected from the install folder - very reliable in practice, but occasionally imperfect for a game with multiple executables."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Automatically scan for new games on startup"
-                                              IsChecked="{Binding AutoScanForGamesOnStartup}"
-                                              Style="{StaticResource ModernCheckBox}" FontSize="13" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens - only interrupts you with the install prompt if it actually finds a new game."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <!-- Scan Locations manager -->
-                                    <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
-                                            CornerRadius="6" Padding="12,10" Margin="0,4,0,0">
-                                        <StackPanel>
-                                            <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                                                <TextBlock Text="Scan Locations" FontSize="12.5" FontWeight="SemiBold"
-                                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                                <Button Content="Refresh Steam Locations" Command="{Binding RefreshSteamScanLocationsCommand}"
-                                                        Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"
-                                                        Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}"/>
-                                            </DockPanel>
-
-                                            <TextBlock Text="No scan locations yet. Add one below, or turn on Steam integration above."
-                                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"
-                                                       Visibility="{Binding HasNoScanLocations, Converter={StaticResource BoolToVis}}"/>
-
-                                            <ItemsControl ItemsSource="{Binding ScanLocations}" ItemTemplate="{StaticResource ScanLocationRowTemplate}" Margin="0,0,0,4"/>
-
-                                            <Button Content="+ Add a Scan Location" Command="{Binding AddScanLocationCommand}"
-                                                    Style="{StaticResource ModernOutlineButton}" HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Ignored Games manager -->
-                                    <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
-                                            CornerRadius="6" Padding="12,10" Margin="0,10,0,0">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasNoIgnoredGamePaths}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <StackPanel>
-                                            <TextBlock Text="Ignored Games" FontSize="12.5" FontWeight="SemiBold"
-                                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                            <TextBlock Text="Never suggested by Add Folder or Scan for Games. Remove one to let it be detected again."
-                                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                                            <ItemsControl ItemsSource="{Binding IgnoredGamePaths}" ItemTemplate="{StaticResource IgnoredGamePathRowTemplate}"/>
-                                        </StackPanel>
-                                    </Border>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -2610,12 +2652,12 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="STORAGE &amp; DIAGNOSTICS" FontSize="11.5" FontWeight="SemiBold" 
+                                    <TextBlock Text="DIAGNOSTICS &amp; STORAGE" FontSize="11.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
 
-                            <!-- 4.1 Troubleshooting & Diagnostics -->
+                            <!-- 5.1 Troubleshooting & Diagnostics -->
                             <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
                                     Padding="14,12" Margin="0,0,0,10">
@@ -2664,7 +2706,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 4.2 Storage & Asset Caches -->
+                            <!-- 5.2 Storage & Asset Caches -->
                             <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
                                     Padding="14,12" Margin="0,0,0,10">
@@ -2708,7 +2750,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 4.3 Reset Settings to Defaults -->
+                            <!-- 5.3 Reset Settings to Defaults -->
                             <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
                                     Padding="14,12" Margin="0,0,0,10">
