@@ -96,8 +96,16 @@ public class EpicScannerService
                 string.IsNullOrWhiteSpace(installDir) || string.IsNullOrWhiteSpace(launchExe))
                 return null;
 
+            // Path.Combine discards installDir entirely if LaunchExecutable is rooted, and happily
+            // builds "..\" traversals - so a planted manifest could point at any exe on disk.
+            // The exe must sit inside the install it claims to belong to.
             string exePath = Path.Combine(installDir, launchExe);
-            if (!File.Exists(exePath)) return null;
+            if (!File.Exists(exePath) || !PlatformLookupService.IsPathUnderDirectory(exePath, installDir))
+            {
+                if (File.Exists(exePath))
+                    LoggingService.Warn("EpicScannerService", $"Ignoring Epic manifest '{manifestPath}': LaunchExecutable '{launchExe}' resolves outside InstallLocation '{installDir}'.");
+                return null;
+            }
 
             return new DiscoveredEpicGame(
                 AppName: appName,

@@ -4,8 +4,11 @@ namespace TrayTrigger.Models;
 
 /// <summary>
 /// Which platform a scan location came from. Steam locations are kept in sync automatically by
-/// <see cref="Services.ScanLocationService"/>; Gog/Ea are reserved for future platform scanners
-/// that will follow the same "detect and add to this list" pattern Steam uses today.
+/// <see cref="Services.ScanLocationService"/> and shown under the Steam integration toggle in
+/// Settings; Manual ones are user-added and shown in the Scan Locations list. Gog/Ea are unused:
+/// those platforms turned out to have no library-folder concept (their scanners read install
+/// paths from the registry/manifests directly), and the values are kept only so the enum's
+/// serialized numbering stays stable.
 /// </summary>
 public enum ScanLocationSource
 {
@@ -30,8 +33,8 @@ public class ScanLocation
 
     /// <summary>
     /// True for entries <see cref="Services.ScanLocationService"/> keeps in sync automatically.
-    /// Removing one from the UI is not permanent - it reappears the next time the owning
-    /// platform's locations are synced, unless that platform's integration is turned off.
+    /// These have no Remove button in Settings (it would just come back on the next sync);
+    /// untick the row to skip that library, or turn the platform's integration off.
     /// </summary>
     public bool IsAutoManaged { get; set; }
 }

@@ -47,6 +47,9 @@ public class SettingsViewModel : ViewModelBase
     private readonly Action? _onRequestOpenScanForGames;
     private readonly Func<Task>? _onCheckForUpdates;
     private readonly Func<string>? _getUpdateStatusText;
+    private readonly Func<DetectedLauncher, (int Total, int Hidden)>? _getPlatformGameCount;
+    private readonly Func<DetectedLauncher, int>? _removePlatformGames;
+    private readonly Action? _onProfileTweaksReset;
 
     public const string ViewModePosterGrid = "Poster Grid";
     public const string ViewModeExtraLarge = "Extra Large";
@@ -153,6 +156,13 @@ public class SettingsViewModel : ViewModelBase
     public ICommand RefreshSteamScanLocationsCommand { get; }
     public ICommand RemoveIgnoredGamePathCommand { get; }
 
+    /// <summary>Steam's own library folders, auto-detected and kept in sync by
+    /// <see cref="ScanLocationService"/>. Shown under the Steam integration toggle (not in the
+    /// manual Scan Locations list) since they belong to the integration, not the user.</summary>
+    public ObservableCollection<ScanLocationRowViewModel> SteamLibraryLocations { get; } = new();
+    public bool HasNoSteamLibraryLocations => SteamLibraryLocations.Count == 0;
+
+    /// <summary>Folders the user added by hand for "Scan for Games" to look in.</summary>
     public ObservableCollection<ScanLocationRowViewModel> ScanLocations { get; } = new();
     public bool HasNoScanLocations => ScanLocations.Count == 0;
 
@@ -172,7 +182,10 @@ public class SettingsViewModel : ViewModelBase
         Func<IProgress<string>, Task>? onRequestRefreshAllPosters = null,
         Action? onRequestOpenScanForGames = null,
         Func<Task>? onCheckForUpdates = null,
-        Func<string>? getUpdateStatusText = null)
+        Func<string>? getUpdateStatusText = null,
+        Func<DetectedLauncher, (int Total, int Hidden)>? getPlatformGameCount = null,
+        Func<DetectedLauncher, int>? removePlatformGames = null,
+        Action? onProfileTweaksReset = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
@@ -188,6 +201,9 @@ public class SettingsViewModel : ViewModelBase
         _onRequestOpenScanForGames = onRequestOpenScanForGames;
         _onCheckForUpdates = onCheckForUpdates;
         _getUpdateStatusText = getUpdateStatusText;
+        _getPlatformGameCount = getPlatformGameCount;
+        _removePlatformGames = removePlatformGames;
+        _onProfileTweaksReset = onProfileTweaksReset;
 
         // Initialize Tab Commands
         SelectAllTabCommand = new RelayCommand(() => SelectedTab = SettingsCategoryTab.All);
@@ -246,9 +262,10 @@ public class SettingsViewModel : ViewModelBase
     }
 
     // --- Scan for Games: Scan Locations ---
-    // The editable folder list "Scan for Games" (Library page) looks in. Steam library folders
-    // are auto-managed by ScanLocationService and shown here read-only-ish (removable, but they
-    // reappear on the next Steam sync); manually-added folders are fully user-owned.
+    // The folder list "Scan for Games" (Library page) looks in, split into two views of the same
+    // AppSettings.ScanLocations list: Steam library folders (auto-managed by ScanLocationService,
+    // shown under the Steam integration toggle, checkbox only) and manually-added folders (fully
+    // user-owned, shown in the Scan Locations section with a Remove button).
 
     /// <summary>Re-reads AppSettings.ScanLocations - call after something outside SettingsViewModel
     /// (e.g. ImportCoordinator adding a "remembered" folder) has changed it.</summary>
@@ -256,13 +273,17 @@ public class SettingsViewModel : ViewModelBase
 
     private void RebuildScanLocationRows()
     {
+        SteamLibraryLocations.Clear();
         ScanLocations.Clear();
-        foreach (var loc in _settings.ScanLocations
-                     .OrderByDescending(l => l.Source == ScanLocationSource.Steam)
-                     .ThenBy(l => l.Path, StringComparer.OrdinalIgnoreCase))
+        foreach (var loc in _settings.ScanLocations.OrderBy(l => l.Path, StringComparer.OrdinalIgnoreCase))
         {
-            ScanLocations.Add(new ScanLocationRowViewModel(loc, () => AutoSaveSettings()));
+            var row = new ScanLocationRowViewModel(loc, () => AutoSaveSettings());
+            if (loc.Source == ScanLocationSource.Steam)
+                SteamLibraryLocations.Add(row);
+            else
+                ScanLocations.Add(row);
         }
+        OnPropertyChanged(nameof(HasNoSteamLibraryLocations));
         OnPropertyChanged(nameof(HasNoScanLocations));
     }
 
@@ -272,9 +293,27 @@ public class SettingsViewModel : ViewModelBase
         if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
 
         string path = dialog.FolderName.TrimEnd('\\', '/');
-        if (_settings.ScanLocations.Any(l => string.Equals(l.Path, path, StringComparison.OrdinalIgnoreCase)))
+        var existing = _settings.ScanLocations.FirstOrDefault(l => string.Equals(l.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
         {
-            StatusMessage = "That folder is already a scan location.";
+            if (existing.Source == ScanLocationSource.Steam && !_settings.SteamIntegrationEnabled)
+            {
+                // A Steam library row lingers in settings while Steam integration is off, hidden
+                // from the UI and skipped by the scan - it must not block the user from folder-
+                // scanning that same directory for non-Steam installs. Convert it in place.
+                existing.Source = ScanLocationSource.Manual;
+                existing.IsAutoManaged = false;
+                existing.IsEnabled = true;
+                AutoSaveSettings();
+                RebuildScanLocationRows();
+                LoggingService.Info("Settings", $"Converted hidden Steam library row '{path}' to a manual scan location.");
+                StatusMessage = "Added scan location (it was a Steam library folder; it's now scanned as a plain folder while Steam integration is off).";
+                return;
+            }
+
+            StatusMessage = existing.Source == ScanLocationSource.Steam
+                ? "That folder is already one of your Steam libraries - see the Steam integration above."
+                : "That folder is already a scan location.";
             return;
         }
 
@@ -297,7 +336,7 @@ public class SettingsViewModel : ViewModelBase
     {
         if (!_settings.SteamIntegrationEnabled)
         {
-            StatusMessage = "Steam integration is disabled - enable it above first.";
+            StatusMessage = "Steam integration is disabled - enable it first.";
             return;
         }
 
@@ -305,11 +344,13 @@ public class SettingsViewModel : ViewModelBase
         {
             AutoSaveSettings();
             RebuildScanLocationRows();
-            StatusMessage = "Steam scan locations refreshed.";
+            StatusMessage = "Steam libraries refreshed.";
         }
         else
         {
-            StatusMessage = "Steam scan locations are already up to date.";
+            StatusMessage = SteamLibraryLocations.Count == 0
+                ? "No Steam libraries found - is Steam installed?"
+                : "Steam libraries are already up to date.";
         }
     }
 
@@ -804,18 +845,16 @@ public class SettingsViewModel : ViewModelBase
 
     // --- Steam Library Scanner ---
 
+    // --- Launcher integration toggles ---
+    // Each toggle gates only *discovery* ("Scan for Games" and the startup auto-scan) for its
+    // platform. Games already in the library keep launching through their launcher and keep their
+    // badge regardless - so turning one off asks whether to also remove that platform's games
+    // (see SetIntegrationEnabled), rather than silently leaving them or silently deleting them.
+
     public bool SteamIntegrationEnabled
     {
         get => _settings.SteamIntegrationEnabled;
-        set
-        {
-            if (_settings.SteamIntegrationEnabled != value)
-            {
-                _settings.SteamIntegrationEnabled = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
-            }
-        }
+        set => SetIntegrationEnabled(DetectedLauncher.Steam, "Steam", _settings.SteamIntegrationEnabled, value, v => _settings.SteamIntegrationEnabled = v);
     }
 
     /// <summary>
@@ -827,60 +866,116 @@ public class SettingsViewModel : ViewModelBase
     public bool GogIntegrationEnabled
     {
         get => _settings.GogIntegrationEnabled;
-        set
-        {
-            if (_settings.GogIntegrationEnabled != value)
-            {
-                _settings.GogIntegrationEnabled = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
-            }
-        }
+        set => SetIntegrationEnabled(DetectedLauncher.Gog, "GOG", _settings.GogIntegrationEnabled, value, v => _settings.GogIntegrationEnabled = v);
     }
 
     /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
     public bool EaIntegrationEnabled
     {
         get => _settings.EaIntegrationEnabled;
-        set
-        {
-            if (_settings.EaIntegrationEnabled != value)
-            {
-                _settings.EaIntegrationEnabled = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
-            }
-        }
+        set => SetIntegrationEnabled(DetectedLauncher.Ea, "EA", _settings.EaIntegrationEnabled, value, v => _settings.EaIntegrationEnabled = v);
     }
 
     /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
     public bool EpicIntegrationEnabled
     {
         get => _settings.EpicIntegrationEnabled;
-        set
-        {
-            if (_settings.EpicIntegrationEnabled != value)
-            {
-                _settings.EpicIntegrationEnabled = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
-            }
-        }
+        set => SetIntegrationEnabled(DetectedLauncher.Epic, "Epic", _settings.EpicIntegrationEnabled, value, v => _settings.EpicIntegrationEnabled = v);
     }
 
     /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
     public bool UbisoftIntegrationEnabled
     {
         get => _settings.UbisoftIntegrationEnabled;
-        set
+        set => SetIntegrationEnabled(DetectedLauncher.Ubisoft, "Ubisoft", _settings.UbisoftIntegrationEnabled, value, v => _settings.UbisoftIntegrationEnabled = v);
+    }
+
+    // True while ApplyDetectedLauncherChoices runs: the first-launch picker is choosing initial
+    // defaults on an (effectively) empty library, so the "also remove its games?" prompt and the
+    // "run Scan for Games" hint would both be noise there.
+    private bool _applyingDetectedLaunchers;
+
+    /// <summary>
+    /// Shared body of the five *IntegrationEnabled setters. Persists the flag and raises the
+    /// change notification for <paramref name="propertyName"/> (the calling property), then:
+    /// on enable, nudges the user to scan (and for Steam, re-syncs its library folders so they
+    /// appear immediately); on disable, offers to remove that platform's games from the library,
+    /// defaulting to keeping them.
+    /// </summary>
+    private void SetIntegrationEnabled(DetectedLauncher launcher, string platformName, bool current, bool value, Action<bool> store, [CallerMemberName] string propertyName = "")
+    {
+        if (current == value) return;
+
+        // Disabling with games present is asked about *before* anything is persisted, so the
+        // prompt's Cancel genuinely cancels: nothing changes and the checkbox snaps back.
+        bool removeGames = false;
+        if (!value && !_applyingDetectedLaunchers)
         {
-            if (_settings.UbisoftIntegrationEnabled != value)
+            var (count, hidden) = _getPlatformGameCount?.Invoke(launcher) ?? (0, 0);
+            if (count > 0)
             {
-                _settings.UbisoftIntegrationEnabled = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
+                string plural = count == 1 ? "" : "s";
+                // Hidden entries aren't visible on any tab, so say so - otherwise "12 games"
+                // can exceed everything the user can see and the sweep looks wrong.
+                string hiddenNote = hidden > 0 ? $" ({hidden} hidden)" : string.Empty;
+                Window? owner = WindowHelper.ActiveOwner();
+                var choice = ModernDialog.PromptChoice(
+                    owner,
+                    $"Turn Off {platformName} Integration?",
+                    $"You have {count} {platformName} game{plural}{hiddenNote} in your library. Remove {(count == 1 ? "it" : "them")} too?",
+                    $"Turning off {platformName} integration only stops new {platformName} games from being detected. " +
+                    $"Games already in your library stay and keep launching through {platformName} unless you remove them here.\n\n" +
+                    "Removing can't be undone: playtime, hotkeys, categories and custom artwork for those games are lost. " +
+                    "Installed game files are never deleted either way.",
+                    primaryText: "Remove Games",
+                    secondaryText: "Keep Games",
+                    cancelText: "Cancel");
+
+                if (choice == DialogResultOption.Cancel)
+                {
+                    // Re-sync the bound checkbox to the unchanged setting.
+                    OnPropertyChanged(propertyName);
+                    return;
+                }
+                removeGames = choice == DialogResultOption.Primary;
             }
         }
+
+        store(value);
+        OnPropertyChanged(propertyName);
+        AutoSaveSettings();
+        LoggingService.Info("Settings", $"{platformName} integration {(value ? "enabled" : "disabled")}.");
+
+        if (launcher == DetectedLauncher.Steam)
+        {
+            if (value)
+            {
+                // Populate the library-folder rows under the toggle right away rather than
+                // waiting for the next startup sync.
+                if (ScanLocationService.SyncSteamLocations(_settings, _steamScannerService))
+                {
+                    AutoSaveSettings();
+                }
+            }
+            RebuildScanLocationRows();
+        }
+
+        if (_applyingDetectedLaunchers) return;
+
+        if (value)
+        {
+            StatusMessage = $"{platformName} integration enabled - run Scan for Games to add your {platformName} titles.";
+            return;
+        }
+
+        if (!removeGames)
+        {
+            StatusMessage = $"{platformName} integration disabled - existing {platformName} games kept.";
+            return;
+        }
+
+        int removed = _removePlatformGames?.Invoke(launcher) ?? 0;
+        StatusMessage = $"{platformName} integration disabled - removed {removed} {platformName} game{(removed == 1 ? "" : "s")} from your library.";
     }
 
     /// <summary>
@@ -889,15 +984,32 @@ public class SettingsViewModel : ViewModelBase
     /// UI bindings and auto-save behave exactly as if the user had flipped them by hand - setting
     /// the underlying AppSettings fields directly (as ImportCoordinator briefly did) leaves an
     /// already-bound checkbox showing its stale old value, since nothing raises the property's
-    /// change notification in that case.
+    /// change notification in that case. The setters' interactive prompts are suppressed here.
     /// </summary>
-    public void ApplyDetectedLauncherChoices(IReadOnlyList<DetectedLauncher> enabledLaunchers)
+    /// <param name="enabledLaunchers">The launchers the user ticked in the picker.</param>
+    /// <param name="probedLaunchers">
+    /// The launchers whose detection probe actually completed (see
+    /// ImportCoordinator.DetectInstalledLaunchers). A launcher outside this set had its probe throw,
+    /// so "absent from the picker" doesn't mean "not installed" - its toggle is left exactly as it
+    /// was rather than silently turned off. Null means every launcher was probed.
+    /// </param>
+    public void ApplyDetectedLauncherChoices(IReadOnlyList<DetectedLauncher> enabledLaunchers, IReadOnlySet<DetectedLauncher>? probedLaunchers = null)
     {
-        SteamIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Steam);
-        GogIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Gog);
-        EaIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ea);
-        EpicIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Epic);
-        UbisoftIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ubisoft);
+        _applyingDetectedLaunchers = true;
+        try
+        {
+            bool Probed(DetectedLauncher l) => probedLaunchers == null || probedLaunchers.Contains(l);
+
+            if (Probed(DetectedLauncher.Steam)) SteamIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Steam);
+            if (Probed(DetectedLauncher.Gog)) GogIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Gog);
+            if (Probed(DetectedLauncher.Ea)) EaIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ea);
+            if (Probed(DetectedLauncher.Epic)) EpicIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Epic);
+            if (Probed(DetectedLauncher.Ubisoft)) UbisoftIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ubisoft);
+        }
+        finally
+        {
+            _applyingDetectedLaunchers = false;
+        }
     }
 
     public bool AutoScanForGamesOnStartup
@@ -1074,7 +1186,25 @@ public class SettingsViewModel : ViewModelBase
         foreach (var prop in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             if (!prop.CanWrite || excludedFromReset.Contains(prop.Name)) continue;
-            prop.SetValue(_settings, prop.GetValue(defaults));
+
+            // Nested config objects (OptimizedProfileTweaks/AggressiveProfileTweaks) are reset
+            // field-by-field into the *existing* instance rather than swapped for a new one:
+            // SystemViewModel's tweak toggles captured the original instances at construction,
+            // so replacing the reference would leave them editing a detached object whose
+            // changes never get saved.
+            object? current = prop.GetValue(_settings);
+            object? fresh = prop.GetValue(defaults);
+            if (current != null && fresh != null && prop.PropertyType.IsClass && prop.PropertyType != typeof(string)
+                && !typeof(System.Collections.IEnumerable).IsAssignableFrom(prop.PropertyType))
+            {
+                foreach (var inner in prop.PropertyType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (inner.CanWrite) inner.SetValue(current, inner.GetValue(fresh));
+                }
+                continue;
+            }
+
+            prop.SetValue(_settings, fresh);
         }
         _settings.SteamGridDbApiKey = existingApiKey;
 
@@ -1084,6 +1214,7 @@ public class SettingsViewModel : ViewModelBase
         _onHotkeySettingChanged?.Invoke();
         LoggingService.Initialize(false);
         _onPosterArtSettingChanged?.Invoke();
+        _onProfileTweaksReset?.Invoke();
 
         // Fire property changed for all settings
         OnPropertyChanged(nameof(StartWithWindows));
@@ -1106,6 +1237,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(UseSteamGridDbArt));
         OnPropertyChanged(nameof(SteamGridDbApiKey));
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
+        OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
         OnPropertyChanged(nameof(AutoCheckForUpdates));
         OnPropertyChanged(nameof(IncludePrereleaseUpdates));

@@ -35,6 +35,23 @@ public class BatchGameItemViewModel : ViewModelBase
     }
     public bool IsAlreadyImported { get; }
 
+    /// <summary>Pack URI to the launcher logo for a candidate that resolved to a Steam/GOG/EA/
+    /// Epic/Ubisoft install (see GameCandidate.Platform), or the generic "Local Games" mark -
+    /// the same treatment "Scan for Games" gives its rows, so the preview matches the import.</summary>
+    public string SourceLogoUri => Candidate.PlatformName switch
+    {
+        "Steam" => "pack://application:,,,/Assets/LauncherLogos/steam.png",
+        "GOG" => "pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png",
+        "EA" => "pack://application:,,,/Assets/LauncherLogos/ea_app.png",
+        "Epic" => "pack://application:,,,/Assets/LauncherLogos/epic_games.png",
+        "Ubisoft" => "pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png",
+        _ => "pack://application:,,,/Assets/LauncherLogos/local_games.png"
+    };
+
+    public string SourceToolTip => Candidate.PlatformName is { } p
+        ? $"Recognised as a {p} game - it will be imported with {p}'s title and launch through {p}."
+        : "Local game - launched directly from its executable.";
+
     /// <summary>Raised when the user clicks "Ignore" - the parent VM removes this row and persists the ignore.</summary>
     public event Action<BatchGameItemViewModel>? IgnoreRequested;
     public ICommand IgnoreCommand { get; }
@@ -106,7 +123,6 @@ public class FolderBatchImportViewModel : ViewModelBase
 {
     private string _filterText = string.Empty;
     private readonly string _folderPath;
-    private readonly HashSet<string> _existingExePaths;
     private bool _rememberAsScanLocation = true;
 
     public string FolderName { get; }
@@ -153,18 +169,19 @@ public class FolderBatchImportViewModel : ViewModelBase
 
     private readonly Action<GameCandidate> _onIgnoreCandidate;
 
-    public FolderBatchImportViewModel(string folderPath, List<GameCandidate> candidates, IEnumerable<string> existingExePaths, bool canRememberAsScanLocation, bool isAlreadyScanLocation, Action<GameCandidate> onIgnoreCandidate)
+    /// <param name="isAlreadyImported">Whether a candidate is already in the library - by exe
+    /// path or, for one that resolved to a launcher game, by platform ID (see MainWindow).</param>
+    public FolderBatchImportViewModel(string folderPath, List<GameCandidate> candidates, Func<GameCandidate, bool> isAlreadyImported, bool canRememberAsScanLocation, bool isAlreadyScanLocation, Action<GameCandidate> onIgnoreCandidate)
     {
         _folderPath = folderPath;
         FolderName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        _existingExePaths = new HashSet<string>(existingExePaths, StringComparer.OrdinalIgnoreCase);
         CanRememberAsScanLocation = canRememberAsScanLocation;
         IsAlreadyScanLocation = isAlreadyScanLocation;
         _onIgnoreCandidate = onIgnoreCandidate;
 
         foreach (var c in candidates)
         {
-            bool alreadyIn = _existingExePaths.Contains(c.ExePath);
+            bool alreadyIn = isAlreadyImported(c);
             var item = new BatchGameItemViewModel(c, alreadyIn);
             item.PropertyChanged += (s, e) =>
             {

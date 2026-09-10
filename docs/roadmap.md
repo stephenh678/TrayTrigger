@@ -2,52 +2,46 @@
 
 Notes on things discussed but not yet implemented, kept here so they survive between sessions.
 
-## Folder-import launcher detection (non-Steam first)
+_(Nothing open right now.)_
 
-When a game is added via "Add Folder", drag-and-drop, or "Batch Add Games from Folder", it always
-goes through the generic exe-heuristic scanner (`FolderScannerService`) and gets tagged as a
-"Local" game - even if the folder is actually inside a real GOG/EA/Epic/Ubisoft install directory.
-"Scan for Games" doesn't have this problem, since it already discovers those platforms' games via
-their own registry/manifest records, independent of any folder path.
+## Shipped
 
-Idea: before running the generic folder scan, check the dropped/browsed path against each of the
-four scanners' own known install directories (GOG/Ubisoft via registry `path`/`InstallDir` values,
-Epic via its manifest files' `InstallLocation`, EA indirectly via its manifest search) - regardless
-of whether that platform's integration toggle is currently on, since recognizing what something
-*is* shouldn't depend on whether auto-scanning for it is enabled. On a match, skip the generic
-heuristic and import using that platform's real record (ID, name, exe, official art) instead of a
-guessed name and extracted exe icon.
+### Folder-import launcher detection (2026-09-10)
 
-Open questions to resolve before building:
+When a game is added via "Add Folder", drag-and-drop (folder, .exe, or .lnk), or "Batch Add
+Games from Folder", the exe path is now checked against each installed platform's own records
+(`Services/PlatformLookupService.cs`) before it becomes a Local entry. On a match the game is
+imported through that platform's normal route (real ID, name, art, launcher-aware launch) instead
+of the generic exe heuristic.
 
-- **Mixed parent folders.** A dropped folder can contain a mix of matched and unmatched
-  subfolders (e.g. one GOG game plus three genuinely local ones) - the check has to run
-  per-subfolder during the batch scan, not once for the whole drop.
-- **EA's default-install-root limitation carries over.** `EaScannerService` can only resolve
-  installs under EA's default install roots (see its class doc comment - no clean registry→path
-  mapping exists). A custom-location EA install won't match even under this new check, so it'll
-  still land as Local for EA specifically. Not a new problem, just inherited.
-- **Silent vs. confirmed.** Leaning toward silently tagging the game correctly with no extra
-  prompt, but worth confirming that's the desired UX.
-- **Scope across entry points.** Should apply to Add Folder, drag-and-drop of a folder, and
-  Batch Add Games from Folder consistently. A single dragged-in .exe/.lnk should probably get the
-  same treatment for consistency, since the exe path is the same signal either way.
+Decisions made while building it, against the open questions that were listed here:
 
-Touches: `ViewModels/ImportCoordinator.cs`, `Services/FolderScannerService.cs`.
+- **Blocking was considered and rejected.** Refusing drops from launcher-owned folders needs the
+  same detection code as redirecting, then sends the user to a full "Scan for Games" to add one
+  game they'd just handed us, and can't be complete anyway (see EA below). Redirecting costs the
+  same and gives the right result.
+- **Mixed parent folders** are handled by matching per candidate exe, not per dropped folder, at
+  the three points where a path becomes a `GameEntry` (`HandleFileDropAsync`, `AddCandidateAsync`,
+  `ImportBatchGamesAsync`). `FolderScannerService` is untouched.
+- **Silent, not confirmed.** The status bar says which platform each game went through (e.g.
+  "Added 3 new game(s)! (2 via Steam, 1 via GOG)") and the log records each resolution.
+- **Independent of the integration toggles.** Recognition runs even when a platform's auto-scan is
+  off.
+- **EA custom-location installs** still can't be resolved (inherited `EaScannerService`
+  limitation) and land as Local.
+- A dropped exe that differs from the platform's own registered exe is replaced by the platform's
+  exe. A user who wants a specific alternate exe edits the path in Edit Game *and* ticks "Launch
+  this executable directly" there - the client-launch branches in `ProcessLauncherService`
+  otherwise ignore `ExecutablePath` (see `GameEntry.LaunchDirectly`).
+- A game already in the library as a plain Local entry for the same exe is linked to the platform
+  in place (`ImportCoordinator.UpgradeExistingEntries`) rather than duplicated.
+- Folder-scan candidates are resolved to their platform *before* the batch dialog
+  (`GameCandidate.Platform`), so the preview shows the platform's name and logo, "in library" is
+  judged by platform ID, and Ignore applies to the platform ID - the same identity the scan
+  picker uses.
 
-## Steam-specific exe-path dedup gap
+### Steam-specific exe-path dedup gap (2026-09-10)
 
-`ImportCoordinator.ScanForGamesCoreAsync`'s Steam task only dedupes by Steam App ID (the
-`steamTask` local function) - unlike GOG/EA/Epic/Ubisoft, it has no exe-path fallback check
-against `existingExePaths`. If a Steam game was added manually (Add Folder/drag-drop) before ever
-being properly Steam-scanned, it has no `SteamAppId`, so a later "Scan for Games" will offer it
-again as "new" - selecting it creates a duplicate library entry (two rows pointing at the same
-exe: one Local, one properly Steam-tagged).
-
-Fix: add the same `(g.ExePath == null || !existingExePaths.Contains(g.ExePath))` condition already
-used by the other four platforms' tasks to Steam's task.
-
-Related to the folder-import detection idea above - fixing the folder-import side (recognizing a
-Steam install directory up front) would prevent this scenario from arising in the first place, but
-the missing Steam-side dedup is worth fixing independently regardless, as a safety net for any
-other route a Steam game's exe could end up in the library without a SteamAppId.
+`ScanForGamesCoreAsync`'s Steam task now applies the same `existingExePaths` fallback as the
+GOG/EA/Epic/Ubisoft tasks, so a Steam game that reached the library without a `SteamAppId` is no
+longer offered again as "new".

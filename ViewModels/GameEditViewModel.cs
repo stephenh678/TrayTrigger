@@ -96,6 +96,8 @@ public class GameEditViewModel : ViewModelBase
         _isSteamGame = game.IsSteamGame;
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
+        _launchDirectly = game.LaunchDirectly;
+        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
@@ -247,6 +249,67 @@ public class GameEditViewModel : ViewModelBase
         get => _isSteamGame;
         set { _isSteamGame = value; OnPropertyChanged(); }
     }
+
+    // --- Launcher platform (GOG / EA / Epic / Ubisoft / Steam-by-AppId) ---
+    // The card shows a platform badge the dialog previously could neither explain nor change.
+
+    private bool _launchDirectly;
+    private bool _hasPlatform;
+    private bool _convertToLocal;
+    private ICommand? _convertToLocalCommand;
+
+    /// <summary>True while the entry is tagged to a launcher platform (and hasn't been converted
+    /// to Local in this edit session) - shows the platform card.</summary>
+    public bool HasPlatform
+    {
+        get => _hasPlatform && !_convertToLocal;
+        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); }
+    }
+
+    /// <summary>"GOG", "EA", "Epic", "Ubisoft" or "Steam" - whichever tag the entry carries.</summary>
+    public string PlatformName =>
+        SourceGame.IsGogGame ? "GOG" :
+        SourceGame.IsEaGame ? "EA" :
+        SourceGame.IsEpicGame ? "Epic" :
+        SourceGame.IsUbisoftGame ? "Ubisoft" :
+        SourceGame.IsSteamGame ? "Steam" : "Local";
+
+    /// <summary>e.g. "Imported from GOG (game ID 1207658924)". Where it came from and the ID
+    /// the launcher knows it by, so a wrong match is at least diagnosable.</summary>
+    public string PlatformDescription
+    {
+        get
+        {
+            string? id = SourceGame.IsGogGame ? SourceGame.GogGameId
+                : SourceGame.IsEaGame ? SourceGame.EaContentId
+                : SourceGame.IsEpicGame ? SourceGame.EpicAppName
+                : SourceGame.IsUbisoftGame ? SourceGame.UbisoftGameId
+                : SourceGame.SteamAppId;
+            string via = SourceGame.ImportedFrom != null ? "Imported from" : "Linked to";
+            return string.IsNullOrEmpty(id) ? $"{via} {PlatformName}" : $"{via} {PlatformName} (ID {id})";
+        }
+    }
+
+    public string LaunchDirectlyLabel => $"Launch this executable directly instead of through {PlatformName}";
+
+    /// <summary>See <see cref="GameEntry.LaunchDirectly"/>: without this, editing the executable
+    /// path of a platform game has no effect because the client-launch path ignores it.</summary>
+    public bool LaunchDirectly
+    {
+        get => _launchDirectly;
+        set { _launchDirectly = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Drops the platform tag and ID on save, making this a plain Local game: launched
+    /// from its executable, badged as Local, no longer swept by "turn off integration + remove
+    /// its games". The next Scan for Games may offer the platform's own record again.</summary>
+    public ICommand ConvertToLocalCommand => _convertToLocalCommand ??= new RelayCommand(() =>
+    {
+        _convertToLocal = true;
+        IsSteamGame = false;
+        OnPropertyChanged(nameof(HasPlatform));
+        StatusMessage = $"Will be saved as a Local game (no longer linked to {PlatformName}). Click Save to apply.";
+    });
 
     public bool ForceSteamOverlayTag
     {
@@ -786,6 +849,13 @@ public class GameEditViewModel : ViewModelBase
             return;
         }
 
+        string trimmedAppId = SteamAppId?.Trim() ?? string.Empty;
+        if (trimmedAppId.Length > 0 && !UrlProtocolHelper.IsValidSteamAppId(trimmedAppId))
+        {
+            StatusMessage = "Steam App ID must be numeric (e.g. 1245620), or leave it blank.";
+            return;
+        }
+
         SourceGame.Name = Name.Trim();
         SourceGame.ExecutablePath = ExecutablePath.Trim();
         SourceGame.Arguments = Arguments?.Trim() ?? string.Empty;
@@ -795,7 +865,23 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.Hotkey = Hotkey?.Trim() ?? string.Empty;
         SourceGame.IsSteamGame = IsSteamGame;
         SourceGame.ForceSteamOverlayTag = ForceSteamOverlayTag;
-        SourceGame.SteamAppId = string.IsNullOrWhiteSpace(SteamAppId) ? null : SteamAppId.Trim();
+        SourceGame.SteamAppId = trimmedAppId.Length == 0 ? null : trimmedAppId;
+        SourceGame.LaunchDirectly = LaunchDirectly;
+        if (_convertToLocal)
+        {
+            LoggingService.Info("GameEdit", $"'{SourceGame.Name}' converted from {PlatformName} to a Local game.");
+            SourceGame.IsSteamGame = false;
+            SourceGame.IsGogGame = false;
+            SourceGame.GogGameId = null;
+            SourceGame.IsEaGame = false;
+            SourceGame.EaContentId = null;
+            SourceGame.IsEpicGame = false;
+            SourceGame.EpicAppName = null;
+            SourceGame.IsUbisoftGame = false;
+            SourceGame.UbisoftGameId = null;
+            SourceGame.ImportedFrom = null;
+            SourceGame.LaunchDirectly = false;
+        }
         if (SourceGame.PerformanceProfile != PerformanceProfile)
         {
             LoggingService.Info("GameEdit", $"'{SourceGame.Name}' Performance Profile changed: {SourceGame.PerformanceProfile} -> {PerformanceProfile}.");

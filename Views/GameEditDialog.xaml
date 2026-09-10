@@ -368,6 +368,27 @@
                                       IsChecked="{Binding RunAsAdmin}" 
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"/>
 
+                            <!-- Launcher platform (GOG / EA / Epic / Ubisoft / Steam): where the entry came
+                                 from, the option to bypass the client so an edited exe actually runs, and
+                                 a way out of the platform tag entirely. Hidden for plain Local games. -->
+                            <Border Background="#1B1B24" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="6" Padding="10,8" Margin="0,2,0,10"
+                                    Visibility="{Binding HasPlatform, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,6">
+                                        <TextBlock Text="{Binding PlatformDescription}" FontSize="11.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                        <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
+                                                Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"
+                                                ToolTip="Drop the launcher tag and ID. The game will launch from its executable and show the Local badge; Scan for Games may offer the launcher's own record again."/>
+                                    </DockPanel>
+                                    <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                    <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable above as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
+                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Steam Client Protocol Toggle -->
                             <StackPanel Margin="0,2,0,10">
                                 <CheckBox Content="Launch via Steam Client protocol (steam://rungameid/)" 

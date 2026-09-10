@@ -25,6 +25,23 @@ public class GameEntry
     public bool IsSteamGame { get; set; }
     public bool ForceSteamOverlayTag { get; set; }
     public string? SteamAppId { get; set; }
+
+    /// <summary>
+    /// The launcher integration that imported this entry (or that it was later linked to when a
+    /// manual import recognised its install folder). Null for a plain Local game and for entries
+    /// from before this field existed - see LibraryViewModel.IsPlatformGame for the legacy
+    /// fallback. This is what "turn off integration + remove its games" sweeps, not the launch
+    /// flags below, which a user can also set by hand.
+    /// </summary>
+    public LauncherPlatform? ImportedFrom { get; set; }
+
+    /// <summary>
+    /// Launch ExecutablePath directly instead of through the platform's client (GOG Galaxy, EA
+    /// App, Epic Games Launcher, Ubisoft Connect, Steam). Off by default; set from Edit Game for a
+    /// user who wants a specific alternate exe (a DX11 build, a mod launcher) to actually run -
+    /// without it, the client-launch branches in ProcessLauncherService ignore ExecutablePath.
+    /// </summary>
+    public bool LaunchDirectly { get; set; }
     /// <summary>True for a game imported via GOG scanning. Unlike Steam, this doesn't change how
     /// ExecutablePath is interpreted - it's always a real local exe - it only changes how the game
     /// is launched (through GOG Galaxy when available; see ProcessLauncherService) and how re-scans

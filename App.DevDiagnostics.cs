@@ -1530,7 +1530,7 @@ public partial class App
                 {
                     Path.Combine(sysDir, "cmd.exe")
                 };
-                var dlg = new FolderBatchImportDialog(@"D:\SteamLibrary\steamapps\common", sampleCandidates, existingPaths, isAlreadyScanLocation: false, onIgnoreCandidate: _ => { });
+                var dlg = new FolderBatchImportDialog(@"D:\SteamLibrary\steamapps\common", sampleCandidates, c => existingPaths.Contains(c.ExePath, StringComparer.OrdinalIgnoreCase), isAlreadyScanLocation: false, onIgnoreCandidate: _ => { });
                 CaptureVisual(dlg, 680, 560, targetPng);
                 ExitApplication();
                 return;
@@ -1549,7 +1549,7 @@ public partial class App
                     new GameCandidate("Dragon Ball Z: Kakarot", Path.Combine(sysDir, "cmd.exe"), @"C:\Games\DBZ Kakarot", 42000000, 140, "DBZ.exe"),
                     new GameCandidate("The Blood of Dawnwalker", Path.Combine(sysDir, "notepad.exe"), @"C:\Games\Dawnwalker", 78000000, 160, "Dawnwalker.exe")
                 };
-                var dlg = new FolderBatchImportDialog(@"C:\Games", sampleCandidates, new List<string>(), isAlreadyScanLocation: false, onIgnoreCandidate: _ => { });
+                var dlg = new FolderBatchImportDialog(@"C:\Games", sampleCandidates, _ => false, isAlreadyScanLocation: false, onIgnoreCandidate: _ => { });
                 if (dlg.DataContext is FolderBatchImportViewModel vm && vm.Games.Count >= 3)
                 {
                     // Unselect the first game (Alan Wake 2)
@@ -1576,7 +1576,7 @@ public partial class App
                     new GameCandidate("Dragon Ball Z: Kakarot", Path.Combine(sysDir, "cmd.exe"), @"C:\Games\DBZ Kakarot", 42000000, 140, "DBZ.exe"),
                     new GameCandidate("The Blood of Dawnwalker", Path.Combine(sysDir, "notepad.exe"), @"C:\Games\Dawnwalker", 78000000, 160, "Dawnwalker.exe")
                 };
-                var dlg = new FolderBatchImportDialog(@"C:\Games", sampleCandidates, new List<string>(), isAlreadyScanLocation: false, onIgnoreCandidate: _ => { });
+                var dlg = new FolderBatchImportDialog(@"C:\Games", sampleCandidates, _ => false, isAlreadyScanLocation: false, onIgnoreCandidate: _ => { });
                 if (dlg.DataContext is FolderBatchImportViewModel vm && vm.Games.Count >= 3)
                 {
                     vm.Games[0].IsSelected = false;

@@ -45,6 +45,18 @@ public class GameScriptService
 
     private readonly Lock _lock = new();
     private readonly Dictionary<string, GameEntry> _pendingPostExit = new(StringComparer.Ordinal);
+    private readonly Func<bool> _isFeatureEnabled;
+
+    /// <param name="isFeatureEnabled">
+    /// The Settings "Enable game scripts" switch. This is the real kill-switch: when it returns
+    /// false no script runs, even for a game whose entry still carries script paths (from before
+    /// the feature was turned off, or from a hand-edited games.json). Defaults to always-on for
+    /// tests and callers that don't wire settings.
+    /// </param>
+    public GameScriptService(Func<bool>? isFeatureEnabled = null)
+    {
+        _isFeatureEnabled = isFeatureEnabled ?? (static () => true);
+    }
 
     /// <summary>
     /// Runs the game's pre-launch script, if configured. Never throws and never blocks the launch
@@ -54,6 +66,12 @@ public class GameScriptService
     public void RunPreLaunch(GameEntry game)
     {
         if (string.IsNullOrWhiteSpace(game.PreLaunchScriptPath)) return;
+
+        if (!_isFeatureEnabled())
+        {
+            LoggingService.Info("GameScript", $"Pre-launch script for '{game.Name}' skipped: game scripts are disabled in Settings.");
+            return;
+        }
 
         if (!IsSupportedScript(game.PreLaunchScriptPath))
         {
@@ -127,6 +145,12 @@ public class GameScriptService
         }
 
         if (string.IsNullOrWhiteSpace(game.PostExitScriptPath)) return;
+
+        if (!_isFeatureEnabled())
+        {
+            LoggingService.Info("GameScript", $"Post-exit script for '{game.Name}' skipped: game scripts are disabled in Settings.");
+            return;
+        }
 
         if (!IsSupportedScript(game.PostExitScriptPath))
         {
@@ -213,9 +237,15 @@ public class GameScriptService
         {
             case ".bat":
             case ".cmd":
+                // cmd.exe re-parses its command line, so the runtime's ArgumentList quoting is
+                // not enough: it only quotes an argument containing whitespace, and an unquoted
+                // "&", "|" or ">" in the game name would become a command separator. Every
+                // argument is force-quoted here and the whole thing wrapped for /s (strip the
+                // outer quotes, keep the inner ones). Quotes can't appear in a Windows path, and
+                // are replaced in the free-text arguments so they can't terminate a quoted span.
                 psi.FileName = "cmd.exe";
-                psi.ArgumentList.Add("/c");
-                psi.ArgumentList.Add(path);
+                psi.Arguments = "/d /s /c \"" + string.Join(' ',
+                    new[] { path, phase, game.Name, game.ExecutablePath }.Select(a => "\"" + a.Replace('"', '\'') + "\"")) + "\"";
                 break;
 
             case ".ps1":
@@ -242,10 +272,15 @@ public class GameScriptService
                 return null;
         }
 
-        // Positional arguments work for every script type and every privilege level.
-        psi.ArgumentList.Add(phase);
-        psi.ArgumentList.Add(game.Name);
-        psi.ArgumentList.Add(game.ExecutablePath);
+        // Positional arguments work for every script type and every privilege level. (The
+        // cmd.exe case already folded them into its pre-quoted Arguments string above -
+        // ArgumentList and Arguments can't be mixed on one ProcessStartInfo.)
+        if (ext is not (".bat" or ".cmd"))
+        {
+            psi.ArgumentList.Add(phase);
+            psi.ArgumentList.Add(game.Name);
+            psi.ArgumentList.Add(game.ExecutablePath);
+        }
 
         if (!psi.UseShellExecute)
         {

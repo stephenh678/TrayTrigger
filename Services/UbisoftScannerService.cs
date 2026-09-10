@@ -65,17 +65,82 @@ public class UbisoftScannerService
         return results.OrderBy(g => g.Name).ToList();
     }
 
+    /// <summary>
+    /// Resolves the single installed Ubisoft game whose registry InstallDir contains
+    /// <paramref name="path"/>, or null. Used by <see cref="PlatformLookupService"/> so a game
+    /// dropped/browsed into the library from a Ubisoft install directory is imported with its real
+    /// game ID rather than as a Local exe. Only the matched install pays for the folder scan.
+    /// </summary>
+    public DiscoveredUbisoftGame? FindGameByPath(string path)
+    {
+        foreach (var (gameId, installDir) in GetInstallDirs())
+        {
+            if (PlatformLookupService.IsPathUnderDirectory(path, installDir))
+            {
+                return ResolveInstall(gameId, installDir);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Every registered Ubisoft install's (gameId, InstallDir) from the registry alone -
+    /// no folder scan. <see cref="PlatformLookupService"/> caches this once per import operation.</summary>
+    public List<(string GameId, string InstallDir)> GetInstallDirs()
+    {
+        var results = new List<(string, string)>();
+        try
+        {
+            using var baseKey = RegistryHelper.OpenLocalMachine32();
+            using var installsKey = baseKey.OpenSubKey(InstallsKeyPath);
+            if (installsKey == null) return results;
+
+            foreach (var gameId in installsKey.GetSubKeyNames())
+            {
+                string? installDir = ReadInstallDir(installsKey, gameId);
+                if (installDir != null) results.Add((gameId, installDir));
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("UbisoftScannerService", $"Error reading Ubisoft install list: {ex.Message}");
+        }
+        return results;
+    }
+
+    /// <summary>The full discovery record for one install (runs the folder scan for its exe), or null.</summary>
+    public DiscoveredUbisoftGame? ResolveInstall(string gameId, string installDir)
+        => ResolveInstall(gameId, installDir, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+    private static string? ReadInstallDir(RegistryKey installsKey, string gameId)
+    {
+        using var gameKey = installsKey.OpenSubKey(gameId);
+        string? installDir = gameKey?.GetValue("InstallDir") as string;
+        if (string.IsNullOrWhiteSpace(installDir)) return null;
+
+        // Ubisoft's own registry writes forward slashes (e.g. "C:/Program Files (x86)/...") -
+        // normalize before any Path/Directory API call.
+        return installDir.Replace('/', '\\').TrimEnd('\\');
+    }
+
     private DiscoveredUbisoftGame? ParseInstallEntry(RegistryKey installsKey, string gameId, HashSet<string> existingSet)
     {
         try
         {
-            using var gameKey = installsKey.OpenSubKey(gameId);
-            string? installDir = gameKey?.GetValue("InstallDir") as string;
-            if (string.IsNullOrWhiteSpace(installDir)) return null;
+            string? installDir = ReadInstallDir(installsKey, gameId);
+            if (installDir == null) return null;
+            return ResolveInstall(gameId, installDir, existingSet);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("UbisoftScannerService", $"Error parsing Ubisoft install entry '{gameId}': {ex.Message}");
+            return null;
+        }
+    }
 
-            // Ubisoft's own registry writes forward slashes (e.g. "C:/Program Files (x86)/...") -
-            // normalize before any Path/Directory API call.
-            installDir = installDir.Replace('/', '\\').TrimEnd('\\');
+    private DiscoveredUbisoftGame? ResolveInstall(string gameId, string installDir, HashSet<string> existingSet)
+    {
+        try
+        {
             if (!Directory.Exists(installDir)) return null;
 
             // Skip the expensive folder scan entirely for a game already in the library - the

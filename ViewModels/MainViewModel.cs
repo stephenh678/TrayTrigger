@@ -184,7 +184,11 @@ public class MainViewModel : ViewModelBase
             onRequestRefreshAllPosters: progress => Import.RefreshAllPostersAsync(progress),
             onRequestOpenScanForGames: () => _ = Import.ScanForGamesAsync(),
             onCheckForUpdates: () => Update.CheckForUpdatesAsync(true),
-            getUpdateStatusText: () => Update.UpdateStatusBadgeText
+            getUpdateStatusText: () => Update.UpdateStatusBadgeText,
+            getPlatformGameCount: Library.CountPlatformGames,
+            removePlatformGames: Library.RemovePlatformGames,
+            // SystemVM is constructed a few lines below; the closure resolves it at call time.
+            onProfileTweaksReset: () => SystemVM?.RefreshProfileTweakToggles()
         );
 
         Library.RequestEditGameDialog += card => RequestEditGameDialog?.Invoke(card);
@@ -205,6 +209,10 @@ public class MainViewModel : ViewModelBase
         // properties are relayed above.
         Library.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
         Import.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+
+        // Lets import/scan completion messages fall back to the floating toast whenever the
+        // Library status bar isn't the section on screen (see LibraryViewModel.AnnounceImportResult).
+        Library.IsLibraryVisible = () => CurrentSection == NavSection.Library;
 
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
 
@@ -479,6 +487,8 @@ public class MainViewModel : ViewModelBase
         set => Library.LaunchToastMessage = value;
     }
 
+    public string LaunchToastIcon => Library.LaunchToastIcon;
+
     public string StatusMessage
     {
         get => Library.StatusMessage;
@@ -549,6 +559,14 @@ public class MainViewModel : ViewModelBase
         Import.IgnoreGamePath(exePath, name);
         // Import mutates the same AppSettings.IgnoredGamePaths list SettingsVM displays in its
         // own management list - see the matching comment on AddManualScanLocationIfNew above.
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    /// <summary>Ignores a folder-scan candidate by platform ID when it resolved to a launcher
+    /// game, by exe path otherwise - see ImportCoordinator.IgnoreCandidate.</summary>
+    public void IgnoreCandidate(GameCandidate candidate)
+    {
+        Import.IgnoreCandidate(candidate);
         SettingsVM.RefreshIgnoredGamePaths();
     }
 
