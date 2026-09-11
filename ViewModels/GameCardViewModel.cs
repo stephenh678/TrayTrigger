@@ -195,9 +195,10 @@ public class GameCardViewModel : ViewModelBase
     /// rather than sitting beside it.</summary>
     public bool IsLocalGame => LibraryConstants.PlatformCategoryFor(Game) == null;
     /// <summary>The category pill is redundant while it still shows the platform's own placeholder
-    /// name next to that platform's badge; it appears once the category is a real genre or a
-    /// user's own choice.</summary>
+    /// name next to that platform's badge, or the meaningless "Uncategorized" default; it appears
+    /// once the category is a real genre or a user's own choice.</summary>
     public bool ShowCategoryBadge =>
+        !string.Equals(Category, LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase) &&
         !string.Equals(Category, LibraryConstants.PlatformCategoryFor(Game), StringComparison.OrdinalIgnoreCase);
     /// <summary>Part of the library's Ctrl/Shift+click multi-selection (see LibraryViewModel).
     /// Purely UI state - never saved.</summary>
