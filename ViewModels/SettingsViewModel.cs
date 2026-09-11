@@ -1180,6 +1180,11 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.UbisoftIntegrationEnabled),
             // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
+            nameof(AppSettings.MainWindowLeft),
+            nameof(AppSettings.MainWindowTop),
+            nameof(AppSettings.MainWindowWidth),
+            nameof(AppSettings.MainWindowHeight),
+            nameof(AppSettings.MainWindowMaximized),
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),

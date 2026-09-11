@@ -91,6 +91,7 @@ public class MainViewModel : ViewModelBase
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
     public event Action<GameCardViewModel>? RequestQuickRename;
     public event Action<GameCardViewModel>? RequestQuickCategory;
+    public event Action<List<GameCardViewModel>>? RequestBatchCategory;
     public event Action<GameCardViewModel>? RequestEditSteamAppId;
     public event Action? LibraryUpdated;
     public event Action? RequestMinimizeToTray;
@@ -197,6 +198,7 @@ public class MainViewModel : ViewModelBase
         Library.RequestEditGameDialog += card => RequestEditGameDialog?.Invoke(card);
         Library.RequestQuickRename += card => RequestQuickRename?.Invoke(card);
         Library.RequestQuickCategory += card => RequestQuickCategory?.Invoke(card);
+        Library.RequestBatchCategory += cards => RequestBatchCategory?.Invoke(cards);
         Library.RequestEditSteamAppId += card => RequestEditSteamAppId?.Invoke(card);
         Library.RequestMinimizeToTray += () => RequestMinimizeToTray?.Invoke();
         Library.LibraryUpdated += () => LibraryUpdated?.Invoke();
@@ -379,8 +381,7 @@ public class MainViewModel : ViewModelBase
                 _settings.IsSidebarExpanded = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(SidebarWidth));
-                OnPropertyChanged(nameof(SidebarToggleTooltip));
-                OnPropertyChanged(nameof(SidebarToggleLabel));
+                OnPropertyChanged(nameof(SidebarToggleName));
                 OnPropertyChanged(nameof(SidebarToggleChevron));
                 SettingsVM.AutoSaveSettings();
             }
@@ -388,8 +389,7 @@ public class MainViewModel : ViewModelBase
     }
 
     public double SidebarWidth => IsSidebarExpanded ? 190 : 60;
-    public string SidebarToggleTooltip => IsSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar";
-    public string SidebarToggleLabel => IsSidebarExpanded ? "◀ Collapse" : "▶";
+    public string SidebarToggleName => IsSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar";
     public string SidebarToggleChevron => IsSidebarExpanded ? "\uE76B" : "\uE76C";
 
     public ICommand ToggleSidebarCommand { get; }
@@ -552,6 +552,29 @@ public class MainViewModel : ViewModelBase
     public ICommand DismissUndoToastCommand => Library.DismissUndoToastCommand;
     public ICommand DismissLaunchToastCommand => Library.DismissLaunchToastCommand;
 
+    // Multi-select / batch editing - see LibraryViewModel. Property change notifications are
+    // relayed generically from Library.PropertyChanged above.
+    public bool HasSelection => Library.HasSelection;
+    public int SelectedCount => Library.SelectedCount;
+    public string SelectionSummary => Library.SelectionSummary;
+    public string SelectionHint => Library.SelectionHint;
+    public bool BatchAllFavorite => Library.BatchAllFavorite;
+    public bool BatchAllHidden => Library.BatchAllHidden;
+    public string BatchFavoriteLabel => Library.BatchFavoriteLabel;
+    public string BatchHideLabel => Library.BatchHideLabel;
+    public void ClearSelection() => Library.ClearSelection();
+    public ICommand SelectAllCommand => Library.SelectAllCommand;
+    public ICommand ClearSelectionCommand => Library.ClearSelectionCommand;
+    public ICommand BatchFavoriteCommand => Library.BatchFavoriteCommand;
+    public ICommand BatchHideCommand => Library.BatchHideCommand;
+    public ICommand BatchChangeCategoryCommand => Library.BatchChangeCategoryCommand;
+    public ICommand BatchRemoveCommand => Library.BatchRemoveCommand;
+    public ICommand BatchSetProfileCommand => Library.BatchSetProfileCommand;
+    public ICommand BatchRefreshMetadataCommand => Library.BatchRefreshMetadataCommand;
+    public bool BatchProfileIsOff => Library.BatchProfileIsOff;
+    public bool BatchProfileIsOptimized => Library.BatchProfileIsOptimized;
+    public bool BatchProfileIsAggressive => Library.BatchProfileIsAggressive;
+
     public void LoadLibrary() => Library.LoadLibrary();
     public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false) => Library.CreateCardViewModel(game, deferHeavyInit);
     public void OpenGameDetails(GameCardViewModel card) => Library.OpenGameDetails(card);
@@ -566,6 +589,9 @@ public class MainViewModel : ViewModelBase
     public Task FetchExeNameForGameAsync(GameCardViewModel card) => Library.FetchExeNameForGameAsync(card);
     public void ApplyRename(GameCardViewModel card, string newName) => Library.ApplyRename(card, newName);
     public void ApplyCategory(GameCardViewModel card, string newCategory) => Library.ApplyCategory(card, newCategory);
+    public void ApplyCategoryToMany(List<GameCardViewModel> cards, string newCategory) => Library.ApplyCategoryToMany(cards, newCategory);
+    public void SelectAllVisible() => Library.SelectAllVisible();
+    public void SetCardSelected(GameCardViewModel card, bool selected) => Library.SetCardSelected(card, selected);
     public void DeleteGame(GameCardViewModel card) => Library.DeleteGame(card);
     public void UndoDelete() => Library.UndoDelete();
 

@@ -30,7 +30,7 @@
                 <Border x:Name="IconBadge" Grid.Column="0" Width="44" Height="44" CornerRadius="22" 
                         Background="#2E181B" BorderBrush="#781D22" BorderThickness="1.5" 
                         Margin="0,0,16,0" VerticalAlignment="Top" HorizontalAlignment="Center">
-                    <TextBlock x:Name="IconGlyph" Text="🗑" FontSize="18" 
+                    <TextBlock x:Name="IconGlyph" Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="18"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
 

@@ -38,19 +38,19 @@
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
                             </Border>
                             <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Off by default and skipped by Apply Performance Preset - situational or tradeoff-heavy, so it's your call.">
+                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
                             </Border>
                             <Border Background="#3D2F14" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Requires a restart to take effect">
+                                    Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="⟳ RESTART" FontSize="9" FontWeight="Bold" Foreground="#E8B84E"/>
                             </Border>
                             <Border Background="#2B2340" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Changing this writes a machine-wide (HKLM) value, so Windows shows a User Account Control prompt.">
-                                <TextBlock Text="🛡 ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0"/>
+                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="#B9A6F0" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                    <TextBlock Text="ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
@@ -85,22 +85,22 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <!-- The longer rationale is the name's tooltip; Learn more has the full topic. -->
+                            <!-- The longer rationale lives in the Learn more topic. -->
                             <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"
-                                       ToolTip="{Binding WhyItMatters}" ToolTipService.ShowDuration="20000"/>
+                                       Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             <Border Background="{Binding StatusBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
                             </Border>
                             <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Off by default within this profile - a real tradeoff, not just a performance win, so it's your call.">
+                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
                             </Border>
                             <Border Background="#2B2340" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
-                                    ToolTip="Applying this at launch writes a machine-wide value or runs an elevated command, so Windows shows a User Account Control prompt.">
-                                <TextBlock Text="🛡 ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0"/>
+                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="#B9A6F0" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                    <TextBlock Text="ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
@@ -196,8 +196,7 @@
                     <DockPanel LastChildFill="False" Margin="0,0,0,8">
                         <Button DockPanel.Dock="Right" Content="Refresh Specs" Command="{Binding RefreshSpecsCommand}"
                                 IsEnabled="{Binding IsSpecsLoaded}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="10,3" VerticalAlignment="Center"
-                                ToolTip="Re-read hardware, display, drive, and network details"/>
+                                Style="{StaticResource ModernOutlineButton}" Padding="10,3" VerticalAlignment="Center"/>
                         <TextBlock DockPanel.Dock="Left" Text="{Binding SpecsRefreshedDisplay}" FontSize="11"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"/>
                     </DockPanel>
@@ -440,8 +439,7 @@
                                              pointing at it in a tooltip. -->
                                         <Button Command="{Binding DataContext.OpenPerformanceSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 Background="{Binding RestorePointBadgeColor}" BorderThickness="0" Padding="6,1.5" Margin="8,0,0,0"
-                                                VerticalAlignment="Center" Cursor="Hand"
-                                                ToolTip="Click to change this in Settings &#x2192; Launch &amp; Performance">
+                                                VerticalAlignment="Center" Cursor="Hand">
                                             <Button.Template>
                                                 <ControlTemplate TargetType="Button">
                                                     <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
@@ -459,7 +457,9 @@
 
                             <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
                                 <DockPanel LastChildFill="False">
-                                    <TextBlock Text="💡 Documented Windows settings only - no registry cleaners. Badges flag the ones that need a restart or are opt-in."
+                                    <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
+                                               VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
+                                    <TextBlock Text="Documented Windows settings only - no registry cleaners. Badges flag the ones that need a restart or are opt-in."
                                                Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="12,0,0,0"
                                             VerticalAlignment="Center" DockPanel.Dock="Right"

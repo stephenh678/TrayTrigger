@@ -129,8 +129,7 @@
             <!-- Footer -->
             <DockPanel Grid.Row="3" LastChildFill="False">
                 <Button Content="Scan for Games" Style="{StaticResource ModernAccentButton}" Padding="16,6"
-                        DockPanel.Dock="Right" IsDefault="True" Click="OnScanClick"
-                        ToolTip="Import what's already installed from Steam, GOG, EA, Epic, and Ubisoft Connect"/>
+                        DockPanel.Dock="Right" IsDefault="True" Click="OnScanClick"/>
                 <Button Content="Get Started" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
                         DockPanel.Dock="Right" IsCancel="True" Click="OnGetStartedClick"/>
             </DockPanel>

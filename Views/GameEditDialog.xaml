@@ -78,7 +78,8 @@
                                         </Style>
                                     </Border.Style>
                                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <TextBlock Text="🖼" FontSize="26" HorizontalAlignment="Center" Opacity="0.4" Margin="0,0,0,6"/>
+                                        <TextBlock Text="&#xEB9F;" FontFamily="{StaticResource IconFont}" FontSize="26"
+                                                   Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Opacity="0.5" Margin="0,0,0,8"/>
                                         <TextBlock Text="NO POSTER" FontSize="11" FontWeight="SemiBold" 
                                                    Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="600 × 900" FontSize="9.5" Foreground="{StaticResource BrushTextMuted}" 
@@ -136,7 +137,7 @@
                                     Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
                             <Button Grid.Column="2" Command="{Binding RefreshPosterCommand}"
                                     Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"
-                                    ToolTip="Re-download the official poster for the linked Steam App ID"
+
                                     AutomationProperties.Name="Refresh poster">
                                 <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"/>
                             </Button>
@@ -188,9 +189,14 @@
                                 <TextBlock Text="Game Title" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
                                            VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                                    <Button Content="Search Online 🔍" Command="{Binding FetchOfficialNameOnlineCommand}"
+                                    <Button Command="{Binding FetchOfficialNameOnlineCommand}"
                                             Style="{StaticResource ModernGhostButton}" Margin="0,0,6,0"
-                                            Padding="8,2" FontSize="10.5"/>
+                                            Padding="8,2" FontSize="10.5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                            <TextBlock Text="Search Online" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button Content="From .exe" Command="{Binding FetchNameFromExeCommand}"
                                             Style="{StaticResource ModernGhostButton}"
                                             Padding="8,2" FontSize="10.5"/>
@@ -244,10 +250,10 @@
                                     <!-- Force Apply Steam Overlay Tag Option - pointless for a game that already
                                          launches through Steam (its card carries the badge anyway). -->
                                     <StackPanel Margin="0,2,0,2" Visibility="{Binding CanOfferSteamBadge, Converter={StaticResource BoolToVis}}">
-                                        <CheckBox Content="Show the Steam badge on this game's card"
+                                        <CheckBox Content="Use the Steam badge instead of the Local badge"
                                                   IsChecked="{Binding ForceSteamOverlayTag}"
                                                   Style="{StaticResource ModernCheckBox}"/>
-                                        <TextBlock Text="Marks the library card with the Steam logo even though the game launches from its executable."
+                                        <TextBlock Text="Replaces the Local Games badge on the library card with the Steam logo, even though the game launches from its executable."
                                                    FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
@@ -298,14 +304,17 @@
 
                             <!-- Hotkey: a launch setting, so it lives with the launch path rather than
                                  under "privileges". -->
+                            <!-- The box is docked first so it keeps its 160px; the label then fills what is
+                                 left and wraps. Docking the label first let its one-line hint claim the whole
+                                 row and push the box underneath it. -->
                             <DockPanel>
-                                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                                    <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
-                                    <TextBlock Text="Press it anywhere in Windows to launch this game (e.g. Ctrl+Alt+D, F10). Leave blank for none." FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"/>
-                                </StackPanel>
                                 <TextBox DockPanel.Dock="Right" Text="{Binding Hotkey, UpdateSourceTrigger=LostFocus}"
-                                         Style="{StaticResource ModernTextBox}" Width="160" HorizontalAlignment="Right"
-                                         Tag="Ctrl+Alt+…"/>
+                                         Style="{StaticResource ModernTextBox}" Width="160" VerticalAlignment="Center"
+                                         Margin="12,0,0,0" Tag="Ctrl+Alt+…"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="Press it anywhere in Windows to launch this game (e.g. Ctrl+Alt+D, F10). Leave blank for none." FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                </StackPanel>
                             </DockPanel>
                         </StackPanel>
                     </Border>
@@ -416,8 +425,7 @@
                             </DockPanel>
                             <CheckBox Content="Cancel the launch if the pre-launch script fails (non-zero exit code, timeout, or won't start)"
                                       IsChecked="{Binding AbortLaunchOnScriptFailure}" IsEnabled="{Binding HasPreLaunchScript}"
-                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"
-                                      ToolTip="Use this when the script is a precondition - e.g. it must close another app or switch a device before the game may start. Turning it on also turns on waiting."/>
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                             <CheckBox Content="Run scripts hidden (no console window)"
                                       IsChecked="{Binding RunScriptsHidden}" IsEnabled="{Binding HasAnyScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
@@ -455,17 +463,15 @@
                                         <TextBlock Text="{Binding PlatformDescription}" FontSize="11.5" FontWeight="SemiBold"
                                                    Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                         <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
-                                                Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"
-                                                ToolTip="Drop the launcher tag and ID. The game will launch from its executable and show the Local badge; Scan for Games may offer the launcher's own record again."/>
+                                                Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"/>
                                     </DockPanel>
                                     <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
                                               Style="{StaticResource ModernCheckBox}"/>
                                     <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable above as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
                                                FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
-                                              Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"
-                                              ToolTip="When the session ends, Steam is asked to shut down (steam.exe -shutdown) and the other clients (GOG Galaxy, EA App, Epic Games Launcher, Ubisoft Connect) are closed. Platform background services are left running."/>
-                                    <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. Off by default - leave it off if you keep the client open for downloads or chat."
+                                              Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"/>
+                                    <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. For Steam, also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears. Off by default - leave it off if you keep the client open for downloads or chat."
                                                FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                 </StackPanel>
                             </Border>

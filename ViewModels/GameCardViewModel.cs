@@ -28,7 +28,11 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onToggleHidden;
     private readonly Action<GameCardViewModel>? _onEndSession;
     private readonly Action<GameCardViewModel>? _onForceClose;
+    private readonly Action<GameCardViewModel>? _onPrimaryClick;
+    private readonly Action<GameCardViewModel>? _onToggleSelect;
+    private readonly Action<GameCardViewModel>? _onRangeSelect;
     private readonly Func<bool>? _getUseVerticalPosterArt;
+    private bool _isSelected;
     private BitmapImage? _iconImage;
     private BitmapImage? _coverImage;
     private bool _isMissing;
@@ -59,12 +63,28 @@ public class GameCardViewModel : ViewModelBase
         Func<bool>? getUseVerticalPosterArt = null,
         bool deferHeavyInit = false,
         Action<GameCardViewModel>? onEndSession = null,
-        Action<GameCardViewModel>? onForceClose = null)
+        Action<GameCardViewModel>? onForceClose = null,
+        Action<GameCardViewModel>? onPrimaryClick = null,
+        Action<GameCardViewModel>? onToggleSelect = null,
+        Action<GameCardViewModel>? onRangeSelect = null)
     {
         _onEndSession = onEndSession;
         _onForceClose = onForceClose;
+        _onPrimaryClick = onPrimaryClick;
+        _onToggleSelect = onToggleSelect;
+        _onRangeSelect = onRangeSelect;
         EndSessionCommand = new RelayCommand(() => _onEndSession?.Invoke(this));
         ForceCloseCommand = new RelayCommand(() => _onForceClose?.Invoke(this));
+        // A plain left-click: Details normally, toggle-selection while the library is in Select
+        // mode (LibraryViewModel decides). Ctrl+click / Shift+click always select, entering
+        // Select mode if needed - the Explorer convention, alongside the toolbar's Select button.
+        PrimaryClickCommand = new RelayCommand(() =>
+        {
+            if (_onPrimaryClick != null) _onPrimaryClick(this);
+            else _onViewDetails?.Invoke(this);
+        });
+        ToggleSelectCommand = new RelayCommand(() => _onToggleSelect?.Invoke(this));
+        RangeSelectCommand = new RelayCommand(() => _onRangeSelect?.Invoke(this));
         Game = game;
         _onLaunch = onLaunch;
         _onEdit = onEdit;
@@ -170,14 +190,34 @@ public class GameCardViewModel : ViewModelBase
     public bool IsUbisoftGame => Game.IsUbisoftGame;
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
-    /// one.</summary>
-    public bool IsLocalGame => !IsSteamGame && !IsGogGame && !IsEaGame && !IsEpicGame && !IsUbisoftGame;
+    /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
+    /// rather than sitting beside it.</summary>
+    public bool IsLocalGame => !HasSteamOverlay && !IsGogGame && !IsEaGame && !IsEpicGame && !IsUbisoftGame;
     public bool ShowCategoryBadge =>
         (!HasSteamOverlay || !string.Equals(Category, LibraryConstants.SteamCategory, StringComparison.OrdinalIgnoreCase)) &&
         (!IsGogGame || !string.Equals(Category, LibraryConstants.GogCategory, StringComparison.OrdinalIgnoreCase)) &&
         (!IsEaGame || !string.Equals(Category, LibraryConstants.EaCategory, StringComparison.OrdinalIgnoreCase)) &&
         (!IsEpicGame || !string.Equals(Category, LibraryConstants.EpicCategory, StringComparison.OrdinalIgnoreCase)) &&
         (!IsUbisoftGame || !string.Equals(Category, LibraryConstants.UbisoftCategory, StringComparison.OrdinalIgnoreCase));
+    /// <summary>Part of the library's Ctrl/Shift+click multi-selection (see LibraryViewModel).
+    /// Purely UI state - never saved.</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected != value)
+            {
+                _isSelected = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public ICommand PrimaryClickCommand { get; }
+    public ICommand ToggleSelectCommand { get; }
+    public ICommand RangeSelectCommand { get; }
+
     public bool IsFavorite => Game.IsFavorite;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public bool IsHidden => Game.IsHidden;
