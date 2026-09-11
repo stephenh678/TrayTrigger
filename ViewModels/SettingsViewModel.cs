@@ -291,7 +291,7 @@ public class SettingsViewModel : ViewModelBase
     private void AddScanLocation()
     {
         var dialog = new OpenFolderDialog { Title = "Add a Scan Location", Multiselect = false };
-        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
+        if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
 
         string path = dialog.FolderName.TrimEnd('\\', '/');
         var existing = _settings.ScanLocations.FirstOrDefault(l => string.Equals(l.Path, path, StringComparison.OrdinalIgnoreCase));
