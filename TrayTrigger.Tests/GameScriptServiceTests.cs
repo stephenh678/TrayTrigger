@@ -50,7 +50,8 @@ public class GameScriptServiceTests : IDisposable
 
         Assert.Equal("cmd.exe", psi.FileName);
         // Every argument force-quoted and wrapped for /s - see BuildStartInfo's cmd.exe comment.
-        Assert.Equal($"/d /s /c \"\"{path}\" \"prelaunch\" \"Test Game\" \"C:\\Games\\Test\\game.exe\"\"", psi.Arguments);
+        // Argument 5 (playtime) is an empty quoted slot on pre-launch so %5 is stable across phases.
+        Assert.Equal($"/d /s /c \"\"{path}\" \"prelaunch\" \"Test Game\" \"C:\\Games\\Test\\game.exe\" \"abc123\" \"\"\"", psi.Arguments);
         Assert.Empty(psi.ArgumentList);
         Assert.False(psi.UseShellExecute);
         Assert.True(psi.CreateNoWindow);
@@ -78,8 +79,28 @@ public class GameScriptServiceTests : IDisposable
 
         Assert.Equal("powershell.exe", psi.FileName);
         Assert.Equal(
-            new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", path, "prelaunch", "Test Game", @"C:\Games\Test\game.exe" },
+            new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", path, "prelaunch", "Test Game", @"C:\Games\Test\game.exe", "abc123", "" },
             psi.ArgumentList);
+    }
+
+    [Fact]
+    public void BatchScripts_PostExit_PassesPlaytimeAsArgument5()
+    {
+        string path = MakeScript("post.bat");
+        var psi = GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePostExit, hidden: true, elevated: false, playedMinutes: 42)!;
+
+        Assert.EndsWith(" \"abc123\" \"42\"\"", psi.Arguments);
+    }
+
+    [Fact]
+    public void Elevated_StillGetsGameIdAndPlaytime_AsArguments()
+    {
+        // No environment block through ShellExecute/runas, so the arguments are the only channel.
+        string path = MakeScript("post.ps1");
+        var psi = GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePostExit, hidden: true, elevated: true, playedMinutes: 7)!;
+
+        Assert.True(psi.UseShellExecute);
+        Assert.Equal(new[] { "abc123", "7" }, psi.ArgumentList.TakeLast(2));
     }
 
     [Fact]
@@ -100,7 +121,7 @@ public class GameScriptServiceTests : IDisposable
         var psi = GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePostExit, hidden: true, elevated: false, playedMinutes: 42)!;
 
         Assert.Equal(path, psi.FileName);
-        Assert.Equal(new[] { "postexit", "Test Game", @"C:\Games\Test\game.exe" }, psi.ArgumentList);
+        Assert.Equal(new[] { "postexit", "Test Game", @"C:\Games\Test\game.exe", "abc123", "42" }, psi.ArgumentList);
     }
 
     [Fact]
@@ -201,7 +222,8 @@ public class GameScriptServiceTests : IDisposable
         // End-to-end: a real cmd.exe script writes its arguments and env to a file.
         string marker = Path.Combine(_dir, "marker.txt");
         string script = Path.Combine(_dir, "pre.bat");
-        File.WriteAllText(script, $"@echo %~1;%~2;%TRAYTRIGGER_GAME_ID%> \"{marker}\"\r\n");
+        // %~5 is the (empty) playtime slot on pre-launch; it must exist so positions don't shift.
+        File.WriteAllText(script, $"@echo %~1;%~2;%~4;[%~5];%TRAYTRIGGER_GAME_ID%> \"{marker}\"\r\n");
 
         var game = new GameEntry
         {
@@ -216,7 +238,7 @@ public class GameScriptServiceTests : IDisposable
         new GameScriptService().RunPreLaunch(game);
 
         Assert.True(File.Exists(marker), "script did not run to completion before RunPreLaunch returned");
-        Assert.Equal("prelaunch;E2E Game;e2e", File.ReadAllText(marker).Trim());
+        Assert.Equal("prelaunch;E2E Game;e2e;[];e2e", File.ReadAllText(marker).Trim());
     }
 
     [Fact]

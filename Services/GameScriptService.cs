@@ -24,10 +24,12 @@ public readonly record struct PreLaunchScriptResult(bool ProceedWithLaunch, stri
 /// -ExecutionPolicy Bypass), .exe/.com (run directly). Anything else is refused - a shell
 /// fallback would depend on the user's file associations and couldn't honour "run hidden".
 ///
-/// Each script receives three positional arguments - phase ("prelaunch" or "postexit"), game
-/// name, game executable path - and, when not elevated, the same data as TRAYTRIGGER_* environment
+/// Each script receives five positional arguments - phase ("prelaunch" or "postexit"), game
+/// name, game executable path, game ID, playtime in minutes (empty on pre-launch, so the
+/// position is stable) - and, when not elevated, the same data as TRAYTRIGGER_* environment
 /// variables (see <see cref="BuildStartInfo"/>). Elevated launches go through ShellExecute, which
-/// cannot carry a custom environment, so those scripts should read the arguments instead.
+/// cannot carry a custom environment, so the arguments are the only way those scripts can read
+/// the game ID and playtime.
 ///
 /// When a script runs hidden (and not elevated) its stdout/stderr are captured into the
 /// TrayTrigger log under the GameScript category, so a misbehaving script can be diagnosed
@@ -338,6 +340,9 @@ public class GameScriptService
 
         string ext = Path.GetExtension(path).ToLowerInvariant();
         string workDir = Path.GetDirectoryName(path) ?? string.Empty;
+        // Argument 5 is always present so a script's positions never shift between phases:
+        // empty on pre-launch (nothing has been played yet), the minute count on post-exit.
+        string playtimeArg = playedMinutes?.ToString() ?? string.Empty;
 
         var psi = new ProcessStartInfo
         {
@@ -376,7 +381,7 @@ public class GameScriptService
                 // stripped (the exact value is still in TRAYTRIGGER_GAME_NAME).
                 psi.FileName = "cmd.exe";
                 psi.Arguments = "/d /s /c \"" + string.Join(' ',
-                    new[] { path, phase, SanitizeForCmdLine(game.Name), game.ExecutablePath }.Select(a => "\"" + a.Replace('"', '\'') + "\"")) + "\"";
+                    new[] { path, phase, SanitizeForCmdLine(game.Name), game.ExecutablePath, game.Id, playtimeArg }.Select(a => "\"" + a.Replace('"', '\'') + "\"")) + "\"";
                 break;
 
             case ".ps1":
@@ -411,6 +416,8 @@ public class GameScriptService
             psi.ArgumentList.Add(phase);
             psi.ArgumentList.Add(game.Name);
             psi.ArgumentList.Add(game.ExecutablePath);
+            psi.ArgumentList.Add(game.Id);
+            psi.ArgumentList.Add(playtimeArg);
         }
 
         if (!psi.UseShellExecute)
