@@ -428,7 +428,8 @@ public partial class MainWindow : Window
             steamGridDbApiKey: _viewModel.SettingsVM.SteamGridDbApiKeyOrNull,
             minConfidence: _viewModel.Settings.OnlineMatchConfidenceThreshold,
             scriptsEnabled: _viewModel.Settings.EnableGameScripts,
-            scriptDefaults: _viewModel.Settings.ScriptDefaults);
+            scriptDefaults: _viewModel.Settings.ScriptDefaults,
+            scriptLibrary: new ScriptLibraryService(_viewModel.StorageService.BaseDirectory));
         editDialog.Owner = this;
         if (editDialog.ShowDialog() == true)
         {

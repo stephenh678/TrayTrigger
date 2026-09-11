@@ -214,6 +214,7 @@ public class SettingsViewModel : ViewModelBase
     public ICommand BrowseDefaultPostExitScriptCommand { get; }
     public ICommand TestDefaultPreLaunchScriptCommand { get; }
     public ICommand TestDefaultPostExitScriptCommand { get; }
+    public ICommand OpenScriptsFolderCommand { get; }
 
     /// <summary>Steam's own library folders, auto-detected and kept in sync by
     /// <see cref="ScanLocationService"/>. Shown under the Steam integration toggle (not in the
@@ -295,6 +296,7 @@ public class SettingsViewModel : ViewModelBase
         BrowseDefaultPostExitScriptCommand = new RelayCommand(() => BrowseDefaultScript(isPreLaunch: false));
         TestDefaultPreLaunchScriptCommand = new AsyncRelayCommand(() => TestDefaultScriptAsync(isPreLaunch: true), () => !IsTestingDefaultScript && HasDefaultPreLaunchScript);
         TestDefaultPostExitScriptCommand = new AsyncRelayCommand(() => TestDefaultScriptAsync(isPreLaunch: false), () => !IsTestingDefaultScript && HasDefaultPostExitScript);
+        OpenScriptsFolderCommand = new RelayCommand(() => ScriptLibrary.OpenFolder());
         AddScanLocationCommand = new RelayCommand(AddScanLocation);
         RemoveScanLocationCommand = new RelayCommand(param =>
         {
@@ -1164,9 +1166,15 @@ public class SettingsViewModel : ViewModelBase
                 _settings.EnableGameScripts = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
+                // First time on: put the blank templates, examples and README where Browse will land.
+                if (value) _ = Task.Run(() => ScriptLibrary.EnsureInstalled());
             }
         }
     }
+
+    private ScriptLibraryService? _scriptLibrary;
+    /// <summary>The scripts folder helper, rooted at the same %AppData% folder as games.json.</summary>
+    public ScriptLibraryService ScriptLibrary => _scriptLibrary ??= new ScriptLibraryService(_storageService.BaseDirectory);
 
     // --- Default scripts (Settings > Launch & Performance) ---
     // Always read through _settings.ScriptDefaults: "Reset to defaults" swaps that object.
@@ -1335,13 +1343,27 @@ public class SettingsViewModel : ViewModelBase
         {
             Title = isPreLaunch ? "Select Default Pre-Launch Script" : "Select Default Post-Exit Script",
             Filter = $"Scripts & Programs ({GameScriptService.SupportedExtensionsFilterPattern})|{GameScriptService.SupportedExtensionsFilterPattern}",
-            CheckFileExists = true
+            CheckFileExists = true,
+            InitialDirectory = InitialDefaultScriptDirectory(isPreLaunch ? DefaultPreLaunchScriptPath : DefaultPostExitScriptPath)
         };
         if (FileDialogCloak.Show(dialog) == true)
         {
             if (isPreLaunch) DefaultPreLaunchScriptPath = dialog.FileName;
             else DefaultPostExitScriptPath = dialog.FileName;
         }
+    }
+
+    /// <summary>The current default's folder if it has one, otherwise the scripts folder (populated on demand).</summary>
+    private string InitialDefaultScriptDirectory(string currentPath)
+    {
+        string p = currentPath.Trim().Trim('"');
+        if (p.Length > 0)
+        {
+            string? dir = Path.GetDirectoryName(p);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) return dir;
+        }
+        ScriptLibrary.EnsureInstalled();
+        return ScriptLibrary.ScriptsDirectory;
     }
 
     /// <summary>

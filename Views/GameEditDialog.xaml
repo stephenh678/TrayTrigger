@@ -391,6 +391,12 @@
                                 <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,-6,0,10">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPreLaunchScriptCommand}"
+                                        ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPreLaunchScriptCommand}"/>
+                            </StackPanel>
 
                             <!-- Post-exit script -->
                             <TextBlock Text="Post-Exit Script (runs after the game closes)" FontSize="11.5"
@@ -409,6 +415,15 @@
                                 <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPostExitScriptCommand}"
+                                        ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPostExitScriptCommand}"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
+                                        ToolTip="The scripts folder holds blank templates, examples, and a README"/>
+                            </StackPanel>
                             <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
