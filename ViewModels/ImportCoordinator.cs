@@ -1112,7 +1112,7 @@ public class ImportCoordinator : ViewModelBase
                 game.ImportedFrom = LauncherPlatform.Xbox;
                 game.XboxAumid = d.Aumid;
                 if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = d.InstallDir;
-                if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.XboxCategory;
+                // No "Xbox" placeholder category (see ImportXboxGamesAsync) - leave it Uncategorized.
             });
 
         if (upgraded > 0)
@@ -2522,7 +2522,12 @@ public class ImportCoordinator : ViewModelBase
                         IsXboxGame = true,
                         ImportedFrom = LauncherPlatform.Xbox,
                         XboxAumid = d.Aumid,
-                        Category = LibraryConstants.XboxCategory,
+                        // Unlike the other platforms, Xbox games get no placeholder category:
+                        // Game Pass exclusives (Fortnite, Roblox, first-party) aren't on Steam, so
+                        // a "Xbox" placeholder would never upgrade to a genre and would harden into
+                        // a permanent Xbox category tab. Left Uncategorized; Steam enrichment still
+                        // fills a real genre for the few Xbox games that are also on Steam.
+                        Category = LibraryConstants.Uncategorized,
                         WorkingDirectory = d.InstallDir
                     };
 
