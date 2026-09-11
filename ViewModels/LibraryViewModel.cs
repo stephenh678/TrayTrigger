@@ -758,7 +758,7 @@ public class LibraryViewModel : ViewModelBase
             deleteAction: _ => requestedDelete = true,
             steamGridDbApiKey: _getSteamGridDbApiKeyOrNull(),
             minConfidence: _settings.OnlineMatchConfidenceThreshold,
-            rawgApiKey: string.IsNullOrWhiteSpace(_settings.RawgApiKey) ? null : _settings.RawgApiKey,
+            rawgApiKey: _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey) ? _settings.RawgApiKey : null,
             saveGame: _ => SaveLibrary());
 
         var dlg = new Views.GameDetailsDialog(vm);

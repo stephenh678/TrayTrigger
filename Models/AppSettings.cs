@@ -55,6 +55,9 @@ public class AppSettings
     /// <summary>User's own RAWG (rawg.io) API key for non-Steam game metadata. Encrypted on disk
     /// like <see cref="SteamGridDbApiKey"/>.</summary>
     public string RawgApiKey { get; set; } = string.Empty;
+    /// <summary>Enables the RAWG metadata source (the Steam/RAWG toggle in Game Details). Off by
+    /// default; needs a <see cref="RawgApiKey"/> to do anything.</summary>
+    public bool UseRawgMetadata { get; set; } = false;
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>

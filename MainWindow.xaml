@@ -2808,14 +2808,15 @@
                                                 Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                     </Grid>
 
-                                    <!-- RAWG metadata key: for developer/publisher/synopsis/genre on non-Steam games,
+                                    <!-- RAWG metadata: developer/publisher/synopsis/genre on non-Steam games,
                                          shown via the source toggle in the Game Details window. -->
-                                    <TextBlock Text="Non-Steam game info (RAWG)" FontSize="12.5" FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,16,0,2"/>
+                                    <CheckBox Content="Use RAWG for non-Steam game info (optional)"
+                                              IsChecked="{Binding UseRawgMetadata}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,16,0,0"/>
                                     <TextBlock Text="Developer, publisher, release date, synopsis, and genre for games that aren't on Steam (Game Pass, Epic exclusives, Roblox, and so on). Needs a free RAWG API key; shown via a source toggle in each game's details window."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                               Margin="0,0,0,8" TextWrapping="Wrap"/>
-                                    <Grid>
+                                               Margin="24,3,0,8" TextWrapping="Wrap"/>
+                                    <Grid Margin="24,0,0,0" IsEnabled="{Binding UseRawgMetadata}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
