@@ -314,6 +314,7 @@ public class StorageService : IProfileSnapshotStore
                     if (settings != null)
                     {
                         settings.SteamGridDbApiKey = DecryptApiKey(settings.SteamGridDbApiKey);
+                        settings.RawgApiKey = DecryptApiKey(settings.RawgApiKey);
                         LoggingService.Verbose("Storage", $"Loaded settings from '{_settingsFilePath}' (from {CallerTag(callerFile, callerMember)}).");
                         return settings;
                     }
@@ -337,6 +338,7 @@ public class StorageService : IProfileSnapshotStore
                     if (bakSettings != null)
                     {
                         bakSettings.SteamGridDbApiKey = DecryptApiKey(bakSettings.SteamGridDbApiKey);
+                        bakSettings.RawgApiKey = DecryptApiKey(bakSettings.RawgApiKey);
                         LoggingService.Info("Storage", $"Recovered settings from '{_settingsBakFilePath}'.");
                         return bakSettings;
                     }
@@ -366,10 +368,12 @@ public class StorageService : IProfileSnapshotStore
             // plaintext on the caller's live object afterward since it's still in active
             // use (bound to Settings UI, passed to SteamGridDB requests, etc.). See L-06.
             string plainApiKey = settings.SteamGridDbApiKey;
+            string plainRawgKey = settings.RawgApiKey;
             try
             {
                 EnsureDirectories();
                 settings.SteamGridDbApiKey = EncryptApiKey(plainApiKey);
+                settings.RawgApiKey = EncryptApiKey(plainRawgKey);
                 string json = JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings);
                 string tempFile = _settingsFilePath + ".tmp";
                 File.WriteAllText(tempFile, json);
@@ -392,6 +396,7 @@ public class StorageService : IProfileSnapshotStore
             finally
             {
                 settings.SteamGridDbApiKey = plainApiKey;
+                settings.RawgApiKey = plainRawgKey;
             }
         }
     }
