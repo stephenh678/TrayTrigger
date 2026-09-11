@@ -123,6 +123,13 @@ public class GameEntry
     /// This is how one generic script is parameterised per game (a save folder, a profile name).
     /// </summary>
     public string ScriptArguments { get; set; } = string.Empty;
+    /// <summary>
+    /// "Don't run the default scripts for this game": opts out of the Settings
+    /// <see cref="AppSettings.ScriptDefaults"/> for both phases. Off by default, so existing
+    /// libraries pick up defaults with no per-game clicks. Irrelevant for a phase where the game
+    /// has its own script - that always wins over the default.
+    /// </summary>
+    public bool SkipDefaultScripts { get; set; }
 
     [JsonIgnore]
     public bool HasScripts => !string.IsNullOrWhiteSpace(PreLaunchScriptPath) || !string.IsNullOrWhiteSpace(PostExitScriptPath);

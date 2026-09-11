@@ -427,7 +427,8 @@ public partial class MainWindow : Window
             _viewModel.IconExtractorService, 
             steamGridDbApiKey: _viewModel.SettingsVM.SteamGridDbApiKeyOrNull,
             minConfidence: _viewModel.Settings.OnlineMatchConfidenceThreshold,
-            scriptsEnabled: _viewModel.Settings.EnableGameScripts);
+            scriptsEnabled: _viewModel.Settings.EnableGameScripts,
+            scriptDefaults: _viewModel.Settings.ScriptDefaults);
         editDialog.Owner = this;
         if (editDialog.ShowDialog() == true)
         {

@@ -38,6 +38,8 @@ public class GameEditViewModel : ViewModelBase
     private bool _runScriptsHidden;
     private bool _runScriptsAsAdmin;
     private string _scriptArguments;
+    private bool _skipDefaultScripts;
+    private readonly ScriptDefaults? _scriptDefaults;
     private bool _abortLaunchOnScriptFailure;
     private string _preLaunchScriptTimeoutSeconds = "30";
     private bool _closeLauncherOnExit;
@@ -79,9 +81,12 @@ public class GameEditViewModel : ViewModelBase
         bool isNewGame = false,
         string? steamGridDbApiKey = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
-        bool scriptsEnabled = false)
+        bool scriptsEnabled = false,
+        ScriptDefaults? scriptDefaults = null)
     {
         SourceGame = game;
+        _scriptDefaults = scriptDefaults;
+        _skipDefaultScripts = game.SkipDefaultScripts;
         // The card is opt-in (Settings > General), but a game that already has a script must
         // stay editable even if the setting was later turned off or reset.
         ShowScriptsCard = scriptsEnabled || game.HasScripts;
@@ -253,6 +258,7 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasPreLaunchScript));
             OnPropertyChanged(nameof(HasAnyScript));
+            OnPropertyChanged(nameof(DefaultScriptsSummary));
         }
     }
 
@@ -265,6 +271,7 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasPostExitScript));
             OnPropertyChanged(nameof(HasAnyScript));
+            OnPropertyChanged(nameof(DefaultScriptsSummary));
         }
     }
 
@@ -344,6 +351,49 @@ public class GameEditViewModel : ViewModelBase
     {
         get => _scriptArguments;
         set { _scriptArguments = value; OnPropertyChanged(); }
+    }
+
+    // --- Settings default scripts, as they apply to this game ---
+
+    /// <summary>Settings has at least one default script, so the summary and opt-out are shown.</summary>
+    public bool HasDefaultScripts => _scriptDefaults?.HasAny == true;
+
+    /// <summary>"Don't run the default scripts for this game". See <see cref="GameEntry.SkipDefaultScripts"/>.</summary>
+    public bool SkipDefaultScripts
+    {
+        get => _skipDefaultScripts;
+        set { _skipDefaultScripts = value; OnPropertyChanged(); OnPropertyChanged(nameof(DefaultScriptsSummary)); }
+    }
+
+    /// <summary>
+    /// One line per configured default, saying whether it applies to this game given what is
+    /// typed in the path boxes right now. Mirrors <see cref="GameScriptService.ResolvePreLaunch"/>.
+    /// </summary>
+    public string DefaultScriptsSummary
+    {
+        get
+        {
+            if (_scriptDefaults == null) return string.Empty;
+            var lines = new List<string>();
+            if (_scriptDefaults.HasPreLaunchScript)
+            {
+                lines.Add(DescribeDefault("pre-launch", _scriptDefaults.PreLaunchScriptPath, HasPreLaunchScript));
+            }
+            if (_scriptDefaults.HasPostExitScript)
+            {
+                lines.Add(DescribeDefault("post-exit", _scriptDefaults.PostExitScriptPath, HasPostExitScript));
+            }
+            return string.Join("\n", lines);
+
+            string DescribeDefault(string phase, string path, bool gameHasOwn)
+            {
+                string name = Path.GetFileName(path.Trim().Trim('"'));
+                string state = SkipDefaultScripts ? "skipped for this game."
+                    : gameHasOwn ? $"not used, this game has its own {phase} script."
+                    : $"runs for this game because it has no {phase} script of its own.";
+                return $"Default {phase} script {name}: {state}";
+            }
+        }
     }
 
     /// <summary>Scripts are configured on this game but the Settings switch is off, so they won't run.</summary>
@@ -1138,6 +1188,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.RunScriptsHidden = RunScriptsHidden;
         SourceGame.RunScriptsAsAdmin = RunScriptsAsAdmin;
         SourceGame.ScriptArguments = ScriptArguments?.Trim() ?? string.Empty;
+        SourceGame.SkipDefaultScripts = SkipDefaultScripts;
         SourceGame.AbortLaunchOnScriptFailure = AbortLaunchOnScriptFailure;
         SourceGame.PreLaunchScriptTimeoutSeconds = timeoutSeconds;
         SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
@@ -1207,4 +1258,5 @@ public class GameEditViewModel : ViewModelBase
 /// What a Test Run produced, plus the two per-game options the test deliberately ignored so the
 /// result dialog can warn that the real run will behave differently.
 /// </summary>
-public sealed record ScriptTestReport(bool IsPreLaunch, string ScriptPath, ScriptTestResult Result, bool WillRunElevated, bool WillRunHidden);
+/// <param name="ProbeDescription">What game values the test used, for the summary line; null means "the name and exe currently in Edit Game".</param>
+public sealed record ScriptTestReport(bool IsPreLaunch, string ScriptPath, ScriptTestResult Result, bool WillRunElevated, bool WillRunHidden, string? ProbeDescription = null);

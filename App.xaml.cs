@@ -241,7 +241,9 @@ public partial class App : Application
         _performanceProfileService = new PerformanceProfileService(_storageService);
         _performanceProfileService.RecoverFromCrashIfNeeded();
         // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
-        _gameScriptService = new GameScriptService(() => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts);
+        _gameScriptService = new GameScriptService(
+            () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
+            () => (_mainViewModel?.Settings ?? startupSettings).ScriptDefaults);
         _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();

@@ -448,6 +448,22 @@
                                       IsChecked="{Binding RunScriptsAsAdmin}" IsEnabled="{Binding HasAnyScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,8"/>
 
+                            <!-- Settings default scripts, as they apply to this game. Only shown
+                                 when at least one default is configured. -->
+                            <Border Background="{StaticResource BrushSurfaceDark}" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="6" Padding="10,8" Margin="0,0,0,10"
+                                    Visibility="{Binding HasDefaultScripts, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="Default scripts from Settings" FontSize="11.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding DefaultScriptsSummary}" FontSize="10.5"
+                                               Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                    <CheckBox Content="Don't run the default scripts for this game"
+                                              IsChecked="{Binding SkipDefaultScripts}"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                </StackPanel>
+                            </Border>
+
                             <TextBlock Text="Any script works as-is. Optionally, your script can read the game name and phase it was called for."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="0,4,0,0"

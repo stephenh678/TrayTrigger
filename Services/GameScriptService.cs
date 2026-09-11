@@ -70,10 +70,12 @@ public class GameScriptService
         return SupportedExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <summary>The effective wait for a game's pre-launch script, clamped to the supported range.</summary>
-    public static TimeSpan EffectivePreLaunchTimeout(GameEntry game)
+    /// <summary>The effective wait for a game's own pre-launch script, clamped to the supported range.</summary>
+    public static TimeSpan EffectivePreLaunchTimeout(GameEntry game) => ClampPreLaunchTimeout(game.PreLaunchScriptTimeoutSeconds);
+
+    /// <summary>Clamps a configured wait to the supported range, falling back to the default when out of range.</summary>
+    public static TimeSpan ClampPreLaunchTimeout(int seconds)
     {
-        int seconds = game.PreLaunchScriptTimeoutSeconds;
         if (seconds < MinPreLaunchTimeoutSeconds || seconds > MaxPreLaunchTimeoutSeconds)
         {
             seconds = (int)DefaultPreLaunchWaitTimeout.TotalSeconds;
@@ -81,9 +83,49 @@ public class GameScriptService
         return TimeSpan.FromSeconds(seconds);
     }
 
+    /// <summary>
+    /// The script that will actually run for one phase of one game, after the Settings defaults
+    /// have been applied. <see cref="IsDefault"/> says which side it came from, for logging and
+    /// for the Edit Game summary.
+    /// </summary>
+    public readonly record struct EffectiveScript(string Path, bool Wait, int TimeoutSeconds, bool AbortOnFailure, bool Hidden, bool Elevated, bool IsDefault);
+
+    /// <summary>
+    /// Per-phase resolution: the game's own pre-launch script if it has one; otherwise the
+    /// default pre-launch script unless the game opted out; otherwise nothing. A game's own
+    /// options apply only to its own script, the defaults' options to the default script.
+    /// </summary>
+    public static EffectiveScript? ResolvePreLaunch(GameEntry game, ScriptDefaults? defaults)
+    {
+        if (!string.IsNullOrWhiteSpace(game.PreLaunchScriptPath))
+        {
+            return new EffectiveScript(game.PreLaunchScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false);
+        }
+        if (defaults != null && !game.SkipDefaultScripts && defaults.HasPreLaunchScript)
+        {
+            return new EffectiveScript(defaults.PreLaunchScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true);
+        }
+        return null;
+    }
+
+    /// <summary>Per-phase resolution for post-exit; see <see cref="ResolvePreLaunch"/>.</summary>
+    public static EffectiveScript? ResolvePostExit(GameEntry game, ScriptDefaults? defaults)
+    {
+        if (!string.IsNullOrWhiteSpace(game.PostExitScriptPath))
+        {
+            return new EffectiveScript(game.PostExitScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false);
+        }
+        if (defaults != null && !game.SkipDefaultScripts && defaults.HasPostExitScript)
+        {
+            return new EffectiveScript(defaults.PostExitScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true);
+        }
+        return null;
+    }
+
     private readonly Lock _lock = new();
     private readonly Dictionary<string, GameEntry> _pendingPostExit = new(StringComparer.Ordinal);
     private readonly Func<bool> _isFeatureEnabled;
+    private readonly Func<ScriptDefaults?> _defaults;
 
     /// <param name="isFeatureEnabled">
     /// The Settings "Enable game scripts" switch. This is the real kill-switch: when it returns
@@ -91,53 +133,62 @@ public class GameScriptService
     /// the feature was turned off, or from a hand-edited games.json). Defaults to always-on for
     /// tests and callers that don't wire settings.
     /// </param>
-    public GameScriptService(Func<bool>? isFeatureEnabled = null)
+    /// <param name="defaults">
+    /// The Settings default scripts, read at each launch so edits apply without a restart. Null
+    /// (the default) means no defaults - every game runs only its own scripts.
+    /// </param>
+    public GameScriptService(Func<bool>? isFeatureEnabled = null, Func<ScriptDefaults?>? defaults = null)
     {
         _isFeatureEnabled = isFeatureEnabled ?? (static () => true);
+        _defaults = defaults ?? (static () => null);
     }
 
     /// <summary>
-    /// Runs the game's pre-launch script, if configured. Never throws. Unless the game opts into
-    /// <see cref="GameEntry.AbortLaunchOnScriptFailure"/>, a broken script is logged and the
+    /// Runs the game's pre-launch script (its own, or the Settings default), if any. Never throws.
+    /// Unless the effective script opts into abort-on-failure, a broken script is logged and the
     /// launch proceeds; with it, a non-zero exit code, a timeout, or a script that fails to start
-    /// returns an abort result the launcher honours. If the game asks to wait (or to abort on
+    /// returns an abort result the launcher honours. If the script asks to wait (or to abort on
     /// failure, which implies waiting), this returns once the script exits or its timeout elapses.
     /// </summary>
     public PreLaunchScriptResult RunPreLaunch(GameEntry game)
     {
-        if (string.IsNullOrWhiteSpace(game.PreLaunchScriptPath)) return PreLaunchScriptResult.Proceed;
+        var script = ResolvePreLaunch(game, _defaults());
+        if (script == null) return PreLaunchScriptResult.Proceed;
+
+        string label = script.Value.IsDefault ? "Default pre-launch script" : "Pre-launch script";
+        string path = script.Value.Path;
 
         if (!_isFeatureEnabled())
         {
-            LoggingService.Info("GameScript", $"Pre-launch script for '{game.Name}' skipped: game scripts are disabled in Settings.");
+            LoggingService.Info("GameScript", $"{label} for '{game.Name}' skipped: game scripts are disabled in Settings.");
             return PreLaunchScriptResult.Proceed;
         }
 
-        bool abortOnFailure = game.AbortLaunchOnScriptFailure;
-        bool wait = game.WaitForPreLaunchScript || abortOnFailure;
-        TimeSpan timeout = EffectivePreLaunchTimeout(game);
+        bool abortOnFailure = script.Value.AbortOnFailure;
+        bool wait = script.Value.Wait || abortOnFailure;
+        TimeSpan timeout = ClampPreLaunchTimeout(script.Value.TimeoutSeconds);
 
-        if (!IsSupportedScript(game.PreLaunchScriptPath))
+        if (!IsSupportedScript(path))
         {
-            LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' has an unsupported type and was skipped: {game.PreLaunchScriptPath} (supported: {string.Join(", ", SupportedExtensions)})");
+            LoggingService.Warn("GameScript", $"{label} for '{game.Name}' has an unsupported type and was skipped: {path} (supported: {string.Join(", ", SupportedExtensions)})");
             return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script has an unsupported file type") : PreLaunchScriptResult.Proceed;
         }
 
-        var psi = BuildStartInfo(game.PreLaunchScriptPath, game, PhasePreLaunch, game.RunScriptsHidden, game.RunScriptsAsAdmin, playedMinutes: null);
+        var psi = BuildStartInfo(path, game, PhasePreLaunch, script.Value.Hidden, script.Value.Elevated, playedMinutes: null);
         if (psi == null)
         {
-            LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' not found: {game.PreLaunchScriptPath}");
+            LoggingService.Warn("GameScript", $"{label} for '{game.Name}' not found: {path}");
             return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script file was not found") : PreLaunchScriptResult.Proceed;
         }
 
         Process? process = null;
         try
         {
-            LoggingService.Info("GameScript", $"Running pre-launch script for '{game.Name}': {game.PreLaunchScriptPath} (wait={wait}, timeout={timeout.TotalSeconds:0}s, hidden={game.RunScriptsHidden}, admin={game.RunScriptsAsAdmin}, abortOnFailure={abortOnFailure})");
+            LoggingService.Info("GameScript", $"Running {label.ToLowerInvariant()} for '{game.Name}': {path} (wait={wait}, timeout={timeout.TotalSeconds:0}s, hidden={script.Value.Hidden}, admin={script.Value.Elevated}, abortOnFailure={abortOnFailure})");
             process = Process.Start(psi);
             if (process == null)
             {
-                LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' did not start.");
+                LoggingService.Warn("GameScript", $"{label} for '{game.Name}' did not start.");
                 return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script did not start") : PreLaunchScriptResult.Proceed;
             }
 
@@ -194,7 +245,7 @@ public class GameScriptService
     /// </summary>
     public void TrackPostExit(GameEntry game)
     {
-        if (string.IsNullOrWhiteSpace(game.PostExitScriptPath)) return;
+        if (ResolvePostExit(game, _defaults()) == null) return;
         lock (_lock)
         {
             _pendingPostExit[game.Id] = game;
@@ -219,34 +270,38 @@ public class GameScriptService
             _pendingPostExit.Remove(game.Id);
         }
 
-        if (string.IsNullOrWhiteSpace(game.PostExitScriptPath)) return;
+        var script = ResolvePostExit(game, _defaults());
+        if (script == null) return;
+
+        string label = script.Value.IsDefault ? "Default post-exit script" : "Post-exit script";
+        string path = script.Value.Path;
 
         if (!_isFeatureEnabled())
         {
-            LoggingService.Info("GameScript", $"Post-exit script for '{game.Name}' skipped: game scripts are disabled in Settings.");
+            LoggingService.Info("GameScript", $"{label} for '{game.Name}' skipped: game scripts are disabled in Settings.");
             return;
         }
 
-        if (!IsSupportedScript(game.PostExitScriptPath))
+        if (!IsSupportedScript(path))
         {
-            LoggingService.Warn("GameScript", $"Post-exit script for '{game.Name}' has an unsupported type and was skipped: {game.PostExitScriptPath} (supported: {string.Join(", ", SupportedExtensions)})");
+            LoggingService.Warn("GameScript", $"{label} for '{game.Name}' has an unsupported type and was skipped: {path} (supported: {string.Join(", ", SupportedExtensions)})");
             return;
         }
 
-        var psi = BuildStartInfo(game.PostExitScriptPath, game, PhasePostExit, game.RunScriptsHidden, game.RunScriptsAsAdmin, playedMinutes);
+        var psi = BuildStartInfo(path, game, PhasePostExit, script.Value.Hidden, script.Value.Elevated, playedMinutes);
         if (psi == null)
         {
-            LoggingService.Warn("GameScript", $"Post-exit script for '{game.Name}' not found: {game.PostExitScriptPath}");
+            LoggingService.Warn("GameScript", $"{label} for '{game.Name}' not found: {path}");
             return;
         }
 
         try
         {
-            LoggingService.Info("GameScript", $"Running post-exit script for '{game.Name}': {game.PostExitScriptPath} (playtime {playedMinutes}m)");
+            LoggingService.Info("GameScript", $"Running {label.ToLowerInvariant()} for '{game.Name}': {path} (playtime {playedMinutes}m, hidden={script.Value.Hidden}, admin={script.Value.Elevated})");
             var process = Process.Start(psi);
             if (process == null)
             {
-                LoggingService.Warn("GameScript", $"Post-exit script for '{game.Name}' did not start.");
+                LoggingService.Warn("GameScript", $"{label} for '{game.Name}' did not start.");
                 return;
             }
             AttachOutputLogging(process, psi, game, PhasePostExit);
