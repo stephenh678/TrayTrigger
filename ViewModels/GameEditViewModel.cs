@@ -107,7 +107,7 @@ public class GameEditViewModel : ViewModelBase
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
         _launchDirectly = game.LaunchDirectly;
-        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
+        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
         _cpuAffinity = game.CpuAffinity;
         _preLaunchScriptPath = game.PreLaunchScriptPath;
@@ -365,7 +365,7 @@ public class GameEditViewModel : ViewModelBase
     public bool HasPlatform
     {
         get => (_hasPlatform || _isSteamGame) && !_convertToLocal;
-        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); OnPropertyChanged(nameof(CanOfferSteamLaunch)); }
+        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); OnPropertyChanged(nameof(CanOfferSteamLaunch)); OnPropertyChanged(nameof(CanOfferLaunchDirectly)); }
     }
 
     /// <summary>"GOG", "EA", "Epic", "Ubisoft" or "Steam" - whichever tag the entry carries.
@@ -375,7 +375,12 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.IsEaGame ? "EA" :
         SourceGame.IsEpicGame ? "Epic" :
         SourceGame.IsUbisoftGame ? "Ubisoft" :
+        SourceGame.IsXboxGame ? "Xbox" :
         _isSteamGame ? "Steam" : "Local";
+
+    /// <summary>"Launch this executable directly" has no meaning for a Game Pass title: a GDK exe
+    /// can't run outside its package, so the launcher always activates the AUMID.</summary>
+    public bool CanOfferLaunchDirectly => HasPlatform && !SourceGame.IsXboxGame;
 
     /// <summary>e.g. "Imported from GOG (game ID 1207658924)". Where it came from and the ID
     /// the launcher knows it by, so a wrong match is at least diagnosable.</summary>
@@ -387,6 +392,7 @@ public class GameEditViewModel : ViewModelBase
                 : SourceGame.IsEaGame ? SourceGame.EaContentId
                 : SourceGame.IsEpicGame ? SourceGame.EpicAppName
                 : SourceGame.IsUbisoftGame ? SourceGame.UbisoftGameId
+                : SourceGame.IsXboxGame ? SourceGame.XboxAumid
                 : SteamAppId;
             string via = SourceGame.ImportedFrom != null ? "Imported from" : "Linked to";
             return string.IsNullOrEmpty(id) ? $"{via} {PlatformName}" : $"{via} {PlatformName} (ID {id})";
@@ -997,6 +1003,8 @@ public class GameEditViewModel : ViewModelBase
             SourceGame.EpicAppName = null;
             SourceGame.IsUbisoftGame = false;
             SourceGame.UbisoftGameId = null;
+            SourceGame.IsXboxGame = false;
+            SourceGame.XboxAumid = null;
             SourceGame.ImportedFrom = null;
             SourceGame.LaunchDirectly = false;
         }

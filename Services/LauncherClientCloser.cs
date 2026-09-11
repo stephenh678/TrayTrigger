@@ -21,6 +21,9 @@ public static class LauncherClientCloser
     private static readonly string[] EaProcesses = ["EADesktop", "EALocalHostSvc", "EACefSubProcess"];
     private static readonly string[] EpicProcesses = ["EpicGamesLauncher", "EpicWebHelper"];
     private static readonly string[] UbisoftProcesses = ["upc", "UplayWebCore", "UbisoftConnect"];
+    // The Xbox app's UI processes only. GamingServices.exe (licensing/launch) is a system
+    // service that games need, and is left alone like GalaxyClientService/EABackgroundService.
+    private static readonly string[] XboxProcesses = ["XboxPcApp", "XboxPcAppFT", "XboxPcTray"];
 
     /// <summary>True if any of the platform's client processes are currently running.</summary>
     public static bool IsClientRunning(LauncherPlatform platform)
@@ -32,6 +35,7 @@ public static class LauncherClientCloser
             LauncherPlatform.Ea => EaProcesses,
             LauncherPlatform.Epic => EpicProcesses,
             LauncherPlatform.Ubisoft => UbisoftProcesses,
+            LauncherPlatform.Xbox => XboxProcesses,
             _ => []
         };
         foreach (var name in names)
@@ -63,6 +67,9 @@ public static class LauncherClientCloser
                     break;
                 case LauncherPlatform.Ubisoft:
                     KillByName(UbisoftProcesses, "Ubisoft Connect");
+                    break;
+                case LauncherPlatform.Xbox:
+                    KillByName(XboxProcesses, "Xbox app");
                     break;
             }
         }

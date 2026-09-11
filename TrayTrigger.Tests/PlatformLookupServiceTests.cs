@@ -66,5 +66,25 @@ public class PlatformLookupServiceTests
         Assert.Null(match.Ea);
         Assert.Null(match.Epic);
         Assert.Null(match.Ubisoft);
+        Assert.Null(match.Xbox);
+    }
+
+    [Fact]
+    public void PlatformMatch_ForXbox()
+    {
+        var xbox = new DiscoveredXboxGame(
+            "436609B6.FortniteClient_9ncxwbgmmv7m8!AppFortniteShipping",
+            "436609B6.FortniteClient_9ncxwbgmmv7m8",
+            "436609B6.FortniteClient_1.5781.9926.0_x64__9ncxwbgmmv7m8",
+            "Fortnite",
+            @"C:\XboxGames\Fortnite\Content",
+            @"C:\Program Files\WindowsApps\436609B6.FortniteClient_1.5781.9926.0_x64__9ncxwbgmmv7m8",
+            null, null, false);
+        var match = PlatformMatch.ForXbox(xbox);
+
+        Assert.Equal("Xbox", match.Platform);
+        Assert.Equal("Fortnite", match.Name);
+        Assert.Same(xbox, match.Xbox);
+        Assert.Null(match.Steam);
     }
 }

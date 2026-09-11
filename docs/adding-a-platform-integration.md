@@ -1,7 +1,7 @@
 # Adding a game-platform integration
 
 Playbook for wiring up a new launcher platform (Steam, GOG, EA App, Epic Games Store, Ubisoft
-Connect, and eventually Xbox) into "Scan for Games". Written after implementing GOG (the second
+Connect, and Xbox / PC Game Pass) into "Scan for Games". Written after implementing GOG (the second
 platform after Steam, and the first one to follow this pattern deliberately), then updated after
 EA (the third), Epic (the fourth), and Ubisoft (the fifth), which together confirmed which parts
 of the pattern actually generalize and which parts are genuinely platform-specific. Steam, GOG,
@@ -298,14 +298,71 @@ data point, Epic the third, and Ubisoft the fourth:
   the next platform (Xbox or otherwise) rather than adding a sixth copy - a `Platform` enum /
   single-source-of-truth version, as the original review suggested, is overdue at this point.
 
+## Xbox / PC Game Pass (2026-09-11) - the sixth platform, and where the pattern bent
+
+Predicted above as the platform this checklist "won't fit cleanly". In practice ~90% of it
+transferred once the research pass found the right local data source; the 10% that didn't is
+worth knowing before the next packaged-app platform (Amazon? no - but anything MSIX-based).
+
+**What the research pass found, against the assumptions:**
+
+- **The permissions premise was wrong.** The obstacle to "Add Executable" on a Game Pass game is
+  not the `WindowsApps` ACL - on a real machine every per-package folder under it was readable by
+  the installing user (only the root listing is denied), and modern titles are junctions to a
+  plain `<drive>:\XboxGames\<Game>\Content` folder anyway. The real obstacle is that a GDK exe
+  refuses to start without *package identity*: `Process.Start` on it is simply not a launch path.
+  There is therefore no `XboxDirect` route and Edit Game hides "Launch this executable directly"
+  for Xbox entries (`GameEditViewModel.CanOfferLaunchDirectly`).
+- **No WinRT needed.** `Windows.Management.Deployment.PackageManager` would have forced a
+  versioned Windows TFM and a ~25 MB projection DLL into the single-file exe. Instead, Windows'
+  own Gaming Services keeps a plain registry mirror of every installed GDK game's
+  `MicrosoftGame.config` at `HKLM\SOFTWARE\Microsoft\GamingServices\GameConfig\<PackageFullName>`
+  (display name under `ShellVisuals`, the real exe + `Id` under `Executable\00000000`), and the
+  per-user package repository at
+  `HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages\<PackageFullName>`
+  gives `PackageRootFolder`. Same "platform's own records" shape as GOG. See
+  `Services/XboxScannerService.cs`.
+- **Launch = shell activation of the AUMID** (`<PackageFamilyName>!<AppId>`, derivable from the
+  two keys above with no manifest parsing) through `IApplicationActivationManager` COM
+  (`Services/PackagedAppActivator.cs`), which returns the started PID; `explorer.exe
+  shell:AppsFolder\<AUMID>` is the fallback. Activation starts Windows' `gamelaunchhelper.exe`
+  stub first (added to `ProcessPathResolver`'s helper list), which spawns the game - so the
+  existing debounced `TrackInstallDirSession` polling is the right tracker here too.
+- **Track by the package root, not the readable folder.** A running GDK game's image path
+  reports through `C:\Program Files\WindowsApps\<PackageFullName>\...`, not the
+  `XboxGames\...\Content` junction target - verified against a live process. So the record carries
+  both (`PackageRoot` for tracking and already-running checks, `InstallDir` for icons/"open
+  folder"/dedupe), and `PlatformLookupService` matches dropped paths against either.
+- **Identity durability trap.** `PackageFullName` and the package root change on *every* game
+  update. The entry stores only the AUMID (`GameEntry.XboxAumid`); `LaunchXboxGame` re-resolves
+  the current full name/root via `XboxScannerService.FindByAumid` on each launch and refreshes the
+  entry's informational `ExecutablePath`. `GameCardViewModel.ComputeIsMissing` exempts Xbox
+  entries for the same reason.
+- **What is not found, and why it's accepted:** legacy UWP-era Store games have no `GameConfig`
+  entry and there is no local way to tell a UWP game from any other UWP app - Playnite only
+  manages it by signing into the user's Xbox account and pulling the online library. Modern Game
+  Pass PC titles are all GDK; the uncovered set is a shrinking minority of older Store titles, and
+  the Settings toggle text says so. Cloud-only/console-only entries are out of scope by nature.
+
+**The consolidation the doc kept asking for finally happened here.** The three copies of the
+category allow-list (`LibraryViewModel.EnrichGameWithSteamMetadataAsync` x2,
+`ImportCoordinator.EnrichLibraryAsync`, `GameCardViewModel.ShowCategoryBadge`) are now
+`LibraryConstants.PlatformCategories` / `IsEnrichableCategory` / `PlatformCategoryFor`. The
+per-platform `Import<Platform>GamesAsync` / `Ignore<Platform>Game` methods, the
+`PlatformImportBuckets` branches and the `PlatformKey` / `IsPlatformGameInLibrary` switches still
+grew by one copy each - a seventh platform should consolidate those next.
+
+**"Client" semantics for a platform with no launcher:** Xbox games don't need the Xbox app running
+(Gaming Services does licensing), so `LaunchClientAvailability` gained no field and
+`LaunchRouter.Resolve` returns `LaunchRoute.Xbox` unconditionally. "Close the launcher after exit"
+still closes the Xbox app's UI processes (`LauncherClientCloser.XboxProcesses`) since a user who
+opened it to install something might want it gone.
+
 ## Platforms this pattern *won't* fit cleanly
 
-**Xbox / Microsoft Store** — architecturally different from Steam/GOG/EA. Those are UWP/MSIX
-packaged apps, not a traditional installed `.exe` with a registry entry pointing at it. Discovery
-would go through `Windows.Management.Deployment.PackageManager`/`Get-AppxPackage`, and launching
-uses shell activation (`shell:AppsFolder\<PackageFamilyName>!<AppId>`), not `Process.Start` on a
-file path. Don't assume this checklist applies as-is — treat it as its own research pass (step 0
-above) before deciding how much of the pattern actually transfers.
+Nothing currently known. The Xbox section above is the record of the one platform that was
+expected not to fit and mostly did; its lesson generalizes: for a packaged-app platform, look for
+the OS's own registry mirror of the package data before reaching for WinRT.
 
 ## 1.3.6 launcher rework (2026-09-10) - name changes for readers of the sections above
 

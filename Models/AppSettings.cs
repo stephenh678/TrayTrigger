@@ -22,6 +22,7 @@ public class AppSettings
     public bool EaIntegrationEnabled { get; set; } = true;
     public bool EpicIntegrationEnabled { get; set; } = true;
     public bool UbisoftIntegrationEnabled { get; set; } = true;
+    public bool XboxIntegrationEnabled { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
     public bool IsSidebarExpanded { get; set; } = false;
     /// <summary>

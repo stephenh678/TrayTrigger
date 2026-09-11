@@ -1213,7 +1213,7 @@ public class LibraryViewModel : ViewModelBase
                     var details = await _steamMetadataService.GetAppDetailsAsync(entry.SteamAppId, _getSteamGridDbApiKeyOrNull());
                     if (details != null)
                     {
-                        if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory || entry.Category == LibraryConstants.GogCategory || entry.Category == LibraryConstants.EaCategory || entry.Category == LibraryConstants.EpicCategory || entry.Category == LibraryConstants.UbisoftCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                        if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                             entry.Category = details.PrimaryGenre;
                         if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                             entry.CoverImagePath = details.CoverImagePath;
@@ -1254,7 +1254,7 @@ public class LibraryViewModel : ViewModelBase
                 var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, _getSteamGridDbApiKeyOrNull());
                 if (details != null)
                 {
-                    if (_settings.AutoCategorizeFromSteam && (entry.Category == LibraryConstants.Uncategorized || entry.Category == LibraryConstants.SteamCategory || entry.Category == LibraryConstants.GogCategory || entry.Category == LibraryConstants.EaCategory || entry.Category == LibraryConstants.EpicCategory || entry.Category == LibraryConstants.UbisoftCategory) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+                    if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
                         entry.Category = details.PrimaryGenre;
                     if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                         entry.CoverImagePath = details.CoverImagePath;
@@ -1418,6 +1418,7 @@ public class LibraryViewModel : ViewModelBase
             { Ea: { } e } => string.Equals(g.Game.EaContentId, e.ContentId, StringComparison.OrdinalIgnoreCase),
             { Epic: { } p } => string.Equals(g.Game.EpicAppName, p.AppName, StringComparison.OrdinalIgnoreCase),
             { Ubisoft: { } u } => string.Equals(g.Game.UbisoftGameId, u.GameId, StringComparison.OrdinalIgnoreCase),
+            { Xbox: { } x } => string.Equals(g.Game.XboxAumid, x.Aumid, StringComparison.OrdinalIgnoreCase),
             _ => false
         });
     }
@@ -1480,6 +1481,7 @@ public class LibraryViewModel : ViewModelBase
             DetectedLauncher.Ea => game.IsEaGame,
             DetectedLauncher.Epic => game.IsEpicGame,
             DetectedLauncher.Ubisoft => game.IsUbisoftGame,
+            DetectedLauncher.Xbox => game.IsXboxGame,
             _ => false
         };
     }
@@ -1490,6 +1492,7 @@ public class LibraryViewModel : ViewModelBase
         DetectedLauncher.Gog => LauncherPlatform.Gog,
         DetectedLauncher.Ea => LauncherPlatform.Ea,
         DetectedLauncher.Epic => LauncherPlatform.Epic,
+        DetectedLauncher.Xbox => LauncherPlatform.Xbox,
         _ => LauncherPlatform.Ubisoft
     };
 

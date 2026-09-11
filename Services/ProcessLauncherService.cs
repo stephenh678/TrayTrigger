@@ -88,6 +88,7 @@ public partial class ProcessLauncherService
     private readonly EaScannerService _eaScannerService;
     private readonly EpicScannerService _epicScannerService;
     private readonly UbisoftScannerService _ubisoftScannerService;
+    private readonly XboxScannerService _xboxScannerService;
 
     private readonly Lock _sessionsLock = new();
     private readonly Dictionary<string, ActiveGameSession> _sessions = new(StringComparer.Ordinal);
@@ -115,7 +116,8 @@ public partial class ProcessLauncherService
         GogScannerService gogScannerService,
         EaScannerService eaScannerService,
         EpicScannerService epicScannerService,
-        UbisoftScannerService ubisoftScannerService)
+        UbisoftScannerService ubisoftScannerService,
+        XboxScannerService xboxScannerService)
     {
         _storageService = storageService;
         _performanceProfileService = performanceProfileService;
@@ -125,6 +127,7 @@ public partial class ProcessLauncherService
         _eaScannerService = eaScannerService;
         _epicScannerService = epicScannerService;
         _ubisoftScannerService = ubisoftScannerService;
+        _xboxScannerService = xboxScannerService;
     }
 
     /// <summary>
@@ -477,6 +480,9 @@ public partial class ProcessLauncherService
                 case LaunchRoute.UbisoftClient:
                     return LaunchViaClientUrl(game, route,
                         $"uplay://launch/{Uri.EscapeDataString(game.UbisoftGameId ?? string.Empty)}/0", out errorMessage);
+
+                case LaunchRoute.Xbox:
+                    return LaunchXboxGame(game, out errorMessage);
 
                 case LaunchRoute.GogDirect:
                 case LaunchRoute.EaDirect:
@@ -1221,6 +1227,69 @@ public partial class ProcessLauncherService
             Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
             MarkLaunched(game);
             LoggingService.Info("Launcher", $"Dispatched {label} launch for '{game.Name}'.");
+
+            TrackInstallDirSession(session, installDir, label, InstallDirLaunchTimeout);
+            return true;
+        }
+        catch
+        {
+            RollbackSession(session);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// PC Game Pass / Store (GDK) title: shell-activates the package's AUMID (the only way a GDK
+    /// exe can start - it refuses to run without package identity) and tracks by the package
+    /// root, which is the path running processes report even when the game's files really live
+    /// under a junction target like "D:\XboxGames\&lt;Game&gt;\Content". The package root changes on
+    /// every game update, so it is re-read from Gaming Services' registry on each launch rather
+    /// than trusted from the entry; the entry's informational exe path is refreshed at the same
+    /// time. Windows' gamelaunchhelper.exe stub is what activation starts first, so this relies
+    /// on the same debounced polling every client-launch platform uses.
+    /// </summary>
+    private bool LaunchXboxGame(GameEntry game, out string? errorMessage)
+    {
+        errorMessage = null;
+        const string label = "Xbox";
+
+        var current = _xboxScannerService.FindByAumid(game.XboxAumid);
+        if (current == null)
+        {
+            errorMessage = $"\"{game.Name}\" is no longer installed through the Xbox app.";
+            LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Xbox package '{game.XboxAumid}' is not registered for this user.");
+            return false;
+        }
+
+        // Self-heal the versioned paths (see the summary) so icon extraction, "open install
+        // folder" and dedupe keep working after the Xbox app updates the game.
+        if (current.ExePath != null && !string.Equals(game.ExecutablePath, current.ExePath, StringComparison.OrdinalIgnoreCase))
+        {
+            LoggingService.Verbose("Launcher", $"'{game.Name}' exe path refreshed after a package update: '{game.ExecutablePath}' -> '{current.ExePath}'.");
+            game.ExecutablePath = current.ExePath;
+            game.WorkingDirectory = current.InstallDir;
+            GameUpdated?.Invoke(game);
+        }
+
+        string installDir = current.PackageRoot;
+        if (TryActivateRunningProcessUnderDirectory(game, installDir, label))
+        {
+            return true;
+        }
+
+        var session = BeginSession(game, LaunchRoute.Xbox, out string? abortReason);
+        if (session == null)
+        {
+            errorMessage = abortReason;
+            return false;
+        }
+
+        try
+        {
+            LoggingService.Verbose("Launcher", $"Activating Xbox package: {current.Aumid}");
+            uint pid = PackagedAppActivator.Activate(current.Aumid, game.Arguments);
+            MarkLaunched(game);
+            LoggingService.Info("Launcher", $"Dispatched {label} launch for '{game.Name}'{(pid != 0 ? $" (activation PID {pid})" : string.Empty)}.");
 
             TrackInstallDirSession(session, installDir, label, InstallDirLaunchTimeout);
             return true;
