@@ -8,8 +8,9 @@ namespace TrayTrigger.Models;
 /// <see cref="SteamAppId"/> (Steam candidates, matched by AppId - stable across exe/version
 /// changes, unlike its ExePath), <see cref="GogGameId"/> (GOG candidates, same reasoning as
 /// SteamAppId), <see cref="EaContentId"/> (EA candidates, same reasoning),
-/// <see cref="EpicAppName"/> (Epic candidates, same reasoning), or <see cref="UbisoftGameId"/>
-/// (Ubisoft candidates, same reasoning) is set, depending on where the candidate came from.
+/// <see cref="EpicAppName"/> (Epic candidates, same reasoning), <see cref="UbisoftGameId"/>
+/// (Ubisoft candidates, same reasoning), or <see cref="XboxAumid"/> (Xbox candidates, same
+/// reasoning) is set, depending on where the candidate came from.
 /// </summary>
 public class IgnoredGamePath
 {
@@ -21,4 +22,5 @@ public class IgnoredGamePath
     public string? EaContentId { get; set; }
     public string? EpicAppName { get; set; }
     public string? UbisoftGameId { get; set; }
+    public string? XboxAumid { get; set; }
 }

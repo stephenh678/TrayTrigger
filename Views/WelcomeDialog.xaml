@@ -48,7 +48,7 @@
             <StackPanel Grid.Row="2" Margin="0,0,0,16">
                 <TextBlock FontSize="12" LineHeight="18" TextWrapping="Wrap"
                            Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"
-                           Text="TrayTrigger is a tray-first game launcher for your Steam, GOG, EA, Epic, and Ubisoft libraries - quick access from the system tray, plus reversible performance tweaks applied automatically while you play."/>
+                           Text="TrayTrigger is a tray-first game launcher for your Steam, GOG, EA, Epic, Ubisoft, and Xbox (PC Game Pass) libraries - quick access from the system tray, plus reversible performance tweaks applied automatically while you play."/>
 
                 <TextBlock Text="A few things to know" FontSize="11" FontWeight="Bold"
                            Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,6"/>

@@ -89,13 +89,14 @@ TrayTrigger isn't another always-on-top launcher. It's a tray icon until you nee
 ## Game Library
 
 - **Automatic Steam discovery and artwork** — no manually building your library one game at a time. TrayTrigger scans your installed Steam library and fetches official metadata (name, description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB.
+- **GOG, EA, Epic, Ubisoft Connect, and Xbox / PC Game Pass too** — Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch in Settings.
 - **Multiple Layout Views** — Grid view (vertical poster cards), Large Icons view, and Detailed List view.
 - **Automated Icon Extraction** — crisp 32-bit icons pulled from executables, shortcuts (`.lnk`), and game folders, with procedural fallback badge generation when nothing better is available.
 - **Drag & Drop Importing** — drag an executable or shortcut onto the window to add it.
 - **Batch Folder Scanner** — scan an entire game drive with intelligent executable scoring that filters out uninstallers and launcher binaries.
 - **Favorites & Categories** — pin favorites to the top of the tray menu and library, organize the rest into custom categories (Action, RPG, Strategy, Steam, etc.) or view as a flat list.
 - **Batch editing** — Ctrl+click, Shift+click, or Ctrl+A to select several games in any view, then right-click for a batch menu that favorites, hides, re-categorizes, sets the Performance Profile, refreshes poster art and metadata, or removes them in one step, with the same undo as a single removal.
-- **Launcher stays out of the way** — per game, close Steam, GOG Galaxy, EA App, Epic, or Ubisoft Connect automatically when the game exits. For Steam, that option also starts the client minimized to the tray when TrayTrigger has to open it, so only the game shows.
+- **Launcher stays out of the way** — per game, close Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, or the Xbox app automatically when the game exits. For Steam, that option also starts the client minimized to the tray when TrayTrigger has to open it, so only the game shows.
 
 ## Performance Profiles
 
@@ -111,7 +112,7 @@ Independently of the tier, any game can be pinned to the performance cores of a 
 
 - **Session-scoped, zero manual cleanup** — tweaks apply the moment a game launches (Steam or direct `.exe`) and revert to your exact prior settings the moment it closes.
 - **Crash-safe** — if TrayTrigger or your PC crashes mid-session, the next launch detects and restores your pre-game state automatically.
-- **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes, with a configurable timeout, and optionally cancelling the launch if it fails); the post-exit script runs the moment the game closes, for direct, Steam, and GOG/EA/Epic/Ubisoft launches alike. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, can run hidden (with their output captured to the log) or elevated.
+- **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes, with a configurable timeout, and optionally cancelling the launch if it fails); the post-exit script runs the moment the game closes, for direct, Steam, GOG/EA/Epic/Ubisoft, and Xbox launches alike. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, can run hidden (with their output captured to the log) or elevated.
 
 ## Verified & Reversible Windows Gaming Optimizations
 

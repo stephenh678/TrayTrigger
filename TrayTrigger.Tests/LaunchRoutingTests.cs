@@ -95,6 +95,25 @@ public class LaunchRoutingTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)] // "launch directly" is meaningless for a GDK package and must not change the route
+    public void Xbox_AlwaysActivatesPackage(bool launchDirectly)
+    {
+        var game = new GameEntry { IsXboxGame = true, XboxAumid = "436609B6.FortniteClient_9ncxwbgmmv7m8!AppFortniteShipping", ExecutablePath = @"C:\XboxGames\Fortnite\Content\x.exe", LaunchDirectly = launchDirectly };
+        Assert.Equal(LaunchRoute.Xbox, LaunchRouter.Resolve(game, NoneInstalled, Exists));
+        // Even with no exe path at all: the AUMID is the identity, not the file.
+        var pathless = new GameEntry { IsXboxGame = true, XboxAumid = game.XboxAumid, ExecutablePath = "", LaunchDirectly = launchDirectly };
+        Assert.Equal(LaunchRoute.Xbox, LaunchRouter.Resolve(pathless, NoneInstalled, Missing));
+    }
+
+    [Fact]
+    public void Xbox_WithoutAumid_FallsThroughToPathRules()
+    {
+        var game = new GameEntry { IsXboxGame = true, XboxAumid = null, ExecutablePath = @"C:\x\x.exe" };
+        Assert.Equal(LaunchRoute.DirectExe, LaunchRouter.Resolve(game, NoneInstalled, Exists));
+    }
+
+    [Theory]
     [InlineData("com.epicgames.launcher://apps/x?action=launch", LaunchRoute.ProtocolUrl)]
     [InlineData("https://example.com/play", LaunchRoute.ProtocolUrl)]
     [InlineData("ms-msdt://something", LaunchRoute.RefusedUrl)]
@@ -132,6 +151,7 @@ public class LaunchRoutingTests
     [InlineData(LaunchRoute.EaClient, LauncherPlatform.Ea)]
     [InlineData(LaunchRoute.EpicDirect, LauncherPlatform.Epic)]
     [InlineData(LaunchRoute.UbisoftClient, LauncherPlatform.Ubisoft)]
+    [InlineData(LaunchRoute.Xbox, LauncherPlatform.Xbox)]
     public void ClientPlatform_MapsRoutes(LaunchRoute route, LauncherPlatform expected)
     {
         Assert.Equal(expected, LaunchRouter.ClientPlatformFor(route));

@@ -511,7 +511,7 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Games Library" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                                    FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                        <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, and local folders"
+                        <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, and local folders"
                                    FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                                    FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
                     </StackPanel>
@@ -673,7 +673,7 @@
                             <TextBlock Text="Your library is empty"
                                        FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, and Ubisoft Connect. Or drop a game's exe, shortcut, or install folder anywhere on this window."
+                            <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, Ubisoft Connect, and Xbox (PC Game Pass). Or drop a game's exe, shortcut, or install folder anywhere on this window."
                                        FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -1019,6 +1019,23 @@
                                                                 </Style>
                                                             </Border.Style>
                                                             <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
+                                                                   Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+
+                                                        <!-- Xbox / PC Game Pass Indicator Badge Overlay -->
+                                                        <Border VerticalAlignment="Center">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png"
                                                                    Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
                                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                                                         </Border>
@@ -1430,6 +1447,23 @@
                                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                                                         </Border>
 
+                                                        <!-- Xbox / PC Game Pass Indicator Badge Overlay -->
+                                                        <Border VerticalAlignment="Center">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png"
+                                                                   Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+
                                                         <!-- Local Games Indicator Badge Overlay - shown for a game added via plain
                                                              exe/shortcut/folder scan rather than any supported launcher. -->
                                                         <Border VerticalAlignment="Center">
@@ -1738,6 +1772,23 @@
                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                             <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                             <TextBlock Text="UBI" FontSize="9" Foreground="#FFC107" FontWeight="SemiBold"/>
+                                                        </StackPanel>
+                                                    </Border>
+
+                                                    <Border Background="#1B2E1B" CornerRadius="3" Padding="4,0" HorizontalAlignment="Left">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                            <TextBlock Text="XBOX" FontSize="9" Foreground="#6CC04A" FontWeight="SemiBold"/>
                                                         </StackPanel>
                                                     </Border>
 
@@ -2079,6 +2130,23 @@
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                         <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                         <TextBlock Text="UBI" FontSize="9.5" Foreground="#FFC107"
+                                                                   FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Background="#1B2E1B" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        <TextBlock Text="XBOX" FontSize="9.5" Foreground="#6CC04A"
                                                                    FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                     </StackPanel>
                                                 </Border>
@@ -2561,6 +2629,17 @@
                                         </StackPanel>
                                     </CheckBox>
                                     <TextBlock Text="Found via Ubisoft Connect's install records, any location. Limitation: Ubisoft records no title or exe, so both are read from the install folder - occasionally wrong for a game with several executables."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                                    <CheckBox IsChecked="{Binding XboxIntegrationEnabled}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                              Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Enable Xbox / PC Game Pass Library Integration" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    <TextBlock Text="Found via Windows' own Gaming Services records, so every game installed through the Xbox app is covered, on any drive. Games launch through Windows like the Xbox app does - no direct-exe option. Limitation: only modern (GDK) titles are detected; a few older Microsoft Store games that never moved to the current format are not."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
@@ -3293,7 +3372,7 @@
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Multi-Platform Library Integration" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Auto-discovers installed games from Steam, GOG, EA, Epic, and Ubisoft Connect, matches official titles and genres, and imports store artwork."
+                                            <TextBlock Text="Auto-discovers installed games from Steam, GOG, EA, Epic, Ubisoft Connect, and Xbox, matches official titles and genres, and imports store artwork."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>

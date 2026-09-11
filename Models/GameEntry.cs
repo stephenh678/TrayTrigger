@@ -60,6 +60,14 @@ public class GameEntry
     /// IsGogGame/IsEaGame/IsEpicGame.</summary>
     public bool IsUbisoftGame { get; set; }
     public string? UbisoftGameId { get; set; }
+    /// <summary>True for a PC Game Pass / Microsoft Store (GDK) game imported via Xbox scanning.
+    /// Unlike every other platform there is no direct-exe fallback: GDK executables need package
+    /// identity, so the game is always launched by shell activation of <see cref="XboxAumid"/>
+    /// and ExecutablePath is informational (icon, dedupe, "open folder") and re-resolved on each
+    /// launch because it changes with every game update.</summary>
+    public bool IsXboxGame { get; set; }
+    /// <summary>Application User Model ID, "&lt;PackageFamilyName&gt;!&lt;AppId&gt;" - stable across updates.</summary>
+    public string? XboxAumid { get; set; }
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
     public DateTime? LastEnrichmentAttemptUtc { get; set; }

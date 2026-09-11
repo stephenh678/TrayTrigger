@@ -41,6 +41,7 @@ public partial class App : Application
     private EaScannerService _eaScannerService = null!;
     private EpicScannerService _epicScannerService = null!;
     private UbisoftScannerService _ubisoftScannerService = null!;
+    private XboxScannerService _xboxScannerService = null!;
     private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
     private GameScriptService? _gameScriptService;
@@ -236,11 +237,12 @@ public partial class App : Application
         _eaScannerService = new EaScannerService();
         _epicScannerService = new EpicScannerService();
         _ubisoftScannerService = new UbisoftScannerService();
+        _xboxScannerService = new XboxScannerService();
         _performanceProfileService = new PerformanceProfileService(_storageService);
         _performanceProfileService.RecoverFromCrashIfNeeded();
         // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
         _gameScriptService = new GameScriptService(() => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts);
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService);
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -259,6 +261,7 @@ public partial class App : Application
             _eaScannerService,
             _epicScannerService,
             _ubisoftScannerService,
+            _xboxScannerService,
             _launcherService,
             _hotkeyManager,
             _startupManager,

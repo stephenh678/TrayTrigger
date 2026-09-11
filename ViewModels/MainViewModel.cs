@@ -47,6 +47,7 @@ public class MainViewModel : ViewModelBase
     private readonly EaScannerService _eaScannerService;
     private readonly EpicScannerService _epicScannerService;
     private readonly UbisoftScannerService _ubisoftScannerService;
+    private readonly XboxScannerService _xboxScannerService;
     private readonly ProcessLauncherService _launcherService;
     private readonly HotkeyManager _hotkeyManager;
     private readonly StartupManager _startupManager;
@@ -79,7 +80,7 @@ public class MainViewModel : ViewModelBase
     public AppSettings Settings => _settings;
     public IconExtractorService IconExtractorService => _iconExtractorService;
     public StorageService StorageService => _storageService;
-    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<GameCandidate>>? RequestScanResultsPicker;
+    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<GameCandidate>>? RequestScanResultsPicker;
     /// <summary>
     /// Forwarded from <see cref="ImportCoordinator.RequestLauncherDetectionPrompt"/>: raised the
     /// first time the user ever presses "Scan for Games", if at least one platform's own scanner
@@ -111,6 +112,7 @@ public class MainViewModel : ViewModelBase
         EaScannerService eaScannerService,
         EpicScannerService epicScannerService,
         UbisoftScannerService ubisoftScannerService,
+        XboxScannerService xboxScannerService,
         ProcessLauncherService launcherService,
         HotkeyManager hotkeyManager,
         StartupManager startupManager,
@@ -125,6 +127,7 @@ public class MainViewModel : ViewModelBase
         _eaScannerService = eaScannerService;
         _epicScannerService = epicScannerService;
         _ubisoftScannerService = ubisoftScannerService;
+        _xboxScannerService = xboxScannerService;
         _launcherService = launcherService;
         _hotkeyManager = hotkeyManager;
         _startupManager = startupManager;
@@ -164,6 +167,7 @@ public class MainViewModel : ViewModelBase
             _eaScannerService,
             _epicScannerService,
             _ubisoftScannerService,
+            _xboxScannerService,
             _steamSearchService,
             _steamMetadataService,
             _storageService,
@@ -203,7 +207,7 @@ public class MainViewModel : ViewModelBase
         Library.RequestMinimizeToTray += () => RequestMinimizeToTray?.Invoke();
         Library.LibraryUpdated += () => LibraryUpdated?.Invoke();
 
-        Import.RequestScanResultsPicker += (steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates);
+        Import.RequestScanResultsPicker += (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, folderCandidates);
         Import.RequestLauncherDetectionPrompt += detected => RequestLauncherDetectionPrompt?.Invoke(detected);
         Import.RequestCandidatePicker += (path, candidates) => RequestCandidatePicker?.Invoke(path, candidates);
         Import.RequestFolderBatchImport += (path, candidates) => RequestFolderBatchImport?.Invoke(path, candidates);
@@ -619,7 +623,9 @@ public class MainViewModel : ViewModelBase
     public Task ImportEpicGamesAsync(List<DiscoveredEpicGame> discoveredGames) => Import.ImportEpicGamesAsync(discoveredGames);
     public void ImportUbisoftGames(List<DiscoveredUbisoftGame> discoveredGames) => Import.ImportUbisoftGames(discoveredGames);
     public Task ImportUbisoftGamesAsync(List<DiscoveredUbisoftGame> discoveredGames) => Import.ImportUbisoftGamesAsync(discoveredGames);
-    public Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<GameCandidate> folderCandidates) => Import.ImportScanResultsAsync(steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates);
+    public void ImportXboxGames(List<DiscoveredXboxGame> discoveredGames) => Import.ImportXboxGames(discoveredGames);
+    public Task ImportXboxGamesAsync(List<DiscoveredXboxGame> discoveredGames) => Import.ImportXboxGamesAsync(discoveredGames);
+    public Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<GameCandidate> folderCandidates) => Import.ImportScanResultsAsync(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, folderCandidates);
     public bool IsScanLocation(string path) => Import.IsScanLocation(path);
 
     public void IgnoreGamePath(string exePath, string name)
@@ -665,6 +671,12 @@ public class MainViewModel : ViewModelBase
     public void IgnoreUbisoftGame(string gameId, string name)
     {
         Import.IgnoreUbisoftGame(gameId, name);
+        SettingsVM.RefreshIgnoredGamePaths();
+    }
+
+    public void IgnoreXboxGame(string aumid, string name)
+    {
+        Import.IgnoreXboxGame(aumid, name);
         SettingsVM.RefreshIgnoredGamePaths();
     }
 
