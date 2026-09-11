@@ -328,11 +328,18 @@ worth knowing before the next packaged-app platform (Amazon? no - but anything M
   shell:AppsFolder\<AUMID>` is the fallback. Activation starts Windows' `gamelaunchhelper.exe`
   stub first (added to `ProcessPathResolver`'s helper list), which spawns the game - so the
   existing debounced `TrackInstallDirSession` polling is the right tracker here too.
-- **Track by the package root, not the readable folder.** A running GDK game's image path
-  reports through `C:\Program Files\WindowsApps\<PackageFullName>\...`, not the
-  `XboxGames\...\Content` junction target - verified against a live process. So the record carries
-  both (`PackageRoot` for tracking and already-running checks, `InstallDir` for icons/"open
-  folder"/dedupe), and `PlatformLookupService` matches dropped paths against either.
+- **Track by the junction target, not the package root - and know which API you probed with.**
+  The first implementation tracked by the WindowsApps package root because a PowerShell
+  `Get-Process | select Path` probe showed a live Roblox there. That property is
+  `Process.MainModule`, which reports the path *as launched*. The app's own
+  `ProcessPathResolver.GetProcessPath` uses `QueryFullProcessImageName`, and the kernel names an
+  image by its final, junction-resolved path - `C:\XboxGames\Roblox\Content\RobloxPlayerBeta.exe`.
+  Same PID, two different answers; the first live launch test found nothing under the package
+  root and would have rolled the profile back after the 3-minute timeout. So `LaunchXboxGame`
+  tracks by `InstallDir` (the resolved target, via `ResolveLinkTarget(returnFinalTarget: true)`),
+  `PackageRoot` is kept only so a dropped path in either form resolves through
+  `PlatformLookupService`, and the lesson for the next platform is: verify process-path
+  assumptions with the resolver the app actually uses, not with whatever PowerShell shows.
 - **Identity durability trap.** `PackageFullName` and the package root change on *every* game
   update. The entry stores only the AUMID (`GameEntry.XboxAumid`); `LaunchXboxGame` re-resolves
   the current full name/root via `XboxScannerService.FindByAumid` on each launch and refreshes the
