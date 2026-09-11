@@ -2,9 +2,80 @@
 
 Notes on things discussed but not yet implemented, kept here so they survive between sessions.
 
-_(Nothing open right now.)_
+## Open
+
+### Community script catalog (design only, 2026-09-11)
+
+A curated catalog of game scripts that advanced users contribute and install from inside
+TrayTrigger. Decided against any in-app upload: a script runs with the installing user's full
+privileges (and the card offers an Administrator option), so distributing strangers' uploads
+without review is not acceptable, and upload needs a backend with auth, abuse handling and
+takedowns. A GitHub repository with pull-request review gives provenance, review and hosting for
+free. **Review is the security control; hashes only prove the file is what the reviewer approved.**
+
+**Catalog repository** (separate from the app, e.g. `stephenh678/TrayTrigger-Scripts`):
+
+- One folder per script: the script file(s) plus a `script.json` with `name`, `description`,
+  `author`, `phase` (`prelaunch`, `postexit`, `both`), `needsAdmin` (bool, must be justified in
+  the PR), `scriptArguments` (what the script expects in Script Arguments), `version`, and
+  `dependencies` (free text: "OpenRGB installed", "AudioDeviceCmdlets module").
+- A GitHub Action regenerates `catalog.json` on merge to `main`: every entry above plus a
+  SHA-256 per file. Contributors never hand-write hashes and cannot forge them.
+- `CONTRIBUTING.md` with the PR checklist: uses only the documented positional arguments and
+  Script Arguments (see `Scripts/Library/README.txt` in this repo for the contract); no
+  downloads, no network calls, no `Invoke-Expression`, no module installs; nothing destructive
+  uncommented (killing processes only by a name the user supplies); `needsAdmin` absent or
+  justified; tested with Test Run in both phases; comments explain every action. The repo owner
+  reviews every PR.
+- The first entries are this repo's bundled examples, in the same format, so the manifest code
+  is written once. The audio-device switcher that was cut from 1.4.0 (needs the AudioDeviceCmdlets
+  module) is the first catalog-only candidate, because the catalog can declare the dependency.
+
+**In the app** (1.4.x):
+
+- Browse from Settings › Launch & Performance (a "Community scripts..." button) and from the
+  scripts card in Edit Game. Fetch `catalog.json` from the repo's raw `main` (or a release asset),
+  reusing `UpdateService`'s HttpClient, timeout and `FindExpectedSha256` / `ComputeSha256Async`
+  patterns (`Services/UpdateService.cs`).
+- Every entry shows name, author, phase, needs-admin, dependencies and the **full source** before
+  install. Install downloads into `%AppData%\TrayTrigger\Scripts\Community\<name>\`, verifies
+  every file's SHA-256 against the catalog, refuses on mismatch, and records the installed hash
+  and version in a small `installed.json`.
+- Never auto-updated. The browser shows "newer version in catalog" and "modified locally" (installed
+  hash vs file hash) and lets the user re-install explicitly, which overwrites only with consent.
+- A trust banner on the browser: community scripts run as you; read them before installing. Same
+  text in `SECURITY.md`.
+- "Share your script" opens the catalog repo's contributing guide in the browser. No upload code.
+- Disclose the new network call (one GET of the catalog, plus one per installed file, only on
+  user action) in `SECURITY.md` and the README's privacy/network section, next to the existing
+  update-check disclosure.
+- Ratings, comments and download counts stay on GitHub (stars, issues). Nothing in-app until the
+  catalog is large enough to need it.
 
 ## Shipped
+
+### 1.4.0: scripts for advanced users (2026-09-11)
+
+Decisions made while building it:
+
+- **Positioning.** Scripts stay an advanced, off-by-default feature. 1.4.0 makes them more
+  powerful and easier to debug, not "easy". The release notes should say that.
+- **No bundled behaviour templates.** A proposed set of Discord / OpenRGB / Wallpaper Engine /
+  audio-switch templates was dropped: each depends on a third-party app's install path and CLI,
+  rots without notice, and would read as a TrayTrigger bug when it breaks. What ships instead is
+  a scripts folder with two blank templates, three small examples that use only Windows built-ins
+  and do nothing until given a Script Argument, and a README (`Scripts/Library/`,
+  `Services/ScriptLibraryService.cs`).
+- **Two script fields, not one.** A single-script model breaks for the two most common
+  attachments: a plain `.exe` that cannot branch on the phase, and different types per phase.
+  A dual-phase script is supported by putting the same file in both boxes, which the examples do.
+- **Test Run** uses the values typed in the dialog, ignores the Settings kill-switch, always runs
+  hidden and non-elevated so output can be captured, and kills the process on timeout.
+- **Defaults resolve per phase**, a game's own script always wins, and default scripts receive the
+  game's Script Arguments so one generic default can be parameterised per game.
+- **Batch gotcha found by the tests:** `echo %~5> file` is a handle redirect when playtime is a
+  single digit, and `rem` lines are still parsed by cmd (`%~N` in a comment aborts the script).
+  Both are documented in the help page and the scripts README.
 
 ### Folder-import launcher detection (2026-09-10)
 

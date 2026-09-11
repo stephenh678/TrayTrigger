@@ -39,13 +39,17 @@ public class ScriptLibraryService
             .ToList();
     }
 
-    /// <summary>The embedded content of one bundled file, or null if there is no such resource.</summary>
+    /// <summary>
+    /// The embedded content of one bundled file with Windows line endings, or null if there is no
+    /// such resource. The repo may store these with LF; on disk they must be CRLF - cmd.exe has
+    /// parsing quirks with LF-only batch files and older Notepad shows them as one line.
+    /// </summary>
     public static string? ReadBundled(string fileName)
     {
         using var stream = typeof(ScriptLibraryService).Assembly.GetManifestResourceStream(ResourcePrefix + fileName);
         if (stream == null) return null;
         using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+        return reader.ReadToEnd().Replace("\r\n", "\n").Replace("\n", "\r\n");
     }
 
     /// <summary>
