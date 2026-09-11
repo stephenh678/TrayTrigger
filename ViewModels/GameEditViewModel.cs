@@ -136,8 +136,7 @@ public class GameEditViewModel : ViewModelBase
         ResetIconCommand = new RelayCommand(ResetIcon);
         BrowseCoverCommand = new RelayCommand(BrowseCover);
         ResetCoverCommand = new RelayCommand(ResetCover);
-        FetchNameFromExeCommand = new RelayCommand(FetchNameFromExe);
-        FetchOfficialNameOnlineCommand = new RelayCommand(FetchOfficialNameOnline);
+        LookUpCommand = new RelayCommand(LookUp, () => !IsRefreshingMetadata);
         FetchBySteamIdCommand = new RelayCommand(FetchBySteamId, () => !IsRefreshingMetadata);
         RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
         SaveCommand = new RelayCommand(Save);
@@ -519,8 +518,7 @@ public class GameEditViewModel : ViewModelBase
     public ICommand ResetIconCommand { get; }
     public ICommand BrowseCoverCommand { get; }
     public ICommand ResetCoverCommand { get; }
-    public ICommand FetchNameFromExeCommand { get; }
-    public ICommand FetchOfficialNameOnlineCommand { get; }
+    public ICommand LookUpCommand { get; }
     public ICommand FetchBySteamIdCommand { get; }
     public ICommand RefreshPosterCommand { get; }
     public ICommand SaveCommand { get; }
@@ -709,7 +707,16 @@ public class GameEditViewModel : ViewModelBase
         }
     }
 
-    public async Task FetchOfficialNameOnlineAsync()
+    /// <summary>
+    /// "Look Up": find this game online and fully populate it. First tries Steam by title - on a
+    /// hit it links the App ID and pulls the poster and genre in one step (the same as "Fetch by
+    /// ID", not just the title as the old "Search Online" did). When Steam has nothing (Roblox,
+    /// Fortnite, a Game Pass exclusive, an obscure indie) it falls back to SteamGridDB for a poster
+    /// by name - art only, no genre - and reports which game the art came from so a loose match is
+    /// visible. The typed title is left as-is on the fallback path since there's no authoritative
+    /// title source there.
+    /// </summary>
+    public async Task LookUpAsync()
     {
         try
         {
@@ -725,31 +732,95 @@ public class GameEditViewModel : ViewModelBase
                 return;
             }
 
-            StatusMessage = $"Searching Steam for \"{term}\"...";
+            IsRefreshingMetadata = true;
+            StatusMessage = $"Looking up \"{term}\"...";
+
             var steamSearch = new SteamSearchService();
             var match = await steamSearch.FindBestMatchAsync(term, _minConfidence);
-            if (match != null && !string.IsNullOrWhiteSpace(match.Name))
+            if (match != null && !string.IsNullOrWhiteSpace(match.AppId))
             {
-                Name = match.Name;
-                if (!string.IsNullOrWhiteSpace(match.AppId))
+                // Steam hit: pull full details (title, poster, genre) exactly like Fetch by ID.
+                var metadataService = new SteamMetadataService();
+                var details = await metadataService.GetAppDetailsAsync(match.AppId, _steamGridDbApiKey, forceRefresh: true);
+                if (details != null && !string.IsNullOrWhiteSpace(details.Name))
                 {
-                    SteamAppId = match.AppId;
+                    ApplySteamDetails(details, match.AppId);
+                    StatusMessage = $"Found on Steam: \"{details.Name}\"";
+                    return;
                 }
-                StatusMessage = $"Found Steam match: \"{match.Name}\"";
+
+                // Details fetch failed but the search matched a title - keep at least that.
+                Name = match.Name;
+                SteamAppId = match.AppId;
+                StatusMessage = $"Found Steam match: \"{match.Name}\" (details unavailable).";
+                return;
             }
-            else
-            {
-                StatusMessage = $"No matching game found on Steam for \"{term}\".";
-            }
+
+            // No Steam match: fall back to SteamGridDB poster art by name.
+            await LookUpGridArtByNameAsync(term);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Search failed: {ex.Message}";
-            LoggingService.Warn("GameEditViewModel", $"Failed to fetch official name online: {ex.Message}");
+            StatusMessage = $"Look up failed: {ex.Message}";
+            LoggingService.Warn("GameEditViewModel", $"Look up failed: {ex.Message}");
+        }
+        finally
+        {
+            IsRefreshingMetadata = false;
         }
     }
 
-    public void FetchOfficialNameOnline() => _ = FetchOfficialNameOnlineAsync();
+    /// <summary>The SteamGridDB-by-name fallback for Look Up. Applies a poster only when the matched
+    /// community title resembles what was searched, so a stray autocomplete hit isn't pinned.</summary>
+    private async Task LookUpGridArtByNameAsync(string term)
+    {
+        if (string.IsNullOrWhiteSpace(_steamGridDbApiKey))
+        {
+            StatusMessage = $"No Steam match for \"{term}\". Add a SteamGridDB key in Settings to find poster art for non-Steam games.";
+            return;
+        }
+
+        StatusMessage = $"No Steam match; searching SteamGridDB art for \"{term}\"...";
+        var metadataService = new SteamMetadataService();
+        var art = await metadataService.DownloadAndCacheGridArtByNameAsync(SourceGame.Id, term, _steamGridDbApiKey);
+        if (art == null)
+        {
+            StatusMessage = $"No match found for \"{term}\" on Steam or SteamGridDB.";
+            return;
+        }
+
+        double similarity = SteamSearchService.CalculateSimilarity(term, art.Value.MatchedName);
+        if (similarity >= _minConfidence)
+        {
+            ApplyFetchedCover(art.Value.Path);
+            StatusMessage = $"No Steam listing; found poster art for \"{art.Value.MatchedName}\" via SteamGridDB.";
+        }
+        else
+        {
+            StatusMessage = $"Closest SteamGridDB art (\"{art.Value.MatchedName}\") didn't look like \"{term}\" - left unchanged. Use Change... to set art manually.";
+        }
+    }
+
+    /// <summary>Applies a full Steam details fetch to the edit fields - shared by "Look Up" and
+    /// "Fetch by ID" so both routes to an App ID populate title, poster and genre identically.</summary>
+    private void ApplySteamDetails(SteamAppDetails details, string appId)
+    {
+        Name = details.Name;
+        SteamAppId = appId;
+        // Preserves non-Steam launch: a local executable must NOT be flipped to a steam:// game.
+        if (!string.IsNullOrWhiteSpace(ExecutablePath) && !ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
+        {
+            IsSteamGame = false;
+        }
+        ApplyFetchedCover(details.CoverImagePath);
+        if ((string.IsNullOrWhiteSpace(Category) || Category.Equals(LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase)) &&
+            !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+        {
+            Category = details.PrimaryGenre;
+        }
+    }
+
+    public void LookUp() => _ = LookUpAsync();
 
     /// <summary>
     /// Corrects a misidentified game by fetching name + poster art directly from Steam for an
@@ -782,21 +853,7 @@ public class GameEditViewModel : ViewModelBase
                 return;
             }
 
-            Name = details.Name;
-            SteamAppId = id;
-            // Preserves non-Steam state: local executables must NOT be changed to steam:// protocol games
-            if (!string.IsNullOrWhiteSpace(ExecutablePath) && !ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
-            {
-                IsSteamGame = false;
-            }
-            ApplyFetchedCover(details.CoverImagePath);
-
-            if ((string.IsNullOrWhiteSpace(Category) || Category.Equals(LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase)) &&
-                !string.IsNullOrWhiteSpace(details.PrimaryGenre))
-            {
-                Category = details.PrimaryGenre;
-            }
-
+            ApplySteamDetails(details, id);
             StatusMessage = $"Successfully matched with \"{details.Name}\"!";
         }
         catch (Exception ex)

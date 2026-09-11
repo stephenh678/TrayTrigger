@@ -1259,11 +1259,53 @@ public class LibraryViewModel : ViewModelBase
                     if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                         entry.CoverImagePath = details.CoverImagePath;
                 }
+                return;
             }
+
+            // No Steam App ID resolved (Roblox, Fortnite, Game Pass exclusives, obscure indies):
+            // fall back to SteamGridDB poster art matched by the game's own name. Poster only -
+            // SteamGridDB has no genre/description, so the category is untouched. Gated on the same
+            // vertical-art setting and user key the Steam path uses, only when no cover exists yet,
+            // and rate-limited by the caller's enrichment retry interval.
+            await TryFetchGridArtByNameAsync(entry);
         }
         catch (Exception ex)
         {
             LoggingService.Warn("LibraryViewModel", $"Enrichment error for {entry.Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// SteamGridDB-by-name poster fetch for an entry with no Steam App ID. A no-op unless vertical
+    /// art is enabled, a SteamGridDB key is set, and the cover is currently empty. The community
+    /// autocomplete can return a loosely-related game, so the art is applied only when the matched
+    /// title actually resembles the game's name (same guard as the Steam title match) - otherwise
+    /// a search for "Roblox" grabbing some unrelated poster would stick.
+    /// </summary>
+    private async Task TryFetchGridArtByNameAsync(GameEntry entry)
+    {
+        if (!_settings.UseVerticalPosterArt
+            || !string.IsNullOrWhiteSpace(entry.CoverImagePath)
+            || string.IsNullOrWhiteSpace(entry.Name))
+            return;
+
+        string? key = _getSteamGridDbApiKeyOrNull();
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        var art = await _steamMetadataService.DownloadAndCacheGridArtByNameAsync(entry.Id, entry.Name, key);
+        if (art == null)
+            return;
+
+        double similarity = SteamSearchService.CalculateSimilarity(entry.Name, art.Value.MatchedName);
+        if (similarity >= _settings.OnlineMatchConfidenceThreshold)
+        {
+            entry.CoverImagePath = art.Value.Path;
+            LoggingService.Info("LibraryViewModel", $"Applied SteamGridDB poster for '{entry.Name}' (matched '{art.Value.MatchedName}', similarity {similarity:F2}).");
+        }
+        else
+        {
+            LoggingService.Verbose("LibraryViewModel", $"Rejected SteamGridDB poster for '{entry.Name}': matched title '{art.Value.MatchedName}' too dissimilar (similarity {similarity:F2} < {_settings.OnlineMatchConfidenceThreshold:F2}).");
         }
     }
 
