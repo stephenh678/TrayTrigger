@@ -57,7 +57,7 @@ public partial class FolderScannerService
     private static readonly string[] MultiGameLibraryNames =
     [
         "games", "my games", "steamlibrary", "common", "steamapps",
-        "gog games", "xboxgames", "installed games", "game library",
+        "gog games", "xboxgames", "content", "installed games", "game library",
         "pc games", "epic games", "ubisoft games", "ea games"
     ];
 

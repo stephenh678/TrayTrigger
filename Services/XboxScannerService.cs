@@ -13,10 +13,12 @@ namespace TrayTrigger.Services;
 /// every game update, so never store it; re-resolve from the AUMID when needed.</param>
 /// <param name="InstallDir">Where the game's files really live. For a modern Xbox-app install
 /// that's the junction target ("D:\XboxGames\&lt;Game&gt;\Content"), a plain readable folder that
-/// survives updates; otherwise the package root itself.</param>
-/// <param name="PackageRoot">The package folder under WindowsApps. Running game processes
-/// report their image path through <em>this</em> path, not the junction target, so this is
-/// what session tracking watches. Changes on every update.</param>
+/// survives updates; otherwise the package root itself. This is also the path the kernel
+/// reports for a running game's image (<see cref="ProcessPathResolver.GetProcessPath"/>), so
+/// session tracking watches it.</param>
+/// <param name="PackageRoot">The package folder under WindowsApps, i.e. the junction itself.
+/// Changes on every update. Only Process.MainModule-style lookups report a game under this
+/// path; kept so dropped paths in either form resolve (see PlatformLookupService).</param>
 /// <param name="ExePath">The real game exe from MicrosoftGame.config, under
 /// <paramref name="InstallDir"/>. Cannot be launched directly (needs package identity); kept
 /// for icon extraction, dedupe against manually-added entries, and "open install folder".</param>
@@ -224,13 +226,15 @@ public class XboxScannerService
     }
 
     /// <summary>The Xbox app installs modern titles to "&lt;drive&gt;:\XboxGames\&lt;Game&gt;\Content" and
-    /// registers the WindowsApps package folder as a junction to it. Null when it's a real folder.</summary>
+    /// registers the WindowsApps package folder as a junction to it. Null when it's a real folder.
+    /// Resolves to the <em>final</em> target so it matches what the kernel reports for process images.</summary>
     private static string? ResolveJunctionTarget(string packageRoot)
     {
         try
         {
             var info = new DirectoryInfo(packageRoot);
-            string? target = info.LinkTarget;
+            if (info.LinkTarget == null) return null;
+            string? target = info.ResolveLinkTarget(returnFinalTarget: true)?.FullName;
             if (string.IsNullOrWhiteSpace(target)) return null;
             target = target.TrimEnd('\\');
             return Directory.Exists(target) ? target : null;

@@ -1240,13 +1240,16 @@ public partial class ProcessLauncherService
 
     /// <summary>
     /// PC Game Pass / Store (GDK) title: shell-activates the package's AUMID (the only way a GDK
-    /// exe can start - it refuses to run without package identity) and tracks by the package
-    /// root, which is the path running processes report even when the game's files really live
-    /// under a junction target like "D:\XboxGames\&lt;Game&gt;\Content". The package root changes on
-    /// every game update, so it is re-read from Gaming Services' registry on each launch rather
-    /// than trusted from the entry; the entry's informational exe path is refreshed at the same
-    /// time. Windows' gamelaunchhelper.exe stub is what activation starts first, so this relies
-    /// on the same debounced polling every client-launch platform uses.
+    /// exe can start - it refuses to run without package identity) and tracks by the game's
+    /// resolved install directory. That is the junction <em>target</em> ("D:\XboxGames\&lt;Game&gt;\Content"),
+    /// not the WindowsApps package root: the kernel names a process image by its final path, so
+    /// <see cref="ProcessPathResolver.GetProcessPath"/> reports running GDK games under the
+    /// target (Process.MainModule would say WindowsApps - verified both ways against a live
+    /// Roblox). Both paths change on every game update, so the record is re-read from Gaming
+    /// Services' registry on each launch rather than trusted from the entry; the entry's
+    /// informational exe path is refreshed at the same time. Windows' gamelaunchhelper.exe stub
+    /// is what activation starts first, so this relies on the same debounced polling every
+    /// client-launch platform uses.
     /// </summary>
     private bool LaunchXboxGame(GameEntry game, out string? errorMessage)
     {
@@ -1271,7 +1274,7 @@ public partial class ProcessLauncherService
             GameUpdated?.Invoke(game);
         }
 
-        string installDir = current.PackageRoot;
+        string installDir = current.InstallDir;
         if (TryActivateRunningProcessUnderDirectory(game, installDir, label))
         {
             return true;
