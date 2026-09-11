@@ -381,10 +381,14 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" Text="{Binding PreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
+                                <Button Grid.Column="1" Content="Test" Command="{Binding TestPreLaunchScriptCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                        ToolTip="Run this script now with the values in this dialog (hidden, not elevated, 30 s limit) and show its exit code and output"/>
+                                <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
 
@@ -395,10 +399,14 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" Text="{Binding PostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
+                                <Button Grid.Column="1" Content="Test" Command="{Binding TestPostExitScriptCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                        ToolTip="Run this script now as a post-exit run with playtime 0 (hidden, not elevated, 30 s limit) and show its exit code and output"/>
+                                <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
                             <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."

@@ -132,6 +132,8 @@ public class GameEditViewModel : ViewModelBase
         BrowseWorkDirCommand = new RelayCommand(BrowseWorkDir);
         BrowsePreLaunchScriptCommand = new RelayCommand(() => BrowseScript(isPreLaunch: true));
         BrowsePostExitScriptCommand = new RelayCommand(() => BrowseScript(isPreLaunch: false));
+        TestPreLaunchScriptCommand = new AsyncRelayCommand(() => TestScriptAsync(isPreLaunch: true), () => !IsTestingScript && HasPreLaunchScript);
+        TestPostExitScriptCommand = new AsyncRelayCommand(() => TestScriptAsync(isPreLaunch: false), () => !IsTestingScript && HasPostExitScript);
         BrowseIconCommand = new RelayCommand(BrowseIcon);
         ResetIconCommand = new RelayCommand(ResetIcon);
         BrowseCoverCommand = new RelayCommand(BrowseCover);
@@ -259,12 +261,59 @@ public class GameEditViewModel : ViewModelBase
         {
             _postExitScriptPath = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(HasPostExitScript));
             OnPropertyChanged(nameof(HasAnyScript));
         }
     }
 
     /// <summary>Gates the "wait for pre-launch script" option, which only means something with a pre-launch script set.</summary>
     public bool HasPreLaunchScript => !string.IsNullOrWhiteSpace(_preLaunchScriptPath);
+
+    public bool HasPostExitScript => !string.IsNullOrWhiteSpace(_postExitScriptPath);
+
+    // --- Test Run ---
+
+    private bool _isTestingScript;
+
+    /// <summary>A Test Run is in progress; both Test buttons stay disabled until it finishes.</summary>
+    public bool IsTestingScript
+    {
+        get => _isTestingScript;
+        private set { _isTestingScript = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Raised on the UI thread when a Test Run finishes; the view shows the report.</summary>
+    public event Action<ScriptTestReport>? ScriptTestCompleted;
+
+    private async Task TestScriptAsync(bool isPreLaunch)
+    {
+        string path = (isPreLaunch ? PreLaunchScriptPath : PostExitScriptPath).Trim();
+        if (string.IsNullOrWhiteSpace(path) || IsTestingScript) return;
+
+        // The probe is built from what is typed right now, not from the saved record: the user
+        // is testing the path (and name/exe) they can see. Only the ID comes from the saved game.
+        var probe = new GameEntry
+        {
+            Id = SourceGame.Id,
+            Name = string.IsNullOrWhiteSpace(Name) ? "Unnamed Game" : Name.Trim(),
+            ExecutablePath = ExecutablePath.Trim()
+        };
+        string phase = isPreLaunch ? GameScriptService.PhasePreLaunch : GameScriptService.PhasePostExit;
+        long? playtime = isPreLaunch ? null : 0;
+
+        IsTestingScript = true;
+        StatusMessage = $"Testing the {(isPreLaunch ? "pre-launch" : "post-exit")} script (up to {GameScriptService.TestRunTimeout.TotalSeconds:0} s)...";
+        try
+        {
+            var result = await Task.Run(() => GameScriptService.TestRun(path, probe, phase, playtime));
+            StatusMessage = null;
+            ScriptTestCompleted?.Invoke(new ScriptTestReport(isPreLaunch, path, result, RunScriptsAsAdmin, RunScriptsHidden));
+        }
+        finally
+        {
+            IsTestingScript = false;
+        }
+    }
 
     /// <summary>Gates the hidden/admin options, which apply to whichever scripts are set.</summary>
     public bool HasAnyScript => HasPreLaunchScript || !string.IsNullOrWhiteSpace(_postExitScriptPath);
@@ -514,6 +563,8 @@ public class GameEditViewModel : ViewModelBase
     public ICommand BrowseWorkDirCommand { get; }
     public ICommand BrowsePreLaunchScriptCommand { get; }
     public ICommand BrowsePostExitScriptCommand { get; }
+    public ICommand TestPreLaunchScriptCommand { get; }
+    public ICommand TestPostExitScriptCommand { get; }
     public ICommand BrowseIconCommand { get; }
     public ICommand ResetIconCommand { get; }
     public ICommand BrowseCoverCommand { get; }
@@ -1140,3 +1191,9 @@ public class GameEditViewModel : ViewModelBase
         RequestClose?.Invoke(false);
     }
 }
+
+/// <summary>
+/// What a Test Run produced, plus the two per-game options the test deliberately ignored so the
+/// result dialog can warn that the real run will behave differently.
+/// </summary>
+public sealed record ScriptTestReport(bool IsPreLaunch, string ScriptPath, ScriptTestResult Result, bool WillRunElevated, bool WillRunHidden);

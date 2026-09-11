@@ -26,6 +26,16 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 - Run scripts hidden suppresses the console window. A hidden script's output is captured into the TrayTrigger log instead (see Troubleshooting).
 - Run scripts as Administrator elevates through UAC, so expect a prompt on every launch.
 
+## Testing a script
+
+Each script field in Edit Game has a Test button. It runs that script right now, the way TrayTrigger will at launch, and shows the exit code and everything the script printed.
+
+- The test uses the values currently typed in Edit Game (name, exe, script path), not the last saved ones, so you can test before you save.
+- Pre-launch tests pass the phase prelaunch; post-exit tests pass postexit with a playtime of 0.
+- The test always runs hidden and without elevation so its output can be captured, and it is stopped after 30 seconds. A real run is never stopped.
+- If the game is set to run scripts as Administrator or visibly, the result dialog says so: the real run will differ in exactly that way.
+- The Test button ignores the Settings kill-switch. Clicking it is an explicit request to run the script once.
+
 ## Examples
 
 A pre-launch script that closes Discord and starts an RGB profile:

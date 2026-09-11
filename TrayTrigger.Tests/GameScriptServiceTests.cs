@@ -242,6 +242,63 @@ public class GameScriptServiceTests : IDisposable
     }
 
     [Fact]
+    public void TestRun_CapturesOutputAndExitCode_AndPassesPositionalArgs()
+    {
+        string script = Path.Combine(_dir, "t.bat");
+        File.WriteAllText(script, "@echo hello %~1 %~4 [%~5]\r\n@echo oops 1>&2\r\n@exit /b 3\r\n");
+
+        var r = GameScriptService.TestRun(script, _game, GameScriptService.PhasePreLaunch, playedMinutes: null);
+
+        Assert.True(r.Started);
+        Assert.False(r.TimedOut);
+        Assert.Equal(3, r.ExitCode);
+        Assert.False(r.Succeeded);
+        Assert.Contains("hello prelaunch abc123 []", r.Output);
+        Assert.Contains("[stderr] oops", r.Output);
+    }
+
+    [Fact]
+    public void TestRun_PostExit_PassesPlaytimeZero()
+    {
+        string script = Path.Combine(_dir, "t.bat");
+        File.WriteAllText(script, "@echo %~1;%~5\r\n");
+
+        var r = GameScriptService.TestRun(script, _game, GameScriptService.PhasePostExit, playedMinutes: 0);
+
+        Assert.True(r.Succeeded);
+        Assert.Equal("postexit;0", r.Output.Trim());
+    }
+
+    [Fact]
+    public void TestRun_TimesOut_AndKillsTheScript()
+    {
+        string script = Path.Combine(_dir, "slow.bat");
+        File.WriteAllText(script, "@ping -n 30 127.0.0.1 >nul\r\n");
+
+        var r = GameScriptService.TestRun(script, _game, GameScriptService.PhasePreLaunch, playedMinutes: null, timeout: TimeSpan.FromSeconds(1));
+
+        Assert.True(r.Started);
+        Assert.True(r.TimedOut);
+        Assert.Null(r.ExitCode);
+        Assert.False(r.Succeeded);
+        // Killed, not left to run out its 30 s ping.
+        Assert.True(r.Elapsed < TimeSpan.FromSeconds(10), $"took {r.Elapsed}");
+    }
+
+    [Fact]
+    public void TestRun_MissingOrUnsupportedScript_ReportsWithoutStarting()
+    {
+        var missing = GameScriptService.TestRun(Path.Combine(_dir, "nope.bat"), _game, GameScriptService.PhasePreLaunch, null);
+        Assert.False(missing.Started);
+        Assert.NotNull(missing.Error);
+
+        string py = MakeScript("tool.py");
+        var unsupported = GameScriptService.TestRun(py, _game, GameScriptService.PhasePreLaunch, null);
+        Assert.False(unsupported.Started);
+        Assert.Contains("Unsupported", unsupported.Error);
+    }
+
+    [Fact]
     public void PendingPostExit_RunsOnShutdown_OnlyForTrackedGames()
     {
         string markerA = Path.Combine(_dir, "a.txt");
