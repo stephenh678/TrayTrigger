@@ -40,9 +40,21 @@ public class StorageService : IProfileSnapshotStore
     public string? SettingsLoadWarning { get; private set; }
 
     public StorageService()
+        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TrayTrigger"),
+               Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayTrigger"),
+               migrateLegacyData: true)
     {
-        _baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TrayTrigger");
-        _localCacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayTrigger");
+    }
+
+    /// <summary>
+    /// Test seam: every file this service reads or writes lives under the two given folders, so a
+    /// test can point it at a temp directory and never touch the real %AppData% library. The
+    /// legacy Documents\TrayTrigger migration is skipped there for the same reason.
+    /// </summary>
+    internal StorageService(string baseDirectory, string localCacheDirectory, bool migrateLegacyData = false)
+    {
+        _baseDirectory = baseDirectory;
+        _localCacheDirectory = localCacheDirectory;
         _iconsDirectory = Path.Combine(_localCacheDirectory, "Icons");
         _coversDirectory = Path.Combine(_localCacheDirectory, "Covers");
 
@@ -53,7 +65,7 @@ public class StorageService : IProfileSnapshotStore
         _profileSessionFilePath = Path.Combine(_baseDirectory, "profile-session.json");
 
         EnsureDirectories();
-        MigrateLegacyData();
+        if (migrateLegacyData) MigrateLegacyData();
     }
 
     public string BaseDirectory => _baseDirectory;
