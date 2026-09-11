@@ -1208,7 +1208,7 @@ public class ImportCoordinator : ViewModelBase
             Multiselect = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             HandleFileDrop(dialog.FileNames);
         }
@@ -1222,7 +1222,7 @@ public class ImportCoordinator : ViewModelBase
             Multiselect = false
         };
 
-        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.FolderName))
+        if (FileDialogCloak.Show(dialog) == true && !string.IsNullOrWhiteSpace(dialog.FolderName))
         {
             ProcessFolderAdd(dialog.FolderName);
         }

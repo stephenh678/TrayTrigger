@@ -10,6 +10,7 @@ Every tweak on this page is a documented Windows setting that TrayTrigger reads 
 - ADMIN means the change writes a machine-wide value, so Windows shows a User Account Control prompt.
 - N/A means the tweak cannot do anything on this machine, for example a Windows 11 graphics setting on Windows 10 or HAGS on a GPU without support. The row explains why and its button is disabled.
 - ON or OFF (blue) marks a status-only row such as Core Isolation.
+- RESTORE POINT: ON or OFF, next to the Performance Optimization Status heading, shows whether TrayTrigger creates a System Restore point before a tweak is applied. Green means on. Click the badge to open the setting; it lives in Settings under Performance Tweaks.
 
 ## The score
 
