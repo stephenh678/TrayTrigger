@@ -76,6 +76,18 @@ jobs:
         run: |
           ISCC.exe /DMyAppVersion=${{ env.VERSION }} setup.iss
 
+      - name: Generate SHA256SUMS.txt
+        shell: pwsh
+        run: |
+          # sha256sum-compatible format ("<hash>  <name>"). The in-app updater downloads this
+          # file and refuses to launch an installer whose hash isn't listed here.
+          $lines = Get-ChildItem -Path publish/installer -File |
+            Where-Object { $_.Name -ne 'SHA256SUMS.txt' } |
+            Sort-Object Name |
+            ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name }
+          [System.IO.File]::WriteAllLines("$PWD/publish/installer/SHA256SUMS.txt", $lines, [System.Text.UTF8Encoding]::new($false))
+          Get-Content publish/installer/SHA256SUMS.txt
+
       - name: Verify Generated Assets
         shell: pwsh
         run: |
@@ -120,3 +132,4 @@ jobs:
           files: |
             publish/installer/TrayTrigger-v*-Setup.exe
             publish/installer/TrayTrigger-v*-portable.zip
+            publish/installer/SHA256SUMS.txt
