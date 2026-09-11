@@ -529,7 +529,7 @@ public class GameEditViewModel : ViewModelBase
             CheckFileExists = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             CustomIconPath = dialog.FileName;
         }
@@ -651,7 +651,7 @@ public class GameEditViewModel : ViewModelBase
             CheckFileExists = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             CustomCoverPath = dialog.FileName;
         }
@@ -875,7 +875,7 @@ public class GameEditViewModel : ViewModelBase
             CheckFileExists = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             ExecutablePath = dialog.FileName;
             if (string.IsNullOrWhiteSpace(WorkingDirectory))
@@ -898,7 +898,7 @@ public class GameEditViewModel : ViewModelBase
             Multiselect = false
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             WorkingDirectory = dialog.FolderName;
         }
@@ -931,7 +931,7 @@ public class GameEditViewModel : ViewModelBase
             CheckFileExists = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             if (isPreLaunch) PreLaunchScriptPath = dialog.FileName;
             else PostExitScriptPath = dialog.FileName;

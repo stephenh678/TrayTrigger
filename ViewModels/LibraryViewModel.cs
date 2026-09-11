@@ -948,7 +948,7 @@ public class LibraryViewModel : ViewModelBase
             CheckFileExists = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             card.Game.ExecutablePath = dialog.FileName;
             if (string.IsNullOrWhiteSpace(card.Game.WorkingDirectory) || !Directory.Exists(card.Game.WorkingDirectory))
@@ -979,7 +979,7 @@ public class LibraryViewModel : ViewModelBase
             CheckFileExists = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             string cachedIcon = _iconExtractorService.ExtractAndCacheIcon(card.Game.Id, dialog.FileName, card.Game.Name);
             if (!string.IsNullOrEmpty(cachedIcon))
@@ -1002,7 +1002,7 @@ public class LibraryViewModel : ViewModelBase
             CheckFileExists = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (FileDialogCloak.Show(dialog) == true)
         {
             try
             {
