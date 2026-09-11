@@ -40,7 +40,8 @@ public sealed record ScriptTestResult(bool Started, int? ExitCode, bool TimedOut
 /// position is stable) - and, when not elevated, the same data as TRAYTRIGGER_* environment
 /// variables (see <see cref="BuildStartInfo"/>). Elevated launches go through ShellExecute, which
 /// cannot carry a custom environment, so the arguments are the only way those scripts can read
-/// the game ID and playtime.
+/// the game ID and playtime. The game's free-text <see cref="GameEntry.ScriptArguments"/> follow
+/// the five positional ones: raw for cmd.exe, tokenised for PowerShell and executables.
 ///
 /// When a script runs hidden (and not elevated) its stdout/stderr are captured into the
 /// TrayTrigger log under the GameScript category, so a misbehaving script can be diagnosed
@@ -482,7 +483,15 @@ public class GameScriptService
                 // stripped (the exact value is still in TRAYTRIGGER_GAME_NAME).
                 psi.FileName = "cmd.exe";
                 psi.Arguments = "/d /s /c \"" + string.Join(' ',
-                    new[] { path, phase, SanitizeForCmdLine(game.Name), game.ExecutablePath, game.Id, playtimeArg }.Select(a => "\"" + a.Replace('"', '\'') + "\"")) + "\"";
+                    new[] { path, phase, SanitizeForCmdLine(game.Name), game.ExecutablePath, game.Id, playtimeArg }.Select(a => "\"" + a.Replace('"', '\'') + "\""));
+                // The game's own script arguments go in raw: a batch author writes cmd syntax and
+                // expects cmd to parse it (%~6, quoted spans, even redirections). Their quoting is
+                // their responsibility - the help page says an unbalanced quote will break parsing.
+                if (!string.IsNullOrWhiteSpace(game.ScriptArguments))
+                {
+                    psi.Arguments += " " + game.ScriptArguments.Trim();
+                }
+                psi.Arguments += "\"";
                 break;
 
             case ".ps1":
@@ -519,6 +528,13 @@ public class GameScriptService
             psi.ArgumentList.Add(game.ExecutablePath);
             psi.ArgumentList.Add(game.Id);
             psi.ArgumentList.Add(playtimeArg);
+            // PowerShell and executables receive discrete argv entries, so the free text is split
+            // the way Windows itself would split a command line, then each token is re-quoted by
+            // the runtime. "C:\My Saves" arrives as one argument.
+            foreach (string token in SplitScriptArguments(game.ScriptArguments))
+            {
+                psi.ArgumentList.Add(token);
+            }
         }
 
         if (!psi.UseShellExecute)
@@ -538,4 +554,43 @@ public class GameScriptService
 
     /// <summary>Strips the one character cmd.exe expands before quote parsing ('%').</summary>
     internal static string SanitizeForCmdLine(string value) => value.Replace("%", string.Empty);
+
+    /// <summary>
+    /// Splits a game's free-text script arguments into argv tokens using the same rules Windows
+    /// applies to a process command line (CommandLineToArgvW): whitespace separates, double quotes
+    /// group, backslashes escape quotes. Empty input yields no tokens.
+    /// </summary>
+    internal static string[] SplitScriptArguments(string? arguments)
+    {
+        if (string.IsNullOrWhiteSpace(arguments)) return Array.Empty<string>();
+
+        // The first token of a command line is parsed with program-name rules (no backslash
+        // escaping), so a throwaway token is prepended and dropped from the result.
+        IntPtr argv = CommandLineToArgvW("x " + arguments.Trim(), out int count);
+        if (argv == IntPtr.Zero)
+        {
+            return arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        try
+        {
+            var tokens = new string[Math.Max(0, count - 1)];
+            for (int i = 1; i < count; i++)
+            {
+                tokens[i - 1] = System.Runtime.InteropServices.Marshal.PtrToStringUni(
+                    System.Runtime.InteropServices.Marshal.ReadIntPtr(argv, i * IntPtr.Size)) ?? string.Empty;
+            }
+            return tokens;
+        }
+        finally
+        {
+            LocalFree(argv);
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CommandLineToArgvW(string lpCmdLine, out int pNumArgs);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern IntPtr LocalFree(IntPtr hMem);
 }

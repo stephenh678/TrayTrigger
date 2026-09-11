@@ -37,6 +37,7 @@ public class GameEditViewModel : ViewModelBase
     private bool _waitForPreLaunchScript;
     private bool _runScriptsHidden;
     private bool _runScriptsAsAdmin;
+    private string _scriptArguments;
     private bool _abortLaunchOnScriptFailure;
     private string _preLaunchScriptTimeoutSeconds = "30";
     private bool _closeLauncherOnExit;
@@ -115,6 +116,7 @@ public class GameEditViewModel : ViewModelBase
         _waitForPreLaunchScript = game.WaitForPreLaunchScript;
         _runScriptsHidden = game.RunScriptsHidden;
         _runScriptsAsAdmin = game.RunScriptsAsAdmin;
+        _scriptArguments = game.ScriptArguments;
         _isHidden = game.IsHidden;
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
@@ -296,7 +298,8 @@ public class GameEditViewModel : ViewModelBase
         {
             Id = SourceGame.Id,
             Name = string.IsNullOrWhiteSpace(Name) ? "Unnamed Game" : Name.Trim(),
-            ExecutablePath = ExecutablePath.Trim()
+            ExecutablePath = ExecutablePath.Trim(),
+            ScriptArguments = ScriptArguments?.Trim() ?? string.Empty
         };
         string phase = isPreLaunch ? GameScriptService.PhasePreLaunch : GameScriptService.PhasePostExit;
         long? playtime = isPreLaunch ? null : 0;
@@ -334,6 +337,13 @@ public class GameEditViewModel : ViewModelBase
     {
         get => _runScriptsAsAdmin;
         set { _runScriptsAsAdmin = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Free-text arguments appended after the positional ones for both scripts. See <see cref="GameEntry.ScriptArguments"/>.</summary>
+    public string ScriptArguments
+    {
+        get => _scriptArguments;
+        set { _scriptArguments = value; OnPropertyChanged(); }
     }
 
     /// <summary>Scripts are configured on this game but the Settings switch is off, so they won't run.</summary>
@@ -1127,6 +1137,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript || AbortLaunchOnScriptFailure;
         SourceGame.RunScriptsHidden = RunScriptsHidden;
         SourceGame.RunScriptsAsAdmin = RunScriptsAsAdmin;
+        SourceGame.ScriptArguments = ScriptArguments?.Trim() ?? string.Empty;
         SourceGame.AbortLaunchOnScriptFailure = AbortLaunchOnScriptFailure;
         SourceGame.PreLaunchScriptTimeoutSeconds = timeoutSeconds;
         SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
