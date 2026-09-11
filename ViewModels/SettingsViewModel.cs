@@ -1179,6 +1179,21 @@ public class SettingsViewModel : ViewModelBase
     // --- Default scripts (Settings > Launch & Performance) ---
     // Always read through _settings.ScriptDefaults: "Reset to defaults" swaps that object.
 
+    /// <summary>"Run the default scripts": pauses the defaults without clearing anything.</summary>
+    public bool DefaultScriptsEnabled
+    {
+        get => _settings.ScriptDefaults.Enabled;
+        set
+        {
+            if (_settings.ScriptDefaults.Enabled != value)
+            {
+                _settings.ScriptDefaults.Enabled = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public string DefaultPreLaunchScriptPath
     {
         get => _settings.ScriptDefaults.PreLaunchScriptPath;
@@ -1323,6 +1338,7 @@ public class SettingsViewModel : ViewModelBase
 
     private void NotifyDefaultScriptsChanged()
     {
+        OnPropertyChanged(nameof(DefaultScriptsEnabled));
         OnPropertyChanged(nameof(DefaultPreLaunchScriptPath));
         OnPropertyChanged(nameof(DefaultPostExitScriptPath));
         OnPropertyChanged(nameof(HasDefaultPreLaunchScript));

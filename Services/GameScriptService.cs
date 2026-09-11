@@ -101,7 +101,7 @@ public class GameScriptService
         {
             return new EffectiveScript(game.PreLaunchScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false);
         }
-        if (defaults != null && !game.SkipDefaultScripts && defaults.HasPreLaunchScript)
+        if (defaults is { Enabled: true } && !game.SkipDefaultScripts && defaults.HasPreLaunchScript)
         {
             return new EffectiveScript(defaults.PreLaunchScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true);
         }
@@ -115,7 +115,7 @@ public class GameScriptService
         {
             return new EffectiveScript(game.PostExitScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false);
         }
-        if (defaults != null && !game.SkipDefaultScripts && defaults.HasPostExitScript)
+        if (defaults is { Enabled: true } && !game.SkipDefaultScripts && defaults.HasPostExitScript)
         {
             return new EffectiveScript(defaults.PostExitScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true);
         }
