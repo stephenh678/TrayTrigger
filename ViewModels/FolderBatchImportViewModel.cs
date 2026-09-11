@@ -48,9 +48,6 @@ public class BatchGameItemViewModel : ViewModelBase
         _ => "pack://application:,,,/Assets/LauncherLogos/local_games.png"
     };
 
-    public string SourceToolTip => Candidate.PlatformName is { } p
-        ? $"Recognised as a {p} game - it will be imported with {p}'s title and launch through {p}."
-        : "Local game - launched directly from its executable.";
 
     /// <summary>Raised when the user clicks "Ignore" - the parent VM removes this row and persists the ignore.</summary>
     public event Action<BatchGameItemViewModel>? IgnoreRequested;

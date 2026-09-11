@@ -157,7 +157,8 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="👍 " FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE8E1;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <TextBlock Text="{Binding ReviewSummary}" FontSize="11.5" Foreground="{StaticResource BrushAccentHover}" FontWeight="Medium"/>
                         </StackPanel>
                     </Border>
@@ -320,12 +321,16 @@
                     <StackPanel>
                         <DockPanel Margin="0,0,0,10" LastChildFill="True">
                             <!-- Link to the full Steam news hub for this app (all announcements, not just the latest 3) -->
-                            <Button DockPanel.Dock="Right" Content="View All News on Steam ↗"
+                            <Button DockPanel.Dock="Right"
                                     Command="{Binding OpenNewsHubCommand}"
                                     Style="{StaticResource ModernGhostButton}"
                                     Padding="0" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0"
-                                    Foreground="{StaticResource BrushAccentHover}"
-                                    ToolTip="{Binding NewsHubUrl}"/>
+                                    Foreground="{StaticResource BrushAccentHover}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="View All News on Steam" VerticalAlignment="Center"/>
+                                    <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </StackPanel>
+                            </Button>
                             <TextBlock Text="LATEST DEVELOPER NEWS &amp; PATCH NOTES" FontSize="11" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                         </DockPanel>
@@ -348,8 +353,7 @@
                                                 <!-- PATCH badge: shown only when Steam tagged the post as patch notes -->
                                                 <Border DockPanel.Dock="Left" Background="#1B2E1F" BorderBrush="#2E7D3A" BorderThickness="1"
                                                         CornerRadius="4" Padding="6,1" Margin="0,0,8,0" VerticalAlignment="Center"
-                                                        Visibility="{Binding IsPatchNotes, Converter={StaticResource BoolToVis}}"
-                                                        ToolTip="Developer-flagged patch notes">
+                                                        Visibility="{Binding IsPatchNotes, Converter={StaticResource BoolToVis}}">
                                                     <TextBlock Text="PATCH" FontSize="9.5" FontWeight="Bold" Foreground="#6FCF7F"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
@@ -361,12 +365,17 @@
                                                        Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6"/>
 
                                             <!-- Read More Link -->
-                                            <Button Grid.Row="2" Content="Read Full Notes ↗" 
+                                            <Button Grid.Row="2"
                                                     Command="{Binding DataContext.OpenNewsUrlCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding Url}"
-                                                    Style="{StaticResource ModernGhostButton}" 
-                                                    Padding="0" HorizontalAlignment="Left" FontSize="11" 
-                                                    Foreground="{StaticResource BrushAccentHover}"/>
+                                                    Style="{StaticResource ModernGhostButton}"
+                                                    Padding="0" HorizontalAlignment="Left" FontSize="11"
+                                                    Foreground="{StaticResource BrushAccentHover}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="Read Full Notes" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

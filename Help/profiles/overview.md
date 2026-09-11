@@ -6,8 +6,15 @@ A Performance Profile is a set of system changes that apply only while a specifi
 
 - Optimized applies the low-risk set: the full-clock power plan and the high-performance GPU preference. Enable HDR and Do Not Disturb are available under Optimized but stay off until you turn them on.
 - Aggressive applies everything in Optimized plus MMCSS scheduling changes, Above Normal process priority, and a 0.5 ms timer resolution request. The Defender exclusion is available under Aggressive but stays off until you turn it on.
-- The toggles on this page control which tweaks each tier includes. Changing one affects every game assigned to that tier. ENABLED or DISABLED shows whether the tweak is part of the tier; OPT-IN marks one with a real trade-off that stays off until you enable it; ADMIN marks one that raises a User Account Control prompt when it is applied.
+- The toggles on this page control which tweaks each tier includes. Changing one affects every game assigned to that tier.
 - Separately from the tier, each game can be pinned to performance cores on a hybrid CPU (Edit Game, CPU Cores). See the CPU Cores topic.
+
+## What the badges mean
+
+- ENABLED or DISABLED shows whether that tweak is part of its tier right now. Enabled tweaks apply to every game assigned to the tier the next time one launches; a game already running keeps its current session.
+- OPT-IN marks a tweak with a real trade-off, such as Enable HDR, Do Not Disturb, or the Defender exclusion. It stays off until you turn it on yourself, even for games on that tier.
+- ADMIN marks a tweak that writes a machine-wide value, so Windows shows a User Account Control prompt the first time it is applied in a session.
+- In the library, a green PLAYING badge on a game card means a profile session is active for it; End Session and Force Close in the card's right-click menu act on that session.
 
 ## Order of events
 
@@ -26,6 +33,7 @@ Machine-wide tweaks such as the power plan are applied by the first game to laun
 - GOG, EA, Epic, and Ubisoft games launched through their client (or directly) are tracked by watching the game's install folder for its real process, because the exe the client registers is often only a short-lived launcher stub. Every tweak, priority included, applies to them.
 - A bare launcher link, meaning a dropped .url or protocol shortcut with no platform ID behind it, has no exit signal at all, so profiles are not applied for it.
 - Launching a game that is already running never re-applies the profile or re-runs scripts; TrayTrigger just brings its window forward.
+- "Close the launcher after this game exits" (Edit Game, launcher card) shuts the platform client down once the session ends, so it does not stay resident with its overlay and background processes. For Steam it also changes how the client is started: when Steam is not already running, TrayTrigger starts it minimized to the tray and launches the game in the same step, so only the game appears. If Steam is already open, or the option is off, the game is launched through Steam's normal steam:// link and the client window is left as it was.
 
 ## Now Playing, End Session, and Force Close
 

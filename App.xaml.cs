@@ -50,6 +50,12 @@ public partial class App : Application
     private MainViewModel _mainViewModel = null!;
 
     private TaskbarIcon? _trayIcon;
+
+    private const int SM_CXSMICON = 49;
+    private const int SM_CYSMICON = 50;
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
     private MainWindow? _mainWindow;
     private bool _isShuttingDown = false;
     private Action<string> _logger = _ => { };
@@ -336,6 +342,12 @@ public partial class App : Application
                 DoubleClickCommand = new RelayCommand(ShowMainWindow)
             };
 
+            // Ask for the shell's small-icon size (16 px at 100 % DPI, 20/24/32 as DPI rises) so the
+            // .ico's hand-tuned small frame is used as-is instead of a downscaled 32 px one.
+            var traySize = new System.Drawing.Size(
+                Math.Max(16, GetSystemMetrics(SM_CXSMICON)),
+                Math.Max(16, GetSystemMetrics(SM_CYSMICON)));
+
             // Attempt to load native Icon from application resources, fallback to file
             System.Drawing.Icon? loadedIcon = null;
             try
@@ -345,7 +357,7 @@ public partial class App : Application
                 if (resInfo?.Stream != null)
                 {
                     using var stream = resInfo.Stream;
-                    loadedIcon = new System.Drawing.Icon(stream);
+                    loadedIcon = new System.Drawing.Icon(stream, traySize);
                 }
             }
             catch
@@ -358,7 +370,7 @@ public partial class App : Application
                 string diskPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "app_icon.ico");
                 if (File.Exists(diskPath))
                 {
-                    loadedIcon = new System.Drawing.Icon(diskPath);
+                    loadedIcon = new System.Drawing.Icon(diskPath, traySize);
                 }
             }
 
@@ -418,7 +430,6 @@ public partial class App : Application
                             : new MenuItem { Header = session.Game.Name, FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
                         sessionItem.Header = $"{session.Game.Name}  ·  {elapsed}";
                         sessionItem.Command = null;
-                        sessionItem.ToolTip = "Tracked session: Performance Profile applied, post-exit script pending.";
 
                         string gameId = session.GameId;
                         sessionItem.Items.Add(CreateNavMenuItem("End Session (restore tweaks)", "", () =>
@@ -687,7 +698,6 @@ public partial class App : Application
             Header = card.Name,
             FontWeight = FontWeights.SemiBold,
             FontSize = 12.5,
-            ToolTip = string.IsNullOrWhiteSpace(card.Game.ExecutablePath) ? card.Name : $"{card.Name}\n{card.Game.ExecutablePath}",
             Command = new RelayCommand(() => _mainViewModel.LaunchGame(card))
         };
 

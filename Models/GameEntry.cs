@@ -92,7 +92,9 @@ public class GameEntry
     public bool AbortLaunchOnScriptFailure { get; set; }
     /// <summary>
     /// After this game's session ends, close the platform client it was launched through (Steam,
-    /// GOG Galaxy, EA App, Epic Games Launcher, Ubisoft Connect). Off by default.
+    /// GOG Galaxy, EA App, Epic Games Launcher, Ubisoft Connect). Off by default. For Steam this
+    /// also makes a cold start of the client silent (minimized to the tray) - see
+    /// ProcessLauncherService.TryLaunchSteamSilently.
     /// </summary>
     public bool CloseLauncherOnExit { get; set; }
     /// <summary>Run scripts without a visible console window.</summary>

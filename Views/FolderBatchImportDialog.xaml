@@ -115,7 +115,7 @@
                                  Epic/Ubisoft, see GameCandidate.Platform) or the generic Local Games
                                  mark, at the same size used on poster cards. Matches what the import
                                  will actually produce, name included. -->
-                            <Image DockPanel.Dock="Right" Source="{Binding SourceLogoUri}" ToolTip="{Binding SourceToolTip}"
+                            <Image DockPanel.Dock="Right" Source="{Binding SourceLogoUri}"
                                    Width="25" Height="25" Stretch="Uniform" VerticalAlignment="Center" Margin="12,0,0,0"
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
 
@@ -123,7 +123,7 @@
                             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0" HorizontalAlignment="Right">
                                 <Button Content="Ignore" Command="{Binding IgnoreCommand}"
                                         FontSize="10.5" Padding="0"
-                                        HorizontalAlignment="Right" ToolTip="Never suggest this exe again in Add Folder or Scan for Games">
+                                        HorizontalAlignment="Right">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource ModernGhostButton}">
                                             <Setter Property="Visibility" Value="Visible"/>

@@ -291,7 +291,7 @@ public class SettingsViewModel : ViewModelBase
     private void AddScanLocation()
     {
         var dialog = new OpenFolderDialog { Title = "Add a Scan Location", Multiselect = false };
-        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
+        if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
 
         string path = dialog.FolderName.TrimEnd('\\', '/');
         var existing = _settings.ScanLocations.FirstOrDefault(l => string.Equals(l.Path, path, StringComparison.OrdinalIgnoreCase));
@@ -1180,6 +1180,11 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.UbisoftIntegrationEnabled),
             // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
+            nameof(AppSettings.MainWindowLeft),
+            nameof(AppSettings.MainWindowTop),
+            nameof(AppSettings.MainWindowWidth),
+            nameof(AppSettings.MainWindowHeight),
+            nameof(AppSettings.MainWindowMaximized),
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),
