@@ -14,10 +14,11 @@ namespace TrayTrigger.Models;
 public class ScriptDefaults
 {
     /// <summary>
-    /// "Run the default scripts": lets the user pause the defaults without clearing the paths
-    /// and options. On by default so a freshly typed path works with no second click.
+    /// "Run the default scripts". Off by default like the feature switch itself: defaults are an
+    /// advanced-user feature, and a typed path must not start running for every game until the
+    /// user explicitly turns them on. Unticking later pauses them without clearing anything.
     /// </summary>
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
     public string PreLaunchScriptPath { get; set; } = string.Empty;
     public string PostExitScriptPath { get; set; } = string.Empty;
     public bool WaitForPreLaunchScript { get; set; } = true;

@@ -245,6 +245,7 @@ public class GameScriptServiceTests : IDisposable
 
     private static ScriptDefaults Defaults(string? pre = null, string? post = null) => new()
     {
+        Enabled = true,
         PreLaunchScriptPath = pre ?? string.Empty,
         PostExitScriptPath = post ?? string.Empty,
         WaitForPreLaunchScript = false,
@@ -319,6 +320,15 @@ public class GameScriptServiceTests : IDisposable
     }
 
     [Fact]
+    public void Defaults_AreOffUntilExplicitlyEnabled()
+    {
+        // Advanced-user feature: a typed path must not start running for every game by itself.
+        var fresh = new ScriptDefaults { PreLaunchScriptPath = @"C:dpre.bat" };
+        Assert.False(fresh.Enabled);
+        Assert.Null(GameScriptService.ResolvePreLaunch(new GameEntry(), fresh));
+    }
+
+    [Fact]
     public void Resolve_NoDefaultsAndNoOwn_IsNull()
     {
         var game = new GameEntry();
@@ -334,7 +344,7 @@ public class GameScriptServiceTests : IDisposable
         string script = Path.Combine(_dir, "def.bat");
         File.WriteAllText(script, $"@echo %~1;%~2;%~4;%~6> \"{marker}\"\r\n");
 
-        var defaults = new ScriptDefaults { PreLaunchScriptPath = script, WaitForPreLaunchScript = true, RunScriptsHidden = true };
+        var defaults = new ScriptDefaults { Enabled = true, PreLaunchScriptPath = script, WaitForPreLaunchScript = true, RunScriptsHidden = true };
         var game = new GameEntry { Id = "g1", Name = "Game One", ExecutablePath = @"C:\x\y.exe", ScriptArguments = "Gaming" };
 
         var svc = new GameScriptService(defaults: () => defaults);
@@ -350,7 +360,7 @@ public class GameScriptServiceTests : IDisposable
     {
         string script = Path.Combine(_dir, "fail.bat");
         File.WriteAllText(script, "@exit /b 5\r\n");
-        var defaults = new ScriptDefaults { PreLaunchScriptPath = script, AbortLaunchOnScriptFailure = true };
+        var defaults = new ScriptDefaults { Enabled = true, PreLaunchScriptPath = script, AbortLaunchOnScriptFailure = true };
 
         var result = new GameScriptService(defaults: () => defaults).RunPreLaunch(new GameEntry { Name = "G" });
 
@@ -364,7 +374,7 @@ public class GameScriptServiceTests : IDisposable
         string marker = Path.Combine(_dir, "defpost.txt");
         string script = Path.Combine(_dir, "defpost.bat");
         File.WriteAllText(script, $"@echo %~1;[%~5]> \"{marker}\"\r\n");
-        var defaults = new ScriptDefaults { PostExitScriptPath = script };
+        var defaults = new ScriptDefaults { Enabled = true, PostExitScriptPath = script };
 
         var svc = new GameScriptService(defaults: () => defaults);
         svc.TrackPostExit(new GameEntry { Id = "t", Name = "T" });
@@ -386,7 +396,7 @@ public class GameScriptServiceTests : IDisposable
         string marker = Path.Combine(_dir, "skip.txt");
         string script = Path.Combine(_dir, "skip.bat");
         File.WriteAllText(script, $"@echo ran> \"{marker}\"\r\n");
-        var defaults = new ScriptDefaults { PostExitScriptPath = script };
+        var defaults = new ScriptDefaults { Enabled = true, PostExitScriptPath = script };
 
         var svc = new GameScriptService(defaults: () => defaults);
         svc.TrackPostExit(new GameEntry { Id = "s", Name = "S", SkipDefaultScripts = true });
