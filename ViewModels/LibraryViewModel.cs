@@ -766,7 +766,8 @@ public class LibraryViewModel : ViewModelBase
             rawgApiKey: _getRawgApiKeyOrNull(),
             saveGame: _ => SaveLibrary(),
             autoCategorize: _settings.AutoCategorizeFromSteam,
-            fetchPosterByName: (game, preferredName, replace) => TryFetchGridArtByNameAsync(game, preferredName, replace));
+            fetchPosterByName: (game, preferredName, replace) => TryFetchGridArtByNameAsync(game, preferredName, replace),
+            refreshInterval: _settings.MetadataRefreshInterval);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
@@ -1122,6 +1123,9 @@ public class LibraryViewModel : ViewModelBase
             {
                 card.Game.CoverImagePath = details.CoverImagePath;
             }
+            // Same RAWG fallback as the background pass for a still-uncategorized game.
+            if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game.Category))
+                await TryEnrichFromRawgAsync(card.Game, forceRefresh: card.Game.RawgId > 0);
         }
 
         card.RefreshProperties();
@@ -1231,6 +1235,11 @@ public class LibraryViewModel : ViewModelBase
                         if (string.IsNullOrWhiteSpace(entry.CoverImagePath) && !string.IsNullOrWhiteSpace(details.CoverImagePath))
                             entry.CoverImagePath = details.CoverImagePath;
                     }
+
+                    // A Steam App ID with no store page (delisted, region-locked) or a page that
+                    // lists no genres leaves the category empty - let RAWG fill it.
+                    if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category))
+                        await TryEnrichFromRawgAsync(entry);
                 }
                 return;
             }

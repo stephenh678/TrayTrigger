@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace TrayTrigger.Models;
 
@@ -13,5 +14,6 @@ public class SteamNewsItem
     /// <summary>True when Steam tagged the announcement as "patchnotes" (developer-marked patch notes).</summary>
     public bool IsPatchNotes { get; set; }
 
+    [JsonIgnore]
     public string DateDisplay => Date > DateTime.MinValue ? Date.ToString("MMM d, yyyy") : string.Empty;
 }

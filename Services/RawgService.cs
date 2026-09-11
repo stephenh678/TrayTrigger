@@ -181,36 +181,6 @@ public class RawgService
     }
 
     /// <summary>
-    /// Fills in the store URLs for a game's <see cref="RawgGameDetails.Stores"/> (RAWG's detail
-    /// only names the stores; <c>/games/{id}/stores</c> carries the links). One call, then
-    /// persisted, so it's only paid once per game and only when the details window needs it.
-    /// </summary>
-    public async Task EnsureStoreLinksAsync(RawgGameDetails details, string apiKey, CancellationToken ct = default)
-    {
-        if (details.StoreLinksResolved || details.Stores.Count == 0 || string.IsNullOrWhiteSpace(apiKey))
-            return;
-
-        try
-        {
-            string url = $"{BaseUrl}/games/{details.RawgId}/stores?key={Uri.EscapeDataString(apiKey)}";
-            using var response = await HttpClient.GetAsync(url, ct).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                return;
-
-            using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
-
-            ApplyStoreLinks(details, doc.RootElement);
-            details.StoreLinksResolved = true;
-            Store(details);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("RawgService", $"Error fetching store links for RAWG id {details.RawgId}: {ex.Message}");
-        }
-    }
-
-    /// <summary>
     /// Raw search results for the "Change match" picker: no similarity guard, RAWG's own
     /// ranking, up to 20 hits. Returns an empty list on failure or a bad key (the picker shows a
     /// status line either way).
@@ -452,99 +422,9 @@ public class RawgService
                 details.BackgroundImageUrl = bgUri.AbsoluteUri;
         }
 
-        if (root.TryGetProperty("stores", out var stores) && stores.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var s in stores.EnumerateArray())
-            {
-                if (!s.TryGetProperty("store", out var st) || st.ValueKind != JsonValueKind.Object)
-                    continue;
-                if (!st.TryGetProperty("id", out var sid) || !sid.TryGetInt32(out int storeId))
-                    continue;
-                string storeName = st.TryGetProperty("name", out var sn) ? sn.GetString() ?? string.Empty : string.Empty;
-                if (string.IsNullOrWhiteSpace(storeName))
-                    continue;
-                details.Stores.Add(new RawgStoreLink
-                {
-                    StoreId = storeId,
-                    Name = storeName,
-                    Slug = st.TryGetProperty("slug", out var ss) ? ss.GetString() ?? string.Empty : string.Empty,
-                });
-            }
-        }
-
         details.RawgPageUrl = $"https://rawg.io/games/{details.Slug}";
 
         return details;
-    }
-
-    /// <summary>Merges a <c>/games/{id}/stores</c> response (store_id → url) into the details.</summary>
-    internal static void ApplyStoreLinks(RawgGameDetails details, JsonElement root)
-    {
-        if (!root.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
-            return;
-
-        foreach (var item in results.EnumerateArray())
-        {
-            if (!item.TryGetProperty("store_id", out var sid) || !sid.TryGetInt32(out int storeId))
-                continue;
-            string? url = item.TryGetProperty("url", out var u) && u.ValueKind == JsonValueKind.String ? u.GetString() : null;
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-                continue;
-
-            foreach (var link in details.Stores)
-            {
-                if (link.StoreId == storeId)
-                    link.Url = uri.AbsoluteUri;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Store slugs in the order the details window prefers when a game has no platform hint:
-    /// PC storefronts first, consoles last. Steam is skipped by the caller when the Steam Store
-    /// button is already showing.
-    /// </summary>
-    private static readonly string[] StorePreference =
-    {
-        "epic-games", "gog", "xbox-store", "itch", "steam", "xbox360", "playstation-store", "nintendo", "apple-appstore", "google-play",
-    };
-
-    /// <summary>
-    /// The one store link to offer for a game: its own platform's store when TrayTrigger knows
-    /// the platform (Xbox / Epic / GOG import), else the first by <see cref="StorePreference"/>.
-    /// Only links with a resolved URL count. Null when there is nothing to offer.
-    /// </summary>
-    internal static RawgStoreLink? PickStore(IReadOnlyList<RawgStoreLink> stores, GameEntry game, bool excludeSteam)
-    {
-        if (stores.Count == 0)
-            return null;
-
-        string? platformSlug = game.IsXboxGame ? "xbox-store"
-                             : game.IsEpicGame ? "epic-games"
-                             : game.IsGogGame ? "gog"
-                             : null;
-
-        if (platformSlug != null)
-        {
-            foreach (var s in stores)
-            {
-                if (s.Slug == platformSlug && !string.IsNullOrWhiteSpace(s.Url))
-                    return s;
-            }
-        }
-
-        foreach (var slug in StorePreference)
-        {
-            if (excludeSteam && slug == "steam")
-                continue;
-            foreach (var s in stores)
-            {
-                if (s.Slug == slug && !string.IsNullOrWhiteSpace(s.Url))
-                    return s;
-            }
-        }
-
-        return null;
     }
 
     /// <summary>

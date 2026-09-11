@@ -189,7 +189,7 @@ public class MainViewModel : ViewModelBase
             onTrayMenuSettingChanged: () => Library.NotifyLibraryUpdated(),
             onPosterArtSettingChanged: () => Library.NotifyAllCardsPosterArtChanged(),
             onHotkeySettingChanged: UpdateHotkeys,
-            onRequestEnrichLibrary: Import.EnrichLibraryAsync,
+            onRequestEnrichLibrary: retryForRawg => Import.EnrichLibraryAsync(retryForRawg),
             onRequestRefreshAllPosters: progress => Import.RefreshAllPostersAsync(progress),
             onRequestOpenScanForGames: () => _ = Import.ScanForGamesAsync(),
             onCheckForUpdates: () => Update.CheckForUpdatesAsync(true),
