@@ -32,6 +32,12 @@ public partial class GameEditDialog : Window
             Activate();
         };
 
+        _viewModel.ScriptTestCompleted += report =>
+        {
+            var dialog = new ScriptTestResultDialog(report) { Owner = this };
+            dialog.ShowDialog();
+        };
+
         _viewModel.RequestClose += success =>
         {
             DialogResult = success;

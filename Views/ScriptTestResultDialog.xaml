@@ -1,0 +1,56 @@
+<Window x:Class="TrayTrigger.Views.ScriptTestResultDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Script Test Run"
+        Width="700" Height="540" MinWidth="520" MinHeight="380"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="{StaticResource BrushDialogBg}"
+        Foreground="{StaticResource BrushTextPrimary}">
+
+    <Border BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="0,1,0,0">
+        <Grid Margin="24,20,24,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Heading -->
+                <RowDefinition Height="Auto"/> <!-- Summary -->
+                <RowDefinition Height="Auto"/> <!-- Notes about the real run -->
+                <RowDefinition Height="Auto"/> <!-- Output label -->
+                <RowDefinition Height="*"/>    <!-- Output -->
+                <RowDefinition Height="Auto"/> <!-- Buttons -->
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="HeadingText" Grid.Row="0" FontSize="16" FontFamily="{StaticResource AppFont}"
+                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
+            <TextBlock x:Name="SummaryText" Grid.Row="1" FontSize="11.5" FontFamily="{StaticResource AppFont}"
+                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+
+            <Border x:Name="NoteBorder" Grid.Row="2" Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1"
+                    CornerRadius="6" Padding="10,6" Margin="0,0,0,12" Visibility="Collapsed">
+                <TextBlock x:Name="NoteText" FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+            </Border>
+
+            <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="10.5"
+                       Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4"/>
+
+            <TextBox x:Name="OutputBox" Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                     FontFamily="Consolas" FontSize="11.5"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     Background="{StaticResource BrushSurfaceDark}" Foreground="{StaticResource BrushTextPrimary}"
+                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="8"
+                     Margin="0,0,0,16"/>
+
+            <DockPanel Grid.Row="5">
+                <Button DockPanel.Dock="Right" Content="Close" Click="CloseButton_Click" IsDefault="True" IsCancel="True"
+                        Style="{StaticResource ModernAccentButton}" MinWidth="90" Margin="10,0,0,0"/>
+                <Button DockPanel.Dock="Right" Content="Copy Output" Click="CopyButton_Click"
+                        Style="{StaticResource ModernGhostButton}" MinWidth="90"/>
+                <TextBlock Text="The full run is also in the TrayTrigger log under GameScript."
+                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Grid>
+    </Border>
+</Window>

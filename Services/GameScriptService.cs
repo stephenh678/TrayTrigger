@@ -15,6 +15,17 @@ public readonly record struct PreLaunchScriptResult(bool ProceedWithLaunch, stri
 }
 
 /// <summary>
+/// Outcome of a "Test Run" from Edit Game (see <see cref="GameScriptService.TestRun"/>).
+/// <see cref="Started"/> is false when the script could not be launched at all, with the reason
+/// in <see cref="Error"/>. <see cref="ExitCode"/> is null when the run timed out and was killed.
+/// <see cref="Output"/> is stdout and stderr interleaved in arrival order, stderr lines prefixed.
+/// </summary>
+public sealed record ScriptTestResult(bool Started, int? ExitCode, bool TimedOut, string Output, string? Error, TimeSpan Elapsed)
+{
+    public bool Succeeded => Started && !TimedOut && ExitCode == 0;
+}
+
+/// <summary>
 /// Runs a game's optional user-supplied pre-launch and post-exit scripts. Sits alongside
 /// <see cref="PerformanceProfileService"/> (the built-in, snapshot-and-restore tweaks) and
 /// covers everything that service can't know about: killing a background app, switching an
@@ -263,6 +274,96 @@ public class GameScriptService
         {
             LoggingService.Info("GameScript", $"Running post-exit script for '{game.Name}' on application exit.");
             RunPostExit(game, playedMinutes: 0);
+        }
+    }
+
+    /// <summary>Upper bound on a Test Run; the script is killed when it elapses.</summary>
+    public static readonly TimeSpan TestRunTimeout = TimeSpan.FromSeconds(30);
+    /// <summary>Lines kept from a Test Run's output before it is truncated.</summary>
+    public const int TestRunMaxOutputLines = 500;
+
+    /// <summary>
+    /// Runs a script the way "Test Run" in Edit Game does: always hidden and never elevated (so
+    /// stdout/stderr can be captured and shown), synchronously, killed on timeout. Deliberately
+    /// ignores the Settings kill-switch - the user just clicked a button asking for exactly this
+    /// run. Never throws; call from a background thread.
+    /// </summary>
+    public static ScriptTestResult TestRun(string scriptPath, GameEntry game, string phase, long? playedMinutes, TimeSpan? timeout = null)
+    {
+        TimeSpan limit = timeout ?? TestRunTimeout;
+        var sw = Stopwatch.StartNew();
+
+        string trimmed = scriptPath.Trim().Trim('"');
+        if (!IsSupportedScript(trimmed))
+        {
+            return new ScriptTestResult(false, null, false, string.Empty, $"Unsupported file type. Supported: {string.Join(", ", SupportedExtensions)}.", sw.Elapsed);
+        }
+        if (!File.Exists(trimmed))
+        {
+            return new ScriptTestResult(false, null, false, string.Empty, "The script file was not found.", sw.Elapsed);
+        }
+
+        var psi = BuildStartInfo(trimmed, game, phase, hidden: true, elevated: false, playedMinutes);
+        if (psi == null)
+        {
+            return new ScriptTestResult(false, null, false, string.Empty, "The script could not be prepared to run.", sw.Elapsed);
+        }
+
+        var lines = new List<string>();
+        int dropped = 0;
+        var outputLock = new object();
+        void Capture(string? text, bool isError)
+        {
+            if (text == null) return;
+            lock (outputLock)
+            {
+                if (lines.Count >= TestRunMaxOutputLines) { dropped++; return; }
+                lines.Add(isError ? "[stderr] " + text : text);
+            }
+        }
+
+        try
+        {
+            LoggingService.Info("GameScript", $"Test run of {phase} script for '{game.Name}': {trimmed}");
+            using var process = Process.Start(psi);
+            if (process == null)
+            {
+                return new ScriptTestResult(false, null, false, string.Empty, "The script did not start.", sw.Elapsed);
+            }
+
+            process.OutputDataReceived += (_, e) => Capture(e.Data, isError: false);
+            process.ErrorDataReceived += (_, e) => Capture(e.Data, isError: true);
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            bool exited = process.WaitForExit((int)limit.TotalMilliseconds);
+            if (!exited)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                try { process.WaitForExit(5000); } catch { }
+                return new ScriptTestResult(true, null, true, JoinOutput(), null, sw.Elapsed);
+            }
+
+            // Let the async readers drain (the timed overload can return before they have).
+            process.WaitForExit();
+            int exitCode = process.ExitCode;
+            LoggingService.Info("GameScript", $"Test run of {phase} script for '{game.Name}' exited with code {exitCode} after {sw.Elapsed.TotalSeconds:0.0}s.");
+            return new ScriptTestResult(true, exitCode, false, JoinOutput(), null, sw.Elapsed);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("GameScript", $"Test run of {phase} script for '{game.Name}' failed: {ex.Message}");
+            return new ScriptTestResult(false, null, false, JoinOutput(), ex.Message, sw.Elapsed);
+        }
+
+        string JoinOutput()
+        {
+            lock (outputLock)
+            {
+                var all = new List<string>(lines);
+                if (dropped > 0) all.Add($"... ({dropped} more line(s) not shown)");
+                return string.Join(Environment.NewLine, all);
+            }
         }
     }
 
