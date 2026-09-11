@@ -305,6 +305,14 @@ public partial class MainWindow : Window
             _viewModel.SelectAllVisible();
             e.Handled = true;
         }
+        else if (e.Key == Key.Delete && Keyboard.Modifiers == ModifierKeys.None && _viewModel.HasSelection &&
+                 Keyboard.FocusedElement is not System.Windows.Controls.TextBox)
+        {
+            // Same path as the batch menu's Remove from Library: one confirmation for the
+            // whole selection, undoable for six seconds afterwards.
+            _viewModel.BatchRemoveCommand.Execute(null);
+            e.Handled = true;
+        }
         else if (e.Key == Key.Escape && _viewModel.HasSelection)
         {
             _viewModel.ClearSelection();

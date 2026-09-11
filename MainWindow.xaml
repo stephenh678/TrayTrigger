@@ -3540,7 +3540,7 @@
                                                     </Border>
                                                     <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="Select several games (Shift+click for a range), then right-click one of them for the batch menu: Favorite, Hide, Change Category, Performance Profile, Refresh, or Remove them together. Esc or a click on empty space clears"
+                                                <TextBlock Text="Select several games (Shift+click for a range), then right-click one of them for the batch menu: Favorite, Hide, Change Category, Performance Profile, Refresh, or Remove them together. Delete removes the selection; Esc or a click on empty space clears it"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 

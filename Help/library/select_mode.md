@@ -16,7 +16,7 @@ You can act on several games in one step: add or remove favorites, hide or unhid
 - Change Category prompts once and applies the category to all selected games. The box is pre-filled only when they already share one.
 - Performance Profile sets Off, Optimized, or Aggressive on every selected game, the same as choosing the tier in Edit Game. The check mark shows the current tier only when all selected games share it. A game that is playing right now keeps its current session; the new tier applies from its next launch.
 - Refresh Poster & Metadata re-fetches each selected game from the Steam store one after another, with progress in the status bar. Games without a Steam App ID are searched by name, as the single-game refresh does.
-- Remove asks for one confirmation for the whole selection. It is undoable for six seconds from the toast at the bottom, the same as removing a single game, and never touches installed files.
+- Remove asks for one confirmation for the whole selection. It is undoable for six seconds from the toast at the bottom, the same as removing a single game, and never touches installed files. Pressing the Delete key with games selected does the same thing.
 - Right-clicking a card that is not selected drops the selection and opens the usual single-game menu for that card. With only one card selected the usual menu opens too.
 
 ## Clearing
