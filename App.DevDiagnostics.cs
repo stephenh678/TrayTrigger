@@ -664,6 +664,39 @@ public partial class App
                 return;
             }
 
+            // --screenshot-system-ready <out.png>: the System "All" tab captured only once hardware
+            // detection has finished (up to 15 s), so the README shot shows real specs rather than
+            // "Detecting hardware...".
+            if ((e.Args[i].Equals("--screenshot-system-ready", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-system-ready", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.CurrentSection = NavSection.System;
+                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                var started = DateTime.Now;
+                var poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                poll.Tick += (s, args) =>
+                {
+                    if (!_mainViewModel.SystemVM.IsSpecsLoaded && DateTime.Now - started < TimeSpan.FromSeconds(15)) return;
+                    poll.Stop();
+                    // One more beat so the bound cards have laid out with the detected values.
+                    var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                    settle.Tick += (s2, args2) =>
+                    {
+                        settle.Stop();
+                        _mainWindow.UpdateLayout();
+                        CaptureVisual(_mainWindow, 960, 750, targetPng);
+                        ExitApplication();
+                    };
+                    settle.Start();
+                };
+                poll.Start();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-system-specs", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-system-specs", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -2350,6 +2383,18 @@ public partial class App
     {
         try
         {
+            // TRAYTRIGGER_SHOT_SIZE=WxH (device-independent units) overrides a mode's default
+            // size - the README screenshots are taken at 1040x747, the review ones at 960x700.
+            string? sizeOverride = Environment.GetEnvironmentVariable("TRAYTRIGGER_SHOT_SIZE");
+            if (!string.IsNullOrWhiteSpace(sizeOverride))
+            {
+                var parts = sizeOverride.Split('x');
+                if (parts.Length == 2 && int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int h) && w > 0 && h > 0)
+                {
+                    width = w;
+                    height = h;
+                }
+            }
             using var bmp = CaptureVisualBitmap(window, width, height);
             string? parentDir = Path.GetDirectoryName(targetPng);
             if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
