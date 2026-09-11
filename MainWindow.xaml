@@ -720,8 +720,11 @@
                                        FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
                             <TextBlock Text="Nothing in this category matches your search. Press Esc to clear the search, or pick another tab."
-                                       FontSize="13" Foreground="{StaticResource BrushTextSecondary}"
+                                       FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Adding a game instead? Drop its exe, shortcut, or install folder anywhere on this window, or use Add Game / Add Folder above."
+                                       FontSize="12.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                       FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                         </StackPanel>
 
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
