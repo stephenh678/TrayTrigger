@@ -9,7 +9,7 @@
     <ApplicationIcon>Assets\app_icon.ico</ApplicationIcon>
     <AssemblyName>TrayTrigger</AssemblyName>
     <RootNamespace>TrayTrigger</RootNamespace>
-    <Version>1.3.9</Version>
+    <Version>1.4.0-beta.1</Version>
     <Authors>Steph</Authors>
     <Product>TrayTrigger</Product>
     <Description>Windows system tray game launcher with Steam integration, per-game performance profiles, live hardware telemetry, and verified one-click performance tweaks.</Description>
