@@ -237,7 +237,10 @@ public class ImportCoordinator : ViewModelBase
 
     public async Task EnrichLibraryAsync()
     {
-        if (!_settings.AutoCategorizeFromSteam && !_settings.SearchOfficialTitleOnline)
+        // RAWG enrichment (match id, category, canonical title for poster search) rides the same
+        // pass, so an enabled RAWG source is reason enough to run it.
+        bool rawgEnabled = _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey);
+        if (!_settings.AutoCategorizeFromSteam && !_settings.SearchOfficialTitleOnline && !rawgEnabled)
             return;
 
         // Settings toggles, library load, and post-import enrichment can all request this

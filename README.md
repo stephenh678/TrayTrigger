@@ -60,6 +60,7 @@ TrayTrigger isn't another always-on-top launcher. It's a tray icon until you nee
 - 🎮 **Tray Game Launcher** — 1-click launch from the tray's jump list, no full UI required
 - 📚 **Automatic Steam Library** — Steam games detected and imported automatically, metadata included
 - 🖼️ **SteamGridDB Artwork** — high-res poster art fetched automatically for your whole library
+- 📖 **RAWG Game Info** — optional developer, publisher, synopsis and ratings for games that aren't on Steam (Game Pass, Epic exclusives, Roblox), with a per-game Steam | RAWG switch
 - 🎯 **Per-Game Performance Profiles** — Optimized/Aggressive tweaks applied on launch, reverted on exit
 - 🤖 **Per-Game Automation** — optional pre-launch and post-exit scripts, scoped to a single game
 - ⚡ **Verified & Reversible Windows Gaming Optimizations** — 21 tweaks grounded in documented Windows behavior, not folklore, each reverting to the exact prior state
@@ -185,7 +186,7 @@ Steam covers Steam games. TrayTrigger sits in your tray for one-click access to 
 Playnite is a full-featured library manager with its own window and a plugin ecosystem. TrayTrigger is intentionally narrower: a tray-first launcher with built-in, reversible performance tweaking, for people who want quick access and optimization rather than another big library UI.
 
 **Is it safe?**
-TrayTrigger doesn't collect telemetry or personal data. Its only outbound network calls are to Steam's public APIs, SteamGridDB (for artwork), and GitHub Releases (for update checks). See [SECURITY.md](SECURITY.md) for the full breakdown.
+TrayTrigger doesn't collect telemetry or personal data. Its only outbound network calls are to Steam's public APIs, SteamGridDB (for artwork), RAWG (for non-Steam game info, only if you enable it with your own key), and GitHub Releases (for update checks). See [SECURITY.md](SECURITY.md) for the full breakdown.
 
 **Does it modify Windows?**
 Only tweaks you explicitly enable. Some require an admin (UAC) prompt because they write to `HKEY_LOCAL_MACHINE`; tweaks scoped to your user account don't.
@@ -248,7 +249,7 @@ Free code signing is provided by [SignPath.io](https://signpath.io), certificate
 - Reviewer (reviews and merges third-party pull requests): [@stephenh678](https://github.com/stephenh678)
 - Approver (approves each signing request): [@stephenh678](https://github.com/stephenh678)
 
-**Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
+**Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), RAWG (game info for non-Steam titles, only if you enter your own API key), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
 
 ## License
 

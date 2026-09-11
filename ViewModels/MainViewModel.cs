@@ -154,7 +154,8 @@ public class MainViewModel : ViewModelBase
             _steamSearchService,
             _settings,
             getUseVerticalPosterArt: () => SettingsVM?.UseVerticalPosterArt ?? false,
-            getSteamGridDbApiKeyOrNull: () => SettingsVM?.SteamGridDbApiKeyOrNull
+            getSteamGridDbApiKeyOrNull: () => SettingsVM?.SteamGridDbApiKeyOrNull,
+            getRawgApiKeyOrNull: () => SettingsVM?.RawgApiKeyOrNull
         );
 
         Import = new ImportCoordinator(

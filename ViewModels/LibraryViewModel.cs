@@ -67,6 +67,9 @@ public class LibraryViewModel : ViewModelBase
     private readonly AppSettings _settings;
     private readonly Func<bool> _getUseVerticalPosterArt;
     private readonly Func<string?> _getSteamGridDbApiKeyOrNull;
+    /// <summary>The RAWG key when the feature is enabled and a key is set, else null.</summary>
+    private readonly Func<string?> _getRawgApiKeyOrNull;
+    private readonly RawgService _rawgService = new();
 
     private string _searchText = string.Empty;
     private string _selectedCategory = LibraryConstants.AllCategory;
@@ -123,8 +126,10 @@ public class LibraryViewModel : ViewModelBase
         SteamSearchService steamSearchService,
         AppSettings settings,
         Func<bool> getUseVerticalPosterArt,
-        Func<string?> getSteamGridDbApiKeyOrNull)
+        Func<string?> getSteamGridDbApiKeyOrNull,
+        Func<string?>? getRawgApiKeyOrNull = null)
     {
+        _getRawgApiKeyOrNull = getRawgApiKeyOrNull ?? (() => null);
         _storageService = storageService;
         _iconExtractorService = iconExtractorService;
         _launcherService = launcherService;
@@ -758,8 +763,10 @@ public class LibraryViewModel : ViewModelBase
             deleteAction: _ => requestedDelete = true,
             steamGridDbApiKey: _getSteamGridDbApiKeyOrNull(),
             minConfidence: _settings.OnlineMatchConfidenceThreshold,
-            rawgApiKey: _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey) ? _settings.RawgApiKey : null,
-            saveGame: _ => SaveLibrary());
+            rawgApiKey: _getRawgApiKeyOrNull(),
+            saveGame: _ => SaveLibrary(),
+            autoCategorize: _settings.AutoCategorizeFromSteam,
+            fetchPosterByName: (game, preferredName, replace) => TryFetchGridArtByNameAsync(game, preferredName, replace));
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
@@ -1100,6 +1107,10 @@ public class LibraryViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(card.Game.SteamAppId))
         {
             StatusMessage = $"Searching Steam store for \"{card.Name}\"...";
+            // A manual refresh re-fetches the RAWG entry too (bypassing the disk cache) before
+            // the normal pass, which then serves it from the fresh cache.
+            if (card.Game.RawgId > 0)
+                await TryEnrichFromRawgAsync(card.Game, forceRefresh: true);
             await EnrichGameWithSteamMetadataAsync(card.Game);
         }
         else
@@ -1224,7 +1235,8 @@ public class LibraryViewModel : ViewModelBase
                 return;
             }
 
-            if (!_settings.SearchOfficialTitleOnline && !_settings.AutoCategorizeFromSteam && !_settings.UseVerticalPosterArt)
+            if (!_settings.SearchOfficialTitleOnline && !_settings.AutoCategorizeFromSteam && !_settings.UseVerticalPosterArt
+                && string.IsNullOrWhiteSpace(_getRawgApiKeyOrNull()))
                 return;
 
             string folder = GameNameExtractor.FindMeaningfulFolderName(entry.ExecutablePath, entry.WorkingDirectory);
@@ -1265,11 +1277,11 @@ public class LibraryViewModel : ViewModelBase
             }
 
             // No Steam App ID resolved (Roblox, Fortnite, Game Pass exclusives, obscure indies):
-            // fall back to SteamGridDB poster art matched by the game's own name. Poster only -
-            // SteamGridDB has no genre/description, so the category is untouched. Gated on the same
-            // vertical-art setting and user key the Steam path uses, only when no cover exists yet,
-            // and rate-limited by the caller's enrichment retry interval.
-            await TryFetchGridArtByNameAsync(entry);
+            // RAWG is the peer source here - resolve (and remember) its match and let its genre
+            // fill the category. Then SteamGridDB poster art by name, searched with RAWG's
+            // canonical title first since the scanner's folder-derived name often misses.
+            string? rawgTitle = await TryEnrichFromRawgAsync(entry);
+            await TryFetchGridArtByNameAsync(entry, rawgTitle);
         }
         catch (Exception ex)
         {
@@ -1284,10 +1296,10 @@ public class LibraryViewModel : ViewModelBase
     /// title actually resembles the game's name (same guard as the Steam title match) - otherwise
     /// a search for "Roblox" grabbing some unrelated poster would stick.
     /// </summary>
-    private async Task TryFetchGridArtByNameAsync(GameEntry entry)
+    internal async Task TryFetchGridArtByNameAsync(GameEntry entry, string? preferredName = null, bool replaceExisting = false)
     {
         if (!_settings.UseVerticalPosterArt
-            || !string.IsNullOrWhiteSpace(entry.CoverImagePath)
+            || (!replaceExisting && !string.IsNullOrWhiteSpace(entry.CoverImagePath))
             || string.IsNullOrWhiteSpace(entry.Name))
             return;
 
@@ -1295,20 +1307,76 @@ public class LibraryViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(key))
             return;
 
-        var art = await _steamMetadataService.DownloadAndCacheGridArtByNameAsync(entry.Id, entry.Name, key);
-        if (art == null)
-            return;
+        // RAWG's canonical title first (when we have one and it differs), then the entry's own
+        // name. Either way the result must resemble the entry's name before it sticks.
+        var queries = new List<string>();
+        if (!string.IsNullOrWhiteSpace(preferredName) && !preferredName.Equals(entry.Name, StringComparison.OrdinalIgnoreCase))
+            queries.Add(preferredName);
+        queries.Add(entry.Name);
 
-        double similarity = SteamSearchService.CalculateSimilarity(entry.Name, art.Value.MatchedName);
-        if (similarity >= _settings.OnlineMatchConfidenceThreshold)
+        foreach (string query in queries)
         {
-            entry.CoverImagePath = art.Value.Path;
-            LoggingService.Info("LibraryViewModel", $"Applied SteamGridDB poster for '{entry.Name}' (matched '{art.Value.MatchedName}', similarity {similarity:F2}).");
+            var art = await _steamMetadataService.DownloadAndCacheGridArtByNameAsync(entry.Id, query, key);
+            if (art == null)
+                continue;
+
+            double similarity = Math.Max(
+                SteamSearchService.CalculateSimilarity(entry.Name, art.Value.MatchedName),
+                SteamSearchService.CalculateSimilarity(query, art.Value.MatchedName));
+            if (similarity >= _settings.OnlineMatchConfidenceThreshold)
+            {
+                entry.CoverImagePath = art.Value.Path;
+                LoggingService.Info("LibraryViewModel", $"Applied SteamGridDB poster for '{entry.Name}' (searched '{query}', matched '{art.Value.MatchedName}', similarity {similarity:F2}).");
+                return;
+            }
+
+            LoggingService.Verbose("LibraryViewModel", $"Rejected SteamGridDB poster for '{entry.Name}' (searched '{query}'): matched title '{art.Value.MatchedName}' too dissimilar (similarity {similarity:F2} < {_settings.OnlineMatchConfidenceThreshold:F2}).");
+        }
+    }
+
+    /// <summary>
+    /// RAWG enrichment for an entry with no Steam App ID: resolves (and remembers) the RAWG
+    /// match, and fills the category from RAWG's primary genre under the same
+    /// "auto-categorize" setting and Uncategorized-only rule as Steam. A no-op unless RAWG is
+    /// enabled with a key. Returns RAWG's canonical title for the poster search, or null.
+    /// </summary>
+    private async Task<string?> TryEnrichFromRawgAsync(GameEntry entry, bool forceRefresh = false)
+    {
+        string? key = _getRawgApiKeyOrNull();
+        if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(entry.Name))
+            return null;
+
+        RawgLookupResult result;
+        if (entry.RawgId > 0)
+        {
+            result = await _rawgService.GetByIdAsync(entry.RawgId, key, forceRefresh);
+            if (result.Status == RawgLookupStatus.NoMatch)
+            {
+                entry.RawgId = 0;
+                result = await _rawgService.LookUpByNameAsync(entry.Name, key, _settings.OnlineMatchConfidenceThreshold);
+            }
         }
         else
         {
-            LoggingService.Verbose("LibraryViewModel", $"Rejected SteamGridDB poster for '{entry.Name}': matched title '{art.Value.MatchedName}' too dissimilar (similarity {similarity:F2} < {_settings.OnlineMatchConfidenceThreshold:F2}).");
+            result = await _rawgService.LookUpByNameAsync(entry.Name, key, _settings.OnlineMatchConfidenceThreshold);
         }
+
+        if (result.Details is not { } details)
+            return null;
+
+        if (entry.RawgId != details.RawgId)
+        {
+            entry.RawgId = details.RawgId;
+            LoggingService.Info("LibraryViewModel", $"'{entry.Name}' matched RAWG entry '{details.Name}' (id {details.RawgId}).");
+        }
+
+        if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+        {
+            entry.Category = details.PrimaryGenre;
+            LoggingService.Info("LibraryViewModel", $"'{entry.Name}' categorized as '{details.PrimaryGenre}' from RAWG.");
+        }
+
+        return details.Name;
     }
 
     public void ApplyRename(GameCardViewModel card, string newName)

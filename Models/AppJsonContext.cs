@@ -25,6 +25,9 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(List<ScanLocation>))]
 [JsonSerializable(typeof(IgnoredGamePath))]
 [JsonSerializable(typeof(List<IgnoredGamePath>))]
+[JsonSerializable(typeof(RawgGameDetails))]
+[JsonSerializable(typeof(RawgStoreLink))]
+[JsonSerializable(typeof(Dictionary<int, RawgGameDetails>))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

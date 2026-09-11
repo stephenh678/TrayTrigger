@@ -19,6 +19,7 @@ No. TrayTrigger does not collect analytics, usage data, or any personal informat
 The app's only outbound network calls are:
 - **Steam's public APIs** — to fetch metadata (name, description, release date, Metacritic score) for games you've added.
 - **SteamGridDB** — to fetch box art/poster images for games you've added.
+- **RAWG (rawg.io)** — only if you enable it in Settings with your own API key, to fetch developer, publisher, synopsis and ratings for games that aren't on Steam. The key is stored encrypted (DPAPI) and only sent to RAWG.
 - **GitHub Releases** — to check whether a newer version of TrayTrigger is available.
 
 No game library contents, hardware telemetry, or usage data are sent as part of any of these calls.
