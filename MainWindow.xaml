@@ -3002,8 +3002,13 @@
                                     <TextBlock Text="Off by default to keep Edit Game simple. While off, no script runs for any game - not a game's own, not the defaults below. Games that already have a script keep their settings either way."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,2" TextWrapping="Wrap"/>
-                                    <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="24,0,0,2"
-                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                    <StackPanel Orientation="Horizontal" Margin="24,0,0,2">
+                                        <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
+                                                Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                        <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                        <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
+                                                ToolTip="Blank templates, three small examples, and a README describing the arguments every script receives"/>
+                                    </StackPanel>
 
                                     <!-- Default scripts: run for every game that has no script of its own for that phase. -->
                                     <StackPanel Margin="0,12,0,0" IsEnabled="{Binding EnableGameScripts}">

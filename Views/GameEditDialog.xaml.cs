@@ -18,11 +18,12 @@ public partial class GameEditDialog : Window
         string? steamGridDbApiKey = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
         bool scriptsEnabled = false,
-        ScriptDefaults? scriptDefaults = null)
+        ScriptDefaults? scriptDefaults = null,
+        ScriptLibraryService? scriptLibrary = null)
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
-        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults);
+        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary);
         DataContext = _viewModel;
 
         Owner = WindowHelper.ActiveOwner();

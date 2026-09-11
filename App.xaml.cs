@@ -244,6 +244,13 @@ public partial class App : Application
         _gameScriptService = new GameScriptService(
             () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
             () => (_mainViewModel?.Settings ?? startupSettings).ScriptDefaults);
+        // Blank templates, examples and README land in the scripts folder once the feature is on
+        // (missing files only - user edits are never overwritten). Off the UI thread: file I/O.
+        if (startupSettings.EnableGameScripts)
+        {
+            var scriptLibrary = new ScriptLibraryService(_storageService.BaseDirectory);
+            _ = Task.Run(() => scriptLibrary.EnsureInstalled());
+        }
         _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();

@@ -40,6 +40,7 @@ public class GameEditViewModel : ViewModelBase
     private string _scriptArguments;
     private bool _skipDefaultScripts;
     private readonly ScriptDefaults? _scriptDefaults;
+    private readonly ScriptLibraryService? _scriptLibrary;
     private bool _abortLaunchOnScriptFailure;
     private string _preLaunchScriptTimeoutSeconds = "30";
     private bool _closeLauncherOnExit;
@@ -82,10 +83,12 @@ public class GameEditViewModel : ViewModelBase
         string? steamGridDbApiKey = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
         bool scriptsEnabled = false,
-        ScriptDefaults? scriptDefaults = null)
+        ScriptDefaults? scriptDefaults = null,
+        ScriptLibraryService? scriptLibrary = null)
     {
         SourceGame = game;
         _scriptDefaults = scriptDefaults;
+        _scriptLibrary = scriptLibrary;
         _skipDefaultScripts = game.SkipDefaultScripts;
         // The card is opt-in (Settings > General), but a game that already has a script must
         // stay editable even if the setting was later turned off or reset.
@@ -141,6 +144,11 @@ public class GameEditViewModel : ViewModelBase
         BrowsePostExitScriptCommand = new RelayCommand(() => BrowseScript(isPreLaunch: false));
         TestPreLaunchScriptCommand = new AsyncRelayCommand(() => TestScriptAsync(isPreLaunch: true), () => !IsTestingScript && HasPreLaunchScript);
         TestPostExitScriptCommand = new AsyncRelayCommand(() => TestScriptAsync(isPreLaunch: false), () => !IsTestingScript && HasPostExitScript);
+        NewPreLaunchScriptCommand = new RelayCommand(() => NewScript(isPreLaunch: true));
+        NewPostExitScriptCommand = new RelayCommand(() => NewScript(isPreLaunch: false));
+        EditPreLaunchScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(PreLaunchScriptPath), () => HasPreLaunchScript);
+        EditPostExitScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(PostExitScriptPath), () => HasPostExitScript);
+        OpenScriptsFolderCommand = new RelayCommand(() => _scriptLibrary?.OpenFolder(), () => _scriptLibrary != null);
         BrowseIconCommand = new RelayCommand(BrowseIcon);
         ResetIconCommand = new RelayCommand(ResetIcon);
         BrowseCoverCommand = new RelayCommand(BrowseCover);
@@ -625,6 +633,11 @@ public class GameEditViewModel : ViewModelBase
     public ICommand BrowsePostExitScriptCommand { get; }
     public ICommand TestPreLaunchScriptCommand { get; }
     public ICommand TestPostExitScriptCommand { get; }
+    public ICommand NewPreLaunchScriptCommand { get; }
+    public ICommand NewPostExitScriptCommand { get; }
+    public ICommand EditPreLaunchScriptCommand { get; }
+    public ICommand EditPostExitScriptCommand { get; }
+    public ICommand OpenScriptsFolderCommand { get; }
     public ICommand BrowseIconCommand { get; }
     public ICommand ResetIconCommand { get; }
     public ICommand BrowseCoverCommand { get; }
@@ -1102,7 +1115,8 @@ public class GameEditViewModel : ViewModelBase
         {
             Title = isPreLaunch ? "Select Pre-Launch Script" : "Select Post-Exit Script",
             Filter = $"Scripts & Programs ({GameScriptService.SupportedExtensionsFilterPattern})|{GameScriptService.SupportedExtensionsFilterPattern}",
-            CheckFileExists = true
+            CheckFileExists = true,
+            InitialDirectory = InitialScriptDirectory(isPreLaunch ? PreLaunchScriptPath : PostExitScriptPath)
         };
 
         if (FileDialogCloak.Show(dialog) == true)
@@ -1110,6 +1124,67 @@ public class GameEditViewModel : ViewModelBase
             if (isPreLaunch) PreLaunchScriptPath = dialog.FileName;
             else PostExitScriptPath = dialog.FileName;
         }
+    }
+
+    /// <summary>The current script's folder if it has one, otherwise the scripts folder (populated on demand).</summary>
+    private string InitialScriptDirectory(string currentPath)
+    {
+        string p = currentPath.Trim().Trim('"');
+        if (p.Length > 0)
+        {
+            string? dir = Path.GetDirectoryName(p);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) return dir;
+        }
+        if (_scriptLibrary == null) return string.Empty;
+        _scriptLibrary.EnsureInstalled();
+        return _scriptLibrary.ScriptsDirectory;
+    }
+
+    /// <summary>
+    /// "New script...": a save dialog in the scripts folder, then the blank template matching the
+    /// chosen extension is written there, the path box filled, and the file opened for editing.
+    /// An existing file is never overwritten - it is simply used as-is.
+    /// </summary>
+    private void NewScript(bool isPreLaunch)
+    {
+        string phase = isPreLaunch ? "PreLaunch" : "PostExit";
+        var dialog = new SaveFileDialog
+        {
+            Title = isPreLaunch ? "New Pre-Launch Script" : "New Post-Exit Script",
+            Filter = "Batch script (*.bat)|*.bat|PowerShell script (*.ps1)|*.ps1",
+            DefaultExt = ".bat",
+            AddExtension = true,
+            OverwritePrompt = false,
+            FileName = $"{SafeFileStem(Name)}-{phase}.bat",
+            InitialDirectory = InitialScriptDirectory(string.Empty)
+        };
+
+        if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FileName)) return;
+
+        string path = dialog.FileName;
+        try
+        {
+            bool created = ScriptLibraryService.CreateFromBlankTemplate(path);
+            StatusMessage = created
+                ? $"Created {Path.GetFileName(path)} from the blank template. Edit it, then Save."
+                : $"{Path.GetFileName(path)} already exists and was left untouched.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not create the script: {ex.Message}";
+            return;
+        }
+
+        if (isPreLaunch) PreLaunchScriptPath = path;
+        else PostExitScriptPath = path;
+        ScriptLibraryService.OpenInEditor(path);
+    }
+
+    private static string SafeFileStem(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        string stem = new string((name ?? string.Empty).Where(c => !invalid.Contains(c)).ToArray()).Trim();
+        return stem.Length == 0 ? "Game" : stem;
     }
 
     private void Save()

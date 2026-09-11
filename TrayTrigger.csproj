@@ -67,6 +67,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Bundled game-script templates, examples and README. Materialised into
+         %AppData%\TrayTrigger\Scripts by ScriptLibraryService; addressed by file name. -->
+    <EmbeddedResource Include="Scripts\Library\*" LogicalName="ScriptLibrary/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Lets the test project reach internal test seams (StorageService's folder-scoped
          constructor, LibraryViewModel.ConfirmBatchRemove) without making them public API. -->
     <InternalsVisibleTo Include="TrayTrigger.Tests" />
