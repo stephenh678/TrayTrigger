@@ -2742,7 +2742,7 @@
                                     <CheckBox Content="Automatically categorize games from store genres" 
                                               IsChecked="{Binding AutoCategorizeFromSteam}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized."
+                                    <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized. Uses Steam's genre when the game is on Steam, otherwise RAWG's if RAWG is enabled."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                                Margin="24,3,0,2" TextWrapping="Wrap"/>
                                 </StackPanel>
@@ -2827,6 +2827,8 @@
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenRawgSiteCommand}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                     </Grid>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="Where game info comes from" Margin="24,6,0,0"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

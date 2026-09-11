@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -26,11 +27,19 @@ public class GameDetailsViewModel : ViewModelBase
     private readonly string? _rawgApiKey;
     private readonly double _minConfidenceForRawg;
     private readonly Action<GameEntry>? _saveGame;
+    /// <summary>Settings › "Automatically categorize games from store genres" - applies to a
+    /// RAWG genre exactly as it does to Steam's, only while the game is still Uncategorized.</summary>
+    private readonly bool _autoCategorize;
+    /// <summary>The library's SteamGridDB-by-name poster fetch: (game, preferred title, replace
+    /// existing). Null in tests / when the library isn't wired.</summary>
+    private readonly Func<GameEntry, string?, bool, Task>? _fetchPosterByName;
 
     private SteamAppDetails? _details;
     private RawgGameDetails? _rawgDetails;
     private MetadataSource _activeSource;
     private bool _rawgAttempted;
+    private bool _isRawgLoading;
+    private RawgLookupStatus _rawgStatus = RawgLookupStatus.Found;
     private bool _isLoading = true;
     private string? _errorMessage;
     private bool _isShowingRecommendedReqs;
@@ -42,17 +51,88 @@ public class GameDetailsViewModel : ViewModelBase
     /// second source to switch to.</summary>
     public bool CanToggleSource => !string.IsNullOrWhiteSpace(_rawgApiKey);
 
-    public string SourceToggleLabel => IsRawgActive ? "Showing RAWG data" : "Showing Steam data";
+    public bool IsSteamActive => _activeSource == MetadataSource.Steam;
 
     /// <summary>"Data from RAWG" attribution link - shown (per RAWG's terms) whenever RAWG data is
-    /// on screen.</summary>
+    /// on screen. Targets the game's rawg.io page.</summary>
     public bool ShowRawgAttribution => IsRawgActive && _rawgDetails != null;
-    public string RawgUrl => _rawgDetails?.Website ?? "https://rawg.io";
+    public string RawgUrl => !string.IsNullOrWhiteSpace(_rawgDetails?.RawgPageUrl) ? _rawgDetails!.RawgPageUrl : "https://rawg.io";
+
+    /// <summary>"Change match" is offered for whichever source is showing (matched or not) once
+    /// its fetch is done - a wrong pick is visible right there, so the fix lives right there. The
+    /// Steam side needs nothing configured; the RAWG side needs the key.</summary>
+    public bool CanChangeMatch => IsRawgActive ? (CanToggleSource && !IsRawgLoading) : !IsLoading;
+    public string ChangeMatchToolTip => IsRawgActive
+        ? "Search RAWG and pick the right entry for this game"
+        : "Search the Steam store and pick the right listing for this game";
+
+    /// <summary>"Matched to X" beside the switch: which Steam listing / RAWG entry the game resolved to.</summary>
+    public string MatchCaption
+    {
+        get
+        {
+            if (IsRawgActive)
+                return _rawgDetails != null ? $"Matched to “{_rawgDetails.Name}”" : string.Empty;
+            return !string.IsNullOrWhiteSpace(_details?.Name) && !string.IsNullOrWhiteSpace(Game.SteamAppId)
+                ? $"Matched to “{_details!.Name}” (App ID {Game.SteamAppId})"
+                : string.Empty;
+        }
+    }
+    public bool HasMatchCaption => !string.IsNullOrEmpty(MatchCaption);
+
+    /// <summary>True while the RAWG lookup for this game is in flight (RAWG side only).</summary>
+    public bool IsRawgLoading
+    {
+        get => _isRawgLoading;
+        private set
+        {
+            if (_isRawgLoading != value)
+            {
+                _isRawgLoading = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ShowLoading));
+                OnPropertyChanged(nameof(CanChangeMatch));
+            }
+        }
+    }
+
+    /// <summary>Whichever source is active, is its fetch still running?</summary>
+    public bool ShowLoading => IsRawgActive ? IsRawgLoading : IsLoading;
+    public string LoadingMessage => IsRawgActive
+        ? "Fetching game info from RAWG..."
+        : "Fetching latest game details, specs & news from Steam...";
+
+    /// <summary>A neutral, source-aware explanation for an empty RAWG side (no match, bad key,
+    /// network), shown instead of the red Steam error banner. Null while loading or when data is
+    /// showing.</summary>
+    public string? RawgStatusMessage
+    {
+        get
+        {
+            if (!IsRawgActive || IsRawgLoading || _rawgDetails != null || !_rawgAttempted)
+                return null;
+
+            return _rawgStatus switch
+            {
+                RawgLookupStatus.Unauthorized => "RAWG rejected the API key. Check the key in Settings › Library.",
+                RawgLookupStatus.Failed => "Could not reach RAWG. Check your internet connection and try again.",
+                _ => $"RAWG has no entry matching \"{RawgSearchName}\". Use Change match to search RAWG yourself, or switch back to Steam.",
+            };
+        }
+    }
+    public bool HasRawgStatus => !string.IsNullOrWhiteSpace(RawgStatusMessage);
 
     public GameEntry Game { get; }
-    // RAWG never renames the entry - the game's own title stays. Steam may show its official
-    // spelling when that's the active source.
-    public string GameTitle => !IsRawgActive && !string.IsNullOrWhiteSpace(_details?.Name) ? _details!.Name : Game.Name;
+    /// <summary>The best-known title to search RAWG with: Steam's official name once Steam has
+    /// resolved (it beats a folder-derived library name), else the library name. Keeps the two
+    /// sources describing the same game after a Steam rematch.</summary>
+    private string RawgSearchName => !string.IsNullOrWhiteSpace(_details?.Name) ? _details!.Name : Game.Name;
+
+    // The header shows the active source's official title (Steam's or RAWG's spelling). The
+    // library entry itself is never renamed from here.
+    public string GameTitle => IsRawgActive
+        ? (!string.IsNullOrWhiteSpace(_rawgDetails?.Name) ? _rawgDetails!.Name : Game.Name)
+        : (!string.IsNullOrWhiteSpace(_details?.Name) ? _details!.Name : Game.Name);
 
     public string PlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? "0 min played" : Game.PlaytimeDisplay;
     public string LastPlayedDisplay => Game.LastPlayedDisplay;
@@ -92,6 +172,7 @@ public class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ReleaseDate));
                 OnPropertyChanged(nameof(ShortDescription));
                 OnPropertyChanged(nameof(DisplayCoverImage));
+                OnPropertyChanged(nameof(AmbientImage));
                 OnPropertyChanged(nameof(MetacriticScore));
                 OnPropertyChanged(nameof(HasMetacritic));
                 OnPropertyChanged(nameof(ReviewSummary));
@@ -104,6 +185,9 @@ public class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasNews));
                 OnPropertyChanged(nameof(NewsItems));
                 OnPropertyChanged(nameof(StoreUrl));
+                OnPropertyChanged(nameof(HasStoreUrl));
+                OnPropertyChanged(nameof(MatchCaption));
+                OnPropertyChanged(nameof(HasMatchCaption));
             }
         }
     }
@@ -117,6 +201,8 @@ public class GameDetailsViewModel : ViewModelBase
             {
                 _isLoading = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ShowLoading));
+                OnPropertyChanged(nameof(CanChangeMatch));
             }
         }
     }
@@ -135,7 +221,8 @@ public class GameDetailsViewModel : ViewModelBase
         }
     }
 
-    public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
+    // The Steam error banner only applies while Steam is the source on screen.
+    public bool HasError => !IsRawgActive && !string.IsNullOrWhiteSpace(_errorMessage);
     public bool HasDetails => IsRawgActive ? _rawgDetails != null : (_details != null && !string.IsNullOrWhiteSpace(_details.Name));
 
     // Developer/Publisher/Release/Genres/Metacritic read from whichever source is active. Empty
@@ -144,7 +231,7 @@ public class GameDetailsViewModel : ViewModelBase
     public bool HasDevelopers => !string.IsNullOrWhiteSpace(Developers);
     public string Publishers => IsRawgActive ? (_rawgDetails?.Publisher ?? string.Empty) : (_details?.Publishers ?? string.Empty);
     public bool HasPublishers => !string.IsNullOrWhiteSpace(Publishers);
-    public string ReleaseDate => IsRawgActive ? (_rawgDetails?.ReleaseDate ?? string.Empty) : (_details?.ReleaseDate ?? string.Empty);
+    public string ReleaseDate => IsRawgActive ? RawgService.FormatReleaseDate(_rawgDetails?.ReleaseDate) : (_details?.ReleaseDate ?? string.Empty);
     public bool HasReleaseDate => !string.IsNullOrWhiteSpace(ReleaseDate);
     public string ShortDescription
     {
@@ -182,8 +269,6 @@ public class GameDetailsViewModel : ViewModelBase
                 localPath = _details.CoverImagePath;
             else if (!string.IsNullOrWhiteSpace(Game.CoverImagePath) && File.Exists(Game.CoverImagePath))
                 localPath = Game.CoverImagePath;
-            else if (!string.IsNullOrWhiteSpace(Game.IconPath) && File.Exists(Game.IconPath))
-                localPath = Game.IconPath;
 
             ImageSource? result = null;
 
@@ -191,23 +276,19 @@ public class GameDetailsViewModel : ViewModelBase
             {
                 result = IconExtractorService.LoadBitmapSafely(localPath, decodePixelWidth: 340);
             }
+            else if (!string.IsNullOrWhiteSpace(_rawgDetails?.BackgroundImageUrl))
+            {
+                // No poster at all: RAWG's screenshot beats the bare icon tile (Stretch=Uniform
+                // letterboxes it in the portrait frame). Never persisted as the game's cover.
+                result = LoadRemoteImage(_rawgDetails!.BackgroundImageUrl);
+            }
+            else if (!string.IsNullOrWhiteSpace(Game.IconPath) && File.Exists(Game.IconPath))
+            {
+                result = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 340);
+            }
             else if (!string.IsNullOrWhiteSpace(_details?.HeaderImageUrl))
             {
-                try
-                {
-                    var bmp = new BitmapImage();
-                    bmp.BeginInit();
-                    bmp.UriSource = new Uri(_details.HeaderImageUrl, UriKind.Absolute);
-                    bmp.CacheOption = BitmapCacheOption.OnLoad;
-                    bmp.EndInit();
-                    // A remote UriSource loads asynchronously regardless of CacheOption;
-                    // Freeze() throws while it's still downloading (IsDownloading == true),
-                    // which the old code swallowed silently here, so this fallback never
-                    // actually returned an image. Skip Freeze() instead - this ImageSource is
-                    // only ever bound on the UI thread, so cross-thread freezing isn't needed.
-                    result = bmp;
-                }
-                catch { }
+                result = LoadRemoteImage(_details.HeaderImageUrl);
             }
 
             _cachedCoverImage = result;
@@ -219,13 +300,66 @@ public class GameDetailsViewModel : ViewModelBase
     public int? MetacriticScore => IsRawgActive ? _rawgDetails?.Metacritic : _details?.MetacriticScore;
     public bool HasMetacritic => MetacriticScore is > 0;
 
+    // RAWG-only badges: the community rating (0-5) covers the many titles with no Metacritic
+    // score, and the ESRB rating has no Steam-side equivalent.
+    public string RawgRatingDisplay => _rawgDetails?.Rating is double r && r > 0
+        ? (_rawgDetails.RatingsCount > 0
+            ? $"{r:0.0} / 5  ({_rawgDetails.RatingsCount:N0} ratings)"
+            : $"{r:0.0} / 5")
+        : string.Empty;
+    public bool HasRawgRating => IsRawgActive && !string.IsNullOrWhiteSpace(RawgRatingDisplay);
+    public string EsrbRating => _rawgDetails?.EsrbRating ?? string.Empty;
+    public bool HasEsrbRating => IsRawgActive && !string.IsNullOrWhiteSpace(EsrbRating);
+
     // Steam's own review summary and (further down) news/patch notes have no RAWG equivalent, so
     // they hide while RAWG is the active source.
     public string? ReviewSummary => _details?.ReviewSummary;
     public bool HasReviewSummary => !IsRawgActive && !string.IsNullOrWhiteSpace(_details?.ReviewSummary);
 
-    public System.Collections.Generic.List<string> PlayModes => _details?.PlayModes ?? new();
+    // Play-mode chips: Steam's categories, or RAWG's tags mapped to the same wording.
+    public System.Collections.Generic.List<string> PlayModes => IsRawgActive ? (_rawgDetails?.PlayModes ?? new()) : (_details?.PlayModes ?? new());
     public bool HasPlayModes => PlayModes.Count > 0;
+
+    // The store the game is sold on, per RAWG - the non-Steam counterpart of the Steam Store
+    // button. Its own platform's store when known (Xbox / Epic / GOG import), else the first PC
+    // storefront RAWG lists a link for.
+    private RawgStoreLink? PickedStore => _rawgDetails != null
+        ? RawgService.PickStore(_rawgDetails.Stores, Game, excludeSteam: HasStoreUrl)
+        : null;
+    public bool HasRawgStore => IsRawgActive && PickedStore != null;
+    public string RawgStoreLabel => PickedStore is { } s ? $"Open on {s.Name}" : string.Empty;
+    public string RawgStoreUrl => PickedStore?.Url ?? string.Empty;
+
+    /// <summary>The blurred hero backdrop. RAWG's screenshot gives real game atmosphere for a
+    /// title with only an icon tile; otherwise the poster itself is blurred as before.</summary>
+    public ImageSource? AmbientImage
+    {
+        get
+        {
+            if (IsRawgActive && !string.IsNullOrWhiteSpace(_rawgDetails?.BackgroundImageUrl))
+                return LoadRemoteImage(_rawgDetails!.BackgroundImageUrl) ?? DisplayCoverImage;
+            return DisplayCoverImage;
+        }
+    }
+
+    private static ImageSource? LoadRemoteImage(string url)
+    {
+        try
+        {
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.UriSource = new Uri(url, UriKind.Absolute);
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.EndInit();
+            // Remote sources load asynchronously; Freeze() would throw mid-download and this is
+            // only ever bound on the UI thread.
+            return bmp;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     public string GenresDisplay
     {
@@ -291,6 +425,13 @@ public class GameDetailsViewModel : ViewModelBase
     public ICommand ShowMinReqsCommand { get; }
     public ICommand ShowRecReqsCommand { get; }
     public ICommand OpenRawgPageCommand { get; private set; } = null!;
+    public ICommand OpenRawgStoreCommand { get; private set; } = null!;
+    /// <summary>The two halves of the Steam | RAWG segmented switch above the synopsis.</summary>
+    public ICommand SelectSteamSourceCommand { get; private set; } = null!;
+    public ICommand SelectRawgSourceCommand { get; private set; } = null!;
+    /// <summary>Opens the title-search picker for the active source so a wrong or missing match
+    /// can be chosen by hand.</summary>
+    public ICommand ChangeMatchCommand { get; private set; } = null!;
 
     private readonly string? _steamGridDbApiKey;
     private readonly double _minConfidence;
@@ -305,8 +446,12 @@ public class GameDetailsViewModel : ViewModelBase
         string? steamGridDbApiKey = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
         string? rawgApiKey = null,
-        Action<GameEntry>? saveGame = null)
+        Action<GameEntry>? saveGame = null,
+        bool autoCategorize = false,
+        Func<GameEntry, string?, bool, Task>? fetchPosterByName = null)
     {
+        _autoCategorize = autoCategorize;
+        _fetchPosterByName = fetchPosterByName;
         Game = game ?? throw new ArgumentNullException(nameof(game));
         _steamMetadataService = steamMetadataService ?? throw new ArgumentNullException(nameof(steamMetadataService));
         _steamSearchService = steamSearchService ?? throw new ArgumentNullException(nameof(steamSearchService));
@@ -327,8 +472,11 @@ public class GameDetailsViewModel : ViewModelBase
             _isLoading = false;
         }
 
-        ToggleSourceCommand = new RelayCommand(ToggleSource, () => CanToggleSource);
+        SelectSteamSourceCommand = new RelayCommand(() => SetSource(MetadataSource.Steam), () => CanToggleSource);
+        SelectRawgSourceCommand = new RelayCommand(() => SetSource(MetadataSource.Rawg), () => CanToggleSource);
+        ChangeMatchCommand = new RelayCommand(ChangeMatch, () => CanChangeMatch);
         OpenRawgPageCommand = new RelayCommand(() => ExecuteOpenUrl(RawgUrl));
+        OpenRawgStoreCommand = new RelayCommand(() => ExecuteOpenUrl(RawgStoreUrl), () => HasRawgStore);
         ToggleFavoriteCommand = new RelayCommand(() => IsFavorite = !IsFavorite);
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
         EditGameCommand = new RelayCommand(ExecuteEdit);
@@ -353,26 +501,35 @@ public class GameDetailsViewModel : ViewModelBase
     /// otherwise automatic - RAWG for a game with no Steam App ID (when a RAWG key exists), Steam
     /// otherwise.</summary>
     private MetadataSource ResolveInitialSource()
-    {
-        bool rawgAvailable = !string.IsNullOrWhiteSpace(_rawgApiKey);
+        => ResolveSource(Game.PreferredMetadataSource, hasSteamAppId: !string.IsNullOrWhiteSpace(Game.SteamAppId),
+                         rawgAvailable: !string.IsNullOrWhiteSpace(_rawgApiKey));
 
-        return Game.PreferredMetadataSource switch
+    /// <summary>Pure source-resolution rule (unit-tested): an explicit preference wins, except
+    /// RAWG without a key falls back to Steam; Auto picks RAWG only for a game with no Steam App
+    /// ID when a key exists.</summary>
+    internal static MetadataSource ResolveSource(MetadataSource preferred, bool hasSteamAppId, bool rawgAvailable)
+    {
+        return preferred switch
         {
             MetadataSource.Steam => MetadataSource.Steam,
             MetadataSource.Rawg => rawgAvailable ? MetadataSource.Rawg : MetadataSource.Steam,
-            _ => rawgAvailable && string.IsNullOrWhiteSpace(Game.SteamAppId) ? MetadataSource.Rawg : MetadataSource.Steam,
+            _ => rawgAvailable && !hasSteamAppId ? MetadataSource.Rawg : MetadataSource.Steam,
         };
     }
 
-    public ICommand ToggleSourceCommand { get; private set; } = null!;
-
-    private void ToggleSource()
+    /// <summary>Switches the text source and remembers the explicit choice on the game so the
+    /// window reopens to the same side. A no-op when already on that side.</summary>
+    private void SetSource(MetadataSource source)
     {
-        _activeSource = IsRawgActive ? MetadataSource.Steam : MetadataSource.Rawg;
+        if (source == MetadataSource.Auto || _activeSource == source)
+            return;
 
-        // Remember the explicit choice on the game so the window reopens to the same source.
-        Game.PreferredMetadataSource = _activeSource;
-        _saveGame?.Invoke(Game);
+        _activeSource = source;
+        if (Game.PreferredMetadataSource != source)
+        {
+            Game.PreferredMetadataSource = source;
+            _saveGame?.Invoke(Game);
+        }
 
         if (IsRawgActive)
         {
@@ -381,6 +538,157 @@ public class GameDetailsViewModel : ViewModelBase
 
         RaiseSourceDependentChanged();
     }
+
+    /// <summary>Routes "Change match" to the picker for whichever source is on screen.</summary>
+    private void ChangeMatch()
+    {
+        if (IsRawgActive)
+            ChangeRawgMatch();
+        else
+            ChangeSteamMatch();
+    }
+
+    /// <summary>
+    /// Lets the user pick the RAWG entry by hand from a live search (pre-filled with the game's
+    /// name). Applies the pick immediately: remembers the id, drops the automatic guard for it,
+    /// and reloads the RAWG side.
+    /// </summary>
+    private void ChangeRawgMatch()
+    {
+        if (string.IsNullOrWhiteSpace(_rawgApiKey))
+            return;
+
+        string key = _rawgApiKey;
+        var dialog = new Views.GameMatchPickerDialog(
+            "Change RAWG Match",
+            $"Pick the RAWG entry for “{Game.Name}”. The choice is remembered for this game.",
+            Game.Name,
+            Game.RawgId > 0 ? Game.RawgId.ToString() : null,
+            async (query, ct) =>
+            {
+                var (status, hits) = await _rawgService.SearchAsync(query, key, ct);
+                string? empty = status switch
+                {
+                    RawgLookupStatus.Unauthorized => "RAWG rejected the API key. Check it in Settings › Library.",
+                    RawgLookupStatus.Failed => "Could not reach RAWG. Check your internet connection and try again.",
+                    _ => null,
+                };
+                return new Views.MatchPickerResult(
+                    hits.Select(h => new Views.MatchPickerHit(h.Id.ToString(), h.Name, h.Subtitle)).ToList(), empty);
+            },
+            attributionLabel: "Data from RAWG",
+            attributionUrl: "https://rawg.io");
+
+        if (dialog.ShowDialog() != true || dialog.SelectedHit == null || !int.TryParse(dialog.SelectedHit.Id, out int rawgId))
+            return;
+
+        Game.RawgId = rawgId;
+        _saveGame?.Invoke(Game);
+        LoggingService.Info("GameDetailsViewModel", $"'{Game.Name}' manually matched to RAWG id {rawgId} ('{dialog.SelectedHit.Name}').");
+
+        _rawgDetails = null;
+        _rawgAttempted = false;
+        _rawgManualPick = true;
+        RaiseSourceDependentChanged();
+        _ = EnsureRawgLoadedAsync();
+    }
+
+    /// <summary>
+    /// The Steam counterpart: a live Steam store search, pre-filled with the game's name. The
+    /// pick becomes the game's Steam App ID - the same effect as "Fetch by ID" in Edit Game, so
+    /// title/genre enrichment and poster art follow it (the wrong match's poster is replaced).
+    /// Launch routing is untouched: a local exe stays a local exe.
+    /// </summary>
+    private void ChangeSteamMatch()
+    {
+        var dialog = new Views.GameMatchPickerDialog(
+            "Change Steam Match",
+            $"Pick the Steam store listing for “{Game.Name}”. Its details and poster art will be used for this game.",
+            Game.Name,
+            string.IsNullOrWhiteSpace(Game.SteamAppId) ? null : Game.SteamAppId,
+            async (query, ct) =>
+            {
+                var matches = await _steamSearchService.SearchGamesAsync(query, ct);
+                return new Views.MatchPickerResult(
+                    matches.Select(m => new Views.MatchPickerHit(m.AppId, m.Name, $"App ID {m.AppId}")).ToList(),
+                    null);
+            });
+
+        if (dialog.ShowDialog() != true || dialog.SelectedHit == null || string.IsNullOrWhiteSpace(dialog.SelectedHit.Id))
+            return;
+
+        string appId = dialog.SelectedHit.Id;
+        if (appId == Game.SteamAppId)
+            return;
+
+        LoggingService.Info("GameDetailsViewModel", $"'{Game.Name}' manually matched to Steam App ID {appId} ('{dialog.SelectedHit.Name}').");
+
+        // A previously cached (possibly wrong) result for this id must not be served back.
+        SteamMetadataService.InvalidateCache(appId);
+        Game.SteamAppId = appId;
+
+        // The Steam listing is the game's identity, so the RAWG side must describe the same
+        // game: drop the old RAWG match and let it re-resolve from the new Steam title.
+        Game.RawgId = 0;
+        _rawgDetails = null;
+        _rawgAttempted = false;
+        _saveGame?.Invoke(Game);
+
+        Details = null;
+        _replaceCoverOnNextLoad = true;
+        _resyncRawgAfterSteamLoad = true;
+        _ = LoadDetailsAsync();
+    }
+
+    /// <summary>Set by a Steam rematch: once the new Steam title is known, re-resolve RAWG from
+    /// it (if RAWG is enabled) so a later switch to RAWG shows the same game.</summary>
+    private bool _resyncRawgAfterSteamLoad;
+
+    /// <summary>Set by a RAWG rematch and consumed when its details arrive: re-resolve Steam from
+    /// RAWG's title and replace (not just fill) the poster.</summary>
+    private bool _rawgManualPick;
+
+    /// <summary>
+    /// Searches Steam for RAWG's title and, on a decisive hit (the same bar the automatic
+    /// auto-link uses) that differs from the current App ID, adopts it: new details, new poster.
+    /// Returns true when the Steam side changed.
+    /// </summary>
+    private async Task<bool> TryResyncSteamFromRawgAsync(string rawgTitle)
+    {
+        if (string.IsNullOrWhiteSpace(rawgTitle))
+            return false;
+
+        try
+        {
+            var match = await _steamSearchService.FindBestMatchAsync(rawgTitle, _minConfidence);
+            if (match == null || string.IsNullOrWhiteSpace(match.AppId) || match.SimilarityScore < Math.Max(0.85, _minConfidence))
+            {
+                LoggingService.Verbose("GameDetailsViewModel", $"No decisive Steam listing for RAWG title '{rawgTitle}' - Steam side left as is.");
+                return false;
+            }
+            if (match.AppId == Game.SteamAppId)
+                return false;
+
+            LoggingService.Info("GameDetailsViewModel", $"'{Game.Name}' Steam side re-linked to App ID {match.AppId} ('{match.Name}') from RAWG title '{rawgTitle}' (similarity {match.SimilarityScore:F2}).");
+            SteamMetadataService.InvalidateCache(match.AppId);
+            Game.SteamAppId = match.AppId;
+            _saveGame?.Invoke(Game);
+
+            Details = null;
+            _replaceCoverOnNextLoad = true;
+            await LoadDetailsAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("GameDetailsViewModel", $"Steam resync from RAWG title '{rawgTitle}' failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Set by a manual Steam rematch so the next load replaces the poster instead of
+    /// keeping whatever the wrong match downloaded.</summary>
+    private bool _replaceCoverOnNextLoad;
 
     /// <summary>
     /// Loads RAWG metadata for this game once (by remembered id, else by name with the same
@@ -393,36 +701,88 @@ public class GameDetailsViewModel : ViewModelBase
             return;
 
         _rawgAttempted = true;
+        IsRawgLoading = true;
         try
         {
-            RawgGameDetails? result;
+            RawgLookupResult result;
             if (Game.RawgId > 0)
             {
                 result = await _rawgService.GetByIdAsync(Game.RawgId, _rawgApiKey);
+                if (result.Status == RawgLookupStatus.NoMatch)
+                {
+                    // The remembered id is gone from RAWG - forget it and fall through to a
+                    // fresh name search.
+                    Game.RawgId = 0;
+                    result = await _rawgService.LookUpByNameAsync(RawgSearchName, _rawgApiKey, _minConfidenceForRawg);
+                }
             }
             else
             {
-                result = await _rawgService.LookUpByNameAsync(Game.Name, _rawgApiKey);
-                if (result != null && SteamSearchService.CalculateSimilarity(Game.Name, result.Name) < _minConfidenceForRawg)
-                {
-                    LoggingService.Verbose("GameDetailsViewModel", $"Rejected RAWG match '{result.Name}' for '{Game.Name}' (too dissimilar).");
-                    result = null;
-                }
-                if (result != null)
-                {
-                    Game.RawgId = result.RawgId;
-                    _saveGame?.Invoke(Game);
-                }
+                result = await _rawgService.LookUpByNameAsync(RawgSearchName, _rawgApiKey, _minConfidenceForRawg);
             }
 
-            _rawgDetails = result;
+            _rawgStatus = result.Status;
+            _rawgDetails = result.Details;
+
+            if (result.Details is { } found)
+            {
+                bool changed = false;
+                if (Game.RawgId != found.RawgId)
+                {
+                    Game.RawgId = found.RawgId;
+                    changed = true;
+                }
+
+                // RAWG's genre fills the category the same way Steam's does - only while the
+                // game is still Uncategorized (or on a platform placeholder), never overriding
+                // a category the user or Steam already set.
+                if (_autoCategorize && LibraryConstants.IsEnrichableCategory(Game.Category) && !string.IsNullOrWhiteSpace(found.PrimaryGenre))
+                {
+                    Game.Category = found.PrimaryGenre;
+                    changed = true;
+                    OnPropertyChanged(nameof(Category));
+                }
+
+                if (changed)
+                    _saveGame?.Invoke(Game);
+
+                // The screenshot may now be the ambient backdrop / crisp fallback.
+                InvalidateCoverImageCache();
+
+                // Store links are a separate call; only pay for it once the RAWG side is up.
+                await _rawgService.EnsureStoreLinksAsync(found, _rawgApiKey);
+
+                bool manualPick = _rawgManualPick;
+                _rawgManualPick = false;
+
+                // A hand-picked RAWG entry is a statement of which game this is, so the Steam
+                // side re-resolves from RAWG's title - the mirror of a Steam rematch dropping
+                // the RAWG match. Only a decisive Steam hit is applied.
+                bool steamChanged = manualPick && await TryResyncSteamFromRawgAsync(found.Name);
+
+                // Poster: Steam's own art wins when Steam matched; otherwise SteamGridDB by
+                // RAWG's canonical title - replacing the old poster after a manual pick, only
+                // filling a missing one after an automatic match.
+                if (!steamChanged && string.IsNullOrWhiteSpace(Game.SteamAppId) && _fetchPosterByName != null)
+                {
+                    string? before = Game.CoverImagePath;
+                    await _fetchPosterByName(Game, found.Name, manualPick);
+                    if (Game.CoverImagePath != before)
+                    {
+                        _saveGame?.Invoke(Game);
+                        InvalidateCoverImageCache();
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
             LoggingService.Warn("GameDetailsViewModel", $"RAWG load failed for '{Game.Name}': {ex.Message}");
+            _rawgStatus = RawgLookupStatus.Failed;
         }
         finally
         {
+            IsRawgLoading = false;
             RaiseSourceDependentChanged();
         }
     }
@@ -433,11 +793,18 @@ public class GameDetailsViewModel : ViewModelBase
     {
         foreach (var name in new[]
         {
-            nameof(IsRawgActive), nameof(SourceToggleLabel), nameof(ShowRawgAttribution), nameof(RawgUrl),
+            nameof(IsRawgActive), nameof(IsSteamActive),
+            nameof(ShowRawgAttribution), nameof(RawgUrl),
+            nameof(CanChangeMatch), nameof(ChangeMatchToolTip), nameof(MatchCaption), nameof(HasMatchCaption),
+            nameof(ShowLoading), nameof(LoadingMessage), nameof(RawgStatusMessage), nameof(HasRawgStatus),
             nameof(HasDetails), nameof(GameTitle),
             nameof(Developers), nameof(HasDevelopers), nameof(Publishers), nameof(HasPublishers),
             nameof(ReleaseDate), nameof(HasReleaseDate), nameof(ShortDescription), nameof(GenresDisplay),
-            nameof(MetacriticScore), nameof(HasMetacritic), nameof(ReviewSummary), nameof(HasReviewSummary),
+            nameof(MetacriticScore), nameof(HasMetacritic), nameof(RawgRatingDisplay), nameof(HasRawgRating),
+            nameof(EsrbRating), nameof(HasEsrbRating), nameof(ReviewSummary), nameof(HasReviewSummary),
+            nameof(PlayModes), nameof(HasPlayModes),
+            nameof(HasRawgStore), nameof(RawgStoreLabel), nameof(RawgStoreUrl),
+            nameof(DisplayCoverImage), nameof(AmbientImage), nameof(Category),
             nameof(HasRequirements), nameof(HasNews), nameof(NewsItems),
             nameof(ErrorMessage), nameof(HasError),
         })
@@ -489,8 +856,8 @@ public class GameDetailsViewModel : ViewModelBase
                 if (_details == null && _activeSource == MetadataSource.Steam)
                 {
                     ErrorMessage = CanToggleSource
-                        ? "This game has no Steam store entry. Switch to RAWG data above, or set a Steam App ID in Edit Properties."
-                        : "This game has no Steam store entry. Add a RAWG key in Settings to show info for non-Steam games, or set a Steam App ID in Edit Properties.";
+                        ? "This game has no Steam store entry. Select RAWG above to show its info, or set a Steam App ID in Edit Properties."
+                        : "This game has no Steam store entry. Enable RAWG in Settings › Library to show info for non-Steam games, or set a Steam App ID in Edit Properties.";
                 }
                 IsLoading = false;
                 return;
@@ -504,8 +871,12 @@ public class GameDetailsViewModel : ViewModelBase
             {
                 Details = loaded;
 
-                // Sync cover image back to game if missing or updated
-                if (!string.IsNullOrWhiteSpace(loaded.CoverImagePath) && (string.IsNullOrWhiteSpace(Game.CoverImagePath) || !File.Exists(Game.CoverImagePath)))
+                // Sync cover image back to game if missing or updated - or unconditionally after
+                // a manual Steam rematch, where the old poster belongs to the wrong game.
+                bool replaceCover = _replaceCoverOnNextLoad;
+                _replaceCoverOnNextLoad = false;
+                if (!string.IsNullOrWhiteSpace(loaded.CoverImagePath) &&
+                    (replaceCover || string.IsNullOrWhiteSpace(Game.CoverImagePath) || !File.Exists(Game.CoverImagePath)))
                 {
                     Game.CoverImagePath = loaded.CoverImagePath;
                     InvalidateCoverImageCache();
@@ -520,6 +891,13 @@ public class GameDetailsViewModel : ViewModelBase
                 }
 
                 ErrorMessage = null;
+
+                if (_resyncRawgAfterSteamLoad)
+                {
+                    _resyncRawgAfterSteamLoad = false;
+                    if (CanToggleSource)
+                        _ = EnsureRawgLoadedAsync();
+                }
             }
             else if (_details == null && _activeSource == MetadataSource.Steam)
             {

@@ -48,8 +48,9 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Ambient Blurred Background Fill (Fills entire poster box with matching game atmosphere) -->
-                    <Image Source="{Binding DisplayCoverImage}" Stretch="UniformToFill"
+                    <!-- Ambient Blurred Background Fill (Fills entire poster box with matching game atmosphere;
+                         RAWG's screenshot when that source is showing, else the poster itself) -->
+                    <Image Source="{Binding AmbientImage}" Stretch="UniformToFill"
                            RenderOptions.BitmapScalingMode="LowQuality">
                         <Image.Effect>
                             <BlurEffect Radius="24" RenderingBias="Performance"/>
@@ -78,14 +79,6 @@
                 <DockPanel Grid.Row="0" Margin="0,0,0,8">
                     <Button DockPanel.Dock="Left" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
                             VerticalAlignment="Top" Margin="0,2,10,0"/>
-                    <!-- Metadata source toggle: only shown when a RAWG key is configured. Switches the
-                         text fields below between Steam and RAWG and remembers the choice per game. -->
-                    <Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,2,0,0"
-                            Command="{Binding ToggleSourceCommand}"
-                            Content="{Binding SourceToggleLabel}"
-                            Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="10.5"
-                            Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}"
-                            ToolTip="Switch this game's info between Steam and RAWG (remembered per game)."/>
                     <StackPanel>
                         <TextBlock Text="{Binding GameTitle}" FontSize="21" FontWeight="SemiBold"
                                    Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
@@ -151,8 +144,31 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- RAWG community rating (RAWG source only; fills in where Metacritic is absent) -->
+                    <Border Background="#1F3325" BorderBrush="#2E5C3A" BorderThickness="1" CornerRadius="4"
+                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
+                            Visibility="{Binding HasRawgRating, Converter={StaticResource BoolToVis}}"
+                            ToolTip="Community rating on rawg.io">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                       Foreground="#44D970" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding RawgRatingDisplay}" FontSize="11.5" Foreground="#9EDBB3" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ESRB rating (RAWG source only) -->
+                    <Border Background="#26242E" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" CornerRadius="4"
+                            Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
+                            Visibility="{Binding HasEsrbRating, Converter={StaticResource BoolToVis}}"
+                            ToolTip="ESRB age rating">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="ESRB" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding EsrbRating}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Steam Review Summary -->
-                    <Border Background="#1C2E3D" BorderBrush="{StaticResource BrushBorderAccent}" BorderThickness="1" CornerRadius="4" 
+                    <Border Background="#1C2E3D" BorderBrush="{StaticResource BrushBorderAccent}" BorderThickness="1" CornerRadius="4"
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
                         <Border.Style>
                             <Style TargetType="Border">
@@ -223,6 +239,16 @@
                                 <TextBlock Text="Steam Store" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+                        <!-- The game's own storefront per RAWG (Epic / GOG / Xbox...) while RAWG is showing. -->
+                        <Button Command="{Binding OpenRawgStoreCommand}"
+                                Visibility="{Binding HasRawgStore, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
+                                FontSize="12">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding RawgStoreLabel}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Command="{Binding EditGameCommand}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
                                 FontSize="12">
@@ -245,22 +271,63 @@
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
             <StackPanel Margin="0,0,10,0">
 
+                <!-- Info source row. The Steam | RAWG switch is only present when RAWG is enabled
+                     with a key (CanToggleSource); otherwise every game simply shows Steam and the
+                     row carries just the "Matched to" caption and Change match. The source choice
+                     is remembered per game (GameEntry.PreferredMetadataSource) and drives the text
+                     fields above and the synopsis below - never the category, art or sorting. -->
+                <DockPanel Margin="0,0,0,10" LastChildFill="True">
+                    <Border DockPanel.Dock="Left" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="6" Padding="3" VerticalAlignment="Center" Margin="0,0,12,0"
+                            Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding SelectSteamSourceCommand}" Content="Steam" Padding="12,4"
+                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSteamActive}"
+                                    ToolTip="Show this game's info from the Steam store"
+                                    AutomationProperties.Name="Show Steam info"/>
+                            <Button Command="{Binding SelectRawgSourceCommand}" Content="RAWG" Padding="12,4" Margin="2,0,0,0"
+                                    Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsRawgActive}"
+                                    ToolTip="Show this game's info from RAWG (rawg.io)"
+                                    AutomationProperties.Name="Show RAWG info"/>
+                        </StackPanel>
+                    </Border>
+                    <Button DockPanel.Dock="Right" Command="{Binding ChangeMatchCommand}"
+                            Visibility="{Binding CanChangeMatch, Converter={StaticResource BoolToVis}}"
+                            Style="{StaticResource ModernGhostButton}" Padding="8,4" FontSize="11.5" VerticalAlignment="Center"
+                            Foreground="{StaticResource BrushAccentHover}"
+                            ToolTip="{Binding ChangeMatchToolTip}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Change match" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding MatchCaption}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                               VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding HasMatchCaption, Converter={StaticResource BoolToVis}}"/>
+                </DockPanel>
+
                 <!-- Loading State -->
                 <StackPanel Margin="0,30,0,30" HorizontalAlignment="Center">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <DataTrigger Binding="{Binding ShowLoading}" Value="True">
                                     <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
                     <ProgressBar IsIndeterminate="True" Width="200" Height="4" Margin="0,0,0,12" Foreground="{StaticResource BrushAccent}"/>
-                    <TextBlock Text="Fetching latest game details, specs &amp; news from Steam..." 
+                    <TextBlock Text="{Binding LoadingMessage}"
                                FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center"/>
                 </StackPanel>
+
+                <!-- RAWG status notice (neutral, not an error): no match / bad key / offline -->
+                <Border Background="#1A1F2B" BorderBrush="{StaticResource BrushBorderAccent}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,14"
+                        Visibility="{Binding HasRawgStatus, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding RawgStatusMessage}" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
+                </Border>
 
                 <!-- Error Notice -->
                 <Border Background="#2E181B" BorderBrush="#781D22" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,14">
@@ -276,6 +343,7 @@
                     </Border.Style>
                     <TextBlock Text="{Binding ErrorMessage}" FontSize="12.5" Foreground="#FF9999" TextWrapping="Wrap"/>
                 </Border>
+
 
                 <!-- A. About / Synopsis Card -->
                 <Border Background="#16161C" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,14">
