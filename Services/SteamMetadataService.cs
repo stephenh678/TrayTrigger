@@ -502,6 +502,37 @@ public partial class SteamMetadataService
     }
 
     /// <summary>
+    /// Fetches SteamGridDB poster art by game NAME (for a game with no Steam App ID) and caches it
+    /// as <c>{gameId}.jpg</c> - a stable key that isn't tied to a Steam App ID the game doesn't
+    /// have. Art only: SteamGridDB carries no genre or description. Returns the cached path and the
+    /// SteamGridDB title the art came from, or null. Applies no similarity guard itself - the
+    /// caller inspects <c>MatchedName</c> and decides whether it's close enough to keep.
+    /// </summary>
+    public async Task<(string Path, string MatchedName)?> DownloadAndCacheGridArtByNameAsync(
+        string gameId, string gameName, string steamGridDbApiKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(gameId) || string.IsNullOrWhiteSpace(gameName) || string.IsNullOrWhiteSpace(steamGridDbApiKey))
+            return null;
+
+        try
+        {
+            var art = await GridDbService.GetBestVerticalGridBytesByNameAsync(gameName, steamGridDbApiKey, ct).ConfigureAwait(false);
+            if (art == null || art.Value.Bytes.Length <= 1000 || !IsDecodableImage(art.Value.Bytes))
+                return null;
+
+            string localPath = Path.Combine(CoversDirectory, $"{gameId}.jpg");
+            byte[] processed = EnsureVerticalPoster(art.Value.Bytes);
+            string saved = await WritePosterFileSafelyAsync(localPath, processed, ct).ConfigureAwait(false);
+            return (saved, art.Value.MatchedName);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamMetadataService", $"Error downloading name-based cover for '{gameName}': {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Tries each candidate URL in order, saving the first response that decodes as a real
     /// image (processed into a vertical poster) to <paramref name="localPath"/>.
     /// Returns the absolute path written to, or null if all candidates failed.
