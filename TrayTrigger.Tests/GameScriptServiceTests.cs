@@ -308,6 +308,17 @@ public class GameScriptServiceTests : IDisposable
     }
 
     [Fact]
+    public void Resolve_DisabledDefaults_AreIgnored_ButOwnScriptsStillRun()
+    {
+        var defaults = Defaults(pre: @"C:\d\pre.bat", post: @"C:\d\post.bat");
+        defaults.Enabled = false;
+
+        Assert.Null(GameScriptService.ResolvePreLaunch(new GameEntry(), defaults));
+        Assert.Null(GameScriptService.ResolvePostExit(new GameEntry(), defaults));
+        Assert.Equal(@"C:\g\own.bat", GameScriptService.ResolvePreLaunch(new GameEntry { PreLaunchScriptPath = @"C:\g\own.bat" }, defaults)!.Value.Path);
+    }
+
+    [Fact]
     public void Resolve_NoDefaultsAndNoOwn_IsNull()
     {
         var game = new GameEntry();

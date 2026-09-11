@@ -382,6 +382,10 @@ public class GameEditViewModel : ViewModelBase
         get
         {
             if (_scriptDefaults == null) return string.Empty;
+            if (!_scriptDefaults.Enabled)
+            {
+                return "Default scripts are turned off in Settings (\"Run the default scripts\" is unticked), so none apply to this game.";
+            }
             var lines = new List<string>();
             if (_scriptDefaults.HasPreLaunchScript)
             {

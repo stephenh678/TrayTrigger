@@ -3017,6 +3017,13 @@
                                         <TextBlock Text="Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;. Each game's Script Arguments are passed to the defaults too."
                                                    Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
+                                        <CheckBox Content="Run the default scripts"
+                                                  IsChecked="{Binding DefaultScriptsEnabled}"
+                                                  Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,0,0,2"/>
+                                        <TextBlock Text="Untick to pause the defaults without clearing them. The paths and options below are kept."
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="24,0,0,10" TextWrapping="Wrap"/>
+
+                                        <StackPanel IsEnabled="{Binding DefaultScriptsEnabled}">
                                         <TextBlock Text="Default pre-launch script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                         <Grid Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
@@ -3072,6 +3079,7 @@
                                         <CheckBox Content="Run default scripts as Administrator (UAC prompt on every launch)"
                                                   IsChecked="{Binding DefaultRunScriptsAsAdmin}" IsEnabled="{Binding HasAnyDefaultScript}"
                                                   Style="{StaticResource ModernCheckBox}" Margin="0,0,0,2"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

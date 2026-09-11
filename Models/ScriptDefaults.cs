@@ -13,6 +13,11 @@ namespace TrayTrigger.Models;
 /// </summary>
 public class ScriptDefaults
 {
+    /// <summary>
+    /// "Run the default scripts": lets the user pause the defaults without clearing the paths
+    /// and options. On by default so a freshly typed path works with no second click.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
     public string PreLaunchScriptPath { get; set; } = string.Empty;
     public string PostExitScriptPath { get; set; } = string.Empty;
     public bool WaitForPreLaunchScript { get; set; } = true;
