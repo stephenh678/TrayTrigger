@@ -692,6 +692,23 @@ public partial class App
                 return;
             }
 
+            // --screenshot-nomatch <out.png>: the library's "No games match" state (a search
+            // that hits nothing).
+            if ((e.Args[i].Equals("--screenshot-nomatch", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-nomatch", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SearchText = "zzzz-no-such-game";
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 700, targetPng);
+                _mainViewModel.SearchText = string.Empty;
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-welcome <out.png>: the first-run Welcome dialog.
             if ((e.Args[i].Equals("--screenshot-welcome", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-welcome", StringComparison.OrdinalIgnoreCase)) &&
