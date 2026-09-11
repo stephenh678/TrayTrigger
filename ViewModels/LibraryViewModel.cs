@@ -699,21 +699,25 @@ public class LibraryViewModel : ViewModelBase
         NotifySelectionChanged();
     }
 
-    private void BatchRemove()
+    /// <summary>The batch Remove confirmation. Defaults to the modal dialog; tests replace it.</summary>
+    internal Func<List<GameCardViewModel>, bool> ConfirmBatchRemove { get; set; } = cards =>
     {
-        var cards = SelectedCards;
-        if (cards.Count == 0) return;
-
         Window? owner = WindowHelper.ActiveOwner();
         string what = cards.Count == 1 ? $"\"{cards[0].Name}\"" : $"these {cards.Count} games";
-        bool confirmed = ModernDialog.ConfirmDelete(
+        return ModernDialog.ConfirmDelete(
             owner,
             "Remove from Library",
             $"Are you sure you want to remove {what} from your library?",
             "This will only remove the shortcuts from TrayTrigger. Your installed game files will not be deleted.",
             confirmText: cards.Count == 1 ? "Remove" : $"Remove {cards.Count}",
             cancelText: "Cancel");
-        if (!confirmed) return;
+    };
+
+    private void BatchRemove()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+        if (!ConfirmBatchRemove(cards)) return;
 
         RemoveGames(cards);
         NotifySelectionChanged();

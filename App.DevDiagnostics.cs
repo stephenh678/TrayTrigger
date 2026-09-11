@@ -692,6 +692,18 @@ public partial class App
                 return;
             }
 
+            // --screenshot-welcome <out.png>: the first-run Welcome dialog.
+            if ((e.Args[i].Equals("--screenshot-welcome", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-welcome", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                var dlg = new WelcomeDialog();
+                CaptureVisual(dlg, 560, 620, targetPng);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-system-profiles <out.png>: the Performance Profiles sub-tab.
             if ((e.Args[i].Equals("--screenshot-system-profiles", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-system-profiles", StringComparison.OrdinalIgnoreCase)) &&

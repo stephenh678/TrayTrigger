@@ -66,4 +66,10 @@
     <EmbeddedResource Include="Help\**\*.md" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Lets the test project reach internal test seams (StorageService's folder-scoped
+         constructor, LibraryViewModel.ConfirmBatchRemove) without making them public API. -->
+    <InternalsVisibleTo Include="TrayTrigger.Tests" />
+  </ItemGroup>
+
 </Project>

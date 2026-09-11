@@ -2210,19 +2210,22 @@
                                Foreground="{StaticResource BrushTextMuted}" Margin="14,0,0,0"
                                FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                     <!-- Multi-select hint: only while two or more cards are selected. -->
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding SelectionHint}" FontSize="12" Margin="14,0,0,0"
-                               Foreground="{StaticResource BrushAccentHover}"
-                               FontFamily="{StaticResource AppFont}" VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectionHint}" Value="">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                        </StackPanel.Style>
+                        <TextBlock Text="{Binding SelectionHint}" FontSize="12"
+                                   Foreground="{StaticResource BrushAccentHover}"
+                                   FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource HelpLinkButton}" Content="Learn more" Margin="10,0,0,0" VerticalAlignment="Center"
+                                Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/select_mode"/>
+                    </StackPanel>
                     <TextBlock Text="{Binding StatusMessage}" FontSize="12" TextTrimming="CharacterEllipsis"
                                Foreground="{StaticResource BrushTextSecondary}"
                                FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
