@@ -3020,7 +3020,7 @@
                                         <CheckBox Content="Run the default scripts"
                                                   IsChecked="{Binding DefaultScriptsEnabled}"
                                                   Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,0,0,2"/>
-                                        <TextBlock Text="Untick to pause the defaults without clearing them. The paths and options below are kept."
+                                        <TextBlock Text="Off by default. Nothing below runs until this is ticked. Untick it later to pause the defaults without clearing them."
                                                    Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="24,0,0,10" TextWrapping="Wrap"/>
 
                                         <StackPanel IsEnabled="{Binding DefaultScriptsEnabled}">

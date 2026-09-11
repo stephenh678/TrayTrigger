@@ -47,7 +47,7 @@ Settings › Launch & Performance can hold a default pre-launch script and a def
 - Any game can opt out of both defaults with "Don't run the default scripts for this game" in Edit Game. It is off for every game, including games added before this option existed, so the defaults apply everywhere the moment you set them.
 - The defaults have their own wait, timeout, cancel-on-failure, hidden, and Administrator options. Those apply whenever a default script runs; a game's own options apply only to its own scripts.
 - Each game's Script Arguments are passed to the default scripts too. That is how one generic default is parameterised per game.
-- "Run the default scripts" pauses the defaults without clearing their paths or options; Edit Game then says so. The Enable game scripts switch gates the defaults as well: while it is off, nothing runs.
+- "Run the default scripts" is off by default, like the feature itself. Nothing in the defaults block runs until it is ticked, and unticking it later pauses the defaults without clearing their paths or options; Edit Game says so either way. The Enable game scripts switch gates the defaults as well: while it is off, nothing runs.
 - Edit Game shows which defaults apply to the game you are editing and why, and the defaults have their own Test buttons in Settings that run them with placeholder game values.
 
 ## Script arguments
