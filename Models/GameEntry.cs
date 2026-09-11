@@ -98,8 +98,8 @@ public class GameEntry
     public string PostExitScriptPath { get; set; } = string.Empty;
     /// <summary>Hold the game launch until the pre-launch script finishes (see <see cref="PreLaunchScriptTimeoutSeconds"/>).</summary>
     public bool WaitForPreLaunchScript { get; set; } = true;
-    /// <summary>How long "wait for the pre-launch script" holds the launch before giving up. 1-600; default 30.</summary>
-    public int PreLaunchScriptTimeoutSeconds { get; set; } = 30;
+    /// <summary>How long "wait for the pre-launch script" holds the launch before giving up. 1-600; default 10.</summary>
+    public int PreLaunchScriptTimeoutSeconds { get; set; } = 10;
     /// <summary>
     /// Cancel the launch (and roll back the Performance Profile) when the pre-launch script exits
     /// non-zero, times out, or fails to start. Implies waiting for the script.

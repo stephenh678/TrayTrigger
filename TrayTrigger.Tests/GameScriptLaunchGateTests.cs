@@ -109,9 +109,9 @@ public class GameScriptLaunchGateTests : IDisposable
     }
 
     [Theory]
-    [InlineData(0, 30)]
-    [InlineData(-5, 30)]
-    [InlineData(601, 30)]
+    [InlineData(0, 10)]
+    [InlineData(-5, 10)]
+    [InlineData(601, 10)]
     [InlineData(1, 1)]
     [InlineData(600, 600)]
     [InlineData(45, 45)]

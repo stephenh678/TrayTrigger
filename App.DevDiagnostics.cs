@@ -575,6 +575,26 @@ public partial class App
                 return;
             }
 
+            // --screenshot-settings-performance <out.png> [offset]: the Launch & Performance tab,
+            // scrolled to its end (where the default scripts block sits) or to a given offset.
+            if ((e.Args[i].Equals("--screenshot-settings-performance", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-settings-performance", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                double? settingsScrollOffset = i + 2 < e.Args.Length && double.TryParse(e.Args[i + 2], out double parsedSettingsOffset) ? parsedSettingsOffset : null;
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.PerformanceTweaks;
+                _mainViewModel.CurrentSection = NavSection.Settings;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                var sv = FindVisualChild<ScrollViewer>(_mainWindow, s => s.ScrollableHeight > 0);
+                if (settingsScrollOffset is double settingsOffset) sv?.ScrollToVerticalOffset(settingsOffset); else sv?.ScrollToBottom();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-settings-general", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-general", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -809,6 +829,22 @@ public partial class App
                 string targetPng = e.Args[i + 1];
                 var dlg = new WelcomeDialog();
                 CaptureVisual(dlg, 560, 620, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-sources-reminder <out.png> [steamgriddb|rawg]: the one-time SteamGridDB /
+            // RAWG reminder, worded for both sources missing unless one is named as the only gap.
+            if ((e.Args[i].Equals("--screenshot-sources-reminder", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-sources-reminder", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                string only = i + 2 < e.Args.Length ? e.Args[i + 2] : string.Empty;
+                bool needsSteamGridDb = !only.Equals("rawg", StringComparison.OrdinalIgnoreCase);
+                bool needsRawg = !only.Equals("steamgriddb", StringComparison.OrdinalIgnoreCase);
+                var dlg = ModernDialog.CreateMetadataSourcesReminder(needsSteamGridDb, needsRawg);
+                CaptureVisual(dlg, 470, 240, targetPng);
                 ExitApplication();
                 return;
             }

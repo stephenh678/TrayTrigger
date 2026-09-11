@@ -3007,7 +3007,7 @@
                                                 Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
                                         <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                         <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
-                                                ToolTip="Blank templates, three small examples, and a README describing the arguments every script receives"/>
+                                                ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>
                                     </StackPanel>
 
                                     <!-- Default scripts: run for every game that has no script of its own for that phase. -->
@@ -3039,6 +3039,16 @@
                                             <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPreLaunchScriptCommand}"
                                                     Style="{StaticResource ModernOutlineButton}"/>
                                         </Grid>
+                                        <StackPanel Orientation="Horizontal" Margin="0,-4,0,8">
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPreLaunchScriptCommand}"
+                                                    ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                            <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPreLaunchScriptCommand}"/>
+                                        </StackPanel>
+                                        <CheckBox Content="Use the same script for pre-launch and post-exit"
+                                                  IsChecked="{Binding DefaultUseSameScriptForBoth}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"
+                                                  ToolTip="For a script that handles both phases in one file, like the bundled examples"/>
 
                                         <TextBlock Text="Default post-exit script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                         <Grid Margin="0,0,0,8">
@@ -3048,13 +3058,22 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                                     IsEnabled="{Binding CanEditDefaultPostExitScript}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                             <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPostExitScriptCommand}"
                                                     Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                                                     ToolTip="Run this script now as a post-exit run with placeholder game values and playtime 0 (hidden, not elevated, 30 s limit)"/>
                                             <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPostExitScriptCommand}"
+                                                    IsEnabled="{Binding CanEditDefaultPostExitScript}"
                                                     Style="{StaticResource ModernOutlineButton}"/>
                                         </Grid>
+                                        <StackPanel Orientation="Horizontal" Margin="0,-4,0,8">
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPostExitScriptCommand}"
+                                                    IsEnabled="{Binding CanEditDefaultPostExitScript}"
+                                                    ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                            <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPostExitScriptCommand}"/>
+                                        </StackPanel>
 
                                         <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
                                                 Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
@@ -3619,7 +3638,7 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 10: SteamGridDB Fallback Artwork -->
+                                <!-- Feature 10: Community Artwork & Game Info (SteamGridDB + RAWG) -->
                                 <Border Grid.Row="4" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="5,0,0,0">
@@ -3629,8 +3648,8 @@
                                                        Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="SteamGridDB Fallback Artwork" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Falls back to community-submitted box art from SteamGridDB when official artwork isn't available yet."
+                                            <TextBlock Text="Community Artwork &amp; Game Info" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Optional community sources fill the gaps: SteamGridDB box art when there's no official poster, and RAWG developer, publisher, synopsis and ratings for games that aren't on Steam."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>

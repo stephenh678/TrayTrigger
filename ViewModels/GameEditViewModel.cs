@@ -42,7 +42,8 @@ public class GameEditViewModel : ViewModelBase
     private readonly ScriptDefaults? _scriptDefaults;
     private readonly ScriptLibraryService? _scriptLibrary;
     private bool _abortLaunchOnScriptFailure;
-    private string _preLaunchScriptTimeoutSeconds = "30";
+    private string _preLaunchScriptTimeoutSeconds = ((int)GameScriptService.DefaultPreLaunchWaitTimeout.TotalSeconds).ToString();
+    private bool _useSameScriptForBoth;
     private bool _closeLauncherOnExit;
     private bool _isHidden;
     private string? _customIconPath;
@@ -121,6 +122,9 @@ public class GameEditViewModel : ViewModelBase
         _cpuAffinity = game.CpuAffinity;
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
+        // Not stored on the game: a game "uses the same script" exactly when both paths match.
+        _useSameScriptForBoth = !string.IsNullOrWhiteSpace(game.PreLaunchScriptPath)
+            && string.Equals(game.PreLaunchScriptPath.Trim(), game.PostExitScriptPath?.Trim(), StringComparison.OrdinalIgnoreCase);
         _waitForPreLaunchScript = game.WaitForPreLaunchScript;
         _runScriptsHidden = game.RunScriptsHidden;
         _runScriptsAsAdmin = game.RunScriptsAsAdmin;
@@ -267,6 +271,8 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged(nameof(HasPreLaunchScript));
             OnPropertyChanged(nameof(HasAnyScript));
             OnPropertyChanged(nameof(DefaultScriptsSummary));
+            // Typing, Browse and "New script..." all land here, so the post-exit box follows along.
+            if (_useSameScriptForBoth) PostExitScriptPath = value;
         }
     }
 
@@ -287,6 +293,26 @@ public class GameEditViewModel : ViewModelBase
     public bool HasPreLaunchScript => !string.IsNullOrWhiteSpace(_preLaunchScriptPath);
 
     public bool HasPostExitScript => !string.IsNullOrWhiteSpace(_postExitScriptPath);
+
+    /// <summary>
+    /// "Use the same script for pre-launch and post-exit": for one-file scripts that branch on the
+    /// phase, like the bundled examples. While on, the post-exit path mirrors the pre-launch path
+    /// and its box is read-only; turning it off leaves the copied path in place to edit.
+    /// </summary>
+    public bool UseSameScriptForBoth
+    {
+        get => _useSameScriptForBoth;
+        set
+        {
+            if (_useSameScriptForBoth == value) return;
+            _useSameScriptForBoth = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanEditPostExitScript));
+            if (value) PostExitScriptPath = PreLaunchScriptPath;
+        }
+    }
+
+    public bool CanEditPostExitScript => !_useSameScriptForBoth;
 
     // --- Test Run ---
 
@@ -1262,7 +1288,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.PerformanceProfile = PerformanceProfile;
         SourceGame.CpuAffinity = CpuAffinity;
         SourceGame.PreLaunchScriptPath = PreLaunchScriptPath?.Trim().Trim('"') ?? string.Empty;
-        SourceGame.PostExitScriptPath = PostExitScriptPath?.Trim().Trim('"') ?? string.Empty;
+        SourceGame.PostExitScriptPath = (UseSameScriptForBoth ? PreLaunchScriptPath : PostExitScriptPath)?.Trim().Trim('"') ?? string.Empty;
         SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript || AbortLaunchOnScriptFailure;
         SourceGame.RunScriptsHidden = RunScriptsHidden;
         SourceGame.RunScriptsAsAdmin = RunScriptsAsAdmin;

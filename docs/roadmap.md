@@ -24,7 +24,7 @@ free. **Review is the security control; hashes only prove the file is what the r
 - `CONTRIBUTING.md` with the PR checklist: uses only the documented positional arguments and
   Script Arguments (see `Scripts/Library/README.txt` in this repo for the contract); no
   downloads, no network calls, no `Invoke-Expression`, no module installs; nothing destructive
-  uncommented (killing processes only by a name the user supplies); `needsAdmin` absent or
+  uncommented (closing only processes the user named or the script itself started); `needsAdmin` absent or
   justified; tested with Test Run in both phases; comments explain every action. The repo owner
   reviews every PR.
 - The first entries are this repo's bundled examples, in the same format, so the manifest code
@@ -60,12 +60,19 @@ Decisions made while building it:
 
 - **Positioning.** Scripts stay an advanced, off-by-default feature. 1.4.0 makes them more
   powerful and easier to debug, not "easy". The release notes should say that.
-- **No bundled behaviour templates.** A proposed set of Discord / OpenRGB / Wallpaper Engine /
-  audio-switch templates was dropped: each depends on a third-party app's install path and CLI,
-  rots without notice, and would read as a TrayTrigger bug when it breaks. What ships instead is
-  a scripts folder with two blank templates, three small examples that use only Windows built-ins
-  and do nothing until given a Script Argument, and a README (`Scripts/Library/`,
-  `Services/ScriptLibraryService.cs`).
+- **Real-world examples (decision reversed the same day).** The first cut shipped three
+  Windows-only examples (session CSV log, zip a named folder, close/restart a named program),
+  because templates for third-party apps depend on their install paths and command lines and can
+  read as a TrayTrigger bug when those change. The owner found them hard to follow and not useful,
+  so 1.4.0 ships five real-world examples instead: Wallpaper Engine pause, Quiet Mode, Companion
+  Apps, OBS replay buffer and Save Backup, plus the two blank templates and a task-first README
+  (`Scripts/Library/`, `Services/ScriptLibraryService.cs`). The breakage risk is handled inside
+  the scripts: each is presented as an example to copy, declares its dependencies in a
+  catalog-style header, finds the third-party app at run time or through one setting at the top,
+  and exits 0 with a plain message when the app isn't there. All are PowerShell except the batch
+  template. They are the seed entries for the community catalog. An audio-device switcher and a
+  display-mode changer were considered and left for the catalog: both need a large inline C#
+  block that is hard to learn from.
 - **Two script fields, not one.** A single-script model breaks for the two most common
   attachments: a plain `.exe` that cannot branch on the phase, and different types per phase.
   A dual-phase script is supported by putting the same file in both boxes, which the examples do.

@@ -52,8 +52,12 @@ public class GameScriptService
     public const string PhasePreLaunch = "prelaunch";
     public const string PhasePostExit = "postexit";
 
-    /// <summary>Default upper bound on how long a "wait for it" pre-launch script can hold up the game launch.</summary>
-    public static readonly TimeSpan DefaultPreLaunchWaitTimeout = TimeSpan.FromSeconds(30);
+    /// <summary>
+    /// Default upper bound on how long a "wait for it" pre-launch script can hold up the game
+    /// launch. Short, because a slow script is never killed - the game just starts without it -
+    /// and a script that needs longer (zipping a large save) gets a higher value per game.
+    /// </summary>
+    public static readonly TimeSpan DefaultPreLaunchWaitTimeout = TimeSpan.FromSeconds(10);
     public const int MinPreLaunchTimeoutSeconds = 1;
     public const int MaxPreLaunchTimeoutSeconds = 600;
 

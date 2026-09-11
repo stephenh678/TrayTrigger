@@ -84,13 +84,26 @@ public partial class SteamMetadataService
     // decides via MetadataFreshness whether to re-fetch behind the cached copy. Only successful
     // lookups are stored - a transient failure must never be remembered as "no data".
 
-    /// <summary>Beside <see cref="CoversDirectory"/>, so the cache folder holds everything fetched.</summary>
-    public static readonly string CacheFilePath = Path.Combine(
+    private static readonly string DefaultCacheFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "TrayTrigger", "steam-cache.json");
 
+    /// <summary>Beside <see cref="CoversDirectory"/>, so the cache folder holds everything fetched.</summary>
+    public static string CacheFilePath { get; private set; } = DefaultCacheFilePath;
+
     private static readonly object CacheLock = new();
     private static Dictionary<string, SteamAppDetails>? _cache;
+
+    /// <summary>Test seam: points the cache at another file (null restores the real one) and
+    /// drops the in-memory copy so the next read loads from that file.</summary>
+    internal static void UseCacheFileForTests(string? path)
+    {
+        lock (CacheLock)
+        {
+            CacheFilePath = path ?? DefaultCacheFilePath;
+            _cache = null;
+        }
+    }
 
     /// <summary>Cached details for an App ID, from memory or the on-disk cache, without a network request.</summary>
     public static bool TryGetCached(string appId, out SteamAppDetails? details)
@@ -132,6 +145,23 @@ public partial class SteamMetadataService
         {
             if (LoadCacheLocked().Remove(appId.Trim()))
                 SaveCacheLocked();
+        }
+    }
+
+    /// <summary>Batch form of <see cref="InvalidateCache(string)"/> for removing many games at
+    /// once: the cache file is rewritten once, not per game. Returns how many entries were dropped.</summary>
+    public static int InvalidateCache(IEnumerable<string> appIds)
+    {
+        var ids = appIds.Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id.Trim()).ToList();
+        if (ids.Count == 0)
+            return 0;
+        lock (CacheLock)
+        {
+            var cache = LoadCacheLocked();
+            int removed = ids.Count(cache.Remove);
+            if (removed > 0)
+                SaveCacheLocked();
+            return removed;
         }
     }
 

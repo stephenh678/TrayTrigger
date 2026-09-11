@@ -10,9 +10,9 @@ namespace TrayTrigger.Services;
 /// <summary>
 /// The user's scripts folder (%AppData%\TrayTrigger\Scripts): where "New script..." writes, where
 /// the Browse buttons open, and where the bundled blank templates, examples and README are
-/// materialised from embedded resources. Ships nothing that acts on its own - the examples do
-/// nothing until given a script argument - and never overwrites a file the user may have edited
-/// (the README is the one exception: it is documentation, refreshed on every install pass).
+/// materialised from embedded resources. Nothing here acts on its own - a script only runs once the
+/// user picks it for a game - and a file the user may have edited is never overwritten (the README
+/// is the one exception: it is documentation, refreshed on every install pass).
 /// </summary>
 public class ScriptLibraryService
 {
