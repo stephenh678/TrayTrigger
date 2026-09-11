@@ -49,7 +49,7 @@ public static partial class GameNameExtractor
     [
         "bin", "binaries", "win64", "win32", "wingdk", "x64", "x86",
         "shipping", "release", "retail", "_retail_", "_retail",
-        "game", "app", "client", "engine", "build", "intermediate"
+        "game", "app", "client", "engine", "build", "intermediate", "content"
     ];
 
     private static readonly string[] LibraryFolders =
