@@ -2712,7 +2712,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Game Titles &amp; Metadata Detection" FontSize="13.5" FontWeight="SemiBold" 
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="How game titles and categories are determined when importing files or scanning folders."
+                                    <TextBlock Text="How game titles and categories are determined when importing files or scanning folders, and how long fetched game info is kept."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,2" TextWrapping="Wrap"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,0,10"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
@@ -2743,8 +2743,31 @@
                                               IsChecked="{Binding AutoCategorizeFromSteam}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                     <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized. Uses Steam's genre when the game is on Steam, otherwise RAWG's if RAWG is enabled."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                                    <!-- Freshness of the cached Steam / RAWG details behind Game Details. The window
+                                         always opens from the disk cache; this decides when it re-fetches behind it.
+                                         Same row style as "Library view mode". The ComboBox is declared first so the
+                                         DockPanel reserves its width before the wrapping description is measured. -->
+                                    <DockPanel Margin="0,0,0,8" LastChildFill="False">
+                                        <ComboBox ItemsSource="{Binding MetadataRefreshOptions}"
+                                                  SelectedItem="{Binding MetadataRefreshOption, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Right"
+                                                  DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="Refresh game info:" Foreground="{StaticResource BrushTextPrimary}" FontSize="12.5"/>
+                                            <TextBlock Text="Game Details opens from a copy saved on disk and shows when it was last updated. This is how old that copy may get before it's refreshed in the background; Refresh in the details window always fetches fresh info."
+                                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DockPanel>
+
+                                    <Button Content="Clear Cached Game Info" Command="{Binding ClearMetadataCacheCommand}"
+                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"
+                                            HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters are kept."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="0,4,0,2" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
 

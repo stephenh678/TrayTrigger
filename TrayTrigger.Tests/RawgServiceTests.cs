@@ -96,11 +96,6 @@ public class RawgServiceTests
         Assert.Equal("https://rawg.io/games/fortnite", d.RawgPageUrl);
         // Play modes in display order, Steam wording, unrelated tags dropped.
         Assert.Equal(new[] { "Full controller support", "Single-player", "Multi-player", "Online Co-op" }, d.PlayModes);
-        Assert.Equal(2, d.Stores.Count);
-        Assert.Equal("epic-games", d.Stores[0].Slug);
-        Assert.Equal(11, d.Stores[0].StoreId);
-        Assert.Equal(string.Empty, d.Stores[0].Url);
-        Assert.False(d.StoreLinksResolved);
     }
 
     [Fact]
@@ -121,7 +116,6 @@ public class RawgServiceTests
         Assert.Equal(string.Empty, d.ReleaseDate);
         Assert.Equal(string.Empty, d.BackgroundImageUrl);
         Assert.Empty(d.PlayModes);
-        Assert.Empty(d.Stores);
         // The attribution link always has a target: the game's rawg.io page.
         Assert.Equal("https://rawg.io/games/minimal", d.RawgPageUrl);
     }
@@ -174,76 +168,6 @@ public class RawgServiceTests
     }
 
     [Fact]
-    public void ApplyStoreLinks_MergesUrlsByStoreId_IgnoringBadUrls()
-    {
-        var d = new RawgGameDetails
-        {
-            Stores =
-            {
-                new RawgStoreLink { StoreId = 11, Name = "Epic Games", Slug = "epic-games" },
-                new RawgStoreLink { StoreId = 7, Name = "Xbox Store", Slug = "xbox-store" },
-                new RawgStoreLink { StoreId = 1, Name = "Steam", Slug = "steam" },
-            }
-        };
-
-        RawgService.ApplyStoreLinks(d, Parse(
-            """
-            {"results":[
-              {"id":1,"game_id":58175,"store_id":11,"url":"https://www.epicgames.com/store/p/fortnite"},
-              {"id":2,"game_id":58175,"store_id":7,"url":"javascript:alert(1)"},
-              {"id":3,"game_id":58175,"store_id":99,"url":"https://unknown.example"}
-            ]}
-            """));
-
-        Assert.Equal("https://www.epicgames.com/store/p/fortnite", d.Stores[0].Url);
-        Assert.Equal(string.Empty, d.Stores[1].Url);
-        Assert.Equal(string.Empty, d.Stores[2].Url);
-    }
-
-    private static List<RawgStoreLink> SampleStores() => new()
-    {
-        new RawgStoreLink { StoreId = 1, Name = "Steam", Slug = "steam", Url = "https://store.steampowered.com/app/1" },
-        new RawgStoreLink { StoreId = 7, Name = "Xbox Store", Slug = "xbox-store", Url = "https://xbox.com/g" },
-        new RawgStoreLink { StoreId = 11, Name = "Epic Games", Slug = "epic-games", Url = "https://epicgames.com/g" },
-        new RawgStoreLink { StoreId = 3, Name = "PlayStation Store", Slug = "playstation-store", Url = "https://store.playstation.com/g" },
-    };
-
-    [Fact]
-    public void PickStore_PrefersTheGamesOwnPlatform()
-    {
-        var xbox = RawgService.PickStore(SampleStores(), new GameEntry { IsXboxGame = true }, excludeSteam: false);
-        Assert.Equal("xbox-store", xbox!.Slug);
-
-        var epic = RawgService.PickStore(SampleStores(), new GameEntry { IsEpicGame = true }, excludeSteam: false);
-        Assert.Equal("epic-games", epic!.Slug);
-    }
-
-    [Fact]
-    public void PickStore_FallsBackToPcStorefrontOrder_AndSkipsSteamWhenAsked()
-    {
-        var local = RawgService.PickStore(SampleStores(), new GameEntry(), excludeSteam: false);
-        Assert.Equal("epic-games", local!.Slug);
-
-        var steamOnly = new List<RawgStoreLink>
-        {
-            new() { StoreId = 1, Name = "Steam", Slug = "steam", Url = "https://store.steampowered.com/app/1" },
-        };
-        Assert.Equal("steam", RawgService.PickStore(steamOnly, new GameEntry(), excludeSteam: false)!.Slug);
-        Assert.Null(RawgService.PickStore(steamOnly, new GameEntry(), excludeSteam: true));
-    }
-
-    [Fact]
-    public void PickStore_IgnoresStoresWithoutAResolvedUrl()
-    {
-        var stores = new List<RawgStoreLink>
-        {
-            new() { StoreId = 11, Name = "Epic Games", Slug = "epic-games", Url = "" },
-            new() { StoreId = 5, Name = "GOG", Slug = "gog", Url = "https://gog.com/g" },
-        };
-        Assert.Equal("gog", RawgService.PickStore(stores, new GameEntry { IsEpicGame = true }, excludeSteam: false)!.Slug);
-    }
-
-    [Fact]
     public void MapPlayModes_NormalisesAndDedupes()
     {
         var chips = RawgService.MapPlayModes(new[] { "online multiplayer", "Multiplayer", "MMO", "Massively Multiplayer", "Story Rich", "co-op" });
@@ -259,8 +183,7 @@ public class RawgServiceTests
             {
                 RawgId = 58175, Slug = "fortnite", Name = "Fortnite", Developer = "Epic Games",
                 Genres = { "Shooter" }, PlayModes = { "Multi-player" }, Rating = 3.4, Metacritic = 78,
-                BackgroundImageUrl = "https://media.rawg.io/x.jpg", StoreLinksResolved = true,
-                Stores = { new RawgStoreLink { StoreId = 11, Name = "Epic Games", Slug = "epic-games", Url = "https://epicgames.com/g" } },
+                BackgroundImageUrl = "https://media.rawg.io/x.jpg",
                 FetchedUtc = new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
             }
         };
@@ -274,8 +197,6 @@ public class RawgServiceTests
         Assert.Equal("Shooter", d.PrimaryGenre);
         Assert.Equal(new[] { "Multi-player" }, d.PlayModes);
         Assert.Equal(3.4, d.Rating);
-        Assert.True(d.StoreLinksResolved);
-        Assert.Equal("https://epicgames.com/g", d.Stores[0].Url);
         Assert.Equal(original[58175].FetchedUtc, d.FetchedUtc);
         Assert.DoesNotContain("PrimaryGenre", json); // computed, not stored
     }

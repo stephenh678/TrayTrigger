@@ -39,10 +39,6 @@ public class RawgGameDetails
     /// <summary>RAWG's <c>background_image</c>: a landscape screenshot. Used for the blurred hero
     /// backdrop and as a last-resort crisp fallback before the icon tile - never as the poster.</summary>
     public string BackgroundImageUrl { get; set; } = string.Empty;
-    /// <summary>Stores RAWG lists the game on. URLs are filled by a second call
-    /// (<see cref="StoreLinksResolved"/>) only when the details window needs them.</summary>
-    public List<RawgStoreLink> Stores { get; set; } = new();
-    public bool StoreLinksResolved { get; set; }
     public DateTime FetchedUtc { get; set; }
 
     /// <summary>The genre used to categorise a game when it's still Uncategorized. "Indie" is a
@@ -61,13 +57,4 @@ public class RawgGameDetails
             return Genres.Count > 0 ? Genres[0] : string.Empty;
         }
     }
-}
-
-/// <summary>One store a game is sold on, per RAWG. <see cref="Url"/> is empty until resolved.</summary>
-public class RawgStoreLink
-{
-    public int StoreId { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Slug { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
 }

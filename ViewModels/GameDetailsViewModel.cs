@@ -186,9 +186,85 @@ public class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(NewsItems));
                 OnPropertyChanged(nameof(StoreUrl));
                 OnPropertyChanged(nameof(HasStoreUrl));
+                OnPropertyChanged(nameof(ShowSteamStoreButton));
                 OnPropertyChanged(nameof(MatchCaption));
                 OnPropertyChanged(nameof(HasMatchCaption));
+                OnPropertyChanged(nameof(LastUpdatedCaption));
+                OnPropertyChanged(nameof(ShowFreshness));
             }
+        }
+    }
+
+    // ------------------------------------------------------------------ freshness
+
+    /// <summary>How long a cached entry is trusted before the window re-fetches it behind the
+    /// cached copy (Settings › Library › Refresh game info).</summary>
+    private readonly MetadataRefreshInterval _refreshInterval;
+
+    /// <summary>Set by "Refresh now" so the next Steam / RAWG load bypasses the cache and the
+    /// freshness rule.</summary>
+    private bool _forceSteamRefresh;
+    private bool _forceRawgRefresh;
+
+    /// <summary>Number of background re-fetches in flight while data is already on screen (the
+    /// big loading state is only for an empty window). Drives the "Updating..." caption.</summary>
+    private int _refreshingCount;
+    public bool IsRefreshingNow => _refreshingCount > 0;
+
+    private void BeginRefreshing()
+    {
+        _refreshingCount++;
+        OnPropertyChanged(nameof(IsRefreshingNow));
+        OnPropertyChanged(nameof(LastUpdatedCaption));
+    }
+
+    private void EndRefreshing()
+    {
+        _refreshingCount = Math.Max(0, _refreshingCount - 1);
+        OnPropertyChanged(nameof(IsRefreshingNow));
+        OnPropertyChanged(nameof(LastUpdatedCaption));
+    }
+
+    /// <summary>"Updated 3 hours ago" for the active source, or "Updating..." while a re-fetch
+    /// is running behind the cached copy. Empty for an entry with no timestamp.</summary>
+    public string LastUpdatedCaption
+    {
+        get
+        {
+            if (IsRefreshingNow)
+                return "Updating...";
+            var fetched = IsRawgActive ? (_rawgDetails?.FetchedUtc ?? default) : (_details?.FetchedUtc ?? default);
+            return MetadataFreshness.Describe(fetched);
+        }
+    }
+
+    /// <summary>The "Updated ... · Refresh" cluster is only meaningful once the active source has data.</summary>
+    public bool ShowFreshness => HasDetails;
+
+    public string RefreshNowToolTip => IsRawgActive
+        ? "Fetch this game's info from RAWG again now"
+        : "Fetch the latest details, reviews and news from Steam now";
+
+    /// <summary>
+    /// "Refresh now": re-fetches the active source regardless of the interval. Only the source
+    /// on screen, so refreshing Steam news never triggers a RAWG name search (with its
+    /// id/category/poster side effects) for a game the user hasn't looked at on RAWG.
+    /// </summary>
+    private async Task RefreshNowAsync()
+    {
+        if (IsRefreshingNow)
+            return;
+
+        if (IsRawgActive)
+        {
+            _forceRawgRefresh = true;
+            _rawgAttempted = false;
+            await EnsureRawgLoadedAsync();
+        }
+        else
+        {
+            _forceSteamRefresh = true;
+            await LoadDetailsAsync();
         }
     }
 
@@ -320,15 +396,15 @@ public class GameDetailsViewModel : ViewModelBase
     public System.Collections.Generic.List<string> PlayModes => IsRawgActive ? (_rawgDetails?.PlayModes ?? new()) : (_details?.PlayModes ?? new());
     public bool HasPlayModes => PlayModes.Count > 0;
 
-    // The store the game is sold on, per RAWG - the non-Steam counterpart of the Steam Store
-    // button. Its own platform's store when known (Xbox / Epic / GOG import), else the first PC
-    // storefront RAWG lists a link for.
-    private RawgStoreLink? PickedStore => _rawgDetails != null
-        ? RawgService.PickStore(_rawgDetails.Stores, Game, excludeSteam: HasStoreUrl)
-        : null;
-    public bool HasRawgStore => IsRawgActive && PickedStore != null;
-    public string RawgStoreLabel => PickedStore is { } s ? $"Open on {s.Name}" : string.Empty;
-    public string RawgStoreUrl => PickedStore?.Url ?? string.Empty;
+    /// <summary>"Open on RAWG" - the RAWG counterpart of the Steam Store button, shown while
+    /// RAWG is the active source. Targets the game's own rawg.io page (the same as the
+    /// attribution link), so it always lands on the page the data came from rather than on
+    /// whichever storefront RAWG happens to list first.</summary>
+    public bool HasRawgPage => ShowRawgAttribution;
+
+    /// <summary>The Steam Store button follows the source switch, the way every other field in
+    /// the header does, so the action row never carries two store buttons and never wraps.</summary>
+    public bool ShowSteamStoreButton => HasStoreUrl && !IsRawgActive;
 
     /// <summary>The blurred hero backdrop. RAWG's screenshot gives real game atmosphere for a
     /// title with only an icon tile; otherwise the poster itself is blurred as before.</summary>
@@ -408,8 +484,9 @@ public class GameDetailsViewModel : ViewModelBase
 
     public string StoreUrl => _details?.StoreUrl ?? (!string.IsNullOrWhiteSpace(Game.SteamAppId) ? $"https://store.steampowered.com/app/{Game.SteamAppId}" : string.Empty);
 
-    /// <summary>Hides the Steam Store button outright (not just disabled) for the many
-    /// GOG/EA/Epic/Ubisoft/local games that have no Steam listing to open.</summary>
+    /// <summary>True when there is a Steam listing to open. The button itself is gated by
+    /// <see cref="ShowSteamStoreButton"/>, which also hides it while RAWG is showing, so the
+    /// many GOG/EA/Epic/Ubisoft/local games with no Steam listing never show it at all.</summary>
     public bool HasStoreUrl => !string.IsNullOrWhiteSpace(StoreUrl);
 
     /// <summary>Steam's news hub for this app: every announcement and patch note, not just the latest 3.</summary>
@@ -425,7 +502,7 @@ public class GameDetailsViewModel : ViewModelBase
     public ICommand ShowMinReqsCommand { get; }
     public ICommand ShowRecReqsCommand { get; }
     public ICommand OpenRawgPageCommand { get; private set; } = null!;
-    public ICommand OpenRawgStoreCommand { get; private set; } = null!;
+    public ICommand RefreshNowCommand { get; private set; } = null!;
     /// <summary>The two halves of the Steam | RAWG segmented switch above the synopsis.</summary>
     public ICommand SelectSteamSourceCommand { get; private set; } = null!;
     public ICommand SelectRawgSourceCommand { get; private set; } = null!;
@@ -448,9 +525,11 @@ public class GameDetailsViewModel : ViewModelBase
         string? rawgApiKey = null,
         Action<GameEntry>? saveGame = null,
         bool autoCategorize = false,
-        Func<GameEntry, string?, bool, Task>? fetchPosterByName = null)
+        Func<GameEntry, string?, bool, Task>? fetchPosterByName = null,
+        MetadataRefreshInterval refreshInterval = MetadataRefreshInterval.Every3Days)
     {
         _autoCategorize = autoCategorize;
+        _refreshInterval = refreshInterval;
         _fetchPosterByName = fetchPosterByName;
         Game = game ?? throw new ArgumentNullException(nameof(game));
         _steamMetadataService = steamMetadataService ?? throw new ArgumentNullException(nameof(steamMetadataService));
@@ -476,7 +555,7 @@ public class GameDetailsViewModel : ViewModelBase
         SelectRawgSourceCommand = new RelayCommand(() => SetSource(MetadataSource.Rawg), () => CanToggleSource);
         ChangeMatchCommand = new RelayCommand(ChangeMatch, () => CanChangeMatch);
         OpenRawgPageCommand = new RelayCommand(() => ExecuteOpenUrl(RawgUrl));
-        OpenRawgStoreCommand = new RelayCommand(() => ExecuteOpenUrl(RawgStoreUrl), () => HasRawgStore);
+        RefreshNowCommand = new RelayCommand(() => _ = RefreshNowAsync(), () => !IsRefreshingNow);
         ToggleFavoriteCommand = new RelayCommand(() => IsFavorite = !IsFavorite);
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
         EditGameCommand = new RelayCommand(ExecuteEdit);
@@ -487,7 +566,8 @@ public class GameDetailsViewModel : ViewModelBase
         ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);
         ShowRecReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = true);
 
-        // Asynchronously load and refresh latest details in the background every time
+        // Paint from the cache (above), then re-fetch behind it only when the entry is older
+        // than the configured refresh interval (or missing).
         _ = LoadDetailsAsync();
 
         // When RAWG is the active source on open (a non-Steam game preferring it), fetch it too.
@@ -697,17 +777,40 @@ public class GameDetailsViewModel : ViewModelBase
     /// </summary>
     private async Task EnsureRawgLoadedAsync()
     {
-        if (_rawgDetails != null || _rawgAttempted || string.IsNullOrWhiteSpace(_rawgApiKey))
+        if (_rawgAttempted || string.IsNullOrWhiteSpace(_rawgApiKey))
             return;
 
         _rawgAttempted = true;
-        IsRawgLoading = true;
+        bool force = _forceRawgRefresh;
+        _forceRawgRefresh = false;
+
+        // Paint from the disk cache first, the way the Steam side does from its constructor.
+        // Fresh enough: done. Stale: re-fetch behind the cached copy, keeping it on any failure.
+        bool revalidating = false;
+        if (!force && Game.RawgId > 0 && RawgService.TryGetCached(Game.RawgId, out var cachedRawg))
+        {
+            _rawgDetails = cachedRawg;
+            _rawgStatus = RawgLookupStatus.Found;
+            RaiseSourceDependentChanged();
+            if (!MetadataFreshness.IsStale(cachedRawg.FetchedUtc, _refreshInterval))
+                return;
+            revalidating = true;
+        }
+        else if (force && _rawgDetails != null)
+        {
+            revalidating = true;
+        }
+
+        if (revalidating)
+            BeginRefreshing();
+        else
+            IsRawgLoading = true;
         try
         {
             RawgLookupResult result;
             if (Game.RawgId > 0)
             {
-                result = await _rawgService.GetByIdAsync(Game.RawgId, _rawgApiKey);
+                result = await _rawgService.GetByIdAsync(Game.RawgId, _rawgApiKey, forceRefresh: force || revalidating);
                 if (result.Status == RawgLookupStatus.NoMatch)
                 {
                     // The remembered id is gone from RAWG - forget it and fall through to a
@@ -719,6 +822,13 @@ public class GameDetailsViewModel : ViewModelBase
             else
             {
                 result = await _rawgService.LookUpByNameAsync(RawgSearchName, _rawgApiKey, _minConfidenceForRawg);
+            }
+
+            if (revalidating && result.Details == null)
+            {
+                // Offline / bad key / quota: the cached copy stays on screen, silently.
+                LoggingService.Verbose("GameDetailsViewModel", $"RAWG re-fetch for '{Game.Name}' returned {result.Status}; keeping the cached entry.");
+                return;
             }
 
             _rawgStatus = result.Status;
@@ -749,9 +859,6 @@ public class GameDetailsViewModel : ViewModelBase
                 // The screenshot may now be the ambient backdrop / crisp fallback.
                 InvalidateCoverImageCache();
 
-                // Store links are a separate call; only pay for it once the RAWG side is up.
-                await _rawgService.EnsureStoreLinksAsync(found, _rawgApiKey);
-
                 bool manualPick = _rawgManualPick;
                 _rawgManualPick = false;
 
@@ -778,11 +885,15 @@ public class GameDetailsViewModel : ViewModelBase
         catch (Exception ex)
         {
             LoggingService.Warn("GameDetailsViewModel", $"RAWG load failed for '{Game.Name}': {ex.Message}");
-            _rawgStatus = RawgLookupStatus.Failed;
+            if (!revalidating)
+                _rawgStatus = RawgLookupStatus.Failed;
         }
         finally
         {
-            IsRawgLoading = false;
+            if (revalidating)
+                EndRefreshing();
+            else
+                IsRawgLoading = false;
             RaiseSourceDependentChanged();
         }
     }
@@ -803,7 +914,8 @@ public class GameDetailsViewModel : ViewModelBase
             nameof(MetacriticScore), nameof(HasMetacritic), nameof(RawgRatingDisplay), nameof(HasRawgRating),
             nameof(EsrbRating), nameof(HasEsrbRating), nameof(ReviewSummary), nameof(HasReviewSummary),
             nameof(PlayModes), nameof(HasPlayModes),
-            nameof(HasRawgStore), nameof(RawgStoreLabel), nameof(RawgStoreUrl),
+            nameof(HasRawgPage), nameof(ShowSteamStoreButton),
+            nameof(LastUpdatedCaption), nameof(ShowFreshness), nameof(RefreshNowToolTip),
             nameof(DisplayCoverImage), nameof(AmbientImage), nameof(Category),
             nameof(HasRequirements), nameof(HasNews), nameof(NewsItems),
             nameof(ErrorMessage), nameof(HasError),
@@ -863,10 +975,37 @@ public class GameDetailsViewModel : ViewModelBase
                 return;
             }
 
-            // Always fetch with forceRefresh: true so that every time a card is clicked,
-            // fresh news, reviews, and specs are updated in the background.
+            // Cached and still inside the refresh interval: nothing to fetch. "Refresh now"
+            // and the rematch paths clear the cache or set the force flag to get past this.
+            bool force = _forceSteamRefresh;
+            _forceSteamRefresh = false;
+            if (_details != null && !force && !MetadataFreshness.IsStale(_details.FetchedUtc, _refreshInterval))
+            {
+                if (_resyncRawgAfterSteamLoad)
+                {
+                    _resyncRawgAfterSteamLoad = false;
+                    if (CanToggleSource)
+                        _ = EnsureRawgLoadedAsync();
+                }
+                return;
+            }
+
+            // A stale entry on screen is re-fetched behind it (forceRefresh bypasses the
+            // service cache); with nothing on screen the service serves its cache if it has one.
+            bool revalidating = _details != null;
+            if (revalidating)
+                BeginRefreshing();
             bool noStoreData = false;
-            var loaded = await _steamMetadataService.GetAppDetailsAsync(targetAppId, _steamGridDbApiKey, forceRefresh: true, onNoStoreData: _ => noStoreData = true);
+            SteamAppDetails? loaded;
+            try
+            {
+                loaded = await _steamMetadataService.GetAppDetailsAsync(targetAppId, _steamGridDbApiKey, forceRefresh: force || revalidating, onNoStoreData: _ => noStoreData = true);
+            }
+            finally
+            {
+                if (revalidating)
+                    EndRefreshing();
+            }
             if (loaded != null)
             {
                 Details = loaded;
@@ -898,9 +1037,19 @@ public class GameDetailsViewModel : ViewModelBase
                     if (CanToggleSource)
                         _ = EnsureRawgLoadedAsync();
                 }
+                else if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game.Category))
+                {
+                    // Steam listed no genre: let RAWG's fill the category in the background,
+                    // the same as the library's enrichment pass does.
+                    _ = EnsureRawgLoadedAsync();
+                }
             }
             else if (_details == null && _activeSource == MetadataSource.Steam)
             {
+                // No Steam store page for this App ID. RAWG can still categorise it.
+                if (_autoCategorize && CanToggleSource && LibraryConstants.IsEnrichableCategory(Game.Category))
+                    _ = EnsureRawgLoadedAsync();
+
                 // Distinguish a real "Steam has no store data for this AppId" (delisted /
                 // region-locked) response from an actual transport/network failure. See L-25.
                 ErrorMessage = noStoreData

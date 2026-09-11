@@ -40,7 +40,6 @@ public partial class SteamMetadataService
         return cts;
     }
 
-    private static readonly ConcurrentDictionary<string, SteamAppDetails> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AppLocks = new(StringComparer.OrdinalIgnoreCase);
     private static readonly SteamGridDbService GridDbService = new();
 
@@ -77,45 +76,142 @@ public partial class SteamMetadataService
         }
     }
 
+    // ------------------------------------------------------------------ disk cache
+    //
+    // Details are persisted to steam-cache.json beside the poster cache, the same shape as
+    // RawgService's rawg-cache.json, so Game Details opens instantly and offline and a restart
+    // doesn't re-hit Steam for every game. Each entry carries FetchedUtc; the details window
+    // decides via MetadataFreshness whether to re-fetch behind the cached copy. Only successful
+    // lookups are stored - a transient failure must never be remembered as "no data".
+
+    /// <summary>Beside <see cref="CoversDirectory"/>, so the cache folder holds everything fetched.</summary>
+    public static readonly string CacheFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "TrayTrigger", "steam-cache.json");
+
+    private static readonly object CacheLock = new();
+    private static Dictionary<string, SteamAppDetails>? _cache;
+
+    /// <summary>Cached details for an App ID, from memory or the on-disk cache, without a network request.</summary>
+    public static bool TryGetCached(string appId, out SteamAppDetails? details)
+    {
+        if (!string.IsNullOrWhiteSpace(appId))
+        {
+            lock (CacheLock)
+            {
+                if (LoadCacheLocked().TryGetValue(appId.Trim(), out var found))
+                {
+                    details = found;
+                    return true;
+                }
+            }
+        }
+        details = null;
+        return false;
+    }
+
+    private static void Store(SteamAppDetails details)
+    {
+        lock (CacheLock)
+        {
+            LoadCacheLocked()[details.AppId] = details;
+            SaveCacheLocked();
+        }
+    }
+
+    /// <summary>
+    /// Removes a single AppId's cached details, so the next lookup re-runs the full fetch
+    /// chain instead of returning a possibly-stale result (e.g. one whose CoverImagePath points
+    /// at a poster file that was since deleted from disk, or a wrong match being replaced).
+    /// </summary>
+    public static void InvalidateCache(string appId)
+    {
+        if (string.IsNullOrWhiteSpace(appId))
+            return;
+        lock (CacheLock)
+        {
+            if (LoadCacheLocked().Remove(appId.Trim()))
+                SaveCacheLocked();
+        }
+    }
+
+    /// <summary>Drops every cached entry (Settings › Clear cached game info). Posters are kept.</summary>
+    public static void ClearCache()
+    {
+        lock (CacheLock)
+        {
+            _cache = new Dictionary<string, SteamAppDetails>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (File.Exists(CacheFilePath))
+                    File.Delete(CacheFilePath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("SteamMetadataService", $"Could not delete Steam cache: {ex.Message}");
+            }
+        }
+    }
+
+    private static Dictionary<string, SteamAppDetails> LoadCacheLocked()
+    {
+        if (_cache != null)
+            return _cache;
+
+        try
+        {
+            if (File.Exists(CacheFilePath))
+            {
+                string json = File.ReadAllText(CacheFilePath);
+                var loaded = JsonSerializer.Deserialize(json, AppJsonContext.Default.DictionaryStringSteamAppDetails);
+                _cache = loaded != null
+                    ? new Dictionary<string, SteamAppDetails>(loaded, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, SteamAppDetails>(StringComparer.OrdinalIgnoreCase);
+                return _cache;
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamMetadataService", $"Steam cache unreadable, starting fresh: {ex.Message}");
+        }
+
+        _cache = new Dictionary<string, SteamAppDetails>(StringComparer.OrdinalIgnoreCase);
+        return _cache;
+    }
+
+    private static void SaveCacheLocked()
+    {
+        if (_cache == null)
+            return;
+
+        try
+        {
+            string? dir = Path.GetDirectoryName(CacheFilePath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            string tmp = CacheFilePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(_cache, AppJsonContext.Default.DictionaryStringSteamAppDetails));
+            File.Move(tmp, CacheFilePath, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamMetadataService", $"Could not save Steam cache: {ex.Message}");
+        }
+    }
+
     /// <param name="steamGridDbApiKey">
     /// Optional SteamGridDB API key. When provided, community-sourced vertical grid art is
     /// tried only after Steam's own official library art comes up empty, and before falling
     /// back to a composited banner/header image as a last resort.
     /// </param>
     /// <param name="forceRefresh">
-    /// Bypasses the in-memory details cache and the on-disk "poster file already exists" check,
+    /// Bypasses the details cache and the on-disk "poster file already exists" check,
     /// re-running the full lookup/download chain even if a (possibly fallback-quality) result was
     /// already cached. Without this, a game that already has a cover - even one from the
     /// composited-banner fallback tier - is never revisited, so e.g. adding a SteamGridDB key
     /// later would never improve an already-imported game's poster.
     /// </param>
-    /// <summary>
-    /// Removes a single AppId's cached details, so the next lookup re-runs the full fetch
-    /// chain instead of returning a possibly-stale in-memory result (e.g. one whose
-    /// CoverImagePath points at a poster file that was since deleted from disk).
-    /// </summary>
-    /// <summary>
-    /// Attempts to retrieve in-memory cached details for an App ID without triggering a network request.
-    /// </summary>
-    public static bool TryGetCached(string appId, out SteamAppDetails? details)
-    {
-        if (!string.IsNullOrWhiteSpace(appId) && Cache.TryGetValue(appId.Trim(), out var found))
-        {
-            details = found;
-            return true;
-        }
-        details = null;
-        return false;
-    }
-
-    public static void InvalidateCache(string appId)
-    {
-        if (!string.IsNullOrWhiteSpace(appId))
-        {
-            Cache.TryRemove(appId.Trim(), out _);
-        }
-    }
-
     /// <param name="onNoStoreData">
     /// Optional callback invoked with true when Steam responded successfully (HTTP 200) but
     /// explicitly reported no store data for this AppId (`"success": false` - a delisted or
@@ -130,7 +226,7 @@ public partial class SteamMetadataService
             return null;
 
         string trimmedId = appId.Trim();
-        if (!forceRefresh && Cache.TryGetValue(trimmedId, out var cached))
+        if (!forceRefresh && TryGetCached(trimmedId, out var cached))
             return cached;
 
         // Serialize all fetch/poster-download work per AppId so two callers enriching
@@ -140,7 +236,7 @@ public partial class SteamMetadataService
         await appLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (!forceRefresh && Cache.TryGetValue(trimmedId, out cached))
+            if (!forceRefresh && TryGetCached(trimmedId, out cached))
                 return cached;
 
             var details = new SteamAppDetails
@@ -192,7 +288,8 @@ public partial class SteamMetadataService
                 // enrichment for this AppId until the app is restarted.
                 if (!string.IsNullOrEmpty(details.Name))
                 {
-                    Cache[trimmedId] = details;
+                    details.FetchedUtc = DateTime.UtcNow;
+                    Store(details);
                     return details;
                 }
 

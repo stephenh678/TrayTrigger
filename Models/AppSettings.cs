@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TrayTrigger.Models;
 
 public class AppSettings
@@ -58,6 +60,10 @@ public class AppSettings
     /// <summary>Enables the RAWG metadata source (the Steam/RAWG toggle in Game Details). Off by
     /// default; needs a <see cref="RawgApiKey"/> to do anything.</summary>
     public bool UseRawgMetadata { get; set; } = false;
+    /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
+    /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<MetadataRefreshInterval>))]
+    public MetadataRefreshInterval MetadataRefreshInterval { get; set; } = MetadataRefreshInterval.Every3Days;
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>

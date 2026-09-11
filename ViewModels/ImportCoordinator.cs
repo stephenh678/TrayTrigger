@@ -235,7 +235,12 @@ public class ImportCoordinator : ViewModelBase
         }
     }
 
-    public async Task EnrichLibraryAsync()
+    /// <param name="retryForRawg">
+    /// True when RAWG has just become available (enabled, or a key entered): games with no Steam
+    /// App ID are retried now instead of waiting out <see cref="EnrichmentRetryInterval"/>, since
+    /// their last attempt ran without the source that can categorise them.
+    /// </param>
+    public async Task EnrichLibraryAsync(bool retryForRawg = false)
     {
         // RAWG enrichment (match id, category, canonical title for poster search) rides the same
         // pass, so an enabled RAWG source is reason enough to run it.
@@ -252,10 +257,12 @@ public class ImportCoordinator : ViewModelBase
         _isEnrichmentInProgress = true;
         try
         {
+            bool retryNow = retryForRawg && rawgEnabled;
             var candidates = _library.Games
                 .Where(card =>
                     (LibraryConstants.IsEnrichableCategory(card.Game.Category) || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId)) &&
-                    (card.Game.LastEnrichmentAttemptUtc == null || DateTime.UtcNow - card.Game.LastEnrichmentAttemptUtc.Value >= EnrichmentRetryInterval))
+                    (card.Game.LastEnrichmentAttemptUtc == null || DateTime.UtcNow - card.Game.LastEnrichmentAttemptUtc.Value >= EnrichmentRetryInterval
+                     || (retryNow && card.Game.RawgId == 0 && LibraryConstants.IsEnrichableCategory(card.Game.Category))))
                 .ToList();
 
             if (candidates.Count == 0)
