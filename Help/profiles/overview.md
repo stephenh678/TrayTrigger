@@ -6,8 +6,15 @@ A Performance Profile is a set of system changes that apply only while a specifi
 
 - Optimized applies the low-risk set: the full-clock power plan and the high-performance GPU preference. Enable HDR and Do Not Disturb are available under Optimized but stay off until you turn them on.
 - Aggressive applies everything in Optimized plus MMCSS scheduling changes, Above Normal process priority, and a 0.5 ms timer resolution request. The Defender exclusion is available under Aggressive but stays off until you turn it on.
-- The toggles on this page control which tweaks each tier includes. Changing one affects every game assigned to that tier. ENABLED or DISABLED shows whether the tweak is part of the tier; OPT-IN marks one with a real trade-off that stays off until you enable it; ADMIN marks one that raises a User Account Control prompt when it is applied.
+- The toggles on this page control which tweaks each tier includes. Changing one affects every game assigned to that tier.
 - Separately from the tier, each game can be pinned to performance cores on a hybrid CPU (Edit Game, CPU Cores). See the CPU Cores topic.
+
+## What the badges mean
+
+- ENABLED or DISABLED shows whether that tweak is part of its tier right now. Enabled tweaks apply to every game assigned to the tier the next time one launches; a game already running keeps its current session.
+- OPT-IN marks a tweak with a real trade-off, such as Enable HDR, Do Not Disturb, or the Defender exclusion. It stays off until you turn it on yourself, even for games on that tier.
+- ADMIN marks a tweak that writes a machine-wide value, so Windows shows a User Account Control prompt the first time it is applied in a session.
+- In the library, a green PLAYING badge on a game card means a profile session is active for it; End Session and Force Close in the card's right-click menu act on that session.
 
 ## Order of events
 

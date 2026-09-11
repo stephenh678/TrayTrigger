@@ -455,54 +455,18 @@
                                 </StackPanel>
                             </DockPanel>
 
+                            <!-- No badge legend here on purpose: the badges (OPTIMAL, OPT-IN, RESTART, ADMIN,
+                                 RESTORE POINT) are defined in the "How tweaks work" help topic this links to. -->
                             <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
-                                <StackPanel>
-                                    <DockPanel LastChildFill="False">
-                                        <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
-                                                   VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
-                                        <TextBlock Text="Documented Windows settings only - no registry cleaners. What the badges on each tweak mean:"
-                                                   Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                        <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="12,0,0,0"
-                                                VerticalAlignment="Center" DockPanel.Dock="Right"
-                                                Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
-                                    </DockPanel>
-                                    <!-- Badge legend. The samples reuse the exact badge styles from the tweak rows
-                                         so they read as the same thing; there are no hover tooltips anywhere in
-                                         the app, so this is where the badges are defined. -->
-                                    <WrapPanel Margin="18,6,0,0">
-                                        <StackPanel Orientation="Horizontal" Margin="0,2,20,2">
-                                            <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" VerticalAlignment="Center">
-                                                <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
-                                            </Border>
-                                            <TextBlock Text="off by default: a trade-off, not a sure win - read Learn more first"
-                                                       FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,2,20,2">
-                                            <Border Background="#3D2F14" CornerRadius="3" Padding="6,1.5" VerticalAlignment="Center">
-                                                <TextBlock Text="⟳ RESTART" FontSize="9" FontWeight="Bold" Foreground="#E8B84E"/>
-                                            </Border>
-                                            <TextBlock Text="takes effect after Windows restarts"
-                                                       FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,2,20,2">
-                                            <Border Background="#2B2340" CornerRadius="3" Padding="6,1.5" VerticalAlignment="Center">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="#B9A6F0" VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                                    <TextBlock Text="ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                            <TextBlock Text="needs TrayTrigger run as administrator"
-                                                       FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,2,20,2">
-                                            <Border Background="#238636" CornerRadius="3" Padding="6,1.5" VerticalAlignment="Center">
-                                                <TextBlock Text="RESTORE POINT" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
-                                            </Border>
-                                            <TextBlock Text="whether a Windows restore point is created before a tweak applies - click the badge above to change it"
-                                                       FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </WrapPanel>
-                                </StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
+                                               VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
+                                    <TextBlock Text="Documented Windows settings only - no registry cleaners. What each badge means is explained under How tweaks work."
+                                               Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="12,0,0,0"
+                                            VerticalAlignment="Center" DockPanel.Dock="Right"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
+                                </DockPanel>
                             </Border>
                         </StackPanel>
                     </Border>
