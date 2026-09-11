@@ -241,6 +241,150 @@ public class GameScriptServiceTests : IDisposable
         Assert.Equal("prelaunch;E2E Game;e2e;[];e2e", File.ReadAllText(marker).Trim());
     }
 
+    // --- Settings default scripts ---
+
+    private static ScriptDefaults Defaults(string? pre = null, string? post = null) => new()
+    {
+        PreLaunchScriptPath = pre ?? string.Empty,
+        PostExitScriptPath = post ?? string.Empty,
+        WaitForPreLaunchScript = false,
+        PreLaunchScriptTimeoutSeconds = 99,
+        AbortLaunchOnScriptFailure = true,
+        RunScriptsHidden = false,
+        RunScriptsAsAdmin = true
+    };
+
+    [Fact]
+    public void Resolve_GameOwnScriptWins_AndUsesGameOptions()
+    {
+        var game = new GameEntry { PreLaunchScriptPath = @"C:\g\own.bat", WaitForPreLaunchScript = true, PreLaunchScriptTimeoutSeconds = 12, RunScriptsHidden = true, RunScriptsAsAdmin = false };
+        var pre = GameScriptService.ResolvePreLaunch(game, Defaults(pre: @"C:\d\def.bat"))!.Value;
+
+        Assert.Equal(@"C:\g\own.bat", pre.Path);
+        Assert.False(pre.IsDefault);
+        Assert.True(pre.Wait);
+        Assert.Equal(12, pre.TimeoutSeconds);
+        Assert.False(pre.AbortOnFailure);
+        Assert.True(pre.Hidden);
+        Assert.False(pre.Elevated);
+    }
+
+    [Fact]
+    public void Resolve_DefaultUsed_WhenGameHasNone_WithDefaultOptions()
+    {
+        var game = new GameEntry { RunScriptsHidden = true, RunScriptsAsAdmin = false };
+        var pre = GameScriptService.ResolvePreLaunch(game, Defaults(pre: @"C:\d\def.bat"))!.Value;
+
+        Assert.Equal(@"C:\d\def.bat", pre.Path);
+        Assert.True(pre.IsDefault);
+        Assert.False(pre.Wait);
+        Assert.Equal(99, pre.TimeoutSeconds);
+        Assert.True(pre.AbortOnFailure);
+        Assert.False(pre.Hidden);
+        Assert.True(pre.Elevated);
+    }
+
+    [Fact]
+    public void Resolve_IsPerPhase()
+    {
+        // Own pre-launch, no own post-exit: the default post-exit still applies.
+        var game = new GameEntry { PreLaunchScriptPath = @"C:\g\own.bat" };
+        var defaults = Defaults(pre: @"C:\d\pre.bat", post: @"C:\d\post.bat");
+
+        Assert.False(GameScriptService.ResolvePreLaunch(game, defaults)!.Value.IsDefault);
+        var post = GameScriptService.ResolvePostExit(game, defaults);
+        Assert.True(post!.Value.IsDefault);
+        Assert.Equal(@"C:\d\post.bat", post.Value.Path);
+    }
+
+    [Fact]
+    public void Resolve_SkipDefaultScripts_BlocksDefaultsOnly()
+    {
+        var game = new GameEntry { SkipDefaultScripts = true, PostExitScriptPath = @"C:\g\post.bat" };
+        var defaults = Defaults(pre: @"C:\d\pre.bat", post: @"C:\d\post.bat");
+
+        Assert.Null(GameScriptService.ResolvePreLaunch(game, defaults));
+        Assert.Equal(@"C:\g\post.bat", GameScriptService.ResolvePostExit(game, defaults)!.Value.Path);
+    }
+
+    [Fact]
+    public void Resolve_NoDefaultsAndNoOwn_IsNull()
+    {
+        var game = new GameEntry();
+        Assert.Null(GameScriptService.ResolvePreLaunch(game, null));
+        Assert.Null(GameScriptService.ResolvePreLaunch(game, Defaults()));
+        Assert.Null(GameScriptService.ResolvePostExit(game, Defaults()));
+    }
+
+    [Fact]
+    public void RunPreLaunch_RunsDefaultScript_WithGameArguments_WhenGameHasNone()
+    {
+        string marker = Path.Combine(_dir, "def.txt");
+        string script = Path.Combine(_dir, "def.bat");
+        File.WriteAllText(script, $"@echo %~1;%~2;%~4;%~6> \"{marker}\"\r\n");
+
+        var defaults = new ScriptDefaults { PreLaunchScriptPath = script, WaitForPreLaunchScript = true, RunScriptsHidden = true };
+        var game = new GameEntry { Id = "g1", Name = "Game One", ExecutablePath = @"C:\x\y.exe", ScriptArguments = "Gaming" };
+
+        var svc = new GameScriptService(defaults: () => defaults);
+        var result = svc.RunPreLaunch(game);
+
+        Assert.True(result.ProceedWithLaunch);
+        Assert.True(File.Exists(marker), "default script did not run");
+        Assert.Equal("prelaunch;Game One;g1;Gaming", File.ReadAllText(marker).Trim());
+    }
+
+    [Fact]
+    public void RunPreLaunch_DefaultAbortOnFailure_CancelsLaunch()
+    {
+        string script = Path.Combine(_dir, "fail.bat");
+        File.WriteAllText(script, "@exit /b 5\r\n");
+        var defaults = new ScriptDefaults { PreLaunchScriptPath = script, AbortLaunchOnScriptFailure = true };
+
+        var result = new GameScriptService(defaults: () => defaults).RunPreLaunch(new GameEntry { Name = "G" });
+
+        Assert.False(result.ProceedWithLaunch);
+        Assert.Contains("exited with code 5", result.AbortReason);
+    }
+
+    [Fact]
+    public void TrackPostExit_TracksDefaultPostExit_AndRunsItOnShutdown()
+    {
+        string marker = Path.Combine(_dir, "defpost.txt");
+        string script = Path.Combine(_dir, "defpost.bat");
+        File.WriteAllText(script, $"@echo %~1;[%~5]> \"{marker}\"\r\n");
+        var defaults = new ScriptDefaults { PostExitScriptPath = script };
+
+        var svc = new GameScriptService(defaults: () => defaults);
+        svc.TrackPostExit(new GameEntry { Id = "t", Name = "T" });
+        svc.RunPendingPostExitScriptsOnShutdown();
+
+        // Fire-and-forget: wait for cmd.exe to both create and finish writing the marker.
+        string content = string.Empty;
+        for (int i = 0; i < 50 && content.Length == 0; i++)
+        {
+            Thread.Sleep(100);
+            if (File.Exists(marker)) content = File.ReadAllText(marker).Trim();
+        }
+        Assert.Equal("postexit;[0]", content);
+    }
+
+    [Fact]
+    public void TrackPostExit_IgnoresGame_ThatOptedOutOfDefaults()
+    {
+        string marker = Path.Combine(_dir, "skip.txt");
+        string script = Path.Combine(_dir, "skip.bat");
+        File.WriteAllText(script, $"@echo ran> \"{marker}\"\r\n");
+        var defaults = new ScriptDefaults { PostExitScriptPath = script };
+
+        var svc = new GameScriptService(defaults: () => defaults);
+        svc.TrackPostExit(new GameEntry { Id = "s", Name = "S", SkipDefaultScripts = true });
+        svc.RunPendingPostExitScriptsOnShutdown();
+
+        Thread.Sleep(500);
+        Assert.False(File.Exists(marker));
+    }
+
     [Fact]
     public void ScriptArguments_Batch_AppendedRaw_AfterPositionalArgs()
     {

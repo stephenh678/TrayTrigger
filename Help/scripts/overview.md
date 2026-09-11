@@ -26,6 +26,18 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 - Run scripts hidden suppresses the console window. A hidden script's output is captured into the TrayTrigger log instead (see Troubleshooting).
 - Run scripts as Administrator elevates through UAC, so expect a prompt on every launch.
 
+## Default scripts for every game
+
+Settings › Launch & Performance can hold a default pre-launch script and a default post-exit script. They run for any game that has no script of its own for that phase, so one "close Discord, restart it afterwards" pair covers the whole library without touching each game.
+
+- Resolution is per phase. A game with its own pre-launch script but no post-exit script runs its own pre-launch and the default post-exit.
+- A game's own script always wins over the default for that phase.
+- Any game can opt out of both defaults with "Don't run the default scripts for this game" in Edit Game. It is off for every game, including games added before this option existed, so the defaults apply everywhere the moment you set them.
+- The defaults have their own wait, timeout, cancel-on-failure, hidden, and Administrator options. Those apply whenever a default script runs; a game's own options apply only to its own scripts.
+- Each game's Script Arguments are passed to the default scripts too. That is how one generic default is parameterised per game.
+- The Enable game scripts switch gates the defaults as well: while it is off, nothing runs.
+- Edit Game shows which defaults apply to the game you are editing and why, and the defaults have their own Test buttons in Settings that run them with placeholder game values.
+
 ## Script arguments
 
 The Script Arguments box in Edit Game is free text appended after the five built-in arguments, for both scripts. It is how one generic script serves many games: the script reads a save folder or a profile name from there instead of having it edited in.
@@ -68,6 +80,8 @@ Every script works as-is; nothing here is required. If one script should behave 
 > Environment variables are not set when running as Administrator, because Windows cannot pass a custom environment through a UAC launch. Elevated scripts should read the arguments instead; the game ID and playtime are passed as arguments 4 and 5 for exactly this reason.
 
 > For .bat/.cmd scripts, percent signs are removed from the game name argument (%2) because cmd.exe would otherwise expand something like "%TEMP%" before your script sees it. The exact name is always available in TRAYTRIGGER_GAME_NAME.
+
+> Batch gotcha: never put the playtime argument directly before a redirect. cmd reads `echo %~5> log.txt` as a handle redirect when playtime is a single digit and writes nothing. Add a space or brackets: `echo [%~5] > log.txt`.
 
 ## Troubleshooting
 

@@ -2996,14 +2996,78 @@
                                     <TextBlock Text="Run your own script or program before a game starts and after it exits - close Discord, switch audio, set an RGB profile."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox Content="Show Pre-Launch &amp; Post-Exit Scripts in Edit Game"
+                                    <CheckBox Content="Enable game scripts (shows Pre-Launch &amp; Post-Exit Scripts in Edit Game)"
                                               IsChecked="{Binding EnableGameScripts}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Off by default to keep Edit Game simple. Games that already have a script keep it either way."
+                                    <TextBlock Text="Off by default to keep Edit Game simple. While off, no script runs for any game - not a game's own, not the defaults below. Games that already have a script keep their settings either way."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,2" TextWrapping="Wrap"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="24,0,0,2"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+
+                                    <!-- Default scripts: run for every game that has no script of its own for that phase. -->
+                                    <StackPanel Margin="0,12,0,0" IsEnabled="{Binding EnableGameScripts}">
+                                        <TextBlock Text="Default scripts for every game" FontSize="12.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;. Each game's Script Arguments are passed to the defaults too."
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                                        <TextBlock Text="Default pre-launch script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Text="{Binding DefaultPreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                            <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPreLaunchScriptCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                                    ToolTip="Run this script now with placeholder game values (hidden, not elevated, 30 s limit) and show its exit code and output"/>
+                                            <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPreLaunchScriptCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}"/>
+                                        </Grid>
+
+                                        <TextBlock Text="Default post-exit script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                            <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPostExitScriptCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                                    ToolTip="Run this script now as a post-exit run with placeholder game values and playtime 0 (hidden, not elevated, 30 s limit)"/>
+                                            <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPostExitScriptCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}"/>
+                                        </Grid>
+
+                                        <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
+                                                Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                                        </Border>
+
+                                        <CheckBox Content="Wait for the default pre-launch script to finish before starting the game"
+                                                  IsChecked="{Binding DefaultWaitForPreLaunchScript}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                        <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
+                                            <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
+                                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <CheckBox Content="Cancel the launch if the default pre-launch script fails (non-zero exit code, timeout, or won't start)"
+                                                  IsChecked="{Binding DefaultAbortLaunchOnScriptFailure}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                        <CheckBox Content="Run default scripts hidden (no console window)"
+                                                  IsChecked="{Binding DefaultRunScriptsHidden}" IsEnabled="{Binding HasAnyDefaultScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                        <CheckBox Content="Run default scripts as Administrator (UAC prompt on every launch)"
+                                                  IsChecked="{Binding DefaultRunScriptsAsAdmin}" IsEnabled="{Binding HasAnyDefaultScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,2"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 

@@ -36,7 +36,7 @@ public partial class ScriptTestResultDialog : Window
             string phase = report.IsPreLaunch ? "prelaunch" : "postexit (playtime 0)";
             summary.Add(r.TimedOut
                 ? $"Ran as {phase}; still running after {GameScriptService.TestRunTimeout.TotalSeconds:0} s, so it was killed. A real run is never killed - it keeps going while the game launches."
-                : $"Ran as {phase} in {r.Elapsed.TotalSeconds:0.0} s, hidden and not elevated, with the name and exe currently in Edit Game.");
+                : $"Ran as {phase} in {r.Elapsed.TotalSeconds:0.0} s, hidden and not elevated, with {report.ProbeDescription ?? "the name and exe currently in Edit Game"}.");
         }
         SummaryText.Text = string.Join("\n", summary);
 

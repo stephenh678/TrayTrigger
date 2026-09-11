@@ -68,11 +68,14 @@ public class AppSettings
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>
     /// The game-scripts feature switch. Shows the Pre-Launch &amp; Post-Exit Scripts card in Edit
-    /// Game, and is also the runtime kill-switch: while off, no script runs for any game, even
-    /// one that still has script paths configured (that game keeps showing the card, with a
-    /// notice that its scripts are disabled). See <see cref="Services.GameScriptService"/>.
+    /// Game, and is also the runtime kill-switch: while off, no script runs for any game - not a
+    /// game's own scripts, not the <see cref="ScriptDefaults"/> - even one that still has script
+    /// paths configured (that game keeps showing the card, with a notice that its scripts are
+    /// disabled). See <see cref="Services.GameScriptService"/>.
     /// </summary>
     public bool EnableGameScripts { get; set; } = false;
+    /// <summary>Scripts that run for every game without one of its own. See <see cref="Models.ScriptDefaults"/>.</summary>
+    public ScriptDefaults ScriptDefaults { get; set; } = new();
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
