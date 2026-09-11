@@ -350,6 +350,19 @@ worth knowing before the next packaged-app platform (Amazon? no - but anything M
   manages it by signing into the user's Xbox account and pulling the online library. Modern Game
   Pass PC titles are all GDK; the uncovered set is a shrinking minority of older Store titles, and
   the Settings toggle text says so. Cloud-only/console-only entries are out of scope by nature.
+- **Always-resident-tray games don't get a Performance Profile (accepted, not fixed).** Roblox
+  keeps a `RobloxPlayerBeta.exe --launch-to-tray` process alive in its install folder with a
+  visible window even when you're not playing. `LaunchXboxGame`'s already-running check
+  (`TryActivateRunningProcessUnderDirectory` → `ProcessPathResolver.FindBestProcessUnderDirectory`,
+  ranked window-first) finds that stub, decides the game is up, activates its window and returns
+  before `BeginSession` - so no profile is applied. Confirmed in a real session: a launch with
+  nothing running applied the Optimized profile fine; two later launches while the tray stub was
+  alive only re-focused it. Not Xbox-specific in principle (any game leaving a windowed helper in
+  its install dir hits it; Steam sidesteps it via its own running-flag), but in practice Roblox is
+  the only common case. Deliberately left as-is: telling a tray stub from the real game needs
+  per-title command-line sniffing (`--launch-to-tray`) that doesn't generalize, and forcing a
+  profile onto a session TrayTrigger isn't tracking makes revert ambiguous. If it ever needs
+  fixing, the hook is `FindBestProcessUnderDirectory`'s candidate ranking, not the launch flow.
 
 **The consolidation the doc kept asking for finally happened here.** The three copies of the
 category allow-list (`LibraryViewModel.EnrichGameWithSteamMetadataAsync` x2,
