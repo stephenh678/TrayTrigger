@@ -825,6 +825,20 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public bool UseRawgMetadata
+    {
+        get => _settings.UseRawgMetadata;
+        set
+        {
+            if (_settings.UseRawgMetadata != value)
+            {
+                _settings.UseRawgMetadata = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public string RawgApiKey
     {
         get => _settings.RawgApiKey;
@@ -839,10 +853,10 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    /// <summary>The RAWG key when set, else null - the details window uses this to decide whether
-    /// the RAWG source is available for the toggle.</summary>
+    /// <summary>The RAWG key when the feature is enabled and a key is set, else null - the details
+    /// window uses this to decide whether the RAWG source is available for the toggle.</summary>
     public string? RawgApiKeyOrNull =>
-        !string.IsNullOrWhiteSpace(_settings.RawgApiKey) ? _settings.RawgApiKey : null;
+        _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey) ? _settings.RawgApiKey : null;
 
     private bool _isRefreshingAllPosters;
     public bool IsRefreshingAllPosters
@@ -1278,6 +1292,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(UseSteamGridDbArt));
         OnPropertyChanged(nameof(SteamGridDbApiKey));
         OnPropertyChanged(nameof(RawgApiKey));
+        OnPropertyChanged(nameof(UseRawgMetadata));
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
