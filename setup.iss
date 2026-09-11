@@ -19,7 +19,17 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
+AppCopyright=Copyright (c) 2026 Steph
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoCopyright=Copyright (c) 2026 Steph
+VersionInfoProductName={#MyAppName}
+VersionInfoDescription={#MyAppName} Setup
 AppMutex=TrayTrigger_SingleInstance_Mutex
+SetupMutex=TrayTrigger_Setup_Mutex
+; The published exe is win-x64 self-contained .NET 10: refuse 32-bit Windows outright and
+; require Windows 10 1809 (the floor the README promises).
+ArchitecturesAllowed=x64compatible
+MinVersion=10.0.17763
 DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
@@ -55,12 +65,110 @@ Name: "{userprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"" --minimized"; Flags: uninsdeletevalue; Tasks: startwithwindows
+; Skipped on an in-app update (/UPDATE): the app owns this value once installed, and re-writing
+; it from the remembered task would undo a user who turned "Start with Windows" off in Settings.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"" --minimized"; Flags: uninsdeletevalue; Tasks: startwithwindows; Check: not IsUpdate
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; In-app updates run Setup silently, so the postinstall checkbox above never shows; bring the
+; app back up ourselves.
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait runasoriginaluser; Check: IsUpdate
 
 [Code]
+const
+  RunKeyPath = 'Software\Microsoft\Windows\CurrentVersion\Run';
+  StartupApprovedKeyPath = 'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run';
+  AppMutexName = 'TrayTrigger_SingleInstance_Mutex';
+
+function CmdLineParamExists(const Value: string): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), Value) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
+// The in-app updater launches Setup as "/SILENT /NORESTART /SP- /SUPPRESSMSGBOXES /UPDATE".
+function IsUpdate(): Boolean;
+begin
+  Result := CmdLineParamExists('/UPDATE');
+end;
+
+function StartupEntryExists(): Boolean;
+begin
+  Result := RegValueExists(HKCU, RunKeyPath, '{#MyAppName}');
+end;
+
+function PreviousInstallExists(): Boolean;
+var
+  UninstallKey: string;
+begin
+  UninstallKey := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\'
+    + ExpandConstant('{#SetupSetting("AppId")}') + '_is1';
+  Result := RegKeyExists(HKCU, UninstallKey) or RegKeyExists(HKLM, UninstallKey);
+end;
+
+// Removes the Run entry the app (or a previous Setup) registered, plus the Task Manager
+// "Startup" enable/disable flag that Windows keeps alongside it.
+procedure RemoveStartupEntry();
+begin
+  if RegValueExists(HKCU, RunKeyPath, '{#MyAppName}') then
+    RegDeleteValue(HKCU, RunKeyPath, '{#MyAppName}');
+  if RegValueExists(HKCU, StartupApprovedKeyPath, '{#MyAppName}') then
+    RegDeleteValue(HKCU, StartupApprovedKeyPath, '{#MyAppName}');
+end;
+
+// %TEMP%\TrayTriggerUpdates is where the in-app updater downloads installers.
+procedure RemoveDownloadedInstallers();
+var
+  Dir: string;
+begin
+  Dir := AddBackslash(GetTempDir()) + 'TrayTriggerUpdates';
+  if DirExists(Dir) then
+    DelTree(Dir, True, True, True);
+end;
+
+function InitializeSetup(): Boolean;
+var
+  Waited: Integer;
+begin
+  Result := True;
+  // The in-app updater starts Setup and then shuts TrayTrigger down, so the single-instance
+  // mutex can still be held for a moment when Setup starts. Give it up to 15 s to go away;
+  // otherwise the AppMutex check below would abort a silent install on the spot.
+  Waited := 0;
+  while CheckForMutexes(AppMutexName) and (Waited < 15000) do
+  begin
+    Sleep(250);
+    Waited := Waited + 250;
+  end;
+end;
+
+var
+  TasksPageSynced: Boolean;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  // Inno remembers the task selection from the *previous Setup run*, not what the user has
+  // since chosen in Settings. Mirror the real Run-key state the first time the page shows.
+  if (CurPageID = wpSelectTasks) and not TasksPageSynced then
+  begin
+    TasksPageSynced := True;
+    if PreviousInstallExists() then
+    begin
+      if StartupEntryExists() then
+        WizardSelectTasks('startwithwindows')
+      else
+        WizardSelectTasks('!startwithwindows');
+    end;
+  end;
+end;
 // Tell Explorer to drop its cached icons so existing Desktop / taskbar / Start Menu
 // shortcuts pick up the icon embedded in the freshly installed exe instead of the
 // previous version's.
@@ -81,6 +189,7 @@ var
   SettingsDir: string;
   SettingsFile: string;
   Lines: TArrayOfString;
+  Original: string;
   I: Integer;
   StartWithWin: Boolean;
 begin
@@ -99,10 +208,15 @@ begin
       begin
         if Pos('"StartWithWindows"', Lines[I]) > 0 then
         begin
+          // Keep the line's trailing comma exactly as it was: adding one to a final
+          // property (or dropping one from a middle property) would corrupt the JSON.
+          Original := TrimRight(Lines[I]);
           if StartWithWin then
-            Lines[I] := '  "StartWithWindows": true,'
+            Lines[I] := '  "StartWithWindows": true'
           else
-            Lines[I] := '  "StartWithWindows": false,';
+            Lines[I] := '  "StartWithWindows": false';
+          if (Length(Original) > 0) and (Original[Length(Original)] = ',') then
+            Lines[I] := Lines[I] + ',';
         end;
       end;
       SaveStringsToFile(SettingsFile, Lines, False);
@@ -128,7 +242,15 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
   begin
-    UpdateAppSettings();
+    // An in-app update leaves startup registration and settings.json alone: the app has
+    // owned both since the original install.
+    if not IsUpdate() then
+    begin
+      UpdateAppSettings();
+      // The [Registry] entry only adds the value; unticking the task should remove it too.
+      if not WizardIsTaskSelected('startwithwindows') then
+        RemoveStartupEntry();
+    end;
     RefreshShellIcons();
   end;
 end;
@@ -202,6 +324,15 @@ var
   AppDataDir: string;
   LocalAppDataDir: string;
 begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    // Always: a Run entry pointing at a deleted exe is just a startup error waiting to
+    // happen, and the updater's download cache has nothing to update any more.
+    RemoveStartupEntry();
+    RemoveDownloadedInstallers();
+    RefreshShellIcons();
+  end;
+
   if (CurUninstallStep = usPostUninstall) and DeleteUserData then
   begin
     AppDataDir := ExpandConstant('{userappdata}\TrayTrigger');
