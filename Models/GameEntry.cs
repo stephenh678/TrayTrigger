@@ -116,6 +116,13 @@ public class GameEntry
     public bool RunScriptsHidden { get; set; } = true;
     /// <summary>Run scripts elevated (UAC prompt). Environment variables are unavailable in this mode.</summary>
     public bool RunScriptsAsAdmin { get; set; }
+    /// <summary>
+    /// Free-text extra arguments for this game's scripts, appended after the five positional
+    /// arguments so nothing shifts. Passed verbatim to .bat/.cmd (cmd.exe parses it), split with
+    /// Windows command-line rules for .ps1/.exe. Shared by the pre-launch and post-exit scripts.
+    /// This is how one generic script is parameterised per game (a save folder, a profile name).
+    /// </summary>
+    public string ScriptArguments { get; set; } = string.Empty;
 
     [JsonIgnore]
     public bool HasScripts => !string.IsNullOrWhiteSpace(PreLaunchScriptPath) || !string.IsNullOrWhiteSpace(PostExitScriptPath);

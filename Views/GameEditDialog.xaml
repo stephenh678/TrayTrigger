@@ -412,6 +412,15 @@
                             <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
+                            <!-- Script arguments: free text appended after the five positional
+                                 arguments, so one generic script can be parameterised per game. -->
+                            <TextBlock Text="Script Arguments (optional, passed to both scripts)" FontSize="11.5"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding ScriptArguments, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource ModernTextBox}" IsEnabled="{Binding HasAnyScript}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Added after the built-in arguments (phase, name, exe, game ID, playtime), so they start at %6 in a batch file or $args[5] in PowerShell. Quote a value that contains spaces."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
                             <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10"
                                     Visibility="{Binding ShowScriptsDisabledNotice, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Game scripts are turned off in Settings › Launch &amp; Performance, so these scripts will NOT run until that switch is back on."

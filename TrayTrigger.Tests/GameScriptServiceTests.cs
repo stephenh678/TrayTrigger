@@ -242,6 +242,68 @@ public class GameScriptServiceTests : IDisposable
     }
 
     [Fact]
+    public void ScriptArguments_Batch_AppendedRaw_AfterPositionalArgs()
+    {
+        string path = MakeScript("pre.bat");
+        var game = new GameEntry { Id = "id1", Name = "G", ExecutablePath = @"C:\g\g.exe", ScriptArguments = "\"C:\\My Saves\" Gaming & extra" };
+        var psi = GameScriptService.BuildStartInfo(path, game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+
+        // Raw: the user's own quoting and metacharacters reach cmd.exe untouched, inside the /s wrapper.
+        Assert.EndsWith(" \"id1\" \"\" \"C:\\My Saves\" Gaming & extra\"", psi.Arguments);
+    }
+
+    [Fact]
+    public void ScriptArguments_PowerShell_Tokenised_AfterPositionalArgs()
+    {
+        string path = MakeScript("pre.ps1");
+        var game = new GameEntry { Id = "id1", Name = "G", ExecutablePath = @"C:\g\g.exe", ScriptArguments = "\"C:\\My Saves\" Gaming" };
+        var psi = GameScriptService.BuildStartInfo(path, game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+
+        Assert.Equal(new[] { "id1", "", @"C:\My Saves", "Gaming" }, psi.ArgumentList.TakeLast(4));
+    }
+
+    [Fact]
+    public void ScriptArguments_Empty_AddsNothing()
+    {
+        string path = MakeScript("pre.ps1");
+        var game = new GameEntry { Id = "id1", Name = "G", ExecutablePath = @"C:\g\g.exe", ScriptArguments = "   " };
+        var psi = GameScriptService.BuildStartInfo(path, game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+
+        Assert.Equal("", psi.ArgumentList[^1]);
+        Assert.Equal("id1", psi.ArgumentList[^2]);
+
+        string bat = MakeScript("pre.bat");
+        var batPsi = GameScriptService.BuildStartInfo(bat, game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+        Assert.EndsWith(" \"id1\" \"\"\"", batPsi.Arguments);
+    }
+
+    [Theory]
+    [InlineData(null, new string[0])]
+    [InlineData("", new string[0])]
+    [InlineData("a b", new[] { "a", "b" })]
+    [InlineData("  a   b  ", new[] { "a", "b" })]
+    [InlineData("\"C:\\My Saves\" Gaming", new[] { @"C:\My Saves", "Gaming" })]
+    [InlineData("say \\\"hi\\\"", new[] { "say", "\"hi\"" })]
+    [InlineData("C:\\path\\ trailing", new[] { @"C:\path\", "trailing" })]
+    public void SplitScriptArguments_FollowsWindowsRules(string? input, string[] expected)
+    {
+        Assert.Equal(expected, GameScriptService.SplitScriptArguments(input));
+    }
+
+    [Fact]
+    public void TestRun_PassesScriptArguments_ToBatch()
+    {
+        string script = Path.Combine(_dir, "args.bat");
+        File.WriteAllText(script, "@echo [%~6] [%~7]\r\n");
+        var game = new GameEntry { Id = "id1", Name = "G", ExecutablePath = @"C:\g\g.exe", ScriptArguments = "\"C:\\My Saves\" Gaming" };
+
+        var r = GameScriptService.TestRun(script, game, GameScriptService.PhasePreLaunch, playedMinutes: null);
+
+        Assert.True(r.Succeeded);
+        Assert.Equal(@"[C:\My Saves] [Gaming]", r.Output.Trim());
+    }
+
+    [Fact]
     public void TestRun_CapturesOutputAndExitCode_AndPassesPositionalArgs()
     {
         string script = Path.Combine(_dir, "t.bat");
