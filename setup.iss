@@ -61,6 +61,21 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
+// Tell Explorer to drop its cached icons so existing Desktop / taskbar / Start Menu
+// shortcuts pick up the icon embedded in the freshly installed exe instead of the
+// previous version's.
+procedure SHChangeNotify(wEventId: Integer; uFlags: Cardinal; dwItem1, dwItem2: Integer);
+  external 'SHChangeNotify@shell32.dll stdcall';
+
+const
+  SHCNE_ASSOCCHANGED = $08000000;
+  SHCNF_IDLIST = $0000;
+
+procedure RefreshShellIcons();
+begin
+  SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, 0, 0);
+end;
+
 procedure UpdateAppSettings();
 var
   SettingsDir: string;
@@ -114,6 +129,7 @@ begin
   if CurStep = ssPostInstall then
   begin
     UpdateAppSettings();
+    RefreshShellIcons();
   end;
 end;
 
