@@ -86,6 +86,10 @@ public partial class App : Application
         void Log(string msg) => LoggingService.Info("App", msg);
         _logger = Log;
 
+        // Drop installers left in %TEMP% by earlier in-app updates (off the UI thread: it's
+        // file I/O against a folder that may hold several 50 MB files).
+        _ = Task.Run(UpdateService.CleanupDownloadedInstallers);
+
         AppDomain.CurrentDomain.ProcessExit += (s, args) =>
         {
             try

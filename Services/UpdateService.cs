@@ -227,7 +227,8 @@ public class UpdateService
             throw new InvalidOperationException("Asset download URL is empty.");
         }
 
-        string tempFolder = Path.Combine(Path.GetTempPath(), "TrayTriggerUpdates");
+        string tempFolder = DownloadFolder;
+        CleanupDownloadedInstallers();
         Directory.CreateDirectory(tempFolder);
 
         string safeName = Path.GetFileName(asset.Name);
@@ -278,6 +279,50 @@ public class UpdateService
     }
 
     /// <summary>
+    /// Where <see cref="DownloadAssetAsync"/> puts installers. The installer's uninstaller
+    /// deletes the same folder (see setup.iss RemoveDownloadedInstallers).
+    /// </summary>
+    public static string DownloadFolder => Path.Combine(Path.GetTempPath(), "TrayTriggerUpdates");
+
+    /// <summary>
+    /// Best-effort removal of previously downloaded installers. Called at startup and before
+    /// each new download so the folder never accumulates one ~50 MB setup per release. An
+    /// installer that is still running (the one that just relaunched us) is locked and simply
+    /// survives until the next pass.
+    /// </summary>
+    public static void CleanupDownloadedInstallers()
+    {
+        try
+        {
+            if (!Directory.Exists(DownloadFolder)) return;
+
+            foreach (string file in Directory.EnumerateFiles(DownloadFolder))
+            {
+                try
+                {
+                    File.Delete(file);
+                    LoggingService.Verbose("UpdateService", $"Removed old installer: {file}");
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    LoggingService.Verbose("UpdateService", $"Old installer still in use, skipping: {file} ({ex.Message})");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("UpdateService", $"Installer cleanup failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Inno Setup switches for an in-app update: silent with a progress window, no reboot,
+    /// no prompts, and our own /UPDATE marker that tells setup.iss to leave startup
+    /// registration and settings.json alone and to relaunch the app when it finishes.
+    /// </summary>
+    internal const string InstallerUpdateArguments = "/SILENT /NORESTART /SP- /SUPPRESSMSGBOXES /UPDATE";
+
+    /// <summary>
     /// Launches the downloaded installer and gracefully exits TrayTrigger so files can be updated.
     /// </summary>
     public static void LaunchInstallerAndExit(string installerPath)
@@ -287,11 +332,12 @@ public class UpdateService
             throw new FileNotFoundException("Installer executable was not found.", installerPath);
         }
 
-        LoggingService.Info("UpdateService", $"Launching installer: {installerPath}");
+        LoggingService.Info("UpdateService", $"Launching installer: {installerPath} {InstallerUpdateArguments}");
 
         var psi = new ProcessStartInfo
         {
             FileName = installerPath,
+            Arguments = InstallerUpdateArguments,
             UseShellExecute = true
         };
 
