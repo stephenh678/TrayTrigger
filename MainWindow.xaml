@@ -2807,6 +2807,25 @@
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                     </Grid>
+
+                                    <!-- RAWG metadata key: for developer/publisher/synopsis/genre on non-Steam games,
+                                         shown via the source toggle in the Game Details window. -->
+                                    <TextBlock Text="Non-Steam game info (RAWG)" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,16,0,2"/>
+                                    <TextBlock Text="Developer, publisher, release date, synopsis, and genre for games that aren't on Steam (Game Pass, Epic exclusives, Roblox, and so on). Needs a free RAWG API key; shown via a source toggle in each game's details window."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+                                                 Tag="Paste your RAWG API key here..."/>
+                                        <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenRawgSiteCommand}"
+                                                Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

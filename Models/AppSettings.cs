@@ -52,6 +52,9 @@ public class AppSettings
     public bool UseVerticalPosterArt { get; set; } = true;
     public bool UseSteamGridDbArt { get; set; } = false;
     public string SteamGridDbApiKey { get; set; } = string.Empty;
+    /// <summary>User's own RAWG (rawg.io) API key for non-Steam game metadata. Encrypted on disk
+    /// like <see cref="SteamGridDbApiKey"/>.</summary>
+    public string RawgApiKey { get; set; } = string.Empty;
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>

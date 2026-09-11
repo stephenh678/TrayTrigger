@@ -78,6 +78,14 @@
                 <DockPanel Grid.Row="0" Margin="0,0,0,8">
                     <Button DockPanel.Dock="Left" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
                             VerticalAlignment="Top" Margin="0,2,10,0"/>
+                    <!-- Metadata source toggle: only shown when a RAWG key is configured. Switches the
+                         text fields below between Steam and RAWG and remembers the choice per game. -->
+                    <Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,2,0,0"
+                            Command="{Binding ToggleSourceCommand}"
+                            Content="{Binding SourceToggleLabel}"
+                            Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="10.5"
+                            Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}"
+                            ToolTip="Switch this game's info between Steam and RAWG (remembered per game)."/>
                     <StackPanel>
                         <TextBlock Text="{Binding GameTitle}" FontSize="21" FontWeight="SemiBold"
                                    Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
@@ -93,15 +101,15 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <DockPanel Margin="0,0,0,3">
+                        <DockPanel Margin="0,0,0,3" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Developer:" Width="80" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding Developers}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
-                        <DockPanel Margin="0,0,0,3">
+                        <DockPanel Margin="0,0,0,3" Visibility="{Binding HasPublishers, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Publisher:" Width="80" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding Publishers}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
-                        <DockPanel>
+                        <DockPanel Visibility="{Binding HasReleaseDate, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Release Date:" Width="80" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding ReleaseDate}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}"/>
                         </DockPanel>
@@ -273,8 +281,13 @@
                 <Border Background="#16161C" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,14">
                     <StackPanel>
                         <TextBlock Text="ABOUT THE GAME" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,6"/>
-                        <TextBlock Text="{Binding ShortDescription}" FontSize="13" Foreground="{StaticResource BrushTextPrimary}" 
+                        <TextBlock Text="{Binding ShortDescription}" FontSize="13" Foreground="{StaticResource BrushTextPrimary}"
                                    TextWrapping="Wrap" LineHeight="20"/>
+                        <!-- Required RAWG attribution: an active link wherever RAWG data is shown. -->
+                        <TextBlock Margin="0,10,0,0" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                   Visibility="{Binding ShowRawgAttribution, Converter={StaticResource BoolToVis}}">
+                            <Hyperlink Command="{Binding OpenRawgPageCommand}" Foreground="{StaticResource BrushTextSecondary}">Data from RAWG</Hyperlink>
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 

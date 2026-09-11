@@ -150,6 +150,7 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SetViewModeCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
     public ICommand OpenSteamGridDbSiteCommand { get; }
+    public ICommand OpenRawgSiteCommand { get; }
     public ICommand OpenScanForGamesCommand { get; }
     public ICommand RefreshAllPostersCommand { get; }
     public ICommand AddScanLocationCommand { get; }
@@ -224,6 +225,7 @@ public class SettingsViewModel : ViewModelBase
         SetViewModeCommand = new RelayCommand(mode => LibraryViewMode = mode?.ToString() ?? ViewModePosterGrid);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
+        OpenRawgSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://rawg.io/apidocs") { UseShellExecute = true }));
         OpenScanForGamesCommand = new RelayCommand(() => _onRequestOpenScanForGames?.Invoke());
         AddScanLocationCommand = new RelayCommand(AddScanLocation);
         RemoveScanLocationCommand = new RelayCommand(param =>
@@ -823,6 +825,25 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public string RawgApiKey
+    {
+        get => _settings.RawgApiKey;
+        set
+        {
+            if (_settings.RawgApiKey != value)
+            {
+                _settings.RawgApiKey = value ?? string.Empty;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>The RAWG key when set, else null - the details window uses this to decide whether
+    /// the RAWG source is available for the toggle.</summary>
+    public string? RawgApiKeyOrNull =>
+        !string.IsNullOrWhiteSpace(_settings.RawgApiKey) ? _settings.RawgApiKey : null;
+
     private bool _isRefreshingAllPosters;
     public bool IsRefreshingAllPosters
     {
@@ -1157,6 +1178,7 @@ public class SettingsViewModel : ViewModelBase
         }
 
         string existingApiKey = _settings.SteamGridDbApiKey;
+        string existingRawgKey = _settings.RawgApiKey;
 
         // Copy every default from a fresh AppSettings instead of a hand-maintained literal
         // list, so a newly added setting is reset automatically instead of silently staying
@@ -1173,6 +1195,7 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
+            nameof(AppSettings.RawgApiKey),
             // Manually-curated, not a "preference" in the dialog's sense - same bucket as the
             // library/categories/artwork the confirmation text already promises to leave alone.
             nameof(AppSettings.ScanLocations),
@@ -1224,6 +1247,7 @@ public class SettingsViewModel : ViewModelBase
             prop.SetValue(_settings, fresh);
         }
         _settings.SteamGridDbApiKey = existingApiKey;
+        _settings.RawgApiKey = existingRawgKey;
 
         // Execute side effects
         _startupManager.SetStartupEnabled(false, true);
@@ -1253,6 +1277,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(UseVerticalPosterArt));
         OnPropertyChanged(nameof(UseSteamGridDbArt));
         OnPropertyChanged(nameof(SteamGridDbApiKey));
+        OnPropertyChanged(nameof(RawgApiKey));
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
