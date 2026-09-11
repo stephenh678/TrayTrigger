@@ -21,22 +21,20 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 
 ## Options
 
-- Wait for the pre-launch script holds the game launch until the script finishes. The timeout box next to it sets how long to wait (1 to 600 seconds, 30 by default), so a stuck script cannot block you forever. Turn waiting off for a script that intentionally keeps running.
+- Wait for the pre-launch script holds the game launch until the script finishes. The timeout box next to it sets how long to wait (1 to 600 seconds, 10 by default), so a stuck script cannot block you forever. Turn waiting off for a script that intentionally keeps running.
 - Cancel the launch if the pre-launch script fails treats the script as a precondition: a non-zero exit code, a timeout, or a script that will not start cancels the launch and rolls the Performance Profile back. Turning this on also turns on waiting. Off by default; a failing script is logged and the game launches anyway.
 - Run scripts hidden suppresses the console window. A hidden script's output is captured into the TrayTrigger log instead (see Troubleshooting).
 - Run scripts as Administrator elevates through UAC, so expect a prompt on every launch.
 
 ## The scripts folder, blank templates and examples
 
-TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there, and it is where "New script..." writes. When game scripts are enabled, TrayTrigger puts these files there (missing files only; your edits are never overwritten):
+TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there, and it is where "New script..." writes. When game scripts are enabled, TrayTrigger puts these files there. It only adds missing files, so a script you edited is never overwritten:
 
-- _Blank.bat and _Blank.ps1: empty templates with the argument contract in comments and a phase branch. "New script..." next to each path box copies one of these to a name you choose, fills the path, and opens it for editing.
-- Example-LogSessions.ps1: appends one CSV line per phase. Shows how to read every argument. Touches nothing else.
-- Example-ZipFolderAfterExit.ps1: zips a folder named in Script Arguments after the game exits and keeps the newest ten. Does nothing until you give it a folder.
-- Example-CloseAndRestartProgram.bat: closes a program named in Script Arguments before the game and restarts it afterwards, only if it was running. Does nothing until you give it a process name.
-- README.txt: the same reference as this page, next to the scripts.
+- _Blank.ps1 and _Blank.bat: empty templates with a phase branch and every argument already read for you. "New script..." next to each path box copies one of these to a name you choose, fills the path, and opens it for editing.
+- Five example scripts, described under Example scripts below.
+- README.txt: a quick start, the examples, and how to write and share your own scripts.
 
-Each example is one file that handles both phases, so set the same file as both the pre-launch and the post-exit script. "Open in editor" next to a path box opens that script in Notepad or whatever you have associated with editing that type; it never runs it.
+Every example is one file that handles both phases. In Edit Game, choose it as the pre-launch script and tick "Use the same script for pre-launch and post-exit". For the Settings defaults, set the same file in both boxes. "Open in editor" next to a path box opens that script in Notepad or whatever you have associated with editing that type; it never runs it.
 
 ## Default scripts for every game
 
@@ -69,18 +67,20 @@ Each script field in Edit Game has a Test button. It runs that script right now,
 - If the game is set to run scripts as Administrator or visibly, the result dialog says so: the real run will differ in exactly that way.
 - The Test button ignores the Settings kill-switch. Clicking it is an explicit request to run the script once.
 
-## Examples
+## Example scripts
 
-A pre-launch script that closes Discord and starts an RGB profile:
+The examples are real scripts for common gaming chores, written to be read, copied and changed. Each one opens with a comment block covering why you'd want it, how to set it up, how it works and what to change, followed by a "Change these" section of settings.
+
+- Example-WallpaperEnginePause.ps1 pauses and mutes Wallpaper Engine while you play and resumes it afterwards. It needs no Script Arguments.
+- Example-QuietMode.ps1 closes the background apps named in Script Arguments, such as OneDrive ms-teams Dropbox, and reopens the ones it closed after the game.
+- Example-CompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, and closes only the ones it started. A program you already had open is left alone.
+- Example-OBSReplayBuffer.ps1 starts OBS in the tray with the replay buffer running and closes it after the game. An OBS you opened yourself is never touched. Script Arguments can name an OBS profile.
+- Example-SaveBackup.ps1 zips the save folder named in Script Arguments, such as "%APPDATA%\EldenRing", before and after you play, and keeps the newest ten backups.
+
+A script doesn't have to be long. This batch file is a complete pre-launch script that closes Discord:
 
 - @echo off
 - taskkill /im Discord.exe /f
-- start "" "C:\Program Files\OpenRGB\OpenRGB.exe" --profile Gaming
-
-A post-exit script that starts Discord again:
-
-- @echo off
-- start "" "%LOCALAPPDATA%\Discord\Update.exe" --processStart Discord.exe
 
 ## Optional: reading the game info
 

@@ -244,6 +244,11 @@ public class MainViewModel : ViewModelBase
             SettingsVM.SelectedTab = SettingsCategoryTab.PerformanceTweaks;
             CurrentSection = NavSection.Settings;
         });
+        OpenLibrarySettingsCommand = new RelayCommand(() =>
+        {
+            SettingsVM.SelectedTab = SettingsCategoryTab.Library;
+            CurrentSection = NavSection.Settings;
+        });
         SelectAboutCommand = new RelayCommand(() => CurrentSection = NavSection.About);
         SelectAboutAllTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.All);
         SelectAboutOverviewTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Overview);
@@ -403,6 +408,8 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenDiagnosticsSettingsCommand { get; }
     /// <summary>System page's RESTORE POINT badge -> Settings > Launch &amp; Performance.</summary>
     public ICommand OpenPerformanceSettingsCommand { get; }
+    /// <summary>Settings › Library &amp; Art, where the SteamGridDB and RAWG keys are entered.</summary>
+    public ICommand OpenLibrarySettingsCommand { get; }
     public ICommand SelectAboutCommand { get; }
 
     /// <summary>About > Overview environment strip: the real runtime this build is on.</summary>
@@ -599,6 +606,7 @@ public class MainViewModel : ViewModelBase
     public void SetCardSelected(GameCardViewModel card, bool selected) => Library.SetCardSelected(card, selected);
     public void DeleteGame(GameCardViewModel card) => Library.DeleteGame(card);
     public void UndoDelete() => Library.UndoDelete();
+    public void FinalizePendingRemoval() => Library.FinalizePendingRemoval();
 
     // --- Forwarded to ImportCoordinator; see L-13 ---
     public bool IsRefreshingAllPosters => Import.IsRefreshingAllPosters;

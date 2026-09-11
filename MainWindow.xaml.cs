@@ -51,8 +51,12 @@ public partial class MainWindow : Window
         Loaded += (s, e) =>
         {
             LoggingService.Verbose("MainWindow", "Loaded.");
+            // Read before the Welcome prompt marks itself seen: a brand-new install gets the
+            // SteamGridDB / RAWG tip inside the Welcome dialog instead of a second popup.
+            bool isFreshInstall = !_viewModel.SettingsVM.Settings.HasSeenWelcomePrompt;
             MaybeShowWelcomePrompt();
             MaybeShowPerformanceProfileMigrationPrompt();
+            MaybeShowMetadataSourcesReminder(isFreshInstall);
         };
 
         _viewModel.RequestScanResultsPicker += OnRequestScanResultsPicker;
@@ -255,6 +259,34 @@ public partial class MainWindow : Window
             }
             LoggingService.Info("GameEdit", $"Performance Profile migration prompt: switched {migratedCount} game(s) from Off to Optimized.");
             _viewModel.SaveLibrary();
+        }
+    }
+
+    /// <summary>
+    /// One-time reminder (gated like the prompts above) that SteamGridDB poster art and RAWG game
+    /// info are available, for users upgrading to 1.4.0 who never turned them on. Names only the
+    /// sources that aren't already enabled with a key, and is skipped when both are, and on a
+    /// fresh install, whose Welcome dialog already mentions them.
+    /// </summary>
+    private void MaybeShowMetadataSourcesReminder(bool isFreshInstall)
+    {
+        var settingsVm = _viewModel.SettingsVM;
+        var settings = settingsVm.Settings;
+        if (settings.HasSeenMetadataSourcesReminder)
+            return;
+
+        settings.HasSeenMetadataSourcesReminder = true;
+        settingsVm.AutoSaveSettings();
+
+        bool needsSteamGridDb = !settings.UseSteamGridDbArt || string.IsNullOrWhiteSpace(settings.SteamGridDbApiKey);
+        bool needsRawg = !settings.UseRawgMetadata || string.IsNullOrWhiteSpace(settings.RawgApiKey);
+        if (isFreshInstall || (!needsSteamGridDb && !needsRawg))
+            return;
+
+        LoggingService.Info("MainWindow", $"Showing the SteamGridDB / RAWG reminder (SteamGridDB set up: {!needsSteamGridDb}, RAWG set up: {!needsRawg}).");
+        if (ModernDialog.PromptMetadataSourcesReminder(this, needsSteamGridDb, needsRawg))
+        {
+            _viewModel.OpenLibrarySettingsCommand.Execute(null);
         }
     }
 

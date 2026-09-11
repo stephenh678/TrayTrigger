@@ -63,13 +63,26 @@ public class RawgService
         Timeout = TimeSpan.FromSeconds(10)
     };
 
-    /// <summary>Beside the poster cache, so "clear cache" in Settings covers it too.</summary>
-    public static readonly string CacheFilePath = Path.Combine(
+    private static readonly string DefaultCacheFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "TrayTrigger", "rawg-cache.json");
 
+    /// <summary>Beside the poster cache, so "clear cache" in Settings covers it too.</summary>
+    public static string CacheFilePath { get; private set; } = DefaultCacheFilePath;
+
     private static readonly object CacheLock = new();
     private static Dictionary<int, RawgGameDetails>? _cache;
+
+    /// <summary>Test seam: points the cache at another file (null restores the real one) and
+    /// drops the in-memory copy so the next read loads from that file.</summary>
+    internal static void UseCacheFileForTests(string? path)
+    {
+        lock (CacheLock)
+        {
+            CacheFilePath = path ?? DefaultCacheFilePath;
+            _cache = null;
+        }
+    }
 
     /// <summary>Names that produced no acceptable match this session - reopening the same game's
     /// details shouldn't cost another two requests against the monthly quota.</summary>
@@ -238,12 +251,22 @@ public class RawgService
         }
     }
 
-    private static void Remove(int rawgId)
+    private static void Remove(int rawgId) => InvalidateCache([rawgId]);
+
+    /// <summary>Drops the cached details for these RAWG ids (games removed from the library),
+    /// rewriting the cache file once. Returns how many entries were dropped.</summary>
+    public static int InvalidateCache(IEnumerable<int> rawgIds)
     {
+        var ids = rawgIds.Where(id => id > 0).ToList();
+        if (ids.Count == 0)
+            return 0;
         lock (CacheLock)
         {
-            if (LoadCacheLocked().Remove(rawgId))
+            var cache = LoadCacheLocked();
+            int removed = ids.Count(cache.Remove);
+            if (removed > 0)
                 SaveCacheLocked();
+            return removed;
         }
     }
 

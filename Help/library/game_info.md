@@ -47,5 +47,6 @@ Both sources are saved to disk beside the poster cache, so Game Details opens in
 - If a background refresh fails (offline, quota, bad key) the saved copy stays on screen.
 - Right-click › Refresh metadata and Change match always fetch fresh info.
 - "Clear Cached Game Info" under the setting forgets every game's saved details. Posters are kept.
+- Removing a game from the library also deletes its saved details, poster and icon once the six-second undo has passed. Anything another game in the library still uses, such as a second entry for the same Steam game, is kept.
 
 > RAWG needs a free API key from rawg.io/apidocs. The key is stored encrypted in your settings file and only sent to RAWG. RAWG's terms require the "Data from RAWG" link shown under the synopsis whenever their data is on screen.

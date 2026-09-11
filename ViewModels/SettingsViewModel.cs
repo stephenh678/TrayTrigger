@@ -214,6 +214,10 @@ public class SettingsViewModel : ViewModelBase
     public ICommand BrowseDefaultPostExitScriptCommand { get; }
     public ICommand TestDefaultPreLaunchScriptCommand { get; }
     public ICommand TestDefaultPostExitScriptCommand { get; }
+    public ICommand NewDefaultPreLaunchScriptCommand { get; }
+    public ICommand NewDefaultPostExitScriptCommand { get; }
+    public ICommand EditDefaultPreLaunchScriptCommand { get; }
+    public ICommand EditDefaultPostExitScriptCommand { get; }
     public ICommand OpenScriptsFolderCommand { get; }
 
     /// <summary>Steam's own library folders, auto-detected and kept in sync by
@@ -296,6 +300,10 @@ public class SettingsViewModel : ViewModelBase
         BrowseDefaultPostExitScriptCommand = new RelayCommand(() => BrowseDefaultScript(isPreLaunch: false));
         TestDefaultPreLaunchScriptCommand = new AsyncRelayCommand(() => TestDefaultScriptAsync(isPreLaunch: true), () => !IsTestingDefaultScript && HasDefaultPreLaunchScript);
         TestDefaultPostExitScriptCommand = new AsyncRelayCommand(() => TestDefaultScriptAsync(isPreLaunch: false), () => !IsTestingDefaultScript && HasDefaultPostExitScript);
+        NewDefaultPreLaunchScriptCommand = new RelayCommand(() => NewDefaultScript(isPreLaunch: true));
+        NewDefaultPostExitScriptCommand = new RelayCommand(() => NewDefaultScript(isPreLaunch: false));
+        EditDefaultPreLaunchScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(DefaultPreLaunchScriptPath), () => HasDefaultPreLaunchScript);
+        EditDefaultPostExitScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(DefaultPostExitScriptPath), () => HasDefaultPostExitScript);
         OpenScriptsFolderCommand = new RelayCommand(() => ScriptLibrary.OpenFolder());
         AddScanLocationCommand = new RelayCommand(AddScanLocation);
         RemoveScanLocationCommand = new RelayCommand(param =>
@@ -1206,6 +1214,8 @@ public class SettingsViewModel : ViewModelBase
                 OnPropertyChanged();
                 NotifyDefaultScriptsChanged();
                 AutoSaveSettings();
+                // Typing, Browse and "New script..." all land here, so the post-exit box follows along.
+                if (DefaultUseSameScriptForBoth) DefaultPostExitScriptPath = v;
             }
         }
     }
@@ -1229,6 +1239,31 @@ public class SettingsViewModel : ViewModelBase
     public bool HasDefaultPreLaunchScript => _settings.ScriptDefaults.HasPreLaunchScript;
     public bool HasDefaultPostExitScript => _settings.ScriptDefaults.HasPostExitScript;
     public bool HasAnyDefaultScript => _settings.ScriptDefaults.HasAny;
+
+    private bool? _defaultUseSameScriptForBoth;
+
+    /// <summary>
+    /// Edit Game's "use the same script for pre-launch and post-exit", for the defaults: while on,
+    /// the post-exit path mirrors the pre-launch one and its box is read-only. Nothing is stored -
+    /// it is simply on when both defaults already point at the same file.
+    /// </summary>
+    public bool DefaultUseSameScriptForBoth
+    {
+        get => _defaultUseSameScriptForBoth ??=
+            !string.IsNullOrWhiteSpace(DefaultPreLaunchScriptPath)
+            && string.Equals(DefaultPreLaunchScriptPath.Trim(), DefaultPostExitScriptPath?.Trim(), StringComparison.OrdinalIgnoreCase);
+        set
+        {
+            if (DefaultUseSameScriptForBoth == value) return;
+            _defaultUseSameScriptForBoth = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanEditDefaultPostExitScript));
+            if (value) DefaultPostExitScriptPath = DefaultPreLaunchScriptPath;
+        }
+    }
+
+    /// <summary>The default post-exit box is read-only while it mirrors the pre-launch one.</summary>
+    public bool CanEditDefaultPostExitScript => !DefaultUseSameScriptForBoth;
 
     /// <summary>A typed default path that won't run as-is (wrong type or missing file), or null.</summary>
     public string? DefaultScriptsProblem
@@ -1351,6 +1386,48 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(DefaultAbortLaunchOnScriptFailure));
         OnPropertyChanged(nameof(DefaultRunScriptsHidden));
         OnPropertyChanged(nameof(DefaultRunScriptsAsAdmin));
+        OnPropertyChanged(nameof(DefaultUseSameScriptForBoth));
+        OnPropertyChanged(nameof(CanEditDefaultPostExitScript));
+    }
+
+    /// <summary>
+    /// "New script...": a save dialog in the scripts folder, then the blank template matching the
+    /// chosen extension is written there, the path box filled, and the file opened for editing.
+    /// An existing file is never overwritten - it is simply used as-is. Mirrors Edit Game.
+    /// </summary>
+    private void NewDefaultScript(bool isPreLaunch)
+    {
+        string phase = isPreLaunch ? "PreLaunch" : "PostExit";
+        var dialog = new SaveFileDialog
+        {
+            Title = isPreLaunch ? "New Default Pre-Launch Script" : "New Default Post-Exit Script",
+            Filter = "Batch script (*.bat)|*.bat|PowerShell script (*.ps1)|*.ps1",
+            DefaultExt = ".bat",
+            AddExtension = true,
+            OverwritePrompt = false,
+            FileName = $"Default-{phase}.bat",
+            InitialDirectory = InitialDefaultScriptDirectory(string.Empty)
+        };
+
+        if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FileName)) return;
+
+        string path = dialog.FileName;
+        try
+        {
+            bool created = ScriptLibraryService.CreateFromBlankTemplate(path);
+            StatusMessage = created
+                ? $"Created {Path.GetFileName(path)} from the blank template."
+                : $"{Path.GetFileName(path)} already exists and was left untouched.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not create the script: {ex.Message}";
+            return;
+        }
+
+        if (isPreLaunch) DefaultPreLaunchScriptPath = path;
+        else DefaultPostExitScriptPath = path;
+        ScriptLibraryService.OpenInEditor(path);
     }
 
     private void BrowseDefaultScript(bool isPreLaunch)
@@ -1628,6 +1705,8 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
         OnPropertyChanged(nameof(EnableGameScripts));
+        // "Reset to defaults" swaps the ScriptDefaults object, so re-derive the mirrored-path tick.
+        _defaultUseSameScriptForBoth = null;
         NotifyDefaultScriptsChanged();
         OnPropertyChanged(nameof(CreateRestorePointBeforeTweaks));
         OnPropertyChanged(nameof(VerboseLoggingEnabled));

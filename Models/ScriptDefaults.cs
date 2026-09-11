@@ -22,7 +22,7 @@ public class ScriptDefaults
     public string PreLaunchScriptPath { get; set; } = string.Empty;
     public string PostExitScriptPath { get; set; } = string.Empty;
     public bool WaitForPreLaunchScript { get; set; } = true;
-    public int PreLaunchScriptTimeoutSeconds { get; set; } = 30;
+    public int PreLaunchScriptTimeoutSeconds { get; set; } = 10;
     public bool AbortLaunchOnScriptFailure { get; set; }
     public bool RunScriptsHidden { get; set; } = true;
     public bool RunScriptsAsAdmin { get; set; }

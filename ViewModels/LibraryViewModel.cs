@@ -1437,23 +1437,18 @@ public class LibraryViewModel : ViewModelBase
 
     /// <summary>
     /// Takes the given cards out of the library as one undoable step (the single-game Remove and
-    /// Select mode's batch Remove both land here). The caller has already confirmed. Cached
-    /// artwork is only deleted once the 6-second undo window lapses.
+    /// Select mode's batch Remove both land here). The caller has already confirmed. The games'
+    /// cached files and fetched details are only deleted once the 6-second undo window ends - see
+    /// <see cref="FinalizePendingRemoval"/>.
     /// </summary>
     private void RemoveGames(List<GameCardViewModel> cards)
     {
         if (cards.Count == 0) return;
 
-        _undoToastTimer?.Stop();
-
         // Only one pending removal can be undone at a time. If another one is still sitting in
         // its undo window when this new one arrives, it's about to be overwritten and can no
-        // longer be undone anyway - finalize its cached artwork cleanup now instead of leaking it.
-        foreach (var (game, _) in _lastRemoved)
-        {
-            DeleteCachedArtwork(game);
-        }
-        _lastRemoved.Clear();
+        // longer be undone anyway - finalize its cleanup now instead of leaking it.
+        FinalizePendingRemoval();
 
         // Record positions before anything moves so undo can put every game back where it was.
         foreach (var card in cards.OrderBy(c => Games.IndexOf(c)))
@@ -1479,17 +1474,9 @@ public class LibraryViewModel : ViewModelBase
         _undoToastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
         _undoToastTimer.Tick += (s, e) =>
         {
-            _undoToastTimer.Stop();
-            IsUndoToastVisible = false;
-
-            // The undo window has expired - the removal is now final, so it's safe to delete
-            // the games' cached icon/cover files instead of leaving them orphaned forever.
-            foreach (var (game, _) in _lastRemoved)
-            {
-                LoggingService.Verbose("Library", $"Undo window expired for '{game.Name}' - deleting cached artwork.");
-                DeleteCachedArtwork(game);
-            }
-            _lastRemoved.Clear();
+            // The undo window has expired - the removal is now final.
+            LoggingService.Verbose("Library", $"Undo window expired for {what} - deleting cached data.");
+            FinalizePendingRemoval();
         };
         _undoToastTimer.Start();
 
@@ -1497,18 +1484,21 @@ public class LibraryViewModel : ViewModelBase
         NotifyGameCountChanged();
     }
 
-    /// <summary>Ends a pending undo window early and cleans up its artwork - for bulk paths that
-    /// are about to delete cached files a resurrected game might share.</summary>
-    private void FinalizePendingRemoval()
+    /// <summary>
+    /// Ends the undo window now and deletes the removed games' cached files and fetched details.
+    /// Called when the window lapses, when another removal replaces it, before a bulk removal
+    /// that could otherwise be raced by an undo, and on app exit - the pending removal lives only
+    /// in memory, so exiting inside the window used to leave that data behind for good.
+    /// </summary>
+    public void FinalizePendingRemoval()
     {
-        if (_lastRemoved.Count == 0) return;
         _undoToastTimer?.Stop();
         IsUndoToastVisible = false;
-        foreach (var (game, _) in _lastRemoved)
-        {
-            DeleteCachedArtwork(game);
-        }
+        if (_lastRemoved.Count == 0) return;
+
+        var removed = _lastRemoved.Select(r => r.Game).ToList();
         _lastRemoved.Clear();
+        DeleteRemovedGameData(removed);
     }
 
     /// <summary>Games imported through <paramref name="launcher"/>'s integration, whatever
@@ -1562,6 +1552,9 @@ public class LibraryViewModel : ViewModelBase
 
         foreach (var card in toRemove)
         {
+            // Same as RemoveGames: a selected card leaving the library must not keep counting
+            // towards Select mode's "N selected".
+            card.IsSelected = false;
             Games.Remove(card);
         }
 
@@ -1572,11 +1565,9 @@ public class LibraryViewModel : ViewModelBase
         SaveLibrary();
         UpdateHotkeys();
         NotifyGameCountChanged();
+        NotifySelectionChanged();
 
-        foreach (var card in toRemove)
-        {
-            DeleteCachedArtwork(card.Game);
-        }
+        DeleteRemovedGameData(toRemove.Select(c => c.Game).ToList());
         LoggingService.Info("Library", $"Removed {toRemove.Count} {launcher} game(s) from the library after the {launcher} integration was turned off.");
         return toRemove.Count;
     }
@@ -1654,59 +1645,24 @@ public class LibraryViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Deletes a removed game's cached icon/cover files. Both are always TrayTrigger-owned
-    /// copies under IconsDirectory/CoversDirectory - even "Change Icon"/"Change Cover" copy the
-    /// user's chosen file in rather than referencing it in place - so this never touches a game's
-    /// actual installed files or a user's original external image.
+    /// Deletes what removed games leave behind outside games.json: their cached icon and poster
+    /// files (including art they no longer pointed at) and their Steam/RAWG details. The files
+    /// are always TrayTrigger-owned copies in the icon/cover cache folders - even "Change
+    /// Icon"/"Change Cover" copy the chosen file in - so a game's installed files or a user's
+    /// original image are never touched. Anything a remaining entry still uses (the same Steam
+    /// App ID added twice, a Steam entry plus a local exe entry) is kept; otherwise re-adding the
+    /// game would be served cached details pointing at a poster that was just deleted.
     /// </summary>
-    private void DeleteCachedArtwork(GameEntry game)
+    private void DeleteRemovedGameData(IReadOnlyCollection<GameEntry> removed)
     {
-        // Two library entries can share one cached file (same Steam AppId added twice, e.g. via
-        // "Add Anyway", or a Steam entry plus a local exe entry) - don't blank the other entry's
-        // art out from under it just because this one is being removed.
-        if (!IsArtworkPathStillReferenced(game.IconPath, g => g.Game.IconPath, game.Id))
-        {
-            TryDeleteManagedFile(game.IconPath, _storageService.IconsDirectory);
-        }
-        if (!IsArtworkPathStillReferenced(game.CoverImagePath, g => g.Game.CoverImagePath, game.Id))
-        {
-            TryDeleteManagedFile(game.CoverImagePath, SteamMetadataService.CoversDirectory);
-        }
+        if (removed.Count == 0) return;
 
-        // Without this, re-adding the same game later hits SteamMetadataService's in-memory
-        // details cache and gets back a CoverImagePath pointing at the file just deleted above,
-        // so the re-added card shows no cover art at all (icon-only) until the app restarts.
-        if (!string.IsNullOrWhiteSpace(game.SteamAppId))
-        {
-            SteamMetadataService.InvalidateCache(game.SteamAppId);
-        }
-    }
-
-    private bool IsArtworkPathStillReferenced(string? path, Func<GameCardViewModel, string?> selector, string excludeGameId)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return false;
-        return Games.Any(g => g.Id != excludeGameId && string.Equals(selector(g), path, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static void TryDeleteManagedFile(string? path, string expectedDirectory)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return;
-
-        try
-        {
-            string fullPath = Path.GetFullPath(path);
-            string fullExpectedDir = Path.GetFullPath(expectedDirectory);
-            if (!fullPath.StartsWith(fullExpectedDir, StringComparison.OrdinalIgnoreCase)) return;
-
-            if (File.Exists(fullPath))
-            {
-                File.Delete(fullPath);
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("LibraryViewModel", $"Failed to delete cached artwork '{path}': {ex.Message}");
-        }
+        var result = GameDataCleanup.DeleteRemovedGameData(
+            removed,
+            Games.Select(c => c.Game).ToList(),
+            _storageService.IconsDirectory,
+            _storageService.CoversDirectory);
+        LoggingService.Verbose("Library", $"Cleaned up after {removed.Count} removed game(s): {result}.");
     }
 
     /// <summary>
