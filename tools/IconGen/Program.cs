@@ -17,6 +17,14 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // social <out.png> <library screenshot.png>: the 1280x640 GitHub social preview card.
+        if (args.Length >= 3 && args[0] == "social")
+        {
+            SavePng(RenderSocialPreview(args[2]), args[1]);
+            Console.WriteLine($"Wrote {args[1]}");
+            return 0;
+        }
+
         string outDir = args.Length > 0 ? args[0] : "Assets";
         Directory.CreateDirectory(outDir);
 
@@ -54,6 +62,104 @@ internal static class Program
 
         return 0;
     }
+
+    // ---------------------------------------------------------------- social preview
+
+    private static readonly Color Accent = Color.FromRgb(0x2F, 0x8F, 0xFF);
+
+    /// <summary>
+    /// 1280x640 card for GitHub's repository social preview: the TT mark and wordmark, the
+    /// "Launch. Automate. Play." tagline, feature pills, and the library screenshot fading in on
+    /// the right. Re-run after an icon or library redesign so the card never drifts from the app.
+    /// </summary>
+    private static BitmapSource RenderSocialPreview(string screenshotPath)
+    {
+        const int W = 1280, H = 640;
+        var visual = new DrawingVisual();
+        using (DrawingContext dc = visual.RenderOpen())
+        {
+            // Background: deep navy with a blue glow behind the mark.
+            dc.DrawRectangle(new LinearGradientBrush(Color.FromRgb(0x0B, 0x10, 0x20), Color.FromRgb(0x05, 0x08, 0x0F), new Point(0, 0), new Point(1, 1)), null, new Rect(0, 0, W, H));
+            dc.DrawRectangle(new RadialGradientBrush(Color.FromArgb(0x55, 0x1E, 0x5F, 0xC0), Color.FromArgb(0x00, 0x1E, 0x5F, 0xC0))
+            {
+                Center = new Point(0.18, 0.28), GradientOrigin = new Point(0.18, 0.28), RadiusX = 0.42, RadiusY = 0.8
+            }, null, new Rect(0, 0, W, H));
+
+            // Library screenshot, right side, fading in from the text column.
+            if (File.Exists(screenshotPath))
+            {
+                var shot = new BitmapImage(new Uri(Path.GetFullPath(screenshotPath)));
+                double scale = 880.0 / shot.PixelWidth;
+                var target = new Rect(560, 52, shot.PixelWidth * scale, shot.PixelHeight * scale);
+                dc.PushClip(new RectangleGeometry(new Rect(560, 52, W - 560 + 40, H - 52), 14, 14));
+                dc.PushOpacityMask(new LinearGradientBrush(
+                    new GradientStopCollection
+                    {
+                        new GradientStop(Color.FromArgb(0x00, 0, 0, 0), 0.0),
+                        new GradientStop(Color.FromArgb(0xFF, 0, 0, 0), 0.28),
+                        new GradientStop(Color.FromArgb(0xFF, 0, 0, 0), 1.0),
+                    }, new Point(0, 0), new Point(1, 0)) { MappingMode = BrushMappingMode.RelativeToBoundingBox });
+                dc.PushOpacity(0.92);
+                dc.DrawImage(shot, target);
+                dc.Pop(); dc.Pop(); dc.Pop();
+                // Soft bottom fade so the cut-off edge does not read as a hard crop.
+                dc.DrawRectangle(new LinearGradientBrush(Color.FromArgb(0x00, 0x05, 0x08, 0x0F), Color.FromArgb(0xFF, 0x05, 0x08, 0x0F), new Point(0, 0), new Point(0, 1)), null, new Rect(560, H - 140, W - 560, 140));
+            }
+
+            // Mark.
+            var mark = RenderMark(256);
+            dc.DrawImage(mark, new Rect(88, 62, 150, 150));
+
+            // Wordmark: "Tray" white, "Trigger" accent blue.
+            var bold = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
+            var semi = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+            var regular = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            var tray = Text("Tray", bold, 84, Colors.White);
+            var trigger = Text("Trigger", bold, 84, Accent);
+            dc.DrawText(tray, new Point(84, 228));
+            dc.DrawText(trigger, new Point(84 + tray.WidthIncludingTrailingWhitespace, 228));
+
+            // Tagline, letter-spaced.
+            double x = 90, y = 344;
+            foreach (char ch in "LAUNCH.  AUTOMATE.  PLAY.")
+            {
+                var glyph = Text(ch.ToString(), semi, 21, Color.FromRgb(0x8F, 0xB8, 0xE8));
+                dc.DrawText(glyph, new Point(x, y));
+                x += glyph.WidthIncludingTrailingWhitespace + 3.5;
+            }
+
+            // One-line description.
+            var desc = Text("Windows game launcher and gaming optimizer that lives in your system tray.", regular, 20, Color.FromRgb(0xB8, 0xC4, 0xD6));
+            desc.MaxTextWidth = 540;
+            dc.DrawText(desc, new Point(88, 388));
+
+            // Feature pills.
+            string[] pills = { "Steam · GOG · EA · Epic · Ubisoft", "Performance Profiles", "Reversible Windows Tweaks", "Hardware Telemetry" };
+            double px = 88, py = 466;
+            foreach (string label in pills)
+            {
+                var t = Text(label, semi, 15, Colors.White);
+                double w = t.WidthIncludingTrailingWhitespace + 32, h = 38;
+                if (px + w > 640) { px = 88; py += h + 12; }
+                dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(0x12, 0x1F, 0x38)), new Pen(new SolidColorBrush(Color.FromArgb(0x99, 0x2F, 0x8F, 0xFF)), 1.2), new Rect(px, py, w, h), 19, 19);
+                dc.DrawText(t, new Point(px + 16, py + (h - t.Height) / 2));
+                px += w + 12;
+            }
+
+            var foot = Text("Free  ·  Open source (MIT)  ·  No account required", regular, 14, Color.FromRgb(0x6F, 0x7C, 0x92));
+            dc.DrawText(foot, new Point(90, 592));
+        }
+
+        var rtb = new RenderTargetBitmap(W, H, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+        return rtb;
+    }
+
+    private static FormattedText Text(string text, Typeface face, double size, Color color) =>
+        new(text, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, new SolidColorBrush(color), 1.0)
+        {
+            TextAlignment = TextAlignment.Left
+        };
 
     // ---------------------------------------------------------------- mark geometry
 
