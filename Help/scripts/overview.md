@@ -43,10 +43,10 @@ A post-exit script that starts Discord again:
 
 Every script works as-is; nothing here is required. If one script should behave differently per game, TrayTrigger passes these details, which the script is free to ignore.
 
-- Arguments, in order: phase (prelaunch or postexit), game name, game exe path. In a batch file those are %1, %2, and %3. Use %~2 to strip the quotes around a name with spaces.
+- Arguments, in order: phase (prelaunch or postexit), game name, game exe path, game ID, playtime in minutes. In a batch file those are %1 to %5; in PowerShell, $args[0] to $args[4]. Use %~2 to strip the quotes around a name with spaces. Playtime is empty on pre-launch, so the position never shifts between phases, and is the minute count on post-exit (for every tracked launch type, including Steam).
 - Environment variables: TRAYTRIGGER_PHASE, TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_ID, TRAYTRIGGER_GAME_EXE, and after exit TRAYTRIGGER_PLAYTIME_MINUTES (minutes the game actually ran, for every tracked launch type including Steam).
 
-> Environment variables are not set when running as Administrator, because Windows cannot pass a custom environment through a UAC launch. Elevated scripts should read the arguments instead.
+> Environment variables are not set when running as Administrator, because Windows cannot pass a custom environment through a UAC launch. Elevated scripts should read the arguments instead; the game ID and playtime are passed as arguments 4 and 5 for exactly this reason.
 
 > For .bat/.cmd scripts, percent signs are removed from the game name argument (%2) because cmd.exe would otherwise expand something like "%TEMP%" before your script sees it. The exact name is always available in TRAYTRIGGER_GAME_NAME.
 
