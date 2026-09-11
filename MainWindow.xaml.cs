@@ -34,11 +34,19 @@ public partial class MainWindow : Window
         // until its first frame renders, so the user never sees an unpainted white frame.
         WindowThemeService.PrepareForFirstShow(this);
 
+        RestoreWindowPlacement();
+
         SourceInitialized += (s, e) =>
         {
             var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
             LoggingService.Verbose("MainWindow", $"SourceInitialized. HWnd={handle}");
         };
+
+        // Track placement continuously (in memory only) so whichever save runs last - the hide
+        // in OnClosing, the tray "Exit", or the ProcessExit fallback - persists the final size.
+        SizeChanged += (s, e) => CaptureWindowPlacement();
+        LocationChanged += (s, e) => CaptureWindowPlacement();
+        StateChanged += (s, e) => CaptureWindowPlacement();
 
         Loaded += (s, e) =>
         {
@@ -54,6 +62,7 @@ public partial class MainWindow : Window
         _viewModel.RequestFolderBatchImport += OnRequestFolderBatchImport;
         _viewModel.RequestQuickRename += OnRequestQuickRename;
         _viewModel.RequestQuickCategory += OnRequestQuickCategory;
+        _viewModel.RequestBatchCategory += OnRequestBatchCategory;
         _viewModel.RequestEditSteamAppId += OnRequestEditSteamAppId;
         _viewModel.RequestMinimizeToTray += OnRequestMinimizeToTray;
 
@@ -66,6 +75,7 @@ public partial class MainWindow : Window
             _viewModel.RequestFolderBatchImport -= OnRequestFolderBatchImport;
             _viewModel.RequestQuickRename -= OnRequestQuickRename;
             _viewModel.RequestQuickCategory -= OnRequestQuickCategory;
+            _viewModel.RequestBatchCategory -= OnRequestBatchCategory;
             _viewModel.RequestEditSteamAppId -= OnRequestEditSteamAppId;
             _viewModel.RequestMinimizeToTray -= OnRequestMinimizeToTray;
         };
@@ -74,6 +84,87 @@ public partial class MainWindow : Window
     public void MarkExplicitExit()
     {
         _isExplicitExit = true;
+    }
+
+    /// <summary>
+    /// Apply the placement saved by <see cref="CaptureWindowPlacement"/> before the window is
+    /// first shown. Falls back to the XAML default size and CenterScreen when nothing has been
+    /// saved yet, or when the saved rectangle no longer touches any monitor (a display was
+    /// unplugged or the resolution changed), so the window can never come back off-screen.
+    /// </summary>
+    private void RestoreWindowPlacement()
+    {
+        var settings = _viewModel.SettingsVM.Settings;
+        if (settings.MainWindowWidth is not double width || settings.MainWindowHeight is not double height ||
+            settings.MainWindowLeft is not double left || settings.MainWindowTop is not double top)
+        {
+            return;
+        }
+
+        if (double.IsNaN(width) || double.IsNaN(height) || double.IsNaN(left) || double.IsNaN(top) ||
+            width < MinWidth || height < MinHeight)
+        {
+            LoggingService.Warn("MainWindow", $"Ignoring invalid saved window placement {width}x{height} at ({left},{top}).");
+            return;
+        }
+
+        // Require a usable slice of the window (enough to grab the title bar) to be inside the
+        // virtual desktop; otherwise let CenterScreen place it.
+        const double minVisible = 120;
+        var saved = new Rect(left, top, width, height);
+        var desktop = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+                               SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+        var visible = Rect.Intersect(saved, desktop);
+        if (visible.IsEmpty || visible.Width < minVisible || visible.Height < minVisible)
+        {
+            LoggingService.Info("MainWindow", $"Saved window placement {width}x{height} at ({left},{top}) is off-screen; using the default placement.");
+            return;
+        }
+
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = left;
+        Top = top;
+        Width = width;
+        Height = height;
+        if (settings.MainWindowMaximized)
+        {
+            WindowState = WindowState.Maximized;
+        }
+        LoggingService.Verbose("MainWindow", $"Restored window placement {width}x{height} at ({left},{top}), maximized={settings.MainWindowMaximized}.");
+    }
+
+    /// <summary>
+    /// Copy the current placement into settings (no disk write). Only the Normal-state rectangle
+    /// is recorded: a maximized or minimized window's Left/Top/Width/Height describe the
+    /// maximized frame or an off-screen point, and RestoreBounds already holds the last Normal
+    /// rectangle for those cases.
+    /// </summary>
+    private void CaptureWindowPlacement()
+    {
+        if (!IsLoaded) return;
+        var settings = _viewModel.SettingsVM.Settings;
+
+        if (WindowState == WindowState.Normal)
+        {
+            settings.MainWindowLeft = Left;
+            settings.MainWindowTop = Top;
+            settings.MainWindowWidth = ActualWidth;
+            settings.MainWindowHeight = ActualHeight;
+        }
+        else if (WindowState == WindowState.Maximized && !RestoreBounds.IsEmpty)
+        {
+            settings.MainWindowLeft = RestoreBounds.Left;
+            settings.MainWindowTop = RestoreBounds.Top;
+            settings.MainWindowWidth = RestoreBounds.Width;
+            settings.MainWindowHeight = RestoreBounds.Height;
+        }
+
+        // Minimized is transient (the window is about to be hidden or restored), so keep
+        // whichever of Normal/Maximized it was minimized from.
+        if (WindowState != WindowState.Minimized)
+        {
+            settings.MainWindowMaximized = WindowState == WindowState.Maximized;
+        }
     }
 
     /// <summary>
@@ -172,7 +263,9 @@ public partial class MainWindow : Window
         if (!_isExplicitExit)
         {
             e.Cancel = true;
+            CaptureWindowPlacement();
             Hide();
+            _viewModel.SettingsVM.AutoSaveSettings();
 
             // First hide via the title-bar X: tell the user the app is still running, once.
             // Without this the X looked like an exit and the tray icon went unnoticed.
@@ -180,7 +273,6 @@ public partial class MainWindow : Window
             if (!settings.HasSeenTrayHideNotice)
             {
                 settings.HasSeenTrayHideNotice = true;
-                _viewModel.SettingsVM.AutoSaveSettings();
                 _viewModel.NotifyTray("TrayTrigger is still running",
                     "Your hotkeys and tray menu stay active. Left-click the tray icon to reopen, or right-click it to exit.");
             }
@@ -203,6 +295,19 @@ public partial class MainWindow : Window
         {
             LibrarySearchTextBox.Focus();
             LibrarySearchTextBox.SelectAll();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control &&
+                 Keyboard.FocusedElement is not System.Windows.Controls.TextBox)
+        {
+            // Select every visible card. Inside a text box Ctrl+A keeps its normal
+            // select-all-text meaning.
+            _viewModel.SelectAllVisible();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && _viewModel.HasSelection)
+        {
+            _viewModel.ClearSelection();
             e.Handled = true;
         }
         else if (e.Key == Key.Escape && !string.IsNullOrEmpty(_viewModel.SearchText))
@@ -299,7 +404,9 @@ public partial class MainWindow : Window
 
     private void OnRequestMinimizeToTray()
     {
+        CaptureWindowPlacement();
         Hide();
+        _viewModel.SettingsVM.AutoSaveSettings();
     }
 
 
@@ -374,6 +481,77 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() == true)
         {
             _viewModel.ApplyCategory(card, dialog.ResultValue);
+        }
+    }
+
+    /// <summary>
+    /// Explorer-style click-away: a mouse press that lands outside every game card (empty
+    /// library space, headers, the toolbar, the sidebar) drops the multi-selection. This is the
+    /// tunneling event on purpose: the library's ScrollViewer marks the bubbling MouseDown
+    /// handled when it takes focus, so a press on the blank space between cards would never
+    /// reach a Window.MouseDown handler. Presses on a card never clear here - its own input
+    /// bindings decide (plain click clears and opens Details, Ctrl/Shift+click toggle), and a
+    /// right-click on a selected card must keep the selection so
+    /// <see cref="OnCardContextMenuOpening"/> can offer the batch menu for it. A press inside a
+    /// text box (the search field) keeps the selection too, as Explorer does.
+    /// </summary>
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!_viewModel.HasSelection) return;
+        var source = e.OriginalSource as DependencyObject;
+        if (IsWithin(source, static fe => fe.DataContext is GameCardViewModel)) return;
+        if (IsWithin(source, static fe => fe is System.Windows.Controls.TextBox)) return;
+        _viewModel.ClearSelection();
+    }
+
+    private static bool IsWithin(DependencyObject? node, Func<FrameworkElement, bool> predicate)
+    {
+        while (node != null)
+        {
+            if (node is FrameworkElement fe && predicate(fe)) return true;
+            node = node is Visual || node is System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(node)
+                : LogicalTreeHelper.GetParent(node);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Explorer-style right-click on a card: if the card is one of two or more selected cards,
+    /// open the batch menu for the whole selection instead of the single-game menu; if it is
+    /// not selected, the selection is dropped first and the normal menu opens for that card.
+    /// </summary>
+    private void OnCardContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.DataContext is not GameCardViewModel card) return;
+
+        if (!card.IsSelected)
+        {
+            _viewModel.ClearSelection();
+            return;
+        }
+        if (_viewModel.SelectedCount < 2) return;
+
+        e.Handled = true;
+        var menu = (System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu");
+        menu.DataContext = _viewModel;
+        menu.PlacementTarget = element;
+        menu.IsOpen = true;
+    }
+
+    private void OnRequestBatchCategory(List<GameCardViewModel> cards)
+    {
+        var suggestions = _viewModel.Categories.Where(c => c != "All");
+        // Pre-fill only when every selected game already shares one category.
+        string initial = cards.Select(c => c.Category).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1 ? cards[0].Category : string.Empty;
+        string prompt = cards.Count == 1
+            ? $"Select or enter a category for \"{cards[0].Name}\":"
+            : $"Select or enter a category for the {cards.Count} selected games:";
+        var dialog = new QuickInputDialog("Change Category", "Change Category", prompt, initial, suggestions);
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true)
+        {
+            _viewModel.ApplyCategoryToMany(cards, dialog.ResultValue);
         }
     }
 

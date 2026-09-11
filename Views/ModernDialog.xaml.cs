@@ -90,7 +90,8 @@ public partial class ModernDialog : Window
             case DialogIconType.Delete:
                 IconBadge.Background = new SolidColorBrush(Color.FromRgb(46, 24, 27));
                 IconBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(120, 29, 34));
-                IconGlyph.Text = "🗑";
+                IconGlyph.Text = "";
+                IconGlyph.Foreground = new SolidColorBrush(Color.FromRgb(0xF0, 0x6C, 0x6C));
                 if (Application.Current?.TryFindResource("ModernDangerButton") is Style dangerStyle)
                 {
                     ConfirmBtn.Style = dangerStyle;
@@ -100,7 +101,8 @@ public partial class ModernDialog : Window
             case DialogIconType.Warning:
                 IconBadge.Background = new SolidColorBrush(Color.FromRgb(40, 35, 21));
                 IconBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(120, 93, 28));
-                IconGlyph.Text = "⚠️";
+                IconGlyph.Text = "";
+                IconGlyph.Foreground = new SolidColorBrush(Color.FromRgb(0xE8, 0xB8, 0x4E));
                 if (Application.Current?.TryFindResource("ModernAccentButton") is Style warnStyle)
                 {
                     ConfirmBtn.Style = warnStyle;
@@ -110,7 +112,7 @@ public partial class ModernDialog : Window
             case DialogIconType.Info:
                 IconBadge.Background = new SolidColorBrush(Color.FromRgb(22, 34, 46));
                 IconBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(28, 75, 120));
-                IconGlyph.Text = "ℹ";
+                IconGlyph.Text = "";
                 IconGlyph.Foreground = (Brush)Application.Current.FindResource("BrushAccentHover");
                 if (Application.Current?.TryFindResource("ModernAccentButton") is Style infoStyle)
                 {
@@ -121,8 +123,7 @@ public partial class ModernDialog : Window
             case DialogIconType.Power:
                 IconBadge.Background = new SolidColorBrush(Color.FromRgb(46, 24, 27));
                 IconBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(120, 29, 34));
-                IconGlyph.Text = "\xE7E8";
-                IconGlyph.FontFamily = new FontFamily("Segoe MDL2 Assets, Segoe Fluent Icons");
+                IconGlyph.Text = "";
                 IconGlyph.Foreground = new SolidColorBrush(Color.FromRgb(224, 108, 117));
                 if (Application.Current?.TryFindResource("ModernDangerButton") is Style powerDangerStyle)
                 {
@@ -134,7 +135,7 @@ public partial class ModernDialog : Window
             default:
                 IconBadge.Background = new SolidColorBrush(Color.FromRgb(22, 34, 46));
                 IconBadge.BorderBrush = new SolidColorBrush(Color.FromRgb(28, 75, 120));
-                IconGlyph.Text = "?";
+                IconGlyph.Text = "";
                 IconGlyph.Foreground = (Brush)Application.Current.FindResource("BrushAccentHover");
                 if (Application.Current?.TryFindResource("ModernAccentButton") is Style questStyle)
                 {

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Regenerates Assets\app_icon.ico and Assets\app_icon.png from vector geometry.
+       Usage (from the repo root):  dotnet run  [with]  project tools\IconGen  [args: outDir]
+       Pass "preview <dir>" to also emit an upscaled contact sheet of every size. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TrayTrigger.Tools.IconGen</RootNamespace>
+  </PropertyGroup>
+
+</Project>

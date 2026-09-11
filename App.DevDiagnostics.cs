@@ -342,6 +342,78 @@ public partial class App
                 return;
             }
 
+            // --screenshot-batch-menu <out.png>: a real screen grab (popups don't render into a
+            // RenderTargetBitmap) of the poster grid with two cards selected and the batch
+            // context menu open over the second one.
+            if ((e.Args[i].Equals("--screenshot-batch-menu", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-batch-menu", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = SettingsViewModel.ViewModePosterGrid;
+                _mainWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+                _mainWindow.Left = 0;
+                _mainWindow.Top = 0;
+                _mainWindow.Width = 1020;
+                _mainWindow.Height = 700;
+                _mainWindow.Show();
+                var selected = _mainViewModel.FilteredGames.Cast<GameCardViewModel>().Take(2).ToList();
+                foreach (var card in selected)
+                {
+                    _mainViewModel.SetCardSelected(card, true);
+                }
+                WindowThemeService.WhenContentRendered(_mainWindow, () =>
+                {
+                    var open = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                    open.Tick += (s, args) =>
+                    {
+                        open.Stop();
+                        var target = FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && ReferenceEquals(b.DataContext, selected.LastOrDefault()));
+                        var menu = (ContextMenu)_mainWindow.FindResource("GameBatchContextMenu");
+                        menu.DataContext = _mainViewModel;
+                        menu.PlacementTarget = target ?? (UIElement)_mainWindow;
+                        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Center;
+                        menu.IsOpen = true;
+                        var grab = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+                        grab.Tick += (s2, args2) =>
+                        {
+                            grab.Stop();
+                            CaptureScreen(_mainWindow, targetPng);
+                            menu.IsOpen = false;
+                            ExitApplication();
+                        };
+                        grab.Start();
+                    };
+                    open.Start();
+                });
+                return;
+            }
+
+            // --screenshot-select <view mode> <out.png>: the library in Select mode with the first
+            // two visible cards checked, in the given view ("Poster Grid", "Extra Large",
+            // "Compact Icons", "Details List").
+            if ((e.Args[i].Equals("--screenshot-select", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-select", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string viewMode = e.Args[i + 1];
+                string targetPng = e.Args[i + 2];
+                string previousMode = _mainViewModel.SettingsVM.LibraryViewMode;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = viewMode;
+                foreach (var card in _mainViewModel.FilteredGames.Cast<GameCardViewModel>().Take(2))
+                {
+                    _mainViewModel.SetCardSelected(card, true);
+                }
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 700, targetPng);
+                _mainViewModel.SettingsVM.LibraryViewMode = previousMode;
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-icons", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-icons", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -635,13 +707,14 @@ public partial class App
                 return;
             }
 
-            // --screenshot-edit-bottom <out.png>: the Edit Game dialog scrolled to its end
-            // (scripts card and privileges card).
+            // --screenshot-edit-bottom <out.png> [offset]: the Edit Game dialog scrolled to its end
+            // (scripts card and privileges card), or to a given vertical offset when one is passed.
             if ((e.Args[i].Equals("--screenshot-edit-bottom", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-edit-bottom", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
+                double? scrollOffset = i + 2 < e.Args.Length && double.TryParse(e.Args[i + 2], out double parsedOffset) ? parsedOffset : null;
                 var sampleGame = _mainViewModel.Games.FirstOrDefault()?.Game ?? new GameEntry
                 {
                     Name = "DOOM Eternal",
@@ -653,7 +726,7 @@ public partial class App
                 dlg.Show();
                 dlg.UpdateLayout();
                 var sv = FindVisualChild<ScrollViewer>(dlg, s => s.ScrollableHeight > 0);
-                sv?.ScrollToBottom();
+                if (scrollOffset is double offset) sv?.ScrollToVerticalOffset(offset); else sv?.ScrollToBottom();
                 dlg.UpdateLayout();
                 CaptureVisual(dlg, 820, 660, targetPng);
                 ExitApplication();
@@ -2217,6 +2290,31 @@ public partial class App
         }
 
         return clientBmp;
+    }
+
+    /// <summary>Copies the window's on-screen pixels (including any open popup over it) to a PNG.</summary>
+    private void CaptureScreen(Window window, string targetPng)
+    {
+        try
+        {
+            var transform = PresentationSource.FromVisual(window)?.CompositionTarget?.TransformToDevice ?? Matrix.Identity;
+            var origin = window.PointToScreen(new Point(0, 0));
+            int width = (int)Math.Round(window.ActualWidth * transform.M11);
+            int height = (int)Math.Round(window.ActualHeight * transform.M22);
+            using var bmp = new System.Drawing.Bitmap(width, height);
+            using (var g = System.Drawing.Graphics.FromImage(bmp))
+            {
+                g.CopyFromScreen((int)origin.X, (int)origin.Y, 0, 0, new System.Drawing.Size(width, height));
+            }
+            string? parentDir = Path.GetDirectoryName(targetPng);
+            if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir)) Directory.CreateDirectory(parentDir);
+            bmp.Save(targetPng, System.Drawing.Imaging.ImageFormat.Png);
+            _logger($"[CaptureScreen] Success: {targetPng}");
+        }
+        catch (Exception ex)
+        {
+            _logger($"[CaptureScreen] Error: {ex}");
+        }
     }
 
     private void CaptureVisual(Window window, int width, int height, string targetPng)

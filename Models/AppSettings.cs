@@ -24,6 +24,16 @@ public class AppSettings
     public bool UbisoftIntegrationEnabled { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
     public bool IsSidebarExpanded { get; set; } = false;
+    /// <summary>
+    /// Last main-window placement (WPF device-independent units), captured while the window is
+    /// in its Normal state and restored on the next launch. Null until the window has been shown
+    /// once, in which case the XAML default size and CenterScreen apply. See MainWindow.
+    /// </summary>
+    public double? MainWindowLeft { get; set; }
+    public double? MainWindowTop { get; set; }
+    public double? MainWindowWidth { get; set; }
+    public double? MainWindowHeight { get; set; }
+    public bool MainWindowMaximized { get; set; } = false;
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
     public string LastCategoryFilter { get; set; } = "All";
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";

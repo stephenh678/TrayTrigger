@@ -76,8 +76,9 @@ public class LibraryViewModel : ViewModelBase
     // Undo toast state
     private bool _isUndoToastVisible = false;
     private string _undoToastMessage = string.Empty;
-    private GameEntry? _lastRemovedGame;
-    private int _lastRemovedIndex = -1;
+    /// <summary>The games taken out by the most recent Remove (one, or a Select-mode batch) with
+    /// their former positions, kept for the 6-second undo window. See <see cref="RemoveGames"/>.</summary>
+    private readonly List<(GameEntry Game, int Index)> _lastRemoved = new();
     private DispatcherTimer? _undoToastTimer;
 
     // Launch toast state
@@ -107,6 +108,9 @@ public class LibraryViewModel : ViewModelBase
     public event Action<GameCardViewModel>? RequestQuickRename;
     public event Action<GameCardViewModel>? RequestQuickCategory;
     public event Action<GameCardViewModel>? RequestEditSteamAppId;
+    /// <summary>Select mode's "Change Category": the window shows the category prompt for the
+    /// given cards, then calls <see cref="ApplyCategoryToMany"/>.</summary>
+    public event Action<List<GameCardViewModel>>? RequestBatchCategory;
     public event Action? RequestMinimizeToTray;
     public event Action? LibraryUpdated;
 
@@ -164,6 +168,8 @@ public class LibraryViewModel : ViewModelBase
             _searchText = value;
             OnPropertyChanged();
             FilteredGames.Refresh();
+            // A selection made under one filter must not be acted on invisibly under another.
+            ClearSelection();
         }
     }
 
@@ -177,6 +183,7 @@ public class LibraryViewModel : ViewModelBase
                 _selectedCategory = value;
                 _settings.LastCategoryFilter = value;
                 OnPropertyChanged();
+                ClearSelection();
                 foreach (var tab in CategoryTabs)
                 {
                     tab.IsSelected = string.Equals(tab.Name, value, StringComparison.OrdinalIgnoreCase);
@@ -228,8 +235,9 @@ public class LibraryViewModel : ViewModelBase
         set { _launchToastMessage = value; OnPropertyChanged(); }
     }
 
-    private string _launchToastIcon = "▶";
-    /// <summary>Glyph shown at the left of the floating toast: "▶" for a launch, "✓" for an import result.</summary>
+    private string _launchToastIcon = "";
+    /// <summary>Segoe MDL2 glyph shown at the left of the floating toast: Play (E768) for a launch,
+    /// Accept (E8FB) for an import result.</summary>
     public string LaunchToastIcon
     {
         get => _launchToastIcon;
@@ -332,7 +340,18 @@ public class LibraryViewModel : ViewModelBase
     {
         var card = new GameCardViewModel(
             game,
-            onLaunch: LaunchGame,
+            // The hover Play button sits in the middle of a card, so a Ctrl/Shift+click aimed at
+            // the card can land on it: treat that as the selection gesture it was meant to be,
+            // never as a launch. While games are multi-selected the Play buttons are hidden (a
+            // single-game action makes no sense against a selection); this also catches the
+            // keyboard route (Ctrl+Enter). Tray and hotkey launches don't come through here.
+            onLaunch: card =>
+            {
+                var modifiers = Keyboard.Modifiers;
+                if (modifiers.HasFlag(ModifierKeys.Shift)) { OnCardRangeSelect(card); return; }
+                if (modifiers.HasFlag(ModifierKeys.Control)) { OnCardToggleSelect(card); return; }
+                if (!HasSelection) LaunchGame(card);
+            },
             onEdit: card => RequestEditGameDialog?.Invoke(card),
             onDelete: DeleteGame,
             onRelocate: RelocateGame,
@@ -349,7 +368,10 @@ public class LibraryViewModel : ViewModelBase
             getUseVerticalPosterArt: () => _getUseVerticalPosterArt(),
             deferHeavyInit: deferHeavyInit,
             onEndSession: card => EndGameSession(card, forceClose: false),
-            onForceClose: card => EndGameSession(card, forceClose: true)
+            onForceClose: card => EndGameSession(card, forceClose: true),
+            onPrimaryClick: OnCardPrimaryClick,
+            onToggleSelect: OnCardToggleSelect,
+            onRangeSelect: OnCardRangeSelect
         );
         // Sessions outlive library reloads (a rescan while a game is running), so a fresh card
         // must pick up the live state rather than wait for the next SessionStarted event.
@@ -420,6 +442,281 @@ public class LibraryViewModel : ViewModelBase
         }
         catch (System.Threading.Tasks.TaskCanceledException) { }
         catch (InvalidOperationException) { }
+    }
+
+    // ------------------------------------------------------------------------------------
+    // Multi-select (batch editing), Explorer-style
+    //
+    // Ctrl+click toggles a card, Shift+click selects a range, Ctrl+A selects every visible
+    // card; selected cards show the accent border. Right-clicking one of two or more selected
+    // cards opens the batch menu (MainWindow.OnCardContextMenuOpening), whose items apply
+    // Favorite / Hide / Change Category / Remove to the whole selection through the same paths
+    // the single-game menu uses. A plain click, Escape, or a filter change clears it.
+    // Selection is UI-only state and is never saved.
+    // ------------------------------------------------------------------------------------
+
+    private GameCardViewModel? _selectionAnchor;
+
+    private IEnumerable<GameCardViewModel> VisibleCards => FilteredGames.Cast<GameCardViewModel>();
+    private List<GameCardViewModel> SelectedCards => Games.Where(g => g.IsSelected).ToList();
+
+    public int SelectedCount => Games.Count(g => g.IsSelected);
+    public bool HasSelection => SelectedCount > 0;
+    public string SelectionSummary => $"{SelectedCount} games selected";
+    /// <summary>Status-bar nudge while a multi-selection exists; empty otherwise.</summary>
+    public string SelectionHint => SelectedCount > 1
+        ? $"{SelectedCount} selected - right-click one for batch actions"
+        : string.Empty;
+
+    /// <summary>Every selected game is a favorite - the batch menu's check mark, and what flips its label.</summary>
+    public bool BatchAllFavorite => HasSelection && SelectedCards.All(c => c.Game.IsFavorite);
+    /// <summary>Every selected game is hidden (the Hidden tab) - the batch menu's check mark.</summary>
+    public bool BatchAllHidden => HasSelection && SelectedCards.All(c => c.Game.IsHidden);
+    /// <summary>"Add to Favorites" unless every selected game already is one, then "Remove from Favorites".</summary>
+    public string BatchFavoriteLabel => BatchAllFavorite ? "Remove from Favorites" : "Add to Favorites";
+    /// <summary>"Hide" unless every selected game is already hidden, then "Unhide".</summary>
+    public string BatchHideLabel => BatchAllHidden ? "Unhide" : "Hide";
+
+    private ICommand? _cmdSelectAllCommand;
+    public ICommand SelectAllCommand => _cmdSelectAllCommand ??= new RelayCommand(SelectAllVisible);
+    private ICommand? _cmdClearSelectionCommand;
+    public ICommand ClearSelectionCommand => _cmdClearSelectionCommand ??= new RelayCommand(ClearSelection);
+    private ICommand? _cmdBatchFavoriteCommand;
+    public ICommand BatchFavoriteCommand => _cmdBatchFavoriteCommand ??= new RelayCommand(BatchToggleFavorite);
+    private ICommand? _cmdBatchHideCommand;
+    public ICommand BatchHideCommand => _cmdBatchHideCommand ??= new RelayCommand(BatchToggleHidden);
+    private ICommand? _cmdBatchChangeCategoryCommand;
+    public ICommand BatchChangeCategoryCommand => _cmdBatchChangeCategoryCommand ??= new RelayCommand(() =>
+    {
+        var cards = SelectedCards;
+        if (cards.Count > 0) RequestBatchCategory?.Invoke(cards);
+    });
+    private ICommand? _cmdBatchRemoveCommand;
+    public ICommand BatchRemoveCommand => _cmdBatchRemoveCommand ??= new RelayCommand(BatchRemove);
+    private ICommand? _cmdBatchSetProfileCommand;
+    /// <summary>Parameter: a <see cref="PerformanceProfileMode"/> (from the batch menu's radio items).</summary>
+    public ICommand BatchSetProfileCommand => _cmdBatchSetProfileCommand ??= new RelayCommand(p =>
+    {
+        if (p is PerformanceProfileMode mode) BatchSetProfile(mode);
+    });
+    private ICommand? _cmdBatchRefreshMetadataCommand;
+    public ICommand BatchRefreshMetadataCommand => _cmdBatchRefreshMetadataCommand ??= new RelayCommand(() => _ = BatchRefreshMetadataAsync());
+
+    /// <summary>The one profile every selected game shares, or null when they differ - drives
+    /// which of the batch menu's Off / Optimized / Aggressive items shows a check.</summary>
+    public PerformanceProfileMode? BatchProfile
+    {
+        get
+        {
+            var cards = SelectedCards;
+            if (cards.Count == 0) return null;
+            var first = cards[0].Game.PerformanceProfile;
+            return cards.All(c => c.Game.PerformanceProfile == first) ? first : null;
+        }
+    }
+    public bool BatchProfileIsOff => BatchProfile == PerformanceProfileMode.Off;
+    public bool BatchProfileIsOptimized => BatchProfile == PerformanceProfileMode.Optimized;
+    public bool BatchProfileIsAggressive => BatchProfile == PerformanceProfileMode.Aggressive;
+
+    private void NotifySelectionChanged()
+    {
+        OnPropertyChanged(nameof(SelectedCount));
+        OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectionSummary));
+        OnPropertyChanged(nameof(SelectionHint));
+        OnPropertyChanged(nameof(BatchAllFavorite));
+        OnPropertyChanged(nameof(BatchAllHidden));
+        OnPropertyChanged(nameof(BatchFavoriteLabel));
+        OnPropertyChanged(nameof(BatchHideLabel));
+        OnPropertyChanged(nameof(BatchProfile));
+        OnPropertyChanged(nameof(BatchProfileIsOff));
+        OnPropertyChanged(nameof(BatchProfileIsOptimized));
+        OnPropertyChanged(nameof(BatchProfileIsAggressive));
+    }
+
+    /// <summary>Same effect as picking the tier in Edit Game for each selected game. A game that
+    /// is playing right now keeps its current session; the new tier applies from its next launch,
+    /// exactly as an Edit Game save would.</summary>
+    private void BatchSetProfile(PerformanceProfileMode mode)
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+        foreach (var card in cards)
+        {
+            card.Game.PerformanceProfile = mode;
+            card.RefreshProperties();
+        }
+        SaveLibrary();
+        LoggingService.Info("Library", $"{cards.Count} game(s) performance profile set to {mode} (batch).");
+        StatusMessage = $"Set Performance Profile of {cards.Count} game(s) to {mode}";
+        NotifySelectionChanged();
+    }
+
+    /// <summary>Runs the single-game refresh for each selected card in turn (the Steam store is
+    /// rate-limited, so they are not fired in parallel) with progress in the status bar.</summary>
+    public async Task BatchRefreshMetadataAsync()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+
+        int done = 0, failed = 0;
+        foreach (var card in cards)
+        {
+            done++;
+            StatusMessage = $"Refreshing poster & metadata ({done} of {cards.Count}): {card.Name}...";
+            try
+            {
+                await RefreshGameMetadataAsync(card);
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                LoggingService.Warn("Library", $"Batch refresh failed for '{card.Name}': {ex.Message}");
+            }
+        }
+        LoggingService.Info("Library", $"Batch refresh finished: {cards.Count - failed} of {cards.Count} game(s) refreshed.");
+        StatusMessage = failed == 0
+            ? $"Refreshed poster & metadata for {cards.Count} game(s)"
+            : $"Refreshed {cards.Count - failed} of {cards.Count} game(s); {failed} failed (see log)";
+    }
+
+    /// <summary>Plain click: Details, as always - and, Explorer-style, it drops any multi-selection.</summary>
+    private void OnCardPrimaryClick(GameCardViewModel card)
+    {
+        ClearSelection();
+        OpenGameDetails(card);
+    }
+
+    private void OnCardToggleSelect(GameCardViewModel card)
+    {
+        ToggleCardSelection(card);
+    }
+
+    /// <summary>Shift+click: select every visible card between the last clicked one and this one.</summary>
+    private void OnCardRangeSelect(GameCardViewModel card)
+    {
+        var visible = VisibleCards.ToList();
+        int from = _selectionAnchor != null ? visible.IndexOf(_selectionAnchor) : -1;
+        int to = visible.IndexOf(card);
+        if (from < 0 || to < 0)
+        {
+            ToggleCardSelection(card);
+            return;
+        }
+
+        for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++)
+        {
+            visible[i].IsSelected = true;
+        }
+        NotifySelectionChanged();
+    }
+
+    private void ToggleCardSelection(GameCardViewModel card)
+    {
+        card.IsSelected = !card.IsSelected;
+        _selectionAnchor = card;
+        NotifySelectionChanged();
+    }
+
+    /// <summary>Programmatic selection (tests, screenshot modes) that keeps the counts in step.</summary>
+    public void SetCardSelected(GameCardViewModel card, bool selected)
+    {
+        card.IsSelected = selected;
+        NotifySelectionChanged();
+    }
+
+    public void SelectAllVisible()
+    {
+        foreach (var card in VisibleCards) card.IsSelected = true;
+        NotifySelectionChanged();
+    }
+
+    public void ClearSelection()
+    {
+        bool any = false;
+        foreach (var card in Games)
+        {
+            if (card.IsSelected) { card.IsSelected = false; any = true; }
+        }
+        _selectionAnchor = null;
+        if (any) NotifySelectionChanged();
+    }
+
+    private void BatchToggleFavorite()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+        bool makeFavorite = !cards.All(c => c.Game.IsFavorite);
+        foreach (var card in cards)
+        {
+            card.Game.IsFavorite = makeFavorite;
+            card.RefreshProperties();
+        }
+        SaveLibrary();
+        FilteredGames.Refresh();
+        LoggingService.Info("Library", $"{cards.Count} game(s) favorite: {(makeFavorite ? "on" : "off")} (batch).");
+        StatusMessage = makeFavorite ? $"Added {cards.Count} game(s) to Favorites" : $"Removed {cards.Count} game(s) from Favorites";
+        NotifySelectionChanged();
+    }
+
+    private void BatchToggleHidden()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+        bool hide = !cards.All(c => c.Game.IsHidden);
+        foreach (var card in cards)
+        {
+            card.Game.IsHidden = hide;
+            card.IsSelected = false;
+            card.RefreshProperties();
+        }
+        SaveLibrary();
+        RebuildCategories();
+        FilteredGames.Refresh();
+        LoggingService.Info("Library", $"{cards.Count} game(s) hidden: {(hide ? "on" : "off")} (batch).");
+        StatusMessage = hide ? $"Hid {cards.Count} game(s)" : $"Unhid {cards.Count} game(s)";
+        NotifySelectionChanged();
+    }
+
+    /// <summary>Applies one category to every card - the window calls this after the batch
+    /// category prompt (see <see cref="RequestBatchCategory"/>).</summary>
+    public void ApplyCategoryToMany(List<GameCardViewModel> cards, string newCategory)
+    {
+        if (cards.Count == 0) return;
+        if (string.IsNullOrWhiteSpace(newCategory)) newCategory = LibraryConstants.Uncategorized;
+        newCategory = newCategory.Trim();
+
+        foreach (var card in cards)
+        {
+            card.Game.Category = newCategory;
+            card.RefreshProperties();
+        }
+        RebuildCategories();
+        SaveLibrary();
+        FilteredGames.Refresh();
+        LoggingService.Info("Library", $"{cards.Count} game(s) category changed to '{newCategory}' (batch).");
+        StatusMessage = $"Set category of {cards.Count} game(s) to {newCategory}";
+        NotifySelectionChanged();
+    }
+
+    private void BatchRemove()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+
+        Window? owner = WindowHelper.ActiveOwner();
+        string what = cards.Count == 1 ? $"\"{cards[0].Name}\"" : $"these {cards.Count} games";
+        bool confirmed = ModernDialog.ConfirmDelete(
+            owner,
+            "Remove from Library",
+            $"Are you sure you want to remove {what} from your library?",
+            "This will only remove the shortcuts from TrayTrigger. Your installed game files will not be deleted.",
+            confirmText: cards.Count == 1 ? "Remove" : $"Remove {cards.Count}",
+            cancelText: "Cancel");
+        if (!confirmed) return;
+
+        RemoveGames(cards);
+        NotifySelectionChanged();
     }
 
     private void ToggleFavorite(GameCardViewModel card)
@@ -614,14 +911,14 @@ public class LibraryViewModel : ViewModelBase
         StatusMessage = message;
         if (IsLibraryVisible?.Invoke() == false)
         {
-            ShowLaunchToast(message, icon: "✓", seconds: 5);
+            ShowLaunchToast(message, icon: "", seconds: 5);
         }
     }
 
     /// <summary>Shows the floating launch toast for a few seconds - same non-blocking overlay
     /// pattern as the undo-delete toast, but auto-dismissing since there's no action to take.
     /// The toast lives outside the per-section grids, so it renders on every section.</summary>
-    private void ShowLaunchToast(string message, string icon = "▶", int seconds = 3)
+    private void ShowLaunchToast(string message, string icon = "", int seconds = 3)
     {
         _launchToastTimer?.Stop();
 
@@ -1010,26 +1307,48 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
+        RemoveGames(new List<GameCardViewModel> { card });
+    }
+
+    /// <summary>
+    /// Takes the given cards out of the library as one undoable step (the single-game Remove and
+    /// Select mode's batch Remove both land here). The caller has already confirmed. Cached
+    /// artwork is only deleted once the 6-second undo window lapses.
+    /// </summary>
+    private void RemoveGames(List<GameCardViewModel> cards)
+    {
+        if (cards.Count == 0) return;
+
         _undoToastTimer?.Stop();
 
-        // Only one pending deletion can be undone at a time. If another one is still sitting in
-        // its undo window when this new delete arrives, it's about to be overwritten and can no
+        // Only one pending removal can be undone at a time. If another one is still sitting in
+        // its undo window when this new one arrives, it's about to be overwritten and can no
         // longer be undone anyway - finalize its cached artwork cleanup now instead of leaking it.
-        if (_lastRemovedGame != null)
+        foreach (var (game, _) in _lastRemoved)
         {
-            DeleteCachedArtwork(_lastRemovedGame);
+            DeleteCachedArtwork(game);
+        }
+        _lastRemoved.Clear();
+
+        // Record positions before anything moves so undo can put every game back where it was.
+        foreach (var card in cards.OrderBy(c => Games.IndexOf(c)))
+        {
+            _lastRemoved.Add((card.Game, Games.IndexOf(card)));
+        }
+        foreach (var card in cards)
+        {
+            card.IsSelected = false;
+            Games.Remove(card);
         }
 
-        _lastRemovedGame = card.Game;
-        _lastRemovedIndex = Games.IndexOf(card);
-
-        Games.Remove(card);
         RebuildCategories();
         SaveLibrary();
         UpdateHotkeys();
-        LoggingService.Info("Library", $"Removed '{card.Name}' from library (undoable for 6s).");
 
-        UndoToastMessage = $"Removed \"{card.Name}\"";
+        string what = cards.Count == 1 ? $"\"{cards[0].Name}\"" : $"{cards.Count} games";
+        LoggingService.Info("Library", $"Removed {what} from library (undoable for 6s).");
+
+        UndoToastMessage = $"Removed {what}";
         IsUndoToastVisible = true;
 
         _undoToastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
@@ -1039,19 +1358,32 @@ public class LibraryViewModel : ViewModelBase
             IsUndoToastVisible = false;
 
             // The undo window has expired - the removal is now final, so it's safe to delete
-            // the game's cached icon/cover files instead of leaving them orphaned forever.
-            if (_lastRemovedGame != null)
+            // the games' cached icon/cover files instead of leaving them orphaned forever.
+            foreach (var (game, _) in _lastRemoved)
             {
-                LoggingService.Verbose("Library", $"Undo window expired for '{_lastRemovedGame.Name}' - deleting cached artwork.");
-                DeleteCachedArtwork(_lastRemovedGame);
-                _lastRemovedGame = null;
+                LoggingService.Verbose("Library", $"Undo window expired for '{game.Name}' - deleting cached artwork.");
+                DeleteCachedArtwork(game);
             }
+            _lastRemoved.Clear();
         };
         _undoToastTimer.Start();
 
-        StatusMessage = $"Removed {card.Name}";
-        OnPropertyChanged(nameof(TotalGameCount));
-        OnPropertyChanged(nameof(TotalGameCountDisplay));
+        StatusMessage = $"Removed {what}";
+        NotifyGameCountChanged();
+    }
+
+    /// <summary>Ends a pending undo window early and cleans up its artwork - for bulk paths that
+    /// are about to delete cached files a resurrected game might share.</summary>
+    private void FinalizePendingRemoval()
+    {
+        if (_lastRemoved.Count == 0) return;
+        _undoToastTimer?.Stop();
+        IsUndoToastVisible = false;
+        foreach (var (game, _) in _lastRemoved)
+        {
+            DeleteCachedArtwork(game);
+        }
+        _lastRemoved.Clear();
     }
 
     /// <summary>Games imported through <paramref name="launcher"/>'s integration, whatever
@@ -1100,13 +1432,7 @@ public class LibraryViewModel : ViewModelBase
 
         // A pending single-game undo would otherwise be able to resurrect a game whose artwork
         // is about to be cleaned up below (if it shares a cached file) - finalize it first.
-        if (_lastRemovedGame != null)
-        {
-            _undoToastTimer?.Stop();
-            IsUndoToastVisible = false;
-            DeleteCachedArtwork(_lastRemovedGame);
-            _lastRemovedGame = null;
-        }
+        FinalizePendingRemoval();
 
         foreach (var card in toRemove)
         {
@@ -1168,29 +1494,35 @@ public class LibraryViewModel : ViewModelBase
         _undoToastTimer?.Stop();
         IsUndoToastVisible = false;
 
-        if (_lastRemovedGame != null)
+        if (_lastRemoved.Count == 0) return;
+
+        // Ascending index order so each insert lands at its original slot relative to the
+        // games already put back before it.
+        var restored = new List<GameCardViewModel>();
+        foreach (var (game, index) in _lastRemoved.OrderBy(r => r.Index))
         {
-            var card = CreateCardViewModel(_lastRemovedGame);
-            if (_lastRemovedIndex >= 0 && _lastRemovedIndex <= Games.Count)
+            var card = CreateCardViewModel(game);
+            if (index >= 0 && index <= Games.Count)
             {
-                Games.Insert(_lastRemovedIndex, card);
+                Games.Insert(index, card);
             }
             else
             {
                 Games.Add(card);
             }
-
-            RebuildCategories();
-            SaveLibrary();
-            UpdateHotkeys();
-            ApplySort();
-            LoggingService.Info("Library", $"Undid removal of '{card.Name}'.");
-
-            StatusMessage = $"Restored \"{card.Name}\" to library.";
-            OnPropertyChanged(nameof(TotalGameCount));
-            OnPropertyChanged(nameof(TotalGameCountDisplay));
-            _lastRemovedGame = null;
+            restored.Add(card);
         }
+        _lastRemoved.Clear();
+
+        RebuildCategories();
+        SaveLibrary();
+        UpdateHotkeys();
+        ApplySort();
+
+        string what = restored.Count == 1 ? $"\"{restored[0].Name}\"" : $"{restored.Count} games";
+        LoggingService.Info("Library", $"Undid removal of {what}.");
+        StatusMessage = $"Restored {what} to library.";
+        NotifyGameCountChanged();
     }
 
     /// <summary>

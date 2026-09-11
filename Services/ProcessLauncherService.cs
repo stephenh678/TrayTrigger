@@ -625,12 +625,15 @@ public partial class ProcessLauncherService
 
         try
         {
-            string launchUrl = appId != null
-                ? LaunchRouter.BuildSteamLaunchUrl(appId, game.Arguments)
-                : game.ExecutablePath;
+            if (!TryLaunchSteamSilently(game, appId))
+            {
+                string launchUrl = appId != null
+                    ? LaunchRouter.BuildSteamLaunchUrl(appId, game.Arguments)
+                    : game.ExecutablePath;
 
-            LoggingService.Verbose("Launcher", $"Launching Steam URL: {launchUrl}");
-            Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
+                LoggingService.Verbose("Launcher", $"Launching Steam URL: {launchUrl}");
+                Process.Start(new ProcessStartInfo(launchUrl) { UseShellExecute = true });
+            }
 
             MarkLaunched(game);
             LoggingService.Info("Launcher", $"Dispatched Steam launch for '{game.Name}'.");
@@ -650,6 +653,51 @@ public partial class ProcessLauncherService
         {
             RollbackSession(session);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// "Close the launcher after this game exits" implies the user treats Steam as incidental to
+    /// the game, so when that option is on and Steam is not already running, cold-start it with
+    /// "steam.exe -silent -applaunch &lt;id&gt; [args]" (Valve's documented switches) instead of a
+    /// steam:// URL: the client comes up minimized to the tray and only the game shows. When
+    /// Steam is already open the URL is used as before - "-silent" only affects client startup.
+    /// Returns false when the URL path should be taken (option off, Steam running, no AppId,
+    /// steam.exe not found, or the start failed), so the caller can fall back.
+    /// </summary>
+    private bool TryLaunchSteamSilently(GameEntry game, string? appId)
+    {
+        if (appId == null || !game.CloseLauncherOnExit) return false;
+        if (LauncherClientCloser.IsClientRunning(LauncherPlatform.Steam)) return false;
+
+        string? steamPath = _steamScannerService.GetSteamInstallPath();
+        string? steamExe = string.IsNullOrWhiteSpace(steamPath) ? null : Path.Combine(steamPath, "steam.exe");
+        if (steamExe == null || !File.Exists(steamExe))
+        {
+            LoggingService.Verbose("Launcher", $"steam.exe not found under '{steamPath ?? "(unknown)"}'; launching '{game.Name}' via steam:// URL instead of a silent client start.");
+            return false;
+        }
+
+        // Everything after "-applaunch <id>" is handed to the game as its launch options, the
+        // same as Properties > Launch Options in Steam - keep the user's own quoting intact.
+        string arguments = string.IsNullOrWhiteSpace(game.Arguments)
+            ? $"-silent -applaunch {appId}"
+            : $"-silent -applaunch {appId} {game.Arguments.Trim()}";
+
+        try
+        {
+            LoggingService.Verbose("Launcher", $"Steam is not running; starting it minimized: \"{steamExe}\" {arguments}");
+            Process.Start(new ProcessStartInfo(steamExe, arguments)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = steamPath
+            });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Launcher", $"Silent Steam start for '{game.Name}' failed ({ex.Message}); falling back to the steam:// URL.");
+            return false;
         }
     }
 

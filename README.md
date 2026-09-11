@@ -94,6 +94,8 @@ TrayTrigger isn't another always-on-top launcher. It's a tray icon until you nee
 - **Drag & Drop Importing** — drag an executable or shortcut onto the window to add it.
 - **Batch Folder Scanner** — scan an entire game drive with intelligent executable scoring that filters out uninstallers and launcher binaries.
 - **Favorites & Categories** — pin favorites to the top of the tray menu and library, organize the rest into custom categories (Action, RPG, Strategy, Steam, etc.) or view as a flat list.
+- **Batch editing** — Ctrl+click, Shift+click, or Ctrl+A to select several games in any view, then right-click for a batch menu that favorites, hides, re-categorizes, sets the Performance Profile, refreshes poster art and metadata, or removes them in one step, with the same undo as a single removal.
+- **Launcher stays out of the way** — per game, close Steam, GOG Galaxy, EA App, Epic, or Ubisoft Connect automatically when the game exits. For Steam, that option also starts the client minimized to the tray when TrayTrigger has to open it, so only the game shows.
 
 ## Performance Profiles
 

@@ -49,7 +49,7 @@
                                        Foreground="{StaticResource BrushTextMuted}" FontWeight="SemiBold"/>
                         </Border>
 
-                        <TextBlock Text="➔" FontSize="12" Foreground="{StaticResource BrushTextMuted}" 
+                        <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                    Margin="8,0,8,0" VerticalAlignment="Center"/>
 
                         <!-- New Version Badge -->

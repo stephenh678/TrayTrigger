@@ -349,7 +349,7 @@ public class GameEditViewModel : ViewModelBase
     /// (or one converted to Local in this session) that has a Steam App ID to launch by.</summary>
     public bool CanOfferSteamLaunch => !HasPlatform && !string.IsNullOrWhiteSpace(SteamAppId);
 
-    /// <summary>"Show the Steam badge" only matters for a game that does not launch through Steam.</summary>
+    /// <summary>"Use the Steam badge instead of the Local badge" only matters for a game that does not launch through Steam.</summary>
     public bool CanOfferSteamBadge => !_isSteamGame;
 
     // --- Launcher platform (GOG / EA / Epic / Ubisoft / Steam-by-AppId) ---
