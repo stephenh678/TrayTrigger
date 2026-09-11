@@ -188,17 +188,18 @@ public class GameCardViewModel : ViewModelBase
     public bool IsEaGame => Game.IsEaGame;
     public bool IsEpicGame => Game.IsEpicGame;
     public bool IsUbisoftGame => Game.IsUbisoftGame;
+    public bool IsXboxGame => Game.IsXboxGame;
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
     /// rather than sitting beside it.</summary>
-    public bool IsLocalGame => !HasSteamOverlay && !IsGogGame && !IsEaGame && !IsEpicGame && !IsUbisoftGame;
+    public bool IsLocalGame => LibraryConstants.PlatformCategoryFor(Game) == null;
+    /// <summary>The category pill is redundant while it still shows the platform's own placeholder
+    /// name next to that platform's badge, or the meaningless "Uncategorized" default; it appears
+    /// once the category is a real genre or a user's own choice.</summary>
     public bool ShowCategoryBadge =>
-        (!HasSteamOverlay || !string.Equals(Category, LibraryConstants.SteamCategory, StringComparison.OrdinalIgnoreCase)) &&
-        (!IsGogGame || !string.Equals(Category, LibraryConstants.GogCategory, StringComparison.OrdinalIgnoreCase)) &&
-        (!IsEaGame || !string.Equals(Category, LibraryConstants.EaCategory, StringComparison.OrdinalIgnoreCase)) &&
-        (!IsEpicGame || !string.Equals(Category, LibraryConstants.EpicCategory, StringComparison.OrdinalIgnoreCase)) &&
-        (!IsUbisoftGame || !string.Equals(Category, LibraryConstants.UbisoftCategory, StringComparison.OrdinalIgnoreCase));
+        !string.Equals(Category, LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(Category, LibraryConstants.PlatformCategoryFor(Game), StringComparison.OrdinalIgnoreCase);
     /// <summary>Part of the library's Ctrl/Shift+click multi-selection (see LibraryViewModel).
     /// Purely UI state - never saved.</summary>
     public bool IsSelected
@@ -266,7 +267,9 @@ public class GameCardViewModel : ViewModelBase
     /// </summary>
     private static bool ComputeIsMissing(GameEntry game)
     {
-        return !game.IsSteamGame &&
+        // An Xbox entry's exe path goes stale on every game update (the package folder is
+        // versioned) and is re-resolved from the AUMID at launch, so it's never "missing" here.
+        return !game.IsSteamGame && !game.IsXboxGame &&
             !string.IsNullOrWhiteSpace(game.ExecutablePath) &&
             !ProcessLauncherService.IsNonFileProtocolUrl(game.ExecutablePath) &&
             !File.Exists(game.ExecutablePath);
@@ -388,6 +391,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEaGame));
         OnPropertyChanged(nameof(IsEpicGame));
         OnPropertyChanged(nameof(IsUbisoftGame));
+        OnPropertyChanged(nameof(IsXboxGame));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));

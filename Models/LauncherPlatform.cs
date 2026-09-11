@@ -13,5 +13,6 @@ public enum LauncherPlatform
     Gog,
     Ea,
     Epic,
-    Ubisoft
+    Ubisoft,
+    Xbox
 }

@@ -189,17 +189,15 @@
                                 <TextBlock Text="Game Title" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
                                            VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                                    <Button Command="{Binding FetchOfficialNameOnlineCommand}"
-                                            Style="{StaticResource ModernGhostButton}" Margin="0,0,6,0"
-                                            Padding="8,2" FontSize="10.5">
+                                    <Button Command="{Binding LookUpCommand}"
+                                            Style="{StaticResource ModernGhostButton}"
+                                            Padding="8,2" FontSize="10.5"
+                                            ToolTip="Find this game online and fill in its title, poster, and genre (Steam, or SteamGridDB art for non-Steam games).">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                            <TextBlock Text="Search Online" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Look Up" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Content="From .exe" Command="{Binding FetchNameFromExeCommand}"
-                                            Style="{StaticResource ModernGhostButton}"
-                                            Padding="8,2" FontSize="10.5"/>
                                 </StackPanel>
                             </DockPanel>
                             <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
@@ -465,10 +463,13 @@
                                         <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
                                                 Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"/>
                                     </DockPanel>
-                                    <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
-                                              Style="{StaticResource ModernCheckBox}"/>
-                                    <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable above as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                    <!-- Hidden for Xbox / Game Pass entries: a GDK exe can't run outside its package. -->
+                                    <StackPanel Visibility="{Binding CanOfferLaunchDirectly, Converter={StaticResource BoolToVis}}">
+                                        <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
+                                                  Style="{StaticResource ModernCheckBox}"/>
+                                        <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable above as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
+                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                    </StackPanel>
                                     <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
                                               Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"/>
                                     <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. For Steam, also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears. Off by default - leave it off if you keep the client open for downloads or chat."

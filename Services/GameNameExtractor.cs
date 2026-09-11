@@ -49,13 +49,13 @@ public static partial class GameNameExtractor
     [
         "bin", "binaries", "win64", "win32", "wingdk", "x64", "x86",
         "shipping", "release", "retail", "_retail_", "_retail",
-        "game", "app", "client", "engine", "build", "intermediate"
+        "game", "app", "client", "engine", "build", "intermediate", "content"
     ];
 
     private static readonly string[] LibraryFolders =
     [
         "games", "my games", "steamlibrary", "common", "steamapps",
-        "gog games", "xboxgames", "installed games", "game library",
+        "gog games", "xboxgames", "content", "installed games", "game library",
         "pc games", "epic games", "ubisoft games", "ea games"
     ];
 
@@ -205,6 +205,7 @@ public static partial class GameNameExtractor
             // Pass 1: Search using local extracted name
             var match1 = await steamSearch.FindBestMatchAsync(localName, minConfidence, cancellationToken).ConfigureAwait(false);
             LoggingService.Verbose("GameNameExtractor", $"Pass 1 result for '{localName}': {(match1 != null ? $"{match1.Name} (score {match1.SimilarityScore:F2})" : "None")}");
+            match1 = GuardAgainstKnownName(match1, knownName, minConfidence, "Pass 1");
 
             if (match1 != null && match1.SimilarityScore >= Math.Max(0.85, minConfidence))
             {
@@ -223,6 +224,7 @@ public static partial class GameNameExtractor
                 LoggingService.Verbose("GameNameExtractor", $"Pass 2 folder candidate='{cleanedFolder}'");
                 var match2 = await steamSearch.FindBestMatchAsync(cleanedFolder, minConfidence, cancellationToken).ConfigureAwait(false);
                 LoggingService.Verbose("GameNameExtractor", $"Pass 2 result for '{cleanedFolder}': {(match2 != null ? $"{match2.Name} (score {match2.SimilarityScore:F2})" : "None")}");
+                match2 = GuardAgainstKnownName(match2, knownName, minConfidence, "Pass 2");
 
                 if (match2 != null)
                 {
@@ -249,6 +251,25 @@ public static partial class GameNameExtractor
         // clean local guess - do not attach an incorrect SteamAppId either way.
         LoggingService.Verbose("GameNameExtractor", $"No online match reached confidence threshold {minConfidence:F2}. Preserving name='{knownName ?? localName}'.");
         return new GameResolutionResult(knownName ?? localName, null, null);
+    }
+
+    /// <summary>
+    /// The exe/folder passes exist to rescue a game whose real title we <em>don't</em> know. When
+    /// the caller handed us a trusted platform title that Steam simply doesn't list (Fortnite,
+    /// Roblox, any Game Pass exclusive), those passes must not be allowed to rename it to whatever
+    /// its install folder happens to resemble - "D:\XboxGames\Fortnite\Content" once became
+    /// "Content Warning". A fallback match is kept only if its title also resembles the trusted
+    /// name; otherwise it's discarded and the trusted name survives with no SteamAppId.
+    /// </summary>
+    internal static SteamGameMatch? GuardAgainstKnownName(SteamGameMatch? match, string? knownName, double minConfidence, string pass)
+    {
+        if (match == null || string.IsNullOrWhiteSpace(knownName)) return match;
+
+        double resemblance = SteamSearchService.CalculateSimilarity(knownName, match.Name);
+        if (resemblance >= minConfidence) return match;
+
+        LoggingService.Verbose("GameNameExtractor", $"{pass} match '{match.Name}' rejected: it doesn't resemble the trusted name '{knownName}' (similarity {resemblance:F2} < {minConfidence:F2}).");
+        return null;
     }
 
     [GeneratedRegex(@"\s+")]

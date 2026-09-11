@@ -6,14 +6,14 @@ Each game card can show a vertical poster instead of a square icon. TrayTrigger 
 
 - A custom cover you chose in Edit Game. Always wins.
 - Steam's official vertical poster for the game's linked App ID. This is what most games end up with.
-- SteamGridDB community art, if you enabled it and added an API key. Useful for new, indie, or unreleased games that Steam has no poster for yet, and for non-Steam games.
+- SteamGridDB community art, if you enabled it and added an API key. Useful for new, indie, or unreleased games that Steam has no poster for yet, and for non-Steam games. When RAWG is enabled, its official title for the game is searched first, which finds art the scanner's folder name often misses.
 - The icon extracted from the exe, shown on a generated background if nothing better exists.
 
 ## Linking a game to Steam
 
 - Games added by the Steam scanner are linked automatically.
 - For everything else, TrayTrigger searches the Steam store by name when the game is added, if online title search is on.
-- To fix a wrong match, open Edit Game, enter the Steam App ID from the store page URL, and click Fetch by ID.
+- To fix a wrong match, open the game's details and click Change match to search the Steam store and pick the right listing. Or open Edit Game, enter the Steam App ID from the store page URL, and click Fetch by ID.
 
 ## Refresh All Game Posters
 

@@ -31,6 +31,7 @@ public class ImportCoordinator : ViewModelBase
     private readonly EaScannerService _eaScannerService;
     private readonly EpicScannerService _epicScannerService;
     private readonly UbisoftScannerService _ubisoftScannerService;
+    private readonly XboxScannerService _xboxScannerService;
     private readonly PlatformLookupService _platformLookup;
     private readonly SteamSearchService _steamSearchService;
     private readonly SteamMetadataService _steamMetadataService;
@@ -57,7 +58,7 @@ public class ImportCoordinator : ViewModelBase
 
     public bool CanRefreshAllPosters => !IsRefreshingAllPosters;
 
-    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<GameCandidate>>? RequestScanResultsPicker;
+    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<GameCandidate>>? RequestScanResultsPicker;
     public event Action<string, List<GameCandidate>>? RequestCandidatePicker;
     public event Action<string, List<GameCandidate>>? RequestFolderBatchImport;
     /// <summary>
@@ -84,6 +85,7 @@ public class ImportCoordinator : ViewModelBase
         EaScannerService eaScannerService,
         EpicScannerService epicScannerService,
         UbisoftScannerService ubisoftScannerService,
+        XboxScannerService xboxScannerService,
         SteamSearchService steamSearchService,
         SteamMetadataService steamMetadataService,
         StorageService storageService,
@@ -99,7 +101,8 @@ public class ImportCoordinator : ViewModelBase
         _eaScannerService = eaScannerService;
         _epicScannerService = epicScannerService;
         _ubisoftScannerService = ubisoftScannerService;
-        _platformLookup = new PlatformLookupService(steamScannerService, gogScannerService, eaScannerService, epicScannerService, ubisoftScannerService);
+        _xboxScannerService = xboxScannerService;
+        _platformLookup = new PlatformLookupService(steamScannerService, gogScannerService, eaScannerService, epicScannerService, ubisoftScannerService, xboxScannerService);
         _steamSearchService = steamSearchService;
         _steamMetadataService = steamMetadataService;
         _storageService = storageService;
@@ -232,9 +235,17 @@ public class ImportCoordinator : ViewModelBase
         }
     }
 
-    public async Task EnrichLibraryAsync()
+    /// <param name="retryForRawg">
+    /// True when RAWG has just become available (enabled, or a key entered): games with no Steam
+    /// App ID are retried now instead of waiting out <see cref="EnrichmentRetryInterval"/>, since
+    /// their last attempt ran without the source that can categorise them.
+    /// </param>
+    public async Task EnrichLibraryAsync(bool retryForRawg = false)
     {
-        if (!_settings.AutoCategorizeFromSteam && !_settings.SearchOfficialTitleOnline)
+        // RAWG enrichment (match id, category, canonical title for poster search) rides the same
+        // pass, so an enabled RAWG source is reason enough to run it.
+        bool rawgEnabled = _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey);
+        if (!_settings.AutoCategorizeFromSteam && !_settings.SearchOfficialTitleOnline && !rawgEnabled)
             return;
 
         // Settings toggles, library load, and post-import enrichment can all request this
@@ -246,10 +257,12 @@ public class ImportCoordinator : ViewModelBase
         _isEnrichmentInProgress = true;
         try
         {
+            bool retryNow = retryForRawg && rawgEnabled;
             var candidates = _library.Games
                 .Where(card =>
-                    (card.Game.Category == LibraryConstants.Uncategorized || card.Game.Category == LibraryConstants.SteamCategory || card.Game.Category == LibraryConstants.GogCategory || card.Game.Category == LibraryConstants.EaCategory || card.Game.Category == LibraryConstants.EpicCategory || card.Game.Category == LibraryConstants.UbisoftCategory || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId)) &&
-                    (card.Game.LastEnrichmentAttemptUtc == null || DateTime.UtcNow - card.Game.LastEnrichmentAttemptUtc.Value >= EnrichmentRetryInterval))
+                    (LibraryConstants.IsEnrichableCategory(card.Game.Category) || string.IsNullOrWhiteSpace(card.Game.CoverImagePath) || string.IsNullOrWhiteSpace(card.Game.SteamAppId)) &&
+                    (card.Game.LastEnrichmentAttemptUtc == null || DateTime.UtcNow - card.Game.LastEnrichmentAttemptUtc.Value >= EnrichmentRetryInterval
+                     || (retryNow && card.Game.RawgId == 0 && LibraryConstants.IsEnrichableCategory(card.Game.Category))))
                 .ToList();
 
             if (candidates.Count == 0)
@@ -932,8 +945,9 @@ public class ImportCoordinator : ViewModelBase
         public List<DiscoveredEaGame> Ea { get; } = [];
         public List<DiscoveredEpicGame> Epic { get; } = [];
         public List<DiscoveredUbisoftGame> Ubisoft { get; } = [];
+        public List<DiscoveredXboxGame> Xbox { get; } = [];
 
-        public bool IsEmpty => Steam.Count == 0 && Gog.Count == 0 && Ea.Count == 0 && Epic.Count == 0 && Ubisoft.Count == 0;
+        public bool IsEmpty => Steam.Count == 0 && Gog.Count == 0 && Ea.Count == 0 && Epic.Count == 0 && Ubisoft.Count == 0 && Xbox.Count == 0;
 
         // Every exe path that led to a given platform record ("Steam|440" -> {the dropped exe,
         // the record's own exe}) - so an existing Local entry can be matched by whichever exe
@@ -989,6 +1003,12 @@ public class ImportCoordinator : ViewModelBase
                 Remember("Ubisoft", u.GameId, u.ExePath, sourceExePath);
                 if (!Ubisoft.Any(x => x.GameId.Equals(u.GameId, StringComparison.OrdinalIgnoreCase)))
                     Ubisoft.Add(u.ExePath == null ? u with { ExePath = sourceExePath, IconPath = u.IconPath ?? sourceExePath } : u);
+            }
+            else if (match.Xbox is { } x)
+            {
+                Remember("Xbox", x.Aumid, x.ExePath, sourceExePath);
+                if (!Xbox.Any(g => g.Aumid.Equals(x.Aumid, StringComparison.OrdinalIgnoreCase)))
+                    Xbox.Add(x.ExePath == null ? x with { ExePath = sourceExePath, IconPath = x.IconPath ?? sourceExePath } : x);
             }
         }
     }
@@ -1095,6 +1115,16 @@ public class ImportCoordinator : ViewModelBase
                 if (game.Category == LibraryConstants.Uncategorized) game.Category = LibraryConstants.UbisoftCategory;
             });
 
+        upgraded += UpgradeBucket(buckets.Xbox, "Xbox", d => d.Aumid, null,
+            (game, d) =>
+            {
+                game.IsXboxGame = true;
+                game.ImportedFrom = LauncherPlatform.Xbox;
+                game.XboxAumid = d.Aumid;
+                if (string.IsNullOrWhiteSpace(game.WorkingDirectory)) game.WorkingDirectory = d.InstallDir;
+                // No "Xbox" placeholder category (see ImportXboxGamesAsync) - leave it Uncategorized.
+            });
+
         if (upgraded > 0)
         {
             _library.RebuildCategories();
@@ -1162,7 +1192,7 @@ public class ImportCoordinator : ViewModelBase
         // before any leg runs, so they can't be duplicated by the ID-only dedup in the legs.
         var linked = new Dictionary<string, int>();
         int upgraded = 0;
-        foreach (var (platform, before) in new[] { ("Steam", buckets.Steam.Count), ("GOG", buckets.Gog.Count), ("EA", buckets.Ea.Count), ("Epic", buckets.Epic.Count), ("Ubisoft", buckets.Ubisoft.Count) })
+        foreach (var (platform, before) in new[] { ("Steam", buckets.Steam.Count), ("GOG", buckets.Gog.Count), ("EA", buckets.Ea.Count), ("Epic", buckets.Epic.Count), ("Ubisoft", buckets.Ubisoft.Count), ("Xbox", buckets.Xbox.Count) })
         {
             linked[platform] = before;
         }
@@ -1172,14 +1202,16 @@ public class ImportCoordinator : ViewModelBase
         linked["EA"] -= buckets.Ea.Count;
         linked["Epic"] -= buckets.Epic.Count;
         linked["Ubisoft"] -= buckets.Ubisoft.Count;
+        linked["Xbox"] -= buckets.Xbox.Count;
 
         int steamAdded = buckets.Steam.Count > 0 ? await ImportSteamGamesAsync(buckets.Steam, announceProgress: false) : 0;
         int gogAdded = buckets.Gog.Count > 0 ? await ImportGogGamesAsync(buckets.Gog, announceProgress: false) : 0;
         int eaAdded = buckets.Ea.Count > 0 ? await ImportEaGamesAsync(buckets.Ea, announceProgress: false) : 0;
         int epicAdded = buckets.Epic.Count > 0 ? await ImportEpicGamesAsync(buckets.Epic, announceProgress: false) : 0;
         int ubisoftAdded = buckets.Ubisoft.Count > 0 ? await ImportUbisoftGamesAsync(buckets.Ubisoft, announceProgress: false) : 0;
+        int xboxAdded = buckets.Xbox.Count > 0 ? await ImportXboxGamesAsync(buckets.Xbox, announceProgress: false) : 0;
 
-        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0)
+        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0)
         {
             return new PlatformImportResult(-1, upgraded, string.Empty);
         }
@@ -1195,8 +1227,9 @@ public class ImportCoordinator : ViewModelBase
         Describe("EA", eaAdded);
         Describe("Epic", epicAdded);
         Describe("Ubisoft", ubisoftAdded);
+        Describe("Xbox", xboxAdded);
 
-        return new PlatformImportResult(steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded, upgraded, string.Join(", ", parts));
+        return new PlatformImportResult(steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded, upgraded, string.Join(", ", parts));
     }
 
     private void AddGameBrowse()
@@ -1288,6 +1321,7 @@ public class ImportCoordinator : ViewModelBase
         Probe(Views.DetectedLauncher.Ea, "EA App", () => _eaScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
         Probe(Views.DetectedLauncher.Epic, "Epic Games", () => _epicScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
         Probe(Views.DetectedLauncher.Ubisoft, "Ubisoft Connect", () => _ubisoftScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
+        Probe(Views.DetectedLauncher.Xbox, "Xbox / PC Game Pass", () => _xboxScannerService.ScanInstalledGames(Array.Empty<string>()).Count);
 
         LastProbedLaunchers = probed;
         LoggingService.Info("ImportCoordinator", detected.Count == 0
@@ -1327,6 +1361,7 @@ public class ImportCoordinator : ViewModelBase
         Views.DetectedLauncher.Ea => _settings.EaIntegrationEnabled,
         Views.DetectedLauncher.Epic => _settings.EpicIntegrationEnabled,
         Views.DetectedLauncher.Ubisoft => _settings.UbisoftIntegrationEnabled,
+        Views.DetectedLauncher.Xbox => _settings.XboxIntegrationEnabled,
         _ => false
     };
 
@@ -1397,7 +1432,7 @@ public class ImportCoordinator : ViewModelBase
         // and skipped, not deleted), so they must not count towards "something to scan".
         bool anySteamLibrary = _settings.SteamIntegrationEnabled && enabledLocations.Any(l => l.Source == ScanLocationSource.Steam);
         bool anyManualFolder = enabledLocations.Any(l => l.Source != ScanLocationSource.Steam);
-        if (!anySteamLibrary && !anyManualFolder && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled)
+        if (!anySteamLibrary && !anyManualFolder && !_settings.GogIntegrationEnabled && !_settings.EaIntegrationEnabled && !_settings.EpicIntegrationEnabled && !_settings.UbisoftIntegrationEnabled && !_settings.XboxIntegrationEnabled)
         {
             if (!silent)
             {
@@ -1441,6 +1476,10 @@ public class ImportCoordinator : ViewModelBase
                 .Where(g => g.Game.IsUbisoftGame && !string.IsNullOrEmpty(g.Game.UbisoftGameId))
                 .Select(g => g.Game.UbisoftGameId!)
                 .ToList();
+            var existingXboxAumids = _library.Games
+                .Where(g => g.Game.IsXboxGame && !string.IsNullOrEmpty(g.Game.XboxAumid))
+                .Select(g => g.Game.XboxAumid!)
+                .ToList();
             var existingExePaths = new HashSet<string>(_library.Games.Select(g => g.Game.ExecutablePath), StringComparer.OrdinalIgnoreCase);
             var ignoredAppIds = new HashSet<string>(
                 _settings.IgnoredGamePaths.Where(p => p.SteamAppId != null).Select(p => p.SteamAppId!),
@@ -1457,6 +1496,9 @@ public class ImportCoordinator : ViewModelBase
             var ignoredUbisoftGameIds = new HashSet<string>(
                 _settings.IgnoredGamePaths.Where(p => p.UbisoftGameId != null).Select(p => p.UbisoftGameId!),
                 StringComparer.OrdinalIgnoreCase);
+            var ignoredXboxAumids = new HashSet<string>(
+                _settings.IgnoredGamePaths.Where(p => p.XboxAumid != null).Select(p => p.XboxAumid!),
+                StringComparer.OrdinalIgnoreCase);
 
             var steamLocations = _settings.SteamIntegrationEnabled
                 ? enabledLocations.Where(l => l.Source == ScanLocationSource.Steam).ToList()
@@ -1466,6 +1508,7 @@ public class ImportCoordinator : ViewModelBase
             bool eaEnabled = _settings.EaIntegrationEnabled;
             bool epicEnabled = _settings.EpicIntegrationEnabled;
             bool ubisoftEnabled = _settings.UbisoftIntegrationEnabled;
+            bool xboxEnabled = _settings.XboxIntegrationEnabled;
 
             // Each platform's scan hits its own independent registry/filesystem locations, so
             // they run concurrently rather than one after another.
@@ -1526,6 +1569,15 @@ public class ImportCoordinator : ViewModelBase
                     .ToList()
                 : new List<DiscoveredUbisoftGame>());
 
+            // Same reasoning again - Xbox games are wherever the Xbox app put them, and Gaming
+            // Services' registry knows each one.
+            var xboxTask = Task.Run(() => xboxEnabled
+                ? _xboxScannerService.ScanInstalledGames(existingXboxAumids)
+                    .Where(g => !g.IsAlreadyImported && !ignoredXboxAumids.Contains(g.Aumid) &&
+                                (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
+                    .ToList()
+                : new List<DiscoveredXboxGame>());
+
             // "Platform|ID" of every platform-tagged game already in the library, so a folder
             // candidate that resolves to one of them (e.g. a GOG game found under a manual
             // "C:\GOG Games" scan location) isn't offered as new just because its exe path
@@ -1538,6 +1590,7 @@ public class ImportCoordinator : ViewModelBase
                 if (!string.IsNullOrEmpty(g.EaContentId)) existingPlatformKeys.Add($"EA|{g.EaContentId}");
                 if (!string.IsNullOrEmpty(g.EpicAppName)) existingPlatformKeys.Add($"Epic|{g.EpicAppName}");
                 if (!string.IsNullOrEmpty(g.UbisoftGameId)) existingPlatformKeys.Add($"Ubisoft|{g.UbisoftGameId}");
+                if (!string.IsNullOrEmpty(g.XboxAumid)) existingPlatformKeys.Add($"Xbox|{g.XboxAumid}");
             }
 
             var folderTask = Task.Run(() =>
@@ -1564,9 +1617,9 @@ public class ImportCoordinator : ViewModelBase
                 return folderResults;
             });
 
-            await Task.WhenAll(steamTask, gogTask, eaTask, epicTask, ubisoftTask, folderTask).ConfigureAwait(true);
-            var (steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates) =
-                (steamTask.Result, gogTask.Result, eaTask.Result, epicTask.Result, ubisoftTask.Result, folderTask.Result);
+            await Task.WhenAll(steamTask, gogTask, eaTask, epicTask, ubisoftTask, xboxTask, folderTask).ConfigureAwait(true);
+            var (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, folderCandidates) =
+                (steamTask.Result, gogTask.Result, eaTask.Result, epicTask.Result, ubisoftTask.Result, xboxTask.Result, folderTask.Result);
 
             // A game a platform scan already found in this run must not be listed a second time
             // as a folder candidate (a manual scan location that overlaps a launcher's install
@@ -1577,19 +1630,20 @@ public class ImportCoordinator : ViewModelBase
             runPlatformKeys.UnionWith(eaGames.Select(g => $"EA|{g.ContentId}"));
             runPlatformKeys.UnionWith(epicGames.Select(g => $"Epic|{g.AppName}"));
             runPlatformKeys.UnionWith(ubisoftGames.Select(g => $"Ubisoft|{g.GameId}"));
+            runPlatformKeys.UnionWith(xboxGames.Select(g => $"Xbox|{g.Aumid}"));
             folderCandidates = folderCandidates
                 .Where(c => c.Platform == null || !runPlatformKeys.Contains(PlatformKey(c.Platform)))
                 .DistinctBy(c => c.Platform != null ? PlatformKey(c.Platform) : c.ExePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && folderCandidates.Count == 0)
+            if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && xboxGames.Count == 0 && folderCandidates.Count == 0)
             {
                 _library.AnnounceImportResult("No new games found.");
                 return;
             }
 
-            _library.StatusMessage = $"Found {steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + folderCandidates.Count} new game(s).";
-            RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, folderCandidates);
+            _library.StatusMessage = $"Found {steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + folderCandidates.Count} new game(s).";
+            RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, folderCandidates);
         }
         finally
         {
@@ -1630,6 +1684,7 @@ public class ImportCoordinator : ViewModelBase
             if (p.EaContentId != null) set.Add($"EA|{p.EaContentId}");
             if (p.EpicAppName != null) set.Add($"Epic|{p.EpicAppName}");
             if (p.UbisoftGameId != null) set.Add($"Ubisoft|{p.UbisoftGameId}");
+            if (p.XboxAumid != null) set.Add($"Xbox|{p.XboxAumid}");
         }
         return set;
     }
@@ -1642,6 +1697,7 @@ public class ImportCoordinator : ViewModelBase
         { Ea: { } e } => $"EA|{e.ContentId}",
         { Epic: { } p } => $"Epic|{p.AppName}",
         { Ubisoft: { } u } => $"Ubisoft|{u.GameId}",
+        { Xbox: { } x } => $"Xbox|{x.Aumid}",
         _ => string.Empty
     };
 
@@ -1684,6 +1740,7 @@ public class ImportCoordinator : ViewModelBase
             case { Ea: { } e }: IgnoreEaGame(e.ContentId, candidate.Name); break;
             case { Epic: { } p }: IgnoreEpicGame(p.AppName, candidate.Name); break;
             case { Ubisoft: { } u }: IgnoreUbisoftGame(u.GameId, candidate.Name); break;
+            case { Xbox: { } x }: IgnoreXboxGame(x.Aumid, candidate.Name); break;
             default: IgnoreGamePath(candidate.ExePath, candidate.Name); break;
         }
     }
@@ -1703,7 +1760,8 @@ public class ImportCoordinator : ViewModelBase
                 (p.GogGameId != null && key.Equals($"GOG|{p.GogGameId}", StringComparison.OrdinalIgnoreCase)) ||
                 (p.EaContentId != null && key.Equals($"EA|{p.EaContentId}", StringComparison.OrdinalIgnoreCase)) ||
                 (p.EpicAppName != null && key.Equals($"Epic|{p.EpicAppName}", StringComparison.OrdinalIgnoreCase)) ||
-                (p.UbisoftGameId != null && key.Equals($"Ubisoft|{p.UbisoftGameId}", StringComparison.OrdinalIgnoreCase)))));
+                (p.UbisoftGameId != null && key.Equals($"Ubisoft|{p.UbisoftGameId}", StringComparison.OrdinalIgnoreCase)) ||
+                (p.XboxAumid != null && key.Equals($"Xbox|{p.XboxAumid}", StringComparison.OrdinalIgnoreCase)))));
         if (removed > 0)
         {
             _storageService.SaveSettings(_settings);
@@ -1775,6 +1833,16 @@ public class ImportCoordinator : ViewModelBase
         LoggingService.Info("ImportCoordinator", $"Ignored Ubisoft scan candidate '{name}' (GameId {gameId}) - will be excluded from future scans.");
     }
 
+    /// <summary>Permanently excludes an Xbox AUMID from future "Scan for Games" results.</summary>
+    public void IgnoreXboxGame(string aumid, string name)
+    {
+        if (_settings.IgnoredGamePaths.Any(p => string.Equals(p.XboxAumid, aumid, StringComparison.OrdinalIgnoreCase))) return;
+
+        _settings.IgnoredGamePaths.Add(new IgnoredGamePath { XboxAumid = aumid, Name = name });
+        _storageService.SaveSettings(_settings);
+        LoggingService.Info("ImportCoordinator", $"Ignored Xbox scan candidate '{name}' ({aumid}) - will be excluded from future scans.");
+    }
+
     public void RemoveIgnoredGamePath(string id)
     {
         var removed = _settings.IgnoredGamePaths.FirstOrDefault(p => p.Id == id);
@@ -1813,9 +1881,9 @@ public class ImportCoordinator : ViewModelBase
     /// off back-to-back (fire-and-forget) makes the second one see the first still in flight and
     /// silently no-op instead of importing anything.
     /// </summary>
-    public async Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<GameCandidate> folderCandidates)
+    public async Task ImportScanResultsAsync(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<GameCandidate> folderCandidates)
     {
-        int total = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + folderCandidates.Count;
+        int total = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + folderCandidates.Count;
         if (total == 0) return;
 
         // announceProgress: false on every leg - each one's own "Importing N..."/"Imported N!"
@@ -1828,21 +1896,22 @@ public class ImportCoordinator : ViewModelBase
         int eaAdded = eaGames.Count > 0 ? await ImportEaGamesAsync(eaGames, announceProgress: false) : 0;
         int epicAdded = epicGames.Count > 0 ? await ImportEpicGamesAsync(epicGames, announceProgress: false) : 0;
         int ubisoftAdded = ubisoftGames.Count > 0 ? await ImportUbisoftGamesAsync(ubisoftGames, announceProgress: false) : 0;
+        int xboxAdded = xboxGames.Count > 0 ? await ImportXboxGamesAsync(xboxGames, announceProgress: false) : 0;
         int folderAdded = folderCandidates.Count > 0 ? await ImportBatchGamesAsync(folderCandidates, announceProgress: false) : 0;
 
         // -1 means that leg's import threw (already logged) rather than everything just being a
         // duplicate - don't let a real failure hide behind the same reassuring "already in your
         // library" text a legitimate all-duplicates result gets.
-        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || folderAdded < 0)
+        if (steamAdded < 0 || gogAdded < 0 || eaAdded < 0 || epicAdded < 0 || ubisoftAdded < 0 || xboxAdded < 0 || folderAdded < 0)
         {
-            int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(gogAdded, 0) + Math.Max(eaAdded, 0) + Math.Max(epicAdded, 0) + Math.Max(ubisoftAdded, 0) + Math.Max(folderAdded, 0);
+            int addedSoFar = Math.Max(steamAdded, 0) + Math.Max(gogAdded, 0) + Math.Max(eaAdded, 0) + Math.Max(epicAdded, 0) + Math.Max(ubisoftAdded, 0) + Math.Max(xboxAdded, 0) + Math.Max(folderAdded, 0);
             _library.AnnounceImportResult(addedSoFar > 0
                 ? $"Imported {addedSoFar} game(s), but part of the import failed - check the log for details."
                 : "Import failed - check the log for details.");
             return;
         }
 
-        int addedTotal = steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + folderAdded;
+        int addedTotal = steamAdded + gogAdded + eaAdded + epicAdded + ubisoftAdded + xboxAdded + folderAdded;
         _library.AnnounceImportResult(addedTotal > 0
             ? $"Imported {addedTotal} game(s)!"
             : "All selected games are already in your library.");
@@ -2401,6 +2470,116 @@ public class ImportCoordinator : ViewModelBase
         catch (Exception ex)
         {
             LoggingService.Error("ImportCoordinator", "Error in ImportUbisoftGames", ex);
+            return -1;
+        }
+        finally
+        {
+            _isImportInProgress = false;
+        }
+    }
+
+    public void ImportXboxGames(List<DiscoveredXboxGame> discoveredGames) => _ = ImportXboxGamesAsync(discoveredGames);
+
+    /// <param name="announceProgress">See the matching parameter on <see cref="ImportBatchGamesAsync"/>.</param>
+    /// <returns>The number of games actually added; 0 if none (e.g. all were duplicates); -1 if the import itself threw (logged separately - callers should not treat this the same as "0, all duplicates").</returns>
+    public async Task<int> ImportXboxGamesAsync(List<DiscoveredXboxGame> discoveredGames, bool announceProgress = true)
+    {
+        if (discoveredGames == null || discoveredGames.Count == 0) return 0;
+
+        if (_isImportInProgress)
+        {
+            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            return 0;
+        }
+
+        _isImportInProgress = true;
+        try
+        {
+            var toProcess = discoveredGames
+                .Where(d => !_library.Games.Any(g => string.Equals(g.Game.XboxAumid, d.Aumid, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            int skippedDuplicates = discoveredGames.Count - toProcess.Count;
+
+            if (toProcess.Count == 0)
+            {
+                if (announceProgress)
+                {
+                    _library.StatusMessage = "All selected Xbox games are already in your library.";
+                }
+                return 0;
+            }
+
+            if (announceProgress)
+            {
+                _library.StatusMessage = $"Importing {toProcess.Count} Xbox game(s)...";
+            }
+
+            using var throttle = new SemaphoreSlim(MaxConcurrentEnrichments);
+            var preparedEntries = new System.Collections.Concurrent.ConcurrentBag<GameEntry>();
+            int failed = 0;
+
+            var tasks = toProcess.Select(async d =>
+            {
+                await throttle.WaitAsync();
+                try
+                {
+                    var entry = new GameEntry
+                    {
+                        Name = d.Name,
+                        // Informational only - launch goes through the AUMID (see GameEntry.IsXboxGame).
+                        ExecutablePath = d.ExePath ?? string.Empty,
+                        IsXboxGame = true,
+                        ImportedFrom = LauncherPlatform.Xbox,
+                        XboxAumid = d.Aumid,
+                        // Unlike the other platforms, Xbox games get no placeholder category:
+                        // Game Pass exclusives (Fortnite, Roblox, first-party) aren't on Steam, so
+                        // a "Xbox" placeholder would never upgrade to a genre and would harden into
+                        // a permanent Xbox category tab. Left Uncategorized; Steam enrichment still
+                        // fills a real genre for the few Xbox games that are also on Steam.
+                        Category = LibraryConstants.Uncategorized,
+                        WorkingDirectory = d.InstallDir
+                    };
+
+                    string iconSource = !string.IsNullOrEmpty(d.IconPath) ? d.IconPath : (d.ExePath ?? string.Empty);
+                    await FinalizeNewEntryAsync(entry, iconSource);
+                    preparedEntries.Add(entry);
+                }
+                catch (Exception ex)
+                {
+                    Interlocked.Increment(ref failed);
+                    LoggingService.Warn("ImportCoordinator", $"Failed to import Xbox game '{d.Name}': {ex.Message}");
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks);
+
+            if (preparedEntries.IsEmpty && failed > 0)
+            {
+                return -1;
+            }
+
+            if (!preparedEntries.IsEmpty)
+            {
+                string? status = null;
+                if (announceProgress)
+                {
+                    status = skippedDuplicates > 0
+                        ? $"Imported {preparedEntries.Count} Xbox game(s)! ({skippedDuplicates} already in library, skipped)"
+                        : $"Imported {preparedEntries.Count} Xbox game(s)!";
+                }
+                CommitImportedEntries(preparedEntries, status);
+            }
+
+            return preparedEntries.Count;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("ImportCoordinator", "Error in ImportXboxGames", ex);
             return -1;
         }
         finally

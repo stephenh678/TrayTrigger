@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration: "application"
+  Stage 1 of release.yml. The workflow uploads publish/bin/TrayTrigger.exe as a GitHub
+  Actions artifact (which GitHub wraps in a zip), SignPath signs the exe inside, and the
+  workflow extracts it back over the unsigned copy before the installer is built.
+
+  This file is the reference copy; the live configuration is pasted into the SignPath
+  project under Artifact Configurations with the slug "application".
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="TrayTrigger.exe" product-name="TrayTrigger">
+      <authenticode-sign hash-algorithm="sha256"
+                         description="TrayTrigger"
+                         description-url="https://github.com/stephenh678/TrayTrigger" />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

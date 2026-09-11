@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TrayTrigger.Models;
 
 public class AppSettings
@@ -22,6 +24,7 @@ public class AppSettings
     public bool EaIntegrationEnabled { get; set; } = true;
     public bool EpicIntegrationEnabled { get; set; } = true;
     public bool UbisoftIntegrationEnabled { get; set; } = true;
+    public bool XboxIntegrationEnabled { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
     public bool IsSidebarExpanded { get; set; } = false;
     /// <summary>
@@ -51,6 +54,16 @@ public class AppSettings
     public bool UseVerticalPosterArt { get; set; } = true;
     public bool UseSteamGridDbArt { get; set; } = false;
     public string SteamGridDbApiKey { get; set; } = string.Empty;
+    /// <summary>User's own RAWG (rawg.io) API key for non-Steam game metadata. Encrypted on disk
+    /// like <see cref="SteamGridDbApiKey"/>.</summary>
+    public string RawgApiKey { get; set; } = string.Empty;
+    /// <summary>Enables the RAWG metadata source (the Steam/RAWG toggle in Game Details). Off by
+    /// default; needs a <see cref="RawgApiKey"/> to do anything.</summary>
+    public bool UseRawgMetadata { get; set; } = false;
+    /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
+    /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<MetadataRefreshInterval>))]
+    public MetadataRefreshInterval MetadataRefreshInterval { get; set; } = MetadataRefreshInterval.Every3Days;
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>

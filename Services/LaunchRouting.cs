@@ -24,6 +24,9 @@ public enum LaunchRoute
     /// <summary>uplay://launch/&lt;id&gt;/0 dispatch, tracked by install directory.</summary>
     UbisoftClient,
     UbisoftDirect,
+    /// <summary>Shell activation of the game's AUMID (PC Game Pass / Store GDK title), tracked by
+    /// package root. No direct variant: GDK exes refuse to start without package identity.</summary>
+    Xbox,
     /// <summary>A non-file URL whose scheme is on the allow-list: fire-and-forget, pre-launch script only.</summary>
     ProtocolUrl,
     /// <summary>A non-file URL whose scheme is NOT on the allow-list: refused.</summary>
@@ -86,6 +89,13 @@ public static class LaunchRouter
             return !game.LaunchDirectly && clients.UbisoftConnectInstalled ? LaunchRoute.UbisoftClient : LaunchRoute.UbisoftDirect;
         }
 
+        // LaunchDirectly is deliberately ignored: there is no way to run a GDK exe outside its
+        // package, so Edit Game hides the option for Xbox entries.
+        if (game.IsXboxGame && !string.IsNullOrWhiteSpace(game.XboxAumid))
+        {
+            return LaunchRoute.Xbox;
+        }
+
         if (string.IsNullOrWhiteSpace(path))
         {
             return LaunchRoute.MissingPath;
@@ -125,6 +135,7 @@ public static class LaunchRouter
         LaunchRoute.EaClient or LaunchRoute.EaDirect => LauncherPlatform.Ea,
         LaunchRoute.EpicClient or LaunchRoute.EpicDirect => LauncherPlatform.Epic,
         LaunchRoute.UbisoftClient or LaunchRoute.UbisoftDirect => LauncherPlatform.Ubisoft,
+        LaunchRoute.Xbox => LauncherPlatform.Xbox,
         _ => null
     };
 
@@ -137,6 +148,7 @@ public static class LaunchRouter
         LaunchRoute.EaDirect => "EA",
         LaunchRoute.EpicClient or LaunchRoute.EpicDirect => "Epic Games",
         LaunchRoute.UbisoftClient or LaunchRoute.UbisoftDirect => "Ubisoft Connect",
+        LaunchRoute.Xbox => "Xbox",
         LaunchRoute.ProtocolUrl => "link",
         _ => "Local"
     };

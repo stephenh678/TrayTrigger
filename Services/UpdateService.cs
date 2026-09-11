@@ -21,6 +21,16 @@ public enum UpdateStatus
     Error
 }
 
+/// <summary>
+/// A downloaded release asset could not be verified against the release's SHA256SUMS.txt
+/// (manifest missing, no entry for the file, or hash mismatch). Not a transient network error:
+/// retrying the download won't help, so callers should offer the GitHub release page instead.
+/// </summary>
+public sealed class UpdateVerificationException : Exception
+{
+    public UpdateVerificationException(string message) : base(message) { }
+}
+
 public class UpdateCheckResult
 {
     public UpdateStatus Status { get; }
@@ -215,10 +225,18 @@ public class UpdateService
     }
 
     /// <summary>
-    /// Downloads an asset (such as an installer executable) to a temporary file, reporting progress.
+    /// Downloads an asset (such as an installer executable) to a temporary file, reporting
+    /// progress, then verifies it against the release's SHA256SUMS.txt.
     /// </summary>
+    /// <param name="checksums">
+    /// The release's <see cref="GitHubReleaseInfo.ChecksumsAsset"/>. Required: a release
+    /// without one, or a download whose hash doesn't match, throws
+    /// <see cref="UpdateVerificationException"/> and the file is deleted. Callers should send
+    /// the user to the GitHub release page in that case rather than retrying.
+    /// </param>
     public async Task<string> DownloadAssetAsync(
         GitHubReleaseAsset asset,
+        GitHubReleaseAsset? checksums,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -227,7 +245,141 @@ public class UpdateService
             throw new InvalidOperationException("Asset download URL is empty.");
         }
 
-        string tempFolder = Path.Combine(Path.GetTempPath(), "TrayTriggerUpdates");
+        if (checksums == null || string.IsNullOrWhiteSpace(checksums.BrowserDownloadUrl))
+        {
+            throw new UpdateVerificationException(
+                $"The release does not include {GitHubReleaseInfo.ChecksumsAssetName}, so the installer cannot be verified.");
+        }
+
+        // Fetch the manifest first: if it's unreachable there's no point pulling 50 MB.
+        string sumsText = await _httpClient.GetStringAsync(checksums.BrowserDownloadUrl, cancellationToken).ConfigureAwait(false);
+        string? expectedHash = FindExpectedSha256(sumsText, asset.Name);
+        if (expectedHash == null)
+        {
+            throw new UpdateVerificationException(
+                $"{GitHubReleaseInfo.ChecksumsAssetName} has no entry for {asset.Name}.");
+        }
+
+        string downloaded = await DownloadAssetCoreAsync(asset, progress, cancellationToken).ConfigureAwait(false);
+
+        string actualHash = await ComputeSha256Async(downloaded, cancellationToken).ConfigureAwait(false);
+        if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+        {
+            LoggingService.Error("UpdateService",
+                $"Checksum mismatch for {asset.Name}: expected {expectedHash}, got {actualHash}. Deleting the download.");
+            try { File.Delete(downloaded); } catch (Exception ex) { LoggingService.Warn("UpdateService", $"Could not delete unverified download: {ex.Message}"); }
+            throw new UpdateVerificationException(
+                $"The downloaded {asset.Name} does not match the checksum published with the release.");
+        }
+
+        LoggingService.Info("UpdateService", $"Verified {asset.Name} (SHA-256 {actualHash}).");
+
+        string? signatureProblem = CheckInstallerSignature(downloaded);
+        if (signatureProblem != null)
+        {
+            LoggingService.Error("UpdateService", $"{signatureProblem} Deleting the download.");
+            try { File.Delete(downloaded); } catch (Exception ex) { LoggingService.Warn("UpdateService", $"Could not delete unverified download: {ex.Message}"); }
+            throw new UpdateVerificationException(signatureProblem);
+        }
+
+        return downloaded;
+    }
+
+    /// <summary>
+    /// "An update must be signed by whoever signed me." Returns null when the installer is
+    /// acceptable, otherwise a user-readable reason. Enforced only when the running exe is
+    /// itself Authenticode-signed: an unsigned build (development, or a release from before
+    /// signing was set up) has no publisher to compare against and just logs the situation.
+    /// SHA256SUMS.txt alone can't catch an attacker who replaces both the installer and the
+    /// manifest on the release; a signature from a key they don't hold can.
+    /// </summary>
+    internal static string? CheckInstallerSignature(string installerPath)
+    {
+        string? runningExe = Environment.ProcessPath;
+        string? expectedSubject = runningExe != null ? AuthenticodeVerifier.GetSignerSubject(runningExe) : null;
+
+        if (string.IsNullOrEmpty(expectedSubject))
+        {
+            LoggingService.Warn("UpdateService", "Running executable is not code-signed; skipping installer signature enforcement.");
+            return null;
+        }
+
+        string? actualSubject = AuthenticodeVerifier.GetSignerSubject(installerPath);
+        if (actualSubject == null)
+        {
+            return "The downloaded installer is not code-signed, but this installation is.";
+        }
+
+        if (!string.Equals(actualSubject, expectedSubject, StringComparison.Ordinal))
+        {
+            LoggingService.Error("UpdateService", $"Installer signer '{actualSubject}' does not match running exe signer '{expectedSubject}'.");
+            return "The downloaded installer was signed by a different publisher than this installation.";
+        }
+
+        if (!AuthenticodeVerifier.IsTrusted(installerPath))
+        {
+            return "The downloaded installer's digital signature is not valid.";
+        }
+
+        LoggingService.Info("UpdateService", $"Installer signature verified: {actualSubject}");
+        return null;
+    }
+
+    /// <summary>
+    /// Parses a sha256sum-style manifest ("&lt;hex&gt;  &lt;name&gt;" or "&lt;hex&gt; *&lt;name&gt;" per
+    /// line) and returns the lower-case hash listed for <paramref name="fileName"/>, or null.
+    /// File names compare case-insensitively (GitHub preserves case, Windows doesn't care).
+    /// </summary>
+    public static string? FindExpectedSha256(string manifest, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(manifest) || string.IsNullOrWhiteSpace(fileName)) return null;
+
+        foreach (string rawLine in manifest.Split('\n'))
+        {
+            string line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith('#')) continue;
+
+            int split = line.IndexOfAny(new[] { ' ', '\t' });
+            if (split <= 0) continue;
+
+            string hash = line.Substring(0, split);
+            string name = line.Substring(split).TrimStart(' ', '\t', '*');
+
+            if (hash.Length != 64 || !IsHex(hash)) continue;
+            if (name.Equals(fileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return hash.ToLowerInvariant();
+            }
+        }
+
+        return null;
+
+        static bool IsHex(string s)
+        {
+            foreach (char c in s)
+            {
+                if (!Uri.IsHexDigit(c)) return false;
+            }
+            return true;
+        }
+    }
+
+    /// <summary>Lower-case hex SHA-256 of a file, streamed so a 50 MB installer isn't read into memory.</summary>
+    public static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken = default)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true);
+        byte[] hash = await System.Security.Cryptography.SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private async Task<string> DownloadAssetCoreAsync(
+        GitHubReleaseAsset asset,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
+    {
+
+        string tempFolder = DownloadFolder;
+        CleanupDownloadedInstallers();
         Directory.CreateDirectory(tempFolder);
 
         string safeName = Path.GetFileName(asset.Name);
@@ -278,6 +430,50 @@ public class UpdateService
     }
 
     /// <summary>
+    /// Where <see cref="DownloadAssetAsync"/> puts installers. The installer's uninstaller
+    /// deletes the same folder (see setup.iss RemoveDownloadedInstallers).
+    /// </summary>
+    public static string DownloadFolder => Path.Combine(Path.GetTempPath(), "TrayTriggerUpdates");
+
+    /// <summary>
+    /// Best-effort removal of previously downloaded installers. Called at startup and before
+    /// each new download so the folder never accumulates one ~50 MB setup per release. An
+    /// installer that is still running (the one that just relaunched us) is locked and simply
+    /// survives until the next pass.
+    /// </summary>
+    public static void CleanupDownloadedInstallers()
+    {
+        try
+        {
+            if (!Directory.Exists(DownloadFolder)) return;
+
+            foreach (string file in Directory.EnumerateFiles(DownloadFolder))
+            {
+                try
+                {
+                    File.Delete(file);
+                    LoggingService.Verbose("UpdateService", $"Removed old installer: {file}");
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    LoggingService.Verbose("UpdateService", $"Old installer still in use, skipping: {file} ({ex.Message})");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("UpdateService", $"Installer cleanup failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Inno Setup switches for an in-app update: silent with a progress window, no reboot,
+    /// no prompts, and our own /UPDATE marker that tells setup.iss to leave startup
+    /// registration and settings.json alone and to relaunch the app when it finishes.
+    /// </summary>
+    internal const string InstallerUpdateArguments = "/SILENT /NORESTART /SP- /SUPPRESSMSGBOXES /UPDATE";
+
+    /// <summary>
     /// Launches the downloaded installer and gracefully exits TrayTrigger so files can be updated.
     /// </summary>
     public static void LaunchInstallerAndExit(string installerPath)
@@ -287,11 +483,12 @@ public class UpdateService
             throw new FileNotFoundException("Installer executable was not found.", installerPath);
         }
 
-        LoggingService.Info("UpdateService", $"Launching installer: {installerPath}");
+        LoggingService.Info("UpdateService", $"Launching installer: {installerPath} {InstallerUpdateArguments}");
 
         var psi = new ProcessStartInfo
         {
             FileName = installerPath,
+            Arguments = InstallerUpdateArguments,
             UseShellExecute = true
         };
 

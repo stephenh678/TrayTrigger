@@ -60,6 +60,7 @@ TrayTrigger isn't another always-on-top launcher. It's a tray icon until you nee
 - 🎮 **Tray Game Launcher** — 1-click launch from the tray's jump list, no full UI required
 - 📚 **Automatic Steam Library** — Steam games detected and imported automatically, metadata included
 - 🖼️ **SteamGridDB Artwork** — high-res poster art fetched automatically for your whole library
+- 📖 **RAWG Game Info** — optional developer, publisher, synopsis and ratings for games that aren't on Steam (Game Pass, Epic exclusives, Roblox), with a per-game Steam | RAWG switch
 - 🎯 **Per-Game Performance Profiles** — Optimized/Aggressive tweaks applied on launch, reverted on exit
 - 🤖 **Per-Game Automation** — optional pre-launch and post-exit scripts, scoped to a single game
 - ⚡ **Verified & Reversible Windows Gaming Optimizations** — 21 tweaks grounded in documented Windows behavior, not folklore, each reverting to the exact prior state
@@ -89,13 +90,14 @@ TrayTrigger isn't another always-on-top launcher. It's a tray icon until you nee
 ## Game Library
 
 - **Automatic Steam discovery and artwork** — no manually building your library one game at a time. TrayTrigger scans your installed Steam library and fetches official metadata (name, description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB.
+- **GOG, EA, Epic, Ubisoft Connect, and Xbox / PC Game Pass too** — Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch in Settings.
 - **Multiple Layout Views** — Grid view (vertical poster cards), Large Icons view, and Detailed List view.
 - **Automated Icon Extraction** — crisp 32-bit icons pulled from executables, shortcuts (`.lnk`), and game folders, with procedural fallback badge generation when nothing better is available.
 - **Drag & Drop Importing** — drag an executable or shortcut onto the window to add it.
 - **Batch Folder Scanner** — scan an entire game drive with intelligent executable scoring that filters out uninstallers and launcher binaries.
 - **Favorites & Categories** — pin favorites to the top of the tray menu and library, organize the rest into custom categories (Action, RPG, Strategy, Steam, etc.) or view as a flat list.
 - **Batch editing** — Ctrl+click, Shift+click, or Ctrl+A to select several games in any view, then right-click for a batch menu that favorites, hides, re-categorizes, sets the Performance Profile, refreshes poster art and metadata, or removes them in one step, with the same undo as a single removal.
-- **Launcher stays out of the way** — per game, close Steam, GOG Galaxy, EA App, Epic, or Ubisoft Connect automatically when the game exits. For Steam, that option also starts the client minimized to the tray when TrayTrigger has to open it, so only the game shows.
+- **Launcher stays out of the way** — per game, close Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, or the Xbox app automatically when the game exits. For Steam, that option also starts the client minimized to the tray when TrayTrigger has to open it, so only the game shows.
 
 ## Performance Profiles
 
@@ -111,7 +113,7 @@ Independently of the tier, any game can be pinned to the performance cores of a 
 
 - **Session-scoped, zero manual cleanup** — tweaks apply the moment a game launches (Steam or direct `.exe`) and revert to your exact prior settings the moment it closes.
 - **Crash-safe** — if TrayTrigger or your PC crashes mid-session, the next launch detects and restores your pre-game state automatically.
-- **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes, with a configurable timeout, and optionally cancelling the launch if it fails); the post-exit script runs the moment the game closes, for direct, Steam, and GOG/EA/Epic/Ubisoft launches alike. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, can run hidden (with their output captured to the log) or elevated.
+- **Custom pre-launch & post-exit scripts** (advanced, off by default) — attach your own `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. The pre-launch script runs just before the game starts (optionally holding launch until it finishes, with a configurable timeout, and optionally cancelling the launch if it fails); the post-exit script runs the moment the game closes, for direct, Steam, GOG/EA/Epic/Ubisoft, and Xbox launches alike. Scripts receive the phase, game name, and executable as arguments plus `TRAYTRIGGER_*` environment variables, can run hidden (with their output captured to the log) or elevated.
 
 ## Verified & Reversible Windows Gaming Optimizations
 
@@ -160,6 +162,14 @@ Download the portable `.zip` from the [latest release](https://github.com/stephe
 ### Updates
 TrayTrigger checks GitHub Releases for updates and installs them in one click. Enable *Receive pre-release (beta) updates* in Settings to get beta and release-candidate builds first; leave it off for stable releases only.
 
+Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installer against it before launching, and refuses to install anything that doesn't match.
+
+### Verifying a download
+```powershell
+Get-FileHash .\TrayTrigger-v1.3.9-Setup.exe -Algorithm SHA256
+```
+Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signed releases (see [Code signing](#code-signing)) also show a valid publisher in the file's Properties → Digital Signatures tab.
+
 ## Requirements
 
 - Windows 10 (version 1809+) or Windows 11 (64-bit recommended)
@@ -176,7 +186,7 @@ Steam covers Steam games. TrayTrigger sits in your tray for one-click access to 
 Playnite is a full-featured library manager with its own window and a plugin ecosystem. TrayTrigger is intentionally narrower: a tray-first launcher with built-in, reversible performance tweaking, for people who want quick access and optimization rather than another big library UI.
 
 **Is it safe?**
-TrayTrigger doesn't collect telemetry or personal data. Its only outbound network calls are to Steam's public APIs, SteamGridDB (for artwork), and GitHub Releases (for update checks). See [SECURITY.md](SECURITY.md) for the full breakdown.
+TrayTrigger doesn't collect telemetry or personal data. Its only outbound network calls are to Steam's public APIs, SteamGridDB (for artwork), RAWG (for non-Steam game info, only if you enable it with your own key), and GitHub Releases (for update checks). See [SECURITY.md](SECURITY.md) for the full breakdown.
 
 **Does it modify Windows?**
 Only tweaks you explicitly enable. Some require an admin (UAC) prompt because they write to `HKEY_LOCAL_MACHINE`; tweaks scoped to your user account don't.
@@ -225,6 +235,21 @@ Bug reports, feature requests, and pull requests are welcome — see [CONTRIBUTI
 ## Security
 
 If you find a security issue, please see [SECURITY.md](SECURITY.md) for how to report it privately.
+
+## Code signing
+
+> **Status:** code signing is being set up and current releases are **not yet signed**. Until then, verify downloads against `SHA256SUMS.txt` as described under [Updates](#updates). This section describes the process that will apply once signing is live.
+
+Free code signing is provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+**Code signing policy.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners and signed through SignPath's GitHub integration; nothing is built or signed on a developer machine. Signed artifacts are `TrayTrigger.exe` (also inside the portable `.zip`) and `TrayTrigger-v*-Setup.exe`. The artifact configurations are kept in [`.signpath/artifact-configurations/`](.signpath/artifact-configurations/).
+
+**Team roles.**
+- Author (commits without external review): [@stephenh678](https://github.com/stephenh678)
+- Reviewer (reviews and merges third-party pull requests): [@stephenh678](https://github.com/stephenh678)
+- Approver (approves each signing request): [@stephenh678](https://github.com/stephenh678)
+
+**Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), RAWG (game info for non-Steam titles, only if you enter your own API key), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
 
 ## License
 

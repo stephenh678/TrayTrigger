@@ -511,7 +511,7 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Games Library" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                                    FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                        <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, and local folders"
+                        <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, and local folders"
                                    FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                                    FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
                     </StackPanel>
@@ -673,7 +673,7 @@
                             <TextBlock Text="Your library is empty"
                                        FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, and Ubisoft Connect. Or drop a game's exe, shortcut, or install folder anywhere on this window."
+                            <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, Ubisoft Connect, and Xbox (PC Game Pass). Or drop a game's exe, shortcut, or install folder anywhere on this window."
                                        FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -1019,6 +1019,23 @@
                                                                 </Style>
                                                             </Border.Style>
                                                             <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
+                                                                   Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+
+                                                        <!-- Xbox / PC Game Pass Indicator Badge Overlay -->
+                                                        <Border VerticalAlignment="Center">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png"
                                                                    Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
                                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                                                         </Border>
@@ -1430,6 +1447,23 @@
                                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                                                         </Border>
 
+                                                        <!-- Xbox / PC Game Pass Indicator Badge Overlay -->
+                                                        <Border VerticalAlignment="Center">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png"
+                                                                   Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        </Border>
+
                                                         <!-- Local Games Indicator Badge Overlay - shown for a game added via plain
                                                              exe/shortcut/folder scan rather than any supported launcher. -->
                                                         <Border VerticalAlignment="Center">
@@ -1738,6 +1772,23 @@
                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                             <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                             <TextBlock Text="UBI" FontSize="9" Foreground="#FFC107" FontWeight="SemiBold"/>
+                                                        </StackPanel>
+                                                    </Border>
+
+                                                    <Border Background="#1B2E1B" CornerRadius="3" Padding="4,0" HorizontalAlignment="Left">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                            <TextBlock Text="XBOX" FontSize="9" Foreground="#6CC04A" FontWeight="SemiBold"/>
                                                         </StackPanel>
                                                     </Border>
 
@@ -2079,6 +2130,23 @@
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                         <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                         <TextBlock Text="UBI" FontSize="9.5" Foreground="#FFC107"
+                                                                   FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Background="#1B2E1B" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                        <TextBlock Text="XBOX" FontSize="9.5" Foreground="#6CC04A"
                                                                    FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                     </StackPanel>
                                                 </Border>
@@ -2564,6 +2632,17 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
+                                    <CheckBox IsChecked="{Binding XboxIntegrationEnabled}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                              Margin="0,0,0,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Enable Xbox / PC Game Pass Library Integration" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                    <TextBlock Text="Found via Windows' own Gaming Services records, so every game installed through the Xbox app is covered, on any drive. Games launch through Windows like the Xbox app does - no direct-exe option. Limitation: only modern (GDK) titles are detected; a few older Microsoft Store games that never moved to the current format are not."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
+
                                     <CheckBox Content="Automatically scan for new games on startup"
                                               IsChecked="{Binding AutoScanForGamesOnStartup}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13" Margin="0,0,0,4"/>
@@ -2633,7 +2712,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Game Titles &amp; Metadata Detection" FontSize="13.5" FontWeight="SemiBold" 
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="How game titles and categories are determined when importing files or scanning folders."
+                                    <TextBlock Text="How game titles and categories are determined when importing files or scanning folders, and how long fetched game info is kept."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,2" TextWrapping="Wrap"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,0,10"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
@@ -2663,9 +2742,32 @@
                                     <CheckBox Content="Automatically categorize games from store genres" 
                                               IsChecked="{Binding AutoCategorizeFromSteam}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,2" TextWrapping="Wrap"/>
+                                    <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized. Uses Steam's genre when the game is on Steam, otherwise RAWG's if RAWG is enabled."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                                    <!-- Freshness of the cached Steam / RAWG details behind Game Details. The window
+                                         always opens from the disk cache; this decides when it re-fetches behind it.
+                                         Same row style as "Library view mode". The ComboBox is declared first so the
+                                         DockPanel reserves its width before the wrapping description is measured. -->
+                                    <DockPanel Margin="0,0,0,8" LastChildFill="False">
+                                        <ComboBox ItemsSource="{Binding MetadataRefreshOptions}"
+                                                  SelectedItem="{Binding MetadataRefreshOption, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Right"
+                                                  DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="Refresh game info:" Foreground="{StaticResource BrushTextPrimary}" FontSize="12.5"/>
+                                            <TextBlock Text="Game Details opens from a copy saved on disk and shows when it was last updated. This is how old that copy may get before it's refreshed in the background; Refresh in the details window always fetches fresh info."
+                                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DockPanel>
+
+                                    <Button Content="Clear Cached Game Info" Command="{Binding ClearMetadataCacheCommand}"
+                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"
+                                            HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters are kept."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="0,4,0,2" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
 
@@ -2728,6 +2830,28 @@
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                     </Grid>
+
+                                    <!-- RAWG metadata: developer/publisher/synopsis/genre on non-Steam games,
+                                         shown via the source toggle in the Game Details window. -->
+                                    <CheckBox Content="Use RAWG for non-Steam game info (optional)"
+                                              IsChecked="{Binding UseRawgMetadata}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,16,0,0"/>
+                                    <TextBlock Text="Developer, publisher, release date, synopsis, and genre for games that aren't on Steam (Game Pass, Epic exclusives, Roblox, and so on). Needs a free RAWG API key; shown via a source toggle in each game's details window."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,8" TextWrapping="Wrap"/>
+                                    <Grid Margin="24,0,0,0" IsEnabled="{Binding UseRawgMetadata}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+                                                 Tag="Paste your RAWG API key here..."/>
+                                        <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenRawgSiteCommand}"
+                                                Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                                    </Grid>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="Where game info comes from" Margin="24,6,0,0"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -3293,7 +3417,7 @@
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Multi-Platform Library Integration" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Auto-discovers installed games from Steam, GOG, EA, Epic, and Ubisoft Connect, matches official titles and genres, and imports store artwork."
+                                            <TextBlock Text="Auto-discovers installed games from Steam, GOG, EA, Epic, Ubisoft Connect, and Xbox, matches official titles and genres, and imports store artwork."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>

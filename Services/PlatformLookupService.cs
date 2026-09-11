@@ -17,6 +17,7 @@ public sealed class PlatformMatch
     public DiscoveredEaGame? Ea { get; init; }
     public DiscoveredEpicGame? Epic { get; init; }
     public DiscoveredUbisoftGame? Ubisoft { get; init; }
+    public DiscoveredXboxGame? Xbox { get; init; }
 
     private PlatformMatch(string platform) => Platform = platform;
 
@@ -25,8 +26,9 @@ public sealed class PlatformMatch
     public static PlatformMatch ForEa(DiscoveredEaGame g) => new("EA") { Ea = g };
     public static PlatformMatch ForEpic(DiscoveredEpicGame g) => new("Epic") { Epic = g };
     public static PlatformMatch ForUbisoft(DiscoveredUbisoftGame g) => new("Ubisoft") { Ubisoft = g };
+    public static PlatformMatch ForXbox(DiscoveredXboxGame g) => new("Xbox") { Xbox = g };
 
-    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? string.Empty;
+    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? Xbox?.Name ?? string.Empty;
 }
 
 /// <summary>
@@ -57,19 +59,22 @@ public class PlatformLookupService
     private readonly EaScannerService _ea;
     private readonly EpicScannerService _epic;
     private readonly UbisoftScannerService _ubisoft;
+    private readonly XboxScannerService _xbox;
 
     public PlatformLookupService(
         SteamScannerService steam,
         GogScannerService gog,
         EaScannerService ea,
         EpicScannerService epic,
-        UbisoftScannerService ubisoft)
+        UbisoftScannerService ubisoft,
+        XboxScannerService xbox)
     {
         _steam = steam;
         _gog = gog;
         _ea = ea;
         _epic = epic;
         _ubisoft = ubisoft;
+        _xbox = xbox;
     }
 
     /// <summary>
@@ -123,6 +128,7 @@ public class PlatformLookupService
         private List<DiscoveredEaGame>? _eaGames;
         private List<DiscoveredEpicGame>? _epicGames;
         private List<(string GameId, string InstallDir)>? _ubisoftInstalls;
+        private List<DiscoveredXboxGame>? _xboxGames;
         // Resolved-once caches for the two platforms whose full record costs a filesystem walk.
         private readonly Dictionary<string, DiscoveredSteamGame?> _steamResolved = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, DiscoveredUbisoftGame?> _ubisoftResolved = new(StringComparer.OrdinalIgnoreCase);
@@ -178,6 +184,13 @@ public class PlatformLookupService
                 }
                 if (ubisoft != null) return PlatformMatch.ForUbisoft(ubisoft);
             }
+
+            // Both the readable "D:\XboxGames\<Game>\Content" folder and the WindowsApps package
+            // root count: a user can only ever drag the former in, but paths recorded from a
+            // running process use the latter.
+            _xboxGames ??= Try(() => _owner._xbox.ScanInstalledGames([]), "Xbox", path) ?? [];
+            var xbox = _xboxGames.FirstOrDefault(g => IsPathUnderDirectory(path, g.InstallDir) || IsPathUnderDirectory(path, g.PackageRoot));
+            if (xbox != null) return PlatformMatch.ForXbox(xbox);
 
             return null;
         }

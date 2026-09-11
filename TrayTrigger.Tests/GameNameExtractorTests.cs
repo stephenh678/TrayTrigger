@@ -48,3 +48,31 @@ public class GameNameExtractorTests
         Assert.Equal(string.Empty, GameNameExtractor.CleanExecutableStem(""));
     }
 }
+
+public class KnownNameGuardTests
+{
+    private static readonly SteamGameMatch ContentWarning = new("Content Warning", "2881650", null, 0.72);
+
+    [Fact]
+    public void FallbackMatch_ThatDoesNotResembleTrustedName_IsRejected()
+    {
+        // "D:\XboxGames\Fortnite\Content" once fuzzy-matched a real Steam game via its "Content" folder.
+        Assert.Null(GameNameExtractor.GuardAgainstKnownName(ContentWarning, "Fortnite", 0.6, "test"));
+        Assert.Null(GameNameExtractor.GuardAgainstKnownName(ContentWarning, "Roblox", 0.6, "test"));
+    }
+
+    [Fact]
+    public void FallbackMatch_ThatResemblesTrustedName_IsKept()
+    {
+        var omd = new SteamGameMatch("Orcs Must Die! 3", "1522820", null, 0.7);
+        Assert.Same(omd, GameNameExtractor.GuardAgainstKnownName(omd, "Orcs Must Die 3", 0.6, "test"));
+    }
+
+    [Fact]
+    public void NoTrustedName_LeavesMatchAlone()
+    {
+        Assert.Same(ContentWarning, GameNameExtractor.GuardAgainstKnownName(ContentWarning, null, 0.6, "test"));
+        Assert.Same(ContentWarning, GameNameExtractor.GuardAgainstKnownName(ContentWarning, "  ", 0.6, "test"));
+        Assert.Null(GameNameExtractor.GuardAgainstKnownName(null, "Fortnite", 0.6, "test"));
+    }
+}

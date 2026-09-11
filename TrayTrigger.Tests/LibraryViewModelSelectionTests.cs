@@ -47,7 +47,8 @@ public class LibraryViewModelSelectionTests : IDisposable
             new GogScannerService(),
             new EaScannerService(),
             new EpicScannerService(),
-            new UbisoftScannerService());
+            new UbisoftScannerService(),
+            new XboxScannerService());
         var settings = new AppSettings();
         var library = new LibraryViewModel(
             storage,

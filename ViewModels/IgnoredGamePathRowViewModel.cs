@@ -12,7 +12,8 @@ public class IgnoredGamePathRowViewModel : ViewModelBase
         ?? (Model.GogGameId != null ? $"GOG GameId {Model.GogGameId}" : null)
         ?? (Model.EaContentId != null ? $"EA ContentId {Model.EaContentId}" : null)
         ?? (Model.EpicAppName != null ? $"Epic AppName {Model.EpicAppName}" : null)
-        ?? $"Ubisoft GameId {Model.UbisoftGameId}";
+        ?? (Model.UbisoftGameId != null ? $"Ubisoft GameId {Model.UbisoftGameId}" : null)
+        ?? $"Xbox {Model.XboxAumid}";
 
     public IgnoredGamePathRowViewModel(IgnoredGamePath model)
     {

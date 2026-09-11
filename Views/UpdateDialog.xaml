@@ -91,10 +91,12 @@
             <!-- Row 2: Download Progress & Status Area -->
             <StackPanel x:Name="ProgressContainer" Grid.Row="2" Margin="0,0,0,16" Visibility="Collapsed">
                 <DockPanel Margin="0,0,0,6">
-                    <TextBlock x:Name="ProgressStatusText" Text="Downloading installer..." FontSize="11" 
-                               Foreground="{StaticResource BrushTextSecondary}" DockPanel.Dock="Left"/>
-                    <TextBlock x:Name="ProgressPercentText" Text="0%" FontSize="11" FontWeight="SemiBold" 
-                               Foreground="{StaticResource BrushAccentHover}" DockPanel.Dock="Right"/>
+                    <!-- Percent docks first so the status text (last child) fills the rest and can wrap
+                         for the longer verification-failure message. -->
+                    <TextBlock x:Name="ProgressPercentText" Text="0%" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource BrushAccentHover}" DockPanel.Dock="Right" Margin="12,0,0,0"/>
+                    <TextBlock x:Name="ProgressStatusText" Text="Downloading installer..." FontSize="11"
+                               Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
                 </DockPanel>
                 <ProgressBar x:Name="DownloadProgressBar" Height="6" Minimum="0" Maximum="100" Value="0" 
                              Foreground="{StaticResource BrushAccentHover}" Background="#1C1C24" BorderThickness="0"/>
