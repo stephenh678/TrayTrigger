@@ -13,11 +13,16 @@ on:
 
 permissions:
   contents: write
+  actions: read   # SignPath's connector reads the workflow-artifact and job metadata
 
 jobs:
   release:
     name: Build & Publish Release
     runs-on: windows-latest
+    env:
+      # Secrets can't be tested in `if:` directly; surfacing it as env makes the signing
+      # steps conditional on the secret being configured.
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 
     steps:
       - name: Checkout Code
@@ -65,6 +70,53 @@ jobs:
         run: |
           dotnet publish TrayTrigger.csproj -c Release -r win-x64 --self-contained -o publish/bin /p:Version=${{ env.VERSION }}
 
+      # ---------------------------------------------------------------------------------------
+      # Code signing (SignPath Foundation). Two stages, because Inno Setup can't unpack an
+      # installer to sign what's inside it: sign TrayTrigger.exe, build the installer around
+      # the signed exe, then sign the installer. Every signing step is skipped when the
+      # SIGNPATH_API_TOKEN secret is absent, so the workflow keeps producing unsigned releases
+      # until the SignPath project exists. Each stage waits for an Approver to accept the
+      # request in the SignPath console (up to 2 h).
+      #
+      # Repository configuration once SignPath approves the project:
+      #   secret  SIGNPATH_API_TOKEN            API token of a SignPath user with Submitter role
+      #   var     SIGNPATH_ORGANIZATION_ID      from the SignPath organization page
+      #   var     SIGNPATH_PROJECT_SLUG         defaults to "traytrigger"
+      #   var     SIGNPATH_SIGNING_POLICY_SLUG  defaults to "release-signing"
+      # Artifact configurations "application" and "installer": .signpath/artifact-configurations/
+      # ---------------------------------------------------------------------------------------
+      - name: Upload unsigned TrayTrigger.exe
+        if: env.SIGNPATH_API_TOKEN != ''
+        id: upload-unsigned-exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-application
+          path: publish/bin/TrayTrigger.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign TrayTrigger.exe (SignPath)
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'traytrigger' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: application
+          github-artifact-id: ${{ steps.upload-unsigned-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: publish/bin
+
+      - name: Verify TrayTrigger.exe signature
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          $sig = Get-AuthenticodeSignature publish/bin/TrayTrigger.exe
+          Write-Host "Status: $($sig.Status)  Signer: $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') { throw "TrayTrigger.exe is not validly signed after SignPath stage 1." }
+
       - name: Package Portable ZIP
         shell: pwsh
         run: |
@@ -75,6 +127,50 @@ jobs:
         shell: pwsh
         run: |
           ISCC.exe /DMyAppVersion=${{ env.VERSION }} setup.iss
+
+      - name: Upload unsigned installer
+        if: env.SIGNPATH_API_TOKEN != ''
+        id: upload-unsigned-installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: publish/installer/TrayTrigger-v${{ env.VERSION }}-Setup.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign installer (SignPath)
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'traytrigger' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.upload-unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: publish/installer
+
+      - name: Verify installer signature
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          $sig = Get-AuthenticodeSignature "publish/installer/TrayTrigger-v${{ env.VERSION }}-Setup.exe"
+          Write-Host "Status: $($sig.Status)  Signer: $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne 'Valid') { throw "Installer is not validly signed after SignPath stage 2." }
+
+      - name: Generate SHA256SUMS.txt
+        shell: pwsh
+        run: |
+          # sha256sum-compatible format ("<hash>  <name>"). The in-app updater downloads this
+          # file and refuses to launch an installer whose hash isn't listed here.
+          $lines = Get-ChildItem -Path publish/installer -File |
+            Where-Object { $_.Name -ne 'SHA256SUMS.txt' } |
+            Sort-Object Name |
+            ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name }
+          [System.IO.File]::WriteAllLines("$PWD/publish/installer/SHA256SUMS.txt", $lines, [System.Text.UTF8Encoding]::new($false))
+          Get-Content publish/installer/SHA256SUMS.txt
 
       - name: Verify Generated Assets
         shell: pwsh
@@ -120,3 +216,4 @@ jobs:
           files: |
             publish/installer/TrayTrigger-v*-Setup.exe
             publish/installer/TrayTrigger-v*-portable.zip
+            publish/installer/SHA256SUMS.txt

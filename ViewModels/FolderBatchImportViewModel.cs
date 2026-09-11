@@ -45,6 +45,7 @@ public class BatchGameItemViewModel : ViewModelBase
         "EA" => "pack://application:,,,/Assets/LauncherLogos/ea_app.png",
         "Epic" => "pack://application:,,,/Assets/LauncherLogos/epic_games.png",
         "Ubisoft" => "pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png",
+        "Xbox" => "pack://application:,,,/Assets/LauncherLogos/xbox.png",
         _ => "pack://application:,,,/Assets/LauncherLogos/local_games.png"
     };
 

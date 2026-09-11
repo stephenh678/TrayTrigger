@@ -158,6 +158,7 @@ public partial class UpdateDialog : Window
         {
             string downloadedPath = await UpdateService.Instance.DownloadAssetAsync(
                 installer,
+                _release.ChecksumsAsset,
                 progress,
                 _downloadCts.Token);
 
@@ -173,6 +174,15 @@ public partial class UpdateDialog : Window
         {
             ProgressStatusText.Text = "Download cancelled.";
             InstallBtn.IsEnabled = true;
+            RemindLaterBtn.IsEnabled = true;
+        }
+        catch (UpdateVerificationException ex)
+        {
+            // Not a flaky connection: the file on GitHub doesn't match what the release
+            // published, so don't offer a retry - point at the release page instead.
+            LoggingService.Error("UpdateDialog", "Update installer failed verification", ex);
+            ProgressStatusText.Text = "The download couldn't be verified and was discarded. Use \"View on GitHub\" to download manually.";
+            InstallBtn.Visibility = Visibility.Collapsed;
             RemindLaterBtn.IsEnabled = true;
         }
         catch (Exception ex)

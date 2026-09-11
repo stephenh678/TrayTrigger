@@ -24,6 +24,52 @@ public partial class App
     private static extern bool AttachConsole(int dwProcessId);
     private const int ATTACH_PARENT_PROCESS = -1;
 
+    private async System.Threading.Tasks.Task RunXboxDiagnosticAsync(bool launch, string? target)
+    {
+        static void Log(string m) => LoggingService.Info("XboxTest", m);
+        try
+        {
+            var vm = _mainViewModel!;
+            var existing = vm.Games.Where(g => g.Game.IsXboxGame && g.Game.XboxAumid != null).Select(g => g.Game.XboxAumid!).ToList();
+            var found = _xboxScannerService.ScanInstalledGames(existing);
+            Log($"Scan found {found.Count}: {string.Join("; ", found.Select(g => $"{g.Name} [{g.Aumid}] alreadyImported={g.IsAlreadyImported} exe={g.ExePath}"))}");
+
+            var toImport = found.Where(g => !g.IsAlreadyImported).ToList();
+            int added = await vm.Import.ImportXboxGamesAsync(toImport);
+            Log($"ImportXboxGamesAsync added {added} (candidates {toImport.Count}).");
+
+            foreach (var card in vm.Games.Where(g => g.Game.IsXboxGame))
+            {
+                var route = LaunchRouter.Resolve(card.Game, default);
+                Log($"Library entry '{card.Name}': aumid={card.Game.XboxAumid} exe={card.Game.ExecutablePath} workDir={card.Game.WorkingDirectory} category={card.Game.Category} importedFrom={card.Game.ImportedFrom} route={route} isLocal={card.IsLocalGame} showCategoryBadge={card.ShowCategoryBadge} isMissing={card.IsMissing} icon={(card.IconImage != null ? "yes" : "no")}");
+            }
+
+            if (!launch)
+            {
+                Log("Import-only run complete; exiting.");
+                ExitApplication();
+                return;
+            }
+
+            var targetCard = vm.Games.FirstOrDefault(g => g.Game.IsXboxGame && (target == null || g.Name.Contains(target, StringComparison.OrdinalIgnoreCase)));
+            if (targetCard == null)
+            {
+                Log($"No Xbox library entry matches '{target}'; exiting.");
+                ExitApplication();
+                return;
+            }
+
+            targetCard.Game.PerformanceProfile = PerformanceProfileMode.Optimized;
+            Log($"Launching '{targetCard.Name}' with PerformanceProfile=Optimized. Staying resident to observe the session.");
+            vm.LaunchGame(targetCard);
+        }
+        catch (Exception ex)
+        {
+            Log($"FAILED: {ex}");
+            ExitApplication();
+        }
+    }
+
     private void ProcessDevArguments(StartupEventArgs e)
     {
         AttachConsole(ATTACH_PARENT_PROCESS);
@@ -84,6 +130,19 @@ public partial class App
                 return;
             }
 
+            // --test-xbox: scan Gaming Services for GDK titles, import them into the real library,
+            // log what the library now holds and how each would route, then exit.
+            // --test-xbox-launch <name>: same, then launch the named entry with an Optimized
+            // profile and stay running so the session (profile apply/revert, tracking, exit) can be
+            // followed in debug.log.
+            if (e.Args[i].Equals("--test-xbox", StringComparison.OrdinalIgnoreCase) ||
+                e.Args[i].Equals("--test-xbox-launch", StringComparison.OrdinalIgnoreCase))
+            {
+                bool launch = e.Args[i].EndsWith("-launch", StringComparison.OrdinalIgnoreCase);
+                string? target = launch && i + 1 < e.Args.Length ? e.Args[i + 1] : null;
+                _ = RunXboxDiagnosticAsync(launch, target);
+                return;
+            }
             if (e.Args[i].Equals("--test-scan", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {
                 string targetFolder = e.Args[i + 1];
@@ -841,7 +900,7 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                var dlg = new ScanForGamesDialog(_mainViewModel, new List<DiscoveredSteamGame>(), new List<DiscoveredGogGame>(), new List<DiscoveredEaGame>(), new List<DiscoveredEpicGame>(), new List<DiscoveredUbisoftGame>(), new List<GameCandidate>());
+                var dlg = new ScanForGamesDialog(_mainViewModel, new List<DiscoveredSteamGame>(), new List<DiscoveredGogGame>(), new List<DiscoveredEaGame>(), new List<DiscoveredEpicGame>(), new List<DiscoveredUbisoftGame>(), new List<DiscoveredXboxGame>(), new List<GameCandidate>());
                 CaptureVisual(dlg, 680, 580, targetPng);
                 ExitApplication();
                 return;

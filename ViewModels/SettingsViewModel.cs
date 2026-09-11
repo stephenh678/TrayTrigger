@@ -42,7 +42,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly Action? _onTrayMenuSettingChanged;
     private readonly Action? _onPosterArtSettingChanged;
     private readonly Action? _onHotkeySettingChanged;
-    private readonly Func<Task>? _onRequestEnrichLibrary;
+    private readonly Func<bool, Task>? _onRequestEnrichLibrary;
     private readonly Func<IProgress<string>, Task>? _onRequestRefreshAllPosters;
     private readonly Action? _onRequestOpenScanForGames;
     private readonly Func<Task>? _onCheckForUpdates;
@@ -131,6 +131,59 @@ public class SettingsViewModel : ViewModelBase
         SensitivityVeryStrict
     };
 
+    // "Refresh game info": how long the cached Steam / RAWG details behind Game Details are
+    // trusted before the window re-fetches them in the background. See MetadataFreshness.
+    public const string RefreshEveryOpen = "Every time details open";
+    public const string RefreshDaily = "Daily";
+    public const string RefreshEvery3Days = "Every 3 days (Default)";
+    public const string RefreshWeekly = "Weekly";
+    public const string RefreshMonthly = "Monthly";
+    public const string RefreshNever = "Never (manual refresh only)";
+
+    public ObservableCollection<string> MetadataRefreshOptions { get; } = new()
+    {
+        RefreshEveryOpen,
+        RefreshDaily,
+        RefreshEvery3Days,
+        RefreshWeekly,
+        RefreshMonthly,
+        RefreshNever
+    };
+
+    public string MetadataRefreshOption
+    {
+        get => _settings.MetadataRefreshInterval switch
+        {
+            MetadataRefreshInterval.EveryOpen => RefreshEveryOpen,
+            MetadataRefreshInterval.Daily => RefreshDaily,
+            MetadataRefreshInterval.Weekly => RefreshWeekly,
+            MetadataRefreshInterval.Monthly => RefreshMonthly,
+            MetadataRefreshInterval.Never => RefreshNever,
+            _ => RefreshEvery3Days
+        };
+        set
+        {
+            var target = value switch
+            {
+                RefreshEveryOpen => MetadataRefreshInterval.EveryOpen,
+                RefreshDaily => MetadataRefreshInterval.Daily,
+                RefreshWeekly => MetadataRefreshInterval.Weekly,
+                RefreshMonthly => MetadataRefreshInterval.Monthly,
+                RefreshNever => MetadataRefreshInterval.Never,
+                _ => MetadataRefreshInterval.Every3Days
+            };
+            if (_settings.MetadataRefreshInterval != target)
+            {
+                _settings.MetadataRefreshInterval = target;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>Drops both detail caches (not posters). Every game re-fetches on its next open.</summary>
+    public ICommand ClearMetadataCacheCommand { get; }
+
     // Category Tab Commands
     public ICommand SelectAllTabCommand { get; }
     public ICommand SelectGeneralTabCommand { get; }
@@ -150,6 +203,7 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SetViewModeCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
     public ICommand OpenSteamGridDbSiteCommand { get; }
+    public ICommand OpenRawgSiteCommand { get; }
     public ICommand OpenScanForGamesCommand { get; }
     public ICommand RefreshAllPostersCommand { get; }
     public ICommand AddScanLocationCommand { get; }
@@ -179,7 +233,7 @@ public class SettingsViewModel : ViewModelBase
         Action? onTrayMenuSettingChanged = null,
         Action? onPosterArtSettingChanged = null,
         Action? onHotkeySettingChanged = null,
-        Func<Task>? onRequestEnrichLibrary = null,
+        Func<bool, Task>? onRequestEnrichLibrary = null,
         Func<IProgress<string>, Task>? onRequestRefreshAllPosters = null,
         Action? onRequestOpenScanForGames = null,
         Func<Task>? onCheckForUpdates = null,
@@ -224,6 +278,14 @@ public class SettingsViewModel : ViewModelBase
         SetViewModeCommand = new RelayCommand(mode => LibraryViewMode = mode?.ToString() ?? ViewModePosterGrid);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
+        OpenRawgSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://rawg.io/apidocs") { UseShellExecute = true }));
+        ClearMetadataCacheCommand = new RelayCommand(() =>
+        {
+            SteamMetadataService.ClearCache();
+            RawgService.ClearCache();
+            LoggingService.Info("SettingsViewModel", "Cleared the cached Steam and RAWG game info.");
+            StatusMessage = "Cached game info cleared. Each game fetches fresh details the next time you open it.";
+        });
         OpenScanForGamesCommand = new RelayCommand(() => _onRequestOpenScanForGames?.Invoke());
         AddScanLocationCommand = new RelayCommand(AddScanLocation);
         RemoveScanLocationCommand = new RelayCommand(param =>
@@ -720,7 +782,7 @@ public class SettingsViewModel : ViewModelBase
                 AutoSaveSettings();
                 if (value)
                 {
-                    _ = _onRequestEnrichLibrary?.Invoke();
+                    _ = _onRequestEnrichLibrary?.Invoke(false);
                 }
             }
         }
@@ -823,6 +885,53 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public bool UseRawgMetadata
+    {
+        get => _settings.UseRawgMetadata;
+        set
+        {
+            if (_settings.UseRawgMetadata != value)
+            {
+                bool wasUsable = RawgApiKeyOrNull != null;
+                _settings.UseRawgMetadata = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                if (!wasUsable && RawgApiKeyOrNull != null)
+                    RequestRawgEnrichment();
+            }
+        }
+    }
+
+    public string RawgApiKey
+    {
+        get => _settings.RawgApiKey;
+        set
+        {
+            if (_settings.RawgApiKey != value)
+            {
+                bool wasUsable = RawgApiKeyOrNull != null;
+                _settings.RawgApiKey = value ?? string.Empty;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                if (!wasUsable && RawgApiKeyOrNull != null)
+                    RequestRawgEnrichment();
+            }
+        }
+    }
+
+    /// <summary>RAWG just became usable (toggled on with a key, or a key typed while on): give
+    /// the still-uncategorised non-Steam games a pass now rather than after the retry interval.</summary>
+    private void RequestRawgEnrichment()
+    {
+        if (_settings.AutoCategorizeFromSteam)
+            _ = _onRequestEnrichLibrary?.Invoke(true);
+    }
+
+    /// <summary>The RAWG key when the feature is enabled and a key is set, else null - the details
+    /// window uses this to decide whether the RAWG source is available for the toggle.</summary>
+    public string? RawgApiKeyOrNull =>
+        _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey) ? _settings.RawgApiKey : null;
+
     private bool _isRefreshingAllPosters;
     public bool IsRefreshingAllPosters
     {
@@ -889,6 +998,13 @@ public class SettingsViewModel : ViewModelBase
     {
         get => _settings.UbisoftIntegrationEnabled;
         set => SetIntegrationEnabled(DetectedLauncher.Ubisoft, "Ubisoft", _settings.UbisoftIntegrationEnabled, value, v => _settings.UbisoftIntegrationEnabled = v);
+    }
+
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool XboxIntegrationEnabled
+    {
+        get => _settings.XboxIntegrationEnabled;
+        set => SetIntegrationEnabled(DetectedLauncher.Xbox, "Xbox", _settings.XboxIntegrationEnabled, value, v => _settings.XboxIntegrationEnabled = v);
     }
 
     // True while ApplyDetectedLauncherChoices runs: the first-launch picker is choosing initial
@@ -1006,6 +1122,7 @@ public class SettingsViewModel : ViewModelBase
             if (Probed(DetectedLauncher.Ea)) EaIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ea);
             if (Probed(DetectedLauncher.Epic)) EpicIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Epic);
             if (Probed(DetectedLauncher.Ubisoft)) UbisoftIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ubisoft);
+            if (Probed(DetectedLauncher.Xbox)) XboxIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Xbox);
         }
         finally
         {
@@ -1149,6 +1266,7 @@ public class SettingsViewModel : ViewModelBase
         }
 
         string existingApiKey = _settings.SteamGridDbApiKey;
+        string existingRawgKey = _settings.RawgApiKey;
 
         // Copy every default from a fresh AppSettings instead of a hand-maintained literal
         // list, so a newly added setting is reset automatically instead of silently staying
@@ -1165,6 +1283,7 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
+            nameof(AppSettings.RawgApiKey),
             // Manually-curated, not a "preference" in the dialog's sense - same bucket as the
             // library/categories/artwork the confirmation text already promises to leave alone.
             nameof(AppSettings.ScanLocations),
@@ -1178,6 +1297,7 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.EaIntegrationEnabled),
             nameof(AppSettings.EpicIntegrationEnabled),
             nameof(AppSettings.UbisoftIntegrationEnabled),
+            nameof(AppSettings.XboxIntegrationEnabled),
             // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
             nameof(AppSettings.MainWindowLeft),
@@ -1215,6 +1335,7 @@ public class SettingsViewModel : ViewModelBase
             prop.SetValue(_settings, fresh);
         }
         _settings.SteamGridDbApiKey = existingApiKey;
+        _settings.RawgApiKey = existingRawgKey;
 
         // Execute side effects
         _startupManager.SetStartupEnabled(false, true);
@@ -1244,6 +1365,9 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(UseVerticalPosterArt));
         OnPropertyChanged(nameof(UseSteamGridDbArt));
         OnPropertyChanged(nameof(SteamGridDbApiKey));
+        OnPropertyChanged(nameof(RawgApiKey));
+        OnPropertyChanged(nameof(UseRawgMetadata));
+        OnPropertyChanged(nameof(MetadataRefreshOption));
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));

@@ -18,7 +18,21 @@ public class GameScriptLaunchGateTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        // Timeout_WithAbort_CancelsLaunch deliberately leaves its script running (the service
+        // abandons a timed-out script rather than killing it), and that cmd.exe/ping.exe pair
+        // keeps _dir as its working directory for a few more seconds. Retry until it lets go
+        // instead of leaving an empty TrayTriggerGateTests_* folder in %TEMP% every run.
+        for (int attempt = 0; attempt < 40; attempt++)
+        {
+            try
+            {
+                Directory.Delete(_dir, recursive: true);
+                return;
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            Thread.Sleep(250);
+        }
     }
 
     private string Script(string name, string body)

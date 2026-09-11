@@ -60,6 +60,21 @@ public class GameEntry
     /// IsGogGame/IsEaGame/IsEpicGame.</summary>
     public bool IsUbisoftGame { get; set; }
     public string? UbisoftGameId { get; set; }
+    /// <summary>True for a PC Game Pass / Microsoft Store (GDK) game imported via Xbox scanning.
+    /// Unlike every other platform there is no direct-exe fallback: GDK executables need package
+    /// identity, so the game is always launched by shell activation of <see cref="XboxAumid"/>
+    /// and ExecutablePath is informational (icon, dedupe, "open folder") and re-resolved on each
+    /// launch because it changes with every game update.</summary>
+    public bool IsXboxGame { get; set; }
+    /// <summary>Application User Model ID, "&lt;PackageFamilyName&gt;!&lt;AppId&gt;" - stable across updates.</summary>
+    public string? XboxAumid { get; set; }
+    /// <summary>Which source the Game Details window shows text metadata from (a per-game view
+    /// preference; never affects the library category, art, or sorting). Auto by default - Steam
+    /// when there's a Steam App ID, otherwise RAWG. See <see cref="MetadataSource"/>.</summary>
+    public MetadataSource PreferredMetadataSource { get; set; } = MetadataSource.Auto;
+    /// <summary>The RAWG game id this entry resolved to, cached so the details window doesn't
+    /// re-search RAWG by name each time it opens. 0 when unresolved.</summary>
+    public int RawgId { get; set; }
     public DateTime? LastPlayed { get; set; }
     public long CumulativePlaytimeMinutes { get; set; }
     public DateTime? LastEnrichmentAttemptUtc { get; set; }
