@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration: "installer"
+  Stage 2 of release.yml. Inno Setup has already packed the signed TrayTrigger.exe into
+  TrayTrigger-v<version>-Setup.exe; this signs the installer itself.
+
+  Known gap: the uninstaller Inno embeds (unins000.exe) stays unsigned. Inno can only sign it
+  at compile time through a local SignTool, which SignPath's GitHub integration doesn't
+  provide. Windows doesn't SmartScreen-gate uninstalls launched from Settings, so this is
+  cosmetic.
+
+  This file is the reference copy; the live configuration is pasted into the SignPath
+  project under Artifact Configurations with the slug "installer".
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="TrayTrigger-v*-Setup.exe" product-name="TrayTrigger">
+      <authenticode-sign hash-algorithm="sha256"
+                         description="TrayTrigger Setup"
+                         description-url="https://github.com/stephenh678/TrayTrigger" />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

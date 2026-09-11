@@ -273,7 +273,56 @@ public class UpdateService
         }
 
         LoggingService.Info("UpdateService", $"Verified {asset.Name} (SHA-256 {actualHash}).");
+
+        string? signatureProblem = CheckInstallerSignature(downloaded);
+        if (signatureProblem != null)
+        {
+            LoggingService.Error("UpdateService", $"{signatureProblem} Deleting the download.");
+            try { File.Delete(downloaded); } catch (Exception ex) { LoggingService.Warn("UpdateService", $"Could not delete unverified download: {ex.Message}"); }
+            throw new UpdateVerificationException(signatureProblem);
+        }
+
         return downloaded;
+    }
+
+    /// <summary>
+    /// "An update must be signed by whoever signed me." Returns null when the installer is
+    /// acceptable, otherwise a user-readable reason. Enforced only when the running exe is
+    /// itself Authenticode-signed: an unsigned build (development, or a release from before
+    /// signing was set up) has no publisher to compare against and just logs the situation.
+    /// SHA256SUMS.txt alone can't catch an attacker who replaces both the installer and the
+    /// manifest on the release; a signature from a key they don't hold can.
+    /// </summary>
+    internal static string? CheckInstallerSignature(string installerPath)
+    {
+        string? runningExe = Environment.ProcessPath;
+        string? expectedSubject = runningExe != null ? AuthenticodeVerifier.GetSignerSubject(runningExe) : null;
+
+        if (string.IsNullOrEmpty(expectedSubject))
+        {
+            LoggingService.Warn("UpdateService", "Running executable is not code-signed; skipping installer signature enforcement.");
+            return null;
+        }
+
+        string? actualSubject = AuthenticodeVerifier.GetSignerSubject(installerPath);
+        if (actualSubject == null)
+        {
+            return "The downloaded installer is not code-signed, but this installation is.";
+        }
+
+        if (!string.Equals(actualSubject, expectedSubject, StringComparison.Ordinal))
+        {
+            LoggingService.Error("UpdateService", $"Installer signer '{actualSubject}' does not match running exe signer '{expectedSubject}'.");
+            return "The downloaded installer was signed by a different publisher than this installation.";
+        }
+
+        if (!AuthenticodeVerifier.IsTrusted(installerPath))
+        {
+            return "The downloaded installer's digital signature is not valid.";
+        }
+
+        LoggingService.Info("UpdateService", $"Installer signature verified: {actualSubject}");
+        return null;
     }
 
     /// <summary>

@@ -160,6 +160,14 @@ Download the portable `.zip` from the [latest release](https://github.com/stephe
 ### Updates
 TrayTrigger checks GitHub Releases for updates and installs them in one click. Enable *Receive pre-release (beta) updates* in Settings to get beta and release-candidate builds first; leave it off for stable releases only.
 
+Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installer against it before launching, and refuses to install anything that doesn't match.
+
+### Verifying a download
+```powershell
+Get-FileHash .\TrayTrigger-v1.3.9-Setup.exe -Algorithm SHA256
+```
+Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signed releases (see [Code signing](#code-signing)) also show a valid publisher in the file's Properties → Digital Signatures tab.
+
 ## Requirements
 
 - Windows 10 (version 1809+) or Windows 11 (64-bit recommended)
@@ -225,6 +233,19 @@ Bug reports, feature requests, and pull requests are welcome — see [CONTRIBUTI
 ## Security
 
 If you find a security issue, please see [SECURITY.md](SECURITY.md) for how to report it privately.
+
+## Code signing
+
+Free code signing is provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+**Code signing policy.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners and signed through SignPath's GitHub integration; nothing is built or signed on a developer machine. Signed artifacts are `TrayTrigger.exe` (also inside the portable `.zip`) and `TrayTrigger-v*-Setup.exe`. The artifact configurations are kept in [`.signpath/artifact-configurations/`](.signpath/artifact-configurations/).
+
+**Team roles.**
+- Author (commits without external review): [@stephenh678](https://github.com/stephenh678)
+- Reviewer (reviews and merges third-party pull requests): [@stephenh678](https://github.com/stephenh678)
+- Approver (approves each signing request): [@stephenh678](https://github.com/stephenh678)
+
+**Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
 
 ## License
 

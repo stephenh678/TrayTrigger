@@ -5,6 +5,13 @@
 #define MyAppVersion "1.0.0"
 #endif
 
+; VersionInfoVersion must be numeric: strip any SemVer pre-release suffix ("1.3.9-beta.1").
+#if Pos("-", MyAppVersion) > 0
+  #define MyAppNumericVersion Copy(MyAppVersion, 1, Pos("-", MyAppVersion) - 1)
+#else
+  #define MyAppNumericVersion MyAppVersion
+#endif
+
 #define MyAppName "TrayTrigger"
 #define MyAppPublisher "stephenh678"
 #define MyAppURL "https://github.com/stephenh678/TrayTrigger"
@@ -24,6 +31,10 @@ VersionInfoCompany={#MyAppPublisher}
 VersionInfoCopyright=Copyright (c) 2026 Steph
 VersionInfoProductName={#MyAppName}
 VersionInfoDescription={#MyAppName} Setup
+; Setup.exe carries the same product/version metadata as TrayTrigger.exe so the code-signing
+; service's file-metadata restrictions (product name) accept both binaries.
+VersionInfoVersion={#MyAppNumericVersion}
+VersionInfoProductTextVersion={#MyAppVersion}
 AppMutex=TrayTrigger_SingleInstance_Mutex
 SetupMutex=TrayTrigger_Setup_Mutex
 ; The published exe is win-x64 self-contained .NET 10: refuse 32-bit Windows outright and
