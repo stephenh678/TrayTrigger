@@ -83,6 +83,17 @@ public class UpdateService
 
     public static bool IsPrereleaseBuild => CurrentSemVer.IsPrerelease;
 
+    /// <summary>
+    /// Whether this check should consider pre-releases. The setting turns it on, and so does
+    /// already running a pre-release - otherwise a tester who installs a beta without ticking the
+    /// box is pinned to it. GitHub excludes pre-releases from /releases/latest, so the only thing
+    /// such a build is ever offered is the older stable, which loses the version comparison and
+    /// reports "up to date" indefinitely. It reverts on its own: once a stable release overtakes
+    /// the beta the user is no longer on a pre-release, and the setting alone decides again.
+    /// </summary>
+    internal static bool ShouldIncludePrerelease(bool settingEnabled, SemanticVersion current) =>
+        settingEnabled || current.IsPrerelease;
+
     public static string CurrentVersionDisplay => CurrentSemVer.ToDisplayString();
 
     public UpdateService()
@@ -137,6 +148,7 @@ public class UpdateService
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(string? repository, bool includePrerelease = false)
     {
         string targetRepo = string.IsNullOrWhiteSpace(repository) ? "stephenh678/TrayTrigger" : repository.Trim();
+        includePrerelease = ShouldIncludePrerelease(includePrerelease, CurrentSemVer);
 
         try
         {
@@ -204,7 +216,17 @@ public class UpdateService
                 return new UpdateCheckResult(UpdateStatus.UpdateAvailable, release, null, CurrentVersion);
             }
 
-            LoggingService.Info("UpdateService", $"App is up to date. Latest release on GitHub is {release.TagName}.");
+            // Saying "up to date, latest is v1.4.0" while running 1.4.1-beta.1 reads as though the
+            // build is behind a release it is in fact ahead of.
+            if (remoteVersion != null && current > remoteVersion)
+            {
+                LoggingService.Info("UpdateService", $"Running {CurrentVersionDisplay}, which is ahead of the latest release on GitHub ({release.TagName}).");
+            }
+            else
+            {
+                LoggingService.Info("UpdateService", $"App is up to date. Latest release on GitHub is {release.TagName}.");
+            }
+
             return new UpdateCheckResult(UpdateStatus.UpToDate, release, null, CurrentVersion);
         }
         catch (HttpRequestException ex)
