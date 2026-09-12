@@ -18,3 +18,4 @@ Creates a power plan based on the hidden Windows Ultimate Performance scheme, se
 
 - TrayTrigger records which plan was active before switching and puts that exact plan back on revert. Balanced is only the fallback if that plan no longer exists.
 - Each powercfg setting is applied and checked individually; a rejected setting is logged rather than hidden.
+- Not every CPU accepts every value. Core parking, for one, is expressed as a minimum percentage of cores to keep unparked, and some machines only allow a narrower range than 0-100. TrayTrigger reads what each setting will actually accept on your hardware and uses the nearest value it allows, so a plan applies as fully as the machine permits instead of failing on one setting.
