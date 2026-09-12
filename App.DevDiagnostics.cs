@@ -29,6 +29,19 @@ public partial class App
     private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
     private const uint WM_CLOSE = 0x0010;
 
+    // Used by --test-poster-zoom: WPF's IsMouseOver only reacts to the real pointer, so the
+    // hover trigger cannot be exercised without actually moving it. POINT is declared further
+    // down, alongside the screenshot helpers.
+    [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
+
+    /// <summary>The card's current ScaleTransform, read fresh - see the note at its call sites.</summary>
+    private static System.Windows.Media.ScaleTransform ScaleOf(Border card) =>
+        card.RenderTransform as System.Windows.Media.ScaleTransform
+        ?? throw new Exception($"CardBorder.RenderTransform is {card.RenderTransform?.GetType().Name ?? "null"}, expected ScaleTransform.");
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT p);
+
+    /// <summary>
+
     private async System.Threading.Tasks.Task RunXboxDiagnosticAsync(bool launch, string? target)
     {
         static void Log(string m) => LoggingService.Info("XboxTest", m);
@@ -1255,6 +1268,130 @@ public partial class App
 
                 Console.WriteLine("TEST_TRAY_MENU_PASSED");
                 ExitApplication();
+                return;
+            }
+
+            if (e.Args[i].Equals("--test-poster-zoom", StringComparison.OrdinalIgnoreCase))
+            {
+                // The hover zoom is driven by a Storyboard declared in Window.Resources but
+                // targeting "CardBorder", a name that only exists inside the poster DataTemplate.
+                // That resolves at trigger time, not compile time, so a build succeeding proves
+                // nothing - a bad target name throws the moment the pointer touches a card. This
+                // moves the real cursor onto a real card and reads the transform back.
+                if (_mainViewModel.Games.Count == 0)
+                {
+                    string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    var sample = new GameEntry
+                    {
+                        Name = "Zoom Test",
+                        Category = "Action",
+                        ExecutablePath = Path.Combine(winDir, "explorer.exe"),
+                    };
+                    sample.IconPath = _iconExtractorService.ExtractAndCacheIcon(sample.Id, sample.ExecutablePath, sample.Name);
+                    _mainViewModel.Games.Add(_mainViewModel.CreateCardViewModel(sample));
+                    _mainViewModel.RebuildCategories();
+                }
+
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = "Poster Grid";
+                _mainWindow.Show();
+                _mainWindow.Activate();
+                // A process started in the background may be denied foreground activation, and
+                // hover goes to whatever window is actually under the pointer - so pin it on top
+                // for the duration or the test measures some other window.
+                _mainWindow.Topmost = true;
+
+                // The assertions run on a worker so the UI thread can return to its own message
+                // loop: hover state and animation ticks both need it running, and nothing
+                // driveable from inside OnStartup gives us that.
+                var zoomWorker = new System.Threading.Thread(() =>
+                {
+                    string outcome;
+                    GetCursorPos(out POINT restore);
+                    try
+                    {
+                        System.Threading.Thread.Sleep(700); // let the grid lay out
+
+                        var card = Dispatcher.Invoke(() =>
+                            FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible));
+                        if (card == null) throw new Exception("No visible poster CardBorder found to hover.");
+
+                        // Re-read on every poll via ScaleOf: animating a sub-property path like
+                        // RenderTransform.ScaleX can leave a different (unfrozen) transform instance
+                        // on the element, so a cached reference goes on reporting the resting value.
+                        var scale = Dispatcher.Invoke(() => card.RenderTransform as System.Windows.Media.ScaleTransform);
+                        if (scale == null) throw new Exception("CardBorder.RenderTransform is not a ScaleTransform.");
+
+                        // The part that can actually fail at runtime: the storyboards live in
+                        // Window.Resources but target "CardBorder", a name that only exists inside
+                        // the poster DataTemplate. That lookup happens when the animation starts,
+                        // so the compiler proves nothing - a wrong name throws on first hover.
+                        // Begin() resolves names against the element's own namescope, exactly as
+                        // the trigger's BeginStoryboard does.
+                        var zoomIn = Dispatcher.Invoke(() => (System.Windows.Media.Animation.Storyboard)_mainWindow.FindResource("PosterCardZoomIn"));
+                        var zoomOut = Dispatcher.Invoke(() => (System.Windows.Media.Animation.Storyboard)_mainWindow.FindResource("PosterCardZoomOut"));
+
+                        Dispatcher.Invoke(() => zoomIn.Begin(card, isControllable: true));
+                        double peak = 1.0;
+                        for (int t = 0; t < 80 && peak < 1.04; t++)
+                        {
+                            System.Threading.Thread.Sleep(25);
+                            peak = Math.Max(peak, Dispatcher.Invoke(() => ScaleOf(card).ScaleX));
+                        }
+                        if (peak < 1.04) throw new Exception($"Zoom-in did not scale the card: ScaleX peaked at {peak:F3}, expected ~1.05.");
+
+                        double sy = Dispatcher.Invoke(() => ScaleOf(card).ScaleY);
+                        double sx = Dispatcher.Invoke(() => ScaleOf(card).ScaleX);
+                        if (Math.Abs(sy - sx) > 0.001) throw new Exception($"Non-uniform zoom: ScaleX={sx:F3} ScaleY={sy:F3}.");
+
+                        // Proof for the eye, captured while the card is still enlarged.
+                        string shot = Path.Combine(Path.GetTempPath(), "traytrigger-poster-zoom.png");
+                        Dispatcher.Invoke(() => CaptureVisual(_mainWindow, 1020, 760, shot));
+                        LoggingService.Info("PosterZoomTest", $"captured zoomed card to {shot}");
+
+                        // And it must come back down, or cards stay permanently enlarged.
+                        Dispatcher.Invoke(() => zoomOut.Begin(card, isControllable: true));
+                        double settled = 2.0;
+                        for (int t = 0; t < 80 && settled > 1.001; t++)
+                        {
+                            System.Threading.Thread.Sleep(25);
+                            settled = Dispatcher.Invoke(() => ScaleOf(card).ScaleX);
+                        }
+                        if (settled > 1.001) throw new Exception($"Card did not return to its resting size: ScaleX={settled:F3}.");
+
+                        // Best effort on top of that: drive the real pointer and see whether the
+                        // trigger fires by itself. Synthetic input does not reliably reach a
+                        // background-launched window, so this reports but never fails the run.
+                        var mid = Dispatcher.Invoke(() => card.PointToScreen(new Point(card.ActualWidth / 2, card.ActualHeight / 2)));
+                        SetCursorPos((int)mid.X, (int)mid.Y);
+                        double hoverPeak = 1.0;
+                        for (int t = 0; t < 40 && hoverPeak < 1.04; t++)
+                        {
+                            System.Threading.Thread.Sleep(25);
+                            hoverPeak = Math.Max(hoverPeak, Dispatcher.Invoke(() => ScaleOf(card).ScaleX));
+                        }
+                        bool hovered = Dispatcher.Invoke(() => card.IsMouseOver);
+                        SetCursorPos(restore.X, restore.Y);
+                        string hoverNote = hovered
+                            ? $"live hover fired the trigger, ScaleX {hoverPeak:F3}"
+                            : "live hover not reproducible here (synthetic input never reached the window)";
+
+                        outcome = $"[TEST_POSTER_ZOOM_PASSED] storyboard zoomed to {peak:F3} and released to {settled:F3}; {hoverNote}";
+                    }
+                    catch (Exception ex)
+                    {
+                        outcome = "[TEST_POSTER_ZOOM_FAILED] " + ex.Message;
+                    }
+                    finally
+                    {
+                        SetCursorPos(restore.X, restore.Y);
+                    }
+
+                    LoggingService.Info("PosterZoomTest", outcome);
+                    Console.WriteLine(outcome);
+                    Dispatcher.Invoke(ExitApplication);
+                }) { IsBackground = true };
+                zoomWorker.Start();
                 return;
             }
 

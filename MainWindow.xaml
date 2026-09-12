@@ -236,6 +236,69 @@
                         VerticalAlignment="Center"/>
             </Grid>
         </DataTemplate>
+
+        <!-- ==================================================================== -->
+        <!-- POSTER CARD HOVER ZOOM                                               -->
+        <!-- The Xbox dashboard lift: the whole tile grows slightly under the      -->
+        <!-- pointer. Both poster grids name their card "CardBorder" and give it a -->
+        <!-- ScaleTransform, so one pair of storyboards drives both.               -->
+        <!--                                                                       -->
+        <!-- Scale is deliberately small. A card is 184x276 (240x360 extra large)  -->
+        <!-- with a 7px margin, so at 1.05 the growth is ~4.6px per side normally  -->
+        <!-- and ~9px vertically when extra large - i.e. it mostly grows into its  -->
+        <!-- own margin rather than over its neighbours. RenderTransform does not  -->
+        <!-- affect layout, so nothing reflows and the WrapPanel never rewraps.    -->
+        <!--                                                                       -->
+        <!-- Out is quicker than in: a slow shrink feels sluggish when sweeping     -->
+        <!-- across a shelf of cards. -->
+        <!-- ==================================================================== -->
+        <Storyboard x:Key="PosterCardZoomIn">
+            <DoubleAnimation Storyboard.TargetName="CardBorder"
+                             Storyboard.TargetProperty="RenderTransform.ScaleX"
+                             To="1.05" Duration="0:0:0.16">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="CardBorder"
+                             Storyboard.TargetProperty="RenderTransform.ScaleY"
+                             To="1.05" Duration="0:0:0.16">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <Storyboard x:Key="PosterCardZoomOut">
+            <DoubleAnimation Storyboard.TargetName="CardBorder"
+                             Storyboard.TargetProperty="RenderTransform.ScaleX"
+                             To="1.0" Duration="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="CardBorder"
+                             Storyboard.TargetProperty="RenderTransform.ScaleY"
+                             To="1.0" Duration="0:0:0.12">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <!-- A WrapPanel paints its children in order, so without this the card being
+             hovered is drawn underneath every card after it in the row and the zoom
+             looks clipped on its right and bottom edges. Lifting the container (the
+             ContentPresenter the panel actually lays out - the template's own Border
+             is too deep for Panel.ZIndex to reach) puts the growing card on top. -->
+        <Style x:Key="PosterCardContainerStyle" TargetType="ContentPresenter">
+            <Setter Property="Panel.ZIndex" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Panel.ZIndex" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -790,6 +853,10 @@
                                     </Style>
                                 </ItemsControl.Style>
 
+                                <ItemsControl.ItemContainerStyle>
+                                    <StaticResource ResourceKey="PosterCardContainerStyle"/>
+                                </ItemsControl.ItemContainerStyle>
+
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel Orientation="Horizontal"/>
@@ -803,10 +870,18 @@
                                                 BorderBrush="{StaticResource BrushBorderDark}" 
                                                 BorderThickness="1"
                                                 Width="184" Height="276" Margin="7"
+                                                RenderTransformOrigin="0.5,0.5"
                                                 Cursor="Hand" Focusable="True"
                                                 AutomationProperties.Name="{Binding Name}"
                                                 ContextMenu="{StaticResource GameItemContextMenu}"
                                                 ContextMenuOpening="OnCardContextMenuOpening">
+
+                                            <!-- Target of the hover zoom - see PosterCardZoomIn. Declared
+                                                 per card (not a shared resource) so each card animates on
+                                                 its own transform instance. -->
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                            </Border.RenderTransform>
 
                                             <!-- Cards are focusable so Tab reaches them: Enter opens Details
                                                  (same as click), Ctrl+Enter launches; the focus ring and the
@@ -1181,6 +1256,12 @@
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomOut}"/>
+                                                </Trigger.ExitActions>
                                             </Trigger>
                                             <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=CardBorder}" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
@@ -1214,6 +1295,10 @@
                                     </Style>
                                 </ItemsControl.Style>
 
+                                <ItemsControl.ItemContainerStyle>
+                                    <StaticResource ResourceKey="PosterCardContainerStyle"/>
+                                </ItemsControl.ItemContainerStyle>
+
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel Orientation="Horizontal"/>
@@ -1227,10 +1312,16 @@
                                                 BorderBrush="{StaticResource BrushBorderDark}"
                                                 BorderThickness="1"
                                                 Width="240" Height="360" Margin="7"
+                                                RenderTransformOrigin="0.5,0.5"
                                                 Cursor="Hand" Focusable="True"
                                                 AutomationProperties.Name="{Binding Name}"
                                                 ContextMenu="{StaticResource GameItemContextMenu}"
                                                 ContextMenuOpening="OnCardContextMenuOpening">
+
+                                            <!-- See the normal grid above. -->
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                            </Border.RenderTransform>
 
                                             <!-- Cards are focusable so Tab reaches them: Enter opens Details
                                                  (same as click), Ctrl+Enter launches; the focus ring and the
@@ -1605,6 +1696,12 @@
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomOut}"/>
+                                                </Trigger.ExitActions>
                                             </Trigger>
                                             <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=CardBorder}" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
