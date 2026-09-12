@@ -1163,6 +1163,49 @@ public partial class App
                 return;
             }
 
+            if (e.Args[i].Equals("--test-tray-tooltip", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_trayIcon == null) InitializeTrayIcon();
+
+                // Regression guard for the 1.4.0 bug: SessionStarted/SessionEnded are raised on
+                // the launcher's monitor thread, and touching TaskbarIcon.ToolTipText from there
+                // threw a cross-thread exception that UpdateTrayToolTip swallowed into a Verbose
+                // log - so the tooltip silently never left its default. Drive it from a
+                // background thread, the way the launcher does, and check the text really moved.
+                _trayIcon.ToolTipText = "sentinel-value-that-must-be-replaced";
+
+                Exception? escaped = null;
+                var worker = new System.Threading.Thread(() =>
+                {
+                    try { UpdateTrayToolTip(); } catch (Exception ex) { escaped = ex; }
+                });
+                worker.Start();
+
+                // The update is marshalled to this thread, so blocking on Join alone would
+                // deadlock: pump the dispatcher while waiting for the callback to land.
+                var deadline = DateTime.UtcNow.AddSeconds(10);
+                while (DateTime.UtcNow < deadline && _trayIcon.ToolTipText != DefaultTrayToolTip)
+                {
+                    Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Background);
+                    System.Threading.Thread.Sleep(25);
+                }
+                worker.Join(TimeSpan.FromSeconds(5));
+
+                if (escaped != null)
+                    throw new Exception($"UpdateTrayToolTip threw on a background thread: {escaped.Message}");
+
+                string actual = _trayIcon.ToolTipText;
+                if (actual != DefaultTrayToolTip)
+                    throw new Exception($"Tooltip was not updated from a background thread. Expected '{DefaultTrayToolTip}', got '{actual}'.");
+
+                // Also to the log: this app is a WinExe, so Console output is unreliable when the
+                // harness is driven from a script rather than a console.
+                LoggingService.Info("TrayTooltipTest", $"[TEST_TRAY_TOOLTIP_PASSED] background-thread update produced '{actual}'");
+                Console.WriteLine($"[TEST_TRAY_TOOLTIP_PASSED] background-thread update produced '{actual}'");
+                ExitApplication();
+                return;
+            }
+
             if (e.Args[i].Equals("--test-tray-menu", StringComparison.OrdinalIgnoreCase))
             {
                 if (_trayIcon == null) InitializeTrayIcon();
