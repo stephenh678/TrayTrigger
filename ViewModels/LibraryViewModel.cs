@@ -364,7 +364,6 @@ public class LibraryViewModel : ViewModelBase
             onChangeCategory: card => RequestQuickCategory?.Invoke(card),
             onChangeIcon: ChangeGameIcon,
             onChangeCover: ChangeGameCover,
-            onFetchExeName: FetchExeNameForGame,
             onViewDetails: OpenGameDetails,
             onEditSteamAppId: EditSteamAppId,
             onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
@@ -1132,84 +1131,6 @@ public class LibraryViewModel : ViewModelBase
         RebuildCategories();
         SaveLibrary();
         StatusMessage = $"Refreshed metadata for \"{card.Name}\"";
-    }
-
-    public void FetchExeNameForGame(GameCardViewModel card) => _ = FetchExeNameForGameAsync(card);
-
-    public async Task FetchExeNameForGameAsync(GameCardViewModel card)
-    {
-        if (card.IsSteamGame || string.IsNullOrWhiteSpace(card.Game.ExecutablePath))
-            return;
-
-        try
-        {
-            string folder = GameNameExtractor.FindMeaningfulFolderName(card.Game.ExecutablePath, card.Game.WorkingDirectory);
-
-            var res = await GameNameExtractor.ResolveGameMatchAsync(
-                card.Game.ExecutablePath,
-                folder,
-                preferExe: _settings.PreferExeForGameName,
-                searchOnline: _settings.SearchOfficialTitleOnline,
-                steamSearch: _steamSearchService,
-                minConfidence: _settings.OnlineMatchConfidenceThreshold);
-
-            bool updated = false;
-
-            if (!string.IsNullOrWhiteSpace(res.ResolvedTitle) && !res.ResolvedTitle.Equals(card.Name, StringComparison.Ordinal))
-            {
-                string oldName = card.Name;
-                card.Game.Name = res.ResolvedTitle;
-                updated = true;
-                LoggingService.Info("Library", $"Updated title from \"{oldName}\" to \"{res.ResolvedTitle}\" via online/exe metadata.");
-            }
-
-            if (!string.IsNullOrWhiteSpace(res.SteamAppId))
-            {
-                card.Game.SteamAppId = res.SteamAppId;
-                updated = true;
-
-                if (_settings.AutoCategorizeFromSteam)
-                {
-                    // This is an explicit, user-triggered refresh (unlike the passive background
-                    // enrichment pass), so force a fresh lookup/poster download - bypassing the
-                    // in-memory details cache and the "poster file already exists" check - and
-                    // apply whatever cover it finds even if one is already set. Without
-                    // forceRefresh, a game that fell back to a composited-banner poster earlier
-                    // would never get a chance to pick up better art later (e.g. after the user
-                    // adds a SteamGridDB API key).
-                    var details = await _steamMetadataService.GetAppDetailsAsync(res.SteamAppId, _getSteamGridDbApiKeyOrNull(), forceRefresh: true);
-                    if (details != null)
-                    {
-                        if (card.Game.Category == LibraryConstants.Uncategorized && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
-                        {
-                            card.Game.Category = details.PrimaryGenre;
-                        }
-                        if (!string.IsNullOrWhiteSpace(details.CoverImagePath))
-                        {
-                            card.Game.CoverImagePath = details.CoverImagePath;
-                        }
-                    }
-                }
-            }
-
-            if (updated)
-            {
-                card.RefreshProperties();
-                RebuildCategories();
-                SaveLibrary();
-                ApplySort();
-                StatusMessage = $"Updated \"{card.Name}\" with Steam metadata.";
-            }
-            else
-            {
-                StatusMessage = $"Game info is already up to date for \"{card.Name}\".";
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Error("LibraryViewModel", $"Error fetching exe/online name for '{card.Name}'", ex);
-            StatusMessage = $"Failed to update info for \"{card.Name}\".";
-        }
     }
 
     /// <summary>

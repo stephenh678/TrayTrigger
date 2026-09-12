@@ -20,7 +20,6 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onChangeCategory;
     private readonly Action<GameCardViewModel>? _onChangeIcon;
     private readonly Action<GameCardViewModel>? _onChangeCover;
-    private readonly Action<GameCardViewModel>? _onFetchExeName;
     private readonly Action<GameCardViewModel>? _onViewDetails;
     private readonly Action<GameCardViewModel>? _onEditSteamAppId;
     private readonly Action<GameCardViewModel>? _onRefreshMetadata;
@@ -54,7 +53,6 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onChangeCategory = null,
         Action<GameCardViewModel>? onChangeIcon = null,
         Action<GameCardViewModel>? onChangeCover = null,
-        Action<GameCardViewModel>? onFetchExeName = null,
         Action<GameCardViewModel>? onViewDetails = null,
         Action<GameCardViewModel>? onEditSteamAppId = null,
         Action<GameCardViewModel>? onRefreshMetadata = null,
@@ -94,7 +92,6 @@ public class GameCardViewModel : ViewModelBase
         _onChangeCategory = onChangeCategory;
         _onChangeIcon = onChangeIcon;
         _onChangeCover = onChangeCover;
-        _onFetchExeName = onFetchExeName;
         _onViewDetails = onViewDetails;
         _onEditSteamAppId = onEditSteamAppId;
         _onRefreshMetadata = onRefreshMetadata;
@@ -111,7 +108,6 @@ public class GameCardViewModel : ViewModelBase
         ChangeCategoryCommand = new RelayCommand(() => _onChangeCategory?.Invoke(this));
         ChangeIconCommand = new RelayCommand(() => _onChangeIcon?.Invoke(this));
         ChangeCoverCommand = new RelayCommand(() => _onChangeCover?.Invoke(this));
-        FetchExeNameCommand = new RelayCommand(() => _onFetchExeName?.Invoke(this));
         EditSteamAppIdCommand = new RelayCommand(() => _onEditSteamAppId?.Invoke(this));
         RefreshMetadataCommand = new RelayCommand(() => _onRefreshMetadata?.Invoke(this));
         ToggleFavoriteCommand = new RelayCommand(() =>
@@ -317,7 +313,6 @@ public class GameCardViewModel : ViewModelBase
     public ICommand RefreshMetadataCommand { get; }
     public ICommand RelocateCommand { get; }
     public ICommand RenameCommand { get; }
-    public ICommand FetchExeNameCommand { get; }
     public ICommand ChangeCategoryCommand { get; }
     public ICommand ChangeIconCommand { get; }
     public ICommand ChangeCoverCommand { get; }

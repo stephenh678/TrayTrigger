@@ -26,8 +26,10 @@
              the MainViewModel by MainWindow.OnCardContextMenuOpening; every item applies to the
              whole selection through LibraryViewModel's batch commands. -->
         <ContextMenu x:Key="GameBatchContextMenu">
-            <!-- Same items, order, check marks, and grouping as the single-game menu below,
-                 minus everything that only makes sense for one game. -->
+            <!-- Shared items keep the same order, check marks, and grouping as the single-game
+                 menu below, minus everything that only makes sense for one game. Performance
+                 Profile is the one addition: a single game reaches it through Edit Game
+                 Properties, and there is no batch equivalent of that dialog. -->
             <MenuItem Header="{Binding BatchFavoriteLabel}" IsCheckable="True" IsChecked="{Binding BatchAllFavorite, Mode=OneWay}" Command="{Binding BatchFavoriteCommand}"/>
             <MenuItem Header="{Binding BatchHideLabel}" IsCheckable="True" IsChecked="{Binding BatchAllHidden, Mode=OneWay}" Command="{Binding BatchHideCommand}"/>
             <Separator/>
@@ -101,18 +103,9 @@
             <!-- Quick Actions: the umbrella (Edit Game Properties) first, then the shortcuts into it. -->
             <MenuItem Header="Edit Game Properties..." Command="{Binding EditCommand}"/>
             <MenuItem Header="Rename..." Command="{Binding RenameCommand}"/>
-            <MenuItem Header="Fetch Official Name (Steam / Exe)" Command="{Binding FetchExeNameCommand}">
-                <MenuItem.Style>
-                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </MenuItem.Style>
-            </MenuItem>
+            <!-- No "Fetch Official Name" here: Game Details > Change match supersedes it. That
+                 renamed silently from a heuristic search with no confirmation and no undo; the
+                 picker shows the candidates and asks first. -->
             <MenuItem Header="Change Category..." Command="{Binding ChangeCategoryCommand}"/>
             <MenuItem Header="Change Icon..." Command="{Binding ChangeIconCommand}"/>
             <MenuItem Header="Change Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
