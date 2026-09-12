@@ -1545,14 +1545,88 @@ public partial class SystemTweaksService
         {
             foreach (var verb in new[] { "/setacvalueindex", "/setdcvalueindex" })
             {
-                if (!RunPowercfgChecked($"{verb} {schemeGuid} {subgroup} {setting} {val}"))
+                if (RunPowercfgChecked($"{verb} {schemeGuid} {subgroup} {setting} {val}"))
+                    continue;
+
+                // Rejected. These values are not universal - CPMINCORES is a percentage whose
+                // ceiling is below 100 on some processors, and on Dylan's machine every pass
+                // came back "not within the range of the target power setting" - so ask the
+                // platform what it will take before calling the tweak broken. Only on the
+                // failure path: the query is another powercfg process, and this runs while a
+                // game is being launched.
+                int? adjusted = ResolveAcceptableValue(schemeGuid, subgroup, setting, val);
+
+                if (adjusted == null)
                 {
-                    LoggingService.Warn("SystemTweaksService", $"powercfg {verb} {subgroup} {setting}={val} failed.");
-                    allOk = false;
+                    // Not a failure: the hardware does not expose this knob at all, so there is
+                    // nothing the user could do about it and nothing worth warning them about.
+                    LoggingService.Info("SystemTweaksService", $"powercfg {subgroup} {setting} is not available on this system; skipped.");
+                    continue;
                 }
+
+                if (adjusted != val && RunPowercfgChecked($"{verb} {schemeGuid} {subgroup} {setting} {adjusted}"))
+                {
+                    LoggingService.Info("SystemTweaksService", $"powercfg {verb} {subgroup} {setting}: {val} is outside this system's range; applied {adjusted} instead.");
+                    continue;
+                }
+
+                LoggingService.Warn("SystemTweaksService", $"powercfg {verb} {subgroup} {setting}={val} failed.");
+                allOk = false;
             }
         }
         return allOk;
+    }
+
+    [GeneratedRegex(@"Possible Setting Index:\s*(\d+)")]
+    private static partial Regex PossibleSettingIndexRegex();
+
+    /// <summary>
+    /// The value this system will actually accept for one power setting, or null when powercfg
+    /// does not describe the setting at all. "powercfg /query" reports a min/max/increment for a
+    /// range setting (CPMINCORES, a percentage) and a list of valid indexes for an enumerated one
+    /// (PERFBOOSTMODE, USB selective suspend); a range is clamped, an enumeration is all or
+    /// nothing since a neighbouring index means something unrelated.
+    /// </summary>
+    private static int? ResolveAcceptableValue(string schemeGuid, string subgroup, string setting, int desired) =>
+        ResolveAcceptableValue(RunPowercfg($"/query {schemeGuid} {subgroup} {setting}"), desired);
+
+    /// <summary>Parses what <see cref="ResolveAcceptableValue(string,string,string,int)"/> asked for.</summary>
+    internal static int? ResolveAcceptableValue(string output, int desired)
+    {
+        if (string.IsNullOrWhiteSpace(output)) return null;
+
+        var indexes = PossibleSettingIndexRegex().Matches(output)
+            .Select(m => int.TryParse(m.Groups[1].Value, out int i) ? i : -1)
+            .ToList();
+        if (indexes.Count > 0)
+        {
+            return indexes.Contains(desired) ? desired : null;
+        }
+
+        int? min = ParseHexSetting(output, "Minimum Possible Setting");
+        int? max = ParseHexSetting(output, "Maximum Possible Setting");
+        if (min == null || max == null || min > max) return null;
+
+        int clamped = Math.Clamp(desired, min.Value, max.Value);
+
+        // Land on a step the platform exposes rather than between two of them.
+        int increment = ParseHexSetting(output, "Possible Settings increment") ?? 1;
+        if (increment > 1)
+        {
+            clamped = min.Value + ((clamped - min.Value) / increment) * increment;
+        }
+
+        return clamped;
+    }
+
+    private static int? ParseHexSetting(string output, string label)
+    {
+        var match = Regex.Match(output, Regex.Escape(label) + @":\s*0x([0-9a-fA-F]+)");
+        return match.Success
+            && int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.HexNumber,
+                            System.Globalization.CultureInfo.InvariantCulture, out int value)
+            ? value
+            : null;
     }
 
     private static bool RunPowercfgChecked(string arguments)
