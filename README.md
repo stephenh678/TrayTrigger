@@ -38,6 +38,18 @@
   Windows 10/11 &nbsp;·&nbsp; Free &nbsp;·&nbsp; Open Source (MIT) &nbsp;·&nbsp; No account &nbsp;·&nbsp; No telemetry
 </p>
 
+<p align="center">
+  <img src="Assets/LauncherLogos/steam.png" width="44" alt="Steam" title="Steam">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/epic_games.png" width="44" alt="Epic Games" title="Epic Games">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/gog_galaxy.png" width="44" alt="GOG Galaxy" title="GOG Galaxy">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/ea_app.png" width="44" alt="EA app" title="EA app">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/ubisoft_connect.png" width="44" alt="Ubisoft Connect" title="Ubisoft Connect">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/xbox.png" width="44" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/local_games.png" width="44" alt="Local games" title="Any executable or shortcut">
+  <br>
+  <sub>Scans all six, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></sub>
+</p>
+
 ---
 
 <p align="center">
@@ -145,29 +157,14 @@ System-wide settings, separate from the per-game profiles. 21 documented Windows
 
 <!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Reset Defaults) -->
 
-| Tweak | Category | What it changes |
-|---|---|---|
-| Mouse Acceleration | Input & Display | Disables "Enhance pointer precision" so cursor movement is 1:1 with physical mouse movement |
-| Sticky / Filter / Toggle Keys shortcuts | Input & Display | Stops five Shift taps or a long Shift hold from popping an accessibility dialog over your game |
-| Optimizations for Windowed Games | Input & Display | Enables flip-model presentation for borderless/windowed DX10/11 games, same low input latency as exclusive fullscreen (Windows 11) |
-| Variable Refresh Rate for Windowed Games | Input & Display | Lets G-SYNC/FreeSync engage for borderless DX11 games, not just exclusive fullscreen (Windows 11) |
-| Auto HDR *(opt-in)* | Input & Display | Windows 11's Auto HDR for SDR-only DX11/12 games on an HDR display |
-| Hardware-Accelerated GPU Scheduling (HAGS) | Input & Display | Lets the GPU manage its own command queue instead of the CPU scheduling every batch |
-| Disable Fullscreen Optimizations *(opt-in)* | Input & Display | Restores true exclusive fullscreen instead of Windows' managed borderless shim. Helps some old DX9/11 engines, hurts most modern ones |
-| Disable Multiplane Overlay *(opt-in)* | Input & Display | NVIDIA's documented workaround for stutter/flicker/black screens in borderless games |
-| Windows Game Mode | CPU & Scheduling | Holds Windows Update/driver installs during play and prioritizes game threads |
-| System Timer Resolution | CPU & Scheduling | Restores system-wide high-precision timer behavior for engines that don't request it themselves |
-| Foreground Priority Boost *(opt-in)* | CPU & Scheduling | The documented `Win32PrioritySeparation` "Programs" scheduling preference: the foreground game keeps its core over background apps |
-| Windows Visual Effects *(opt-in)* | CPU & Scheduling | Turns off minimize animations and drop shadows to reduce Desktop Window Manager compositing load |
-| "Ultimate Plan – TrayTrigger" Power Plan *(opt-in)* | CPU & Scheduling | Pins the CPU at 100% min/max state and disables PCIe/USB power-saving, permanently rather than only during a session |
-| Disable MMCSS Network Throttling | Network & Background | Lifts the packet-rate cap Windows applies to non-multimedia traffic while audio/video is active |
-| Disable Nagle's Algorithm *(opt-in)* | Network & Background | Sends small TCP packets immediately instead of batching. Situational; most games use UDP already |
-| Disable Delivery Optimization | Network & Background | Stops Windows silently uploading updates to other PCs on your network or the internet |
-| Exclude Drivers from Windows Update *(opt-in)* | Network & Background | Stops Windows Update replacing your pinned GPU/chipset/audio drivers |
-| Disable Game Bar Captures | Network & Background | Stops the hardware-encoder background recording buffer Xbox Game Bar keeps running |
-| Disable Xbox Game Bar Overlay | Network & Background | Stops the Game Bar overlay and its background processes from loading with your game |
-| Disable Diagnostic Telemetry Sweeps | Network & Background | Lowers the Windows diagnostic data policy so background scan tasks (e.g. CompatTelRunner) run less often |
-| Core Isolation / Memory Integrity *(status only)* | Security & Advanced | Shows whether HVCI is running (documented CPU cost in some games) and links to Windows Security. Never counted as an "optimization" |
+| Category | Tweaks |
+|---|---|
+| **Input & Display** | [Mouse Acceleration](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Mouse-Acceleration) · [Sticky / Filter / Toggle Keys shortcuts](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Sticky,-Filter,-and-Toggle-Keys-Shortcuts) · [Optimizations for Windowed Games](https://github.com/stephenh678/TrayTrigger/wiki/Optimizations-for-Windowed-Games) · [Variable Refresh Rate for Windowed Games](https://github.com/stephenh678/TrayTrigger/wiki/Variable-Refresh-Rate-for-Windowed-Games) · [Auto HDR](https://github.com/stephenh678/TrayTrigger/wiki/Auto-HDR) *(opt-in)* · [Hardware-Accelerated GPU Scheduling](https://github.com/stephenh678/TrayTrigger/wiki/Hardware-Accelerated-GPU-Scheduling) · [Disable Fullscreen Optimizations](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Fullscreen-Optimization-Shims) *(opt-in)* · [Disable Multiplane Overlay](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Multiplane-Overlay-(MPO)) *(opt-in)* |
+| **CPU & Scheduling** | [Windows Game Mode](https://github.com/stephenh678/TrayTrigger/wiki/Windows-Game-Mode) · [System Timer Resolution](https://github.com/stephenh678/TrayTrigger/wiki/System-Timer-Resolution) · [Foreground Priority Boost](https://github.com/stephenh678/TrayTrigger/wiki/Foreground-Priority-Boost) *(opt-in)* · [Windows Visual Effects](https://github.com/stephenh678/TrayTrigger/wiki/Windows-Visual-Effects-(Performance-Mode)) *(opt-in)* · ["Ultimate Plan" Power Plan](https://github.com/stephenh678/TrayTrigger/wiki/Ultimate-Plan-TrayTrigger-Power-Plan-(always-on)) *(opt-in)* |
+| **Network & Background** | [Disable MMCSS Network Throttling](https://github.com/stephenh678/TrayTrigger/wiki/Disable-MMCSS-Network-Throttling) · [Disable Nagle's Algorithm](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Nagle's-Algorithm) *(opt-in)* · [Disable Delivery Optimization](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Delivery-Optimization) · [Exclude Drivers from Windows Update](https://github.com/stephenh678/TrayTrigger/wiki/Exclude-Drivers-from-Windows-Update) *(opt-in)* · [Disable Game Bar Captures](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Game-Bar-Captures-and-Background-Recording) · [Disable Xbox Game Bar Overlay](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Xbox-Game-Bar-Overlay) · [Disable Diagnostic Telemetry Sweeps](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Diagnostic-Telemetry-Sweeps) |
+| **Security & Advanced** | [Core Isolation / Memory Integrity](https://github.com/stephenh678/TrayTrigger/wiki/Core-Isolation-Memory-Integrity-(HVCI)) *(status only: shown, linked to Windows Security, never counted as an optimization)* |
+
+Each link goes to the wiki page with what the tweak changes, the exact registry or API behind it, the trade-off, and how it's reverted. Start with [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work).
 
 **Apply Performance Preset** turns on every recommended tweak in one pass with at most one UAC prompt. **Reset Defaults** reverts only what TrayTrigger changed. An optional **System Restore point** is created before either, if enabled in Settings (on by default).
 
@@ -304,6 +301,19 @@ Free code signing is provided by [SignPath.io](https://signpath.io), certificate
 - Approver (approves each signing request): [@stephenh678](https://github.com/stephenh678)
 
 **Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), RAWG (game info for non-Steam titles, only if you enter your own API key), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
+
+## Star History
+
+If TrayTrigger saved you a click, an alt-tab, or a settings hunt, a star helps other people find it.
+
+<p align="center">
+  <a href="https://star-history.com/#stephenh678/TrayTrigger&Date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=stephenh678/TrayTrigger&type=Date&theme=dark">
+      <img src="https://api.star-history.com/svg?repos=stephenh678/TrayTrigger&type=Date" alt="Star history chart" width="600">
+    </picture>
+  </a>
+</p>
 
 ## License
 
