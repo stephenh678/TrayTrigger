@@ -196,14 +196,47 @@ jobs:
             $compareLine = ""
           }
 
-          $commitLines = git log $range --no-merges --pretty=format:"- %s"
+          # Drop housekeeping commits that say nothing to a user reading the release page.
+          $noise = '^- (Release \d|Bump version|Open (the )?\d|Start \d.*line|Merge )'
+          $commitLines = @(git log $range --no-merges --pretty=format:"- %s" | Where-Object { $_ -notmatch $noise })
           if (-not $commitLines) {
             $commits = "- No notable changes."
           } else {
             $commits = ($commitLines -join "`n")
           }
 
-          @("## What's Changed", $commits, "", $compareLine) -join "`n" | Out-File -FilePath release_notes.md -Encoding utf8
+          # Hand-written highlights come from CHANGELOG.md. A stable release uses its own
+          # section; a pre-release uses the section of the stable version it leads to
+          # (1.4.2-beta.3 -> "## 1.4.2"), if that section has been written yet.
+          $baseVersion = ($env:VERSION -split '-')[0]
+          $highlights = ""
+          if (Test-Path CHANGELOG.md) {
+            $changelog = Get-Content CHANGELOG.md -Raw -Encoding UTF8
+            $m = [regex]::Match($changelog, "(?ms)^## $([regex]::Escape($baseVersion))\s*$\r?\n(.*?)(?=^## |\z)")
+            if ($m.Success) { $highlights = $m.Groups[1].Value.Trim() }
+          }
+
+          $sections = @()
+          if ($highlights) {
+            $sections += "## Highlights"
+            $sections += $highlights
+            $sections += ""
+            $sections += "<details><summary>All changes</summary>"
+            $sections += ""
+            $sections += $commits
+            $sections += ""
+            $sections += "</details>"
+          } else {
+            $sections += "## What's Changed"
+            $sections += $commits
+          }
+          $sections += ""
+          $sections += "**Install:** download ``TrayTrigger-v$env:VERSION-Setup.exe`` below (or the portable ``.zip``). Both are self-contained; no .NET install needed. Verify against ``SHA256SUMS.txt``."
+          $sections += ""
+          $sections += $compareLine
+
+          ($sections -join "`n") | Out-File -FilePath release_notes.md -Encoding utf8
+          Get-Content release_notes.md
 
       - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
