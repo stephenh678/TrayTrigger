@@ -63,6 +63,24 @@ public static class LoggingService
         }
     }
 
+    /// <summary>
+    /// Test seam. The log path is otherwise fixed at %LocalAppData%\TrayTrigger\debug.log, so a
+    /// test run wrote straight into the real user's log - the very file testers are asked to
+    /// send - at roughly 170 lines a run, and could trip rotation and archive their history away.
+    /// TrayTrigger.Tests calls this from a module initializer, before any test touches a service
+    /// that logs.
+    /// </summary>
+    internal static void UseLogFileForTests(string path)
+    {
+        lock (LockObj)
+        {
+            CloseWriter();
+            _logFilePath = path;
+            _bannerWrittenThisProcess = false;
+            _logFileCreatedThisProcess = false;
+        }
+    }
+
     public static bool IsVerboseEnabled
     {
         get => _isVerboseEnabled;
