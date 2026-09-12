@@ -43,12 +43,20 @@ public sealed class FileDialogCloak : IDisposable
     private const int DWMWA_CLOAK = 13;
 
     private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+    private delegate bool EnumChildProc(IntPtr hwnd, IntPtr lParam);
+
+    /// <summary>
+    /// Window classes that mean "the shell view inside the dialog now exists". The file picker
+    /// hosts its item view in a <c>DirectUIHWND</c>; the folder picker's tree is a
+    /// <c>SysTreeView32</c>; both can sit under a <c>SHELLDLL_DefView</c> container.
+    /// </summary>
+    private static readonly string[] ShellViewClasses = ["DirectUIHWND", "SHELLDLL_DefView", "SysTreeView32"];
 
     [DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string? className, string? windowName);
+    [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, EnumChildProc callback, IntPtr lParam);
     [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hWnd);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
     [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
@@ -62,9 +70,22 @@ public sealed class FileDialogCloak : IDisposable
     private int _revealed;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
+    /// <summary>Test hook: why the most recent dialog was uncloaked ("...painted, revealed at N ms"
+    /// versus "fail-safe at N ms"). The --test-dialog-cloak harness asserts on this to prove the
+    /// shell-view detection actually fires for each dialog type rather than silently degrading to
+    /// the fail-safe, which is how the folder picker regressed unnoticed. Not read in normal use.</summary>
+    internal static string? LastRevealReason { get; private set; }
+
+    /// <summary>Test hook: the dialog window the most recent <see cref="Show"/> cloaked, so a
+    /// harness can close it without a human clicking Cancel. <see cref="IntPtr.Zero"/> until one
+    /// is seen.</summary>
+    internal static IntPtr LastDialogHandle { get; private set; }
+
     /// <summary>Runs <c>dialog.ShowDialog()</c> with the dialog cloaked until its view has painted.</summary>
     public static bool? Show(CommonDialog dialog)
     {
+        LastRevealReason = null;
+        LastDialogHandle = IntPtr.Zero;
         using var guard = new FileDialogCloak();
         return dialog.ShowDialog();
     }
@@ -102,6 +123,7 @@ public sealed class FileDialogCloak : IDisposable
             _dialog = IntPtr.Zero;
             return;
         }
+        LastDialogHandle = hwnd;
         LoggingService.Verbose("FileDialogCloak", $"File dialog cloaked at creation, {_clock.ElapsedMilliseconds} ms.");
 
         // Both clocks start when the dialog is actually shown, since it sits hidden for a while
@@ -109,21 +131,59 @@ public sealed class FileDialogCloak : IDisposable
         long createdAt = _clock.ElapsedMilliseconds;
         long shownAt = -1;
         long viewSeenAt = -1;
+        string? viewClass = null;
         _reveal = new Timer(_ =>
         {
             long now = _clock.ElapsedMilliseconds;
             if (shownAt < 0 && IsWindowVisible(hwnd)) shownAt = now;
-            if (shownAt >= 0 && viewSeenAt < 0 && FindWindowEx(hwnd, IntPtr.Zero, "DirectUIHWND", null) != IntPtr.Zero)
+            if (shownAt >= 0 && viewSeenAt < 0)
             {
-                viewSeenAt = now;
+                viewClass = FindShellView(hwnd);
+                if (viewClass != null) viewSeenAt = now;
             }
             bool settled = viewSeenAt >= 0 && now - viewSeenAt >= ViewSettleMs;
             bool failSafe = (shownAt >= 0 && now - shownAt >= FailSafeMs) || now - createdAt >= FailSafeMs * 4;
             if (settled || failSafe)
             {
-                Reveal(settled ? $"view painted, revealed at {now} ms" : $"fail-safe at {now} ms");
+                Reveal(settled ? $"{viewClass} painted, revealed at {now} ms" : $"fail-safe at {now} ms");
             }
         }, null, PollMs, PollMs);
+    }
+
+    /// <summary>
+    /// Locates the dialog's shell view anywhere beneath it, returning its class name, or null
+    /// while it does not exist yet.
+    ///
+    /// This walks the whole descendant tree (<see cref="EnumChildWindows"/> recurses; FindWindowEx
+    /// does not). The previous direct-child lookup for <c>DirectUIHWND</c> never matched, because
+    /// the view sits several levels below the dialog frame - so *both* pickers stayed cloaked
+    /// until the <see cref="FailSafeMs"/> timer fired instead of revealing the moment they
+    /// painted. Measured with --test-dialog-cloak: folder 739 ms -> 331 ms, file 569 ms -> 256 ms.
+    /// Nothing caught this earlier because a fail-safe reveal looks the same on screen as a real
+    /// one, only later - hence a harness that asserts on the reason rather than the pixels.
+    /// </summary>
+    private static string? FindShellView(IntPtr dialog)
+    {
+        string? found = null;
+        var cls = new StringBuilder(64);
+
+        // The delegate is only used for the duration of this synchronous call, so the call frame
+        // keeps it alive - no field needed, unlike the WinEvent hook's long-lived callback.
+        EnumChildWindows(dialog, (child, _) =>
+        {
+            cls.Clear();
+            GetClassName(child, cls, cls.Capacity);
+            string name = cls.ToString();
+            foreach (string candidate in ShellViewClasses)
+            {
+                if (!name.Equals(candidate, StringComparison.Ordinal)) continue;
+                found = name;
+                return false; // stop enumerating
+            }
+            return true;
+        }, IntPtr.Zero);
+
+        return found;
     }
 
     private void Reveal(string why)
@@ -135,6 +195,7 @@ public sealed class FileDialogCloak : IDisposable
             int cloak = 0;
             DwmSetWindowAttribute(_dialog, DWMWA_CLOAK, in cloak, sizeof(int));
         }
+        LastRevealReason = why;
         LoggingService.Verbose("FileDialogCloak", $"File dialog {why}.");
     }
 

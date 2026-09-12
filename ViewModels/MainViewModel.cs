@@ -226,7 +226,7 @@ public class MainViewModel : ViewModelBase
 
         // The tweaks service records what it found on the machine before applying a tweak (prior
         // power plan, prior visual-effects state) into settings so "Revert to Default" is exact.
-        _systemTweaksService = new SystemTweaksService(() => _settings, () => _storageService.SaveSettings(_settings));
+        _systemTweaksService = new SystemTweaksService(() => _settings, () => _storageService.SaveSettings(_settings, source: "SystemTweaksService.TweakApplied"));
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
 
         // Navigation Commands
