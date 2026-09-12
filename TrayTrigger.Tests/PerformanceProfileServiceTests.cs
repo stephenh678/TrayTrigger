@@ -40,8 +40,13 @@ public class PerformanceProfileServiceTests : IDisposable
         public bool WriteHklmString(string subKey, string valueName, string value) { Hklm[subKey + "|" + valueName] = value; Log.Add($"hklm:{valueName}={value}"); return true; }
         public bool DeleteHklmValue(string subKey, string valueName) { Hklm.Remove(subKey + "|" + valueName); Log.Add($"hklm:{valueName}=<deleted>"); return true; }
 
-        public List<HdrControlService.DisplayColorState> GetHdrDisplayStates() => new();
-        public bool SetDisplayHdrEnabled(HdrControlService.LUID adapterId, uint targetId, bool enable) => true;
+        public readonly List<HdrControlService.DisplayColorState> HdrDisplays = new();
+        public List<HdrControlService.DisplayColorState> GetHdrDisplayStates() => new(HdrDisplays);
+        public bool SetDisplayHdrEnabled(HdrControlService.LUID adapterId, uint targetId, bool enable)
+        {
+            Log.Add($"hdr:{targetId}={(enable ? "on" : "off")}");
+            return true;
+        }
 
         public string? GetGpuPreference(string exePath) => GpuPrefs.GetValueOrDefault(exePath);
         public void SetGpuPreference(string exePath, string value) { GpuPrefs[exePath] = value; Log.Add($"gpu:{Path.GetFileName(exePath)}={value}"); }
@@ -293,6 +298,55 @@ public class PerformanceProfileServiceTests : IDisposable
         _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
         _service.EndGameSession("a");
         Assert.Equal(0, _backend.Toasts);
+    }
+
+    private static HdrControlService.DisplayColorState Display(uint targetId, bool enabled, bool wcg = false) =>
+        new(new HdrControlService.LUID { LowPart = 1, HighPart = 0 }, targetId, Supported: true, Enabled: enabled, IsWcg: wcg);
+
+    /// <summary>
+    /// Writing the HDR bit makes Windows re-negotiate the display mode, which blanks most monitors
+    /// for a second or two. A display that was already in HDR was never changed, so re-asserting it
+    /// on exit bought nothing and cost a blank screen after every single game.
+    /// </summary>
+    [Fact]
+    public void Hdr_DisplayAlreadyOn_IsNeverTouched()
+    {
+        _settings.OptimizedProfileTweaks.HdrEnabled = true;
+        _backend.HdrDisplays.Add(Display(4355, enabled: true));
+
+        _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
+        _service.EndGameSession("a");
+
+        Assert.DoesNotContain(_backend.Log, l => l.StartsWith("hdr:"));
+    }
+
+    [Fact]
+    public void Hdr_DisplayOff_IsEnabledThenPutBack()
+    {
+        _settings.OptimizedProfileTweaks.HdrEnabled = true;
+        _backend.HdrDisplays.Add(Display(4355, enabled: false));
+
+        _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
+        Assert.Contains("hdr:4355=on", _backend.Log);
+
+        _service.EndGameSession("a");
+        Assert.Contains("hdr:4355=off", _backend.Log);
+    }
+
+    /// <summary>
+    /// A mixed setup must not be all-or-nothing: the off display is driven, the on one is left be.
+    /// </summary>
+    [Fact]
+    public void Hdr_MixedDisplays_OnlyTheOffOneIsDriven()
+    {
+        _settings.OptimizedProfileTweaks.HdrEnabled = true;
+        _backend.HdrDisplays.Add(Display(4353, enabled: true));
+        _backend.HdrDisplays.Add(Display(4355, enabled: false));
+
+        _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
+        _service.EndGameSession("a");
+
+        Assert.Equal(new[] { "hdr:4355=on", "hdr:4355=off" }, _backend.Log.Where(l => l.StartsWith("hdr:")).ToArray());
     }
 
     [Fact]
