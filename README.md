@@ -124,7 +124,7 @@ taskkill /im Discord.exe /f
 - **Default scripts** in Settings run for every game that has no script of its own, with a per-game opt-out.
 - **New script...** creates a blank template with every argument already read for you and opens it in your editor.
 
-Scripts are off by default. Nothing runs until you enable them and choose one. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract, and [`docs/roadmap.md`](docs/roadmap.md) for the planned community script catalog.
+Scripts are off by default. Nothing runs until you enable them and choose one. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract. Community-contributed scripts live in [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts), reviewed before listing.
 
 ---
 

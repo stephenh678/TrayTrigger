@@ -13,7 +13,7 @@ without review is not acceptable, and upload needs a backend with auth, abuse ha
 takedowns. A GitHub repository with pull-request review gives provenance, review and hosting for
 free. **Review is the security control; hashes only prove the file is what the reviewer approved.**
 
-**Catalog repository** (separate from the app, e.g. `stephenh678/TrayTrigger-Scripts`):
+**Catalog repository**: [stephenh678/TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts), scaffolded 2026-09-12 with the five bundled examples, `script.json` manifests, a generated `catalog.json` with SHA-256 per file, PR validation, and the review checklist in its CONTRIBUTING. Remaining below is the design it implements:
 
 - One folder per script: the script file(s) plus a `script.json` with `name`, `description`,
   `author`, `phase` (`prelaunch`, `postexit`, `both`), `needsAdmin` (bool, must be justified in
