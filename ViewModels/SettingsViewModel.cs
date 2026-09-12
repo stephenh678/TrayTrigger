@@ -210,6 +210,15 @@ public class SettingsViewModel : ViewModelBase
     public ICommand RemoveScanLocationCommand { get; }
     public ICommand RefreshSteamScanLocationsCommand { get; }
     public ICommand RemoveIgnoredGamePathCommand { get; }
+    public ICommand BrowseDefaultPreLaunchScriptCommand { get; }
+    public ICommand BrowseDefaultPostExitScriptCommand { get; }
+    public ICommand TestDefaultPreLaunchScriptCommand { get; }
+    public ICommand TestDefaultPostExitScriptCommand { get; }
+    public ICommand NewDefaultPreLaunchScriptCommand { get; }
+    public ICommand NewDefaultPostExitScriptCommand { get; }
+    public ICommand EditDefaultPreLaunchScriptCommand { get; }
+    public ICommand EditDefaultPostExitScriptCommand { get; }
+    public ICommand OpenScriptsFolderCommand { get; }
 
     /// <summary>Steam's own library folders, auto-detected and kept in sync by
     /// <see cref="ScanLocationService"/>. Shown under the Steam integration toggle (not in the
@@ -287,6 +296,15 @@ public class SettingsViewModel : ViewModelBase
             StatusMessage = "Cached game info cleared. Each game fetches fresh details the next time you open it.";
         });
         OpenScanForGamesCommand = new RelayCommand(() => _onRequestOpenScanForGames?.Invoke());
+        BrowseDefaultPreLaunchScriptCommand = new RelayCommand(() => BrowseDefaultScript(isPreLaunch: true));
+        BrowseDefaultPostExitScriptCommand = new RelayCommand(() => BrowseDefaultScript(isPreLaunch: false));
+        TestDefaultPreLaunchScriptCommand = new AsyncRelayCommand(() => TestDefaultScriptAsync(isPreLaunch: true), () => !IsTestingDefaultScript && HasDefaultPreLaunchScript);
+        TestDefaultPostExitScriptCommand = new AsyncRelayCommand(() => TestDefaultScriptAsync(isPreLaunch: false), () => !IsTestingDefaultScript && HasDefaultPostExitScript);
+        NewDefaultPreLaunchScriptCommand = new RelayCommand(() => NewDefaultScript(isPreLaunch: true));
+        NewDefaultPostExitScriptCommand = new RelayCommand(() => NewDefaultScript(isPreLaunch: false));
+        EditDefaultPreLaunchScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(DefaultPreLaunchScriptPath), () => HasDefaultPreLaunchScript);
+        EditDefaultPostExitScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(DefaultPostExitScriptPath), () => HasDefaultPostExitScript);
+        OpenScriptsFolderCommand = new RelayCommand(() => ScriptLibrary.OpenFolder());
         AddScanLocationCommand = new RelayCommand(AddScanLocation);
         RemoveScanLocationCommand = new RelayCommand(param =>
         {
@@ -879,6 +897,8 @@ public class SettingsViewModel : ViewModelBase
             if (_settings.SteamGridDbApiKey != value)
             {
                 _settings.SteamGridDbApiKey = value ?? string.Empty;
+                // See the note in RawgApiKey: an explicit edit wins over a preserved ciphertext.
+                _storageService.NoteApiKeyEdited(StorageService.ApiKeyField.SteamGridDb);
                 OnPropertyChanged();
                 AutoSaveSettings();
             }
@@ -911,6 +931,9 @@ public class SettingsViewModel : ViewModelBase
             {
                 bool wasUsable = RawgApiKeyOrNull != null;
                 _settings.RawgApiKey = value ?? string.Empty;
+                // The user owns the field now: if an undecryptable value was being preserved for
+                // it, this replaces it - including a deliberate clear.
+                _storageService.NoteApiKeyEdited(StorageService.ApiKeyField.Rawg);
                 OnPropertyChanged();
                 AutoSaveSettings();
                 if (!wasUsable && RawgApiKeyOrNull != null)
@@ -1156,7 +1179,318 @@ public class SettingsViewModel : ViewModelBase
                 _settings.EnableGameScripts = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
+                // First time on: put the blank templates, examples and README where Browse will land.
+                if (value) _ = Task.Run(() => ScriptLibrary.EnsureInstalled());
             }
+        }
+    }
+
+    private ScriptLibraryService? _scriptLibrary;
+    /// <summary>The scripts folder helper, rooted at the same %AppData% folder as games.json.</summary>
+    public ScriptLibraryService ScriptLibrary => _scriptLibrary ??= new ScriptLibraryService(_storageService.BaseDirectory);
+
+    // --- Default scripts (Settings > Launch & Performance) ---
+    // Always read through _settings.ScriptDefaults: "Reset to defaults" swaps that object.
+
+    /// <summary>"Run the default scripts": pauses the defaults without clearing anything.</summary>
+    public bool DefaultScriptsEnabled
+    {
+        get => _settings.ScriptDefaults.Enabled;
+        set
+        {
+            if (_settings.ScriptDefaults.Enabled != value)
+            {
+                _settings.ScriptDefaults.Enabled = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public string DefaultPreLaunchScriptPath
+    {
+        get => _settings.ScriptDefaults.PreLaunchScriptPath;
+        set
+        {
+            string v = value ?? string.Empty;
+            if (_settings.ScriptDefaults.PreLaunchScriptPath != v)
+            {
+                _settings.ScriptDefaults.PreLaunchScriptPath = v;
+                OnPropertyChanged();
+                NotifyDefaultScriptsChanged();
+                AutoSaveSettings();
+                // Typing, Browse and "New script..." all land here, so the post-exit box follows along.
+                if (DefaultUseSameScriptForBoth) DefaultPostExitScriptPath = v;
+            }
+        }
+    }
+
+    public string DefaultPostExitScriptPath
+    {
+        get => _settings.ScriptDefaults.PostExitScriptPath;
+        set
+        {
+            string v = value ?? string.Empty;
+            if (_settings.ScriptDefaults.PostExitScriptPath != v)
+            {
+                _settings.ScriptDefaults.PostExitScriptPath = v;
+                OnPropertyChanged();
+                NotifyDefaultScriptsChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool HasDefaultPreLaunchScript => _settings.ScriptDefaults.HasPreLaunchScript;
+    public bool HasDefaultPostExitScript => _settings.ScriptDefaults.HasPostExitScript;
+    public bool HasAnyDefaultScript => _settings.ScriptDefaults.HasAny;
+
+    private bool? _defaultUseSameScriptForBoth;
+
+    /// <summary>
+    /// Edit Game's "use the same script for pre-launch and post-exit", for the defaults: while on,
+    /// the post-exit path mirrors the pre-launch one and its box is read-only. Nothing is stored -
+    /// it is simply on when both defaults already point at the same file.
+    /// </summary>
+    public bool DefaultUseSameScriptForBoth
+    {
+        get => _defaultUseSameScriptForBoth ??=
+            !string.IsNullOrWhiteSpace(DefaultPreLaunchScriptPath)
+            && string.Equals(DefaultPreLaunchScriptPath.Trim(), DefaultPostExitScriptPath?.Trim(), StringComparison.OrdinalIgnoreCase);
+        set
+        {
+            if (DefaultUseSameScriptForBoth == value) return;
+            _defaultUseSameScriptForBoth = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanEditDefaultPostExitScript));
+            if (value) DefaultPostExitScriptPath = DefaultPreLaunchScriptPath;
+        }
+    }
+
+    /// <summary>The default post-exit box is read-only while it mirrors the pre-launch one.</summary>
+    public bool CanEditDefaultPostExitScript => !DefaultUseSameScriptForBoth;
+
+    /// <summary>A typed default path that won't run as-is (wrong type or missing file), or null.</summary>
+    public string? DefaultScriptsProblem
+    {
+        get
+        {
+            return Describe("pre-launch", _settings.ScriptDefaults.PreLaunchScriptPath)
+                ?? Describe("post-exit", _settings.ScriptDefaults.PostExitScriptPath);
+
+            static string? Describe(string which, string path)
+            {
+                string p = path.Trim().Trim('"');
+                if (p.Length == 0) return null;
+                if (!GameScriptService.IsSupportedScript(p))
+                    return $"The default {which} script has an unsupported file type and will be skipped. Supported: {string.Join(", ", GameScriptService.SupportedExtensions)}.";
+                if (!File.Exists(p))
+                    return $"The default {which} script file was not found and will be skipped: {p}";
+                return null;
+            }
+        }
+    }
+    public bool HasDefaultScriptsProblem => DefaultScriptsProblem != null;
+
+    public bool DefaultWaitForPreLaunchScript
+    {
+        get => _settings.ScriptDefaults.WaitForPreLaunchScript;
+        set
+        {
+            if (_settings.ScriptDefaults.WaitForPreLaunchScript != value)
+            {
+                _settings.ScriptDefaults.WaitForPreLaunchScript = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>Text-bound; only a value inside the supported range is stored.</summary>
+    public string DefaultPreLaunchScriptTimeoutSeconds
+    {
+        get => _settings.ScriptDefaults.PreLaunchScriptTimeoutSeconds.ToString();
+        set
+        {
+            if (int.TryParse(value?.Trim(), out int seconds)
+                && seconds >= GameScriptService.MinPreLaunchTimeoutSeconds
+                && seconds <= GameScriptService.MaxPreLaunchTimeoutSeconds
+                && _settings.ScriptDefaults.PreLaunchScriptTimeoutSeconds != seconds)
+            {
+                _settings.ScriptDefaults.PreLaunchScriptTimeoutSeconds = seconds;
+                AutoSaveSettings();
+            }
+            OnPropertyChanged();
+        }
+    }
+
+    public string DefaultPreLaunchTimeoutHint => $"Seconds to wait ({GameScriptService.MinPreLaunchTimeoutSeconds}-{GameScriptService.MaxPreLaunchTimeoutSeconds}); default {GameScriptService.DefaultPreLaunchWaitTimeout.TotalSeconds:0}.";
+
+    public bool DefaultAbortLaunchOnScriptFailure
+    {
+        get => _settings.ScriptDefaults.AbortLaunchOnScriptFailure;
+        set
+        {
+            if (_settings.ScriptDefaults.AbortLaunchOnScriptFailure != value)
+            {
+                _settings.ScriptDefaults.AbortLaunchOnScriptFailure = value;
+                OnPropertyChanged();
+                if (value) DefaultWaitForPreLaunchScript = true;
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool DefaultRunScriptsHidden
+    {
+        get => _settings.ScriptDefaults.RunScriptsHidden;
+        set
+        {
+            if (_settings.ScriptDefaults.RunScriptsHidden != value)
+            {
+                _settings.ScriptDefaults.RunScriptsHidden = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool DefaultRunScriptsAsAdmin
+    {
+        get => _settings.ScriptDefaults.RunScriptsAsAdmin;
+        set
+        {
+            if (_settings.ScriptDefaults.RunScriptsAsAdmin != value)
+            {
+                _settings.ScriptDefaults.RunScriptsAsAdmin = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    private bool _isTestingDefaultScript;
+    public bool IsTestingDefaultScript
+    {
+        get => _isTestingDefaultScript;
+        private set { _isTestingDefaultScript = value; OnPropertyChanged(); }
+    }
+
+    private void NotifyDefaultScriptsChanged()
+    {
+        OnPropertyChanged(nameof(DefaultScriptsEnabled));
+        OnPropertyChanged(nameof(DefaultPreLaunchScriptPath));
+        OnPropertyChanged(nameof(DefaultPostExitScriptPath));
+        OnPropertyChanged(nameof(HasDefaultPreLaunchScript));
+        OnPropertyChanged(nameof(HasDefaultPostExitScript));
+        OnPropertyChanged(nameof(HasAnyDefaultScript));
+        OnPropertyChanged(nameof(DefaultScriptsProblem));
+        OnPropertyChanged(nameof(HasDefaultScriptsProblem));
+        OnPropertyChanged(nameof(DefaultWaitForPreLaunchScript));
+        OnPropertyChanged(nameof(DefaultPreLaunchScriptTimeoutSeconds));
+        OnPropertyChanged(nameof(DefaultAbortLaunchOnScriptFailure));
+        OnPropertyChanged(nameof(DefaultRunScriptsHidden));
+        OnPropertyChanged(nameof(DefaultRunScriptsAsAdmin));
+        OnPropertyChanged(nameof(DefaultUseSameScriptForBoth));
+        OnPropertyChanged(nameof(CanEditDefaultPostExitScript));
+    }
+
+    /// <summary>
+    /// "New script...": a save dialog in the scripts folder, then the blank template matching the
+    /// chosen extension is written there, the path box filled, and the file opened for editing.
+    /// An existing file is never overwritten - it is simply used as-is. Mirrors Edit Game.
+    /// </summary>
+    private void NewDefaultScript(bool isPreLaunch)
+    {
+        string phase = isPreLaunch ? "PreLaunch" : "PostExit";
+        var dialog = new SaveFileDialog
+        {
+            Title = isPreLaunch ? "New Default Pre-Launch Script" : "New Default Post-Exit Script",
+            Filter = "Batch script (*.bat)|*.bat|PowerShell script (*.ps1)|*.ps1",
+            DefaultExt = ".bat",
+            AddExtension = true,
+            OverwritePrompt = false,
+            FileName = $"Default-{phase}.bat",
+            InitialDirectory = InitialDefaultScriptDirectory(string.Empty)
+        };
+
+        if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FileName)) return;
+
+        string path = dialog.FileName;
+        try
+        {
+            bool created = ScriptLibraryService.CreateFromBlankTemplate(path);
+            StatusMessage = created
+                ? $"Created {Path.GetFileName(path)} from the blank template."
+                : $"{Path.GetFileName(path)} already exists and was left untouched.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not create the script: {ex.Message}";
+            return;
+        }
+
+        if (isPreLaunch) DefaultPreLaunchScriptPath = path;
+        else DefaultPostExitScriptPath = path;
+        ScriptLibraryService.OpenInEditor(path);
+    }
+
+    private void BrowseDefaultScript(bool isPreLaunch)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = isPreLaunch ? "Select Default Pre-Launch Script" : "Select Default Post-Exit Script",
+            Filter = $"Scripts & Programs ({GameScriptService.SupportedExtensionsFilterPattern})|{GameScriptService.SupportedExtensionsFilterPattern}",
+            CheckFileExists = true,
+            InitialDirectory = InitialDefaultScriptDirectory(isPreLaunch ? DefaultPreLaunchScriptPath : DefaultPostExitScriptPath)
+        };
+        if (FileDialogCloak.Show(dialog) == true)
+        {
+            if (isPreLaunch) DefaultPreLaunchScriptPath = dialog.FileName;
+            else DefaultPostExitScriptPath = dialog.FileName;
+        }
+    }
+
+    /// <summary>The current default's folder if it has one, otherwise the scripts folder (populated on demand).</summary>
+    private string InitialDefaultScriptDirectory(string currentPath)
+    {
+        string p = currentPath.Trim().Trim('"');
+        if (p.Length > 0)
+        {
+            string? dir = Path.GetDirectoryName(p);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) return dir;
+        }
+        ScriptLibrary.EnsureInstalled();
+        return ScriptLibrary.ScriptsDirectory;
+    }
+
+    /// <summary>
+    /// Test Run for a default script. There is no real game here, so the script receives
+    /// placeholder values; the result dialog says so.
+    /// </summary>
+    private async Task TestDefaultScriptAsync(bool isPreLaunch)
+    {
+        string path = (isPreLaunch ? DefaultPreLaunchScriptPath : DefaultPostExitScriptPath).Trim();
+        if (string.IsNullOrWhiteSpace(path) || IsTestingDefaultScript) return;
+
+        const string probeName = "Default Script Test";
+        var probe = new GameEntry { Id = "default", Name = probeName, ExecutablePath = string.Empty };
+        string phase = isPreLaunch ? GameScriptService.PhasePreLaunch : GameScriptService.PhasePostExit;
+        long? playtime = isPreLaunch ? null : 0;
+
+        IsTestingDefaultScript = true;
+        StatusMessage = $"Testing the default {(isPreLaunch ? "pre-launch" : "post-exit")} script (up to {GameScriptService.TestRunTimeout.TotalSeconds:0} s)...";
+        try
+        {
+            var result = await Task.Run(() => GameScriptService.TestRun(path, probe, phase, playtime));
+            StatusMessage = null;
+            var report = new ScriptTestReport(isPreLaunch, path, result, DefaultRunScriptsAsAdmin, DefaultRunScriptsHidden,
+                ProbeDescription: $"placeholder values (name \"{probeName}\", game ID \"default\", empty exe, no script arguments)");
+            new ScriptTestResultDialog(report).ShowDialog();
+        }
+        finally
+        {
+            IsTestingDefaultScript = false;
         }
     }
 
@@ -1376,6 +1710,9 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
         OnPropertyChanged(nameof(EnableGameScripts));
+        // "Reset to defaults" swaps the ScriptDefaults object, so re-derive the mirrored-path tick.
+        _defaultUseSameScriptForBoth = null;
+        NotifyDefaultScriptsChanged();
         OnPropertyChanged(nameof(CreateRestorePointBeforeTweaks));
         OnPropertyChanged(nameof(VerboseLoggingEnabled));
         OnPropertyChanged(nameof(LibraryViewMode));

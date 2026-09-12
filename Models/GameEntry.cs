@@ -98,8 +98,8 @@ public class GameEntry
     public string PostExitScriptPath { get; set; } = string.Empty;
     /// <summary>Hold the game launch until the pre-launch script finishes (see <see cref="PreLaunchScriptTimeoutSeconds"/>).</summary>
     public bool WaitForPreLaunchScript { get; set; } = true;
-    /// <summary>How long "wait for the pre-launch script" holds the launch before giving up. 1-600; default 30.</summary>
-    public int PreLaunchScriptTimeoutSeconds { get; set; } = 30;
+    /// <summary>How long "wait for the pre-launch script" holds the launch before giving up. 1-600; default 10.</summary>
+    public int PreLaunchScriptTimeoutSeconds { get; set; } = 10;
     /// <summary>
     /// Cancel the launch (and roll back the Performance Profile) when the pre-launch script exits
     /// non-zero, times out, or fails to start. Implies waiting for the script.
@@ -116,6 +116,20 @@ public class GameEntry
     public bool RunScriptsHidden { get; set; } = true;
     /// <summary>Run scripts elevated (UAC prompt). Environment variables are unavailable in this mode.</summary>
     public bool RunScriptsAsAdmin { get; set; }
+    /// <summary>
+    /// Free-text extra arguments for this game's scripts, appended after the five positional
+    /// arguments so nothing shifts. Passed verbatim to .bat/.cmd (cmd.exe parses it), split with
+    /// Windows command-line rules for .ps1/.exe. Shared by the pre-launch and post-exit scripts.
+    /// This is how one generic script is parameterised per game (a save folder, a profile name).
+    /// </summary>
+    public string ScriptArguments { get; set; } = string.Empty;
+    /// <summary>
+    /// "Don't run the default scripts for this game": opts out of the Settings
+    /// <see cref="AppSettings.ScriptDefaults"/> for both phases. Off by default, so existing
+    /// libraries pick up defaults with no per-game clicks. Irrelevant for a phase where the game
+    /// has its own script - that always wins over the default.
+    /// </summary>
+    public bool SkipDefaultScripts { get; set; }
 
     [JsonIgnore]
     public bool HasScripts => !string.IsNullOrWhiteSpace(PreLaunchScriptPath) || !string.IsNullOrWhiteSpace(PostExitScriptPath);

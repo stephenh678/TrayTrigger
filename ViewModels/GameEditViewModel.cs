@@ -37,8 +37,13 @@ public class GameEditViewModel : ViewModelBase
     private bool _waitForPreLaunchScript;
     private bool _runScriptsHidden;
     private bool _runScriptsAsAdmin;
+    private string _scriptArguments;
+    private bool _skipDefaultScripts;
+    private readonly ScriptDefaults? _scriptDefaults;
+    private readonly ScriptLibraryService? _scriptLibrary;
     private bool _abortLaunchOnScriptFailure;
-    private string _preLaunchScriptTimeoutSeconds = "30";
+    private string _preLaunchScriptTimeoutSeconds = ((int)GameScriptService.DefaultPreLaunchWaitTimeout.TotalSeconds).ToString();
+    private bool _useSameScriptForBoth;
     private bool _closeLauncherOnExit;
     private bool _isHidden;
     private string? _customIconPath;
@@ -78,9 +83,14 @@ public class GameEditViewModel : ViewModelBase
         bool isNewGame = false,
         string? steamGridDbApiKey = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
-        bool scriptsEnabled = false)
+        bool scriptsEnabled = false,
+        ScriptDefaults? scriptDefaults = null,
+        ScriptLibraryService? scriptLibrary = null)
     {
         SourceGame = game;
+        _scriptDefaults = scriptDefaults;
+        _scriptLibrary = scriptLibrary;
+        _skipDefaultScripts = game.SkipDefaultScripts;
         // The card is opt-in (Settings > General), but a game that already has a script must
         // stay editable even if the setting was later turned off or reset.
         ShowScriptsCard = scriptsEnabled || game.HasScripts;
@@ -112,9 +122,13 @@ public class GameEditViewModel : ViewModelBase
         _cpuAffinity = game.CpuAffinity;
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
+        // Not stored on the game: a game "uses the same script" exactly when both paths match.
+        _useSameScriptForBoth = !string.IsNullOrWhiteSpace(game.PreLaunchScriptPath)
+            && string.Equals(game.PreLaunchScriptPath.Trim(), game.PostExitScriptPath?.Trim(), StringComparison.OrdinalIgnoreCase);
         _waitForPreLaunchScript = game.WaitForPreLaunchScript;
         _runScriptsHidden = game.RunScriptsHidden;
         _runScriptsAsAdmin = game.RunScriptsAsAdmin;
+        _scriptArguments = game.ScriptArguments;
         _isHidden = game.IsHidden;
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
@@ -132,6 +146,13 @@ public class GameEditViewModel : ViewModelBase
         BrowseWorkDirCommand = new RelayCommand(BrowseWorkDir);
         BrowsePreLaunchScriptCommand = new RelayCommand(() => BrowseScript(isPreLaunch: true));
         BrowsePostExitScriptCommand = new RelayCommand(() => BrowseScript(isPreLaunch: false));
+        TestPreLaunchScriptCommand = new AsyncRelayCommand(() => TestScriptAsync(isPreLaunch: true), () => !IsTestingScript && HasPreLaunchScript);
+        TestPostExitScriptCommand = new AsyncRelayCommand(() => TestScriptAsync(isPreLaunch: false), () => !IsTestingScript && HasPostExitScript);
+        NewPreLaunchScriptCommand = new RelayCommand(() => NewScript(isPreLaunch: true));
+        NewPostExitScriptCommand = new RelayCommand(() => NewScript(isPreLaunch: false));
+        EditPreLaunchScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(PreLaunchScriptPath), () => HasPreLaunchScript);
+        EditPostExitScriptCommand = new RelayCommand(() => ScriptLibraryService.OpenInEditor(PostExitScriptPath), () => HasPostExitScript);
+        OpenScriptsFolderCommand = new RelayCommand(() => _scriptLibrary?.OpenFolder(), () => _scriptLibrary != null);
         BrowseIconCommand = new RelayCommand(BrowseIcon);
         ResetIconCommand = new RelayCommand(ResetIcon);
         BrowseCoverCommand = new RelayCommand(BrowseCover);
@@ -249,6 +270,9 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasPreLaunchScript));
             OnPropertyChanged(nameof(HasAnyScript));
+            OnPropertyChanged(nameof(DefaultScriptsSummary));
+            // Typing, Browse and "New script..." all land here, so the post-exit box follows along.
+            if (_useSameScriptForBoth) PostExitScriptPath = value;
         }
     }
 
@@ -259,12 +283,81 @@ public class GameEditViewModel : ViewModelBase
         {
             _postExitScriptPath = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(HasPostExitScript));
             OnPropertyChanged(nameof(HasAnyScript));
+            OnPropertyChanged(nameof(DefaultScriptsSummary));
         }
     }
 
     /// <summary>Gates the "wait for pre-launch script" option, which only means something with a pre-launch script set.</summary>
     public bool HasPreLaunchScript => !string.IsNullOrWhiteSpace(_preLaunchScriptPath);
+
+    public bool HasPostExitScript => !string.IsNullOrWhiteSpace(_postExitScriptPath);
+
+    /// <summary>
+    /// "Use the same script for pre-launch and post-exit": for one-file scripts that branch on the
+    /// phase, like the bundled examples. While on, the post-exit path mirrors the pre-launch path
+    /// and its box is read-only; turning it off leaves the copied path in place to edit.
+    /// </summary>
+    public bool UseSameScriptForBoth
+    {
+        get => _useSameScriptForBoth;
+        set
+        {
+            if (_useSameScriptForBoth == value) return;
+            _useSameScriptForBoth = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanEditPostExitScript));
+            if (value) PostExitScriptPath = PreLaunchScriptPath;
+        }
+    }
+
+    public bool CanEditPostExitScript => !_useSameScriptForBoth;
+
+    // --- Test Run ---
+
+    private bool _isTestingScript;
+
+    /// <summary>A Test Run is in progress; both Test buttons stay disabled until it finishes.</summary>
+    public bool IsTestingScript
+    {
+        get => _isTestingScript;
+        private set { _isTestingScript = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Raised on the UI thread when a Test Run finishes; the view shows the report.</summary>
+    public event Action<ScriptTestReport>? ScriptTestCompleted;
+
+    private async Task TestScriptAsync(bool isPreLaunch)
+    {
+        string path = (isPreLaunch ? PreLaunchScriptPath : PostExitScriptPath).Trim();
+        if (string.IsNullOrWhiteSpace(path) || IsTestingScript) return;
+
+        // The probe is built from what is typed right now, not from the saved record: the user
+        // is testing the path (and name/exe) they can see. Only the ID comes from the saved game.
+        var probe = new GameEntry
+        {
+            Id = SourceGame.Id,
+            Name = string.IsNullOrWhiteSpace(Name) ? "Unnamed Game" : Name.Trim(),
+            ExecutablePath = ExecutablePath.Trim(),
+            ScriptArguments = ScriptArguments?.Trim() ?? string.Empty
+        };
+        string phase = isPreLaunch ? GameScriptService.PhasePreLaunch : GameScriptService.PhasePostExit;
+        long? playtime = isPreLaunch ? null : 0;
+
+        IsTestingScript = true;
+        StatusMessage = $"Testing the {(isPreLaunch ? "pre-launch" : "post-exit")} script (up to {GameScriptService.TestRunTimeout.TotalSeconds:0} s)...";
+        try
+        {
+            var result = await Task.Run(() => GameScriptService.TestRun(path, probe, phase, playtime));
+            StatusMessage = null;
+            ScriptTestCompleted?.Invoke(new ScriptTestReport(isPreLaunch, path, result, RunScriptsAsAdmin, RunScriptsHidden));
+        }
+        finally
+        {
+            IsTestingScript = false;
+        }
+    }
 
     /// <summary>Gates the hidden/admin options, which apply to whichever scripts are set.</summary>
     public bool HasAnyScript => HasPreLaunchScript || !string.IsNullOrWhiteSpace(_postExitScriptPath);
@@ -285,6 +378,60 @@ public class GameEditViewModel : ViewModelBase
     {
         get => _runScriptsAsAdmin;
         set { _runScriptsAsAdmin = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Free-text arguments appended after the positional ones for both scripts. See <see cref="GameEntry.ScriptArguments"/>.</summary>
+    public string ScriptArguments
+    {
+        get => _scriptArguments;
+        set { _scriptArguments = value; OnPropertyChanged(); }
+    }
+
+    // --- Settings default scripts, as they apply to this game ---
+
+    /// <summary>Settings has at least one default script, so the summary and opt-out are shown.</summary>
+    public bool HasDefaultScripts => _scriptDefaults?.HasAny == true;
+
+    /// <summary>"Don't run the default scripts for this game". See <see cref="GameEntry.SkipDefaultScripts"/>.</summary>
+    public bool SkipDefaultScripts
+    {
+        get => _skipDefaultScripts;
+        set { _skipDefaultScripts = value; OnPropertyChanged(); OnPropertyChanged(nameof(DefaultScriptsSummary)); }
+    }
+
+    /// <summary>
+    /// One line per configured default, saying whether it applies to this game given what is
+    /// typed in the path boxes right now. Mirrors <see cref="GameScriptService.ResolvePreLaunch"/>.
+    /// </summary>
+    public string DefaultScriptsSummary
+    {
+        get
+        {
+            if (_scriptDefaults == null) return string.Empty;
+            if (!_scriptDefaults.Enabled)
+            {
+                return "Default scripts are configured but not turned on in Settings (\"Run the default scripts\" is unticked), so none apply to this game.";
+            }
+            var lines = new List<string>();
+            if (_scriptDefaults.HasPreLaunchScript)
+            {
+                lines.Add(DescribeDefault("pre-launch", _scriptDefaults.PreLaunchScriptPath, HasPreLaunchScript));
+            }
+            if (_scriptDefaults.HasPostExitScript)
+            {
+                lines.Add(DescribeDefault("post-exit", _scriptDefaults.PostExitScriptPath, HasPostExitScript));
+            }
+            return string.Join("\n", lines);
+
+            string DescribeDefault(string phase, string path, bool gameHasOwn)
+            {
+                string name = Path.GetFileName(path.Trim().Trim('"'));
+                string state = SkipDefaultScripts ? "skipped for this game."
+                    : gameHasOwn ? $"not used, this game has its own {phase} script."
+                    : $"runs for this game because it has no {phase} script of its own.";
+                return $"Default {phase} script {name}: {state}";
+            }
+        }
     }
 
     /// <summary>Scripts are configured on this game but the Settings switch is off, so they won't run.</summary>
@@ -514,6 +661,13 @@ public class GameEditViewModel : ViewModelBase
     public ICommand BrowseWorkDirCommand { get; }
     public ICommand BrowsePreLaunchScriptCommand { get; }
     public ICommand BrowsePostExitScriptCommand { get; }
+    public ICommand TestPreLaunchScriptCommand { get; }
+    public ICommand TestPostExitScriptCommand { get; }
+    public ICommand NewPreLaunchScriptCommand { get; }
+    public ICommand NewPostExitScriptCommand { get; }
+    public ICommand EditPreLaunchScriptCommand { get; }
+    public ICommand EditPostExitScriptCommand { get; }
+    public ICommand OpenScriptsFolderCommand { get; }
     public ICommand BrowseIconCommand { get; }
     public ICommand ResetIconCommand { get; }
     public ICommand BrowseCoverCommand { get; }
@@ -991,7 +1145,8 @@ public class GameEditViewModel : ViewModelBase
         {
             Title = isPreLaunch ? "Select Pre-Launch Script" : "Select Post-Exit Script",
             Filter = $"Scripts & Programs ({GameScriptService.SupportedExtensionsFilterPattern})|{GameScriptService.SupportedExtensionsFilterPattern}",
-            CheckFileExists = true
+            CheckFileExists = true,
+            InitialDirectory = InitialScriptDirectory(isPreLaunch ? PreLaunchScriptPath : PostExitScriptPath)
         };
 
         if (FileDialogCloak.Show(dialog) == true)
@@ -999,6 +1154,67 @@ public class GameEditViewModel : ViewModelBase
             if (isPreLaunch) PreLaunchScriptPath = dialog.FileName;
             else PostExitScriptPath = dialog.FileName;
         }
+    }
+
+    /// <summary>The current script's folder if it has one, otherwise the scripts folder (populated on demand).</summary>
+    private string InitialScriptDirectory(string currentPath)
+    {
+        string p = currentPath.Trim().Trim('"');
+        if (p.Length > 0)
+        {
+            string? dir = Path.GetDirectoryName(p);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) return dir;
+        }
+        if (_scriptLibrary == null) return string.Empty;
+        _scriptLibrary.EnsureInstalled();
+        return _scriptLibrary.ScriptsDirectory;
+    }
+
+    /// <summary>
+    /// "New script...": a save dialog in the scripts folder, then the blank template matching the
+    /// chosen extension is written there, the path box filled, and the file opened for editing.
+    /// An existing file is never overwritten - it is simply used as-is.
+    /// </summary>
+    private void NewScript(bool isPreLaunch)
+    {
+        string phase = isPreLaunch ? "PreLaunch" : "PostExit";
+        var dialog = new SaveFileDialog
+        {
+            Title = isPreLaunch ? "New Pre-Launch Script" : "New Post-Exit Script",
+            Filter = "Batch script (*.bat)|*.bat|PowerShell script (*.ps1)|*.ps1",
+            DefaultExt = ".bat",
+            AddExtension = true,
+            OverwritePrompt = false,
+            FileName = $"{SafeFileStem(Name)}-{phase}.bat",
+            InitialDirectory = InitialScriptDirectory(string.Empty)
+        };
+
+        if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FileName)) return;
+
+        string path = dialog.FileName;
+        try
+        {
+            bool created = ScriptLibraryService.CreateFromBlankTemplate(path);
+            StatusMessage = created
+                ? $"Created {Path.GetFileName(path)} from the blank template. Edit it, then Save."
+                : $"{Path.GetFileName(path)} already exists and was left untouched.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not create the script: {ex.Message}";
+            return;
+        }
+
+        if (isPreLaunch) PreLaunchScriptPath = path;
+        else PostExitScriptPath = path;
+        ScriptLibraryService.OpenInEditor(path);
+    }
+
+    private static string SafeFileStem(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        string stem = new string((name ?? string.Empty).Where(c => !invalid.Contains(c)).ToArray()).Trim();
+        return stem.Length == 0 ? "Game" : stem;
     }
 
     private void Save()
@@ -1072,10 +1288,12 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.PerformanceProfile = PerformanceProfile;
         SourceGame.CpuAffinity = CpuAffinity;
         SourceGame.PreLaunchScriptPath = PreLaunchScriptPath?.Trim().Trim('"') ?? string.Empty;
-        SourceGame.PostExitScriptPath = PostExitScriptPath?.Trim().Trim('"') ?? string.Empty;
+        SourceGame.PostExitScriptPath = (UseSameScriptForBoth ? PreLaunchScriptPath : PostExitScriptPath)?.Trim().Trim('"') ?? string.Empty;
         SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript || AbortLaunchOnScriptFailure;
         SourceGame.RunScriptsHidden = RunScriptsHidden;
         SourceGame.RunScriptsAsAdmin = RunScriptsAsAdmin;
+        SourceGame.ScriptArguments = ScriptArguments?.Trim() ?? string.Empty;
+        SourceGame.SkipDefaultScripts = SkipDefaultScripts;
         SourceGame.AbortLaunchOnScriptFailure = AbortLaunchOnScriptFailure;
         SourceGame.PreLaunchScriptTimeoutSeconds = timeoutSeconds;
         SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
@@ -1140,3 +1358,10 @@ public class GameEditViewModel : ViewModelBase
         RequestClose?.Invoke(false);
     }
 }
+
+/// <summary>
+/// What a Test Run produced, plus the two per-game options the test deliberately ignored so the
+/// result dialog can warn that the real run will behave differently.
+/// </summary>
+/// <param name="ProbeDescription">What game values the test used, for the summary line; null means "the name and exe currently in Edit Game".</param>
+public sealed record ScriptTestReport(bool IsPreLaunch, string ScriptPath, ScriptTestResult Result, bool WillRunElevated, bool WillRunHidden, string? ProbeDescription = null);

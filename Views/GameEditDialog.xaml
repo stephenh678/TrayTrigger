@@ -6,7 +6,7 @@
         xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="Edit Game Configuration"
-        Height="660" Width="820"
+        Height="675" Width="820"
         MinHeight="600" MinWidth="760"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -147,29 +147,45 @@
                     <!-- Divider -->
                     <Rectangle DockPanel.Dock="Top" Height="1" Fill="#242430" Margin="0,14,0,12"/>
 
-                    <!-- Section: Game Icon -->
-                    <StackPanel DockPanel.Dock="Top">
-                        <TextBlock Text="GAME ICON" FontSize="11" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8"/>
-                        <DockPanel>
-                            <Border DockPanel.Dock="Left" Width="48" Height="48" CornerRadius="6" 
-                                    Background="#202028" BorderBrush="#2C2C38" BorderThickness="1"
-                                    Margin="0,0,10,0" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Image Source="{Binding IconPreview}" Width="36" Height="36" 
-                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Tray &amp; list icon" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,5"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Content="Change..." Command="{Binding BrowseIconCommand}" 
-                                            Style="{StaticResource ModernOutlineButton}" Padding="6,3" FontSize="11" Margin="0,0,4,0"/>
-                                    <Button Content="Reset" Command="{Binding ResetIconCommand}"
-                                            Style="{StaticResource ModernGhostButton}" Padding="6,3" FontSize="11"/>
-                                </StackPanel>
-                            </StackPanel>
+                    <!-- Section: Game Icon. The DockPanel's last child, so it takes the space the
+                         poster section leaves, but it hugs the top at a fixed size: the icon is
+                         deliberately not tied to the window height, and 52 is what fits under the
+                         170x255 poster with its buttons at the dialog's starting height. -->
+                    <Grid VerticalAlignment="Top">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                            <TextBlock Text="GAME ICON" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextSecondary}" DockPanel.Dock="Left"/>
+                            <TextBlock Text="Tray &amp; list" FontSize="10" Foreground="{StaticResource BrushTextMuted}"
+                                       DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </DockPanel>
-                    </StackPanel>
+
+                        <!-- No frame behind it: the poster above has one, but its artwork covers it
+                             edge to edge, so a framed icon is the only thing that shows a border. -->
+                        <!-- Fixed at 52 and pinned under the header, so it neither grows with the
+                             window nor pushes the buttons out of the panel at the dialog's
+                             starting height. 52 is what the left column can spare below the
+                             170x255 poster. -->
+                        <Image Grid.Row="1" Source="{Binding IconPreview}" Width="52" Height="52" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Top"/>
+
+                        <Grid Grid.Row="2" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="Change..." Command="{Binding BrowseIconCommand}"
+                                    Style="{StaticResource ModernOutlineButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
+                            <Button Grid.Column="1" Content="Reset" Command="{Binding ResetIconCommand}"
+                                    Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"/>
+                        </Grid>
+                    </Grid>
                 </DockPanel>
             </Border>
 
@@ -381,12 +397,26 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" Text="{Binding PreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
+                                <Button Grid.Column="1" Content="Test" Command="{Binding TestPreLaunchScriptCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                        ToolTip="Run this script now with the values in this dialog (hidden, not elevated, 30 s limit) and show its exit code and output"/>
+                                <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,-6,0,8">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPreLaunchScriptCommand}"
+                                        ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPreLaunchScriptCommand}"/>
+                            </StackPanel>
+                            <CheckBox Content="Use the same script for pre-launch and post-exit"
+                                      IsChecked="{Binding UseSameScriptForBoth}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,12"
+                                      ToolTip="For a script that handles both phases in one file, like the bundled examples"/>
 
                             <!-- Post-exit script -->
                             <TextBlock Text="Post-Exit Script (runs after the game closes)" FontSize="11.5"
@@ -395,13 +425,35 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" Text="{Binding PostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding CanEditPostExitScript}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
+                                <Button Grid.Column="1" Content="Test" Command="{Binding TestPostExitScriptCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                        ToolTip="Run this script now as a post-exit run with playtime 0 (hidden, not elevated, 30 s limit) and show its exit code and output"/>
+                                <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
+                                        IsEnabled="{Binding CanEditPostExitScript}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPostExitScriptCommand}"
+                                        IsEnabled="{Binding CanEditPostExitScript}"
+                                        ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPostExitScriptCommand}"/>
+                            </StackPanel>
                             <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <!-- Script arguments: free text appended after the five positional
+                                 arguments, so one generic script can be parameterised per game. -->
+                            <TextBlock Text="Script Arguments (optional, passed to both scripts)" FontSize="11.5"
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding ScriptArguments, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource ModernTextBox}" IsEnabled="{Binding HasAnyScript}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Added after the built-in arguments (phase, name, exe, game ID, playtime), so they start at %6 in a batch file or $args[5] in PowerShell. Quote a value that contains spaces."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10"
@@ -431,10 +483,32 @@
                                       IsChecked="{Binding RunScriptsAsAdmin}" IsEnabled="{Binding HasAnyScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,8"/>
 
+                            <!-- Settings default scripts, as they apply to this game. Only shown
+                                 when at least one default is configured. -->
+                            <Border Background="{StaticResource BrushSurfaceDark}" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="6" Padding="10,8" Margin="0,0,0,10"
+                                    Visibility="{Binding HasDefaultScripts, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="Default scripts from Settings" FontSize="11.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding DefaultScriptsSummary}" FontSize="10.5"
+                                               Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                    <CheckBox Content="Don't run the default scripts for this game"
+                                              IsChecked="{Binding SkipDefaultScripts}"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                </StackPanel>
+                            </Border>
+
                             <TextBlock Text="Any script works as-is. Optionally, your script can read the game name and phase it was called for."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
-                            <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="0,4,0,0"
-                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                            <!-- Same pair of links, in the same place, as the scripts card in Settings. -->
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
+                                        ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

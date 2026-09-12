@@ -17,11 +17,13 @@ public partial class GameEditDialog : Window
         bool isNewGame = false, 
         string? steamGridDbApiKey = null,
         double minConfidence = SteamSearchService.DefaultMinConfidence,
-        bool scriptsEnabled = false)
+        bool scriptsEnabled = false,
+        ScriptDefaults? scriptDefaults = null,
+        ScriptLibraryService? scriptLibrary = null)
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
-        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled);
+        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary);
         DataContext = _viewModel;
 
         Owner = WindowHelper.ActiveOwner();
@@ -30,6 +32,12 @@ public partial class GameEditDialog : Window
         {
             WindowThemeService.CenterOverOwner(this);
             Activate();
+        };
+
+        _viewModel.ScriptTestCompleted += report =>
+        {
+            var dialog = new ScriptTestResultDialog(report) { Owner = this };
+            dialog.ShowDialog();
         };
 
         _viewModel.RequestClose += success =>

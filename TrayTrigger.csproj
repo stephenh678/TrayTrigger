@@ -9,7 +9,7 @@
     <ApplicationIcon>Assets\app_icon.ico</ApplicationIcon>
     <AssemblyName>TrayTrigger</AssemblyName>
     <RootNamespace>TrayTrigger</RootNamespace>
-    <Version>1.3.9</Version>
+    <Version>1.4.0</Version>
     <Authors>Steph</Authors>
     <Product>TrayTrigger</Product>
     <Description>Windows system tray game launcher with Steam integration, per-game performance profiles, live hardware telemetry, and verified one-click performance tweaks.</Description>
@@ -64,6 +64,12 @@
     <!-- In-app "Learn more" help topics. Help\tweaks\hags.md becomes the embedded resource
          TrayTrigger.Help.tweaks.hags.md, addressed by HelpContentService as "tweaks/hags". -->
     <EmbeddedResource Include="Help\**\*.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Bundled game-script templates, examples and README. Materialised into
+         %AppData%\TrayTrigger\Scripts by ScriptLibraryService; addressed by file name. -->
+    <EmbeddedResource Include="Scripts\Library\*" LogicalName="ScriptLibrary/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

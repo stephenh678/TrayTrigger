@@ -52,6 +52,13 @@ public partial class App : Application
 
     private TaskbarIcon? _trayIcon;
 
+    /// <summary>The tray tooltip while nothing is playing.</summary>
+    private const string DefaultTrayToolTip = "TrayTrigger - Game Launcher";
+    /// <summary>The shell truncates a tray tooltip past this; do it ourselves so it ends cleanly.</summary>
+    private const int MaxTrayToolTipLength = 127;
+    /// <summary>Re-writes the tooltip's elapsed time while a game is running; stopped when none is.</summary>
+    private System.Windows.Threading.DispatcherTimer? _trayToolTipTimer;
+
     private const int SM_CXSMICON = 49;
     private const int SM_CYSMICON = 50;
 
@@ -241,7 +248,16 @@ public partial class App : Application
         _performanceProfileService = new PerformanceProfileService(_storageService);
         _performanceProfileService.RecoverFromCrashIfNeeded();
         // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
-        _gameScriptService = new GameScriptService(() => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts);
+        _gameScriptService = new GameScriptService(
+            () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
+            () => (_mainViewModel?.Settings ?? startupSettings).ScriptDefaults);
+        // Blank templates, examples and README land in the scripts folder once the feature is on
+        // (missing files only - user edits are never overwritten). Off the UI thread: file I/O.
+        if (startupSettings.EnableGameScripts)
+        {
+            var scriptLibrary = new ScriptLibraryService(_storageService.BaseDirectory);
+            _ = Task.Run(() => scriptLibrary.EnsureInstalled());
+        }
         _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
@@ -289,8 +305,8 @@ public partial class App : Application
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;
         // The "Now Playing" tray section follows the launcher's session registry directly.
-        _launcherService.SessionStarted += _ => UpdateTrayContextMenu();
-        _launcherService.SessionEnded += _ => UpdateTrayContextMenu();
+        _launcherService.SessionStarted += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
+        _launcherService.SessionEnded += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
 
         // Windows shutdown / sign-out: WPF raises SessionEnding instead of going through the tray
         // Exit path, so without this a running game's Performance Profile (power plan, MMCSS,
@@ -304,6 +320,7 @@ public partial class App : Application
             {
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
+                FinalizePendingRemovalOnShutdown();
                 if (_mainViewModel != null && _storageService != null)
                 {
                     _storageService.SaveSettings(_mainViewModel.Settings);
@@ -344,7 +361,7 @@ public partial class App : Application
         {
             _trayIcon = new TaskbarIcon
             {
-                ToolTipText = "TrayTrigger - Game Launcher",
+                ToolTipText = DefaultTrayToolTip,
                 LeftClickCommand = new RelayCommand(ToggleMainWindow),
                 DoubleClickCommand = new RelayCommand(ShowMainWindow)
             };
@@ -387,6 +404,7 @@ public partial class App : Application
             }
 
             UpdateTrayContextMenu();
+            UpdateTrayToolTip();
             if (!_trayIcon.IsCreated)
             {
                 _trayIcon.ForceCreate();
@@ -396,6 +414,74 @@ public partial class App : Application
         {
             LoggingService.Error("App", $"Error initializing TaskbarIcon: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Puts what is playing in the tray tooltip - the one place the tray can say something while
+    /// the window is hidden. Driven by the launcher's session registry, the same source as the
+    /// "Now Playing" menu section, and re-run on a timer only while a session is active so the
+    /// elapsed time stays current. Deliberately no CPU or RAM figures: those are system-wide, and
+    /// beside a game's name they read as that game's usage. The System page shows them properly.
+    /// </summary>
+    public void UpdateTrayToolTip()
+    {
+        if (_trayIcon == null) return;
+
+        try
+        {
+            var sessions = _launcherService?.GetActiveSessions() ?? [];
+            string text;
+
+            if (sessions.Count == 0)
+            {
+                text = DefaultTrayToolTip;
+            }
+            else if (sessions.Count == 1)
+            {
+                var session = sessions[0];
+                text = session.GameStarted
+                    ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(DateTime.Now - session.StartedAt)}"
+                    : $"Starting {session.Game.Name} via {session.PlatformLabel}";
+            }
+            else
+            {
+                text = $"Playing {sessions.Count} games · {string.Join(", ", sessions.Select(s => s.Game.Name))}";
+            }
+
+            if (text.Length > MaxTrayToolTipLength)
+            {
+                text = text[..(MaxTrayToolTipLength - 1)].TrimEnd() + "…";
+            }
+
+            _trayIcon.ToolTipText = text;
+
+            // The timer exists only to age the elapsed time, so it runs only while something is
+            // actually playing (a session still starting has no elapsed time to age yet).
+            bool needsTicking = sessions.Any(s => s.GameStarted);
+            if (needsTicking && _trayToolTipTimer == null)
+            {
+                _trayToolTipTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+                _trayToolTipTimer.Tick += (_, _) => UpdateTrayToolTip();
+                _trayToolTipTimer.Start();
+            }
+            else if (!needsTicking && _trayToolTipTimer != null)
+            {
+                _trayToolTipTimer.Stop();
+                _trayToolTipTimer = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("App", $"Could not update the tray tooltip: {ex.Message}");
+        }
+    }
+
+    /// <summary>"47m" under an hour, "1h 12m" past it - the tray tooltip has no room for more.</summary>
+    private static string FormatPlayingElapsed(TimeSpan elapsed)
+    {
+        if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
+        int minutes = (int)elapsed.TotalMinutes;
+        return minutes < 60 ? $"{minutes}m" : $"{minutes / 60}h {minutes % 60}m";
     }
 
     public void UpdateTrayContextMenu()
@@ -652,7 +738,7 @@ public partial class App : Application
         return new MenuItem
         {
             Header = text.ToUpperInvariant(),
-            Style = (Style)FindResource("TrayMenuSectionHeaderStyle"),
+            Style = (Style)FindResource("MenuSectionHeaderStyle"),
             Focusable = false,
             IsHitTestVisible = false
         };
@@ -848,6 +934,7 @@ public partial class App : Application
         {
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
+            FinalizePendingRemovalOnShutdown();
 
             if (_mainViewModel != null && _storageService != null)
             {
@@ -855,6 +942,8 @@ public partial class App : Application
                 LoggingService.Info("App", "Settings successfully saved during application exit.");
             }
 
+            _trayToolTipTimer?.Stop();
+            _trayToolTipTimer = null;
             _hotkeyManager?.Dispose();
             _trayIcon?.Dispose();
 
@@ -887,9 +976,27 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// A game removed in the last 6 seconds is still inside its undo window, which lives only in
+    /// memory - finish its cleanup (cached art, Steam/RAWG details) before the process goes away.
+    /// Isolated so a failure here can't skip the settings save or profile restore around it.
+    /// </summary>
+    private void FinalizePendingRemovalOnShutdown()
+    {
+        try
+        {
+            _mainViewModel?.FinalizePendingRemoval();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("App", $"Failed to finish a pending game removal during shutdown: {ex.Message}");
+        }
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         LoggingService.Info("App", $"OnExit called. ExitCode={e.ApplicationExitCode}");
+        FinalizePendingRemovalOnShutdown();
         try
         {
             if (_mainViewModel != null && _storageService != null)
