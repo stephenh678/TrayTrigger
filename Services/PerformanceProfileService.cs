@@ -628,14 +628,26 @@ public class PerformanceProfileService
 
         foreach (var s in snapshot.PreviousHdrStates)
         {
+            // ApplyHdr only ever enables displays that were off, so WasEnabled is the record of
+            // what we left alone. Re-asserting HDR on a display that was already in HDR is not
+            // free: writing the HDR bit makes Windows re-negotiate the display mode, which blanks
+            // most monitors for a second or two. Someone who games with HDR on permanently was
+            // getting that blank on every single game exit to restore a state that had never
+            // changed. Skip those - there is nothing to undo.
+            if (s.WasEnabled)
+            {
+                LoggingService.Verbose("PerformanceProfile", $"Display target {s.TargetId} was already in HDR at launch and was never changed; leaving it alone.");
+                continue;
+            }
+
             var adapterId = new HdrControlService.LUID { LowPart = s.AdapterIdLowPart, HighPart = s.AdapterIdHighPart };
-            bool ok = _backend.SetDisplayHdrEnabled(adapterId, s.TargetId, s.WasEnabled);
+            bool ok = _backend.SetDisplayHdrEnabled(adapterId, s.TargetId, false);
 
             // Name the mode the display goes back to, not just the HDR bit. "HDR state to Off"
             // read as though a display that had been in WCG was being dropped to plain SDR; it
             // is not - clearing HDR returns it to whichever non-HDR mode Auto Color Management
             // had it in.
-            string restoredTo = s.WasEnabled ? "HDR" : s.WasWcg ? "WCG" : "SDR";
+            string restoredTo = s.WasWcg ? "WCG" : "SDR";
             LoggingService.Info("PerformanceProfile", ok
                 ? $"Restored display target {s.TargetId} to {restoredTo}."
                 : $"Failed to restore display target {s.TargetId} to {restoredTo}.");
