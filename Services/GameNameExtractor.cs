@@ -190,9 +190,10 @@ public static partial class GameNameExtractor
             // than anything derived from the exe filename or folder name (see the knownName doc
             // comment above). Skips straight to a result if it clears the confidence bar, since
             // there's no reason to also try weaker exe/folder guesses once a trusted name matched.
+            SteamGameMatch? knownMatch = null;
             if (!string.IsNullOrWhiteSpace(knownName))
             {
-                var knownMatch = await steamSearch.FindBestMatchAsync(knownName, minConfidence, cancellationToken).ConfigureAwait(false);
+                knownMatch = await steamSearch.FindBestMatchAsync(knownName, minConfidence, cancellationToken).ConfigureAwait(false);
                 LoggingService.Verbose("GameNameExtractor", $"Pass 0 (known name) result for '{knownName}': {(knownMatch != null ? $"{knownMatch.Name} (score {knownMatch.SimilarityScore:F2})" : "None")}");
 
                 if (knownMatch != null && knownMatch.SimilarityScore >= Math.Max(0.85, minConfidence))
@@ -202,9 +203,22 @@ public static partial class GameNameExtractor
                 }
             }
 
-            // Pass 1: Search using local extracted name
-            var match1 = await steamSearch.FindBestMatchAsync(localName, minConfidence, cancellationToken).ConfigureAwait(false);
-            LoggingService.Verbose("GameNameExtractor", $"Pass 1 result for '{localName}': {(match1 != null ? $"{match1.Name} (score {match1.SimilarityScore:F2})" : "None")}");
+            // Pass 1: Search using local extracted name. When that term is one an earlier pass
+            // already asked, reuse its answer instead of asking again: the query, the candidates
+            // and the score are identical, and re-running it only repeats the rejection in the
+            // log. Reused rather than skipped, because a sub-decisive Pass 0 match is still
+            // eligible below.
+            SteamGameMatch? match1;
+            if (SameQuery(localName, knownName))
+            {
+                match1 = knownMatch;
+                LoggingService.Verbose("GameNameExtractor", $"Pass 1 skipped: '{localName}' is the query Pass 0 already ran.");
+            }
+            else
+            {
+                match1 = await steamSearch.FindBestMatchAsync(localName, minConfidence, cancellationToken).ConfigureAwait(false);
+                LoggingService.Verbose("GameNameExtractor", $"Pass 1 result for '{localName}': {(match1 != null ? $"{match1.Name} (score {match1.SimilarityScore:F2})" : "None")}");
+            }
             match1 = GuardAgainstKnownName(match1, knownName, minConfidence, "Pass 1");
 
             if (match1 != null && match1.SimilarityScore >= Math.Max(0.85, minConfidence))
@@ -217,8 +231,9 @@ public static partial class GameNameExtractor
             string folderCandidate = FindMeaningfulFolderName(exePath, folderFallback);
             string cleanedFolder = CleanFolderName(folderCandidate);
 
-            if (!string.IsNullOrWhiteSpace(cleanedFolder) && 
-                !cleanedFolder.Equals(localName, StringComparison.OrdinalIgnoreCase) && 
+            if (!string.IsNullOrWhiteSpace(cleanedFolder) &&
+                !SameQuery(cleanedFolder, localName) &&
+                !SameQuery(cleanedFolder, knownName) &&
                 !IsGenericFolder(cleanedFolder))
             {
                 LoggingService.Verbose("GameNameExtractor", $"Pass 2 folder candidate='{cleanedFolder}'");
@@ -261,6 +276,15 @@ public static partial class GameNameExtractor
     /// "Content Warning". A fallback match is kept only if its title also resembles the trusted
     /// name; otherwise it's discarded and the trusted name survives with no SteamAppId.
     /// </summary>
+    /// <summary>
+    /// Whether two passes would send Steam the same question. Matches how SteamSearchService keys
+    /// its cache - trimmed, case-insensitive - so "same query" here means the same cache entry.
+    /// A null or blank side is never "the same": there was no earlier query to reuse.
+    /// </summary>
+    private static bool SameQuery(string? a, string? b) =>
+        !string.IsNullOrWhiteSpace(a) && !string.IsNullOrWhiteSpace(b) &&
+        a.Trim().Equals(b.Trim(), StringComparison.OrdinalIgnoreCase);
+
     internal static SteamGameMatch? GuardAgainstKnownName(SteamGameMatch? match, string? knownName, double minConfidence, string pass)
     {
         if (match == null || string.IsNullOrWhiteSpace(knownName)) return match;

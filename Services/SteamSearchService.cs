@@ -34,6 +34,15 @@ public partial class SteamSearchService
 
     private static readonly ConcurrentDictionary<string, List<SteamGameMatch>> Cache = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Searches still in flight, so concurrent callers asking the same question wait on one
+    /// request instead of each issuing their own. A folder import enriches several games at once
+    /// (ImportCoordinator's MaxConcurrentEnrichments), and games under one tree routinely derive
+    /// the same folder-name query - the completed-result cache alone cannot help there, because
+    /// none of them has finished to populate it yet.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, Task<List<SteamGameMatch>>> InFlight = new(StringComparer.OrdinalIgnoreCase);
+
     private static readonly string[] PenaltyKeywords =
     [
         "soundtrack", "ost", "demo", "teaser", "prologue", "artbook", 
@@ -120,6 +129,41 @@ public partial class SteamSearchService
         if (Cache.TryGetValue(trimmed, out var cached))
             return cached;
 
+        // Claim the term with a placeholder before doing any work: GetOrAdd's factory overload
+        // can run more than once under contention, and a second factory run would fire the very
+        // HTTP request this exists to avoid. Whoever's own task lands in the dictionary owns the
+        // search; everyone else awaits it.
+        var claim = new TaskCompletionSource<List<SteamGameMatch>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = InFlight.GetOrAdd(trimmed, claim.Task);
+
+        if (ReferenceEquals(pending, claim.Task))
+        {
+            try
+            {
+                // Deliberately not the caller's token: the result is shared, so one caller
+                // walking away must not cancel the search the others are waiting on. They each
+                // stop waiting on their own token below instead.
+                claim.SetResult(await SearchGamesUncachedAsync(trimmed, CancellationToken.None).ConfigureAwait(false));
+            }
+            catch (Exception ex)
+            {
+                claim.SetException(ex);
+            }
+            finally
+            {
+                InFlight.TryRemove(new KeyValuePair<string, Task<List<SteamGameMatch>>>(trimmed, claim.Task));
+            }
+        }
+
+        return await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The one network round trip, behind the cache and the in-flight claim. Virtual purely as a
+    /// test seam: TrayTrigger.Tests overrides it to count how many searches actually escape.
+    /// </summary>
+    internal virtual async Task<List<SteamGameMatch>> SearchGamesUncachedAsync(string trimmed, CancellationToken cancellationToken)
+    {
         string sanitized = SanitizeSearchQuery(trimmed);
         string effectiveQuery = !string.IsNullOrWhiteSpace(sanitized) ? sanitized : trimmed;
 

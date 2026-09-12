@@ -1,6 +1,31 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using TrayTrigger.Services;
 
 namespace TrayTrigger.Tests;
+
+/// <summary>
+/// Counts how many searches get past the cache and the in-flight claim, and holds each one open
+/// until released so several callers are genuinely overlapping rather than merely queued.
+/// </summary>
+internal sealed class CountingSteamSearchService : SteamSearchService
+{
+    private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _searches;
+
+    public int SearchCount => Volatile.Read(ref _searches);
+    public void Release() => _release.TrySetResult();
+
+    internal override async Task<List<SteamGameMatch>> SearchGamesUncachedAsync(string trimmed, CancellationToken cancellationToken)
+    {
+        Interlocked.Increment(ref _searches);
+        await _release.Task.ConfigureAwait(false);
+        return [new SteamGameMatch(trimmed, "1", null)];
+    }
+}
 
 public class SteamSearchServiceTests
 {
@@ -42,6 +67,39 @@ public class SteamSearchServiceTests
     public void CalculateSimilarity_IdenticalTitles_ScoresPerfect()
     {
         Assert.Equal(1.0, SteamSearchService.CalculateSimilarity("Half-Life 2", "Half-Life 2"));
+    }
+
+    /// <summary>
+    /// A folder import enriches several games at once, and games under one tree routinely derive
+    /// the same folder-name query. The completed-result cache cannot help while they overlap -
+    /// none of them has finished to populate it - so without an in-flight claim each one issues
+    /// its own request for the same term.
+    /// </summary>
+    [Fact]
+    public async Task SearchGamesAsync_ConcurrentIdenticalQueries_IssueOneSearch()
+    {
+        var service = new CountingSteamSearchService();
+        string query = $"Concurrent Dedup Probe {Guid.NewGuid():N}"; // unseen by the shared cache
+
+        var callers = Enumerable.Range(0, 8).Select(_ => service.SearchGamesAsync(query)).ToArray();
+        service.Release();
+        var results = await Task.WhenAll(callers);
+
+        Assert.Equal(1, service.SearchCount);
+        Assert.All(results, r => Assert.Equal(query, Assert.Single(r).Name));
+    }
+
+    [Fact]
+    public async Task SearchGamesAsync_DifferentQueries_EachIssueTheirOwnSearch()
+    {
+        var service = new CountingSteamSearchService();
+        string stem = Guid.NewGuid().ToString("N");
+
+        var callers = Enumerable.Range(0, 3).Select(i => service.SearchGamesAsync($"Probe {stem} {i}")).ToArray();
+        service.Release();
+        await Task.WhenAll(callers);
+
+        Assert.Equal(3, service.SearchCount);
     }
 
     /// <summary>
