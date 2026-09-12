@@ -597,8 +597,6 @@ public class MainViewModel : ViewModelBase
     public void EditSteamAppId(GameCardViewModel card) => Library.EditSteamAppId(card);
     public Task UpdateGameSteamAppIdAsync(GameCardViewModel card, string? newAppId) => Library.UpdateGameSteamAppIdAsync(card, newAppId);
     public Task RefreshGameMetadataAsync(GameCardViewModel card) => Library.RefreshGameMetadataAsync(card);
-    public void FetchExeNameForGame(GameCardViewModel card) => Library.FetchExeNameForGame(card);
-    public Task FetchExeNameForGameAsync(GameCardViewModel card) => Library.FetchExeNameForGameAsync(card);
     public void ApplyRename(GameCardViewModel card, string newName) => Library.ApplyRename(card, newName);
     public void ApplyCategory(GameCardViewModel card, string newCategory) => Library.ApplyCategory(card, newCategory);
     public void ApplyCategoryToMany(List<GameCardViewModel> cards, string newCategory) => Library.ApplyCategoryToMany(cards, newCategory);
