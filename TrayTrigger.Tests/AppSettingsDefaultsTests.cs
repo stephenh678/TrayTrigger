@@ -5,24 +5,25 @@ namespace TrayTrigger.Tests;
 public class AppSettingsDefaultsTests
 {
     /// <summary>
-    /// RAWG ships on. It is inert without a key - every consumer requires both the switch and
-    /// <see cref="AppSettings.RawgApiKey"/> - so a user who never enters one pays nothing, and a
-    /// user who pastes one does not then have to hunt for a second switch to make it do anything.
+    /// The two third-party metadata sources both need the user's own API key, and neither is on
+    /// until the user asks for it. They were briefly inconsistent - RAWG on, SteamGridDB off -
+    /// which read as an accident rather than a decision, since being on without a key does nothing
+    /// either way.
     /// </summary>
     [Fact]
-    public void UseRawgMetadata_DefaultsToEnabled()
+    public void KeyGatedMetadataSources_DefaultToDisabled()
     {
-        Assert.True(new AppSettings().UseRawgMetadata);
+        var settings = new AppSettings();
+        Assert.False(settings.UseRawgMetadata);
+        Assert.False(settings.UseSteamGridDbArt);
     }
 
-    /// <summary>
-    /// ...and it stays inert on a fresh install, because there is no key yet. This is what keeps
-    /// the default from being a behaviour change for anyone who does not opt in.
-    /// </summary>
+    /// <summary>...and a fresh install has no key for either, so nothing can call out regardless.</summary>
     [Fact]
-    public void FreshSettings_HaveNoRawgKey_SoTheSourceStaysInert()
+    public void FreshSettings_HaveNoApiKeys()
     {
         var settings = new AppSettings();
         Assert.True(string.IsNullOrWhiteSpace(settings.RawgApiKey));
+        Assert.True(string.IsNullOrWhiteSpace(settings.SteamGridDbApiKey));
     }
 }

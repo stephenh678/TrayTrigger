@@ -471,7 +471,7 @@ public class ImportCoordinator : ViewModelBase
                         var res = await GameNameExtractor.ResolveGameMatchAsync(
                             shortcut.TargetPath,
                             shortcut.WorkingDirectory,
-                            preferExe: _settings.PreferExeForGameName,
+                            preferExe: GameNameExtractor.PreferExeForGameName,
                             searchOnline: true,
                             steamSearch: _steamSearchService,
                             minConfidence: _settings.OnlineMatchConfidenceThreshold);
@@ -569,7 +569,7 @@ public class ImportCoordinator : ViewModelBase
         {
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) continue;
 
-            var scanResult = await Task.Run(() => ResolveAndFilterIgnored(_folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName), lookupIndex));
+            var scanResult = await Task.Run(() => ResolveAndFilterIgnored(_folderScannerService.ScanFolderOrLibrary(folderPath, GameNameExtractor.PreferExeForGameName), lookupIndex));
 
             if (scanResult.IsMultiGameLibrary)
             {
@@ -618,7 +618,7 @@ public class ImportCoordinator : ViewModelBase
         _library.StatusMessage = "Scanning folder...";
         // Platform resolution and ignore filtering happen here, before any picking, so an
         // ignored exe inside a Steam/GOG install can't hide the game the platform record names.
-        var scanResult = await Task.Run(() => ResolveAndFilterIgnored(_folderScannerService.ScanFolderOrLibrary(folderPath, _settings.PreferExeForGameName), _platformLookup.CreateIndex()));
+        var scanResult = await Task.Run(() => ResolveAndFilterIgnored(_folderScannerService.ScanFolderOrLibrary(folderPath, GameNameExtractor.PreferExeForGameName), _platformLookup.CreateIndex()));
 
         // A. Multi-game parent folder detected (e.g. C:\Games, D:\SteamLibrary\steamapps\common, C:\GOG Games)
         if (scanResult.IsMultiGameLibrary)
@@ -811,7 +811,7 @@ public class ImportCoordinator : ViewModelBase
                         var res = await GameNameExtractor.ResolveGameMatchAsync(
                             c.ExePath,
                             c.WorkingDirectory,
-                            preferExe: _settings.PreferExeForGameName,
+                            preferExe: GameNameExtractor.PreferExeForGameName,
                             searchOnline: true,
                             steamSearch: _steamSearchService,
                             minConfidence: _settings.OnlineMatchConfidenceThreshold);
@@ -951,7 +951,7 @@ public class ImportCoordinator : ViewModelBase
                 var res = await GameNameExtractor.ResolveGameMatchAsync(
                     candidate.ExePath,
                     candidate.WorkingDirectory,
-                    preferExe: _settings.PreferExeForGameName,
+                    preferExe: GameNameExtractor.PreferExeForGameName,
                     searchOnline: true,
                     steamSearch: _steamSearchService,
                     minConfidence: _settings.OnlineMatchConfidenceThreshold);
@@ -1664,7 +1664,7 @@ public class ImportCoordinator : ViewModelBase
                     // confidence gating entirely and takes every immediate subfolder's own best
                     // candidate directly - see ScanKnownLibraryLocation.
                     var candidates = FilterIgnored(
-                        ResolvePlatforms(_folderScannerService.ScanKnownLibraryLocation(loc.Path, _settings.PreferExeForGameName), index),
+                        ResolvePlatforms(_folderScannerService.ScanKnownLibraryLocation(loc.Path, GameNameExtractor.PreferExeForGameName), index),
                         ignoredExePaths, ignoredPlatformKeys);
                     folderResults.AddRange(candidates.Where(c =>
                         !existingExePaths.Contains(c.ExePath) &&

@@ -2832,14 +2832,7 @@
                                                   Style="{StaticResource ModernComboBox}" Width="190" HorizontalAlignment="Left"/>
                                     </DockPanel>
 
-                                    <CheckBox Content="Local title fallback: Prefer executable (.exe) over folder name" 
-                                              IsChecked="{Binding PreferExeForGameName}" 
-                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Builds the title from the exe's name and metadata rather than its parent folder."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
-                                               Margin="24,3,0,10" TextWrapping="Wrap"/>
-
-                                    <CheckBox Content="Automatically categorize games from store genres" 
+                                    <CheckBox Content="Automatically categorize games from store genres"
                                               IsChecked="{Binding AutoCategorizeFromSteam}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                     <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized. Uses Steam's genre when the game is on Steam, otherwise RAWG's if RAWG is enabled."

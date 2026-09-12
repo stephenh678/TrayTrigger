@@ -1271,6 +1271,25 @@ public partial class App
                 return;
             }
 
+            if (e.Args[i].Equals("--test-startup-reconcile", StringComparison.OrdinalIgnoreCase))
+            {
+                // The Run key is the truth for "Start with Windows"; settings.json only mirrors
+                // it. Reconciling used to happen solely when the Settings page opened, so a fresh
+                // install that ticked the installer's startup task carried StartWithWindows=false
+                // in settings.json until the user wandered into Settings. Drive this with the two
+                // deliberately out of step (registry on, stored value off) and the assert only
+                // passes if startup reconciled them.
+                bool registry = _startupManager.IsStartupEnabled();
+                bool setting = _mainViewModel.SettingsVM.StartWithWindows;
+                if (registry != setting)
+                    throw new Exception($"Startup state not reconciled: Run key says {registry}, setting says {setting}.");
+
+                LoggingService.Info("StartupReconcileTest", $"[TEST_STARTUP_RECONCILE_PASSED] Run key and setting agree ({registry})");
+                Console.WriteLine($"[TEST_STARTUP_RECONCILE_PASSED] Run key and setting agree ({registry})");
+                ExitApplication();
+                return;
+            }
+
             if (e.Args[i].Equals("--test-poster-zoom", StringComparison.OrdinalIgnoreCase))
             {
                 // The hover zoom is driven by a Storyboard declared in Window.Resources but
@@ -1501,9 +1520,9 @@ public partial class App
                 if (!_mainViewModel.SettingsVM.AlwaysShowTrayIcon) throw new Exception("Expected AlwaysShowTrayIcon=true after reset");
                 if (!_mainViewModel.SettingsVM.AutoCategorizeFromSteam) throw new Exception("Expected AutoCategorizeFromSteam=true after reset");
                 if (!_mainViewModel.SettingsVM.SearchOfficialTitleOnline) throw new Exception("Expected SearchOfficialTitleOnline=true after reset");
-                if (!_mainViewModel.SettingsVM.PreferExeForGameName) throw new Exception("Expected PreferExeForGameName=true after reset");
                 if (!_mainViewModel.SettingsVM.UseVerticalPosterArt) throw new Exception("Expected UseVerticalPosterArt=true after reset");
-                if (!_mainViewModel.SettingsVM.UseRawgMetadata) throw new Exception("Expected UseRawgMetadata=true after reset");
+                if (_mainViewModel.SettingsVM.UseRawgMetadata) throw new Exception("Expected UseRawgMetadata=false after reset");
+                if (_mainViewModel.SettingsVM.UseSteamGridDbArt) throw new Exception("Expected UseSteamGridDbArt=false after reset");
                 if (_mainViewModel.SettingsVM.StartWithWindows) throw new Exception("Expected StartWithWindows=false after reset");
                 if (!_mainViewModel.SettingsVM.StartMinimizedToTray) throw new Exception("Expected StartMinimizedToTray=true after reset");
 

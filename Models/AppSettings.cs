@@ -47,7 +47,6 @@ public class AppSettings
     public int MaxFavoritesInTray { get; set; } = 5;
     public string FavoritesTraySortOption { get; set; } = "Alphabetical (A - Z)";
     public string TrayMenuSortOption { get; set; } = "Alphabetical (A - Z)";
-    public bool PreferExeForGameName { get; set; } = true;
     public bool SearchOfficialTitleOnline { get; set; } = true;
     public double OnlineMatchConfidenceThreshold { get; set; } = 0.60;
     public bool AutoCategorizeFromSteam { get; set; } = true;
@@ -57,11 +56,10 @@ public class AppSettings
     /// <summary>User's own RAWG (rawg.io) API key for non-Steam game metadata. Encrypted on disk
     /// like <see cref="SteamGridDbApiKey"/>.</summary>
     public string RawgApiKey { get; set; } = string.Empty;
-    /// <summary>Enables the RAWG metadata source (the Steam/RAWG toggle in Game Details). On by
-    /// default, but inert until a <see cref="RawgApiKey"/> is entered - every consumer requires
-    /// both - so this costs a user without a key nothing, and saves a user who pastes one from
-    /// having to find a second switch before anything happens.</summary>
-    public bool UseRawgMetadata { get; set; } = true;
+    /// <summary>Enables the RAWG metadata source (the Steam/RAWG toggle in Game Details). Off by
+    /// default, matching <see cref="UseSteamGridDbArt"/>: both are third-party services the user
+    /// supplies their own key for, so neither is on until the user asks for it.</summary>
+    public bool UseRawgMetadata { get; set; } = false;
     /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
     /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
     [JsonConverter(typeof(JsonStringEnumConverter<MetadataRefreshInterval>))]
