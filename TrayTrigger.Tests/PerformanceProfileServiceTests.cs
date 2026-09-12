@@ -60,6 +60,17 @@ public class PerformanceProfileServiceTests : IDisposable
         public int? Toasts;
         public int? GetToastsEnabled() => Toasts;
         public void SetToastsEnabled(int? value) { Toasts = value; Log.Add("toasts:" + (value?.ToString() ?? "unset")); }
+
+        /// <summary>null models a machine with no playback device at all.</summary>
+        public bool? PlaybackMuted;
+        public bool? GetDefaultPlaybackMuted() => PlaybackMuted;
+        public bool SetDefaultPlaybackMuted(bool muted)
+        {
+            if (PlaybackMuted == null) return false;
+            PlaybackMuted = muted;
+            Log.Add("mute:" + muted);
+            return true;
+        }
     }
 
     private readonly string _dir;
@@ -282,6 +293,76 @@ public class PerformanceProfileServiceTests : IDisposable
         _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
         _service.EndGameSession("a");
         Assert.Equal(0, _backend.Toasts);
+    }
+
+    [Fact]
+    public void UnmuteAudio_MutedDevice_IsUnmutedThenRemuted()
+    {
+        _settings.OptimizedProfileTweaks.UnmuteAudioEnabled = true;
+        _backend.PlaybackMuted = true;
+
+        _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
+        Assert.False(_backend.PlaybackMuted);
+        Assert.True(_store.OnDisk!.PlaybackMuteCaptured);
+        Assert.True(_store.OnDisk.PreviousPlaybackMuted);
+
+        _service.EndGameSession("a");
+        Assert.True(_backend.PlaybackMuted);
+    }
+
+    /// <summary>
+    /// The usual case. Nothing is written and nothing is captured, so the exit restore has nothing
+    /// to put back - a device the user unmuted mid-session is left alone.
+    /// </summary>
+    [Fact]
+    public void UnmuteAudio_DeviceAlreadyUnmuted_TouchesNothing()
+    {
+        _settings.OptimizedProfileTweaks.UnmuteAudioEnabled = true;
+        _backend.PlaybackMuted = false;
+
+        _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
+        Assert.DoesNotContain(_backend.Log, l => l.StartsWith("mute:"));
+        Assert.False(_store.OnDisk!.PlaybackMuteCaptured);
+
+        _backend.PlaybackMuted = true; // user muted while playing
+        _service.EndGameSession("a");
+        Assert.True(_backend.PlaybackMuted);
+    }
+
+    [Fact]
+    public void UnmuteAudio_NoPlaybackDevice_IsNotAnError()
+    {
+        _settings.OptimizedProfileTweaks.UnmuteAudioEnabled = true;
+        _backend.PlaybackMuted = null;
+
+        Assert.True(_service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.False(_store.OnDisk!.PlaybackMuteCaptured);
+        _service.EndGameSession("a");
+    }
+
+    /// <summary>Opt-in: picking Optimized on its own must not start touching the speakers.</summary>
+    [Fact]
+    public void UnmuteAudio_Disabled_LeavesTheDeviceMuted()
+    {
+        _backend.PlaybackMuted = true;
+        _service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized));
+        Assert.True(_backend.PlaybackMuted);
+        Assert.DoesNotContain(_backend.Log, l => l.StartsWith("mute:"));
+        _service.EndGameSession("a");
+    }
+
+    [Fact]
+    public void CrashRecovery_RestoresPlaybackMute()
+    {
+        _backend.PlaybackMuted = false;
+        _store.OnDisk = new PerformanceProfileSessionSnapshot
+        {
+            PlaybackMuteCaptured = true,
+            PreviousPlaybackMuted = true
+        };
+        _service.RecoverFromCrashIfNeeded();
+        Assert.True(_backend.PlaybackMuted);
+        Assert.Null(_store.OnDisk);
     }
 
     [Fact]

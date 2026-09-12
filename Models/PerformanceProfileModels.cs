@@ -32,6 +32,14 @@ public class OptimizedProfileTweakConfig
     /// waiting on a message mid-game would rather see it.
     /// </summary>
     public bool DoNotDisturbEnabled { get; set; }
+
+    /// <summary>
+    /// Unmutes the default playback device when the game starts, restoring the prior mute state on
+    /// exit. Defaults to false: silence is sometimes deliberate (a sleeping household, a call on
+    /// the other monitor), and a launcher that turns the speakers on by itself is an unpleasant
+    /// surprise the first time. Opt in and it stops being a surprise.
+    /// </summary>
+    public bool UnmuteAudioEnabled { get; set; }
 }
 
 /// <summary>
@@ -136,6 +144,13 @@ public class PerformanceProfileSessionSnapshot
     /// <summary>Do Not Disturb: the global toast switch before the session (null = value absent = on).</summary>
     public bool ToastsCaptured { get; set; }
     public int? PreviousToastsEnabled { get; set; }
+
+    /// <summary>Unmute audio: whether the default playback device was muted before the session.
+    /// Only set when it was actually muted - unmuting an already-unmuted device is a no-op with
+    /// nothing to put back, and recording it would let crash recovery re-mute someone who never
+    /// was.</summary>
+    public bool PlaybackMuteCaptured { get; set; }
+    public bool PreviousPlaybackMuted { get; set; }
 
     /// <summary>A timer-resolution request is held by this TrayTrigger process. Nothing to recover
     /// after a crash (the request dies with the process) - tracked so the last session releases it.</summary>

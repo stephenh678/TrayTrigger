@@ -332,6 +332,9 @@ public partial class App : Application
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;
         // The "Now Playing" tray section follows the launcher's session registry directly.
         _launcherService.SessionStarted += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
+        // Without this the tray stays on the text SessionStarted painted - "Starting <game> via
+        // Steam" - for as long as the game runs, because nothing else re-reads GameStarted.
+        _launcherService.SessionGameStarted += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
         _launcherService.SessionEnded += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
 
         // Windows shutdown / sign-out: WPF raises SessionEnding instead of going through the tray
@@ -465,30 +468,7 @@ public partial class App : Application
             try
             {
                 var sessions = _launcherService?.GetActiveSessions() ?? [];
-                string text;
-
-                if (sessions.Count == 0)
-                {
-                    text = DefaultTrayToolTip;
-                }
-                else if (sessions.Count == 1)
-                {
-                    var session = sessions[0];
-                    text = session.GameStarted
-                        ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(DateTime.Now - session.StartedAt)}"
-                        : $"Starting {session.Game.Name} via {session.PlatformLabel}";
-                }
-                else
-                {
-                    text = $"Playing {sessions.Count} games · {string.Join(", ", sessions.Select(s => s.Game.Name))}";
-                }
-
-                if (text.Length > MaxTrayToolTipLength)
-                {
-                    text = text[..(MaxTrayToolTipLength - 1)].TrimEnd() + "…";
-                }
-
-                _trayIcon.ToolTipText = text;
+                _trayIcon.ToolTipText = BuildTrayToolTipText(sessions, DateTime.Now);
 
                 // The timer exists only to age the elapsed time, so it runs only while something is
                 // actually playing (a session still starting has no elapsed time to age yet).
@@ -513,6 +493,37 @@ public partial class App : Application
     }
 
     /// <summary>"47m" under an hour, "1h 12m" past it - the tray tooltip has no room for more.</summary>
+    /// <summary>
+    /// The tray tooltip for a set of live sessions. "Starting X via Steam" is only ever correct
+    /// before the game itself is up: <see cref="ProcessLauncherService.SessionGameStarted"/> is
+    /// what brings <see cref="UpdateTrayToolTip"/> back once it is, and without that subscription
+    /// this text is painted once at dispatch and never replaced.
+    /// </summary>
+    internal static string BuildTrayToolTipText(IReadOnlyList<ActiveGameSession> sessions, DateTime now)
+    {
+        string text;
+
+        if (sessions.Count == 0)
+        {
+            text = DefaultTrayToolTip;
+        }
+        else if (sessions.Count == 1)
+        {
+            var session = sessions[0];
+            text = session.GameStarted
+                ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(now - session.StartedAt)}"
+                : $"Starting {session.Game.Name} via {session.PlatformLabel}";
+        }
+        else
+        {
+            text = $"Playing {sessions.Count} games · {string.Join(", ", sessions.Select(s => s.Game.Name))}";
+        }
+
+        return text.Length > MaxTrayToolTipLength
+            ? text[..(MaxTrayToolTipLength - 1)].TrimEnd() + "…"
+            : text;
+    }
+
     private static string FormatPlayingElapsed(TimeSpan elapsed)
     {
         if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;

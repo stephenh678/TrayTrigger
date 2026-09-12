@@ -52,19 +52,31 @@ public class SystemTweakViewModel : ViewModelBase
     public bool IsBusy
     {
         get => _isBusy;
-        private set
+        internal set
         {
             if (_isBusy != value)
             {
                 _isBusy = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ActionButtonText));
-                OnPropertyChanged(nameof(CanExecuteToggle));
             }
         }
     }
 
-    public bool CanExecuteToggle => CanToggle && IsAvailable && !IsBusy;
+    /// <summary>
+    /// Deliberately independent of <see cref="IsBusy"/>: the row's Optimize/Revert button must not
+    /// disable itself while its own click is being handled.
+    ///
+    /// WPF moves keyboard focus off an element the moment it becomes disabled, and the element it
+    /// moves to gets scrolled into view - so a button that greys itself out mid-click threw the
+    /// tweak list's scroll position to wherever the next focusable row happened to be. The button
+    /// staying enabled also keeps it out of the re-enable path that needs a CommandManager
+    /// requery, which is what made the next click on it do nothing.
+    ///
+    /// Re-entry is still blocked - <see cref="ExecuteToggleAsync"/> returns immediately while busy
+    /// - and "Working..." in <see cref="ActionButtonText"/> is what tells the user it is running.
+    /// </summary>
+    public bool CanExecuteToggle => CanToggle && IsAvailable;
 
     /// <summary>"Learn more" target: Help/tweaks/&lt;id&gt;.md, embedded at build time.</summary>
     public string HelpTopicId => "tweaks/" + Model.Id;
@@ -436,6 +448,13 @@ public class SystemViewModel : ViewModelBase
                 "profiles/do_not_disturb",
                 () => config.DoNotDisturbEnabled,
                 v => { config.DoNotDisturbEnabled = v; Save(); },
+                isOptIn: true),
+            new("Unmute Speakers While Playing",
+                "Unmutes your current playback device when the game starts, and puts the mute back the way it was on exit.",
+                "Starting a game into silence because the speakers were muted from earlier is a two-minute detour through the volume flyout - and on a machine that boots muted, every time. This clears the mute flag on whichever playback device Windows currently treats as the default, using the same Core Audio call the volume flyout's own speaker button makes, so it follows a switch to a headset without any per-device setup. Volume level is left exactly where you had it: this only lifts the mute, so a device sitting at 5% still plays at 5%. If the device was not muted at the start of the session, nothing is recorded and nothing is restored. If it was, the mute goes back on when the game exits - TrayTrigger puts what it changes back. Opt-in because sound off is often deliberate.",
+                "profiles/unmute_audio",
+                () => config.UnmuteAudioEnabled,
+                v => { config.UnmuteAudioEnabled = v; Save(); },
                 isOptIn: true),
         };
     }

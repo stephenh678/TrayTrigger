@@ -40,6 +40,15 @@ public class AppSettings
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
     public string LastCategoryFilter { get; set; } = "All";
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
+
+    /// <summary>
+    /// Ticked options in the library filter flyout ("launcher:steam", "status:neverplayed"), kept
+    /// across restarts the same way the category tab and sort order are. Unlike those two, an
+    /// active filter is not visible in the toolbar on its own, so the filter button carries a blue
+    /// dot and the empty-library message offers to clear it - a saved filter must never look like
+    /// a library that lost its games.
+    /// </summary>
+    public List<string> LibraryFilterKeys { get; set; } = new();
     public bool ShowRecentInTray { get; set; } = true;
     public int MaxRecentInTray { get; set; } = 5;
     public string RecentTraySortOption { get; set; } = "Most Recently Played";

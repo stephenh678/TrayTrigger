@@ -52,6 +52,23 @@
                 <MenuItem Header="Aggressive" IsCheckable="True" IsChecked="{Binding BatchProfileIsAggressive, Mode=OneWay}"
                           Command="{Binding BatchSetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Aggressive}"/>
             </MenuItem>
+            <!-- Hidden on a uniform CPU: pinning to performance cores is a documented no-op there,
+                 and an option that cannot do anything is worse than no option. Edit Game Properties
+                 still offers it, with a hint, for a library headed to a hybrid machine. -->
+            <MenuItem Header="CPU Cores" Visibility="{Binding IsHybridCpu, Converter={StaticResource BoolToVis}}">
+                <MenuItem Header="All Cores (Windows default)" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsDefault, Mode=OneWay}"
+                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Default}"/>
+                <MenuItem Header="Performance Cores Only" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsPerformanceCores, Mode=OneWay}"
+                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"/>
+            </MenuItem>
+            <!-- Both are all-or-nothing, like Favorite and Hide above: the check is on only when
+                 every selected game already has it, so the label says which way the click goes. -->
+            <MenuItem Header="Launch Options">
+                <MenuItem Header="{Binding BatchRunAsAdminLabel}" IsCheckable="True" IsChecked="{Binding BatchAllRunAsAdmin, Mode=OneWay}"
+                          Command="{Binding BatchRunAsAdminCommand}"/>
+                <MenuItem Header="{Binding BatchCloseLauncherLabel}" IsCheckable="True" IsChecked="{Binding BatchAllCloseLauncher, Mode=OneWay}"
+                          Command="{Binding BatchCloseLauncherCommand}"/>
+            </MenuItem>
             <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding BatchRefreshMetadataCommand}"/>
             <Separator/>
             <MenuItem Header="Remove from Library" Command="{Binding BatchRemoveCommand}" Foreground="#E06C75"/>
@@ -108,34 +125,58 @@
 
             <Separator/>
 
+            <!-- Cascading quick settings, in the same order and with the same wording as the batch
+                 menu. Everything here writes a field Edit Game Properties also writes; the point is
+                 to flip one without opening a dialog, the way the batch menu already let you flip a
+                 whole selection. -->
+            <MenuItem Header="Performance Profile">
+                <MenuItem Header="Off" IsCheckable="True" IsChecked="{Binding ProfileIsOff, Mode=OneWay}"
+                          Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Off}"/>
+                <MenuItem Header="Optimized" IsCheckable="True" IsChecked="{Binding ProfileIsOptimized, Mode=OneWay}"
+                          Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Optimized}"/>
+                <MenuItem Header="Aggressive" IsCheckable="True" IsChecked="{Binding ProfileIsAggressive, Mode=OneWay}"
+                          Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Aggressive}"/>
+            </MenuItem>
+            <MenuItem Header="CPU Cores" Visibility="{Binding IsHybridCpu, Converter={StaticResource BoolToVis}}">
+                <MenuItem Header="All Cores (Windows default)" IsCheckable="True" IsChecked="{Binding CpuAffinityIsDefault, Mode=OneWay}"
+                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Default}"/>
+                <MenuItem Header="Performance Cores Only" IsCheckable="True" IsChecked="{Binding CpuAffinityIsPerformanceCores, Mode=OneWay}"
+                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"/>
+            </MenuItem>
+            <MenuItem Header="Launch Options">
+                <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding RunAsAdmin, Mode=OneWay}"
+                          Command="{Binding ToggleRunAsAdminCommand}"/>
+                <!-- Nothing to close for a plain local exe, so the item is not offered there. -->
+                <MenuItem Header="Close Launcher After Game Exits" IsCheckable="True" IsChecked="{Binding CloseLauncherOnExit, Mode=OneWay}"
+                          Command="{Binding ToggleCloseLauncherCommand}"
+                          Visibility="{Binding HasLauncherToClose, Converter={StaticResource BoolToVis}}"/>
+            </MenuItem>
+
+            <Separator/>
+
             <!-- Quick Actions: the umbrella (Edit Game Properties) first, then the shortcuts into it. -->
             <MenuItem Header="Edit Game Properties..." Command="{Binding EditCommand}"/>
             <MenuItem Header="Rename..." Command="{Binding RenameCommand}"/>
-            <!-- Replaces the old "Fetch Official Name", which renamed silently from a heuristic
-                 search with no confirmation and no undo. This opens the same picker Game Details
-                 uses, so a wrong match is corrected in one step instead of three. -->
-            <MenuItem Header="Change Match..." Command="{Binding ChangeMatchCommand}"/>
-            <MenuItem Header="Change Category..." Command="{Binding ChangeCategoryCommand}"/>
-            <MenuItem Header="Change Icon..." Command="{Binding ChangeIconCommand}"/>
-            <MenuItem Header="Change Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
-            <!-- The manual escape hatch, below the picker that supersedes it for most users. -->
-            <MenuItem Header="Set Steam App ID..." Command="{Binding EditSteamAppIdCommand}"/>
+            <!-- The five "Change ..." items were a flat run in the middle of an already long menu.
+                 Cascaded, the menu reads as actions first and corrections second, and Rename stays
+                 at the top level because it is the one used far more often than the rest. -->
+            <MenuItem Header="Change">
+                <!-- Replaces the old "Fetch Official Name", which renamed silently from a heuristic
+                     search with no confirmation and no undo. This opens the same picker Game Details
+                     uses, so a wrong match is corrected in one step instead of three. -->
+                <MenuItem Header="Match..." Command="{Binding ChangeMatchCommand}"/>
+                <MenuItem Header="Category..." Command="{Binding ChangeCategoryCommand}"/>
+                <MenuItem Header="Icon..." Command="{Binding ChangeIconCommand}"/>
+                <MenuItem Header="Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
+                <Separator/>
+                <!-- The manual escape hatch, below the picker that supersedes it for most users. -->
+                <MenuItem Header="Steam App ID..." Command="{Binding EditSteamAppIdCommand}"/>
+            </MenuItem>
             <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding RefreshMetadataCommand}"/>
 
-            <!-- Steam Specific Actions -->
-            <Separator>
-                <Separator.Style>
-                    <Style TargetType="Separator">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Separator.Style>
-            </Separator>
-            <MenuItem Header="Steam Store Page" Command="{Binding OpenStoreCommand}">
+            <!-- Steam-specific actions. One cascading item rather than three top-level ones and a
+                 separator, all four of which carried the same HasSteamOverlay visibility style. -->
+            <MenuItem Header="Steam">
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -146,30 +187,9 @@
                         </Style.Triggers>
                     </Style>
                 </MenuItem.Style>
-            </MenuItem>
-            <MenuItem Header="Open in Steam Library" Command="{Binding OpenInSteamLibraryCommand}">
-                <MenuItem.Style>
-                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </MenuItem.Style>
-            </MenuItem>
-            <MenuItem Header="Verify Game Files" Command="{Binding VerifyFilesCommand}">
-                <MenuItem.Style>
-                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </MenuItem.Style>
+                <MenuItem Header="Store Page" Command="{Binding OpenStoreCommand}"/>
+                <MenuItem Header="Open in Steam Library" Command="{Binding OpenInSteamLibraryCommand}"/>
+                <MenuItem Header="Verify Game Files" Command="{Binding VerifyFilesCommand}"/>
             </MenuItem>
 
             <Separator/>
@@ -650,6 +670,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="190"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <TextBox x:Name="LibrarySearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -661,8 +682,83 @@
                               SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                               Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
 
+                    <!-- Filter flyout. Sits beside Sort because it is the same kind of control: it
+                         changes what the list shows without changing the library. The category tabs
+                         above stay the primary cut; this narrows within whichever one is selected. -->
+                    <Grid Grid.Column="2" Margin="0,0,10,0">
+                        <!-- Same container as the view-mode switcher to its right, so the two icon
+                             controls read as one family rather than a loose button beside a group. -->
+                        <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                                BorderThickness="1" CornerRadius="6" Padding="3"/>
+                        <Button x:Name="LibraryFilterButton"
+                                Command="{Binding Library.Filter.ToggleOpenCommand}"
+                                Width="32" Height="30" Padding="0" Cursor="Hand" Margin="4,4,4,4"
+                                Style="{StaticResource SegmentedTabButton}"
+                                Tag="{Binding Library.Filter.IsOpen}"
+                                ToolTip="{Binding Library.Filter.ActiveFilterSummary}"
+                                AutomationProperties.Name="Filter games">
+                            <Grid>
+                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
+                                           Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <!-- The blue dot: the only thing on screen that says a filter is
+                                     hiding games, since unlike the category tab and the sort box
+                                     the flyout's state is invisible once it closes. -->
+                                <Ellipse Width="6" Height="6" Fill="{StaticResource BrushAccentHover}"
+                                         Stroke="#181820" StrokeThickness="1"
+                                         HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"
+                                         Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Button>
+
+                        <Popup IsOpen="{Binding Library.Filter.IsOpen, Mode=TwoWay}"
+                               PlacementTarget="{Binding ElementName=LibraryFilterButton}" Placement="Bottom"
+                               StaysOpen="False" AllowsTransparency="True" HorizontalOffset="-236" VerticalOffset="4">
+                            <Border Background="#1B1B20" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="8" Padding="14,12" MinWidth="270" MaxWidth="300">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="#000000"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Button DockPanel.Dock="Right" Content="Clear" Command="{Binding Library.Filter.ClearCommand}"
+                                                Style="{StaticResource HelpLinkButton}"
+                                                Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+
+                                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding Library.Filter.Groups}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:LibraryFilterGroup}">
+                                                    <StackPanel Margin="0,0,0,10"
+                                                                Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{Binding Title}" FontSize="10.5" FontWeight="Bold"
+                                                                   Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4"/>
+                                                        <ItemsControl ItemsSource="{Binding Options}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type vm:LibraryFilterOption}">
+                                                                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                                              Style="{StaticResource ModernCheckBox}" FontSize="12"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}"
+                                            CommandParameter="library/filtering"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+
                     <!-- View Mode Switcher (Grid, Icons, List) -->
-                    <Border Grid.Column="2" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                    <Border Grid.Column="3" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="6" Padding="3">
                         <StackPanel Orientation="Horizontal">
                             <!-- Every button is icon-only, so each carries a tooltip and an automation
@@ -777,6 +873,9 @@
                                         <DataTrigger Binding="{Binding SelectedCategory}" Value="Favorites">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
+                                        <DataTrigger Binding="{Binding Library.IsEmptyBecauseOfFilters}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
@@ -805,6 +904,11 @@
                                             </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible"/>
                                         </MultiDataTrigger>
+                                        <!-- Last trigger wins: on the Favorites tab with filters on,
+                                             "clear filters" is the useful advice, not "star a game". -->
+                                        <DataTrigger Binding="{Binding Library.IsEmptyBecauseOfFilters}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
@@ -816,6 +920,33 @@
                             <TextBlock Text="Click the star on any game to add it to your Favorites."
                                        FontSize="13" Foreground="{StaticResource BrushTextSecondary}"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                        </StackPanel>
+
+                        <!-- Filtered to nothing. The filter flyout persists across restarts, so
+                             without this a tick left on last night reads as a library that lost its
+                             games. Wins over the "No games match" panel above, which would send the
+                             user looking at the search box and the tabs instead. -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Library.IsEmptyBecauseOfFilters}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="36"
+                                       Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                            <TextBlock Text="Hidden by your filters"
+                                       FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
+                                       FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Your library has games, but none of them match the filters you have set. Filters stay put between sessions - the filter button shows a blue dot whenever any are on."
+                                       FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                       FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,16"/>
+                            <Button Content="Clear filters" Command="{Binding Library.Filter.ClearCommand}"
+                                    Style="{StaticResource ModernAccentButton}" HorizontalAlignment="Center"/>
                         </StackPanel>
                         </Grid>
                     </Border>

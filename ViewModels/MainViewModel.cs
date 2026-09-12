@@ -586,6 +586,22 @@ public class MainViewModel : ViewModelBase
     public bool BatchProfileIsOff => Library.BatchProfileIsOff;
     public bool BatchProfileIsOptimized => Library.BatchProfileIsOptimized;
     public bool BatchProfileIsAggressive => Library.BatchProfileIsAggressive;
+    public ICommand BatchRunAsAdminCommand => Library.BatchRunAsAdminCommand;
+    public ICommand BatchCloseLauncherCommand => Library.BatchCloseLauncherCommand;
+    public ICommand BatchSetCpuAffinityCommand => Library.BatchSetCpuAffinityCommand;
+    public bool BatchAllRunAsAdmin => Library.BatchAllRunAsAdmin;
+    public string BatchRunAsAdminLabel => Library.BatchRunAsAdminLabel;
+    public bool BatchAllCloseLauncher => Library.BatchAllCloseLauncher;
+    public string BatchCloseLauncherLabel => Library.BatchCloseLauncherLabel;
+    public bool BatchCpuAffinityIsDefault => Library.BatchCpuAffinityIsDefault;
+    public bool BatchCpuAffinityIsPerformanceCores => Library.BatchCpuAffinityIsPerformanceCores;
+
+    /// <summary>
+    /// Whether this machine has a hybrid (P-core/E-core) CPU. The core-pinning menu items are
+    /// hidden elsewhere: on a uniform CPU "Performance Cores Only" is a documented no-op, and an
+    /// option that cannot do anything is worse than no option.
+    /// </summary>
+    public bool IsHybridCpu => Services.CpuTopologyService.GetTopology().IsHybrid;
 
     public void LoadLibrary() => Library.LoadLibrary();
     public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false) => Library.CreateCardViewModel(game, deferHeavyInit);

@@ -51,6 +51,11 @@ public interface ISystemTweakBackend
     /// <summary>The notification centre's global toast switch (NOC_GLOBAL_SETTING_TOASTS_ENABLED): null = value absent = enabled.</summary>
     int? GetToastsEnabled();
     void SetToastsEnabled(int? value);
+
+    /// <summary>The default playback device's mute flag; null when the machine has no playback device.</summary>
+    bool? GetDefaultPlaybackMuted();
+    /// <summary>Sets the default playback device's mute flag. False when there was nothing to set.</summary>
+    bool SetDefaultPlaybackMuted(bool muted);
 }
 
 /// <summary>Production <see cref="ISystemTweakBackend"/> - thin pass-throughs, no logic.</summary>
@@ -217,6 +222,10 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
         if (value.HasValue) key.SetValue(ToastsEnabledValue, value.Value, RegistryValueKind.DWord);
         else key.DeleteValue(ToastsEnabledValue, throwOnMissingValue: false);
     }
+
+    public bool? GetDefaultPlaybackMuted() => AudioEndpointService.GetDefaultRenderMuted();
+
+    public bool SetDefaultPlaybackMuted(bool muted) => AudioEndpointService.SetDefaultRenderMuted(muted);
 
     private static string EscapeForPowerShellSingleQuoted(string value) => value.Replace("'", "''");
 

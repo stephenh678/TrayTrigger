@@ -221,6 +221,13 @@ public class PerformanceProfileService
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
+            if (settings.OptimizedProfileTweaks.UnmuteAudioEnabled)
+            {
+                ApplyUnmuteAudio(snapshot);
+                applied = true;
+                _store.SaveProfileSessionSnapshot(snapshot);
+            }
+
             if (aggressive && settings.AggressiveProfileTweaks.TimerResolutionEnabled)
             {
                 ApplyTimerResolution(snapshot);
@@ -472,6 +479,62 @@ public class PerformanceProfileService
         }
     }
 
+    /// <summary>
+    /// Unmutes the default playback device so a muted machine does not start a game in silence.
+    /// Nothing is captured when it was not muted to begin with, so the common case leaves no state
+    /// behind and cannot be put back wrongly.
+    /// </summary>
+    private void ApplyUnmuteAudio(PerformanceProfileSessionSnapshot snapshot)
+    {
+        try
+        {
+            bool? muted = _backend.GetDefaultPlaybackMuted();
+            if (muted == null)
+            {
+                LoggingService.Verbose("PerformanceProfile", "Unmute audio: no default playback device; nothing to do.");
+                return;
+            }
+            if (muted == false)
+            {
+                LoggingService.Verbose("PerformanceProfile", "Unmute audio: playback device is already unmuted.");
+                return;
+            }
+
+            if (_backend.SetDefaultPlaybackMuted(false))
+            {
+                snapshot.PlaybackMuteCaptured = true;
+                snapshot.PreviousPlaybackMuted = true;
+                LoggingService.Info("PerformanceProfile", "Unmute audio: default playback device unmuted for this session.");
+            }
+            else
+            {
+                LoggingService.Warn("PerformanceProfile", "Unmute audio: the default playback device refused the change.");
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("PerformanceProfile", $"ApplyUnmuteAudio failed: {ex.Message}");
+        }
+    }
+
+    private void RestoreUnmuteAudio(PerformanceProfileSessionSnapshot snapshot)
+    {
+        if (!snapshot.PlaybackMuteCaptured) return;
+        try
+        {
+            // Restores to whichever device is default now, not the one the session started on.
+            // Following the user's current device is the lesser surprise: they moved the sound
+            // somewhere on purpose, and re-muting a device they have since walked away from would
+            // leave the one they are listening to in a state TrayTrigger never saw.
+            _backend.SetDefaultPlaybackMuted(snapshot.PreviousPlaybackMuted);
+            LoggingService.Info("PerformanceProfile", $"Unmute audio: playback device restored to {(snapshot.PreviousPlaybackMuted ? "muted" : "unmuted")}.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("PerformanceProfile", $"RestoreUnmuteAudio failed: {ex.Message}");
+        }
+    }
+
     private void ApplyTimerResolution(PerformanceProfileSessionSnapshot snapshot)
     {
         uint granted = _backend.RequestHighTimerResolution();
@@ -497,6 +560,8 @@ public class PerformanceProfileService
         snapshot.HdrCaptured = false;
         RestoreDoNotDisturb(snapshot);
         snapshot.ToastsCaptured = false;
+        RestoreUnmuteAudio(snapshot);
+        snapshot.PlaybackMuteCaptured = false;
         RestoreTimerResolution(snapshot);
 
         if (skipElevated && !_backend.IsElevated)

@@ -44,6 +44,7 @@ public sealed class ActiveGameSession
     internal Action? CancelTracking;
     internal int Finished;
     internal int WindowReadySignalled;
+    internal int GameStartedSignalled;
 }
 
 public partial class ProcessLauncherService
@@ -105,8 +106,34 @@ public partial class ProcessLauncherService
 
     /// <summary>A tracked session began (profile applied / launch dispatched). Raised on a background thread.</summary>
     public event Action<ActiveGameSession>? SessionStarted;
+    /// <summary>
+    /// The game itself is now running, as opposed to merely dispatched - the process handle was
+    /// attached, or Steam flipped its Running flag. Raised at most once per session, on a
+    /// background thread.
+    ///
+    /// SessionStarted fires at dispatch, when <see cref="ActiveGameSession.GameStarted"/> is still
+    /// false, and nothing raised anything when it later turned true - so anything rendered from
+    /// that flag (the tray tooltip, the tray menu's Now Playing section) was painted once as
+    /// "Starting ..." and stayed that way for the whole session.
+    /// </summary>
+    public event Action<ActiveGameSession>? SessionGameStarted;
     /// <summary>A tracked session ended (tweaks restored, post-exit script dispatched). Raised on a background thread.</summary>
     public event Action<ActiveGameSession>? SessionEnded;
+
+    /// <summary>
+    /// The single place <see cref="ActiveGameSession.GameStarted"/> turns on: sets the flag and the
+    /// playtime clock, then raises <see cref="SessionGameStarted"/> exactly once. Every launch route
+    /// funnels through here - Steam via its Running flag, everything else via
+    /// <see cref="AttachExitTracking"/>.
+    /// </summary>
+    internal void MarkGameStarted(ActiveGameSession session, DateTime startedAt)
+    {
+        session.StartedAt = startedAt;
+        session.GameStarted = true;
+        if (Interlocked.Exchange(ref session.GameStartedSignalled, 1) != 0) return;
+        try { SessionGameStarted?.Invoke(session); }
+        catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionGameStarted handler failed: {ex.Message}"); }
+    }
 
     public ProcessLauncherService(
         StorageService storageService,
@@ -738,8 +765,7 @@ public partial class ProcessLauncherService
             {
                 if (isRunning)
                 {
-                    session.GameStarted = true;
-                    session.StartedAt = DateTime.Now;
+                    MarkGameStarted(session, DateTime.Now);
                     LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' now running.");
                     return true;
                 }
@@ -927,8 +953,9 @@ public partial class ProcessLauncherService
     {
         var game = session.Game;
         session.Process = process;
-        session.GameStarted = true;
-        try { session.StartedAt = process.StartTime; } catch { session.StartedAt = DateTime.Now; }
+        DateTime startedAt;
+        try { startedAt = process.StartTime; } catch { startedAt = DateTime.Now; }
+        MarkGameStarted(session, startedAt);
 
         int exitHandled = 0;
 

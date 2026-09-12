@@ -11,10 +11,12 @@ You can act on several games in one step: add or remove favorites, hide or unhid
 
 ## Acting on the selection
 
-- Right-click any selected card. When two or more are selected, the menu shows only the actions that work on a group: Add to or Remove from Favorites, Hide or Unhide, Change Category, Performance Profile, Refresh Poster & Metadata, and Remove from Library. Play is hidden on the cards while a selection exists, because playing is a single-game action.
-- Add to Favorites turns into Remove from Favorites when every selected game is already a favorite. Hide turns into Unhide the same way, for example on the Hidden tab.
+- Right-click any selected card. When two or more are selected, the menu shows only the actions that work on a group: Add to or Remove from Favorites, Hide or Unhide, Change Category, Performance Profile, CPU Cores, Launch Options, Refresh Poster & Metadata, and Remove from Library. Play is hidden on the cards while a selection exists, because playing is a single-game action.
+- Add to Favorites turns into Remove from Favorites when every selected game is already a favorite. Hide turns into Unhide the same way, for example on the Hidden tab. Run as Administrator and Close Launcher After Game Exits work the same way: a mixed selection turns every game on, and only a selection where all of them are already on turns them off. The label always says which way the next click goes.
 - Change Category prompts once and applies the category to all selected games. The box is pre-filled only when they already share one.
 - Performance Profile sets Off, Optimized, or Aggressive on every selected game, the same as choosing the tier in Edit Game. The check mark shows the current tier only when all selected games share it. A game that is playing right now keeps its current session; the new tier applies from its next launch.
+- CPU Cores pins the selection to performance cores, or puts it back on all cores. It only appears on a hybrid CPU, the kind with separate performance and efficiency cores, because pinning does nothing on any other kind.
+- Launch Options covers Run as Administrator and Close Launcher After Game Exits for the whole selection. Both are also on the single-game menu, in a submenu with the same name.
 - Refresh Poster & Metadata re-fetches each selected game from the Steam store one after another, with progress in the status bar. Games without a Steam App ID are searched by name, as the single-game refresh does.
 - Remove asks for one confirmation for the whole selection. It is undoable for six seconds from the toast at the bottom, the same as removing a single game, and never touches installed files. Pressing the Delete key with games selected does the same thing.
 - Right-clicking a card that is not selected drops the selection and opens the usual single-game menu for that card. With only one card selected the usual menu opens too.
