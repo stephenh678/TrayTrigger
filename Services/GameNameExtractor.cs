@@ -302,10 +302,17 @@ public static partial class GameNameExtractor
     [GeneratedRegex(@"(?<=[a-z])(?=[A-Z])")]
     private static partial Regex CamelCaseBoundaryRegex();
 
-    [GeneratedRegex(@"(?<=[a-zA-Z])(?=[0-9])")]
+    // A digit starts a new word only when a real word precedes it. Splitting at every
+    // letter/digit boundary turned "R6-Extraction" into "R 6 Extraction", "P3R" into "P 3 R" and
+    // "G1R" into "G 1 R" - names that match nothing, and that then became the *trusted* name the
+    // later passes are measured against. Requiring three letters keeps the sequel and year splits
+    // that make these names searchable ("MortalShell2", "Cyberpunk2077", "Left4Dead") while
+    // leaving a short designation whole. The same rule on the other side keeps "R6Extraction"
+    // splitting into "R6 Extraction" rather than "R 6 Extraction".
+    [GeneratedRegex(@"(?<=[a-zA-Z]{3})(?=[0-9])")]
     private static partial Regex LetterNumberBoundaryRegex();
 
-    [GeneratedRegex(@"(?<=[0-9])(?=[a-zA-Z])")]
+    [GeneratedRegex(@"(?<=[0-9])(?=[a-zA-Z]{3})")]
     private static partial Regex NumberLetterBoundaryRegex();
 
     [GeneratedRegex(@"\[.*?\]")]
