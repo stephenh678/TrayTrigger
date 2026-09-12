@@ -27,6 +27,8 @@
   &nbsp;·&nbsp;
   <a href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
   &nbsp;·&nbsp;
+  <a href="https://stephenh678.github.io/TrayTrigger/">Website</a>
+  &nbsp;·&nbsp;
   <a href="https://github.com/stephenh678/TrayTrigger/wiki">Wiki</a>
   &nbsp;·&nbsp;
   <a href="#faq">FAQ</a>
