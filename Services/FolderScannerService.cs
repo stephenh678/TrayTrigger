@@ -74,6 +74,10 @@ public partial class FolderScannerService
         "fonts", "saves", "saved", "screenshots", "logs", "crashdumps", "dumps",
         "intermediate", "deriveddatacache", "patch", "dlc",
 
+        // Where installers and archives land on their way somewhere else - never where a game
+        // keeps its binary, and full of setup stubs and utilities that score like one.
+        "downloads", "download",
+
         // Redistributables, installers, dependencies
         "_commonredist", "commonredist", "redist", "redistributables",
         "directx", "dxsetup", "support", "installer", "installers",
@@ -602,6 +606,17 @@ public partial class FolderScannerService
 
         // Blizzard uses _retail_ for the game files
         if (lower.StartsWith("_") && !lower.StartsWith("_retail"))
+            return true;
+
+        // Folders are often prefixed with a punctuation character to pin them to the top of a
+        // sorted listing - "^Downloads", "!Backup", "#Temp". Re-check the name without it, so the
+        // prefix cannot smuggle a folder past the list above: Steph's "C:\Games\^Downloads" was
+        // walked as a game folder, scoring twenty-odd installer and utility binaries and putting
+        // "Topaz Photo AI Pro 4.1.0 (x64)" in front of him as a game to import. Only the name
+        // check repeats - a prefixed folder whose real name is not on the list is still scanned,
+        // so "^My Game" is untouched.
+        string unprefixed = lower.TrimStart('^', '!', '#', '@', '~', '+');
+        if (unprefixed.Length > 0 && unprefixed.Length != lower.Length && PrunedDirectoryNames.Contains(unprefixed))
             return true;
 
         if (lower.StartsWith("redist") ||

@@ -48,6 +48,46 @@ public class FolderScannerServiceTests : IDisposable
         Assert.Equal("R6 Extraction Plus", Assert.Single(byExe).Name);
     }
 
+    private string CreateGameFolder(string folderName, string exeName)
+    {
+        string dir = Path.Combine(_tempDir, folderName);
+        Directory.CreateDirectory(dir);
+        File.WriteAllBytes(Path.Combine(dir, exeName), new byte[400 * 1024]);
+        return dir;
+    }
+
+    /// <summary>
+    /// A punctuation prefix pins a folder to the top of a sorted listing; it does not make it a
+    /// game. Steph's "C:\Games\^Downloads" was walked as one, scoring twenty-odd installer and
+    /// utility binaries and offering "Topaz Photo AI Pro 4.1.0 (x64)" for import.
+    /// </summary>
+    [Fact]
+    public void ScanFolderOrLibrary_SortPrefixedDownloadsFolder_IsNotScanned()
+    {
+        CreateGameFolder("Fatekeeper", "Fatekeeper.exe");
+        CreateGameFolder("Ghostrunner", "Ghostrunner.exe");
+        CreateGameFolder("^Downloads", "Topaz Photo AI Pro 4.1.0 (x64).exe");
+
+        var result = new FolderScannerService().ScanFolderOrLibrary(_tempDir);
+
+        Assert.True(result.IsMultiGameLibrary);
+        Assert.DoesNotContain(result.DiscoveredGames, g => g.Name.Contains("Topaz", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(2, result.DiscoveredGames.Count);
+    }
+
+    /// <summary>The prefix alone proves nothing - only the name underneath it decides.</summary>
+    [Fact]
+    public void ScanFolderOrLibrary_SortPrefixedGameFolder_IsStillScanned()
+    {
+        CreateGameFolder("^Fatekeeper", "Fatekeeper.exe");
+        CreateGameFolder("Ghostrunner", "Ghostrunner.exe");
+
+        var result = new FolderScannerService().ScanFolderOrLibrary(_tempDir);
+
+        Assert.True(result.IsMultiGameLibrary);
+        Assert.Equal(2, result.DiscoveredGames.Count);
+    }
+
     [Fact]
     public void IsDisqualified_TinyStub_IsDisqualified()
     {
