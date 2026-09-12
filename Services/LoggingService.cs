@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 
@@ -22,6 +23,8 @@ public static class LoggingService
     private static bool _isVerboseEnabled;
     private static StreamWriter? _writer;
     private static int _writesSinceRotationCheck;
+    private static bool _bannerWrittenThisProcess;
+    private static bool _logFileCreatedThisProcess;
     private const int RotationCheckInterval = 50;
     private const long MaxLogSizeBytes = 5 * 1024 * 1024;
 
@@ -59,7 +62,68 @@ public static class LoggingService
     {
         _isVerboseEnabled = verbose;
         EnsureLogFileExists();
+
+        // One banner per run. A tester's log file outlives many versions - Preston's covered
+        // 1.0.2 through 1.4.0 over six days - and without this there is nothing in it saying
+        // which build wrote which line. Skipped when the file was just created, because its
+        // own header says the same thing.
+        lock (LockObj)
+        {
+            if (!_bannerWrittenThisProcess)
+            {
+                _bannerWrittenThisProcess = true;
+                if (!_logFileCreatedThisProcess)
+                {
+                    GetWriter().Write(BuildBanner("session started"));
+                }
+            }
+        }
+
         Info("App", $"TrayTrigger logging initialized. Verbose={_isVerboseEnabled}");
+    }
+
+    /// <summary>
+    /// The running build, as baked in by CI (<c>/p:Version=1.4.1-beta.1</c>). The SDK appends
+    /// "+&lt;commit&gt;" to the informational version; a tester reading their own log does not
+    /// need it.
+    /// </summary>
+    private static string AppVersion()
+    {
+        try
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            string? informational = assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+            if (!string.IsNullOrWhiteSpace(informational))
+            {
+                int plus = informational.IndexOf('+');
+                return plus > 0 ? informational[..plus] : informational;
+            }
+
+            return assembly.GetName().Version?.ToString() ?? "unknown";
+        }
+        catch
+        {
+            return "unknown";
+        }
+    }
+
+    /// <summary>
+    /// Every block that starts or restarts the file says the same things, so a log that has been
+    /// rotated - or a fragment someone pastes into chat - still names the build and the machine
+    /// it came from.
+    /// </summary>
+    private static string BuildBanner(string title)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("================================================================================");
+        sb.AppendLine($" TrayTrigger {AppVersion()} - {title} {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($" OS: {Environment.OSVersion} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
+        sb.AppendLine($" Machine: {Environment.MachineName} | User: {Environment.UserName}");
+        sb.AppendLine($" .NET Runtime: {Environment.Version}");
+        sb.AppendLine("================================================================================");
+        return sb.ToString();
     }
 
     private static StreamWriter GetWriter()
@@ -87,14 +151,8 @@ public static class LoggingService
                 CloseWriter();
                 if (!File.Exists(LogFilePath))
                 {
-                    var sb = new StringBuilder();
-                    sb.AppendLine("================================================================================");
-                    sb.AppendLine($" TrayTrigger Debug Log - Started {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                    sb.AppendLine($" OS: {Environment.OSVersion} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
-                    sb.AppendLine($" Machine: {Environment.MachineName} | User: {Environment.UserName}");
-                    sb.AppendLine($" .NET Runtime: {Environment.Version}");
-                    sb.AppendLine("================================================================================");
-                    File.WriteAllText(LogFilePath, sb.ToString());
+                    _logFileCreatedThisProcess = true;
+                    File.WriteAllText(LogFilePath, BuildBanner("debug log started"));
                 }
                 else
                 {
@@ -104,7 +162,7 @@ public static class LoggingService
                     {
                         string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
                         File.Copy(LogFilePath, oldLog, overwrite: true);
-                        File.WriteAllText(LogFilePath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log rotated. Previous log archived to debug.old.log.\n");
+                        File.WriteAllText(LogFilePath, BuildBanner("log rotated, previous log archived to debug.old.log"));
                     }
                 }
             }
@@ -153,7 +211,7 @@ public static class LoggingService
                     _ => "DEBUG"
                 };
 
-                string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{tag}] [{category}] {message}\n";
+                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{tag}] [{category}] {message}\n";
                 GetWriter().Write(line);
 
                 if (++_writesSinceRotationCheck >= RotationCheckInterval)
@@ -177,7 +235,7 @@ public static class LoggingService
                 CloseWriter();
                 string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
                 File.Copy(LogFilePath, oldLog, overwrite: true);
-                File.WriteAllText(LogFilePath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log rotated. Previous log archived to debug.old.log.\n");
+                File.WriteAllText(LogFilePath, BuildBanner("log rotated, previous log archived to debug.old.log"));
             }
         }
         catch { }
@@ -190,12 +248,7 @@ public static class LoggingService
             lock (LockObj)
             {
                 CloseWriter();
-                var sb = new StringBuilder();
-                sb.AppendLine("================================================================================");
-                sb.AppendLine($" TrayTrigger Debug Log - Cleared & Restarted {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                sb.AppendLine($" OS: {Environment.OSVersion} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
-                sb.AppendLine("================================================================================");
-                File.WriteAllText(LogFilePath, sb.ToString());
+                File.WriteAllText(LogFilePath, BuildBanner("debug log cleared & restarted"));
             }
         }
         catch { }
