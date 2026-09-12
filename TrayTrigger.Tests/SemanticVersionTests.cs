@@ -144,4 +144,21 @@ public class UpdateServiceSelectLatestTests
         var releases = new[] { R("nightly"), R("v9.9.9", draft: true) };
         Assert.Null(UpdateService.SelectLatest(releases, includePrerelease: true));
     }
+
+    /// <summary>
+    /// A tester who installs a beta without ticking "Receive pre-release updates" would otherwise
+    /// be pinned to it: GitHub keeps pre-releases out of /releases/latest, so the only thing the
+    /// build is ever offered is the older stable, which loses the comparison and reports "up to
+    /// date" indefinitely.
+    /// </summary>
+    [Theory]
+    [InlineData("1.4.1-beta.1", false, true)]   // on a beta with the setting off - track betas anyway
+    [InlineData("1.4.1-beta.1", true, true)]
+    [InlineData("1.4.0", false, false)]         // on a stable build the setting alone decides
+    [InlineData("1.4.0", true, true)]
+    public void ShouldIncludePrerelease_TracksBetasWhileRunningOne(string current, bool setting, bool expected)
+    {
+        var version = SemanticVersion.TryParse(current)!;
+        Assert.Equal(expected, UpdateService.ShouldIncludePrerelease(setting, version));
+    }
 }
