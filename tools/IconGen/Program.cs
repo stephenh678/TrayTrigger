@@ -70,7 +70,11 @@ internal static class Program
     /// <summary>
     /// 1280x640 card for GitHub's repository social preview: the TT mark and wordmark, the
     /// "Launch. Automate. Play." tagline, feature pills, and the library screenshot fading in on
-    /// the right. Re-run after an icon or library redesign so the card never drifts from the app.
+    /// the right.
+    ///
+    /// NOTE (2026-09-12): Assets/social-preview.png is now a hand-made card, not this renderer's
+    /// output. Running "social" against that path replaces it. Keep this as the fallback for a
+    /// quick regeneration if the art ever needs to change and no designer is at hand.
     /// </summary>
     private static BitmapSource RenderSocialPreview(string screenshotPath)
     {

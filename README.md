@@ -40,10 +40,11 @@
 
 ---
 
-<!-- HERO GIF: Assets/screenshots/tweaks-apply-revert.gif goes here once recorded. -->
 <p align="center">
-  <img src="Assets/screenshots/library-grid.png" width="800" alt="TrayTrigger games library, poster grid view">
+  <img src="Assets/social-preview.png" alt="TrayTrigger: per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks, auto-close launchers">
 </p>
+
+<!-- HERO GIF: Assets/screenshots/tweaks-apply-revert.gif goes here once recorded. -->
 
 ---
 
