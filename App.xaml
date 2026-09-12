@@ -605,6 +605,52 @@
             </Setter>
         </Style>
 
+        <!-- Filter flyout option row. Deliberately a clone of the ComboBoxItem style above: the
+             filter flyout and the Sort dropdown sit next to each other in the library toolbar and
+             do the same kind of job, so picking a filter should look like picking a sort order -
+             a full-width row that fills accent blue when it is on. A ToggleButton rather than a
+             ComboBoxItem because filters are multi-select; only the selection mechanic differs,
+             never the appearance. -->
+        <Style x:Key="FilterOptionToggle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#2A2A34"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource BrushAccent}"/>
+                            </Trigger>
+                            <!-- Hovering something already on must not read as "off": keep it blue
+                                 and lift it, the way the sort list highlights its current choice. -->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource BrushAccentHover}"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BrushAccentHover}"/>
+                                <Setter TargetName="border" Property="BorderThickness" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Modern Sleek Dark ScrollBar -->
         <Style TargetType="ScrollBar">
             <Setter Property="Background" Value="Transparent"/>
