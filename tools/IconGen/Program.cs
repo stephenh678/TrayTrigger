@@ -25,6 +25,14 @@ internal static class Program
             return 0;
         }
 
+        // mark <size> <out.png>: the app mark rendered at one size (store listings, Ko-fi, etc.).
+        if (args.Length >= 3 && args[0] == "mark" && int.TryParse(args[1], out int markSize))
+        {
+            SavePng(RenderMark(markSize), args[2]);
+            Console.WriteLine($"Wrote {args[2]} ({markSize}x{markSize})");
+            return 0;
+        }
+
         string outDir = args.Length > 0 ? args[0] : "Assets";
         Directory.CreateDirectory(outDir);
 
