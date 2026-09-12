@@ -45,8 +45,13 @@ DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=LICENSE
+; Per-user only, and deliberately no PrivilegesRequiredOverridesAllowed. Offering "install for
+; all users" showed admins a mode this script cannot actually deliver: DefaultDirName above is
+; {localappdata}, [Icons] uses {userprograms} and [Registry] writes HKCU, so an all-users install
+; still lands inside the installing user's profile - while the uninstall entry went to HKLM and
+; the desktop shortcut to the Public desktop, where other users click through to an exe they have
+; no permission to read.
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=publish\installer
 OutputBaseFilename=TrayTrigger-v{#MyAppVersion}-Setup
 SetupIconFile=Assets\app_icon.ico
@@ -120,13 +125,40 @@ begin
   Result := RegValueExists(HKCU, RunKeyPath, '{#MyAppName}');
 end;
 
-function PreviousInstallExists(): Boolean;
-var
-  UninstallKey: string;
+function UninstallKeyPath(): string;
 begin
-  UninstallKey := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\'
+  Result := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\'
     + ExpandConstant('{#SetupSetting("AppId")}') + '_is1';
-  Result := RegKeyExists(HKCU, UninstallKey) or RegKeyExists(HKLM, UninstallKey);
+end;
+
+function PreviousInstallExists(): Boolean;
+begin
+  Result := RegKeyExists(HKCU, UninstallKeyPath()) or RegKeyExists(HKLM, UninstallKeyPath());
+end;
+
+// Setup used to offer an "install for all users" mode, which put the uninstall entry in HKLM
+// while installing into the user's own profile anyway. Now that Setup is always per-user, that
+// entry is left behind pointing at an uninstaller this install is about to replace - so Apps &
+// Features would list TrayTrigger twice, one of them dead. Clearing it needs admin rights, which
+// a per-user Setup does not have.
+function LegacyAllUsersInstallExists(): Boolean;
+begin
+  Result := RegKeyExists(HKLM, UninstallKeyPath());
+end;
+
+procedure RemoveLegacyAllUsersEntry();
+begin
+  if not LegacyAllUsersInstallExists() then Exit;
+
+  if IsAdmin() and RegDeleteKeyIncludingSubkeys(HKLM, UninstallKeyPath()) then
+  begin
+    Log('Removed the legacy all-users uninstall entry from HKLM.');
+    // Its desktop shortcut went to the Public desktop, where this install's own per-user
+    // shortcut cannot replace it.
+    DeleteFile(ExpandConstant('{commondesktop}\{#MyAppName}.lnk'));
+  end
+  else
+    Log('An all-users install is registered in HKLM but Setup is not elevated; leaving it for the user to remove.');
 end;
 
 // Removes the Run entry the app (or a previous Setup) registered, plus the Task Manager
@@ -252,6 +284,14 @@ begin
     Sleep(250);
     Waited := Waited + 250;
   end;
+
+  // Say this once, up front, rather than leaving a dead second entry in Apps & features with no
+  // explanation. Only when Setup cannot clear it itself, and never during an in-app update.
+  if LegacyAllUsersInstallExists() and (not IsAdmin()) and (not WizardSilent()) then
+    MsgBox('An older "all users" installation of TrayTrigger is still registered on this computer.'#13#10#13#10
+      + 'TrayTrigger now installs for the current user only. Setup will continue, but that older entry stays '
+      + 'listed in Apps & features until it is removed: uninstall it from there, or run this installer as '
+      + 'administrator and Setup will clear it for you.', mbInformation, MB_OK);
 end;
 
 var
@@ -355,6 +395,7 @@ begin
       if not WizardIsTaskSelected('startwithwindows') then
         RemoveStartupEntry();
     end;
+    RemoveLegacyAllUsersEntry();
     RefreshShellIcons();
   end;
 end;
