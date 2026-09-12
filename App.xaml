@@ -777,7 +777,9 @@
         </Style>
 
         <!-- Tray Context Menu Section Header (Non-interactive) -->
-        <Style x:Key="TrayMenuSectionHeaderStyle" TargetType="MenuItem">
+        <!-- A non-interactive label inside a menu. Used for the tray menu's section headings and
+             for the batch context menu's selection count. -->
+        <Style x:Key="MenuSectionHeaderStyle" TargetType="MenuItem">
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
             <Setter Property="Cursor" Value="Arrow"/>
