@@ -508,6 +508,10 @@
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
                                         ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Browse community scripts"
+                                        Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="{x:Static services:HelpCommands.ScriptCatalogUrl}"
+                                        ToolTip="Opens the TrayTrigger-Scripts catalog on GitHub in your browser. Scripts there are reviewed before listing; read one before you attach it."/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
