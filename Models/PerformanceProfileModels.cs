@@ -94,6 +94,16 @@ public class HdrDisplaySnapshot
     public int AdapterIdHighPart { get; set; }
     public uint TargetId { get; set; }
     public bool WasEnabled { get; set; }
+
+    /// <summary>
+    /// Whether the display was in WCG (wide colour gamut) rather than plain SDR before HDR was
+    /// forced on. Recorded for the log only - restoring is still just "clear the HDR bit", because
+    /// WCG versus SDR is decided by Windows' own per-display Auto Color Management setting, which
+    /// TrayTrigger never touches, so the display drops back to whichever of the two it was in.
+    /// Without this the restore line read "HDR state to Off", which looks like it left a
+    /// WCG display in SDR.
+    /// </summary>
+    public bool WasWcg { get; set; }
 }
 
 /// <summary>

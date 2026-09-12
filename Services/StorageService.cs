@@ -46,6 +46,11 @@ public class StorageService : IProfileSnapshotStore
     /// rather than once per platform.</summary>
     internal int GamesSaveCount { get; private set; }
 
+    /// <summary>Test hook: how many times settings.json has actually been written by this
+    /// instance. Counted alongside <see cref="GamesSaveCount"/> to prove the launch path saves the
+    /// library without dragging settings along with it.</summary>
+    internal int SettingsSaveCount { get; private set; }
+
     public string? GamesLoadWarning { get; private set; }
     public string? SettingsLoadWarning { get; private set; }
 
@@ -404,6 +409,7 @@ public class StorageService : IProfileSnapshotStore
                 _settingsPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _settingsFilePath);
+                SettingsSaveCount++;
                 LoggingService.Verbose("Storage", $"Saved settings to '{_settingsFilePath}' (from {CallerTag(callerFile, callerMember, source)}).");
             }
             catch (Exception ex)

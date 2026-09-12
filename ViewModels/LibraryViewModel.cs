@@ -1614,6 +1614,19 @@ public class LibraryViewModel : ViewModelBase
         NotifyLibraryUpdated();
     }
 
+    /// <summary>
+    /// Persists the library without touching settings.json. <see cref="SaveLibrary"/> writes both
+    /// because the import paths that call it do change settings - scan locations, the one-time
+    /// prompt flags - but a game starting or exiting changes only the game itself (LastPlayed,
+    /// cumulative playtime). Writing settings there cost a full encrypt-and-replace twice per
+    /// session for a file whose contents had not moved.
+    /// </summary>
+    public void SaveGamesOnly([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
+    {
+        _storageService.SaveGames(Games.Select(g => g.Game), callerMember, callerFile);
+        NotifyLibraryUpdated();
+    }
+
     public void UpdateHotkeys()
     {
         _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, Games.Select(g => g.Game));
@@ -1625,7 +1638,7 @@ public class LibraryViewModel : ViewModelBase
         {
             var card = Games.FirstOrDefault(g => g.Id == game.Id);
             card?.RefreshProperties();
-            SaveLibrary();
+            SaveGamesOnly();
             ApplySort();
         });
     }
