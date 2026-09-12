@@ -19,6 +19,17 @@ public enum LogLevel
 public static class LoggingService
 {
     private static readonly Lock LockObj = new();
+
+    /// <summary>
+    /// Serialises writes across processes, not just threads. Two TrayTrigger processes overlap
+    /// routinely - launching the app while it is already running signals the first instance and
+    /// exits, and an in-app update runs the new build beside the old one - and they share one
+    /// log file. FileMode.Append tracks a position per stream rather than appending atomically,
+    /// so without this each process writes over the other's bytes: a two-process test lost half
+    /// of 6000 lines outright, which is how Preston's log ended up with a line whose first half
+    /// had been overwritten ("p] Application starting...") and timestamps that ran backwards.
+    /// </summary>
+    private static readonly Mutex FileMutex = new(false, @"Local\TrayTrigger_DebugLog");
     private static string? _logFilePath;
     private static bool _isVerboseEnabled;
     private static StreamWriter? _writer;
@@ -74,7 +85,7 @@ public static class LoggingService
                 _bannerWrittenThisProcess = true;
                 if (!_logFileCreatedThisProcess)
                 {
-                    GetWriter().Write(BuildBanner("session started"));
+                    AppendLine(BuildBanner("session started"));
                 }
             }
         }
@@ -126,6 +137,55 @@ public static class LoggingService
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Returns whether the caller now owns the mutex and must release it. An abandoned mutex
+    /// means the previous holder died mid-write; ownership transfers to us and the file may be
+    /// short a line, which is not worth failing over.
+    /// </summary>
+    private static bool AcquireFileMutex()
+    {
+        try
+        {
+            return FileMutex.WaitOne(TimeSpan.FromSeconds(2));
+        }
+        catch (AbandonedMutexException)
+        {
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void ReleaseFileMutex(bool held)
+    {
+        if (!held) return;
+        try { FileMutex.ReleaseMutex(); } catch { }
+    }
+
+    /// <summary>
+    /// Appends one already-formatted line. The seek matters: another process may have extended
+    /// the file since this stream last wrote, and without it this write would land on top of
+    /// whatever that process put there.
+    /// </summary>
+    private static void AppendLine(string line)
+    {
+        bool held = AcquireFileMutex();
+        try
+        {
+            var writer = GetWriter();
+            writer.Flush();
+            writer.BaseStream.Seek(0, SeekOrigin.End);
+            writer.Write(line);
+            writer.Flush();
+        }
+        finally
+        {
+            ReleaseFileMutex(held);
+        }
+    }
+
     private static StreamWriter GetWriter()
     {
         if (_writer == null)
@@ -148,22 +208,32 @@ public static class LoggingService
         {
             lock (LockObj)
             {
-                CloseWriter();
-                if (!File.Exists(LogFilePath))
+                // Under the cross-process mutex as well: these replace the whole file, and doing
+                // that while another process is mid-append truncates its output.
+                bool held = AcquireFileMutex();
+                try
                 {
-                    _logFileCreatedThisProcess = true;
-                    File.WriteAllText(LogFilePath, BuildBanner("debug log started"));
-                }
-                else
-                {
-                    // Rotate if log file exceeds 5MB
-                    var fi = new FileInfo(LogFilePath);
-                    if (fi.Length > 5 * 1024 * 1024)
+                    CloseWriter();
+                    if (!File.Exists(LogFilePath))
                     {
-                        string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
-                        File.Copy(LogFilePath, oldLog, overwrite: true);
-                        File.WriteAllText(LogFilePath, BuildBanner("log rotated, previous log archived to debug.old.log"));
+                        _logFileCreatedThisProcess = true;
+                        File.WriteAllText(LogFilePath, BuildBanner("debug log started"));
                     }
+                    else
+                    {
+                        // Rotate if log file exceeds 5MB
+                        var fi = new FileInfo(LogFilePath);
+                        if (fi.Length > 5 * 1024 * 1024)
+                        {
+                            string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
+                            File.Copy(LogFilePath, oldLog, overwrite: true);
+                            File.WriteAllText(LogFilePath, BuildBanner("log rotated, previous log archived to debug.old.log"));
+                        }
+                    }
+                }
+                finally
+                {
+                    ReleaseFileMutex(held);
                 }
             }
         }
@@ -212,7 +282,7 @@ public static class LoggingService
                 };
 
                 string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{tag}] [{category}] {message}\n";
-                GetWriter().Write(line);
+                AppendLine(line);
 
                 if (++_writesSinceRotationCheck >= RotationCheckInterval)
                 {
@@ -232,10 +302,18 @@ public static class LoggingService
             var fi = new FileInfo(LogFilePath);
             if (fi.Exists && fi.Length > MaxLogSizeBytes)
             {
-                CloseWriter();
-                string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
-                File.Copy(LogFilePath, oldLog, overwrite: true);
-                File.WriteAllText(LogFilePath, BuildBanner("log rotated, previous log archived to debug.old.log"));
+                bool held = AcquireFileMutex();
+                try
+                {
+                    CloseWriter();
+                    string oldLog = Path.Combine(Path.GetDirectoryName(LogFilePath)!, "debug.old.log");
+                    File.Copy(LogFilePath, oldLog, overwrite: true);
+                    File.WriteAllText(LogFilePath, BuildBanner("log rotated, previous log archived to debug.old.log"));
+                }
+                finally
+                {
+                    ReleaseFileMutex(held);
+                }
             }
         }
         catch { }
@@ -247,8 +325,16 @@ public static class LoggingService
         {
             lock (LockObj)
             {
-                CloseWriter();
-                File.WriteAllText(LogFilePath, BuildBanner("debug log cleared & restarted"));
+                bool held = AcquireFileMutex();
+                try
+                {
+                    CloseWriter();
+                    File.WriteAllText(LogFilePath, BuildBanner("debug log cleared & restarted"));
+                }
+                finally
+                {
+                    ReleaseFileMutex(held);
+                }
             }
         }
         catch { }
