@@ -45,9 +45,25 @@ public partial class SteamSearchService
 
     private static readonly string[] PenaltyKeywords =
     [
-        "soundtrack", "ost", "demo", "teaser", "prologue", "artbook", 
-        "trailer", "dlc", "expansion", "skin pack", "dedicated server", "server"
+        "soundtrack", "ost", "demo", "teaser", "prologue", "artbook",
+        "trailer", "dlc", "expansion", "skin pack", "dedicated server", "server",
+        // A VR edition is a separate product, not a way of spelling the flat one: matching
+        // 'Steam Deck' to 'Steam Deck VR' is how Dylan's library ended up pointing at RAWG's
+        // 'Steam Deck VR'. Only ever counts against a candidate the query did not ask for, so a
+        // user whose own folder says VR is unaffected.
+        "vr"
     ];
+
+    /// <summary>
+    /// Whole-word, because these were matched as bare substrings: "ost" fired inside "Ghost of
+    /// Tsushima", costing a correct match 35% of its score, and "vr" would do the same to
+    /// "Louvre". Compiled once - CalculateSimilarity runs this list against every candidate.
+    /// </summary>
+    private static readonly Regex[] PenaltyKeywordPatterns = PenaltyKeywords
+        .Select(kw => new Regex($@"\b{Regex.Escape(kw)}\b", RegexOptions.IgnoreCase | RegexOptions.Compiled))
+        .ToArray();
+
+    private const double PenaltyKeywordMultiplier = 0.65;
 
     private static readonly char[] WordSeparators = [' ', '\t', ':', '-', '_', '.', ',', '!', '?', '\'', '"', '`', '/', '\\', '(', ')', '[', ']', '{', '}'];
 
@@ -441,12 +457,11 @@ public partial class SteamSearchService
             finalScore *= NumericMismatchPenalty;
         }
 
-        foreach (var kw in PenaltyKeywords)
+        foreach (var pattern in PenaltyKeywordPatterns)
         {
-            if (normCand.Contains(kw, StringComparison.OrdinalIgnoreCase) && 
-                !normQuery.Contains(kw, StringComparison.OrdinalIgnoreCase))
+            if (pattern.IsMatch(normCand) && !pattern.IsMatch(normQuery))
             {
-                finalScore *= 0.65;
+                finalScore *= PenaltyKeywordMultiplier;
             }
         }
 
