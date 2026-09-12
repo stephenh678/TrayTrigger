@@ -68,11 +68,14 @@ public class AppSettings
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>
     /// The game-scripts feature switch. Shows the Pre-Launch &amp; Post-Exit Scripts card in Edit
-    /// Game, and is also the runtime kill-switch: while off, no script runs for any game, even
-    /// one that still has script paths configured (that game keeps showing the card, with a
-    /// notice that its scripts are disabled). See <see cref="Services.GameScriptService"/>.
+    /// Game, and is also the runtime kill-switch: while off, no script runs for any game - not a
+    /// game's own scripts, not the <see cref="ScriptDefaults"/> - even one that still has script
+    /// paths configured (that game keeps showing the card, with a notice that its scripts are
+    /// disabled). See <see cref="Services.GameScriptService"/>.
     /// </summary>
     public bool EnableGameScripts { get; set; } = false;
+    /// <summary>Scripts that run for every game without one of its own. See <see cref="Models.ScriptDefaults"/>.</summary>
+    public ScriptDefaults ScriptDefaults { get; set; } = new();
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
@@ -80,6 +83,9 @@ public class AppSettings
     /// <summary>Gates the one-time "Welcome to TrayTrigger" dialog to the first time the main
     /// window is actually shown on a fresh install - see MainWindow.MaybeShowWelcomePrompt.</summary>
     public bool HasSeenWelcomePrompt { get; set; } = false;
+    /// <summary>Gates the one-time 1.4.0 reminder that SteamGridDB poster art and RAWG game info
+    /// are available - see MainWindow.MaybeShowMetadataSourcesReminder.</summary>
+    public bool HasSeenMetadataSourcesReminder { get; set; } = false;
     /// <summary>One-time tray balloon shown the first time the window is hidden via its title-bar
     /// X, so a new user learns TrayTrigger is still running in the tray.</summary>
     public bool HasSeenTrayHideNotice { get; set; } = false;

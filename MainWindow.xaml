@@ -26,8 +26,18 @@
              the MainViewModel by MainWindow.OnCardContextMenuOpening; every item applies to the
              whole selection through LibraryViewModel's batch commands. -->
         <ContextMenu x:Key="GameBatchContextMenu">
-            <!-- Same items, order, check marks, and grouping as the single-game menu below,
-                 minus everything that only makes sense for one game. -->
+            <!-- Shared items keep the same order, check marks, and grouping as the single-game
+                 menu below, minus everything that only makes sense for one game. Performance
+                 Profile is the one addition: a single game reaches it through Edit Game
+                 Properties, and there is no batch equivalent of that dialog. -->
+
+            <!-- Scope, first: the items below read the same as the single-game menu's, and only
+                 Remove asks before it acts. Without this the other four (category, profile,
+                 refresh) fire on the whole selection with nothing on screen saying how big it
+                 is. -->
+            <MenuItem Header="{Binding SelectionSummary}" Style="{StaticResource MenuSectionHeaderStyle}"/>
+            <Separator/>
+
             <MenuItem Header="{Binding BatchFavoriteLabel}" IsCheckable="True" IsChecked="{Binding BatchAllFavorite, Mode=OneWay}" Command="{Binding BatchFavoriteCommand}"/>
             <MenuItem Header="{Binding BatchHideLabel}" IsCheckable="True" IsChecked="{Binding BatchAllHidden, Mode=OneWay}" Command="{Binding BatchHideCommand}"/>
             <Separator/>
@@ -101,21 +111,14 @@
             <!-- Quick Actions: the umbrella (Edit Game Properties) first, then the shortcuts into it. -->
             <MenuItem Header="Edit Game Properties..." Command="{Binding EditCommand}"/>
             <MenuItem Header="Rename..." Command="{Binding RenameCommand}"/>
-            <MenuItem Header="Fetch Official Name (Steam / Exe)" Command="{Binding FetchExeNameCommand}">
-                <MenuItem.Style>
-                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSteamGame}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </MenuItem.Style>
-            </MenuItem>
+            <!-- Replaces the old "Fetch Official Name", which renamed silently from a heuristic
+                 search with no confirmation and no undo. This opens the same picker Game Details
+                 uses, so a wrong match is corrected in one step instead of three. -->
+            <MenuItem Header="Change Match..." Command="{Binding ChangeMatchCommand}"/>
             <MenuItem Header="Change Category..." Command="{Binding ChangeCategoryCommand}"/>
             <MenuItem Header="Change Icon..." Command="{Binding ChangeIconCommand}"/>
             <MenuItem Header="Change Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
+            <!-- The manual escape hatch, below the picker that supersedes it for most users. -->
             <MenuItem Header="Set Steam App ID..." Command="{Binding EditSteamAppIdCommand}"/>
             <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding RefreshMetadataCommand}"/>
 
@@ -244,7 +247,7 @@
         <!-- ============================================================== -->
         <!-- LEFT COLLAPSIBLE SIDEBAR                                      -->
         <!-- ============================================================== -->
-        <Border Grid.Column="0" Background="#141418" BorderBrush="{StaticResource BrushBorderDark}" 
+        <Border Grid.Column="0" Background="{StaticResource BrushSidebarBg}" BorderBrush="{StaticResource BrushBorderDark}" 
                 BorderThickness="0,0,1,0" Width="{Binding SidebarWidth}">
             <Grid Margin="6,12,6,12">
                 <Grid.RowDefinitions>
@@ -279,7 +282,7 @@
                 </DockPanel>
 
                 <!-- Separator -->
-                <Separator Grid.Row="1" Background="#26262E" Margin="2,0,2,12"/>
+                <Separator Grid.Row="1" Background="{StaticResource BrushSidebarDivider}" Margin="2,0,2,12"/>
 
                 <!-- Navigation & Action Items -->
                 <Grid Grid.Row="2">
@@ -413,7 +416,7 @@
 
                     <!-- Bottom Actions: Exit TrayTrigger -->
                     <StackPanel Grid.Row="1" VerticalAlignment="Bottom">
-                        <Separator Background="#26262E" Margin="2,0,2,8"/>
+                        <Separator Background="{StaticResource BrushSidebarDivider}" Margin="2,0,2,8"/>
                         <Button Command="{Binding ExitApplicationCommand}" AutomationProperties.Name="Exit TrayTrigger" Style="{StaticResource SidebarNavButton}">
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
                                 <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="16" 
@@ -2996,14 +2999,110 @@
                                     <TextBlock Text="Run your own script or program before a game starts and after it exits - close Discord, switch audio, set an RGB profile."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox Content="Show Pre-Launch &amp; Post-Exit Scripts in Edit Game"
+                                    <CheckBox Content="Enable game scripts (shows Pre-Launch &amp; Post-Exit Scripts in Edit Game)"
                                               IsChecked="{Binding EnableGameScripts}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="Off by default to keep Edit Game simple. Games that already have a script keep it either way."
+                                    <TextBlock Text="Off by default to keep Edit Game simple. While off, no script runs for any game - not a game's own, not the defaults below. Games that already have a script keep their settings either way."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,2" TextWrapping="Wrap"/>
-                                    <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples" Margin="24,0,0,2"
-                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                    <StackPanel Orientation="Horizontal" Margin="24,0,0,2">
+                                        <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
+                                                Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                        <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                        <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
+                                                ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>
+                                    </StackPanel>
+
+                                    <!-- Default scripts: run for every game that has no script of its own for that phase. -->
+                                    <StackPanel Margin="0,12,0,0" IsEnabled="{Binding EnableGameScripts}">
+                                        <TextBlock Text="Default scripts for every game" FontSize="12.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;. Each game's Script Arguments are passed to the defaults too."
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                                        <CheckBox Content="Run the default scripts"
+                                                  IsChecked="{Binding DefaultScriptsEnabled}"
+                                                  Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,0,0,2"/>
+                                        <TextBlock Text="Off by default. Nothing below runs until this is ticked. Untick it later to pause the defaults without clearing them."
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="24,0,0,10" TextWrapping="Wrap"/>
+
+                                        <StackPanel IsEnabled="{Binding DefaultScriptsEnabled}">
+                                        <TextBlock Text="Default pre-launch script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Text="{Binding DefaultPreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                            <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPreLaunchScriptCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                                    ToolTip="Run this script now with placeholder game values (hidden, not elevated, 30 s limit) and show its exit code and output"/>
+                                            <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPreLaunchScriptCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}"/>
+                                        </Grid>
+                                        <StackPanel Orientation="Horizontal" Margin="0,-4,0,8">
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPreLaunchScriptCommand}"
+                                                    ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                            <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPreLaunchScriptCommand}"/>
+                                        </StackPanel>
+                                        <CheckBox Content="Use the same script for pre-launch and post-exit"
+                                                  IsChecked="{Binding DefaultUseSameScriptForBoth}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"
+                                                  ToolTip="For a script that handles both phases in one file, like the bundled examples"/>
+
+                                        <TextBlock Text="Default post-exit script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                                     IsEnabled="{Binding CanEditDefaultPostExitScript}"
+                                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                            <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPostExitScriptCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                                    ToolTip="Run this script now as a post-exit run with placeholder game values and playtime 0 (hidden, not elevated, 30 s limit)"/>
+                                            <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPostExitScriptCommand}"
+                                                    IsEnabled="{Binding CanEditDefaultPostExitScript}"
+                                                    Style="{StaticResource ModernOutlineButton}"/>
+                                        </Grid>
+                                        <StackPanel Orientation="Horizontal" Margin="0,-4,0,8">
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPostExitScriptCommand}"
+                                                    IsEnabled="{Binding CanEditDefaultPostExitScript}"
+                                                    ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                            <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                            <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPostExitScriptCommand}"/>
+                                        </StackPanel>
+
+                                        <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
+                                                Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                                        </Border>
+
+                                        <CheckBox Content="Wait for the default pre-launch script to finish before starting the game"
+                                                  IsChecked="{Binding DefaultWaitForPreLaunchScript}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                        <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
+                                            <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
+                                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <CheckBox Content="Cancel the launch if the default pre-launch script fails (non-zero exit code, timeout, or won't start)"
+                                                  IsChecked="{Binding DefaultAbortLaunchOnScriptFailure}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                        <CheckBox Content="Run default scripts hidden (no console window)"
+                                                  IsChecked="{Binding DefaultRunScriptsHidden}" IsEnabled="{Binding HasAnyDefaultScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                        <CheckBox Content="Run default scripts as Administrator (UAC prompt on every launch)"
+                                                  IsChecked="{Binding DefaultRunScriptsAsAdmin}" IsEnabled="{Binding HasAnyDefaultScript}"
+                                                  Style="{StaticResource ModernCheckBox}" Margin="0,0,0,2"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 
@@ -3542,7 +3641,7 @@
                                     </DockPanel>
                                 </Border>
 
-                                <!-- Feature 10: SteamGridDB Fallback Artwork -->
+                                <!-- Feature 10: Community Artwork & Game Info (SteamGridDB + RAWG) -->
                                 <Border Grid.Row="4" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                                         BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                         Padding="14,12" Margin="5,0,0,0">
@@ -3552,8 +3651,8 @@
                                                        Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="SteamGridDB Fallback Artwork" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Falls back to community-submitted box art from SteamGridDB when official artwork isn't available yet."
+                                            <TextBlock Text="Community Artwork &amp; Game Info" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Optional community sources fill the gaps: SteamGridDB box art when there's no official poster, and RAWG developer, publisher, synopsis and ratings for games that aren't on Steam."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>

@@ -287,6 +287,42 @@ public partial class ModernDialog : Window
             DialogIconType.Info);
     }
 
+    /// <summary>
+    /// The one-time SteamGridDB / RAWG reminder (see MainWindow.MaybeShowMetadataSourcesReminder),
+    /// worded for whichever of the two isn't set up yet. True when the user picks "Open Settings".
+    /// </summary>
+    public static bool PromptMetadataSourcesReminder(Window? owner, bool needsSteamGridDb, bool needsRawg)
+    {
+        var activeOwner = owner ?? WindowHelper.ActiveOwner();
+        var dialog = CreateMetadataSourcesReminder(needsSteamGridDb, needsRawg);
+        if (activeOwner != null)
+        {
+            dialog.Owner = activeOwner;
+        }
+
+        bool? res = dialog.ShowDialog();
+        return res == true && dialog.Result;
+    }
+
+    /// <summary>Builds the reminder without showing it - also used by the dev screenshot mode.</summary>
+    internal static ModernDialog CreateMetadataSourcesReminder(bool needsSteamGridDb, bool needsRawg)
+    {
+        (string message, string detail) = (needsSteamGridDb, needsRawg) switch
+        {
+            (true, false) => (
+                "A free SteamGridDB API key finds poster art Steam doesn't have.",
+                "It's optional and fills in box art for games with no Steam poster. Add it in Settings > Library & Art."),
+            (false, true) => (
+                "A free RAWG API key adds game info for games that aren't on Steam.",
+                "It's optional and covers Game Pass, Epic exclusives and other non-Steam games. Add it in Settings > Library & Art."),
+            _ => (
+                "Two free API keys give your library better poster art and game info.",
+                "SteamGridDB fills in missing box art. RAWG adds details for Game Pass, Epic and other non-Steam games. Both are optional. Add them in Settings > Library & Art."),
+        };
+
+        return new ModernDialog("Better Art and Game Info", message, detail, "Open Settings", "Not Now", DialogIconType.Info);
+    }
+
     public static void ShowWarning(
         Window? owner,
         string title,

@@ -122,7 +122,7 @@
                                Margin="0,0,8,0" VerticalAlignment="Top"/>
                     <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
                                Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Missing box art? Settings &gt; Library &amp; Art can pull higher-quality poster art from SteamGridDB.com with your own free API key."/>
+                               Text="Missing box art or game info? Settings &gt; Library &amp; Art can add poster art from SteamGridDB.com and details for non-Steam games from RAWG.io, each with your own free API key."/>
                 </Grid>
 
                 <Grid Margin="6,0,0,0">

@@ -10,6 +10,22 @@
 
         <!-- Colors -->
         <Color x:Key="ColorBgDark">#121214</Color>
+
+        <!-- The sidebar rail, and the dividers inside it. The rail is deliberately a visible
+             step above ColorBgDark: at the previous #141418 the rail and the content column
+             were four values apart at their widest channel, so the boundary between them read
+             as nothing at all. The divider moved with it to keep the same perceptual step it
+             had against the old, darker rail (~18 values, not ~6).
+
+             Pre-1.4.0-beta.3 values, should we want them back:
+                 rail    #141418  (was inline in MainWindow.xaml)
+                 divider #26262E  (was inline, twice, in MainWindow.xaml)
+             These came from the Mica Alt spike on spike/mica-alt-sidebar: DWM's Mica Alt
+             resolves to #202020 in dark mode, and matching it as a flat brush turned out to
+             carry the whole readability win without the transparency plumbing. -->
+        <Color x:Key="ColorSidebarBg">#202020</Color>
+        <Color x:Key="ColorSidebarDivider">#32323C</Color>
+
         <Color x:Key="ColorDialogBg">#1D1D25</Color>
         <Color x:Key="ColorSurfaceDark">#1C1C23</Color>
         <Color x:Key="ColorSurfaceHover">#252530</Color>
@@ -25,6 +41,8 @@
 
         <!-- Brushes -->
         <SolidColorBrush x:Key="BrushBgDark" Color="{StaticResource ColorBgDark}"/>
+        <SolidColorBrush x:Key="BrushSidebarBg" Color="{StaticResource ColorSidebarBg}"/>
+        <SolidColorBrush x:Key="BrushSidebarDivider" Color="{StaticResource ColorSidebarDivider}"/>
         <SolidColorBrush x:Key="BrushDialogBg" Color="{StaticResource ColorDialogBg}"/>
         <SolidColorBrush x:Key="BrushSurfaceDark" Color="{StaticResource ColorSurfaceDark}"/>
         <SolidColorBrush x:Key="BrushSurfaceHover" Color="{StaticResource ColorSurfaceHover}"/>
@@ -759,7 +777,9 @@
         </Style>
 
         <!-- Tray Context Menu Section Header (Non-interactive) -->
-        <Style x:Key="TrayMenuSectionHeaderStyle" TargetType="MenuItem">
+        <!-- A non-interactive label inside a menu. Used for the tray menu's section headings and
+             for the batch context menu's selection count. -->
+        <Style x:Key="MenuSectionHeaderStyle" TargetType="MenuItem">
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
             <Setter Property="Cursor" Value="Arrow"/>

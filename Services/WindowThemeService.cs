@@ -257,6 +257,11 @@ public static partial class WindowThemeService
     [LibraryImport("dwmapi.dll")]
     private static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, in int attrValue, int attrSize);
 
+    // DWM wants a COLORREF (0x00BBGGRR), which is byte-reversed from the #RRGGBB literals the
+    // palette in App.xaml is written in. Converting here means the caption tracks the palette
+    // instead of a hand-swapped copy that silently drifts when the palette is retuned.
+    private static int ToColorRef(Color color) => color.R | (color.G << 8) | (color.B << 16);
+
     private static void SetDarkAttributes(Window window)
     {
         try
@@ -270,15 +275,26 @@ public static partial class WindowThemeService
             // Windows 10 1809 - 1909 fallback
             DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, in useDarkMode, sizeof(int));
 
-            // Windows 11 Build 22000+ support custom caption color (COLORREF: 0x00BBGGRR)
-            // MainWindow: #121214 -> 0x00141212
-            // Dialogs / Popups: #1D1D25 -> R=29 (0x1D), G=29 (0x1D), B=37 (0x25) -> 0x00251D1D
-            bool isMain = window is MainWindow;
-            int captionColor = isMain ? 0x00141212 : 0x00251D1D;
-            DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, in captionColor, sizeof(int));
+            // Windows 11 Build 22000+ support custom caption/text colors. Take them from the
+            // window's own Background - every window sets one from the palette - so the caption
+            // always matches the client area directly below it. That includes QuickInputDialog,
+            // which uses BrushBgDark rather than the dialog color and so had the wrong caption
+            // under the old main-window-vs-dialog split.
+            if (window.Background is SolidColorBrush background)
+            {
+                int captionColor = ToColorRef(background.Color);
+                DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, in captionColor, sizeof(int));
 
-            int textColor = 0x00FFFFFF;
-            DwmSetWindowAttribute(handle, DWMWA_TEXT_COLOR, in textColor, sizeof(int));
+                int textColor = ToColorRef(
+                    Application.Current?.TryFindResource("ColorTextPrimary") as Color? ?? Colors.White);
+                DwmSetWindowAttribute(handle, DWMWA_TEXT_COLOR, in textColor, sizeof(int));
+            }
+            else
+            {
+                // Nothing solid to match. DWMWA_USE_IMMERSIVE_DARK_MODE above already gives the
+                // window the standard dark caption, which beats guessing a color.
+                LoggingService.Verbose("WindowThemeService", $"{window.GetType().Name} has no solid background; leaving the caption color to DWM.");
+            }
         }
         catch (Exception ex)
         {
