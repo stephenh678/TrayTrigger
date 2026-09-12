@@ -1414,6 +1414,182 @@ public partial class App
                 return;
             }
 
+            if (e.Args[i].Equals("--test-context-menus", StringComparison.OrdinalIgnoreCase))
+            {
+                // Both menus live in Window.Resources and are parsed the first time one is shown,
+                // not at build time - so a wrong x:Static enum member, a missing converter, or a
+                // binding to a property that does not exist all survive a green build and throw
+                // (or silently render an empty submenu) on the first right-click. This opens each
+                // menu for real and reads back what it rendered.
+                string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                _mainViewModel.Games.Clear();
+                _mainViewModel.Games.Add(_mainViewModel.CreateCardViewModel(new GameEntry
+                {
+                    Name = "Menu Test Steam", Category = "Action", ExecutablePath = "steam://rungameid/220",
+                    IsSteamGame = true, ImportedFrom = LauncherPlatform.Steam, SteamAppId = "220"
+                }));
+                _mainViewModel.Games.Add(_mainViewModel.CreateCardViewModel(new GameEntry
+                {
+                    Name = "Menu Test Local", Category = "Action",
+                    ExecutablePath = Path.Combine(winDir, "explorer.exe")
+                }));
+                _mainViewModel.RebuildCategories();
+
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainWindow.Show();
+                _mainWindow.Activate();
+
+                var menuWorker = new System.Threading.Thread(() =>
+                {
+                    string outcome;
+                    try
+                    {
+                        System.Threading.Thread.Sleep(600);
+
+                        var singleHeaders = Dispatcher.Invoke(() =>
+                            OpenMenuAndReadHeaders("GameItemContextMenu", _mainViewModel.Games[0]));
+                        System.Threading.Thread.Sleep(200);
+
+                        foreach (string required in new[] { "Play", "Performance Profile", "CPU Cores", "Launch Options", "Change", "Steam", "Remove from Library" })
+                        {
+                            if (!singleHeaders.Contains(required))
+                                throw new Exception($"Single-game menu is missing '{required}'. Rendered: {string.Join(" | ", singleHeaders)}");
+                        }
+                        // The submenus are the new part; an empty one means its items failed to build.
+                        foreach (string child in new[] { "Optimized", "Aggressive", "Run as Administrator", "Close Launcher After Game Exits", "Match...", "Poster Artwork...", "Verify Game Files" })
+                        {
+                            if (!singleHeaders.Contains(child))
+                                throw new Exception($"Single-game submenu item '{child}' did not render. Rendered: {string.Join(" | ", singleHeaders)}");
+                        }
+
+                        // Two selected: the batch menu is shown instead, and must offer the same
+                        // three quick-setting submenus under the same names.
+                        var batchHeaders = Dispatcher.Invoke(() =>
+                        {
+                            foreach (var card in _mainViewModel.Games) card.IsSelected = true;
+                            _mainViewModel.Library.SelectAllCommand.Execute(null);
+                            return OpenMenuAndReadHeaders("GameBatchContextMenu", _mainViewModel);
+                        });
+                        System.Threading.Thread.Sleep(200);
+
+                        foreach (string required in new[] { "Performance Profile", "CPU Cores", "Launch Options", "Change Category...", "Remove from Library" })
+                        {
+                            if (!batchHeaders.Contains(required))
+                                throw new Exception($"Batch menu is missing '{required}'. Rendered: {string.Join(" | ", batchHeaders)}");
+                        }
+                        if (!batchHeaders.Any(h => h.Contains("games selected", StringComparison.Ordinal)))
+                            throw new Exception($"Batch menu lost its selection-count header. Rendered: {string.Join(" | ", batchHeaders)}");
+
+                        outcome = $"[TEST_CONTEXT_MENUS_PASSED] single-game menu rendered {singleHeaders.Count} items, batch menu {batchHeaders.Count}";
+                    }
+                    catch (Exception ex)
+                    {
+                        outcome = "[TEST_CONTEXT_MENUS_FAILED] " + ex.Message;
+                    }
+
+                    LoggingService.Info("ContextMenuTest", outcome);
+                    Console.WriteLine(outcome);
+                    Dispatcher.Invoke(ExitApplication);
+                }) { IsBackground = true };
+                menuWorker.Start();
+                return;
+            }
+
+            if (e.Args[i].Equals("--test-library-filter", StringComparison.OrdinalIgnoreCase))
+            {
+                // LibraryFilterTests covers the filtering rules. What it cannot cover is the
+                // flyout: a Popup whose ItemsControl nests a second ItemsControl over two view
+                // model types, bound through a converter to a property on a nested view model.
+                // All of that resolves at render time, so a green build and a green unit suite
+                // both prove nothing about whether a tick box ever appears on screen.
+                string winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                string exe = Path.Combine(winDir, "explorer.exe");
+                _mainViewModel.Games.Clear();
+                _mainViewModel.Games.Add(_mainViewModel.CreateCardViewModel(new GameEntry
+                {
+                    Name = "Filter Test Steam", Category = "Action", ExecutablePath = "steam://rungameid/220",
+                    IsSteamGame = true, ImportedFrom = LauncherPlatform.Steam
+                }));
+                _mainViewModel.Games.Add(_mainViewModel.CreateCardViewModel(new GameEntry
+                {
+                    Name = "Filter Test Local", Category = "Action", ExecutablePath = exe
+                }));
+                _mainViewModel.RebuildCategories();
+
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainWindow.Show();
+                _mainWindow.Activate();
+
+                var filterWorker = new System.Threading.Thread(() =>
+                {
+                    string outcome;
+                    try
+                    {
+                        System.Threading.Thread.Sleep(600); // let the toolbar lay out
+
+                        var filter = _mainViewModel.Library.Filter;
+
+                        // The popup is closed at rest, so its contents are not in the tree yet -
+                        // opening it is what forces the templates to expand.
+                        Dispatcher.Invoke(() => filter.IsOpen = true);
+                        System.Threading.Thread.Sleep(500);
+
+                        // Every touch of a DependencyObject stays inside a Dispatcher.Invoke: this
+                        // thread does not own them, and popup.Child read from out here throws.
+                        const string steamKey = "launcher:steam";
+                        var (boxCount, renderedKeys, steamBox) = Dispatcher.Invoke(() =>
+                        {
+                            var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(_mainWindow, p => p.IsOpen);
+                            if (popup?.Child == null) return (0, new List<string>(), (CheckBox?)null);
+                            var found = FindVisualChildren<CheckBox>(popup.Child).ToList();
+                            var keys = found.Select(b => (b.DataContext as LibraryFilterOption)?.Key ?? "?").ToList();
+                            return (found.Count, keys, found.FirstOrDefault(b => (b.DataContext as LibraryFilterOption)?.Key == steamKey));
+                        });
+
+                        if (boxCount == 0) throw new Exception("The filter popup did not open, or opened and rendered no tick boxes - a template or converter failed to resolve.");
+                        if (steamBox == null) throw new Exception($"No '{steamKey}' tick box rendered. Rendered: {string.Join(", ", renderedKeys)}");
+
+                        int before = Dispatcher.Invoke(() => _mainViewModel.Library.FilteredGames.Cast<object>().Count());
+
+                        // Tick it the way a user does, through the CheckBox, not the view model -
+                        // that is what exercises the two-way binding.
+                        Dispatcher.Invoke(() => steamBox.IsChecked = true);
+                        System.Threading.Thread.Sleep(250);
+
+                        int after = Dispatcher.Invoke(() => _mainViewModel.Library.FilteredGames.Cast<object>().Count());
+                        if (before != 2) throw new Exception($"Expected 2 games visible before filtering, saw {before}.");
+                        if (after != 1) throw new Exception($"Ticking '{steamKey}' should leave 1 game visible, saw {after}.");
+                        if (!Dispatcher.Invoke(() => filter.HasActiveFilters)) throw new Exception("HasActiveFilters stayed false - the blue dot would never appear.");
+
+                        // Captured with the flyout shut, because that is the only state where the
+                        // blue dot is the sole indication that games are being hidden. (A Popup is
+                        // its own HWND and never appears in a PrintWindow capture anyway.)
+                        Dispatcher.Invoke(() => filter.IsOpen = false);
+                        System.Threading.Thread.Sleep(400);
+                        string shot = Path.Combine(Path.GetTempPath(), "traytrigger-library-filter.png");
+                        Dispatcher.Invoke(() => CaptureVisual(_mainWindow, 1020, 760, shot));
+
+                        Dispatcher.Invoke(() => filter.ClearCommand.Execute(null));
+                        System.Threading.Thread.Sleep(250);
+                        int cleared = Dispatcher.Invoke(() => _mainViewModel.Library.FilteredGames.Cast<object>().Count());
+                        if (cleared != 2) throw new Exception($"Clear should restore all 2 games, saw {cleared}.");
+                        if (Dispatcher.Invoke(() => steamBox.IsChecked == true)) throw new Exception("Clear emptied the filter but left the tick box checked on screen.");
+
+                        outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} tick boxes rendered; ticking Steam went {before} -> {after} games and Clear restored {cleared}; screenshot {shot}";
+                    }
+                    catch (Exception ex)
+                    {
+                        outcome = "[TEST_LIBRARY_FILTER_FAILED] " + ex.Message;
+                    }
+
+                    LoggingService.Info("LibraryFilterTest", outcome);
+                    Console.WriteLine(outcome);
+                    Dispatcher.Invoke(ExitApplication);
+                }) { IsBackground = true };
+                filterWorker.Start();
+                return;
+            }
+
             if (e.Args[i].Equals("--test-live-settings", StringComparison.OrdinalIgnoreCase))
             {
                 // PerformanceProfileService used to be built with its convenience constructor,
@@ -2605,6 +2781,60 @@ public partial class App
                 return descendant;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Opens one of MainWindow's context menus against a data context and returns every header it
+    /// rendered, submenu items included. Submenu items are only built once their parent has been
+    /// expanded, so each parent is opened explicitly rather than just walked.
+    ///
+    /// Collapsed items (the Steam block on a non-Steam game, "Close Launcher" on a local exe) are
+    /// left out, so the result is what a user would actually see.
+    /// </summary>
+    private List<string> OpenMenuAndReadHeaders(string resourceKey, object dataContext)
+    {
+        var menu = (ContextMenu)_mainWindow!.FindResource(resourceKey);
+        menu.PlacementTarget = _mainWindow;
+        menu.DataContext = dataContext;
+        menu.IsOpen = true;
+
+        var headers = new List<string>();
+        CollectMenuHeaders(menu.Items, headers, depth: 0);
+
+        menu.IsOpen = false;
+        // The single-game menu binds its DataContext to PlacementTarget.DataContext; clearing the
+        // local value here puts that binding back for the real cards.
+        menu.ClearValue(FrameworkElement.DataContextProperty);
+        return headers;
+    }
+
+    private static void CollectMenuHeaders(System.Collections.IEnumerable items, List<string> headers, int depth)
+    {
+        foreach (object item in items)
+        {
+            if (item is not MenuItem mi) continue;
+            if (mi.Visibility != Visibility.Visible) continue;
+
+            headers.Add(mi.Header?.ToString() ?? "");
+            if (mi.Items.Count == 0 || depth >= 2) continue;
+
+            // A submenu's items are realised on expansion; without this they read as empty.
+            mi.IsSubmenuOpen = true;
+            mi.UpdateLayout();
+            CollectMenuHeaders(mi.Items, headers, depth + 1);
+            mi.IsSubmenuOpen = false;
+        }
+    }
+
+    /// <summary>Every descendant of <paramref name="parent"/> of type T, depth-first.</summary>
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed) yield return typed;
+            foreach (var descendant in FindVisualChildren<T>(child)) yield return descendant;
+        }
     }
 
     [DllImport("user32.dll")]

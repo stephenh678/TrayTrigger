@@ -107,6 +107,32 @@ public class LibraryViewModel : ViewModelBase
     };
     public ICollectionView FilteredGames { get; }
 
+    /// <summary>The toolbar's filter flyout - launcher, performance profile, and per-entry state.
+    /// Runs on top of the category tabs and the search box, never instead of them.</summary>
+    public LibraryFilterViewModel Filter { get; }
+
+    /// <summary>
+    /// True when the visible list is empty only because of the filter flyout - the library has
+    /// games and the current tab and search would show some, but a tick box is hiding them. Drives
+    /// the "clear filters" escape hatch in the empty state, so a filter saved from a previous run
+    /// can never read as a library that lost its games.
+    /// </summary>
+    public bool IsEmptyBecauseOfFilters =>
+        HasAnyGames && Filter.HasActiveFilters && !FilteredGames.Cast<object>().Any();
+
+    private void OnFilterChanged()
+    {
+        FilteredGames.Refresh();
+        // A selection made under one filter must not be acted on invisibly under another.
+        ClearSelection();
+        _settings.LibraryFilterKeys = Filter.ActiveKeys();
+        _storageService.SaveSettings(_settings);
+        OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
+    }
+
+    /// <summary>Clears every filter tick - the empty state's escape hatch and the flyout's button.</summary>
+    public void ClearFilters() => Filter.ClearAll();
+
     public event Action<GameCardViewModel>? RequestEditGameDialog;
     public event Action<GameCardViewModel>? RequestQuickRename;
     public event Action<GameCardViewModel>? RequestQuickCategory;
@@ -149,6 +175,9 @@ public class LibraryViewModel : ViewModelBase
             _selectedCategory = _settings.LastCategoryFilter;
         }
 
+        Filter = new LibraryFilterViewModel(OnFilterChanged);
+        Filter.RestoreKeys(_settings.LibraryFilterKeys);
+
         FilteredGames = CollectionViewSource.GetDefaultView(Games);
         FilteredGames.Filter = FilterGameItem;
         ApplySort();
@@ -175,6 +204,7 @@ public class LibraryViewModel : ViewModelBase
             FilteredGames.Refresh();
             // A selection made under one filter must not be acted on invisibly under another.
             ClearSelection();
+            OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
         }
     }
 
@@ -194,6 +224,7 @@ public class LibraryViewModel : ViewModelBase
                     tab.IsSelected = string.Equals(tab.Name, value, StringComparison.OrdinalIgnoreCase);
                 }
                 FilteredGames.Refresh();
+                OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
                 _storageService.SaveSettings(_settings);
                 LoggingService.Verbose("Settings", "Settings auto-saved.");
             }
@@ -376,7 +407,10 @@ public class LibraryViewModel : ViewModelBase
             onForceClose: card => EndGameSession(card, forceClose: true),
             onPrimaryClick: OnCardPrimaryClick,
             onToggleSelect: OnCardToggleSelect,
-            onRangeSelect: OnCardRangeSelect
+            onRangeSelect: OnCardRangeSelect,
+            // The quick settings change the game entry and nothing else, so this is the narrow
+            // save - no settings.json rewrite for a menu tick.
+            onQuickSettingChanged: _ => SaveGamesOnly()
         );
         // Sessions outlive library reloads (a rescan while a game is running), so a fresh card
         // must pick up the live state rather than wait for the next SessionStarted event.
@@ -506,6 +540,16 @@ public class LibraryViewModel : ViewModelBase
     });
     private ICommand? _cmdBatchRefreshMetadataCommand;
     public ICommand BatchRefreshMetadataCommand => _cmdBatchRefreshMetadataCommand ??= new RelayCommand(() => _ = BatchRefreshMetadataAsync());
+    private ICommand? _cmdBatchRunAsAdminCommand;
+    public ICommand BatchRunAsAdminCommand => _cmdBatchRunAsAdminCommand ??= new RelayCommand(BatchToggleRunAsAdmin);
+    private ICommand? _cmdBatchCloseLauncherCommand;
+    public ICommand BatchCloseLauncherCommand => _cmdBatchCloseLauncherCommand ??= new RelayCommand(BatchToggleCloseLauncher);
+    private ICommand? _cmdBatchSetCpuAffinityCommand;
+    /// <summary>Parameter: a <see cref="CpuAffinityMode"/> (from the batch menu's radio items).</summary>
+    public ICommand BatchSetCpuAffinityCommand => _cmdBatchSetCpuAffinityCommand ??= new RelayCommand(p =>
+    {
+        if (p is CpuAffinityMode mode) BatchSetCpuAffinity(mode);
+    });
 
     /// <summary>The one profile every selected game shares, or null when they differ - drives
     /// which of the batch menu's Off / Optimized / Aggressive items shows a check.</summary>
@@ -523,6 +567,27 @@ public class LibraryViewModel : ViewModelBase
     public bool BatchProfileIsOptimized => BatchProfile == PerformanceProfileMode.Optimized;
     public bool BatchProfileIsAggressive => BatchProfile == PerformanceProfileMode.Aggressive;
 
+    /// <summary>The one core mode every selected game shares, or null when they differ.</summary>
+    public CpuAffinityMode? BatchCpuAffinity
+    {
+        get
+        {
+            var cards = SelectedCards;
+            if (cards.Count == 0) return null;
+            var first = cards[0].Game.CpuAffinity;
+            return cards.All(c => c.Game.CpuAffinity == first) ? first : null;
+        }
+    }
+    public bool BatchCpuAffinityIsDefault => BatchCpuAffinity == CpuAffinityMode.Default;
+    public bool BatchCpuAffinityIsPerformanceCores => BatchCpuAffinity == CpuAffinityMode.PerformanceCoresOnly;
+
+    /// <summary>Every selected game already runs elevated - the batch menu's check, and what flips its label.</summary>
+    public bool BatchAllRunAsAdmin => HasSelection && SelectedCards.All(c => c.Game.RunAsAdmin);
+    public string BatchRunAsAdminLabel => BatchAllRunAsAdmin ? "Don't Run as Administrator" : "Run as Administrator";
+    /// <summary>Every selected game already closes its launcher on exit.</summary>
+    public bool BatchAllCloseLauncher => HasSelection && SelectedCards.All(c => c.Game.CloseLauncherOnExit);
+    public string BatchCloseLauncherLabel => BatchAllCloseLauncher ? "Leave Launcher Running After Exit" : "Close Launcher After Game Exits";
+
     private void NotifySelectionChanged()
     {
         OnPropertyChanged(nameof(SelectedCount));
@@ -537,6 +602,13 @@ public class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(BatchProfileIsOff));
         OnPropertyChanged(nameof(BatchProfileIsOptimized));
         OnPropertyChanged(nameof(BatchProfileIsAggressive));
+        OnPropertyChanged(nameof(BatchCpuAffinity));
+        OnPropertyChanged(nameof(BatchCpuAffinityIsDefault));
+        OnPropertyChanged(nameof(BatchCpuAffinityIsPerformanceCores));
+        OnPropertyChanged(nameof(BatchAllRunAsAdmin));
+        OnPropertyChanged(nameof(BatchRunAsAdminLabel));
+        OnPropertyChanged(nameof(BatchAllCloseLauncher));
+        OnPropertyChanged(nameof(BatchCloseLauncherLabel));
     }
 
     /// <summary>Same effect as picking the tier in Edit Game for each selected game. A game that
@@ -551,9 +623,72 @@ public class LibraryViewModel : ViewModelBase
             card.Game.PerformanceProfile = mode;
             card.RefreshProperties();
         }
-        SaveLibrary();
+        SaveGamesOnly();
         LoggingService.Info("Library", $"{cards.Count} game(s) performance profile set to {mode} (batch).");
         StatusMessage = $"Set Performance Profile of {cards.Count} game(s) to {mode}";
+        NotifySelectionChanged();
+    }
+
+    /// <summary>
+    /// Same effect as picking the core mode in Edit Game for each selected game. A game already
+    /// running keeps the affinity it was launched with; the new mode applies from its next launch.
+    /// </summary>
+    private void BatchSetCpuAffinity(CpuAffinityMode mode)
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+        foreach (var card in cards)
+        {
+            card.Game.CpuAffinity = mode;
+            card.RefreshProperties();
+        }
+        SaveGamesOnly();
+        LoggingService.Info("Library", $"{cards.Count} game(s) CPU affinity set to {mode} (batch).");
+        StatusMessage = mode == CpuAffinityMode.PerformanceCoresOnly
+            ? $"Set {cards.Count} game(s) to performance cores only"
+            : $"Set {cards.Count} game(s) back to all cores";
+        NotifySelectionChanged();
+    }
+
+    /// <summary>
+    /// All-or-nothing, like the Favorite and Hide batch toggles: a mixed selection turns every
+    /// game on, and only a selection where all of them are already on turns them off. The check
+    /// mark in the menu is <see cref="BatchAllRunAsAdmin"/>, so what the click will do is on screen
+    /// before it happens.
+    /// </summary>
+    private void BatchToggleRunAsAdmin()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+        bool target = !BatchAllRunAsAdmin;
+        foreach (var card in cards)
+        {
+            card.Game.RunAsAdmin = target;
+            card.RefreshProperties();
+        }
+        SaveGamesOnly();
+        LoggingService.Info("Library", $"{cards.Count} game(s) set to {(target ? "run elevated" : "run normally")} (batch).");
+        StatusMessage = target
+            ? $"{cards.Count} game(s) will now run as administrator"
+            : $"{cards.Count} game(s) will no longer run as administrator";
+        NotifySelectionChanged();
+    }
+
+    private void BatchToggleCloseLauncher()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0) return;
+        bool target = !BatchAllCloseLauncher;
+        foreach (var card in cards)
+        {
+            card.Game.CloseLauncherOnExit = target;
+            card.RefreshProperties();
+        }
+        SaveGamesOnly();
+        LoggingService.Info("Library", $"{cards.Count} game(s) set to {(target ? "close" : "leave")} their launcher after exit (batch).");
+        StatusMessage = target
+            ? $"{cards.Count} game(s) will close their launcher after exit"
+            : $"{cards.Count} game(s) will leave their launcher running";
         NotifySelectionChanged();
     }
 
@@ -1721,6 +1856,14 @@ public class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedCategory));
 
         RebuildCategoryTabs();
+        // Same trigger points as the category tabs, and for the same reason: the Launcher options
+        // only list launchers the library actually contains. The refresh afterwards is not
+        // optional: this is where a launcher tick saved from the last run is re-applied (its
+        // option did not exist until now), and where one whose launcher has left the library is
+        // dropped. Either changes what should be on screen.
+        Filter.RebuildLauncherOptions(Games);
+        FilteredGames.Refresh();
+        OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
     }
 
     public void RebuildCategoryTabs()
@@ -1797,6 +1940,10 @@ public class LibraryViewModel : ViewModelBase
                 return false;
             }
         }
+
+        // Flyout filters: launcher, performance profile, per-entry state. AND'd with the tab and
+        // the search box, so they narrow what those already chose rather than reaching past them.
+        if (!Filter.Matches(card)) return false;
 
         // Search text filter
         if (!string.IsNullOrWhiteSpace(SearchText))

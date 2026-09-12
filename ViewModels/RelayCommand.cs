@@ -88,6 +88,16 @@ public class AsyncRelayCommand : ICommand
         {
             LoggingService.Error("AsyncRelayCommand", $"Unhandled exception in async command: {ex.Message}", ex);
         }
+        finally
+        {
+            // CanExecuteChanged rides on CommandManager.RequerySuggested, which fires on user
+            // input - a key up, a mouse up, a focus change - never on "an await finished". A
+            // command that reports CanExecute false while it runs therefore leaves its button
+            // greyed out after the work is done, until some unrelated input happens to poke the
+            // CommandManager. The user's first click on the button is that poke and does nothing
+            // else, so the action appears to need two clicks. Requery once here instead.
+            CommandManager.InvalidateRequerySuggested();
+        }
     }
 
     public void RaiseCanExecuteChanged()

@@ -31,6 +31,10 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onPrimaryClick;
     private readonly Action<GameCardViewModel>? _onToggleSelect;
     private readonly Action<GameCardViewModel>? _onRangeSelect;
+    /// <summary>Persist-and-refresh for the context menu's cascading quick settings (profile, cores,
+    /// elevation, close-launcher) - the same fields Edit Game Properties writes, reached without
+    /// opening it.</summary>
+    private readonly Action<GameCardViewModel>? _onQuickSettingChanged;
     private readonly Func<bool>? _getUseVerticalPosterArt;
     private bool _isSelected;
     private BitmapImage? _iconImage;
@@ -66,8 +70,10 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onForceClose = null,
         Action<GameCardViewModel>? onPrimaryClick = null,
         Action<GameCardViewModel>? onToggleSelect = null,
-        Action<GameCardViewModel>? onRangeSelect = null)
+        Action<GameCardViewModel>? onRangeSelect = null,
+        Action<GameCardViewModel>? onQuickSettingChanged = null)
     {
+        _onQuickSettingChanged = onQuickSettingChanged;
         _onEndSession = onEndSession;
         _onForceClose = onForceClose;
         _onPrimaryClick = onPrimaryClick;
@@ -127,6 +133,35 @@ public class GameCardViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsHidden));
             OnPropertyChanged(nameof(HideMenuLabel));
             _onToggleHidden?.Invoke(this);
+        });
+        // Cascading quick settings: the same fields Edit Game Properties writes, reached from the
+        // context menu without a dialog. Each one writes the entry, notifies its own check marks,
+        // and hands off to the library to save.
+        SetProfileCommand = new RelayCommand(p =>
+        {
+            if (p is not PerformanceProfileMode mode || Game.PerformanceProfile == mode) return;
+            Game.PerformanceProfile = mode;
+            NotifyQuickSettingsChanged();
+            _onQuickSettingChanged?.Invoke(this);
+        });
+        SetCpuAffinityCommand = new RelayCommand(p =>
+        {
+            if (p is not CpuAffinityMode mode || Game.CpuAffinity == mode) return;
+            Game.CpuAffinity = mode;
+            NotifyQuickSettingsChanged();
+            _onQuickSettingChanged?.Invoke(this);
+        });
+        ToggleRunAsAdminCommand = new RelayCommand(() =>
+        {
+            Game.RunAsAdmin = !Game.RunAsAdmin;
+            NotifyQuickSettingsChanged();
+            _onQuickSettingChanged?.Invoke(this);
+        });
+        ToggleCloseLauncherCommand = new RelayCommand(() =>
+        {
+            Game.CloseLauncherOnExit = !Game.CloseLauncherOnExit;
+            NotifyQuickSettingsChanged();
+            _onQuickSettingChanged?.Invoke(this);
         });
         OpenFolderCommand = new RelayCommand(OpenContainingFolder);
         OpenStoreCommand = new RelayCommand(OpenStorePage);
@@ -327,6 +362,49 @@ public class GameCardViewModel : ViewModelBase
     public ICommand VerifyFilesCommand { get; }
     public ICommand ToggleFavoriteCommand { get; }
     public ICommand ToggleHiddenCommand { get; }
+    /// <summary>Parameter: a <see cref="PerformanceProfileMode"/>.</summary>
+    public ICommand SetProfileCommand { get; }
+    /// <summary>Parameter: a <see cref="CpuAffinityMode"/>.</summary>
+    public ICommand SetCpuAffinityCommand { get; }
+    public ICommand ToggleRunAsAdminCommand { get; }
+    public ICommand ToggleCloseLauncherCommand { get; }
+
+    // Check marks for the cascading quick-setting submenus.
+    public bool ProfileIsOff => Game.PerformanceProfile == PerformanceProfileMode.Off;
+    public bool ProfileIsOptimized => Game.PerformanceProfile == PerformanceProfileMode.Optimized;
+    public bool ProfileIsAggressive => Game.PerformanceProfile == PerformanceProfileMode.Aggressive;
+    public bool CpuAffinityIsDefault => Game.CpuAffinity == CpuAffinityMode.Default;
+    public bool CpuAffinityIsPerformanceCores => Game.CpuAffinity == CpuAffinityMode.PerformanceCoresOnly;
+    public bool RunAsAdmin => Game.RunAsAdmin;
+    public bool CloseLauncherOnExit => Game.CloseLauncherOnExit;
+
+    /// <summary>
+    /// True when this entry launches through a platform client there is something to close - the
+    /// "Close Launcher After Game Exits" item is meaningless for a plain local exe, which has no
+    /// launcher behind it.
+    /// </summary>
+    public bool HasLauncherToClose => LibraryFilterViewModel.PlatformOf(Game) != null;
+
+    /// <summary>
+    /// Whether this machine has a hybrid (P-core/E-core) CPU. The core-pinning submenu is hidden
+    /// elsewhere: on a uniform CPU "Performance Cores Only" is a documented no-op, and an option
+    /// that cannot do anything is worse than no option. Edit Game Properties still offers it with
+    /// a hint, for a library that will move to a hybrid machine. The topology is read once per
+    /// process and cached, so this is free per card.
+    /// </summary>
+    public bool IsHybridCpu => CpuTopologyService.GetTopology().IsHybrid;
+
+    private void NotifyQuickSettingsChanged()
+    {
+        OnPropertyChanged(nameof(ProfileIsOff));
+        OnPropertyChanged(nameof(ProfileIsOptimized));
+        OnPropertyChanged(nameof(ProfileIsAggressive));
+        OnPropertyChanged(nameof(CpuAffinityIsDefault));
+        OnPropertyChanged(nameof(CpuAffinityIsPerformanceCores));
+        OnPropertyChanged(nameof(RunAsAdmin));
+        OnPropertyChanged(nameof(CloseLauncherOnExit));
+        OnPropertyChanged(nameof(HasLauncherToClose));
+    }
 
     public string? SteamAppId => Game.SteamAppId;
     public bool HasSteamAppId => !string.IsNullOrWhiteSpace(Game.SteamAppId);
@@ -404,6 +482,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamAppIdTooltip));
         OnPropertyChanged(nameof(PlaytimeDisplay));
         OnPropertyChanged(nameof(LastPlayedDisplay));
+        NotifyQuickSettingsChanged();
         ReloadIcon();
         ReloadCover();
     }

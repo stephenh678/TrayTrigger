@@ -1605,6 +1605,10 @@ public class SettingsViewModel : ViewModelBase
         {
             nameof(AppSettings.LastCategoryFilter),
             nameof(AppSettings.LastSortOption),
+            // Same bucket: which slice of the library is on screen, not a preference. Also the
+            // only sane answer here - the tick boxes live in LibraryFilterViewModel, and clearing
+            // the saved keys behind its back would leave them ticked and write them straight back.
+            nameof(AppSettings.LibraryFilterKeys),
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
