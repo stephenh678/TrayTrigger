@@ -43,4 +43,40 @@ public class SteamSearchServiceTests
     {
         Assert.Equal(1.0, SteamSearchService.CalculateSimilarity("Half-Life 2", "Half-Life 2"));
     }
+
+    /// <summary>
+    /// From Dylan's 1.4.0 log: 'P 3 R' was accepted as RAWG's 'P-T-R' (0.71) and given a
+    /// SteamGridDB poster for 'P.3' (0.71). Probing the rest of the space turned up the same
+    /// hole under every sequel: 'Portal 2'/'Portal 3' scored 0.63 and 'Doom'/'Doom II' 0.79,
+    /// all of them over the 0.60 bar.
+    /// </summary>
+    [Theory]
+    [InlineData("P 3 R", "P-T-R")]
+    [InlineData("P 3 R", "P.3")]
+    [InlineData("Doom", "Doom II")]
+    [InlineData("F1 22", "F1 23")]
+    [InlineData("Portal 2", "Portal 3")]
+    [InlineData("Persona 3", "Persona 5")]
+    [InlineData("Mega Man X", "Mega Man 10")]
+    [InlineData("Half-Life", "Half-Life 2")]
+    public void CalculateSimilarity_DifferentGame_ScoresBelowDefaultConfidence(string query, string candidate)
+    {
+        double score = SteamSearchService.CalculateSimilarity(query, candidate);
+        Assert.True(score < SteamSearchService.DefaultMinConfidence,
+            $"Expected < {SteamSearchService.DefaultMinConfidence}, got {score:F3} for '{query}' vs '{candidate}'");
+    }
+
+    [Theory]
+    [InlineData("Doom", "DOOM")]                                // short title, only case differs
+    [InlineData("Tunic", "TUNIC")]
+    [InlineData("Elden Ring", "ELDEN RING")]
+    [InlineData("Gothic 1 reamek", "Gothic 1 Remake")]          // typo, numbers agree
+    [InlineData("Civilization VI", "Civilization 6")]           // roman numeral normalisation
+    [InlineData("Resident Evil 4 (2023)", "Resident Evil 4")]   // extra number on one side only
+    public void CalculateSimilarity_SameGame_ScoresAtOrAboveDefaultConfidence(string query, string candidate)
+    {
+        double score = SteamSearchService.CalculateSimilarity(query, candidate);
+        Assert.True(score >= SteamSearchService.DefaultMinConfidence,
+            $"Expected >= {SteamSearchService.DefaultMinConfidence}, got {score:F3} for '{query}' vs '{candidate}'");
+    }
 }

@@ -301,6 +301,18 @@ public partial class SteamSearchService
         if (normQuery.Equals(normCand, StringComparison.OrdinalIgnoreCase))
             return 1.0;
 
+        // A near-empty title carries almost no signal, and the edit-distance terms below reward
+        // that: 'P 3 R' scored 0.71 against 'P-T-R' and 0.71 against 'P.3', both clearing the
+        // 0.60 bar and handing the library a different game's genre and poster. Under this many
+        // characters, demand the compacted forms be identical - 'Doom' still matches 'DOOM', and
+        // no longer matches 'Doom II'.
+        string compactQuery = CompactAlphanumeric(normQuery);
+        string compactCand = CompactAlphanumeric(normCand);
+        if (compactQuery.Length <= MinFuzzyMatchLength)
+        {
+            return compactQuery.Equals(compactCand, StringComparison.OrdinalIgnoreCase) ? 1.0 : 0.0;
+        }
+
         string[] qTokens = normQuery.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries);
         string[] cTokens = normCand.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries);
 
@@ -376,6 +388,15 @@ public partial class SteamSearchService
         double finalScore = (tokenScore * 0.65) + (levScore * 0.35);
 
         // 4. Penalize unwanted candidate types (soundtrack, demo, dlc, server) if query didn't ask for them
+        // 3b. A disagreeing number is usually the entire difference between two titles that are
+        // otherwise the same string, and the weighted score barely notices one digit: 'Portal 2'
+        // scored 0.63 against 'Portal 3', 'Persona 3' 0.64 against 'Persona 5' and 'Doom' 0.79
+        // against 'Doom II' - every one of them accepted as a match.
+        if (NumericTokensDisagree(qTokens, cTokens))
+        {
+            finalScore *= NumericMismatchPenalty;
+        }
+
         foreach (var kw in PenaltyKeywords)
         {
             if (normCand.Contains(kw, StringComparison.OrdinalIgnoreCase) && 
@@ -424,6 +445,49 @@ public partial class SteamSearchService
     /// <summary>
     /// Computes Levenshtein distance between two strings.
     /// </summary>
+    /// <summary>
+    /// Below this many alphanumeric characters a title is treated as an identifier rather than
+    /// something to match fuzzily: one edit is the whole meaning of "P3R" or "F1 22".
+    /// </summary>
+    private const int MinFuzzyMatchLength = 4;
+
+    /// <summary>
+    /// Applied when the two titles disagree about their numbers. Deliberately near-fatal - it
+    /// takes the highest realistic pre-penalty score well under any usable confidence threshold -
+    /// while still leaving a graded score for callers that rank rather than accept.
+    /// </summary>
+    private const double NumericMismatchPenalty = 0.45;
+
+    private static string CompactAlphanumeric(string s)
+    {
+        var sb = new System.Text.StringBuilder(s.Length);
+        foreach (char c in s)
+        {
+            if (char.IsLetterOrDigit(c)) sb.Append(c);
+        }
+        return sb.ToString();
+    }
+
+    private static bool IsNumericToken(string token) =>
+        token.Length > 0 && token.All(char.IsDigit);
+
+    /// <summary>
+    /// True when the titles' numbers cannot describe the same game. One side carrying numbers the
+    /// other omits entirely is allowed - "Resident Evil 4 (2023)" and "Resident Evil 4" are the
+    /// same game - but two non-empty sets that each hold a number the other lacks are not.
+    /// </summary>
+    private static bool NumericTokensDisagree(string[] qTokens, string[] cTokens)
+    {
+        var qNums = new HashSet<string>(qTokens.Where(IsNumericToken), StringComparer.Ordinal);
+        var cNums = new HashSet<string>(cTokens.Where(IsNumericToken), StringComparer.Ordinal);
+
+        if (qNums.Count == 0 && cNums.Count == 0) return false;
+        // "Doom" vs "Doom II": a number on one side only is a sequel, not a spelling variant.
+        if (qNums.Count == 0 || cNums.Count == 0) return true;
+
+        return !qNums.IsSubsetOf(cNums) && !cNums.IsSubsetOf(qNums);
+    }
+
     public static int LevenshteinDistance(string s, string t)
     {
         if (string.IsNullOrEmpty(s)) return t?.Length ?? 0;
