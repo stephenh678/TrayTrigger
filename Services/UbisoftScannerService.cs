@@ -147,7 +147,13 @@ public class UbisoftScannerService
             // scan result would only be discarded (via IsAlreadyImported) after paying the cost.
             if (existingSet.Contains(gameId)) return null;
 
-            var candidates = _folderScannerService.ScanFolder(installDir);
+            // preferExe: false is the whole point here. Ubisoft publishes no display name, so the
+            // install folder is the only title available - and the class comment above has always
+            // said this scanner trusts it. Taking ScanFolder's default instead handed back the
+            // exe stem, which is how "Tom Clancy's Rainbow Six Extraction" arrived as
+            // "R 6 Extraction Plus" and then, being the trusted name, made the folder pass
+            // discard Steam's exact match of the real title.
+            var candidates = _folderScannerService.ScanFolder(installDir, preferExe: false);
             var best = candidates.FirstOrDefault();
             if (best == null) return null;
 
