@@ -127,8 +127,14 @@ WHEN SOMETHING DOESN'T WORK
 SHARING YOUR SCRIPT
 -------------------
 
-  A community catalog of TrayTrigger scripts is planned, where you'll be able
-  to share your scripts and install other people's after they are reviewed.
+  The community catalog of TrayTrigger scripts is on GitHub:
+
+    https://github.com/stephenh678/TrayTrigger-Scripts
+
+  Every script there is read by a maintainer before it is listed. To use
+  one, download its folder into this scripts folder and browse to it in
+  Edit Game. To share yours, open a pull request there (the CONTRIBUTING
+  file has the checklist), or post it first in Discussions > Show and tell.
   To have a script ready for it:
 
     - Start it with the same header the examples use: Name, Description,

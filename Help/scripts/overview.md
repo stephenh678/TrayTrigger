@@ -36,6 +36,12 @@ TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it fro
 
 Every example is one file that handles both phases. In Edit Game, choose it as the pre-launch script and tick "Use the same script for pre-launch and post-exit". For the Settings defaults, set the same file in both boxes. "Open in editor" next to a path box opens that script in Notepad or whatever you have associated with editing that type; it never runs it.
 
+## Community scripts
+
+Scripts other people have written and shared live in the TrayTrigger-Scripts catalog on GitHub: https://github.com/stephenh678/TrayTrigger-Scripts. Every script there was read by a maintainer before it was listed, and the catalog records a SHA-256 for each file so a download can be checked against what was reviewed. That is a review, not a guarantee: a script runs as you, so open it and read it before you attach it.
+
+To use one today, download its folder into your scripts folder and browse to it in Edit Game, the same as the bundled examples. To share yours, open a pull request on the catalog repository; its CONTRIBUTING file has the manifest format and the review checklist. A browser for the catalog inside TrayTrigger is planned.
+
 ## Default scripts for every game
 
 Settings › Launch & Performance can hold a default pre-launch script and a default post-exit script. They run for any game that has no script of its own for that phase, so one "close Discord, restart it afterwards" pair covers the whole library without touching each game.
