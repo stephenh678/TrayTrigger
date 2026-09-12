@@ -1529,6 +1529,13 @@ public partial class App
 
                         var filter = _mainViewModel.Library.Filter;
 
+                        // Filters persist to settings, so a run that threw before reaching Clear
+                        // leaves a tick behind and the next run starts with games already hidden -
+                        // which shows up as a baffling "expected 2 games, saw 1" that has nothing
+                        // to do with the change under test. Start from a known-clear state.
+                        Dispatcher.Invoke(filter.ClearAll);
+                        System.Threading.Thread.Sleep(150);
+
                         // The popup is closed at rest, so its contents are not in the tree yet -
                         // opening it is what forces the templates to expand.
                         Dispatcher.Invoke(() => filter.IsOpen = true);
@@ -1559,7 +1566,54 @@ public partial class App
                         int after = Dispatcher.Invoke(() => _mainViewModel.Library.FilteredGames.Cast<object>().Count());
                         if (before != 2) throw new Exception($"Expected 2 games visible before filtering, saw {before}.");
                         if (after != 1) throw new Exception($"Ticking '{steamKey}' should leave 1 game visible, saw {after}.");
-                        if (!Dispatcher.Invoke(() => filter.HasActiveFilters)) throw new Exception("HasActiveFilters stayed false - the blue dot would never appear.");
+                        if (!Dispatcher.Invoke(() => filter.HasActiveFilters)) throw new Exception("HasActiveFilters stayed false - the count badge would never appear.");
+
+                        // The badge is a Border+TextBlock bound to ActiveFilterCount inside the
+                        // button's content Grid. Nothing above proves it rendered, or that the
+                        // number in it is the count rather than, say, an unresolved binding.
+                        string badge = Dispatcher.Invoke(() =>
+                            !_mainWindow.LibraryFilterBadge.IsVisible
+                                ? "<hidden>"
+                                : (_mainWindow.LibraryFilterBadge.Child as TextBlock)?.Text ?? "<no text>");
+                        if (badge != "1") throw new Exception($"The count badge did not render '1' for one active filter. Saw: '{badge}'.");
+
+                        // The badge overlays the button's top-right corner, so it has to be square
+                        // in that corner and it must not eat the clicks underneath it.
+                        var badgeGeometry = Dispatcher.Invoke(() =>
+                        {
+                            var b = _mainWindow.LibraryFilterBadge;
+                            var btn = _mainWindow.LibraryFilterButton;
+                            var badgeTopRight = b.PointToScreen(new Point(b.ActualWidth, 0));
+                            var buttonTopRight = btn.PointToScreen(new Point(btn.ActualWidth, 0));
+                            var glyph = FindVisualChildren<TextBlock>(btn).FirstOrDefault();
+                            var glyphMid = glyph == null ? new Point(double.NaN, double.NaN)
+                                : glyph.PointToScreen(new Point(glyph.ActualWidth / 2, glyph.ActualHeight / 2));
+                            return (Dx: badgeTopRight.X - buttonTopRight.X, Dy: badgeTopRight.Y - buttonTopRight.Y,
+                                    CoversGlyphCentre: !double.IsNaN(glyphMid.X)
+                                        && glyphMid.X >= badgeTopRight.X - b.ActualWidth && glyphMid.X <= badgeTopRight.X
+                                        && glyphMid.Y >= badgeTopRight.Y && glyphMid.Y <= badgeTopRight.Y + b.ActualHeight,
+                                    HitTestable: b.IsHitTestVisible);
+                        });
+                        if (Math.Abs(badgeGeometry.Dx) > 6 || Math.Abs(badgeGeometry.Dy) > 6)
+                            throw new Exception($"The badge is not in the button's top-right corner (off by {badgeGeometry.Dx:0.#},{badgeGeometry.Dy:0.#}px) - the button template centres its content, which parks the badge on the glyph.");
+                        if (badgeGeometry.CoversGlyphCentre)
+                            throw new Exception("The badge is sitting on top of the filter glyph.");
+                        if (badgeGeometry.HitTestable)
+                            throw new Exception("The badge is hit-testable and will swallow clicks meant for the button.");
+
+                        // Right edges should line up. A fixed HorizontalOffset only matched at one
+                        // popup width; the placement callback has to hold at whatever width the
+                        // content lands on.
+                        double drift = Dispatcher.Invoke(() =>
+                        {
+                            var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(_mainWindow, p => p.IsOpen);
+                            if (popup?.Child is not FrameworkElement panel) return double.NaN;
+                            double panelRight = panel.PointToScreen(new Point(panel.ActualWidth, 0)).X;
+                            double buttonRight = _mainWindow.LibraryFilterButton.PointToScreen(new Point(_mainWindow.LibraryFilterButton.ActualWidth, 0)).X;
+                            return Math.Abs(panelRight - buttonRight);
+                        });
+                        if (double.IsNaN(drift)) throw new Exception("Could not measure the flyout - it was not open when placement was checked.");
+                        if (drift > 2) throw new Exception($"The flyout is not right-aligned with its button: {drift:0.#}px of drift.");
 
                         // Captured with the flyout shut, because that is the only state where the
                         // blue dot is the sole indication that games are being hidden. (A Popup is
@@ -1569,13 +1623,21 @@ public partial class App
                         string shot = Path.Combine(Path.GetTempPath(), "traytrigger-library-filter.png");
                         Dispatcher.Invoke(() => CaptureVisual(_mainWindow, 1020, 760, shot));
 
+                        // Clear from inside the flyout, which is the only place it exists: it must
+                        // empty the filter, untick the box on screen, and shut the flyout behind it.
+                        Dispatcher.Invoke(() => filter.IsOpen = true);
+                        System.Threading.Thread.Sleep(300);
                         Dispatcher.Invoke(() => filter.ClearCommand.Execute(null));
                         System.Threading.Thread.Sleep(250);
                         int cleared = Dispatcher.Invoke(() => _mainViewModel.Library.FilteredGames.Cast<object>().Count());
                         if (cleared != 2) throw new Exception($"Clear should restore all 2 games, saw {cleared}.");
                         if (Dispatcher.Invoke(() => steamBox.IsChecked == true)) throw new Exception("Clear emptied the filter but left the tick box checked on screen.");
+                        if (Dispatcher.Invoke(() => filter.IsOpen)) throw new Exception("Clear left the flyout open - the Clear button hides itself at zero, so it vanishes under the pointer.");
 
-                        outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} tick boxes rendered; ticking Steam went {before} -> {after} games and Clear restored {cleared}; screenshot {shot}";
+                        if (Dispatcher.Invoke(() => _mainWindow.LibraryFilterBadge.IsVisible))
+                            throw new Exception("The badge survived Clear - it should disappear at zero, not show a 0.");
+
+                        outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} tick boxes rendered; ticking Steam went {before} -> {after} games, badge read 1, flyout right-aligned within {drift:0.#}px, Clear restored {cleared} and closed the flyout; screenshot {shot}";
                     }
                     catch (Exception ex)
                     {

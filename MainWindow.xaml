@@ -690,29 +690,53 @@
                              controls read as one family rather than a loose button beside a group. -->
                         <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                                 BorderThickness="1" CornerRadius="6" Padding="3"/>
+                        <!-- 34 rather than the 32 of every other icon button in this row: the badge
+                             needs the extra two pixels to clear the glyph. Kept as close as it can
+                             be so the control still reads as one of the family. -->
                         <Button x:Name="LibraryFilterButton"
                                 Command="{Binding Library.Filter.ToggleOpenCommand}"
-                                Width="32" Height="30" Padding="0" Cursor="Hand" Margin="4,4,4,4"
+                                Width="34" Height="30" Padding="0" Cursor="Hand" Margin="4,4,4,4"
                                 Style="{StaticResource SegmentedTabButton}"
                                 Tag="{Binding Library.Filter.IsOpen}"
                                 ToolTip="{Binding Library.Filter.ActiveFilterSummary}"
-                                AutomationProperties.Name="Filter games">
-                            <Grid>
-                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
-                                           Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <!-- The blue dot: the only thing on screen that says a filter is
-                                     hiding games, since unlike the category tab and the sort box
-                                     the flyout's state is invisible once it closes. -->
-                                <Ellipse Width="6" Height="6" Fill="{StaticResource BrushAccentHover}"
-                                         Stroke="#181820" StrokeThickness="1"
-                                         HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"
-                                         Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}"/>
-                            </Grid>
+                                AutomationProperties.Name="{Binding Library.Filter.AccessibleName}">
+                            <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
+                                       Foreground="{StaticResource BrushTextPrimary}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
 
-                        <Popup IsOpen="{Binding Library.Filter.IsOpen, Mode=TwoWay}"
-                               PlacementTarget="{Binding ElementName=LibraryFilterButton}" Placement="Bottom"
-                               StaysOpen="False" AllowsTransparency="True" HorizontalOffset="-236" VerticalOffset="4">
+                        <!-- How many filters are on. Once the flyout closes this is the only thing on
+                             screen saying anything is hidden, so it carries a number rather than a
+                             dot - a dot says "something", which leaves reopening the flyout as the
+                             only way to find out how much. Geometry and type follow the badge pills
+                             on the game cards; the 1px outline is the container background, holding
+                             the badge off the glyph behind it.
+
+                             It sits in this Grid rather than inside the Button because
+                             SegmentedTabButton centres its ContentPresenter: content there shrinks to
+                             fit, so "top right" resolves against the glyph's own bounds and lands the
+                             badge squarely on top of it. Out here it aligns to the whole control.
+                             Not hit-testable, so the corner it covers still presses the button. -->
+                        <Border x:Name="LibraryFilterBadge"
+                                Background="{StaticResource BrushAccentHover}"
+                                BorderBrush="#181820" BorderThickness="1" IsHitTestVisible="False"
+                                CornerRadius="8" Height="15" MinWidth="15" Padding="3,0"
+                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0"
+                                Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding Library.Filter.ActiveFilterCount}"
+                                       FontSize="10" FontFamily="{StaticResource AppFont}"
+                                       Foreground="{StaticResource BrushTextPrimary}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+
+                        <!-- Placement is computed in code-behind rather than a fixed HorizontalOffset:
+                             the panel is MinWidth 270 / MaxWidth 300, so any single hardcoded offset
+                             is only right at one width and drifts off the button at the others. -->
+                        <Popup x:Name="LibraryFilterPopup"
+                               IsOpen="{Binding Library.Filter.IsOpen, Mode=TwoWay}"
+                               PlacementTarget="{Binding ElementName=LibraryFilterButton}" Placement="Custom"
+                               StaysOpen="False" AllowsTransparency="True" Focusable="True"
+                               Opened="LibraryFilterPopup_Opened" PreviewKeyDown="LibraryFilterPopup_PreviewKeyDown">
                             <Border Background="#1B1B20" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                     CornerRadius="8" Padding="14,12" MinWidth="270" MaxWidth="300">
                                 <Border.Effect>
@@ -749,7 +773,10 @@
                                         </ItemsControl>
                                     </ScrollViewer>
 
+                                    <!-- Click runs before Command, so the flyout is already closed by
+                                         the time the help window appears over the same corner. -->
                                     <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
+                                            Click="LibraryFilterHelp_Click"
                                             Command="{x:Static services:HelpCommands.ShowTopic}"
                                             CommandParameter="library/filtering"/>
                                 </StackPanel>
@@ -942,7 +969,7 @@
                             <TextBlock Text="Hidden by your filters"
                                        FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Your library has games, but none of them match the filters you have set. Filters stay put between sessions - the filter button shows a blue dot whenever any are on."
+                            <TextBlock Text="Your library has games, but none of them match the filters you have set. Filters stay put between sessions - the filter button shows how many are on."
                                        FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,16"/>
                             <Button Content="Clear filters" Command="{Binding Library.Filter.ClearCommand}"

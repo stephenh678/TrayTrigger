@@ -194,4 +194,72 @@ public class LibraryFilterTests : IDisposable
         Assert.False(library.Filter.HasActiveFilters);
         Assert.Equal(["A"], Visible(library));
     });
+
+    /// <summary>
+    /// The badge carries a number, so the number has to be right: it counts ticked values, not
+    /// groups with something ticked.
+    /// </summary>
+    [Fact]
+    public void TheCount_IsTickedValuesNotGroups() => Sta(() =>
+    {
+        var library = NewLibrary(null, Steam("A"), Epic("B"), Local("C"));
+        Assert.Equal(0, library.Filter.ActiveFilterCount);
+
+        Option(library.Filter, "launcher:steam").IsChecked = true;
+        Option(library.Filter, "launcher:epic").IsChecked = true;
+        Assert.Equal(2, library.Filter.ActiveFilterCount);
+
+        Option(library.Filter, "profile:off").IsChecked = true;
+        Assert.Equal(3, library.Filter.ActiveFilterCount);
+        Assert.Contains("3 filters active", library.Filter.AccessibleName);
+    });
+
+    /// <summary>
+    /// Clear closes the flyout - the Clear button hides itself at zero, so leaving the panel open
+    /// would make it vanish from under the pointer that just pressed it.
+    /// </summary>
+    [Fact]
+    public void Clear_ClosesTheFlyout() => Sta(() =>
+    {
+        var library = NewLibrary(null, Steam("A"), Epic("B"));
+        Option(library.Filter, "launcher:steam").IsChecked = true;
+        library.Filter.IsOpen = true;
+
+        library.Filter.ClearCommand.Execute(null);
+
+        Assert.False(library.Filter.IsOpen);
+        Assert.False(library.Filter.HasActiveFilters);
+        Assert.Equal(2, Visible(library).Count);
+    });
+
+    /// <summary>
+    /// A library of nothing but Steam games leaves the Launcher group with one box whose only
+    /// effect would be to hide nothing. It is hidden, and being hidden it must not filter or count
+    /// either - otherwise a tick restored from settings would hide games with no box to untick.
+    /// </summary>
+    [Fact]
+    public void AGroupDownToOneOption_IsHiddenAndInert() => Sta(() =>
+    {
+        var settings = new AppSettings { LibraryFilterKeys = ["launcher:steam"] };
+        var library = NewLibrary(settings, Steam("A"), Steam("B"));
+
+        var launchers = library.Filter.Groups.Single(g => g.Title == "Launcher");
+        Assert.Single(launchers.Options);
+        Assert.False(launchers.IsVisible);
+
+        Assert.False(library.Filter.HasActiveFilters);
+        Assert.Equal(0, library.Filter.ActiveFilterCount);
+        Assert.Equal(2, Visible(library).Count);
+    });
+
+    /// <summary>Two launchers is enough to be worth offering.</summary>
+    [Fact]
+    public void AGroupWithTwoOptions_IsShown() => Sta(() =>
+    {
+        var library = NewLibrary(null, Steam("A"), Epic("B"));
+
+        var launchers = library.Filter.Groups.Single(g => g.Title == "Launcher");
+        Assert.Equal(2, launchers.Options.Count);
+        Assert.True(launchers.IsVisible);
+    });
 }

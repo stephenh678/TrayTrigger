@@ -60,12 +60,21 @@ public sealed class LibraryFilterGroup : ViewModelBase
 
     public LibraryFilterGroup(string title) => Title = title;
 
-    /// <summary>False when no option in this group applies to anything in the library - the
-    /// Launcher group on a library imported entirely by hand, for instance.</summary>
-    public bool IsVisible => Options.Count > 0;
+    /// <summary>
+    /// False when this group cannot narrow anything. That covers an empty group - the Launcher
+    /// group on a library imported entirely by hand - and also a group down to a single option,
+    /// which is worse than useless: a library of nothing but Steam games showed a lone "Steam"
+    /// tickbox whose only effect was to hide nothing.
+    /// </summary>
+    public bool IsVisible => Options.Count > 1;
 
     internal bool Matches(GameCardViewModel card)
     {
+        // A group the flyout does not show is inert. Without this, a tick could survive in a group
+        // that later collapsed to one option and hide games with no visible way to undo it - the
+        // same trap RebuildLauncherOptions already avoids by dropping orphaned ticks.
+        if (!IsVisible) return true;
+
         bool anyChecked = false;
         foreach (var option in Options)
         {
@@ -127,7 +136,10 @@ public sealed class LibraryFilterViewModel : ViewModelBase
         Groups.Add(_profiles);
         Groups.Add(_status);
 
-        ClearCommand = new RelayCommand(ClearAll);
+        // Clear closes the flyout. Leaving it open would strand the user in front of a panel with
+        // nothing ticked, and the Clear button itself vanishes at zero - so it would disappear from
+        // under the pointer that just pressed it.
+        ClearCommand = new RelayCommand(() => { ClearAll(); IsOpen = false; });
         ToggleOpenCommand = new RelayCommand(() => IsOpen = !IsOpen);
     }
 
@@ -150,13 +162,28 @@ public sealed class LibraryFilterViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasActiveFilters));
         OnPropertyChanged(nameof(ActiveFilterCount));
         OnPropertyChanged(nameof(ActiveFilterSummary));
+        OnPropertyChanged(nameof(AccessibleName));
     }
 
     private IEnumerable<LibraryFilterOption> AllOptions => Groups.SelectMany(g => g.Options);
 
-    /// <summary>Drives the blue dot on the filter button.</summary>
-    public bool HasActiveFilters => AllOptions.Any(o => o.IsChecked);
-    public int ActiveFilterCount => AllOptions.Count(o => o.IsChecked);
+    /// <summary>
+    /// Options the user can actually see and untick. Ticks stranded in a group the flyout hides
+    /// are excluded, because <see cref="LibraryFilterGroup.Matches"/> ignores them too - counting
+    /// them would advertise a filter that is not filtering and cannot be reached.
+    /// </summary>
+    private IEnumerable<LibraryFilterOption> ReachableOptions =>
+        Groups.Where(g => g.IsVisible).SelectMany(g => g.Options);
+
+    /// <summary>Drives the count badge on the filter button.</summary>
+    public bool HasActiveFilters => ReachableOptions.Any(o => o.IsChecked);
+    public int ActiveFilterCount => ReachableOptions.Count(o => o.IsChecked);
+
+    /// <summary>
+    /// The filter button is icon-only and its badge is not reachable by a screen reader, so the
+    /// count has to travel on the button's own automation name instead.
+    /// </summary>
+    public string AccessibleName => $"Filter games. {ActiveFilterSummary}.";
     public string ActiveFilterSummary => ActiveFilterCount switch
     {
         0 => "No filters",

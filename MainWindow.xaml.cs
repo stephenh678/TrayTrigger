@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using TrayTrigger.Models;
@@ -22,6 +23,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = _viewModel;
+
+        // Not settable from XAML - it's a delegate, not a value.
+        LibraryFilterPopup.CustomPopupPlacementCallback = PlaceLibraryFilterPopup;
 
         try
         {
@@ -313,6 +317,50 @@ public partial class MainWindow : Window
 
         base.OnClosing(e);
     }
+
+    /// <summary>
+    /// Right-aligns the filter flyout under its button. The panel's width varies with its content
+    /// (MinWidth 270, MaxWidth 300, and the Launcher group's labels decide where in between it
+    /// lands), so a fixed HorizontalOffset can only ever be correct at one of those widths -
+    /// the previous -236 drifted visibly off the button as soon as a long launcher name widened
+    /// the panel. Measuring at placement time is correct at every width.
+    /// </summary>
+    private static CustomPopupPlacement[] PlaceLibraryFilterPopup(Size popupSize, Size targetSize, Point offset) =>
+    [
+        new CustomPopupPlacement(new Point(targetSize.Width - popupSize.Width, targetSize.Height + 4), PopupPrimaryAxis.Horizontal)
+    ];
+
+    /// <summary>
+    /// Moves focus into the flyout so its tick boxes are reachable by keyboard. A Popup does not
+    /// take focus on its own, which left the whole panel unusable without a mouse.
+    /// </summary>
+    private void LibraryFilterPopup_Opened(object? sender, EventArgs e)
+    {
+        if (LibraryFilterPopup.Child is FrameworkElement child)
+        {
+            child.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+        }
+    }
+
+    /// <summary>
+    /// Escape closes the flyout and puts focus back on the button that opened it, per the ARIA
+    /// authoring practices - without the second half, focus is left orphaned on a panel that is
+    /// no longer on screen.
+    /// </summary>
+    private void LibraryFilterPopup_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        _viewModel.Library.Filter.IsOpen = false;
+        LibraryFilterButton.Focus();
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Closes the flyout before the help window opens over it. Click runs ahead of the button's
+    /// Command, which is what actually shows the topic.
+    /// </summary>
+    private void LibraryFilterHelp_Click(object sender, RoutedEventArgs e) =>
+        _viewModel.Library.Filter.IsOpen = false;
 
     /// <summary>
     /// Library-only shortcuts documented in the About page's Quick Reference: Ctrl+F jumps focus
