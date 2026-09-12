@@ -1276,6 +1276,7 @@ public partial class App
                 if (!_mainViewModel.SettingsVM.SearchOfficialTitleOnline) throw new Exception("Expected SearchOfficialTitleOnline=true after reset");
                 if (!_mainViewModel.SettingsVM.PreferExeForGameName) throw new Exception("Expected PreferExeForGameName=true after reset");
                 if (!_mainViewModel.SettingsVM.UseVerticalPosterArt) throw new Exception("Expected UseVerticalPosterArt=true after reset");
+                if (!_mainViewModel.SettingsVM.UseRawgMetadata) throw new Exception("Expected UseRawgMetadata=true after reset");
                 if (_mainViewModel.SettingsVM.StartWithWindows) throw new Exception("Expected StartWithWindows=false after reset");
                 if (!_mainViewModel.SettingsVM.StartMinimizedToTray) throw new Exception("Expected StartMinimizedToTray=true after reset");
 
