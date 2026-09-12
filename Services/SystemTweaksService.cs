@@ -1513,120 +1513,148 @@ public partial class SystemTweaksService
     private static bool IsUltimatePlanGuid(string guid) =>
         FindAllUltimatePlanGuids().Any(g => string.Equals(g, guid, StringComparison.OrdinalIgnoreCase));
 
+    private const string ProcessorSubgroupGuid = "54533251-82be-4824-96c1-47b60b740d00";
+    private const string PciExpressSubgroupGuid = "501a4d13-42af-4429-9fd1-a8218c268e20";
+    private const string UsbSubgroupGuid = "2a737441-1930-4402-8d77-b2bebba308a3";
+
+    /// <summary>
+    /// Addressed by GUID, never by powercfg's friendly aliases. Aliases are not guaranteed to
+    /// exist - Windows registers none at all for the USB subgroup, which is why "SUB_USB
+    /// USBSELECTSUSPEND" was rejected outright on every machine - and the GUID is also the key
+    /// under which the platform publishes what values it will accept.
+    /// </summary>
+    private static readonly (string Name, string Subgroup, string Setting, int Value)[] UltimatePlanSettings =
+    [
+        ("PROCTHROTTLEMIN",  ProcessorSubgroupGuid,  "893dee8e-2bef-41e0-89c6-b55d0929964c", 100), // Minimum processor state: 100%
+        ("PROCTHROTTLEMAX",  ProcessorSubgroupGuid,  "bc5038f7-23e0-4960-96da-33abaf5935ec", 100), // Maximum processor state: 100%
+        ("SYSCOOLPOL",       ProcessorSubgroupGuid,  "94d3a615-a899-4ac5-ae2b-e4d8f634367f", 1),   // System cooling policy: Active
+        ("CPMINCORES",       ProcessorSubgroupGuid,  "0cc5b647-c1df-4637-891a-dec35c318583", 100), // Core parking: disabled (100% unparked)
+        ("PERFBOOSTMODE",    ProcessorSubgroupGuid,  "be337238-0d82-4146-a960-4f3749d470c7", 2),   // Processor performance boost mode: Aggressive
+        ("ASPM",             PciExpressSubgroupGuid, "ee12f906-d277-404b-b6da-e5fa1a576df5", 0),   // PCI Express link state power management: Off
+        ("USBSELECTSUSPEND", UsbSubgroupGuid,        "48e6b7a6-50f5-4782-a5d4-53bb8f07e226", 0),   // USB selective suspend: Disabled
+    ];
+
     /// <summary>
     /// Each powercfg call runs on its own and is checked on its own: the previous "cmd /c a & b &
     /// ..." chain reported only the last command's exit code, so a rejected hidden setting
     /// (CPMINCORES, PERFBOOSTMODE) failed silently.
     /// </summary>
-    private const string UsbSubgroupGuid = "2a737441-1930-4402-8d77-b2bebba308a3";
-    private const string UsbSelectiveSuspendGuid = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226";
-
     internal static bool ApplyUltimatePlanTweaks(string schemeGuid)
     {
         if (!Guid.TryParseExact(schemeGuid, "D", out _)) return false;
 
-        var settings = new (string Subgroup, string Setting, int Val)[]
-        {
-            ("SUB_PROCESSOR", "PROCTHROTTLEMIN", 100),   // Minimum processor state: 100%
-            ("SUB_PROCESSOR", "PROCTHROTTLEMAX", 100),   // Maximum processor state: 100%
-            ("SUB_PROCESSOR", "SYSCOOLPOL", 1),          // System cooling policy: Active
-            ("SUB_PROCESSOR", "CPMINCORES", 100),        // Core parking: disabled (100% unparked)
-            ("SUB_PROCESSOR", "PERFBOOSTMODE", 2),       // Processor performance boost mode: Aggressive
-            ("SUB_PCIEXPRESS", "ASPM", 0),               // PCI Express link state power management: Off
-            // USB selective suspend: Disabled. Windows registers no alias for the USB subgroup
-            // (powercfg /aliases lists SUB_PROCESSOR and SUB_PCIEXPRESS but nothing for USB), so
-            // "SUB_USB USBSELECTSUSPEND" was rejected outright with "Invalid Parameters" on every
-            // machine and the setting was never applied. Address it by GUID instead.
-            (UsbSubgroupGuid, UsbSelectiveSuspendGuid, 0)
-        };
-
         bool allOk = true;
-        foreach (var (subgroup, setting, val) in settings)
+        foreach (var (name, subgroup, setting, desired) in UltimatePlanSettings)
         {
+            // Decide the value up front rather than after a rejection. These are not universal -
+            // CPMINCORES is a percentage whose ceiling is a property of the processor, and
+            // Dylan's refused 100 on all four passes - and the platform publishes its own limits,
+            // so there is no reason to guess and then react.
+            var domain = ReadPowerSettingDomain(subgroup, setting);
+            if (domain == null)
+            {
+                // Not a failure: this machine has no such knob, so there is nothing the user
+                // could act on and nothing worth warning them about.
+                LoggingService.Info("SystemTweaksService", $"Power setting {name} is not present on this system; skipped.");
+                continue;
+            }
+
+            int? value = ResolveAcceptableValue(domain.Value, desired);
+            if (value == null)
+            {
+                LoggingService.Info("SystemTweaksService", $"Power setting {name} does not offer {desired} on this system ({domain}); skipped.");
+                continue;
+            }
+
+            if (value != desired)
+            {
+                LoggingService.Info("SystemTweaksService", $"Power setting {name}: {desired} is outside this system's range ({domain}); using {value}.");
+            }
+
             foreach (var verb in new[] { "/setacvalueindex", "/setdcvalueindex" })
             {
-                if (RunPowercfgChecked($"{verb} {schemeGuid} {subgroup} {setting} {val}"))
+                if (RunPowercfgChecked($"{verb} {schemeGuid} {subgroup} {setting} {value}"))
                     continue;
 
-                // Rejected. These values are not universal - CPMINCORES is a percentage whose
-                // ceiling is below 100 on some processors, and on Dylan's machine every pass
-                // came back "not within the range of the target power setting" - so ask the
-                // platform what it will take before calling the tweak broken. Only on the
-                // failure path: the query is another powercfg process, and this runs while a
-                // game is being launched.
-                int? adjusted = ResolveAcceptableValue(schemeGuid, subgroup, setting, val);
-
-                if (adjusted == null)
-                {
-                    // Not a failure: the hardware does not expose this knob at all, so there is
-                    // nothing the user could do about it and nothing worth warning them about.
-                    LoggingService.Info("SystemTweaksService", $"powercfg {subgroup} {setting} is not available on this system; skipped.");
-                    continue;
-                }
-
-                if (adjusted != val && RunPowercfgChecked($"{verb} {schemeGuid} {subgroup} {setting} {adjusted}"))
-                {
-                    LoggingService.Info("SystemTweaksService", $"powercfg {verb} {subgroup} {setting}: {val} is outside this system's range; applied {adjusted} instead.");
-                    continue;
-                }
-
-                LoggingService.Warn("SystemTweaksService", $"powercfg {verb} {subgroup} {setting}={val} failed.");
+                // Refused a value the platform said it would take. Record what it advertised so
+                // the next log says which of the two is lying.
+                LoggingService.Warn("SystemTweaksService", $"powercfg {verb} {name}={value} failed, though this system advertises {domain}.");
                 allOk = false;
             }
         }
         return allOk;
     }
 
-    [GeneratedRegex(@"Possible Setting Index:\s*(\d+)")]
-    private static partial Regex PossibleSettingIndexRegex();
+    /// <summary>
+    /// What one power setting will accept, as the platform itself publishes it under
+    /// HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings. A range setting (CPMINCORES,
+    /// PROCTHROTTLEMIN) carries ValueMin/ValueMax/ValueIncrement; an enumerated one
+    /// (PERFBOOSTMODE, USB selective suspend) instead has one numbered subkey per valid index.
+    /// </summary>
+    internal readonly record struct PowerSettingDomain(int? Min, int? Max, int? Increment, IReadOnlyList<int> Indexes)
+    {
+        public override string ToString() =>
+            Indexes.Count > 0 ? $"indexes {string.Join('/', Indexes)}" : $"range {Min}-{Max} step {Increment ?? 1}";
+    }
 
     /// <summary>
-    /// The value this system will actually accept for one power setting, or null when powercfg
-    /// does not describe the setting at all. "powercfg /query" reports a min/max/increment for a
-    /// range setting (CPMINCORES, a percentage) and a list of valid indexes for an enumerated one
-    /// (PERFBOOSTMODE, USB selective suspend); a range is clamped, an enumeration is all or
-    /// nothing since a neighbouring index means something unrelated.
+    /// Read from the registry rather than "powercfg /query", which prints nothing at all for a
+    /// setting whose Attributes mark it hidden - the Windows default for CPMINCORES, so querying
+    /// powercfg would have drawn a blank on exactly the machines that need this. It is also one
+    /// registry read instead of another process, on the path that launches a game.
     /// </summary>
-    private static int? ResolveAcceptableValue(string schemeGuid, string subgroup, string setting, int desired) =>
-        ResolveAcceptableValue(RunPowercfg($"/query {schemeGuid} {subgroup} {setting}"), desired);
-
-    /// <summary>Parses what <see cref="ResolveAcceptableValue(string,string,string,int)"/> asked for.</summary>
-    internal static int? ResolveAcceptableValue(string output, int desired)
+    private static PowerSettingDomain? ReadPowerSettingDomain(string subgroupGuid, string settingGuid)
     {
-        if (string.IsNullOrWhiteSpace(output)) return null;
-
-        var indexes = PossibleSettingIndexRegex().Matches(output)
-            .Select(m => int.TryParse(m.Groups[1].Value, out int i) ? i : -1)
-            .ToList();
-        if (indexes.Count > 0)
+        try
         {
-            return indexes.Contains(desired) ? desired : null;
+            using var key = Registry.LocalMachine.OpenSubKey(
+                $@"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\{subgroupGuid}\{settingGuid}");
+            if (key == null) return null;
+
+            var indexes = key.GetSubKeyNames()
+                .Select(n => int.TryParse(n, out int i) ? i : -1)
+                .Where(i => i >= 0)
+                .OrderBy(i => i)
+                .ToList();
+
+            int? min = key.GetValue("ValueMin") as int?;
+            int? max = key.GetValue("ValueMax") as int?;
+            int? increment = key.GetValue("ValueIncrement") as int?;
+
+            if (indexes.Count == 0 && (min == null || max == null)) return null;
+            return new PowerSettingDomain(min, max, increment, indexes);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("SystemTweaksService", $"Could not read the domain of power setting {settingGuid}: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The value this system will take, or null when it offers nothing usable. A range is clamped
+    /// to its ceiling and aligned to its step, so a processor that will only unpark half its cores
+    /// gets half rather than nothing. An enumeration is all or nothing: a neighbouring index is a
+    /// different mode, not a weaker version of the one asked for.
+    /// </summary>
+    internal static int? ResolveAcceptableValue(PowerSettingDomain domain, int desired)
+    {
+        if (domain.Indexes.Count > 0)
+        {
+            return domain.Indexes.Contains(desired) ? desired : null;
         }
 
-        int? min = ParseHexSetting(output, "Minimum Possible Setting");
-        int? max = ParseHexSetting(output, "Maximum Possible Setting");
-        if (min == null || max == null || min > max) return null;
+        if (domain.Min == null || domain.Max == null || domain.Min > domain.Max) return null;
 
-        int clamped = Math.Clamp(desired, min.Value, max.Value);
+        int clamped = Math.Clamp(desired, domain.Min.Value, domain.Max.Value);
 
-        // Land on a step the platform exposes rather than between two of them.
-        int increment = ParseHexSetting(output, "Possible Settings increment") ?? 1;
+        int increment = domain.Increment ?? 1;
         if (increment > 1)
         {
-            clamped = min.Value + ((clamped - min.Value) / increment) * increment;
+            clamped = domain.Min.Value + ((clamped - domain.Min.Value) / increment) * increment;
         }
 
         return clamped;
-    }
-
-    private static int? ParseHexSetting(string output, string label)
-    {
-        var match = Regex.Match(output, Regex.Escape(label) + @":\s*0x([0-9a-fA-F]+)");
-        return match.Success
-            && int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.HexNumber,
-                            System.Globalization.CultureInfo.InvariantCulture, out int value)
-            ? value
-            : null;
     }
 
     private static bool RunPowercfgChecked(string arguments)

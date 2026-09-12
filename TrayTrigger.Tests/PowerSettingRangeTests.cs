@@ -1,94 +1,76 @@
 using TrayTrigger.Services;
+using Domain = TrayTrigger.Services.SystemTweaksService.PowerSettingDomain;
 
 namespace TrayTrigger.Tests;
 
 /// <summary>
-/// The Ultimate plan's powercfg values are not universal. Dylan's 1.4.0 log rejected
-/// CPMINCORES=100 on every pass with "not within the range of the target power setting", so the
-/// tweak now asks powercfg what the machine will take. These are the real shapes of
-/// "powercfg /query" output, captured from a Windows 11 26200 machine.
+/// The Ultimate plan's powercfg values are not universal: Dylan's 1.4.0 log rejected
+/// CPMINCORES=100 on all four passes with "not within the range of the target power setting", so
+/// the value is now taken from what the platform publishes for the setting. These are the shapes
+/// Windows actually stores under
+/// HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\{subgroup}\{setting} - a range
+/// setting carries ValueMin/ValueMax/ValueIncrement, an enumerated one has a numbered subkey per
+/// valid index - both read from a Windows 11 26200 machine.
 /// </summary>
 public class PowerSettingRangeTests
 {
-    private const string RangeSetting = """
-        Power Scheme GUID: 4fce28e6-fe88-45ef-8e13-506c90b94943  (ZZ-Probe)
-          Subgroup GUID: 54533251-82be-4824-96c1-47b60b740d00  (Processor power management)
-            GUID Alias: SUB_PROCESSOR
-            Power Setting GUID: 0cc5b647-c1df-4637-891a-dec35c318583  (Processor performance core parking min cores)
-              GUID Alias: CPMINCORES
-              Minimum Possible Setting: 0x00000000
-              Maximum Possible Setting: 0x00000064
-              Possible Settings increment: 0x00000001
-              Possible Settings units: %
-            Current AC Power Setting Index: 0x00000004
-            Current DC Power Setting Index: 0x00000004
-        """;
+    // CPMINCORES / PROCTHROTTLEMIN: percentages.
+    private static Domain Range(int min, int max, int? increment = 1) => new(min, max, increment, []);
 
-    // The same setting on a machine that caps core parking below 100%, which is what the log's
-    // "not within the range" rejection means.
-    private const string CappedRangeSetting = """
-              GUID Alias: CPMINCORES
-              Minimum Possible Setting: 0x00000000
-              Maximum Possible Setting: 0x00000032
-              Possible Settings increment: 0x00000005
-              Possible Settings units: %
-        """;
-
-    private const string EnumSetting = """
-        Power Scheme GUID: 4fce28e6-fe88-45ef-8e13-506c90b94943  (ZZ-Probe)
-          Subgroup GUID: 54533251-82be-4824-96c1-47b60b740d00  (Processor power management)
-            Power Setting GUID: be337238-0d82-4146-a960-4f3749d470c7  (Processor performance boost mode)
-              GUID Alias: PERFBOOSTMODE
-              Possible Setting Index: 000
-              Possible Setting Friendly Name: Disabled
-              Possible Setting Index: 001
-              Possible Setting Friendly Name: Enabled
-              Possible Setting Index: 002
-              Possible Setting Friendly Name: Aggressive
-            Current AC Power Setting Index: 0x00000002
-        """;
+    // PERFBOOSTMODE has subkeys 0..6; USB selective suspend and SYSCOOLPOL have 0..1.
+    private static Domain Enum(params int[] indexes) => new(null, null, null, indexes);
 
     [Fact]
     public void RangeSetting_ValueInRange_IsKept()
     {
-        Assert.Equal(100, SystemTweaksService.ResolveAcceptableValue(RangeSetting, 100));
+        Assert.Equal(100, SystemTweaksService.ResolveAcceptableValue(Range(0, 100), 100));
     }
 
     [Fact]
     public void RangeSetting_ValueAboveCeiling_ClampsToCeiling()
     {
-        // 100 is refused on this machine; 50 (0x32) is the most core parking it will give up.
-        Assert.Equal(50, SystemTweaksService.ResolveAcceptableValue(CappedRangeSetting, 100));
+        // A processor that will only ever unpark half its cores gets half, rather than nothing.
+        Assert.Equal(50, SystemTweaksService.ResolveAcceptableValue(Range(0, 50), 100));
     }
 
     [Fact]
     public void RangeSetting_ClampedValue_LandsOnAnExposedStep()
     {
-        // Increment is 5, so 48 must come back as 45 rather than a value powercfg would refuse.
-        Assert.Equal(45, SystemTweaksService.ResolveAcceptableValue(CappedRangeSetting, 48));
+        Assert.Equal(45, SystemTweaksService.ResolveAcceptableValue(Range(0, 50, increment: 5), 48));
+    }
+
+    [Fact]
+    public void RangeSetting_MissingIncrement_IsTreatedAsOne()
+    {
+        Assert.Equal(50, SystemTweaksService.ResolveAcceptableValue(Range(0, 50, increment: null), 100));
+    }
+
+    [Fact]
+    public void RangeSetting_CeilingOfZero_YieldsZeroRatherThanFailing()
+    {
+        // Core parking the platform will not give up at all: 0 is the Windows default, so this
+        // ends up a no-op instead of a warning the user cannot act on.
+        Assert.Equal(0, SystemTweaksService.ResolveAcceptableValue(Range(0, 0), 100));
     }
 
     [Fact]
     public void EnumeratedSetting_OfferedIndex_IsKept()
     {
-        Assert.Equal(2, SystemTweaksService.ResolveAcceptableValue(EnumSetting, 2));
+        Assert.Equal(2, SystemTweaksService.ResolveAcceptableValue(Enum(0, 1, 2, 3, 4, 5, 6), 2));
     }
 
     [Fact]
     public void EnumeratedSetting_UnofferedIndex_IsNotSubstituted()
     {
-        // A neighbouring index is a different mode, not a weaker version of the same one, so
-        // there is nothing safe to fall back to.
-        Assert.Null(SystemTweaksService.ResolveAcceptableValue(EnumSetting, 5));
+        // Index 2 of a 0/1 setting is not "more" of anything - there is nothing safe to fall
+        // back to, so the tweak is skipped rather than guessed at.
+        Assert.Null(SystemTweaksService.ResolveAcceptableValue(Enum(0, 1), 2));
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("Invalid Parameters -- try \"/?\" for help")]
-    [InlineData("Power Scheme GUID: 4fce28e6-fe88-45ef-8e13-506c90b94943  (ZZ-Probe)")]
-    public void SettingNotDescribed_ReturnsNull(string output)
+    [Fact]
+    public void MalformedRange_IsRejected()
     {
-        Assert.Null(SystemTweaksService.ResolveAcceptableValue(output, 100));
+        Assert.Null(SystemTweaksService.ResolveAcceptableValue(Range(100, 0), 100));
+        Assert.Null(SystemTweaksService.ResolveAcceptableValue(new Domain(null, null, null, []), 100));
     }
 }
