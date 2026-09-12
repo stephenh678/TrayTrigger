@@ -534,7 +534,8 @@ public class PerformanceProfileService
             AdapterIdLowPart = s.AdapterId.LowPart,
             AdapterIdHighPart = s.AdapterId.HighPart,
             TargetId = s.TargetId,
-            WasEnabled = s.Enabled
+            WasEnabled = s.Enabled,
+            WasWcg = s.IsWcg
         }).ToList();
         snapshot.HdrCaptured = true;
 
@@ -564,9 +565,15 @@ public class PerformanceProfileService
         {
             var adapterId = new HdrControlService.LUID { LowPart = s.AdapterIdLowPart, HighPart = s.AdapterIdHighPart };
             bool ok = _backend.SetDisplayHdrEnabled(adapterId, s.TargetId, s.WasEnabled);
+
+            // Name the mode the display goes back to, not just the HDR bit. "HDR state to Off"
+            // read as though a display that had been in WCG was being dropped to plain SDR; it
+            // is not - clearing HDR returns it to whichever non-HDR mode Auto Color Management
+            // had it in.
+            string restoredTo = s.WasEnabled ? "HDR" : s.WasWcg ? "WCG" : "SDR";
             LoggingService.Info("PerformanceProfile", ok
-                ? $"Restored display target {s.TargetId} HDR state to {(s.WasEnabled ? "On" : "Off")}."
-                : $"Failed to restore display target {s.TargetId} HDR state.");
+                ? $"Restored display target {s.TargetId} to {restoredTo}."
+                : $"Failed to restore display target {s.TargetId} to {restoredTo}.");
         }
     }
 
