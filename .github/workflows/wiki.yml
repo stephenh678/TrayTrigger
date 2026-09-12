@@ -1,0 +1,47 @@
+name: Sync Wiki
+
+# The wiki is generated from Help/ (the app's "Learn more" pages) so the two never drift.
+# Runs whenever a help page or the generator changes on main; can also be run by hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Help/**'
+      - 'tools/Export-Wiki.ps1'
+      - '.github/workflows/wiki.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # the wiki repository accepts GITHUB_TOKEN with contents:write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Checkout Wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate pages
+        shell: pwsh
+        run: ./tools/Export-Wiki.ps1 -OutDir wiki -Repo "${{ github.repository }}"
+
+      - name: Commit and push
+        shell: bash
+        working-directory: wiki
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date."
+            exit 0
+          fi
+          git commit -m "Sync wiki from Help/ at ${GITHUB_SHA::7}"
+          git push
