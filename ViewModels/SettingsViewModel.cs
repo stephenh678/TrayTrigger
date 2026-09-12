@@ -897,6 +897,8 @@ public class SettingsViewModel : ViewModelBase
             if (_settings.SteamGridDbApiKey != value)
             {
                 _settings.SteamGridDbApiKey = value ?? string.Empty;
+                // See the note in RawgApiKey: an explicit edit wins over a preserved ciphertext.
+                _storageService.NoteApiKeyEdited(StorageService.ApiKeyField.SteamGridDb);
                 OnPropertyChanged();
                 AutoSaveSettings();
             }
@@ -929,6 +931,9 @@ public class SettingsViewModel : ViewModelBase
             {
                 bool wasUsable = RawgApiKeyOrNull != null;
                 _settings.RawgApiKey = value ?? string.Empty;
+                // The user owns the field now: if an undecryptable value was being preserved for
+                // it, this replaces it - including a deliberate clear.
+                _storageService.NoteApiKeyEdited(StorageService.ApiKeyField.Rawg);
                 OnPropertyChanged();
                 AutoSaveSettings();
                 if (!wasUsable && RawgApiKeyOrNull != null)

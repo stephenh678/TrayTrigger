@@ -313,8 +313,8 @@ public class StorageService : IProfileSnapshotStore
                     var settings = JsonSerializer.Deserialize(json, AppJsonContext.Default.AppSettings);
                     if (settings != null)
                     {
-                        settings.SteamGridDbApiKey = DecryptApiKey(settings.SteamGridDbApiKey);
-                        settings.RawgApiKey = DecryptApiKey(settings.RawgApiKey);
+                        settings.SteamGridDbApiKey = DecryptApiKey(ApiKeyField.SteamGridDb, settings.SteamGridDbApiKey);
+                        settings.RawgApiKey = DecryptApiKey(ApiKeyField.Rawg, settings.RawgApiKey);
                         LoggingService.Verbose("Storage", $"Loaded settings from '{_settingsFilePath}' (from {CallerTag(callerFile, callerMember)}).");
                         return settings;
                     }
@@ -337,8 +337,8 @@ public class StorageService : IProfileSnapshotStore
                     var bakSettings = JsonSerializer.Deserialize(bakJson, AppJsonContext.Default.AppSettings);
                     if (bakSettings != null)
                     {
-                        bakSettings.SteamGridDbApiKey = DecryptApiKey(bakSettings.SteamGridDbApiKey);
-                        bakSettings.RawgApiKey = DecryptApiKey(bakSettings.RawgApiKey);
+                        bakSettings.SteamGridDbApiKey = DecryptApiKey(ApiKeyField.SteamGridDb, bakSettings.SteamGridDbApiKey);
+                        bakSettings.RawgApiKey = DecryptApiKey(ApiKeyField.Rawg, bakSettings.RawgApiKey);
                         LoggingService.Info("Storage", $"Recovered settings from '{_settingsBakFilePath}'.");
                         return bakSettings;
                     }
@@ -372,8 +372,8 @@ public class StorageService : IProfileSnapshotStore
             try
             {
                 EnsureDirectories();
-                settings.SteamGridDbApiKey = EncryptApiKey(plainApiKey);
-                settings.RawgApiKey = EncryptApiKey(plainRawgKey);
+                settings.SteamGridDbApiKey = StoredApiKey(ApiKeyField.SteamGridDb, plainApiKey);
+                settings.RawgApiKey = StoredApiKey(ApiKeyField.Rawg, plainRawgKey);
                 string json = JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings);
                 string tempFile = _settingsFilePath + ".tmp";
                 File.WriteAllText(tempFile, json);
@@ -461,7 +461,64 @@ public class StorageService : IProfileSnapshotStore
 
     private const string EncryptedApiKeyPrefix = "dpapi:";
 
-    private static string EncryptApiKey(string plainKey)
+    /// <summary>
+    /// Which stored API key a crypto helper is working on. Only used to name the field in log
+    /// messages and to key the preserved-ciphertext slots below.
+    /// </summary>
+    public enum ApiKeyField
+    {
+        SteamGridDb,
+        Rawg,
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Undecryptable keys are preserved, not discarded.
+    //
+    // DecryptApiKey used to return string.Empty when ProtectedData.Unprotect threw. That empty
+    // string landed on the live AppSettings, and the next SaveSettings - which fires on any
+    // setting change at all - re-encrypted it and wrote it over the good ciphertext. A single
+    // transient DPAPI failure therefore destroyed the key permanently, with nothing on screen
+    // to say so.
+    //
+    // Now a failed decrypt parks the original ciphertext here and still hands the caller an
+    // empty string (an undecryptable key is unusable, and the ciphertext must never be sent to
+    // an API or shown in the settings box). SaveSettings writes the parked value back verbatim
+    // instead of encrypting the empty plaintext, so the key survives to the next start - by
+    // which time DPAPI may well be working again.
+    //
+    // NoteApiKeyEdited clears the slot, so a key the user actually retypes or deliberately
+    // clears is never resurrected by this.
+    // ---------------------------------------------------------------------------------
+    private readonly Dictionary<ApiKeyField, string> _undecryptableKeys = new();
+
+    /// <summary>
+    /// Tell storage the user has set <paramref name="field"/> by hand, so a previously
+    /// undecryptable value for it must not be written back on the next save.
+    /// </summary>
+    public void NoteApiKeyEdited(ApiKeyField field)
+    {
+        lock (_settingsLock)
+        {
+            if (_undecryptableKeys.Remove(field))
+            {
+                LoggingService.Verbose("Storage", $"{field} API key was re-entered; dropping the preserved ciphertext.");
+            }
+        }
+    }
+
+    /// <summary>The on-disk value for <paramref name="field"/>: normally the freshly encrypted
+    /// plaintext, but the preserved ciphertext when this session could not decrypt it and the
+    /// user has not replaced it since.</summary>
+    private string StoredApiKey(ApiKeyField field, string plainKey)
+    {
+        if (string.IsNullOrEmpty(plainKey) && _undecryptableKeys.TryGetValue(field, out var preserved))
+        {
+            return preserved;
+        }
+        return EncryptApiKey(field, plainKey);
+    }
+
+    private static string EncryptApiKey(ApiKeyField field, string plainKey)
     {
         if (string.IsNullOrEmpty(plainKey)) return string.Empty;
         try
@@ -471,13 +528,15 @@ public class StorageService : IProfileSnapshotStore
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("Storage", $"Failed to encrypt SteamGridDB API key, storing as-is: {ex.Message}");
+            LoggingService.Warn("Storage", $"Failed to encrypt the {field} API key, storing as-is: {ex.Message}");
             return plainKey;
         }
     }
 
-    private static string DecryptApiKey(string storedKey)
+    private string DecryptApiKey(ApiKeyField field, string storedKey)
     {
+        _undecryptableKeys.Remove(field);
+
         if (string.IsNullOrEmpty(storedKey)) return string.Empty;
 
         // A value without the prefix is a legacy plain-text key from before this fix;
@@ -495,7 +554,10 @@ public class StorageService : IProfileSnapshotStore
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("Storage", $"Failed to decrypt SteamGridDB API key: {ex.Message}");
+            // Park the ciphertext so the next save preserves it rather than overwriting it with
+            // the empty string returned here. See the comment on _undecryptableKeys.
+            _undecryptableKeys[field] = storedKey;
+            LoggingService.Warn("Storage", $"Failed to decrypt the {field} API key ({ex.Message}). The stored value is kept; re-enter the key if it stays unavailable.");
             return string.Empty;
         }
     }
