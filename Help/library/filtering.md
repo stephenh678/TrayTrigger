@@ -28,9 +28,9 @@ The filter button sits beside the sort box in the library toolbar, under the sta
 - Across groups they are "and". Steam plus Never played shows Steam games you have not played.
 - A group with nothing ticked places no restriction. Ticking every box in a group is the same as ticking none.
 
-## The blue dot
+## The count badge
 
-Filters stay set between sessions, the same as the category tab and the sort order. Unlike those two, the filter is invisible once the flyout closes, so the button carries a blue dot whenever anything is ticked. If a filter hides everything, the library says so and offers a Clear filters button rather than showing the empty-library message.
+Filters stay set between sessions, the same as the category tab and the sort order. Unlike those two, the filter is invisible once the flyout closes, so the button carries a badge showing how many filters are on. It disappears when none are. If a filter hides everything, the library says so and offers a Clear filters button rather than showing the empty-library message.
 
 Clear in the flyout, or Clear filters in that message, removes every tick at once.
 
