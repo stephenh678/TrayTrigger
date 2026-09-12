@@ -60,6 +60,20 @@ public static partial class GameNameExtractor
     ];
 
     /// <summary>
+    /// Titles are built from the executable's own name and metadata in preference to its parent
+    /// folder, for every import route.
+    ///
+    /// This was a Settings checkbox from 1.0.0 until 1.4.1-beta.4, back when the matcher was much
+    /// weaker. It earns its keep - a folder scan of C:\Games turned up "Fatekeeper-AnkerGames",
+    /// "Mortal-Shell-Ii-AnkerGames" and "The-Blood-of-Dawnwalker-AnkerGames", where the exe's
+    /// FileDescription gave the real titles - but only for plain folder scans: every launcher
+    /// import already carries a known name from the launcher, which wins ahead of either source.
+    /// Since the folder name remains the fallback whenever the exe yields nothing useful, turning
+    /// it off had no case to make, so the switch went and the behaviour stayed.
+    /// </summary>
+    public const bool PreferExeForGameName = true;
+
+    /// <summary>
     /// Extracts the best display name for a game, prioritizing the executable's embedded metadata and binary stem.
     /// </summary>
     public static string ExtractGameName(string exePath, string? folderFallback = null, bool preferExe = true)

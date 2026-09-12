@@ -729,20 +729,6 @@ public class SettingsViewModel : ViewModelBase
 
     // --- Game Titles & Metadata Detection ---
 
-    public bool PreferExeForGameName
-    {
-        get => _settings.PreferExeForGameName;
-        set
-        {
-            if (_settings.PreferExeForGameName != value)
-            {
-                _settings.PreferExeForGameName = value;
-                OnPropertyChanged();
-                AutoSaveSettings();
-            }
-        }
-    }
-
     public bool SearchOfficialTitleOnline
     {
         get => _settings.SearchOfficialTitleOnline;
@@ -1697,7 +1683,6 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(MaxFavoritesInTray));
         OnPropertyChanged(nameof(FavoritesTraySortOption));
         OnPropertyChanged(nameof(TrayMenuSortOption));
-        OnPropertyChanged(nameof(PreferExeForGameName));
         OnPropertyChanged(nameof(SearchOfficialTitleOnline));
         OnPropertyChanged(nameof(OnlineMatchSensitivity));
         OnPropertyChanged(nameof(AutoCategorizeFromSteam));

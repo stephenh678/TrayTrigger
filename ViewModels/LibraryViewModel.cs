@@ -1190,7 +1190,7 @@ public class LibraryViewModel : ViewModelBase
             var res = await GameNameExtractor.ResolveGameMatchAsync(
                 entry.ExecutablePath,
                 folder,
-                preferExe: _settings.PreferExeForGameName,
+                preferExe: GameNameExtractor.PreferExeForGameName,
                 searchOnline: true,
                 steamSearch: _steamSearchService,
                 minConfidence: _settings.OnlineMatchConfidenceThreshold,

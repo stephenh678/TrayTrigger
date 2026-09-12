@@ -302,6 +302,13 @@ public partial class App : Application
             _startupManager,
             _trayPromotionService);
 
+        // The Run key is the truth for "Start with Windows" - the installer writes it when the
+        // user ticks the task, Task Manager's Startup tab can disable it, and a fresh install
+        // therefore starts with a settings.json that says false while Windows is in fact set to
+        // launch us. Reconciling only when the Settings page opened left that stored value stale
+        // until the user happened to go there.
+        _mainViewModel.SettingsVM.ReconcileStartWithWindows();
+
         // Constructing MainWindow initializes WPF's D3D render stack (GPU driver DLLs load
         // immediately) even if it's never shown, so skip it when starting minimized to the tray -
         // ShowMainWindow() constructs it lazily on first use. Screenshot mode still needs it up
