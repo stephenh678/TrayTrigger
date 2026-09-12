@@ -1518,6 +1518,9 @@ public partial class SystemTweaksService
     /// ..." chain reported only the last command's exit code, so a rejected hidden setting
     /// (CPMINCORES, PERFBOOSTMODE) failed silently.
     /// </summary>
+    private const string UsbSubgroupGuid = "2a737441-1930-4402-8d77-b2bebba308a3";
+    private const string UsbSelectiveSuspendGuid = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226";
+
     internal static bool ApplyUltimatePlanTweaks(string schemeGuid)
     {
         if (!Guid.TryParseExact(schemeGuid, "D", out _)) return false;
@@ -1530,7 +1533,11 @@ public partial class SystemTweaksService
             ("SUB_PROCESSOR", "CPMINCORES", 100),        // Core parking: disabled (100% unparked)
             ("SUB_PROCESSOR", "PERFBOOSTMODE", 2),       // Processor performance boost mode: Aggressive
             ("SUB_PCIEXPRESS", "ASPM", 0),               // PCI Express link state power management: Off
-            ("SUB_USB", "USBSELECTSUSPEND", 0)           // USB selective suspend: Disabled
+            // USB selective suspend: Disabled. Windows registers no alias for the USB subgroup
+            // (powercfg /aliases lists SUB_PROCESSOR and SUB_PCIEXPRESS but nothing for USB), so
+            // "SUB_USB USBSELECTSUSPEND" was rejected outright with "Invalid Parameters" on every
+            // machine and the setting was never applied. Address it by GUID instead.
+            (UsbSubgroupGuid, UsbSelectiveSuspendGuid, 0)
         };
 
         bool allOk = true;

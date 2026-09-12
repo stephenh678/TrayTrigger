@@ -427,53 +427,63 @@ public partial class App : Application
     {
         if (_trayIcon == null) return;
 
-        try
+        // SessionStarted/SessionEnded are raised on the launcher's monitor thread, so both the
+        // TaskbarIcon and the DispatcherTimer below have to be touched from the UI thread.
+        // BeginInvoke rather than UpdateTrayContextMenu's Invoke: a tooltip has no return value
+        // and nothing orders against it, so there is no reason to park the launcher's thread
+        // until the UI thread is free. The try/catch lives inside the callback because by the
+        // time it runs the caller is long gone - an escaping exception would reach the
+        // dispatcher's unhandled handler and be treated as fatal.
+        Dispatcher.BeginInvoke(() =>
         {
-            var sessions = _launcherService?.GetActiveSessions() ?? [];
-            string text;
+            try
+            {
+                var sessions = _launcherService?.GetActiveSessions() ?? [];
+                string text;
 
-            if (sessions.Count == 0)
-            {
-                text = DefaultTrayToolTip;
-            }
-            else if (sessions.Count == 1)
-            {
-                var session = sessions[0];
-                text = session.GameStarted
-                    ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(DateTime.Now - session.StartedAt)}"
-                    : $"Starting {session.Game.Name} via {session.PlatformLabel}";
-            }
-            else
-            {
-                text = $"Playing {sessions.Count} games · {string.Join(", ", sessions.Select(s => s.Game.Name))}";
-            }
+                if (sessions.Count == 0)
+                {
+                    text = DefaultTrayToolTip;
+                }
+                else if (sessions.Count == 1)
+                {
+                    var session = sessions[0];
+                    text = session.GameStarted
+                        ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(DateTime.Now - session.StartedAt)}"
+                        : $"Starting {session.Game.Name} via {session.PlatformLabel}";
+                }
+                else
+                {
+                    text = $"Playing {sessions.Count} games · {string.Join(", ", sessions.Select(s => s.Game.Name))}";
+                }
 
-            if (text.Length > MaxTrayToolTipLength)
-            {
-                text = text[..(MaxTrayToolTipLength - 1)].TrimEnd() + "…";
-            }
+                if (text.Length > MaxTrayToolTipLength)
+                {
+                    text = text[..(MaxTrayToolTipLength - 1)].TrimEnd() + "…";
+                }
 
-            _trayIcon.ToolTipText = text;
+                _trayIcon.ToolTipText = text;
 
-            // The timer exists only to age the elapsed time, so it runs only while something is
-            // actually playing (a session still starting has no elapsed time to age yet).
-            bool needsTicking = sessions.Any(s => s.GameStarted);
-            if (needsTicking && _trayToolTipTimer == null)
-            {
-                _trayToolTipTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-                _trayToolTipTimer.Tick += (_, _) => UpdateTrayToolTip();
-                _trayToolTipTimer.Start();
+                // The timer exists only to age the elapsed time, so it runs only while something is
+                // actually playing (a session still starting has no elapsed time to age yet).
+                bool needsTicking = sessions.Any(s => s.GameStarted);
+                if (needsTicking && _trayToolTipTimer == null)
+                {
+                    _trayToolTipTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+                    _trayToolTipTimer.Tick += (_, _) => UpdateTrayToolTip();
+                    _trayToolTipTimer.Start();
+                }
+                else if (!needsTicking && _trayToolTipTimer != null)
+                {
+                    _trayToolTipTimer.Stop();
+                    _trayToolTipTimer = null;
+                }
             }
-            else if (!needsTicking && _trayToolTipTimer != null)
+            catch (Exception ex)
             {
-                _trayToolTipTimer.Stop();
-                _trayToolTipTimer = null;
+                LoggingService.Verbose("App", $"Could not update the tray tooltip: {ex.Message}");
             }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Verbose("App", $"Could not update the tray tooltip: {ex.Message}");
-        }
+        });
     }
 
     /// <summary>"47m" under an hour, "1h 12m" past it - the tray tooltip has no room for more.</summary>
