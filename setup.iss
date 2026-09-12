@@ -362,6 +362,31 @@ end;
 var
   DeleteUserData: Boolean;
 
+// DelTree gives up on the first file it cannot delete and reports nothing but a Boolean, so a
+// single handle still open on one cached cover used to leave the rest of the library on disk
+// after the user asked for all of it to go. Retry - the holder is transient (the app's own
+// process finishing its exit, a shell thumbnail read) - and record what happened in the log
+// rather than failing silently.
+procedure DeleteDataFolder(const Dir: string);
+var
+  Attempt: Integer;
+begin
+  if not DirExists(Dir) then Exit;
+
+  for Attempt := 1 to 5 do
+  begin
+    if DelTree(Dir, True, True, True) and not DirExists(Dir) then
+    begin
+      Log('Removed user data folder: ' + Dir);
+      Exit;
+    end;
+    Log('Could not fully remove ' + Dir + ' (attempt ' + IntToStr(Attempt) + '); retrying.');
+    Sleep(500);
+  end;
+
+  Log('Gave up removing user data folder: ' + Dir + ' - files are still in use.');
+end;
+
 function InitializeUninstall(): Boolean;
 var
   UninstallForm: TSetupForm;
@@ -460,13 +485,8 @@ begin
     // what the checkbox promised.
     LegacyDataDir := ExpandConstant('{userdocs}\TrayTrigger');
 
-    if DirExists(AppDataDir) then
-      DelTree(AppDataDir, True, True, True);
-
-    if DirExists(LocalAppDataDir) then
-      DelTree(LocalAppDataDir, True, True, True);
-
-    if DirExists(LegacyDataDir) then
-      DelTree(LegacyDataDir, True, True, True);
+    DeleteDataFolder(AppDataDir);
+    DeleteDataFolder(LocalAppDataDir);
+    DeleteDataFolder(LegacyDataDir);
   end;
 end;
