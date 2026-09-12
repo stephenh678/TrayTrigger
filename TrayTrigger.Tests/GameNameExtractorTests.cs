@@ -29,8 +29,43 @@ public class GameNameExtractorTests
     [Theory]
     [InlineData("MyGame-Win64-Shipping", "My Game")]
     [InlineData("TheWitcher3", "The Witcher 3")]
-    [InlineData("some_game_v2", "Some Game V 2")]
+    // "V2" now stays whole, like every other short letter-and-digit token: the digit belongs to
+    // the token rather than starting a word. It used to come out "V 2".
+    [InlineData("some_game_v2", "Some Game V2")]
     public void CleanExecutableStem_SplitsCamelCaseAndStripsEngineSuffixes(string input, string expected)
+    {
+        Assert.Equal(expected, GameNameExtractor.CleanExecutableStem(input));
+    }
+
+    /// <summary>
+    /// Splitting at every letter/digit boundary turned Steph's 'R6-Extraction.exe' into
+    /// "R 6 Extraction" and Dylan's into "P 3 R" and "G 1 R" - names that match nothing, and that
+    /// then became the trusted name later passes are measured against.
+    /// </summary>
+    [Theory]
+    [InlineData("R6-Extraction", "R6 Extraction")]
+    [InlineData("R6-Extraction_Plus", "R6 Extraction Plus")]
+    [InlineData("R6Extraction", "R6 Extraction")]
+    [InlineData("P3R", "P3R")]
+    [InlineData("G1R", "G1R")]
+    [InlineData("R6S", "R6S")]
+    [InlineData("F1", "F1")]
+    public void CleanExecutableStem_ShortDesignation_KeepsTheDigitAttached(string input, string expected)
+    {
+        Assert.Equal(expected, GameNameExtractor.CleanExecutableStem(input));
+    }
+
+    /// <summary>A digit after a real word is a sequel or a year, and splitting it is what makes
+    /// these searchable.</summary>
+    [Theory]
+    [InlineData("MortalShell2", "Mortal Shell 2")]
+    [InlineData("Cyberpunk2077", "Cyberpunk 2077")]
+    [InlineData("Left4Dead", "Left 4 Dead")]
+    [InlineData("Left4Dead2", "Left 4 Dead 2")]
+    [InlineData("Fallout4", "Fallout 4")]
+    [InlineData("HalfLife2", "Half Life 2")]
+    [InlineData("DOOM3", "DOOM 3")]
+    public void CleanExecutableStem_DigitAfterAWord_StillSplits(string input, string expected)
     {
         Assert.Equal(expected, GameNameExtractor.CleanExecutableStem(input));
     }
