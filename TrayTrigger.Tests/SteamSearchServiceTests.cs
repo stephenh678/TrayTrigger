@@ -124,6 +124,48 @@ public class SteamSearchServiceTests
             $"Expected < {SteamSearchService.DefaultMinConfidence}, got {score:F3} for '{query}' vs '{candidate}'");
     }
 
+    /// <summary>
+    /// A VR edition is a separate product. 'Steam Deck' scored 0.854 against RAWG's 'Steam Deck
+    /// VR' in Dylan's 1.4.0 log and pointed the library at it.
+    /// </summary>
+    [Theory]
+    [InlineData("Steam Deck", "Steam Deck VR")]
+    [InlineData("Beat Saber", "Beat Saber VR")]
+    public void CalculateSimilarity_VrEditionOfAFlatTitle_IsRejected(string query, string candidate)
+    {
+        double score = SteamSearchService.CalculateSimilarity(query, candidate);
+        Assert.True(score < SteamSearchService.DefaultMinConfidence,
+            $"Expected < {SteamSearchService.DefaultMinConfidence}, got {score:F3} for '{query}' vs '{candidate}'");
+    }
+
+    /// <summary>
+    /// The penalty keywords were matched as bare substrings, so a candidate was docked 35% for
+    /// merely containing one: "ost" fires inside "Ghost of Tsushima", which dropped a correct
+    /// match from 0.685 to 0.445 and put it under the bar.
+    /// </summary>
+    [Theory]
+    [InlineData("Tsushima", "Ghost of Tsushima")]
+    [InlineData("Frostpunk", "Frostpunk")]
+    [InlineData("Provost", "Provost")]
+    [InlineData("Louvre", "Louvre")]
+    public void CalculateSimilarity_PenaltyKeywordInsideAWord_IsNotPenalised(string query, string candidate)
+    {
+        double score = SteamSearchService.CalculateSimilarity(query, candidate);
+        Assert.True(score >= SteamSearchService.DefaultMinConfidence,
+            $"Expected >= {SteamSearchService.DefaultMinConfidence}, got {score:F3} for '{query}' vs '{candidate}'");
+    }
+
+    [Theory]
+    [InlineData("Hades", "Hades Soundtrack")]
+    [InlineData("Hades", "Hades Demo")]
+    [InlineData("Hades", "Hades OST")]
+    public void CalculateSimilarity_PenaltyKeywordAsItsOwnWord_StillPenalises(string query, string candidate)
+    {
+        double score = SteamSearchService.CalculateSimilarity(query, candidate);
+        Assert.True(score < SteamSearchService.DefaultMinConfidence,
+            $"Expected < {SteamSearchService.DefaultMinConfidence}, got {score:F3} for '{query}' vs '{candidate}'");
+    }
+
     [Theory]
     [InlineData("Doom", "DOOM")]                                // short title, only case differs
     [InlineData("Tunic", "TUNIC")]
