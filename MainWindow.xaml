@@ -738,12 +738,12 @@
                                StaysOpen="False" AllowsTransparency="True" Focusable="True"
                                Opened="LibraryFilterPopup_Opened" PreviewKeyDown="LibraryFilterPopup_PreviewKeyDown">
                             <Border Background="#1B1B20" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
-                                    CornerRadius="8" Padding="14,12" MinWidth="270" MaxWidth="300">
+                                    CornerRadius="8" Padding="6,12" MinWidth="270" MaxWidth="300">
                                 <Border.Effect>
                                     <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="#000000"/>
                                 </Border.Effect>
                                 <StackPanel>
-                                    <DockPanel Margin="0,0,0,8">
+                                    <DockPanel Margin="8,0,8,8">
                                         <Button DockPanel.Dock="Right" Content="Clear" Command="{Binding Library.Filter.ClearCommand}"
                                                 Style="{StaticResource HelpLinkButton}"
                                                 Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}"/>
@@ -758,12 +758,12 @@
                                                     <StackPanel Margin="0,0,0,10"
                                                                 Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                                                         <TextBlock Text="{Binding Title}" FontSize="10.5" FontWeight="Bold"
-                                                                   Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4"/>
+                                                                   Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,4"/>
                                                         <ItemsControl ItemsSource="{Binding Options}">
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate DataType="{x:Type vm:LibraryFilterOption}">
-                                                                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                                                              Style="{StaticResource ModernCheckBox}" FontSize="12"/>
+                                                                    <ToggleButton Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                                                  Style="{StaticResource FilterOptionToggle}"/>
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
@@ -775,7 +775,7 @@
 
                                     <!-- Click runs before Command, so the flyout is already closed by
                                          the time the help window appears over the same corner. -->
-                                    <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
+                                    <Button Style="{StaticResource HelpLinkButton}" Margin="8,4,0,0"
                                             Click="LibraryFilterHelp_Click"
                                             Command="{x:Static services:HelpCommands.ShowTopic}"
                                             CommandParameter="library/filtering"/>

@@ -1547,18 +1547,18 @@ public partial class App
                         var (boxCount, renderedKeys, steamBox) = Dispatcher.Invoke(() =>
                         {
                             var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(_mainWindow, p => p.IsOpen);
-                            if (popup?.Child == null) return (0, new List<string>(), (CheckBox?)null);
-                            var found = FindVisualChildren<CheckBox>(popup.Child).ToList();
+                            if (popup?.Child == null) return (0, new List<string>(), (System.Windows.Controls.Primitives.ToggleButton?)null);
+                            var found = FindVisualChildren<System.Windows.Controls.Primitives.ToggleButton>(popup.Child).ToList();
                             var keys = found.Select(b => (b.DataContext as LibraryFilterOption)?.Key ?? "?").ToList();
                             return (found.Count, keys, found.FirstOrDefault(b => (b.DataContext as LibraryFilterOption)?.Key == steamKey));
                         });
 
-                        if (boxCount == 0) throw new Exception("The filter popup did not open, or opened and rendered no tick boxes - a template or converter failed to resolve.");
-                        if (steamBox == null) throw new Exception($"No '{steamKey}' tick box rendered. Rendered: {string.Join(", ", renderedKeys)}");
+                        if (boxCount == 0) throw new Exception("The filter popup did not open, or opened and rendered no option rows - a template or converter failed to resolve.");
+                        if (steamBox == null) throw new Exception($"No '{steamKey}' option row rendered. Rendered: {string.Join(", ", renderedKeys)}");
 
                         int before = Dispatcher.Invoke(() => _mainViewModel.Library.FilteredGames.Cast<object>().Count());
 
-                        // Tick it the way a user does, through the CheckBox, not the view model -
+                        // Tick it the way a user does, through the control, not the view model -
                         // that is what exercises the two-way binding.
                         Dispatcher.Invoke(() => steamBox.IsChecked = true);
                         System.Threading.Thread.Sleep(250);
@@ -1567,6 +1567,29 @@ public partial class App
                         if (before != 2) throw new Exception($"Expected 2 games visible before filtering, saw {before}.");
                         if (after != 1) throw new Exception($"Ticking '{steamKey}' should leave 1 game visible, saw {after}.");
                         if (!Dispatcher.Invoke(() => filter.HasActiveFilters)) throw new Exception("HasActiveFilters stayed false - the count badge would never appear.");
+
+                        // Selection is shown by the row filling accent blue, the way the Sort
+                        // dropdown marks its current choice - there is no tick box any more, so if
+                        // that trigger stops firing there is nothing at all on screen saying which
+                        // filters are on.
+                        string rowFill = Dispatcher.Invoke(() =>
+                        {
+                            var border = FindVisualChildren<Border>(steamBox!).FirstOrDefault();
+                            return (border?.Background as SolidColorBrush)?.Color.ToString() ?? "<none>";
+                        });
+                        string accent = ((SolidColorBrush)Current.Resources["BrushAccent"]).Color.ToString();
+                        if (!string.Equals(rowFill, accent, StringComparison.OrdinalIgnoreCase))
+                            throw new Exception($"A selected filter row did not fill accent blue: it is '{rowFill}', expected '{accent}'.");
+
+                        // And the fill has to span the flyout, not hug the label - a row that only
+                        // tints its text width looks like a highlight, not a selection.
+                        double rowGap = Dispatcher.Invoke(() =>
+                        {
+                            var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(_mainWindow, p => p.IsOpen);
+                            return popup?.Child is FrameworkElement panel ? panel.ActualWidth - steamBox!.ActualWidth : double.NaN;
+                        });
+                        if (double.IsNaN(rowGap) || rowGap > 20)
+                            throw new Exception($"Selected rows do not span the flyout - {rowGap:0.#}px narrower than the panel, so the blue fill hugs the label instead.");
 
                         // The badge is a Border+TextBlock bound to ActiveFilterCount inside the
                         // button's content Grid. Nothing above proves it rendered, or that the
@@ -1637,7 +1660,7 @@ public partial class App
                         if (Dispatcher.Invoke(() => _mainWindow.LibraryFilterBadge.IsVisible))
                             throw new Exception("The badge survived Clear - it should disappear at zero, not show a 0.");
 
-                        outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} tick boxes rendered; ticking Steam went {before} -> {after} games, badge read 1, flyout right-aligned within {drift:0.#}px, Clear restored {cleared} and closed the flyout; screenshot {shot}";
+                        outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} option rows rendered; ticking Steam went {before} -> {after} games, badge read 1, flyout right-aligned within {drift:0.#}px, Clear restored {cleared} and closed the flyout; screenshot {shot}";
                     }
                     catch (Exception ex)
                     {
