@@ -82,9 +82,23 @@ public static class HdrControlService
                     continue;
                 }
 
-                bool supported2 = (colorInfo2.value & 0x1) != 0; // advancedColorSupported
+                // Bit 0 (advancedColorSupported) is NOT "this display can do HDR" - it is set on
+                // any display Windows can drive in an advanced-colour mode, which includes
+                // wide-colour-gamut-only panels that have no HDR mode at all. Treating it as HDR
+                // support made every WCG monitor look HDR-capable, so Enable HDR fired
+                // SET_HDR_STATE at them on every launch and Windows answered 50
+                // (ERROR_NOT_SUPPORTED) twice on start and twice again on restore. Bit 4 is the
+                // one that actually means "has an HDR mode".
+                bool supported2 = HdrSupportedFromAdvancedColorInfo2(colorInfo2.value);
                 bool enabled2 = colorInfo2.activeColorMode == DISPLAYCONFIG_ADVANCED_COLOR_MODE_HDR;
                 bool isWcg2 = colorInfo2.activeColorMode == DISPLAYCONFIG_ADVANCED_COLOR_MODE_WCG;
+
+                // Raw bits in the log so a machine that still refuses HDR can be diagnosed from
+                // its log alone rather than another round trip.
+                LoggingService.Verbose("HdrControlService",
+                    $"Target {target.id}: hdrSupported={supported2}, advancedColorSupported={(colorInfo2.value & ADVANCED_COLOR_SUPPORTED) != 0}, " +
+                    $"limitedByPolicy={(colorInfo2.value & ADVANCED_COLOR_LIMITED_BY_POLICY) != 0}, activeColorMode={colorInfo2.activeColorMode}, value=0x{colorInfo2.value:X}.");
+
                 result.Add(new DisplayColorState(target.adapterId, target.id, supported2, enabled2, isWcg2));
                 continue;
             }
@@ -176,6 +190,21 @@ public static class HdrControlService
     private const int DISPLAYCONFIG_DEVICE_INFO_SET_HDR_STATE = 16;
     private const int DISPLAYCONFIG_ADVANCED_COLOR_MODE_WCG = 1;
     private const int DISPLAYCONFIG_ADVANCED_COLOR_MODE_HDR = 2;
+
+    // DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2.value bitfield, in declaration order:
+    // 0 advancedColorSupported, 1 advancedColorActive, 2 reserved1, 3 advancedColorLimitedByPolicy,
+    // 4 highDynamicRangeSupported, 5 highDynamicRangeUserEnabled, 6 wideColorSupported,
+    // 7 wideColorUserEnabled, 8-31 reserved.
+    private const uint ADVANCED_COLOR_SUPPORTED = 1u << 0;
+    private const uint ADVANCED_COLOR_LIMITED_BY_POLICY = 1u << 3;
+    private const uint ADVANCED_COLOR_HDR_SUPPORTED = 1u << 4;
+
+    /// <summary>
+    /// Whether a DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO_2 "value" word says the display has a real
+    /// HDR mode. Split out from the P/Invoke walk purely so the bit index is unit-testable.
+    /// </summary>
+    internal static bool HdrSupportedFromAdvancedColorInfo2(uint value) =>
+        (value & ADVANCED_COLOR_HDR_SUPPORTED) != 0;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct DISPLAYCONFIG_DEVICE_INFO_HEADER
