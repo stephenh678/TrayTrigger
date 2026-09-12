@@ -69,12 +69,64 @@ foreach ($file in Get-ChildItem $helpDir -Recurse -Filter *.md | Sort-Object Ful
     if (-not $title) { $title = [System.IO.Path]::GetFileNameWithoutExtension($file.Name) }
     $topics += [pscustomobject]@{
         Section  = $section
-        Rel      = $rel
+        Source   = "Help/$rel"
         Title    = $title
         Page     = ConvertTo-PageName $title
         IsOverview = $file.BaseName -eq 'overview'
         # The wiki shows the page name as its title, so the "# Title" line would appear twice.
         Body     = (($lines | Where-Object { $_ -notmatch '^# ' }) -join "`n").Trim()
+        Note     = "This page is the same text as the app's Learn more button"
+    }
+}
+
+# One page per bundled example script, from the script's own header block. The header is the
+# documentation the user sees in the scripts folder, so the wiki page is generated from it
+# rather than written twice.
+$scriptsDir = Join-Path $root 'Scripts\Library'
+foreach ($file in Get-ChildItem $scriptsDir -Filter 'Example-*.ps1' | Sort-Object Name) {
+    $lines = Get-Content $file.FullName -Encoding UTF8
+    $end = [Array]::IndexOf($lines, ($lines | Where-Object { $_ -match '^#>' } | Select-Object -First 1))
+    if ($lines[0] -notmatch '^<#' -or $end -lt 1) { continue }
+    $header = $lines[1..($end - 1)]
+    $fields = [ordered]@{}; $sections = [ordered]@{}; $current = $null
+    foreach ($l in $header) {
+        if ($l -match '^  ([A-Z][A-Z ]+)$') { $current = $Matches[1].Trim(); $sections[$current] = New-Object System.Collections.Generic.List[string]; continue }
+        if ($null -eq $current -and $l -match '^  ([A-Za-z ]+):\s+(.*)$') { $fields[$Matches[1]] = $Matches[2].Trim(); continue }
+        if ($null -ne $current) { $sections[$current].Add(($l -replace '^    ', '')) }
+    }
+    $name = if ($fields['Name']) { $fields['Name'] } else { $file.BaseName -replace '^Example-', '' }
+    $title = "Script: $name"
+    $body = New-Object System.Collections.Generic.List[string]
+    if ($fields['Description']) { $body.Add($fields['Description']); $body.Add('') }
+    $body.Add('| | |'); $body.Add('|---|---|')
+    foreach ($k in 'Phase', 'Needs admin', 'Dependencies', 'Script Arguments', 'Version') {
+        if ($fields[$k]) { $body.Add("| **$k** | $($fields[$k]) |") }
+    }
+    $body.Add("| **File** | ``$($file.Name)`` in ``%AppData%\TrayTrigger\Scripts`` |")
+    $body.Add('')
+    foreach ($s in $sections.Keys) {
+        $text = ($sections[$s] -join "`n").Trim()
+        if (-not $text) { continue }
+        $body.Add("## $((Get-Culture).TextInfo.ToTitleCase($s.ToLowerInvariant()))")
+        $body.Add('')
+        $body.Add('```text'); $body.Add($text); $body.Add('```')
+        $body.Add('')
+    }
+    $body.Add('## Full source')
+    $body.Add('')
+    $body.Add("<details><summary>$($file.Name) ($($lines.Count) lines)</summary>")
+    $body.Add('')
+    $body.Add('```powershell'); $body.Add(($lines -join "`n").TrimEnd()); $body.Add('```')
+    $body.Add('')
+    $body.Add('</details>')
+    $topics += [pscustomobject]@{
+        Section  = 'scripts'
+        Source   = "Scripts/Library/$($file.Name)"
+        Title    = $title
+        Page     = ConvertTo-PageName $title
+        IsOverview = $false
+        Body     = ($body -join "`n")
+        Note     = "The text above is the script's own header comment"
     }
 }
 
@@ -96,13 +148,13 @@ Get-ChildItem $OutDir -Filter *.md | Where-Object { $_.BaseName -notin $keep } |
 
 # One page per topic.
 foreach ($t in $topics) {
-    $src = "https://github.com/$Repo/blob/$Branch/Help/$($t.Rel)"
+    $src = "https://github.com/$Repo/blob/$Branch/$($t.Source)"
     $group = $groups | Where-Object Key -eq $t.Section
     $body = @(
         $t.Body
         ''
         '---'
-        "_Part of **$($group.Label)**. This page is the same text as the app's Learn more button, generated from [``Help/$($t.Rel)``]($src). To fix something, edit that file (or open an issue); wiki edits are overwritten on the next sync._"
+        "_Part of **$($group.Label)**. $($t.Note), generated from [``$($t.Source)``]($src). To fix something, edit that file (or open an issue); wiki edits are overwritten on the next sync._"
         ''
     ) -join "`n"
     Write-Page $t.Page $body
@@ -112,7 +164,7 @@ foreach ($t in $topics) {
 $homePage = New-Object System.Collections.Generic.List[string]
 $homePage.Add('# TrayTrigger Wiki')
 $homePage.Add('')
-$homePage.Add('TrayTrigger is a free, open-source Windows game launcher that lives in your system tray, imports your Steam, GOG, EA, Epic, Ubisoft Connect and Xbox libraries, and applies reversible per-game performance tweaks.')
+$homePage.Add('Per-game Windows tuning and launch automation for PC gamers. Performance profiles, your own pre-launch and post-exit scripts, launch arguments, and launchers that close themselves. Everything reverts when the game exits. Steam, GOG, Epic, EA, Ubisoft, Xbox. Lives in your tray.')
 $homePage.Add('')
 $homePage.Add("**[Download the latest release](https://github.com/$Repo/releases/latest)** | [README](https://github.com/$Repo#readme) | [FAQ](https://github.com/$Repo#faq) | [Changelog](https://github.com/$Repo/blob/$Branch/CHANGELOG.md) | [Discussions](https://github.com/$Repo/discussions) | [Report a bug](https://github.com/$Repo/issues/new/choose)")
 $homePage.Add('')
