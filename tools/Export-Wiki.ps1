@@ -73,7 +73,8 @@ foreach ($file in Get-ChildItem $helpDir -Recurse -Filter *.md | Sort-Object Ful
         Title    = $title
         Page     = ConvertTo-PageName $title
         IsOverview = $file.BaseName -eq 'overview'
-        Body     = ($lines -join "`n").Trim()
+        # The wiki shows the page name as its title, so the "# Title" line would appear twice.
+        Body     = (($lines | Where-Object { $_ -notmatch '^# ' }) -join "`n").Trim()
     }
 }
 
