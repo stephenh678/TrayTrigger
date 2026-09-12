@@ -1544,7 +1544,12 @@ public class SettingsViewModel : ViewModelBase
                 }
                 else
                 {
+                    // Preston reported verbose turning itself off. Nothing in the app disables it
+                    // except this setter, so record what reached it: if a binding is writing the
+                    // checkbox back rather than a person clicking it, the stack says so. Written
+                    // only on the way off, and only once per toggle.
                     LoggingService.Info("Settings", "[VERBOSE DISABLED] Verbose diagnostic logging has been turned off.");
+                    LoggingService.Info("Settings", $"[VERBOSE DISABLED] Turned off from:\n{Environment.StackTrace}");
                 }
                 OnPropertyChanged(nameof(LogFileSizeDisplay));
             }
