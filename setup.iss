@@ -91,6 +91,10 @@ const
   RunKeyPath = 'Software\Microsoft\Windows\CurrentVersion\Run';
   StartupApprovedKeyPath = 'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run';
   AppMutexName = 'TrayTrigger_SingleInstance_Mutex';
+  // Must match SystemTweaksService.UltimatePlanName / BalancedPlanGuid.
+  PowerSchemesKeyPath = 'SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes';
+  UltimatePlanName = 'Ultimate Plan - TrayTrigger';
+  BalancedPlanGuid = '381b4222-f694-41f0-9685-ff5bb260df2e';
 
 function CmdLineParamExists(const Value: string): Boolean;
 var
@@ -143,6 +147,95 @@ begin
   Dir := AddBackslash(GetTempDir()) + 'TrayTriggerUpdates';
   if DirExists(Dir) then
     DelTree(Dir, True, True, True);
+end;
+
+// TrayTrigger.exe is a single-file self-contained build, so the .NET host unpacks its native
+// libraries to %TEMP%\.net\TrayTrigger on every launch and never cleans up. That's ~100 MB of
+// cache for an exe that no longer exists, so it goes whether or not user data was opted into.
+procedure RemoveBundleExtractionCache();
+var
+  Dir: string;
+begin
+  Dir := AddBackslash(GetTempDir()) + '.net\{#MyAppName}';
+  if DirExists(Dir) then
+    DelTree(Dir, True, True, True);
+end;
+
+// Inno only removes the files it logged at install time. Anything else in {app} - an exe that
+// was locked during an in-app update and got renamed for reboot-deletion, a stray log - keeps
+// the folder alive, and the next Setup then warns that the directory already exists. Name the
+// files that can legitimately be ours rather than emptying {app} wholesale: the user can Browse
+// to any folder on the Select Destination page, including one holding their own files.
+procedure RemoveAppFolderLeftovers();
+var
+  Dir: string;
+  I: Integer;
+  Leftovers: TArrayOfString;
+  FindRec: TFindRec;
+begin
+  Dir := AddBackslash(ExpandConstant('{app}'));
+  if not DirExists(Dir) then Exit;
+
+  SetArrayLength(Leftovers, 4);
+  Leftovers[0] := '{#MyAppExeName}';
+  Leftovers[1] := 'TrayTrigger.pdb';
+  Leftovers[2] := 'README.md';
+  Leftovers[3] := 'LICENSE';
+  for I := 0 to GetArrayLength(Leftovers) - 1 do
+    if FileExists(Dir + Leftovers[I]) then
+      DeleteFile(Dir + Leftovers[I]);
+
+  // Any log written next to the exe (a crash handler running before %LocalAppData% is usable).
+  if FindFirst(Dir + '*.log', FindRec) then
+  begin
+    try
+      repeat
+        DeleteFile(Dir + FindRec.Name);
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+
+  // Succeeds only once unins000.* are gone, which Inno does after this step; the call is a
+  // no-op until then and Inno removes the empty folder itself.
+  RemoveDir(Dir);
+end;
+
+// The app duplicates Windows' hidden "Ultimate Performance" scheme into one of its own the
+// first time a performance profile asks for it (SystemTweaksService.CreateUltimateTrayTriggerPlan).
+// Nothing else ever deletes it, so uninstalling without this leaves a TrayTrigger-made power
+// plan in Settings forever - and if it is the active one, the machine stays on it.
+procedure RemoveUltimatePowerPlan();
+var
+  SchemeGuids: TArrayOfString;
+  I, ResultCode: Integer;
+  FriendlyName, ActiveGuid: string;
+begin
+  if not RegGetSubkeyNames(HKLM, PowerSchemesKeyPath, SchemeGuids) then Exit;
+
+  ActiveGuid := '';
+  if RegQueryStringValue(HKLM, PowerSchemesKeyPath, 'ActivePowerScheme', ActiveGuid) then
+    ActiveGuid := RemoveQuotes(Trim(ActiveGuid));
+  StringChangeEx(ActiveGuid, '{', '', True);
+  StringChangeEx(ActiveGuid, '}', '', True);
+
+  for I := 0 to GetArrayLength(SchemeGuids) - 1 do
+  begin
+    FriendlyName := '';
+    RegQueryStringValue(HKLM, PowerSchemesKeyPath + '\' + SchemeGuids[I], 'FriendlyName', FriendlyName);
+    if CompareText(FriendlyName, UltimatePlanName) = 0 then
+    begin
+      // powercfg refuses to delete the active scheme. Balanced is the same fallback the app
+      // itself uses when it cannot tell which scheme was active before the profile ran.
+      if CompareText(SchemeGuids[I], ActiveGuid) = 0 then
+        Exec(ExpandConstant('{sys}\powercfg.exe'), '/setactive ' + BalancedPlanGuid, '',
+             SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+      Exec(ExpandConstant('{sys}\powercfg.exe'), '/delete ' + SchemeGuids[I], '',
+           SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    end;
+  end;
 end;
 
 function InitializeSetup(): Boolean;
@@ -279,6 +372,14 @@ begin
   Result := True;
   DeleteUserData := False;
 
+  // A silent uninstall has no one to answer the prompt, and ShowModal would hang the process
+  // forever waiting. Keep user data unless the caller asked for it with /DELETEDATA.
+  if UninstallSilent() then
+  begin
+    DeleteUserData := CmdLineParamExists('/DELETEDATA');
+    Exit;
+  end;
+
   UninstallForm := CreateCustomForm(ScaleX(420), ScaleY(160), False, True);
   try
     UninstallForm.Caption := 'Uninstall TrayTrigger';
@@ -334,13 +435,18 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   AppDataDir: string;
   LocalAppDataDir: string;
+  LegacyDataDir: string;
 begin
   if CurUninstallStep = usPostUninstall then
   begin
     // Always: a Run entry pointing at a deleted exe is just a startup error waiting to
-    // happen, and the updater's download cache has nothing to update any more.
+    // happen, the caches belong to an exe that no longer exists, and the power plan and
+    // program folder are artefacts of an install that is over.
     RemoveStartupEntry();
     RemoveDownloadedInstallers();
+    RemoveBundleExtractionCache();
+    RemoveUltimatePowerPlan();
+    RemoveAppFolderLeftovers();
     RefreshShellIcons();
   end;
 
@@ -348,11 +454,19 @@ begin
   begin
     AppDataDir := ExpandConstant('{userappdata}\TrayTrigger');
     LocalAppDataDir := ExpandConstant('{localappdata}\TrayTrigger');
+    // Pre-1.3 kept the library, settings and artwork here. StorageService and LoggingService
+    // *copy* rather than move on migration, so an upgraded install still has a full second
+    // copy of the game library sitting in Documents - leaving it behind would ignore exactly
+    // what the checkbox promised.
+    LegacyDataDir := ExpandConstant('{userdocs}\TrayTrigger');
 
     if DirExists(AppDataDir) then
       DelTree(AppDataDir, True, True, True);
 
     if DirExists(LocalAppDataDir) then
       DelTree(LocalAppDataDir, True, True, True);
+
+    if DirExists(LegacyDataDir) then
+      DelTree(LegacyDataDir, True, True, True);
   end;
 end;
