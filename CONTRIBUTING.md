@@ -50,4 +50,4 @@ Open a [Feature Request](https://github.com/stephenh678/TrayTrigger/issues/new?t
 
 ## Code of Conduct
 
-Be respectful and constructive. Disagreements about implementation are fine; personal attacks are not.
+Be respectful and constructive. Disagreements about implementation are fine; personal attacks are not. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the full policy.
