@@ -129,12 +129,12 @@ internal static class Program
             }
 
             // One-line description.
-            var desc = Text("Windows game launcher and gaming optimizer that lives in your system tray.", regular, 20, Color.FromRgb(0xB8, 0xC4, 0xD6));
+            var desc = Text("Per-game Windows tuning and launch automation. Everything reverts when the game exits.", regular, 20, Color.FromRgb(0xB8, 0xC4, 0xD6));
             desc.MaxTextWidth = 540;
             dc.DrawText(desc, new Point(88, 388));
 
-            // Feature pills.
-            string[] pills = { "Steam · GOG · EA · Epic · Ubisoft", "Performance Profiles", "Reversible Windows Tweaks", "Hardware Telemetry" };
+            // Feature pills: the three legs of the pitch plus the launcher control that ties them together.
+            string[] pills = { "Per-Game Performance Profiles", "Pre-Launch & Post-Exit Scripts", "Reversible Windows Tweaks", "Auto-Close Launchers" };
             double px = 88, py = 466;
             foreach (string label in pills)
             {
@@ -146,7 +146,7 @@ internal static class Program
                 px += w + 12;
             }
 
-            var foot = Text("Free  ·  Open source (MIT)  ·  No account required", regular, 14, Color.FromRgb(0x6F, 0x7C, 0x92));
+            var foot = Text("Steam · GOG · Epic · EA · Ubisoft · Xbox   ·   Free  ·  Open source (MIT)  ·  No telemetry", regular, 14, Color.FromRgb(0x6F, 0x7C, 0x92));
             dc.DrawText(foot, new Point(90, 592));
         }
 
