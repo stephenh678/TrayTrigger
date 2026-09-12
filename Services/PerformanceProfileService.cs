@@ -40,6 +40,15 @@ public class PerformanceProfileService
 
     private readonly IProfileSnapshotStore _store;
     private readonly Func<AppSettings> _settingsProvider;
+
+    /// <summary>
+    /// Test hook: whatever the settings provider currently hands back. The --test-live-settings
+    /// harness asserts this is reference-equal to the ViewModel's own AppSettings, because the
+    /// convenience constructor's provider instead re-read and re-decrypted settings.json on every
+    /// call - twice per game launch, on the launch hot path - and returned a detached copy, so an
+    /// in-memory toggle that had not been flushed yet was silently ignored.
+    /// </summary>
+    internal AppSettings CurrentSettingsForTests => _settingsProvider();
     private readonly ISystemTweakBackend _backend;
     private readonly Lock _lock = new();
     private readonly HashSet<string> _activeSessionKeys = new();

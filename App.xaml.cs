@@ -66,6 +66,9 @@ public partial class App : Application
     private static extern int GetSystemMetrics(int nIndex);
     private MainWindow? _mainWindow;
     private bool _isShuttingDown = false;
+    /// <summary>Set once <see cref="ExitApplication"/> has flushed settings, so the ProcessExit
+    /// fallback does not write the same file a second time on a normal shutdown.</summary>
+    private volatile bool _settingsSavedOnExit;
     private Action<string> _logger = _ => { };
 
     public App()
@@ -102,9 +105,17 @@ public partial class App : Application
         {
             try
             {
-                if (_mainViewModel != null && _storageService != null)
+                // Last-resort save, for a shutdown that never ran ExitApplication (killed from
+                // Task Manager, a Windows log-off). When the normal exit path did run it has
+                // already written the same object moments earlier, so repeating it here is a
+                // second full encrypt-and-replace of settings.json for no gain.
+                if (_settingsSavedOnExit)
                 {
-                    _storageService.SaveSettings(_mainViewModel.Settings);
+                    LoggingService.Verbose("App", "ProcessExit: settings already saved by ExitApplication; skipping duplicate save.");
+                }
+                else if (_mainViewModel != null && _storageService != null)
+                {
+                    _storageService.SaveSettings(_mainViewModel.Settings, source: "App.ProcessExit");
                 }
             }
             catch (Exception ex)
@@ -245,7 +256,15 @@ public partial class App : Application
         _epicScannerService = new EpicScannerService();
         _ubisoftScannerService = new UbisoftScannerService();
         _xboxScannerService = new XboxScannerService();
-        _performanceProfileService = new PerformanceProfileService(_storageService);
+        // Same live-settings provider as _gameScriptService below, rather than the convenience
+        // constructor's () => storageService.LoadSettings(): that re-read and re-decrypted
+        // settings.json from disk on every profile apply and restore - twice per game launch, on
+        // the launch hot path - and used the on-disk copy, so a toggle not yet flushed was
+        // ignored. Falls back to startupSettings for the window before the ViewModel exists.
+        _performanceProfileService = new PerformanceProfileService(
+            _storageService,
+            () => _mainViewModel?.Settings ?? startupSettings,
+            new WindowsTweakBackend());
         _performanceProfileService.RecoverFromCrashIfNeeded();
         // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
         _gameScriptService = new GameScriptService(
@@ -948,7 +967,8 @@ public partial class App : Application
 
             if (_mainViewModel != null && _storageService != null)
             {
-                _storageService.SaveSettings(_mainViewModel.Settings);
+                _storageService.SaveSettings(_mainViewModel.Settings, source: "App.ExitApplication");
+                _settingsSavedOnExit = true;
                 LoggingService.Info("App", "Settings successfully saved during application exit.");
             }
 

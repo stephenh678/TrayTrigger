@@ -17,8 +17,13 @@ public class StorageService : IProfileSnapshotStore
     // call sites across the app (many of them generic AutoSaveSettings()/SaveLibrary() wrappers),
     // a bare "Saved settings" line gave no way to tell which of them fired without instrumenting
     // every call site by hand.
-    private static string CallerTag(string callerFilePath, string callerMember) =>
-        $"{Path.GetFileNameWithoutExtension(callerFilePath)}.{callerMember}";
+    // [CallerMemberName] resolves at compile time to the member that *lexically contains* the
+    // call - which for a lambda is wherever it was created, not whatever later invoked it. A
+    // callback registered in a constructor therefore reported "..ctor" minutes into the session,
+    // and the ProcessExit handler registered in OnStartup reported "OnStartup" during shutdown.
+    // Call sites in that position pass an explicit `source` instead, and it wins.
+    private static string CallerTag(string callerFilePath, string callerMember, string? source = null) =>
+        source ?? $"{Path.GetFileNameWithoutExtension(callerFilePath)}.{callerMember}";
 
     private readonly Lock _gamesLock = new();
     private readonly Lock _settingsLock = new();
@@ -35,6 +40,11 @@ public class StorageService : IProfileSnapshotStore
 
     private bool _gamesPrimaryUnreadableThisSession;
     private bool _settingsPrimaryUnreadableThisSession;
+
+    /// <summary>Test hook: how many times the library has actually been written to disk by this
+    /// instance. ImportCommitBatchTests counts it to prove a multi-platform import writes once
+    /// rather than once per platform.</summary>
+    internal int GamesSaveCount { get; private set; }
 
     public string? GamesLoadWarning { get; private set; }
     public string? SettingsLoadWarning { get; private set; }
@@ -289,6 +299,7 @@ public class StorageService : IProfileSnapshotStore
                 }
 
                 SafeReplaceFile(tempFile, _gamesFilePath);
+                GamesSaveCount++;
                 LoggingService.Verbose("Storage", $"Saved {list.Count} game(s) to '{_gamesFilePath}' (from {CallerTag(callerFile, callerMember)}).");
             }
             catch (Exception ex)
@@ -360,7 +371,13 @@ public class StorageService : IProfileSnapshotStore
         }
     }
 
-    public void SaveSettings(AppSettings settings, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
+    /// <param name="source">
+    /// Overrides the inferred caller tag in the log line. Pass this from a callback or lambda,
+    /// where <see cref="CallerMemberNameAttribute"/> names the registration site rather than
+    /// whatever actually triggered the save - see <see cref="CallerTag"/>. Kept last so the
+    /// existing forwarding call site that passes callerMember/callerFile positionally still binds.
+    /// </param>
+    public void SaveSettings(AppSettings settings, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "", string? source = null)
     {
         lock (_settingsLock)
         {
@@ -387,7 +404,7 @@ public class StorageService : IProfileSnapshotStore
                 _settingsPrimaryUnreadableThisSession = false;
 
                 SafeReplaceFile(tempFile, _settingsFilePath);
-                LoggingService.Verbose("Storage", $"Saved settings to '{_settingsFilePath}' (from {CallerTag(callerFile, callerMember)}).");
+                LoggingService.Verbose("Storage", $"Saved settings to '{_settingsFilePath}' (from {CallerTag(callerFile, callerMember, source)}).");
             }
             catch (Exception ex)
             {

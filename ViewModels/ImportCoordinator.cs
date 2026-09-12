@@ -132,7 +132,7 @@ public class ImportCoordinator : ViewModelBase
 
     // Shared commit step of every import pipeline: add the prepared entries to the visible
     // library and refresh everything that depends on it. See L-12.
-    private void CommitImportedEntries(IEnumerable<GameEntry> entries, string? statusMessage)
+    internal void CommitImportedEntries(IEnumerable<GameEntry> entries, string? statusMessage)
     {
         foreach (var entry in entries)
         {
@@ -140,14 +140,70 @@ public class ImportCoordinator : ViewModelBase
         }
 
         _library.RebuildCategories();
-        _library.SaveLibrary();
-        _library.UpdateHotkeys();
+        PersistCommittedLibrary();
         _library.ApplySort();
         if (statusMessage != null)
         {
             _library.AnnounceImportResult(statusMessage);
         }
         _library.NotifyGameCountChanged();
+    }
+
+    /// <summary>
+    /// The persistent half of a commit - rewriting games.json/settings.json and re-registering
+    /// every hotkey - deferred to the end of the enclosing <see cref="BeginCommitBatch"/>, if any.
+    ///
+    /// One "Scan for Games" confirmation runs up to seven imports back to back, each of which
+    /// used to do this itself: a nine-game scan wrote the whole library six times over and tore
+    /// down and re-registered the global hotkey six times, leaving six windows in which it was
+    /// unbound. The in-memory half (cards, categories, sort) still runs per import, so the
+    /// library still fills in platform by platform on screen.
+    /// </summary>
+    private void PersistCommittedLibrary()
+    {
+        if (_commitBatchDepth > 0)
+        {
+            _commitBatchPending = true;
+            return;
+        }
+
+        _library.SaveLibrary();
+        _library.UpdateHotkeys();
+    }
+
+    private int _commitBatchDepth;
+    private bool _commitBatchPending;
+
+    /// <summary>
+    /// Coalesces the saves and hotkey rebuilds of every commit made inside the returned scope
+    /// into one, run on dispose. Nests safely; only the outermost scope flushes.
+    /// </summary>
+    internal CommitBatch BeginCommitBatch() => new(this);
+
+    internal sealed class CommitBatch : IDisposable
+    {
+        private readonly ImportCoordinator _owner;
+        private bool _disposed;
+
+        internal CommitBatch(ImportCoordinator owner)
+        {
+            _owner = owner;
+            _owner._commitBatchDepth++;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // Decrement even on the failure path: a leg that threw must not leave the coordinator
+            // permanently batching and therefore never saving again.
+            if (--_owner._commitBatchDepth > 0 || !_owner._commitBatchPending) return;
+
+            _owner._commitBatchPending = false;
+            _owner._library.SaveLibrary();
+            _owner._library.UpdateHotkeys();
+        }
     }
 
     /// <summary>
@@ -1891,13 +1947,19 @@ public class ImportCoordinator : ViewModelBase
         // "Importing 1..." followed by "Importing 2...") instead of one steady running total.
         _library.StatusMessage = $"Importing {total} game(s)...";
 
-        int steamAdded = steamGames.Count > 0 ? await ImportSteamGamesAsync(steamGames, announceProgress: false) : 0;
-        int gogAdded = gogGames.Count > 0 ? await ImportGogGamesAsync(gogGames, announceProgress: false) : 0;
-        int eaAdded = eaGames.Count > 0 ? await ImportEaGamesAsync(eaGames, announceProgress: false) : 0;
-        int epicAdded = epicGames.Count > 0 ? await ImportEpicGamesAsync(epicGames, announceProgress: false) : 0;
-        int ubisoftAdded = ubisoftGames.Count > 0 ? await ImportUbisoftGamesAsync(ubisoftGames, announceProgress: false) : 0;
-        int xboxAdded = xboxGames.Count > 0 ? await ImportXboxGamesAsync(xboxGames, announceProgress: false) : 0;
-        int folderAdded = folderCandidates.Count > 0 ? await ImportBatchGamesAsync(folderCandidates, announceProgress: false) : 0;
+        int steamAdded, gogAdded, eaAdded, epicAdded, ubisoftAdded, xboxAdded, folderAdded;
+
+        // One save and one hotkey rebuild for the whole selection instead of one per platform.
+        using (BeginCommitBatch())
+        {
+            steamAdded = steamGames.Count > 0 ? await ImportSteamGamesAsync(steamGames, announceProgress: false) : 0;
+            gogAdded = gogGames.Count > 0 ? await ImportGogGamesAsync(gogGames, announceProgress: false) : 0;
+            eaAdded = eaGames.Count > 0 ? await ImportEaGamesAsync(eaGames, announceProgress: false) : 0;
+            epicAdded = epicGames.Count > 0 ? await ImportEpicGamesAsync(epicGames, announceProgress: false) : 0;
+            ubisoftAdded = ubisoftGames.Count > 0 ? await ImportUbisoftGamesAsync(ubisoftGames, announceProgress: false) : 0;
+            xboxAdded = xboxGames.Count > 0 ? await ImportXboxGamesAsync(xboxGames, announceProgress: false) : 0;
+            folderAdded = folderCandidates.Count > 0 ? await ImportBatchGamesAsync(folderCandidates, announceProgress: false) : 0;
+        }
 
         // -1 means that leg's import threw (already logged) rather than everything just being a
         // duplicate - don't let a real failure hide behind the same reassuring "already in your

@@ -24,6 +24,11 @@ public partial class App
     private static extern bool AttachConsole(int dwProcessId);
     private const int ATTACH_PARENT_PROCESS = -1;
 
+    // Used by --test-dialog-cloak to dismiss a modal shell dialog from a helper thread.
+    [DllImport("user32.dll")]
+    private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+    private const uint WM_CLOSE = 0x0010;
+
     private async System.Threading.Tasks.Task RunXboxDiagnosticAsync(bool launch, string? target)
     {
         static void Log(string m) => LoggingService.Info("XboxTest", m);
@@ -1249,6 +1254,91 @@ public partial class App
                 UpdateTrayContextMenu();
 
                 Console.WriteLine("TEST_TRAY_MENU_PASSED");
+                ExitApplication();
+                return;
+            }
+
+            if (e.Args[i].Equals("--test-live-settings", StringComparison.OrdinalIgnoreCase))
+            {
+                // PerformanceProfileService used to be built with its convenience constructor,
+                // whose provider is () => storageService.LoadSettings(): a disk read plus key
+                // decryption on every profile apply and restore, returning a detached copy of
+                // settings rather than the object the UI is editing. Reference equality is the
+                // whole point of the fix, so assert exactly that.
+                var live = _mainViewModel.Settings;
+                var seen = _performanceProfileService.CurrentSettingsForTests;
+                if (!ReferenceEquals(live, seen))
+                    throw new Exception("PerformanceProfileService is not reading the live AppSettings instance - it is re-loading a detached copy from disk.");
+
+                // And prove it follows unsaved edits, which a disk-reading provider cannot.
+                bool original = live.CreateRestorePointBeforeTweaks;
+                try
+                {
+                    live.CreateRestorePointBeforeTweaks = !original;
+                    if (_performanceProfileService.CurrentSettingsForTests.CreateRestorePointBeforeTweaks != !original)
+                        throw new Exception("PerformanceProfileService did not observe an unsaved in-memory settings change.");
+                }
+                finally
+                {
+                    live.CreateRestorePointBeforeTweaks = original;
+                }
+
+                LoggingService.Info("LiveSettingsTest", "[TEST_LIVE_SETTINGS_PASSED] profile service reads the live AppSettings instance");
+                Console.WriteLine("[TEST_LIVE_SETTINGS_PASSED] profile service reads the live AppSettings instance");
+                ExitApplication();
+                return;
+            }
+
+            if (e.Args[i].Equals("--test-dialog-cloak", StringComparison.OrdinalIgnoreCase))
+            {
+                // Regression guard for the 1.4.1-beta.2 bug: FileDialogCloak polled for a
+                // *direct child* named DirectUIHWND to decide the shell view had painted. The
+                // folder picker nests its view deeper, so that never matched and every "Add
+                // Folder" dialog stayed cloaked until the 450 ms fail-safe - visible in the log
+                // only as "fail-safe at 739 ms" where a working detection says "painted".
+                // Both dialog types are driven here because only the folder one regressed, and
+                // nothing would have caught it: the fail-safe makes a broken detector look fine.
+                var cloakFailures = new List<string>();
+                foreach (var (label, dialog) in new (string, Microsoft.Win32.CommonDialog)[]
+                {
+                    ("OpenFolderDialog", new Microsoft.Win32.OpenFolderDialog { Title = "Cloak test (closes itself)" }),
+                    ("OpenFileDialog", new Microsoft.Win32.OpenFileDialog { Title = "Cloak test (closes itself)", Filter = "All files (*.*)|*.*" }),
+                })
+                {
+                    // ShowDialog blocks this thread, so the auto-close has to come from another
+                    // one. It waits out the full fail-safe window before closing, otherwise the
+                    // dialog could vanish before the detector had a chance either way.
+                    var closer = new System.Threading.Thread(() =>
+                    {
+                        var deadline = DateTime.UtcNow.AddSeconds(10);
+                        while (DateTime.UtcNow < deadline)
+                        {
+                            System.Threading.Thread.Sleep(50);
+                            IntPtr h = FileDialogCloak.LastDialogHandle;
+                            if (h == IntPtr.Zero || FileDialogCloak.LastRevealReason == null) continue;
+                            System.Threading.Thread.Sleep(150);
+                            PostMessage(h, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                            return;
+                        }
+                    }) { IsBackground = true };
+                    closer.Start();
+
+                    FileDialogCloak.Show(dialog);
+                    closer.Join(TimeSpan.FromSeconds(12));
+
+                    string reason = FileDialogCloak.LastRevealReason ?? "<never revealed>";
+                    LoggingService.Info("DialogCloakTest", $"{label}: revealed via '{reason}'");
+                    if (!reason.Contains("painted", StringComparison.Ordinal))
+                    {
+                        cloakFailures.Add($"{label} revealed via '{reason}' - shell view was never detected.");
+                    }
+                }
+
+                if (cloakFailures.Count > 0)
+                    throw new Exception("Dialog cloak detection failed: " + string.Join(" | ", cloakFailures));
+
+                LoggingService.Info("DialogCloakTest", "[TEST_DIALOG_CLOAK_PASSED] both dialog types revealed on shell-view detection, not the fail-safe");
+                Console.WriteLine("[TEST_DIALOG_CLOAK_PASSED] both dialog types revealed on shell-view detection, not the fail-safe");
                 ExitApplication();
                 return;
             }
