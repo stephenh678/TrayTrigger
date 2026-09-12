@@ -21,6 +21,7 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onChangeIcon;
     private readonly Action<GameCardViewModel>? _onChangeCover;
     private readonly Action<GameCardViewModel>? _onViewDetails;
+    private readonly Action<GameCardViewModel>? _onChangeMatch;
     private readonly Action<GameCardViewModel>? _onEditSteamAppId;
     private readonly Action<GameCardViewModel>? _onRefreshMetadata;
     private readonly Action<GameCardViewModel>? _onToggleFavorite;
@@ -54,6 +55,7 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onChangeIcon = null,
         Action<GameCardViewModel>? onChangeCover = null,
         Action<GameCardViewModel>? onViewDetails = null,
+        Action<GameCardViewModel>? onChangeMatch = null,
         Action<GameCardViewModel>? onEditSteamAppId = null,
         Action<GameCardViewModel>? onRefreshMetadata = null,
         Action<GameCardViewModel>? onToggleFavorite = null,
@@ -93,6 +95,7 @@ public class GameCardViewModel : ViewModelBase
         _onChangeIcon = onChangeIcon;
         _onChangeCover = onChangeCover;
         _onViewDetails = onViewDetails;
+        _onChangeMatch = onChangeMatch;
         _onEditSteamAppId = onEditSteamAppId;
         _onRefreshMetadata = onRefreshMetadata;
         _onToggleFavorite = onToggleFavorite;
@@ -103,6 +106,7 @@ public class GameCardViewModel : ViewModelBase
         EditCommand = new RelayCommand(() => _onEdit(this));
         DeleteCommand = new RelayCommand(() => _onDelete(this));
         ViewDetailsCommand = new RelayCommand(() => _onViewDetails?.Invoke(this));
+        ChangeMatchCommand = new RelayCommand(() => _onChangeMatch?.Invoke(this));
         RelocateCommand = new RelayCommand(() => _onRelocate?.Invoke(this));
         RenameCommand = new RelayCommand(() => _onRename?.Invoke(this));
         ChangeCategoryCommand = new RelayCommand(() => _onChangeCategory?.Invoke(this));
@@ -309,6 +313,7 @@ public class GameCardViewModel : ViewModelBase
     public ICommand EditCommand { get; }
     public ICommand DeleteCommand { get; }
     public ICommand ViewDetailsCommand { get; }
+    public ICommand ChangeMatchCommand { get; }
     public ICommand EditSteamAppIdCommand { get; }
     public ICommand RefreshMetadataCommand { get; }
     public ICommand RelocateCommand { get; }

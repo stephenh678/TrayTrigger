@@ -364,7 +364,8 @@ public class LibraryViewModel : ViewModelBase
             onChangeCategory: card => RequestQuickCategory?.Invoke(card),
             onChangeIcon: ChangeGameIcon,
             onChangeCover: ChangeGameCover,
-            onViewDetails: OpenGameDetails,
+            onViewDetails: c => OpenGameDetails(c),
+            onChangeMatch: c => OpenGameDetails(c, openMatchPicker: true),
             onEditSteamAppId: EditSteamAppId,
             onRefreshMetadata: card => _ = RefreshGameMetadataAsync(card),
             onToggleFavorite: ToggleFavorite,
@@ -747,7 +748,15 @@ public class LibraryViewModel : ViewModelBase
         FilteredGames.Refresh();
     }
 
-    public void OpenGameDetails(GameCardViewModel card)
+    /// <summary>
+    /// Opens the details dialog for <paramref name="card"/>. With
+    /// <paramref name="openMatchPicker"/> it goes straight into the Steam/RAWG match picker on
+    /// arrival - that is the card context menu's "Change Match...", which exists so correcting a
+    /// bad match doesn't take three steps. Routing between the two sources, and all the reload
+    /// and poster-replacement bookkeeping a rematch triggers, stay in GameDetailsViewModel; there
+    /// is no second copy of that logic at the library level.
+    /// </summary>
+    public void OpenGameDetails(GameCardViewModel card, bool openMatchPicker = false)
     {
         bool requestedLaunch = false;
         bool requestedEdit = false;
@@ -770,6 +779,7 @@ public class LibraryViewModel : ViewModelBase
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
+        if (openMatchPicker) dlg.OpenMatchPickerWhenReady();
         dlg.ShowDialog();
 
         if (requestedLaunch)

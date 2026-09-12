@@ -738,7 +738,7 @@ public partial class App : Application
         return new MenuItem
         {
             Header = text.ToUpperInvariant(),
-            Style = (Style)FindResource("TrayMenuSectionHeaderStyle"),
+            Style = (Style)FindResource("MenuSectionHeaderStyle"),
             Focusable = false,
             IsHitTestVisible = false
         };

@@ -30,6 +30,14 @@
                  menu below, minus everything that only makes sense for one game. Performance
                  Profile is the one addition: a single game reaches it through Edit Game
                  Properties, and there is no batch equivalent of that dialog. -->
+
+            <!-- Scope, first: the items below read the same as the single-game menu's, and only
+                 Remove asks before it acts. Without this the other four (category, profile,
+                 refresh) fire on the whole selection with nothing on screen saying how big it
+                 is. -->
+            <MenuItem Header="{Binding SelectionSummary}" Style="{StaticResource MenuSectionHeaderStyle}"/>
+            <Separator/>
+
             <MenuItem Header="{Binding BatchFavoriteLabel}" IsCheckable="True" IsChecked="{Binding BatchAllFavorite, Mode=OneWay}" Command="{Binding BatchFavoriteCommand}"/>
             <MenuItem Header="{Binding BatchHideLabel}" IsCheckable="True" IsChecked="{Binding BatchAllHidden, Mode=OneWay}" Command="{Binding BatchHideCommand}"/>
             <Separator/>
@@ -103,12 +111,14 @@
             <!-- Quick Actions: the umbrella (Edit Game Properties) first, then the shortcuts into it. -->
             <MenuItem Header="Edit Game Properties..." Command="{Binding EditCommand}"/>
             <MenuItem Header="Rename..." Command="{Binding RenameCommand}"/>
-            <!-- No "Fetch Official Name" here: Game Details > Change match supersedes it. That
-                 renamed silently from a heuristic search with no confirmation and no undo; the
-                 picker shows the candidates and asks first. -->
+            <!-- Replaces the old "Fetch Official Name", which renamed silently from a heuristic
+                 search with no confirmation and no undo. This opens the same picker Game Details
+                 uses, so a wrong match is corrected in one step instead of three. -->
+            <MenuItem Header="Change Match..." Command="{Binding ChangeMatchCommand}"/>
             <MenuItem Header="Change Category..." Command="{Binding ChangeCategoryCommand}"/>
             <MenuItem Header="Change Icon..." Command="{Binding ChangeIconCommand}"/>
             <MenuItem Header="Change Poster Artwork..." Command="{Binding ChangeCoverCommand}"/>
+            <!-- The manual escape hatch, below the picker that supersedes it for most users. -->
             <MenuItem Header="Set Steam App ID..." Command="{Binding EditSteamAppIdCommand}"/>
             <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding RefreshMetadataCommand}"/>
 
