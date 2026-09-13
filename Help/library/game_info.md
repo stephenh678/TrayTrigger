@@ -8,7 +8,7 @@ Used for any game linked to a Steam App ID. Steam is the richer source: it alone
 
 ## RAWG
 
-RAWG (rawg.io) is a community games database that covers titles Steam doesn't list: Game Pass exclusives, Epic exclusives, Roblox, Fortnite, console ports and many indies. When enabled, it supplies developer, publisher, release date, synopsis, genres, play modes, Metacritic, an ESRB rating, RAWG's own community rating, and an "Open on RAWG" button to the game's rawg.io page.
+RAWG (rawg.io) is a community games database that covers titles Steam doesn't list: Game Pass exclusives, Epic exclusives, Battle.net games such as Hearthstone and StarCraft II, Roblox, Fortnite, console ports and many indies. When enabled, it supplies developer, publisher, release date, synopsis, genres, play modes, Metacritic, an ESRB rating, RAWG's own community rating, and an "Open on RAWG" button to the game's rawg.io page.
 
 - Turn it on in Settings › Library with "Use RAWG for non-Steam game info" and paste a free API key from rawg.io/apidocs.
 - Until RAWG is enabled, the details window has no source switch and every game shows Steam.

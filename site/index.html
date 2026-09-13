@@ -9,7 +9,7 @@
 <link rel="canonical" href="https://stephenh678.github.io/TrayTrigger/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="TrayTrigger: Launch. Automate. Play.">
-<meta property="og:description" content="Per-game Windows tuning and launch automation for PC gamers. Everything reverts when the game exits. Steam, GOG, Epic, EA, Ubisoft, Xbox. Lives in your tray.">
+<meta property="og:description" content="Per-game Windows tuning and launch automation for PC gamers. Everything reverts when the game exits. Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.">
 <meta property="og:image" content="https://stephenh678.github.io/TrayTrigger/assets/social-preview.png">
 <meta property="og:url" content="https://stephenh678.github.io/TrayTrigger/">
 <meta name="twitter:card" content="summary_large_image">
@@ -193,9 +193,10 @@
       <img src="assets/ea_app.png" alt="EA app" title="EA app">
       <img src="assets/ubisoft_connect.png" alt="Ubisoft Connect" title="Ubisoft Connect">
       <img src="assets/xbox.png" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">
+      <img src="assets/battlenet.png" alt="Battle.net" title="Battle.net">
       <img src="assets/local_games.png" alt="Local games" title="Any executable or shortcut">
     </div>
-    <p class="dim" style="font-size:14px">Scans all six, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></p>
+    <p class="dim" style="font-size:14px">Scans all seven, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></p>
 
     <div class="card"><img src="assets/social-preview.png" alt="TrayTrigger: per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks, auto-close launchers"></div>
   </div>
@@ -209,7 +210,7 @@
     </div>
     <div class="grid grid-4">
       <div class="tile"><div class="step">1 · Before launch</div><p>Snapshots your current settings. Applies the game's <strong>Performance Profile</strong>: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your <strong>pre-launch script</strong>.</p></div>
-      <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, or Xbox, or directly. Steam can start minimized so only the game appears.</p></div>
+      <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam can start minimized so only the game appears.</p></div>
       <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past.</p></div>
       <div class="tile"><div class="step">4 · On exit</div><p>Restores every setting to <strong>exactly what it found</strong>. Runs your <strong>post-exit script</strong>. Closes the launcher if you told it to. Crash-safe: a snapshot survives a crash and is restored on next start.</p></div>
     </div>
@@ -254,7 +255,7 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
         <h2>Launchers that get out of the way.</h2>
         <ul>
           <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
-          <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, or the EA app isn't still sitting in your tray an hour later.</li>
+          <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
           <li><strong>Start Steam minimized</strong>: only the game appears.</li>
           <li><strong>Run as Administrator</strong> per game, <strong>CPU core affinity</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
           <li><strong>Hardware monitoring</strong> in the same window: CPU, GPU, RAM, temperatures, without a second app.</li>
