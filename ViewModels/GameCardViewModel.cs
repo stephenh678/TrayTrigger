@@ -305,7 +305,8 @@ public class GameCardViewModel : ViewModelBase
     {
         // An Xbox entry's exe path goes stale on every game update (the package folder is
         // versioned) and is re-resolved from the AUMID at launch, so it's never "missing" here.
-        return !game.IsSteamGame && !game.IsXboxGame &&
+        // A Battle.net game is started by the client from its uid; the exe is never run.
+        return !game.IsSteamGame && !game.IsXboxGame && !game.IsBattleNetGame &&
             !string.IsNullOrWhiteSpace(game.ExecutablePath) &&
             !ProcessLauncherService.IsNonFileProtocolUrl(game.ExecutablePath) &&
             !File.Exists(game.ExecutablePath);

@@ -1387,7 +1387,10 @@ public partial class ProcessLauncherService
             return false;
         }
 
-        string installDir = ResolveInstallDir(game);
+        // Track the folder Battle.net records now, not the saved one: a moved install, or a Local
+        // entry linked from a versioned subfolder (StarCraft II's Versions\BaseNNNNN), would
+        // otherwise be watched where the game no longer runs.
+        string installDir = _battleNetScannerService.FindInstallDir(game.BattleNetUid) ?? ResolveInstallDir(game);
         if (TryActivateRunningProcessUnderDirectory(game, installDir, label))
         {
             return true;
@@ -1398,10 +1401,8 @@ public partial class ProcessLauncherService
             LoggingService.Verbose("Launcher", $"'{game.Name}' has launch arguments, but Battle.net's launch command can't carry them - set them in Battle.net's own game settings.");
         }
 
-        string? programId = BattleNetCatalog.IsValidProgramId(game.BattleNetProgramId)
-            ? game.BattleNetProgramId
-            : FindBattleNetProgramIdForLaunch(game, clientPath);
-
+        // The session is registered before any wait for a launch code, so a second click during
+        // that wait hits LaunchGame's in-flight check instead of starting a second session.
         var session = BeginSession(game, LaunchRoute.BattleNet, out string? abortReason);
         if (session == null)
         {
@@ -1411,6 +1412,10 @@ public partial class ProcessLauncherService
 
         try
         {
+            string? programId = BattleNetCatalog.IsValidProgramId(game.BattleNetProgramId)
+                ? game.BattleNetProgramId
+                : FindBattleNetProgramIdForLaunch(game, clientPath);
+
             if (programId == null)
             {
                 SendBattleNetCommand(clientPath, "focus play");

@@ -157,6 +157,25 @@ public partial class BattleNetScannerService
     }
 
     /// <summary>
+    /// The install folder Blizzard's uninstall entry currently records for <paramref name="uid"/>,
+    /// or null. Follows a game moved with Battle.net's "Move install", which the saved entry doesn't.
+    /// </summary>
+    public string? FindInstallDir(string? uid)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return null;
+        try
+        {
+            var entry = ReadUninstallEntries().FirstOrDefault(e => e.Uid.Equals(uid, StringComparison.OrdinalIgnoreCase));
+            return entry != null && Directory.Exists(entry.InstallDir) ? entry.InstallDir : null;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("BattleNetScannerService", $"Could not read the uninstall entry for uid '{uid}': {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Looks up <paramref name="uid"/>'s launch code: Battle.net's live catalog first, then the
     /// saved code map. Refreshes the saved map from whatever the catalog holds.
     /// </summary>
