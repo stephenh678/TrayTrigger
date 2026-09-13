@@ -132,13 +132,13 @@ public partial class BattleNetScannerService
                         LoggingService.Warn("BattleNetScannerService", $"No launch code for '{install.Name}' (uid {install.Uid}): {lookup.Detail}. It imports anyway; the launcher looks again.");
                     }
 
-                    string? exe = ResolveExe(install);
+                    string? exe = ResolveExe(install, out string? iconFile);
                     results.Add(new DiscoveredBattleNetGame(
                         Uid: install.Uid,
                         Name: install.Name,
                         InstallDir: install.InstallDir,
                         ExePath: exe,
-                        IconPath: exe,
+                        IconPath: iconFile ?? exe,
                         ProgramId: lookup.ProgramId,
                         IsAlreadyImported: existingSet.Contains(install.Uid)));
                 }
@@ -232,37 +232,57 @@ public partial class BattleNetScannerService
         if (!Directory.Exists(_cacheDirectory)) return new CatalogSnapshot(false, 0, owners);
 
         int catalogFiles = 0;
-        foreach (var path in Directory.EnumerateFiles(_cacheDirectory, "*", SearchOption.AllDirectories))
+        try
         {
-            try
+            // The client rebuilds this folder while it runs. A subfolder that can't be opened is
+            // skipped rather than ending the read, and if listing fails outright the files already
+            // read still count: a throw here used to empty the whole Battle.net scan.
+            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 };
+            foreach (var path in Directory.EnumerateFiles(_cacheDirectory, "*", options))
             {
-                var info = new FileInfo(path);
-                if (info.Length == 0 || info.Length > MaxCatalogFileBytes) continue;
+                try
+                {
+                    var info = new FileInfo(path);
+                    if (info.Length == 0 || info.Length > MaxCatalogFileBytes) continue;
 
-                // The client may be writing its cache while this reads it.
-                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                if (stream.ReadByte() != '{') continue;
-                stream.Position = 0;
-                using var reader = new StreamReader(stream);
-                if (BattleNetCatalog.MergeInto(owners, reader.ReadToEnd())) catalogFiles++;
+                    // The client may be writing its cache while this reads it.
+                    using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    if (stream.ReadByte() != '{') continue;
+                    stream.Position = 0;
+                    using var reader = new StreamReader(stream);
+                    if (BattleNetCatalog.MergeInto(owners, reader.ReadToEnd())) catalogFiles++;
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Verbose("BattleNetScannerService", $"Skipped cache file '{path}': {ex.Message}");
+                }
             }
-            catch (Exception ex)
-            {
-                LoggingService.Verbose("BattleNetScannerService", $"Skipped cache file '{path}': {ex.Message}");
-            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("BattleNetScannerService", $"Stopped reading Battle.net's cache folder '{_cacheDirectory}' after {catalogFiles} catalog file(s): {ex.Message}");
+            if (catalogFiles == 0 && !Directory.Exists(_cacheDirectory)) return new CatalogSnapshot(false, 0, owners);
         }
         return new CatalogSnapshot(true, catalogFiles, owners);
     }
 
-    private string? ResolveExe(InstallEntry install)
+    /// <summary>
+    /// The game's exe: DisplayIcon when it's an .exe inside the install folder (the game itself, or
+    /// StarCraft II's switcher), else the same scored search Add Folder uses. A DisplayIcon that is
+    /// an .ico is only an icon - returned in <paramref name="iconFile"/>, never as the exe, which
+    /// "Convert to Local game" would otherwise try to run.
+    /// </summary>
+    internal string? ResolveExe(InstallEntry install, out string? iconFile)
     {
+        iconFile = null;
         string? icon = ParseDisplayIconPath(install.DisplayIcon);
         if (icon != null && File.Exists(icon) && PlatformLookupService.IsPathUnderDirectory(icon, install.InstallDir))
         {
-            return icon;
+            if (icon.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return icon;
+            if (icon.EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) iconFile = icon;
         }
 
-        // No usable pointer: the same scored search Add Folder uses.
+        // No usable exe pointer: the same scored search Add Folder uses.
         return _folderScannerService.ScanFolder(install.InstallDir, preferExe: false).FirstOrDefault()?.ExePath;
     }
 

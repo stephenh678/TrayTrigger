@@ -14,6 +14,7 @@ stable version they lead to.
 - **Better game names from folders** — titles written without spaces (BALLxPIT), acronyms run into a word (ACBlackFlag), packaged Unreal games (Gothic 1 Remake, Persona 3 Reload), and folders with an extra trailing word now match the right game.
 - The Steam and Battle.net client folders are no longer offered as games when a scan location contains them.
 - Game names matched online no longer keep ®, ™ or © from the store listing ("Overwatch®" is now "Overwatch").
+- Titles containing "Steam" or "GOG" ("Steam Tactics", "Full Steam Ahead") are no longer searched with that word removed; it's only dropped as a trailing store tag ("Portal.2.Steam").
 
 ## 1.4.1
 

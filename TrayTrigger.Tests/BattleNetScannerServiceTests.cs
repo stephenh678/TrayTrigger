@@ -114,6 +114,69 @@ public sealed class BattleNetScannerServiceTests : IDisposable
         Assert.Contains("not in Battle.net's catalog", lookup.Detail);
     }
 
+    /// <summary>A cache subfolder the read can't open used to throw out of the whole catalog read
+    /// (antigravity review, 2.3) - and a scan with no catalog read reported no Battle.net games.</summary>
+    [Fact]
+    public void LookUp_UnreadableCacheSubfolder_DoesNotStopTheRead()
+    {
+        WriteCacheFile(@"ab\39\ab3923de", """{"fragment_id":"hearthstone","products":[{"base":{"uid":"hs_beta"},"id":"WTCG"}]}""");
+        WriteCacheFile(@"zz\locked", "x");
+        var locked = new DirectoryInfo(Path.Combine(CacheDir, "zz"));
+        var rule = new System.Security.AccessControl.FileSystemAccessRule(
+            System.Security.Principal.WindowsIdentity.GetCurrent().User!,
+            System.Security.AccessControl.FileSystemRights.ListDirectory,
+            System.Security.AccessControl.AccessControlType.Deny);
+        var acl = locked.GetAccessControl();
+        acl.AddAccessRule(rule);
+        locked.SetAccessControl(acl);
+        try
+        {
+            var lookup = NewScanner().LookUpProgramId("hs_beta");
+
+            Assert.Equal("WTCG", lookup.ProgramId);
+            Assert.Equal("Battle.net catalog", lookup.Source);
+        }
+        finally
+        {
+            acl.RemoveAccessRule(rule);
+            locked.SetAccessControl(acl);
+        }
+    }
+
+    /// <summary>A DisplayIcon that is an .ico was taken as the game's exe (antigravity review, 1.2),
+    /// so "Convert to Local game" would have tried to launch the icon.</summary>
+    [Fact]
+    public void ResolveExe_IconFileInDisplayIcon_IsKeptAsTheIcon_AndTheExeIsFound()
+    {
+        string install = Path.Combine(_root, "Some Game");
+        Directory.CreateDirectory(install);
+        string icon = Path.Combine(install, "game.ico");
+        File.WriteAllBytes(icon, new byte[64]);
+        string exe = Path.Combine(install, "SomeGame.exe");
+        File.WriteAllBytes(exe, new byte[400 * 1024]);
+
+        var entry = new BattleNetScannerService.InstallEntry("some", "Some Game", install, $"\"{icon}\",0");
+        string? resolved = NewScanner().ResolveExe(entry, out string? iconFile);
+
+        Assert.Equal(exe, resolved, ignoreCase: true);
+        Assert.Equal(icon, iconFile, ignoreCase: true);
+    }
+
+    [Fact]
+    public void ResolveExe_ExeInDisplayIcon_IsTheExe()
+    {
+        string install = Path.Combine(_root, "Hearthstone");
+        Directory.CreateDirectory(install);
+        string exe = Path.Combine(install, "Hearthstone.exe");
+        File.WriteAllBytes(exe, new byte[400 * 1024]);
+
+        var entry = new BattleNetScannerService.InstallEntry("hs_beta", "Hearthstone", install, exe);
+        string? resolved = NewScanner().ResolveExe(entry, out string? iconFile);
+
+        Assert.Equal(exe, resolved);
+        Assert.Null(iconFile);
+    }
+
     [Fact]
     public void ScanInstalledGames_NeverThrows()
     {

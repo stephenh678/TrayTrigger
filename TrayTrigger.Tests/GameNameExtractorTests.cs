@@ -26,6 +26,9 @@ public class GameNameExtractorTests
     [InlineData("Elden Ring (x64)", "Elden Ring")]
     [InlineData("Half-Life-Deluxe-Edition", "Half Life Deluxe Edition")]
     [InlineData("Portal.2.Steam", "Portal 2")]
+    [InlineData("Hollow.Knight.v1.5.78.11833.GoG", "Hollow Knight")]
+    [InlineData("Steam.Marines", "Steam Marines")] // part of the title, not a store tag
+    [InlineData("Full Steam Ahead", "Full Steam Ahead")]
     public void CleanFolderName_StripsStoreNamesVersionsAndDelimiters(string input, string expected)
     {
         Assert.Equal(expected, GameNameExtractor.CleanFolderName(input));

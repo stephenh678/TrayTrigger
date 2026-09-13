@@ -503,22 +503,19 @@ public static partial class GameNameExtractor
         cleaned = BracketedAnnotationsRegex().Replace(cleaned, " ");
         cleaned = ParenthesesAnnotationsRegex().Replace(cleaned, " ");
 
-        // 3. Strip store names
-        foreach (var store in TitleHeuristics.StoreNames)
-        {
-            cleaned = Regex.Replace(cleaned, $@"(?:^|[-_.\s])+{Regex.Escape(store)}(?:[-_.\s]|$)+", " ", RegexOptions.IgnoreCase);
-        }
-
-        // 4. Strip edition tags
+        // 3. Strip edition tags
         foreach (var ed in TitleHeuristics.EditionPhrases)
         {
             cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", " ", RegexOptions.IgnoreCase);
         }
 
-        // 5. Strip build and version tags
+        // 4. Strip build and version tags
         cleaned = BuildRegex().Replace(cleaned, " ");
         cleaned = VersionRegex().Replace(cleaned, " ");
         cleaned = ClutterWordRegex().Replace(cleaned, " ");
+
+        // 5. Strip a trailing store name ("Portal.2.Steam"), never the word inside a title
+        cleaned = TitleHeuristics.TrailingStoreNameRegex.Replace(cleaned, " ");
 
         // 6. Replace separators with space
         cleaned = cleaned.Replace('_', ' ').Replace('-', ' ').Replace('.', ' ');

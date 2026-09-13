@@ -36,9 +36,22 @@ public class SteamSearchServiceTests
     [InlineData("reamek of the fallen", "remake of the fallen")] // common misspelling correction
     [InlineData("GTA V GOG", "GTA V")]
     [InlineData("Portal 2 Steam", "Portal 2")] // "Steam" store name stripped. See L-11.
+    [InlineData("Cyberpunk 2077 GOG v1.63", "Cyberpunk 2077")] // a version after the tag doesn't hide it
     public void SanitizeSearchQuery_StripsStoreNamesVersionsAndEditionTags(string input, string expected)
     {
         Assert.Equal(expected, SteamSearchService.SanitizeSearchQuery(input));
+    }
+
+    /// <summary>The store-name strip used to remove the word anywhere, so "Steam Tactics" was
+    /// searched as "Tactics" (antigravity review, 1.1).</summary>
+    [Theory]
+    [InlineData("Steam Tactics")]
+    [InlineData("Full Steam Ahead")]
+    [InlineData("Steam Engine Simulator")]
+    [InlineData("GOG Galaxy Demo")]
+    public void SanitizeSearchQuery_KeepsAStoreNameThatIsPartOfTheTitle(string title)
+    {
+        Assert.Equal(title, SteamSearchService.SanitizeSearchQuery(title));
     }
 
     [Fact]

@@ -1414,7 +1414,15 @@ public partial class ProcessLauncherService
         {
             string? programId = BattleNetCatalog.IsValidProgramId(game.BattleNetProgramId)
                 ? game.BattleNetProgramId
-                : FindBattleNetProgramIdForLaunch(game, clientPath);
+                : FindBattleNetProgramIdForLaunch(game, clientPath, session);
+
+            // The user ended the session while the launch code was being looked for: they no
+            // longer want the game, so send nothing and don't start tracking.
+            if (Volatile.Read(ref session.Finished) != 0)
+            {
+                LoggingService.Info("Launcher", $"'{game.Name}' session ended while waiting for its launch code; the launch was not sent.");
+                return true;
+            }
 
             if (programId == null)
             {
@@ -1446,7 +1454,7 @@ public partial class ProcessLauncherService
     /// map. When neither has it, starts the client (a cleared cache is rebuilt at startup) and asks
     /// again for up to <see cref="BattleNetCatalogWait"/>. Saves what it finds on the entry.
     /// </summary>
-    private string? FindBattleNetProgramIdForLaunch(GameEntry game, string clientPath)
+    private string? FindBattleNetProgramIdForLaunch(GameEntry game, string clientPath, ActiveGameSession session)
     {
         string uid = game.BattleNetUid ?? string.Empty;
         var lookup = _battleNetScannerService.LookUpProgramId(uid);
@@ -1458,8 +1466,9 @@ public partial class ProcessLauncherService
                 StartBattleNetClient(clientPath);
             }
 
+            // Stops early when the user ends the session during the wait (End Session).
             var deadline = DateTime.UtcNow + BattleNetCatalogWait;
-            while (!lookup.Found && DateTime.UtcNow < deadline)
+            while (!lookup.Found && DateTime.UtcNow < deadline && Volatile.Read(ref session.Finished) == 0)
             {
                 Thread.Sleep(TimeSpan.FromSeconds(2));
                 lookup = _battleNetScannerService.LookUpProgramId(uid);
@@ -1467,6 +1476,7 @@ public partial class ProcessLauncherService
 
             if (!lookup.Found)
             {
+                if (Volatile.Read(ref session.Finished) != 0) return null;
                 LoggingService.Warn("Launcher", $"Still no launch code for '{game.Name}' (uid {uid}) after waiting: {lookup.Detail}.");
                 return null;
             }

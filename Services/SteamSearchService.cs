@@ -107,22 +107,19 @@ public partial class SteamSearchService
         cleaned = BracketClutterRegex().Replace(cleaned, " ");
         cleaned = ParenthesesClutterRegex().Replace(cleaned, " ");
 
-        // 3. Strip store names
-        foreach (var store in TitleHeuristics.StoreNames)
-        {
-            cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(store)}\b", "", RegexOptions.IgnoreCase);
-        }
-
-        // 4. Strip edition tags (which often break Steam API search matching)
+        // 3. Strip edition tags (which often break Steam API search matching)
         foreach (var ed in TitleHeuristics.EditionPhrases)
         {
             cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", "", RegexOptions.IgnoreCase);
         }
 
-        // 5. Strip builds, version numbers, and architecture tags
+        // 4. Strip builds, version numbers, and architecture tags
         cleaned = BuildNumberRegex().Replace(cleaned, "");
         cleaned = VersionNumberRegex().Replace(cleaned, "");
         cleaned = TechClutterRegex().Replace(cleaned, "");
+
+        // 5. Strip a trailing store name ("Portal 2 Steam"), never the word inside a title
+        cleaned = TitleHeuristics.TrailingStoreNameRegex.Replace(cleaned, "");
 
         // 6. Replace delimiters with space
         cleaned = cleaned.Replace('.', ' ').Replace('_', ' ').Replace('-', ' ');

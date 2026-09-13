@@ -17,6 +17,16 @@ public static class TitleHeuristics
     /// </summary>
     public static readonly string[] StoreNames = ["GOG", "Steam"];
 
+    /// <summary>
+    /// A store name as a trailing tag ("Portal.2.Steam", "GTA V GOG"): only at the end and only
+    /// after a separator, so a title that merely contains the word keeps it. Stripping the word
+    /// anywhere sent Steam a search for "Tactics" for "Steam Tactics", and "Full Ahead" for "Full
+    /// Steam Ahead". Apply it after versions and edition tags are gone, so they can't hide the tag.
+    /// </summary>
+    public static readonly System.Text.RegularExpressions.Regex TrailingStoreNameRegex = new(
+        $@"(?:[-_.\s]+(?:{string.Join("|", System.Array.ConvertAll(StoreNames, System.Text.RegularExpressions.Regex.Escape))}))+[-_.\s]*$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+
     public static readonly string[] EditionPhrases =
     [
         "Digital Deluxe Edition", "Deluxe Edition", "Definitive Edition",
