@@ -47,7 +47,7 @@ public record DiscoveredXboxGame(
 /// Install locations come from the per-user package repository
 /// (<c>HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages</c>),
 /// which is what Get-AppxPackage reads. Every field is derived from these two keys; the
-/// package folder is only touched to pick an icon.
+/// package folder is only touched to confirm the game's files are still there and to pick an icon.
 /// </summary>
 public class XboxScannerService
 {
@@ -145,6 +145,18 @@ public class XboxScannerService
         string? packageRoot = ReadPackageRoot(repositoryKey, packageFullName);
         if (packageRoot == null || !Directory.Exists(packageRoot)) return null;
 
+        // The Xbox app installs to "<drive>:\XboxGames\<Game>\Content" and registers the
+        // WindowsApps package folder as a junction to it. When those files go without an uninstall
+        // (a wiped or disconnected drive, a deleted XboxGames folder) Windows keeps both registry
+        // records and the junction, and Directory.Exists passes for the junction itself, so the
+        // game used to import with no exe or icon and only fail at launch. Resolved to the final
+        // target so the install dir matches what the kernel reports for process images.
+        if (LinkedDirectory.Resolve(packageRoot, out string installDir) == LinkedDirectoryState.BrokenLink)
+        {
+            LoggingService.Verbose("XboxScannerService", $"Skipped '{packageFullName}': its package folder links to a folder or drive that no longer exists.");
+            return null;
+        }
+
         using var configKey = gameConfigKey.OpenSubKey(packageFullName);
         if (configKey == null) return null;
 
@@ -183,7 +195,6 @@ public class XboxScannerService
                 ?? packageFullName.Split('_')[0].Split('.').Last();
         }
 
-        string installDir = ResolveJunctionTarget(packageRoot) ?? packageRoot;
         string? exePath = string.IsNullOrWhiteSpace(exeRelative) ? null : SafeCombine(installDir, exeRelative);
         if (exePath != null && !File.Exists(exePath)) exePath = null;
 
@@ -223,26 +234,6 @@ public class XboxScannerService
         int lastUnderscore = packageFullName.LastIndexOf('_');
         if (firstUnderscore <= 0 || lastUnderscore <= firstUnderscore || lastUnderscore == packageFullName.Length - 1) return null;
         return packageFullName.Substring(0, firstUnderscore) + "_" + packageFullName.Substring(lastUnderscore + 1);
-    }
-
-    /// <summary>The Xbox app installs modern titles to "&lt;drive&gt;:\XboxGames\&lt;Game&gt;\Content" and
-    /// registers the WindowsApps package folder as a junction to it. Null when it's a real folder.
-    /// Resolves to the <em>final</em> target so it matches what the kernel reports for process images.</summary>
-    private static string? ResolveJunctionTarget(string packageRoot)
-    {
-        try
-        {
-            var info = new DirectoryInfo(packageRoot);
-            if (info.LinkTarget == null) return null;
-            string? target = info.ResolveLinkTarget(returnFinalTarget: true)?.FullName;
-            if (string.IsNullOrWhiteSpace(target)) return null;
-            target = target.TrimEnd('\\');
-            return Directory.Exists(target) ? target : null;
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static string? SafeCombine(string root, string relative)

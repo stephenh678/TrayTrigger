@@ -361,6 +361,23 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Clear leaves the flyout open, but the button hides itself once nothing is ticked, and a
+    /// hidden button can't keep keyboard focus. Click runs ahead of the Command that clears, so
+    /// focus moves once that has happened: onto the first option, which is now the first
+    /// focusable element in the panel.
+    /// </summary>
+    private void LibraryFilterClear_Click(object sender, RoutedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (LibraryFilterPopup.IsOpen && LibraryFilterPopup.Child is FrameworkElement child)
+            {
+                child.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            }
+        }), System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    /// <summary>
     /// Closes the flyout before the help window opens over it. Click runs ahead of the button's
     /// Command, which is what actually shows the topic.
     /// </summary>

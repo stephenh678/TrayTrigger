@@ -215,11 +215,11 @@ public class LibraryFilterTests : IDisposable
     });
 
     /// <summary>
-    /// Clear closes the flyout - the Clear button hides itself at zero, so leaving the panel open
-    /// would make it vanish from under the pointer that just pressed it.
+    /// Clear is a reset, not a close: every tick goes and the flyout stays open, so the user can
+    /// pick a different filter without reopening it.
     /// </summary>
     [Fact]
-    public void Clear_ClosesTheFlyout() => Sta(() =>
+    public void Clear_ResetsFilters_AndLeavesTheFlyoutOpen() => Sta(() =>
     {
         var library = NewLibrary(null, Steam("A"), Epic("B"));
         Option(library.Filter, "launcher:steam").IsChecked = true;
@@ -227,7 +227,7 @@ public class LibraryFilterTests : IDisposable
 
         library.Filter.ClearCommand.Execute(null);
 
-        Assert.False(library.Filter.IsOpen);
+        Assert.True(library.Filter.IsOpen);
         Assert.False(library.Filter.HasActiveFilters);
         Assert.Equal(2, Visible(library).Count);
     });

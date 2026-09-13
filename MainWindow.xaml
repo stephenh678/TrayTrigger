@@ -752,9 +752,21 @@
                                 </Border.Effect>
                                 <StackPanel>
                                     <DockPanel Margin="8,0,8,8">
+                                        <!-- Clear resets and leaves the flyout open. Hidden rather than collapsed
+                                             at zero, so the header doesn't reflow under the pointer that pressed it;
+                                             the Click handler moves keyboard focus off it onto the first option. -->
                                         <Button DockPanel.Dock="Right" Content="Clear" Command="{Binding Library.Filter.ClearCommand}"
-                                                Style="{StaticResource HelpLinkButton}"
-                                                Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}"/>
+                                                Click="LibraryFilterClear_Click">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource HelpLinkButton}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Library.Filter.HasActiveFilters}" Value="False">
+                                                            <Setter Property="Visibility" Value="Hidden"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
                                         <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="12" FontWeight="SemiBold"
                                                    Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                                     </DockPanel>
@@ -2810,6 +2822,14 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,12" TextWrapping="Wrap"/>
 
+                                    <!-- Sits with the option above: both keep windows off the game while it starts. -->
+                                    <CheckBox Content="Keep game launchers minimized when launching a game"
+                                              IsChecked="{Binding KeepLaunchersMinimized}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game opens. The EA app, Ubisoft Connect, Xbox and Battle.net are left as they are."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,12" TextWrapping="Wrap"/>
+
                                     <DockPanel LastChildFill="False">
                                         <CheckBox Content="Always show icon in tray (prevent collapsing into overflow)" 
                                                   IsChecked="{Binding AlwaysShowTrayIcon}" 
@@ -2844,6 +2864,27 @@
                                     <TextBlock Text="Off: left-click shows or hides the window and right-click opens the menu. On: both clicks open the menu. Double-click always opens the window."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                                    <!-- The icon's launch popup: what a launch from a game hotkey or the tray menu shows
+                                         while the window is out of sight. A launch from the open window uses it only when
+                                         the window is about to hide (minimize on launch) or with the every-launch option. -->
+                                    <CheckBox Content="Show a launch popup by the tray icon"
+                                              IsChecked="{Binding ShowLaunchPopup}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="While TrayTrigger is hidden, a game started from its hotkey or the tray menu shows a small card by the tray icon: the game, what it's waiting for, and any launch error. It never takes focus and closes once the game starts."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,0" TextWrapping="Wrap"/>
+
+                                    <!-- Nested sub-toggle: the popup for launches from the open window too. -->
+                                    <StackPanel Margin="24,8,0,12">
+                                        <CheckBox Content="Show it on every game launch"
+                                                  IsChecked="{Binding ShowLaunchPopupOnEveryLaunch}"
+                                                  IsEnabled="{Binding ShowLaunchPopup}"
+                                                  Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                        <TextBlock Text="Off: only while TrayTrigger is hidden, or when &quot;Minimize to system tray when launching a game&quot; is about to hide it. On: every launch from the open window uses the popup, in place of the notice inside the window. A launch error still opens a dialog while the window is in front."
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="10.5"
+                                                   Margin="24,2,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
 
                                     <TextBlock Text="Show / Hide Window Hotkey" FontSize="12.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>

@@ -599,6 +599,48 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public bool KeepLaunchersMinimized
+    {
+        get => _settings.KeepLaunchersMinimized;
+        set
+        {
+            if (_settings.KeepLaunchersMinimized != value)
+            {
+                _settings.KeepLaunchersMinimized = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool ShowLaunchPopup
+    {
+        get => _settings.ShowLaunchPopup;
+        set
+        {
+            if (_settings.ShowLaunchPopup != value)
+            {
+                _settings.ShowLaunchPopup = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool ShowLaunchPopupOnEveryLaunch
+    {
+        get => _settings.ShowLaunchPopupOnEveryLaunch;
+        set
+        {
+            if (_settings.ShowLaunchPopupOnEveryLaunch != value)
+            {
+                _settings.ShowLaunchPopupOnEveryLaunch = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     // --- Updates & Version Control Preferences ---
 
     public bool AutoCheckForUpdates
@@ -1802,6 +1844,12 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
+        OnPropertyChanged(nameof(KeepLaunchersMinimized));
+        OnPropertyChanged(nameof(ShowLaunchPopup));
+        OnPropertyChanged(nameof(ShowLaunchPopupOnEveryLaunch));
+        OnPropertyChanged(nameof(ShowTrayMenuIcons));
+        OnPropertyChanged(nameof(CompactTrayMenu));
+        OnPropertyChanged(nameof(TrayLeftClickOpensMenu));
         OnPropertyChanged(nameof(AutoCheckForUpdates));
         OnPropertyChanged(nameof(IncludePrereleaseUpdates));
         OnPropertyChanged(nameof(GitHubRepository));

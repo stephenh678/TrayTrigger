@@ -26,6 +26,14 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 - With grouping off, the remaining games show as one flat list under an All Games heading.
 - "Tray menu sort order" controls the order of that flat list (or the order within each category submenu, when grouping is on) - independent of the Recent and Favorites sort orders above.
 
+## When you launch from the tray or a hotkey
+
+- With the window hidden, a game started from the tray menu or its own hotkey shows a small popup near the tray clock: the game's icon and name, and what it's waiting for (Battle.net signing in, for example).
+- The popup never takes focus, and clicks pass through it to whatever is underneath. It closes once the game starts, or after 100 seconds if the game never does.
+- If the launch fails, the popup shows why and stays until you close it. Its link opens TrayTrigger, or lets you locate a game whose executable is missing.
+- Turn it off with "Show a launch popup by the tray icon" under Settings > General > Window & Tray Icon, below the tray icon's left-click option.
+- Launches from the open window use the popup too when "Minimize to system tray when launching a game" is on, since the window hides as soon as the game is launched. Otherwise they keep the notice inside the window, unless you tick "Show it on every game launch" under the same setting. A launch error still opens a dialog while the window is in front.
+
 ## Shortcuts at the bottom
 
 Games Library opens the window on the library, Scan for Games... runs a scan straight away, Settings opens the window on Settings, and Exit TrayTrigger quits the app immediately (unlike the window's Exit button, which asks first).
