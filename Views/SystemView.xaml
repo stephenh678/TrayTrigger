@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
              xmlns:services="clr-namespace:TrayTrigger.Services"
+             xmlns:views="clr-namespace:TrayTrigger.Views"
              mc:Ignorable="d"
              d:DesignHeight="900" d:DesignWidth="1100"
              Background="Transparent">
@@ -141,7 +142,7 @@
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="System &amp; Performance" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                <TextBlock Text="Hardware telemetry, gaming specifications, and verified performance optimizations"
+                <TextBlock Text="Hardware specs, verified performance tweaks, and per-game performance profiles"
                            FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                            FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
             </StackPanel>
@@ -149,7 +150,8 @@
 
         <!-- 2. CATEGORY SEGMENTED TABS -->
         <Border Grid.Row="1" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
-                BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16">
+                BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16"
+                views:ScrollToTop.Target="{Binding ElementName=ContentScroll}">
             <StackPanel Orientation="Horizontal">
                 <Button Content="All" Command="{Binding SelectAllTabCommand}"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}"/>
@@ -163,7 +165,8 @@
         </Border>
 
         <!-- 3. CONTENT AREA -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
+        <ScrollViewer x:Name="ContentScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14"
+                      views:ScrollToTop.ResetOn="{Binding CurrentSubSection}">
             <StackPanel HorizontalAlignment="Stretch" Margin="0,0,12,0">
 
                 <!-- ========================================================== -->
@@ -185,7 +188,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE770;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="HARDWARE TELEMETRY &amp; SPECS" FontSize="11.5" FontWeight="SemiBold"
+                            <TextBlock Text="HARDWARE SPECS" FontSize="11.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -411,7 +414,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="PERFORMANCE TWEAKS &amp; OPTIMIZATIONS" FontSize="11.5" FontWeight="SemiBold" 
+                            <TextBlock Text="PERFORMANCE TWEAKS" FontSize="11.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -536,14 +539,14 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="GAME-LEVEL PERFORMANCE PROFILES" FontSize="11.5" FontWeight="SemiBold"
+                            <TextBlock Text="PERFORMANCE PROFILES" FontSize="11.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Game-Level Performance Profiles" FontSize="13.5" FontWeight="SemiBold"
+                            <TextBlock Text="Performance Profiles" FontSize="13.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="Assigned per game in Edit Game. Applied at launch, reverted at exit. Changing a tweak here affects every game on that profile."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4" TextWrapping="Wrap"/>

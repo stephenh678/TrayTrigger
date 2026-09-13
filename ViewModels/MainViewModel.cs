@@ -77,6 +77,8 @@ public class MainViewModel : ViewModelBase
     public ObservableCollection<CategoryTabItem> CategoryTabs => Library.CategoryTabs;
     public ObservableCollection<string> SortOptions => Library.SortOptions;
     public ICollectionView FilteredGames => Library.FilteredGames;
+    // The library empty states bind this; without it the first-run and "No favorites yet" panels never show.
+    public bool HasAnyGames => Library.HasAnyGames;
 
     public AppSettings Settings => _settings;
     public IconExtractorService IconExtractorService => _iconExtractorService;

@@ -136,6 +136,9 @@ public class ImportCoordinator : ViewModelBase
         entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, iconSourcePath, entry.Name);
         entry.PerformanceProfile = PerformanceProfileMode.Optimized;
         await _library.EnrichGameWithSteamMetadataAsync(entry);
+        // Stamp it like EnrichLibraryAsync does, or the next startup re-searches every game this
+        // import just looked up and couldn't match (Xbox, Battle.net titles not on Steam).
+        entry.LastEnrichmentAttemptUtc = DateTime.UtcNow;
     }
 
     // Shared commit step of every import pipeline: add the prepared entries to the visible
