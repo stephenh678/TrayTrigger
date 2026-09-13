@@ -176,6 +176,29 @@ public class StorageService : IProfileSnapshotStore
         }
     }
 
+    /// <summary>
+    /// Drops ®, ™ and © from stored game names. New matches have been cleaned since 1.4.2, but a
+    /// library imported before that kept "Overwatch®" and "STAR WARS Jedi: Fallen Order™" in every
+    /// list, tray menu included. In-memory only; the next library save persists it. Returns how
+    /// many names changed.
+    /// </summary>
+    internal static int StripStoreSymbolsFromNames(List<GameEntry> games)
+    {
+        int changed = 0;
+        foreach (var game in games)
+        {
+            string cleaned = GameNameExtractor.CleanMetadataTitle(game.Name);
+            if (cleaned.Length == 0 || string.Equals(cleaned, game.Name, StringComparison.Ordinal)) continue;
+            game.Name = cleaned;
+            changed++;
+        }
+        if (changed > 0)
+        {
+            LoggingService.Info("Storage", $"Removed store symbols (®, ™, ©) from {changed} game name(s).");
+        }
+        return changed;
+    }
+
     public List<GameEntry> LoadGames()
     {
         lock (_gamesLock)
@@ -192,6 +215,7 @@ public class StorageService : IProfileSnapshotStore
                     if (games != null)
                     {
                         RemapLegacyPaths(games);
+                        StripStoreSymbolsFromNames(games);
                         LoggingService.Verbose("Storage", $"Loaded {games.Count} game(s) from '{_gamesFilePath}'.");
                         return games;
                     }
@@ -215,6 +239,7 @@ public class StorageService : IProfileSnapshotStore
                     if (bakGames != null)
                     {
                         RemapLegacyPaths(bakGames);
+                        StripStoreSymbolsFromNames(bakGames);
                         LoggingService.Info("Storage", $"Recovered {bakGames.Count} game(s) from '{_gamesBakFilePath}'.");
                         return bakGames;
                     }

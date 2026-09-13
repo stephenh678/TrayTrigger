@@ -30,7 +30,7 @@ public class LibrarySaveScopeTests : IDisposable
         var launcher = new ProcessLauncherService(
             storage, new PerformanceProfileService(storage), new GameScriptService(),
             new SteamScannerService(), new GogScannerService(), new EaScannerService(),
-            new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService());
+            new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService(), new BattleNetScannerService());
 
         var library = new LibraryViewModel(
             storage, new IconExtractorService(storage), launcher, new HotkeyManager(),

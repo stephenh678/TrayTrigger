@@ -207,7 +207,7 @@ public class GameDataCleanupTests : IDisposable
             new EaScannerService(),
             new EpicScannerService(),
             new UbisoftScannerService(),
-            new XboxScannerService());
+            new XboxScannerService(), new BattleNetScannerService());
         return new LibraryViewModel(
             storage,
             new IconExtractorService(storage),

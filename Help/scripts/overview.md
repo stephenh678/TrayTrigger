@@ -15,7 +15,7 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 - Post-exit runs after the Performance Profile is restored, so your script sees the machine back in its normal state. It needs an exit signal, which exists for:
   - direct .exe launches (the process itself);
   - Steam games (Steam's own "running" flag for the game);
-  - GOG, EA, Epic, and Ubisoft games launched through their client or directly (TrayTrigger watches the game's install folder for its real process, since the client-registered exe is often only a stub).
+  - GOG, EA, Epic, Ubisoft, Xbox and Battle.net games launched through their client or directly (TrayTrigger watches the game's install folder for its real process, since the client-registered exe is often only a stub).
 - A bare launcher link, meaning a dropped .url or protocol shortcut with no platform ID behind it, has no exit signal. Pre-launch still runs; post-exit is skipped.
 - If TrayTrigger closes while a game with a post-exit script is still running, the script runs then rather than never.
 
@@ -40,7 +40,7 @@ Every example is one file that handles both phases. In Edit Game, choose it as t
 
 Scripts other people have written and shared live in the TrayTrigger-Scripts catalog on GitHub: https://github.com/stephenh678/TrayTrigger-Scripts. Every script there was read by a maintainer before it was listed, and the catalog records a SHA-256 for each file so a download can be checked against what was reviewed. That is a review, not a guarantee: a script runs as you, so open it and read it before you attach it.
 
-To use one today, download its folder into your scripts folder and browse to it in Edit Game, the same as the bundled examples. To share yours, open a pull request on the catalog repository; its CONTRIBUTING file has the manifest format and the review checklist. A browser for the catalog inside TrayTrigger is planned.
+"Browse community scripts" on the scripts card (in Settings and in Edit Game) opens the catalog in your browser. To use one today, download its folder into your scripts folder and browse to it in Edit Game, the same as the bundled examples. To share yours, open a pull request on the catalog repository; its CONTRIBUTING file has the manifest format and the review checklist. Installing from inside TrayTrigger, with the hash check, is planned.
 
 ## Default scripts for every game
 
@@ -51,7 +51,7 @@ Settings › Launch & Performance can hold a default pre-launch script and a def
 - Any game can opt out of both defaults with "Don't run the default scripts for this game" in Edit Game. It is off for every game, including games added before this option existed, so the defaults apply everywhere the moment you set them.
 - The defaults have their own wait, timeout, cancel-on-failure, hidden, and Administrator options. Those apply whenever a default script runs; a game's own options apply only to its own scripts.
 - Each game's Script Arguments are passed to the default scripts too. That is how one generic default is parameterised per game.
-- "Run the default scripts" is off by default, like the feature itself. Nothing in the defaults block runs until it is ticked, and unticking it later pauses the defaults without clearing their paths or options; Edit Game says so either way. The Enable game scripts switch gates the defaults as well: while it is off, nothing runs.
+- "Run the default scripts" is off by default, like the feature itself, and it sits under the master "Enable scripts" switch: that one switch is what guarantees no script runs for any game while it is off, so the defaults cannot run without it. Nothing in the defaults block runs until it is ticked, and unticking it later pauses the defaults without clearing their paths or options; Edit Game says so either way. The Enable game scripts switch gates the defaults as well: while it is off, nothing runs.
 - Edit Game shows which defaults apply to the game you are editing and why, and the defaults have their own Test buttons in Settings that run them with placeholder game values.
 
 ## Script arguments

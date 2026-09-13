@@ -111,6 +111,7 @@ public class HelpContentServiceTests
     [InlineData("library/artwork")]
     [InlineData("library/titles")]
     [InlineData("library/game_info")]
+    [InlineData("library/launch")]
     [InlineData("troubleshooting/logs")]
     public void EveryLinkedTopic_Exists(string topicId)
     {

@@ -100,6 +100,6 @@ public class TrayToolTipTests
         return new ProcessLauncherService(
             storage, new PerformanceProfileService(storage), new GameScriptService(),
             new SteamScannerService(), new GogScannerService(), new EaScannerService(),
-            new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService());
+            new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService(), new BattleNetScannerService());
     }
 }

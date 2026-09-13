@@ -71,13 +71,37 @@ public class TrayPromotionService
         return removedCount;
     }
 
-    public bool TrySetAlwaysShow(bool enable, out string statusMessage)
+    /// <summary>
+    /// Raised after <see cref="TrySetAlwaysShow"/> actually changed the stored value. Explorer
+    /// reads an icon's NotifyIconSettings entry when the icon is registered and keeps the answer
+    /// in memory, so a value written afterwards is ignored until the icon is added again: the
+    /// owner of the tray icon subscribes and re-adds it.
+    /// </summary>
+    public event Action? PromotionApplied;
+
+    public enum Outcome
+    {
+        /// <summary>The value was written; the tray icon should be re-added for Explorer to notice.</summary>
+        Applied,
+        /// <summary>Windows already had the requested value; nothing written.</summary>
+        Unchanged,
+        /// <summary>Windows has not created the icon's settings entry yet (it does so a moment after the icon first appears). Worth retrying.</summary>
+        NotRegisteredYet,
+        Failed
+    }
+
+    /// <summary>
+    /// Writes the icon's "always show" flag. Writes only when the stored value differs, so a start
+    /// with the setting on doesn't rewrite Windows' entry every time, and reports which of the
+    /// four things happened so the caller can retry, re-add the icon, or show the reason.
+    /// </summary>
+    public Outcome TrySetAlwaysShow(bool enable, out string statusMessage)
     {
         string? exePath = Environment.ProcessPath;
         if (string.IsNullOrEmpty(exePath))
         {
             statusMessage = "Cannot determine process path.";
-            return false;
+            return Outcome.Failed;
         }
 
         CleanStaleRegistrations();
@@ -87,8 +111,8 @@ public class TrayPromotionService
             using var rootKey = Registry.CurrentUser.OpenSubKey(NotifyIconSettingsPath, true);
             if (rootKey == null)
             {
-                statusMessage = "NotifyIconSettings registry key not found on this Windows version.";
-                return false;
+                statusMessage = "This version of Windows has no per-icon tray settings (Windows 11 only). Use the Taskbar Settings button instead.";
+                return Outcome.Failed;
             }
 
             string[] subKeyNames = rootKey.GetSubKeyNames();
@@ -127,28 +151,42 @@ public class TrayPromotionService
 
             if (targetSubKey == null)
             {
-                statusMessage = "Windows has not registered this application icon yet. The icon must appear in the tray overflow first before Windows creates its settings entry.";
-                return false;
+                statusMessage = "Windows hasn't registered the TrayTrigger icon yet; it does that a moment after the icon first appears. Tick this again in a few seconds, or drag the icon from the overflow onto the taskbar.";
+                return Outcome.NotRegisteredYet;
             }
 
+            int wanted = enable ? 1 : 0;
             using (var writeSubKey = rootKey.OpenSubKey(targetSubKey, true))
             {
-                if (writeSubKey != null)
+                if (writeSubKey == null)
                 {
-                    writeSubKey.SetValue("IsPromoted", enable ? 1 : 0, RegistryValueKind.DWord);
+                    statusMessage = "Windows' entry for the icon couldn't be opened for writing.";
+                    return Outcome.Failed;
                 }
+
+                if (writeSubKey.GetValue("IsPromoted") is int current && current == wanted)
+                {
+                    statusMessage = enable
+                        ? "Windows already keeps the icon on the taskbar. If it's still in the overflow, drag it onto the taskbar once."
+                        : "Windows already leaves the icon to its default overflow behaviour.";
+                    return Outcome.Unchanged;
+                }
+
+                writeSubKey.SetValue("IsPromoted", wanted, RegistryValueKind.DWord);
             }
 
             statusMessage = enable
-                ? "Requested Windows to keep icon always visible on taskbar."
-                : "Icon reset to default Windows overflow behavior.";
-            return true;
+                ? "Applied. The icon was re-added so Windows picks the change up; if it's still in the overflow, drag it onto the taskbar once."
+                : "Applied. The icon follows Windows' default overflow behaviour again.";
+            try { PromotionApplied?.Invoke(); }
+            catch (Exception ex) { LoggingService.Verbose("TrayPromotionService", $"PromotionApplied handler failed: {ex.Message}"); }
+            return Outcome.Applied;
         }
         catch (Exception ex)
         {
             LoggingService.Warn("TrayPromotionService", $"Error writing to NotifyIconSettings: {ex.Message}");
-            statusMessage = $"Registry access error: {ex.Message}";
-            return false;
+            statusMessage = $"Couldn't write the setting: {ex.Message}";
+            return Outcome.Failed;
         }
     }
 

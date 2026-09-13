@@ -117,7 +117,7 @@ public class GameEditViewModel : ViewModelBase
         _forceSteamOverlayTag = game.ForceSteamOverlayTag;
         _steamAppId = game.SteamAppId;
         _launchDirectly = game.LaunchDirectly;
-        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
+        _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
         _cpuAffinity = game.CpuAffinity;
         _preLaunchScriptPath = game.PreLaunchScriptPath;
@@ -522,11 +522,13 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.IsEpicGame ? "Epic" :
         SourceGame.IsUbisoftGame ? "Ubisoft" :
         SourceGame.IsXboxGame ? "Xbox" :
+        SourceGame.IsBattleNetGame ? "Battle.net" :
         _isSteamGame ? "Steam" : "Local";
 
     /// <summary>"Launch this executable directly" has no meaning for a Game Pass title: a GDK exe
-    /// can't run outside its package, so the launcher always activates the AUMID.</summary>
-    public bool CanOfferLaunchDirectly => HasPlatform && !SourceGame.IsXboxGame;
+    /// can't run outside its package, so the launcher always activates the AUMID. Nor for a
+    /// Battle.net game, which needs the sign-in token only the client passes it.</summary>
+    public bool CanOfferLaunchDirectly => HasPlatform && !SourceGame.IsXboxGame && !SourceGame.IsBattleNetGame;
 
     /// <summary>e.g. "Imported from GOG (game ID 1207658924)". Where it came from and the ID
     /// the launcher knows it by, so a wrong match is at least diagnosable.</summary>
@@ -539,6 +541,9 @@ public class GameEditViewModel : ViewModelBase
                 : SourceGame.IsEpicGame ? SourceGame.EpicAppName
                 : SourceGame.IsUbisoftGame ? SourceGame.UbisoftGameId
                 : SourceGame.IsXboxGame ? SourceGame.XboxAumid
+                : SourceGame.IsBattleNetGame ? (string.IsNullOrEmpty(SourceGame.BattleNetProgramId)
+                    ? SourceGame.BattleNetUid
+                    : $"{SourceGame.BattleNetUid}, launch code {SourceGame.BattleNetProgramId}")
                 : SteamAppId;
             string via = SourceGame.ImportedFrom != null ? "Imported from" : "Linked to";
             return string.IsNullOrEmpty(id) ? $"{via} {PlatformName}" : $"{via} {PlatformName} (ID {id})";
@@ -1278,6 +1283,9 @@ public class GameEditViewModel : ViewModelBase
             SourceGame.UbisoftGameId = null;
             SourceGame.IsXboxGame = false;
             SourceGame.XboxAumid = null;
+            SourceGame.IsBattleNetGame = false;
+            SourceGame.BattleNetUid = null;
+            SourceGame.BattleNetProgramId = null;
             SourceGame.ImportedFrom = null;
             SourceGame.LaunchDirectly = false;
         }

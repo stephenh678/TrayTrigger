@@ -7,7 +7,7 @@ When you add a game from an exe, a shortcut, or a folder scan, TrayTrigger has t
 - The exe's own metadata often carries a product name. If it does, that is used first.
 - Otherwise the name comes from the file name or the parent folder, cleaned up: version numbers, "x64", "Shipping", and similar tokens are stripped, and capitalisation is normalised.
 - The exe wins over the parent folder when the two disagree, because a folder name is the more often mangled of the two: a game unpacked into "Fatekeeper-SomeSite" or "Mortal-Shell-Ii-SomeSite" still carries the real title inside the exe. The folder name remains the fallback whenever the exe yields nothing useful.
-- Games added from a launcher skip all of this. Steam, GOG, EA, Epic, Ubisoft and Xbox each tell TrayTrigger the game's real name, and that beats any guess made from the files.
+- Games added from a launcher skip all of this. Steam, GOG, EA, Epic, Ubisoft, Xbox and Battle.net each tell TrayTrigger the game's real name, and that beats any guess made from the files.
 
 ## Online title search
 

@@ -52,13 +52,14 @@ public class ImportCommitBatchTests : IDisposable
         var epicScanner = new EpicScannerService();
         var ubisoftScanner = new UbisoftScannerService();
         var xboxScanner = new XboxScannerService();
+        var battleNetScanner = new BattleNetScannerService();
         var steamSearch = new SteamSearchService();
         var steamMetadata = new SteamMetadataService();
         var settings = new AppSettings();
 
         var launcher = new ProcessLauncherService(
             storage, new PerformanceProfileService(storage), new GameScriptService(),
-            steamScanner, gogScanner, eaScanner, epicScanner, ubisoftScanner, xboxScanner);
+            steamScanner, gogScanner, eaScanner, epicScanner, ubisoftScanner, xboxScanner, battleNetScanner);
 
         var library = new LibraryViewModel(
             storage, icons, launcher, new HotkeyManager(), steamMetadata, steamSearch, settings,
@@ -67,7 +68,7 @@ public class ImportCommitBatchTests : IDisposable
 
         var import = new ImportCoordinator(
             library, new ShortcutService(), icons, new FolderScannerService(),
-            steamScanner, gogScanner, eaScanner, epicScanner, ubisoftScanner, xboxScanner,
+            steamScanner, gogScanner, eaScanner, epicScanner, ubisoftScanner, xboxScanner, battleNetScanner,
             steamSearch, steamMetadata, storage, settings,
             getSteamGridDbApiKeyOrNull: () => null);
 

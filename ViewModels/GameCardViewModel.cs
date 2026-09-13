@@ -224,6 +224,7 @@ public class GameCardViewModel : ViewModelBase
     public bool IsEpicGame => Game.IsEpicGame;
     public bool IsUbisoftGame => Game.IsUbisoftGame;
     public bool IsXboxGame => Game.IsXboxGame;
+    public bool IsBattleNetGame => Game.IsBattleNetGame;
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
@@ -235,6 +236,23 @@ public class GameCardViewModel : ViewModelBase
     public bool ShowCategoryBadge =>
         !string.Equals(Category, LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase) &&
         !string.Equals(Category, LibraryConstants.PlatformCategoryFor(Game), StringComparison.OrdinalIgnoreCase);
+    /// <summary>True while this card's right-click menu is open. The menu takes the mouse, so the
+    /// card's hover state drops the moment it opens; the views use this to keep the card
+    /// highlighted, so it stays clear which game the menu is changing. UI state only.</summary>
+    public bool IsContextMenuOpen
+    {
+        get => _isContextMenuOpen;
+        set
+        {
+            if (_isContextMenuOpen != value)
+            {
+                _isContextMenuOpen = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+    private bool _isContextMenuOpen;
+
     /// <summary>Part of the library's Ctrl/Shift+click multi-selection (see LibraryViewModel).
     /// Purely UI state - never saved.</summary>
     public bool IsSelected
@@ -304,7 +322,8 @@ public class GameCardViewModel : ViewModelBase
     {
         // An Xbox entry's exe path goes stale on every game update (the package folder is
         // versioned) and is re-resolved from the AUMID at launch, so it's never "missing" here.
-        return !game.IsSteamGame && !game.IsXboxGame &&
+        // A Battle.net game is started by the client from its uid; the exe is never run.
+        return !game.IsSteamGame && !game.IsXboxGame && !game.IsBattleNetGame &&
             !string.IsNullOrWhiteSpace(game.ExecutablePath) &&
             !ProcessLauncherService.IsNonFileProtocolUrl(game.ExecutablePath) &&
             !File.Exists(game.ExecutablePath);
@@ -470,6 +489,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEpicGame));
         OnPropertyChanged(nameof(IsUbisoftGame));
         OnPropertyChanged(nameof(IsXboxGame));
+        OnPropertyChanged(nameof(IsBattleNetGame));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));

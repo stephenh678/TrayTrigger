@@ -25,6 +25,7 @@ public class AppSettings
     public bool EpicIntegrationEnabled { get; set; } = true;
     public bool UbisoftIntegrationEnabled { get; set; } = true;
     public bool XboxIntegrationEnabled { get; set; } = true;
+    public bool BattleNetIntegrationEnabled { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
     public bool IsSidebarExpanded { get; set; } = false;
     /// <summary>
@@ -56,6 +57,12 @@ public class AppSettings
     public int MaxFavoritesInTray { get; set; } = 5;
     public string FavoritesTraySortOption { get; set; } = "Alphabetical (A - Z)";
     public string TrayMenuSortOption { get; set; } = "Alphabetical (A - Z)";
+    /// <summary>Game icons (or the launcher's logo when a game has none) beside each game in the tray menu.</summary>
+    public bool ShowTrayMenuIcons { get; set; } = true;
+    /// <summary>Tighter rows and smaller icons in the tray menu, for a long library.</summary>
+    public bool CompactTrayMenu { get; set; } = false;
+    /// <summary>Left-click on the tray icon opens the game menu instead of showing or hiding the window. Double-click always opens the window.</summary>
+    public bool TrayLeftClickOpensMenu { get; set; } = false;
     public bool SearchOfficialTitleOnline { get; set; } = true;
     public double OnlineMatchConfidenceThreshold { get; set; } = 0.60;
     public bool AutoCategorizeFromSteam { get; set; } = true;

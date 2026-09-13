@@ -88,6 +88,92 @@ public class FolderScannerServiceTests : IDisposable
         Assert.Equal(2, result.DiscoveredGames.Count);
     }
 
+    /// <summary>
+    /// Dylan's C:\Games\Steam is the Steam client, not a game: steam.exe was offered for import
+    /// and matched online as "Steam Deck".
+    /// </summary>
+    [Fact]
+    public void ScanKnownLibraryLocation_SteamClientInstall_IsNotScanned()
+    {
+        CreateGameFolder("Fatekeeper", "Fatekeeper.exe");
+        string steam = CreateGameFolder("Steam", "steam.exe");
+        Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
+
+        var results = new FolderScannerService().ScanKnownLibraryLocation(_tempDir);
+
+        Assert.Equal("Fatekeeper", Assert.Single(results).Name);
+    }
+
+    [Fact]
+    public void ScanKnownLibraryLocation_BattleNetClientInstall_IsNotScanned()
+    {
+        // Battle.net installs under Program Files (x86) beside its games; its own folder is not a game.
+        CreateGameFolder("Fatekeeper", "Fatekeeper.exe");
+        string client = CreateGameFolder("Battle.net", "Battle.net.exe");
+        File.WriteAllBytes(Path.Combine(client, "Battle.net Launcher.exe"), new byte[1024]);
+
+        var results = new FolderScannerService().ScanKnownLibraryLocation(_tempDir);
+
+        Assert.Equal("Fatekeeper", Assert.Single(results).Name);
+    }
+
+    /// <summary>
+    /// The client folder itself dropped on the window (or added as a scan location): the subfolder
+    /// filter above doesn't see it, so the single-game fallback used to scan its root and offer
+    /// Battle.net.exe / steam.exe as the "game".
+    /// </summary>
+    [Fact]
+    public void ScanFolderOrLibrary_ClientInstallAsRoot_YieldsNoCandidates()
+    {
+        string client = CreateGameFolder("Battle.net", "Battle.net.exe");
+        File.WriteAllBytes(Path.Combine(client, "Battle.net Launcher.exe"), new byte[1024]);
+        string steam = CreateGameFolder("Steam", "steam.exe");
+        Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
+
+        var scanner = new FolderScannerService();
+
+        Assert.Empty(scanner.ScanFolderOrLibrary(client).SingleGameCandidates);
+        Assert.Empty(scanner.ScanFolderOrLibrary(steam).SingleGameCandidates);
+    }
+
+    /// <summary>
+    /// A folder ignored in Settings (Utilities, Mods) is pruned by every scan route - the library
+    /// scan, Add Folder's library detection, and the deep walk - together with everything under it,
+    /// and by full path so a sibling that merely starts with the same name is still scanned.
+    /// </summary>
+    [Fact]
+    public void IgnoredFolder_IsSkippedByEveryScanRoute_AndOnlyByFullPath()
+    {
+        CreateGameFolder("Fatekeeper", "Fatekeeper.exe");
+        string tools = CreateGameFolder("Extras", "Extra.exe");
+        string nested = Path.Combine(tools, "Nested");
+        Directory.CreateDirectory(nested);
+        File.WriteAllBytes(Path.Combine(nested, "Profiler.exe"), new byte[400 * 1024]);
+        CreateGameFolder("Extrasworth", "Extrasworth.exe");
+
+        var scanner = new FolderScannerService { IgnoredFolderProvider = () => [tools] };
+        string underTools = tools + Path.DirectorySeparatorChar;
+
+        var known = scanner.ScanKnownLibraryLocation(_tempDir);
+        Assert.Equal(["Extrasworth", "Fatekeeper"], known.Select(c => c.Name).OrderBy(n => n).ToArray());
+
+        var library = scanner.ScanFolderOrLibrary(_tempDir);
+        Assert.True(library.IsMultiGameLibrary);
+        Assert.DoesNotContain(library.DiscoveredGames, c => c.ExePath.StartsWith(underTools, StringComparison.OrdinalIgnoreCase));
+
+        // The deep walk inside one game folder: an ignored subfolder is never entered.
+        string game = CreateGameFolder("Ghostrunner", "Ghostrunner.exe");
+        // An Unreal layout, because the scorer only keeps a subfolder exe it recognises as a game binary.
+        string binaries = Path.Combine(game, "Binaries");
+        string win64 = Path.Combine(binaries, "Win64");
+        Directory.CreateDirectory(win64);
+        File.WriteAllBytes(Path.Combine(win64, "Ghostrunner-Win64-Shipping.exe"), new byte[400 * 1024]);
+        Assert.Contains(new FolderScannerService().ScanFolder(game), c => c.ExePath.EndsWith("Shipping.exe"));
+
+        var walker = new FolderScannerService { IgnoredFolderProvider = () => [binaries] };
+        Assert.DoesNotContain(walker.ScanFolder(game), c => c.ExePath.EndsWith("Shipping.exe"));
+    }
+
     [Fact]
     public void IsDisqualified_TinyStub_IsDisqualified()
     {

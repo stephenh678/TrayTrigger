@@ -184,7 +184,7 @@ public partial class FolderScannerService
                     foreach (var sub in subdirs)
                     {
                         string dirName = Path.GetFileName(sub);
-                        if (ShouldPruneDirectory(dirName))
+                        if (ShouldPruneDirectory(dirName) || IsIgnoredFolder(sub))
                             continue;
 
                         queue.Enqueue((sub, depth + 1));
@@ -218,7 +218,7 @@ public partial class FolderScannerService
         try
         {
             subdirs = Directory.GetDirectories(folderPath)
-                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
+                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)) && !IsIgnoredFolder(d))
                 .ToList();
         }
         catch (Exception ex)
@@ -232,7 +232,7 @@ public partial class FolderScannerService
         // library imported exactly one game. Any child that is itself named like a library
         // container is replaced by its own children (repeatedly, bounded), so the per-subfolder
         // game detection below runs against the real game folders.
-        subdirs = ExpandLibraryContainers(subdirs);
+        subdirs = ExpandLibraryContainers(subdirs).Where(d => !IsIgnoredFolder(d) && !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d)).ToList();
 
         var detectedSubGames = new List<GameCandidate>();
 
@@ -262,6 +262,14 @@ public partial class FolderScannerService
                     .OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList()
             };
+        }
+
+        // The client's own folder was dropped or added as a scan location. Its games, if any, were
+        // handled as subfolders above; the folder itself is never a game, so don't fall through to
+        // scanning its root and offering steam.exe or Battle.net.exe for import.
+        if (IsSteamClientInstall(folderPath) || IsBattleNetClientInstall(folderPath))
+        {
+            return new FolderScanResult();
         }
 
         // Otherwise, treat as a single game folder
@@ -294,7 +302,7 @@ public partial class FolderScannerService
         try
         {
             subdirs = Directory.GetDirectories(folderPath)
-                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
+                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)) && !IsIgnoredFolder(d) && !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d))
                 .ToList();
         }
         catch (Exception ex)
@@ -595,6 +603,70 @@ public partial class FolderScannerService
             if (!expandedAny) break;
         }
         return current;
+    }
+
+    /// <summary>
+    /// Folders the user told Settings to keep out of every scan (a Utilities or Mods folder under
+    /// a scan location). Read at the start of each scan; null means none. Set by the owner that
+    /// has the settings, so this service stays free of them.
+    /// </summary>
+    public Func<IEnumerable<string>>? IgnoredFolderProvider { get; set; }
+
+    /// <summary>
+    /// True when <paramref name="dir"/> is an ignored folder or lies under one. Compared by full
+    /// path, case-insensitively, with the separator appended so "C:\Games\Mods" never matches
+    /// "C:\Games\Modsworth".
+    /// </summary>
+    internal bool IsIgnoredFolder(string dir)
+    {
+        var provider = IgnoredFolderProvider;
+        if (provider == null) return false;
+
+        string candidate = NormalizeFolder(dir);
+        foreach (var ignored in provider())
+        {
+            if (string.IsNullOrWhiteSpace(ignored)) continue;
+            if (candidate.StartsWith(NormalizeFolder(ignored), StringComparison.OrdinalIgnoreCase))
+            {
+                LoggingService.Verbose("FolderScanner", $"Skipped ignored folder: '{dir}'");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static string NormalizeFolder(string path)
+    {
+        try { path = Path.GetFullPath(path); } catch { }
+        return path.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+    }
+
+    /// <summary>
+    /// The Steam client's own install folder, not a game. Installed under a scan location - Dylan's
+    /// is C:\Games\Steam - it was scanned like any other subfolder: steam.exe scored 150, came
+    /// back as the folder's "game", and online matching named it "Steam Deck". Its games are
+    /// imported by SteamScannerService already, so there is nothing here for a folder scan to add.
+    /// </summary>
+    internal static bool IsSteamClientInstall(string dir)
+    {
+        if (!File.Exists(Path.Combine(dir, "steam.exe")) || !Directory.Exists(Path.Combine(dir, "steamapps")))
+            return false;
+
+        LoggingService.Verbose("FolderScanner", $"Skipped Steam client install folder: '{dir}'");
+        return true;
+    }
+
+    /// <summary>
+    /// Battle.net's own install folder, not a game - same reasoning as <see cref="IsSteamClientInstall"/>.
+    /// Its games live in their own folders and are imported by BattleNetScannerService.
+    /// </summary>
+    internal static bool IsBattleNetClientInstall(string dir)
+    {
+        if (!File.Exists(Path.Combine(dir, "Battle.net.exe")) || !File.Exists(Path.Combine(dir, "Battle.net Launcher.exe")))
+            return false;
+
+        LoggingService.Verbose("FolderScanner", $"Skipped Battle.net client install folder: '{dir}'");
+        return true;
     }
 
     private static bool ShouldPruneDirectory(string dirName)

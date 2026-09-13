@@ -79,6 +79,8 @@ public static partial class ProcessPathResolver
         "UbisoftGameLauncher", "UbisoftGameLauncher64", "upc", "uplay_bootstrapper", "SteamService", "steamerrorreporter", "steamerrorreporter64",
         "EOSOverlayRenderer-Win64-Shipping", "EOSOverlayRenderer-Win32-Shipping", "EpicOnlineServicesHost", "EpicWebHelper",
         "gameoverlayui", "GameBarPresenceWriter", "nvcontainer", "NVIDIA Share", "RzSynapse", "vconsole2", "vconsole",
+        // Battle.net's error reporter and in-game web view, shipped inside every Blizzard install.
+        "BlizzardError", "BlizzardBrowser",
         // Windows' own stub that every GDK (Game Pass) package registers as its entry point; it
         // spawns the real game exe and exits.
         "gamelaunchhelper"

@@ -210,6 +210,7 @@ public class SettingsViewModel : ViewModelBase
     public ICommand RemoveScanLocationCommand { get; }
     public ICommand RefreshSteamScanLocationsCommand { get; }
     public ICommand RemoveIgnoredGamePathCommand { get; }
+    public ICommand AddIgnoredFolderCommand { get; }
     public ICommand BrowseDefaultPreLaunchScriptCommand { get; }
     public ICommand BrowseDefaultPostExitScriptCommand { get; }
     public ICommand TestDefaultPreLaunchScriptCommand { get; }
@@ -313,6 +314,7 @@ public class SettingsViewModel : ViewModelBase
         RefreshSteamScanLocationsCommand = new RelayCommand(RefreshSteamScanLocations);
         RebuildScanLocationRows();
 
+        AddIgnoredFolderCommand = new RelayCommand(AddIgnoredFolder);
         RemoveIgnoredGamePathCommand = new RelayCommand(param =>
         {
             if (param is IgnoredGamePathRowViewModel row) RemoveIgnoredGamePath(row);
@@ -460,6 +462,34 @@ public class SettingsViewModel : ViewModelBase
         RebuildIgnoredGamePathRows();
     }
 
+    /// <summary>
+    /// The one kind of ignore that is added by hand: a whole folder the scanner must not look
+    /// inside. Single exes and platform games are ignored from a scan result, where the name is known.
+    /// </summary>
+    private void AddIgnoredFolder()
+    {
+        var dialog = new OpenFolderDialog { Title = "Ignore a folder", Multiselect = false };
+        if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
+
+        string path = dialog.FolderName.TrimEnd('\\', '/');
+        if (_settings.IgnoredGamePaths.Any(p => string.Equals(p.FolderPath, path, StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusMessage = "That folder is already ignored.";
+            return;
+        }
+        if (_settings.ScanLocations.Any(l => string.Equals(l.Path, path, StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusMessage = "That folder is a scan location. Untick or remove it above instead of ignoring it.";
+            return;
+        }
+
+        _settings.IgnoredGamePaths.Add(new IgnoredGamePath { FolderPath = path, Name = Path.GetFileName(path) is { Length: > 0 } n ? n : path });
+        AutoSaveSettings();
+        RebuildIgnoredGamePathRows();
+        LoggingService.Info("Settings", $"Ignored folder '{path}' - folder scans skip it and everything under it.");
+        StatusMessage = $"Ignoring {path}";
+    }
+
     // --- Windows Startup & System Tray Integration ---
 
     public bool StartWithWindows
@@ -529,12 +559,31 @@ public class SettingsViewModel : ViewModelBase
                 _settings.AlwaysShowTrayIcon = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
-                _trayPromotionService.TrySetAlwaysShow(value, out string msg);
-                LoggingService.Info("Settings", $"AlwaysShowTrayIcon set to {value}: {msg}");
-                StatusMessage = msg;
+                var outcome = _trayPromotionService.TrySetAlwaysShow(value, out string msg);
+                LoggingService.Info("Settings", $"AlwaysShowTrayIcon set to {value}: {outcome} - {msg}");
+                TrayPromotionStatus = msg;
             }
         }
     }
+
+    /// <summary>
+    /// What happened the last time the "always show" flag was written - shown under the checkbox,
+    /// because a request Windows silently dropped used to look identical to one it honoured.
+    /// Set from the setter above and from the startup retry in App.
+    /// </summary>
+    public string TrayPromotionStatus
+    {
+        get => _trayPromotionStatus;
+        set
+        {
+            if (_trayPromotionStatus == value) return;
+            _trayPromotionStatus = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasTrayPromotionStatus));
+        }
+    }
+    private string _trayPromotionStatus = string.Empty;
+    public bool HasTrayPromotionStatus => !string.IsNullOrEmpty(_trayPromotionStatus);
 
     public bool MinimizeOnGameLaunch
     {
@@ -604,6 +653,51 @@ public class SettingsViewModel : ViewModelBase
     public ICommand CheckUpdatesInSettingsCommand { get; }
 
     // --- System Tray Context Menu Preferences ---
+
+    public bool ShowTrayMenuIcons
+    {
+        get => _settings.ShowTrayMenuIcons;
+        set
+        {
+            if (_settings.ShowTrayMenuIcons != value)
+            {
+                _settings.ShowTrayMenuIcons = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    public bool CompactTrayMenu
+    {
+        get => _settings.CompactTrayMenu;
+        set
+        {
+            if (_settings.CompactTrayMenu != value)
+            {
+                _settings.CompactTrayMenu = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    public bool TrayLeftClickOpensMenu
+    {
+        get => _settings.TrayLeftClickOpensMenu;
+        set
+        {
+            if (_settings.TrayLeftClickOpensMenu != value)
+            {
+                _settings.TrayLeftClickOpensMenu = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
 
     public bool ShowRecentInTray
     {
@@ -1016,6 +1110,13 @@ public class SettingsViewModel : ViewModelBase
         set => SetIntegrationEnabled(DetectedLauncher.Xbox, "Xbox", _settings.XboxIntegrationEnabled, value, v => _settings.XboxIntegrationEnabled = v);
     }
 
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool BattleNetIntegrationEnabled
+    {
+        get => _settings.BattleNetIntegrationEnabled;
+        set => SetIntegrationEnabled(DetectedLauncher.BattleNet, "Battle.net", _settings.BattleNetIntegrationEnabled, value, v => _settings.BattleNetIntegrationEnabled = v);
+    }
+
     // True while ApplyDetectedLauncherChoices runs: the first-launch picker is choosing initial
     // defaults on an (effectively) empty library, so the "also remove its games?" prompt and the
     // "run Scan for Games" hint would both be noise there.
@@ -1132,6 +1233,7 @@ public class SettingsViewModel : ViewModelBase
             if (Probed(DetectedLauncher.Epic)) EpicIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Epic);
             if (Probed(DetectedLauncher.Ubisoft)) UbisoftIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ubisoft);
             if (Probed(DetectedLauncher.Xbox)) XboxIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Xbox);
+            if (Probed(DetectedLauncher.BattleNet)) BattleNetIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.BattleNet);
         }
         finally
         {
@@ -1627,6 +1729,7 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.EpicIntegrationEnabled),
             nameof(AppSettings.UbisoftIntegrationEnabled),
             nameof(AppSettings.XboxIntegrationEnabled),
+            nameof(AppSettings.BattleNetIntegrationEnabled),
             // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
             nameof(AppSettings.MainWindowLeft),

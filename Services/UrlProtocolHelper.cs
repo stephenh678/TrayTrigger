@@ -46,17 +46,8 @@ public static class UrlProtocolHelper
             using var key = Registry.ClassesRoot.OpenSubKey($@"{scheme}\shell\open\command");
             if (key?.GetValue(null) is string command && !string.IsNullOrWhiteSpace(command))
             {
-                // Expected form: "<exe path>" "%1" - take the quoted exe path.
-                string trimmed = command.Trim();
-                if (trimmed.StartsWith('"'))
-                {
-                    int closingQuote = trimmed.IndexOf('"', 1);
-                    if (closingQuote > 1)
-                    {
-                        string exePath = trimmed[1..closingQuote];
-                        return File.Exists(exePath) ? exePath : null;
-                    }
-                }
+                string? exePath = ParseHandlerCommand(command);
+                return exePath != null && File.Exists(exePath) ? exePath : null;
             }
         }
         catch (Exception ex)
@@ -64,6 +55,33 @@ public static class UrlProtocolHelper
             LoggingService.Warn(callerTag, $"Error reading '{scheme}' protocol handler: {ex.Message}");
         }
         return null;
+    }
+
+    /// <summary>
+    /// The executable in a shell "open" command. Steam, Epic and Ubisoft register
+    /// <c>"C:\...\client.exe" "%1"</c>; the EA app registers
+    /// <c>C:\Program Files\Electronic Arts\EA Desktop\EA Desktop\EALauncher.exe "%1"</c> with no
+    /// quotes around a path full of spaces. Reading only the quoted form reported the EA app as
+    /// not installed, which sent EA games down the direct-exe route and printed "no" in the
+    /// diagnostic report. Returns null when no .exe can be found in the command.
+    /// </summary>
+    internal static string? ParseHandlerCommand(string command)
+    {
+        string trimmed = command.Trim();
+        if (trimmed.Length == 0) return null;
+
+        if (trimmed.StartsWith('"'))
+        {
+            int closingQuote = trimmed.IndexOf('"', 1);
+            return closingQuote > 1 ? trimmed[1..closingQuote] : null;
+        }
+
+        // Unquoted: the path runs up to the first ".exe" (the arguments that follow it - "%1",
+        // -flags - never contain one). Comparison is case-insensitive: some installers write .EXE.
+        int exe = trimmed.IndexOf(".exe", StringComparison.OrdinalIgnoreCase);
+        if (exe < 0) return null;
+        string path = trimmed[..(exe + 4)];
+        return path.Length > 4 ? path : null;
     }
 
     public static bool IsHandlerInstalled(string scheme, string callerTag = "UrlProtocolHelper") =>

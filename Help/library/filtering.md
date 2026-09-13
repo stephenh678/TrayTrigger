@@ -10,7 +10,7 @@ The filter button sits beside the sort box in the library toolbar, under the sta
 
 ## What you can filter on
 
-**Launcher** - Steam, Epic Games, GOG, EA, Ubisoft Connect, Xbox, and "Not from a launcher" for anything you added by hand. Only launchers you actually have games from are listed, so there is never a tick box that can only return nothing.
+**Launcher** - Steam, Epic Games, GOG, EA, Ubisoft Connect, Xbox, Battle.net, and "Not from a launcher" for anything you added by hand. Only launchers you actually have games from are listed, so there is never a tick box that can only return nothing.
 
 **Performance Profile** - Off, Optimized, or Aggressive. Useful for finding the games you have not set a tier on yet.
 

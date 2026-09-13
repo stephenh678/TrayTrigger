@@ -114,6 +114,31 @@ public class LaunchRoutingTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)] // Battle.net games need the client's sign-in token - "launch directly" can't apply
+    public void BattleNet_AlwaysGoesThroughTheClient(bool launchDirectly)
+    {
+        var game = new GameEntry { IsBattleNetGame = true, BattleNetUid = "hs_beta", BattleNetProgramId = "WTCG", ExecutablePath = @"C:\Program Files (x86)\Hearthstone\Hearthstone.exe", LaunchDirectly = launchDirectly };
+        Assert.Equal(LaunchRoute.BattleNet, LaunchRouter.Resolve(game, AllInstalled, Exists));
+        // A missing launch code still routes to Battle.net - the launcher looks it up or opens the Play tab.
+        var noCode = new GameEntry { IsBattleNetGame = true, BattleNetUid = "hs_beta", ExecutablePath = game.ExecutablePath, LaunchDirectly = launchDirectly };
+        Assert.Equal(LaunchRoute.BattleNet, LaunchRouter.Resolve(noCode, NoneInstalled, Missing));
+    }
+
+    [Fact]
+    public void BattleNet_WithoutUid_FallsThroughToPathRules()
+    {
+        var game = new GameEntry { IsBattleNetGame = true, BattleNetUid = null, ExecutablePath = @"C:\x\x.exe" };
+        Assert.Equal(LaunchRoute.DirectExe, LaunchRouter.Resolve(game, NoneInstalled, Exists));
+    }
+
+    [Fact]
+    public void BattleNet_LabelIsBattleNet()
+    {
+        Assert.Equal("Battle.net", LaunchRouter.PlatformLabelFor(LaunchRoute.BattleNet));
+    }
+
+    [Theory]
     [InlineData("com.epicgames.launcher://apps/x?action=launch", LaunchRoute.ProtocolUrl)]
     [InlineData("https://example.com/play", LaunchRoute.ProtocolUrl)]
     [InlineData("ms-msdt://something", LaunchRoute.RefusedUrl)]
@@ -152,6 +177,7 @@ public class LaunchRoutingTests
     [InlineData(LaunchRoute.EpicDirect, LauncherPlatform.Epic)]
     [InlineData(LaunchRoute.UbisoftClient, LauncherPlatform.Ubisoft)]
     [InlineData(LaunchRoute.Xbox, LauncherPlatform.Xbox)]
+    [InlineData(LaunchRoute.BattleNet, LauncherPlatform.BattleNet)]
     public void ClientPlatform_MapsRoutes(LaunchRoute route, LauncherPlatform expected)
     {
         Assert.Equal(expected, LaunchRouter.ClientPlatformFor(route));

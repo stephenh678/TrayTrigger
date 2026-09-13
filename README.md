@@ -11,7 +11,7 @@
 <p align="center">
   Per-game Windows tuning and launch automation for PC gamers.<br>
   Performance profiles, your own pre-launch and post-exit scripts, launch arguments, and launchers that close themselves.<br>
-  <strong>Everything reverts when the game exits.</strong> Steam, GOG, Epic, EA, Ubisoft, Xbox. Lives in your tray.
+  <strong>Everything reverts when the game exits.</strong> Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.
 </p>
 
 <p align="center">
@@ -47,9 +47,10 @@
   <img src="Assets/LauncherLogos/ea_app.png" width="44" alt="EA app" title="EA app">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/ubisoft_connect.png" width="44" alt="Ubisoft Connect" title="Ubisoft Connect">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/xbox.png" width="44" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/battlenet.png" width="44" alt="Battle.net" title="Battle.net">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/local_games.png" width="44" alt="Local games" title="Any executable or shortcut">
   <br>
-  <sub>Scans all six, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></sub>
+  <sub>Scans all seven, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></sub>
 </p>
 
 ---
@@ -64,30 +65,18 @@
 
 ## Every launcher opens games. TrayTrigger runs the session.
 
-Steam, Playnite, and the rest stop at "the game is running." TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. All of it per game, all of it automatic, all of it reversible.
+A launcher's job ends when the game is running. TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. All of it per game, all of it automatic, all of it reversible.
 
 | When | What TrayTrigger does |
 |---|---|
 | **Before launch** | Snapshots your current settings. Applies the game's **Performance Profile**: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your **pre-launch script**: pause Wallpaper Engine, start the OBS replay buffer, close Discord, back up saves. |
-| **On launch** | Starts the game with your **launch arguments**, as Administrator if you asked, through its own launcher (Steam, GOG, Epic, EA, Ubisoft, Xbox) or directly. Steam can start minimized so only the game appears. |
+| **On launch** | Starts the game with your **launch arguments**, as Administrator if you asked, through its own launcher (Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net) or directly. Steam can start minimized so only the game appears. |
 | **While playing** | Stays a tray icon. The tooltip and the tray menu's *Now Playing* section show what's running. |
 | **On exit** | Restores every setting to **exactly what it found**. Runs your **post-exit script**. Closes the launcher if you told it to. Crash-safe: if TrayTrigger or Windows dies mid-game, the snapshot is restored on next start. |
 
-### Why not just Steam? Why not Playnite?
+### Why not just Steam?
 
-| | Steam | Playnite | **TrayTrigger** |
-|---|:---:|:---:|:---:|
-| Launches games from every store | | ✅ | ✅ |
-| Per-game Windows performance profile | | | ✅ |
-| Reverts every change when the game exits | | | ✅ |
-| Your own pre-launch and post-exit scripts | | ✅ | ✅ |
-| Bundled example scripts, Test Run, per-game arguments, cancel-on-failure | | | ✅ |
-| Closes the launcher when the game exits | | | ✅ |
-| 21 documented, reversible Windows gaming tweaks | | | ✅ |
-| Lives in the tray, no window to manage | | | ✅ |
-| Full-screen library UI with a plugin ecosystem | | ✅ | |
-
-TrayTrigger isn't trying to replace Playnite's library or Steam's store. It's the layer under them.
+Steam launches Steam games. It doesn't change your power plan for one game and put it back after, pause your wallpaper, start your replay buffer, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam. It isn't a replacement for any store or launcher; it's the layer under them.
 
 ---
 
@@ -102,7 +91,7 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 | **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, and an off-by-default Microsoft Defender exclusion. |
 
 - **CPU Cores**: independently of the tier, pin any game to the performance cores of a hybrid CPU, for older engines and anti-cheat titles that stutter on E-cores.
-- **Session-scoped**: tweaks apply on launch (Steam or direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
+- **Session-scoped**: tweaks apply on launch (through any supported launcher or a direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
 - **Crash-safe**: the snapshot lives on disk. If TrayTrigger or your PC crashes mid-session, the next start restores your pre-game state. A normal shutdown restores the power plan, HDR, and GPU preference immediately.
 - **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
 - **End Session / Force Close** in the game's right-click menu if a launcher ever stalls. A game that never appears is rolled back automatically after three minutes.
@@ -111,7 +100,7 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 
 ## Pre-Launch and Post-Exit Scripts
 
-Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, and Xbox launches alike. Use it for anything TrayTrigger doesn't do itself.
+Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
 
 **Five real ones ship with the app**, written to be read, copied, and changed:
 
@@ -147,7 +136,7 @@ Scripts are off by default. Nothing runs until you enable them and choose one. S
 
 - **Launch arguments** per game, passed exactly as typed.
 - **Run as Administrator** per game.
-- **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, or the Xbox app shut down once the session ends, so they don't stay resident with their overlays and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows.
+- **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, the Xbox app, or Battle.net shut down once the session ends, so they don't stay resident with their overlays and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows.
 - **Global hotkey** to open the library, and per-game hotkeys to launch.
 - **One-click launch from the tray menu**: Recent, Favorites, and Categories, no window to open.
 
@@ -155,7 +144,7 @@ Scripts are off by default. Nothing runs until you enable them and choose one. S
 
 ## Verified and Reversible Windows Gaming Tweaks
 
-System-wide settings, separate from the per-game profiles. 21 documented Windows gaming settings, each toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
+System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a Core Isolation status readout, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
 <!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Reset Defaults) -->
 
@@ -174,10 +163,10 @@ Each link goes to the wiki page with what the tweak changes, the exact registry 
 
 ## Your Library
 
-The launcher part, so the session part has something to run.
+The launcher part, so the session part has something to run. A dark, Fluent-style interface built to look at home on Windows 11: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon.
 
-- **Steam, GOG, EA, Epic, Ubisoft Connect, and Xbox / PC Game Pass**: Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch.
-- **Artwork and metadata**: Steam's official metadata (description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB. Optional RAWG info for games that aren't on Steam (Game Pass, Epic exclusives), with a per-game Steam | RAWG switch. Both need your own free API key and are off until you add one.
+- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net**: Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch.
+- **Artwork and metadata**: Steam's official metadata (description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB. Optional RAWG info for games that aren't on Steam (Game Pass, Epic exclusives, Battle.net games like Hearthstone and StarCraft II), with a per-game Steam | RAWG switch. Both need your own free API key and are off until you add one.
 - **Three views**: poster grid, large icons, detailed list. Poster cards zoom on hover.
 - **Filters**: by launcher, performance profile, and state (never played, favorite, missing executable, has a hotkey, has scripts, runs elevated).
 - **Favorites and categories**: favorites pin to the top of the tray menu; the rest goes into custom categories or a flat list.
@@ -216,7 +205,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.4.1-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.4.2-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signed releases (see [Code signing](#code-signing)) also show a valid publisher in the file's Properties → Digital Signatures tab.
 
@@ -229,10 +218,10 @@ Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signe
 ## FAQ
 
 **Why do I need this if I already have Steam?**
-Steam launches Steam games. It doesn't change your power plan for one game and put it back after, pause your wallpaper, start your replay buffer, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam.
+Steam's job ends when the game is running. TrayTrigger handles what happens around that, for every game from every store, and it still launches Steam games through Steam. See [Why not just Steam?](#why-not-just-steam) above.
 
-**Why not Playnite?**
-Playnite is a library manager: a big window, themes, and a plugin ecosystem. TrayTrigger is a tray icon that manages the game session. If you want a full-screen library, use Playnite for that and TrayTrigger for the launch. They don't conflict.
+**Does it work alongside other launchers and library apps?**
+Yes. TrayTrigger launches each game through its own client and changes nothing about how those clients work. Run whatever front end you like; TrayTrigger manages the session around the launch.
 
 **Is it safe? What does it touch?**
 Only what you explicitly turn on. Every tweak records the state it found and restores exactly that, including after a crash. Bulk changes can create a System Restore point first. Scripts are off until you enable them and choose one, and they run as you. See [SECURITY.md](SECURITY.md) for the full breakdown.
@@ -254,7 +243,7 @@ Every tweak, profile option, script feature, and library setting has a page at t
 
 ## Tech Stack
 
-- **Framework**: .NET 10.0 (WPF) with C# 13
+- **Framework**: .NET 10.0 (WPF) with C# 14
 - **Tray Icon**: `H.NotifyIcon.Wpf`
 - **WMI & Hardware**: `System.Management`
 - **Serialization**: `System.Text.Json` Source Generation (`AppJsonContext`)

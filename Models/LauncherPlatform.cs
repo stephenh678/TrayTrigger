@@ -14,5 +14,6 @@ public enum LauncherPlatform
     Ea,
     Epic,
     Ubisoft,
-    Xbox
+    Xbox,
+    BattleNet
 }

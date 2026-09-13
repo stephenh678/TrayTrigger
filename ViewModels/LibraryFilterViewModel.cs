@@ -259,6 +259,7 @@ public sealed class LibraryFilterViewModel : ViewModelBase
         (LauncherPlatform.Ea, "EA"),
         (LauncherPlatform.Ubisoft, "Ubisoft Connect"),
         (LauncherPlatform.Xbox, "Xbox"),
+        (LauncherPlatform.BattleNet, "Battle.net"),
     ];
 
     /// <summary>
@@ -275,6 +276,7 @@ public sealed class LibraryFilterViewModel : ViewModelBase
         if (game.IsEaGame) return LauncherPlatform.Ea;
         if (game.IsUbisoftGame) return LauncherPlatform.Ubisoft;
         if (game.IsXboxGame) return LauncherPlatform.Xbox;
+        if (game.IsBattleNetGame) return LauncherPlatform.BattleNet;
         return null;
     }
 

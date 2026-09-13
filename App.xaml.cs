@@ -42,6 +42,7 @@ public partial class App : Application
     private EpicScannerService _epicScannerService = null!;
     private UbisoftScannerService _ubisoftScannerService = null!;
     private XboxScannerService _xboxScannerService = null!;
+    private BattleNetScannerService _battleNetScannerService = null!;
     private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
     private GameScriptService? _gameScriptService;
@@ -175,9 +176,12 @@ public partial class App : Application
 #endif
 
         // Single-instance check
-        bool isScreenshot = false;
+        // "--screenshot <file>" works in every build (see App.Screenshot.cs); the rest of the
+        // capture and test modes are Debug-only. A screenshot run skips the single-instance
+        // check so it can be taken while the real app is running.
+        bool isScreenshot = IsReleaseScreenshotRequest(e.Args);
 #if DEBUG
-        isScreenshot = e.Args.Any(a => a.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
+        isScreenshot = isScreenshot || e.Args.Any(a => a.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
                                        a.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
                                        a.StartsWith("--test", StringComparison.OrdinalIgnoreCase) ||
                                        a.StartsWith("-test", StringComparison.OrdinalIgnoreCase));
@@ -256,6 +260,7 @@ public partial class App : Application
         _epicScannerService = new EpicScannerService();
         _ubisoftScannerService = new UbisoftScannerService();
         _xboxScannerService = new XboxScannerService();
+        _battleNetScannerService = new BattleNetScannerService();
         // Same live-settings provider as _gameScriptService below, rather than the convenience
         // constructor's () => storageService.LoadSettings(): that re-read and re-decrypted
         // settings.json from disk on every profile apply and restore - twice per game launch, on
@@ -277,7 +282,7 @@ public partial class App : Application
             var scriptLibrary = new ScriptLibraryService(_storageService.BaseDirectory);
             _ = Task.Run(() => scriptLibrary.EnsureInstalled());
         }
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService);
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -297,6 +302,7 @@ public partial class App : Application
             _epicScannerService,
             _ubisoftScannerService,
             _xboxScannerService,
+            _battleNetScannerService,
             _launcherService,
             _hotkeyManager,
             _startupManager,
@@ -324,6 +330,7 @@ public partial class App : Application
         ProcessDevArguments(e);
         if (_isShuttingDown) return;
 #endif
+        if (TryHandleReleaseScreenshot(e.Args)) return;
 
         // Global Hotkey Trigger
         _hotkeyManager.ManageHotkeyTriggered += OnManageHotkeyTriggered;
@@ -367,10 +374,16 @@ public partial class App : Application
         Log("Initializing Tray Icon...");
         InitializeTrayIcon();
 
-        // Apply "Always show in tray" if configured
+        // Explorer only re-reads an icon's NotifyIconSettings entry when the icon is registered,
+        // so a freshly written "always show" flag takes effect only after the icon is re-added.
+        _trayPromotionService.PromotionApplied += ReAddTrayIcon;
+
+        // Apply "Always show in tray" if configured. Windows creates the icon's settings entry a
+        // moment after the icon first appears, so on a first run (or after an update moved the
+        // exe) the first attempt lands before the entry exists: retry over the first seconds.
         if (_mainViewModel.Settings.AlwaysShowTrayIcon)
         {
-            _trayPromotionService.TrySetAlwaysShow(true, out _);
+            ApplyTrayPromotionWithRetry(attempt: 0);
         }
 
         // Show window if not started with --minimized
@@ -546,6 +559,7 @@ public partial class App : Application
                 var emptyItem = new MenuItem
                 {
                     Header = "No games in library",
+                    Style = TrayItemStyle,
                     IsEnabled = false,
                     Foreground = new SolidColorBrush(Color.FromRgb(140, 140, 150))
                 };
@@ -567,7 +581,9 @@ public partial class App : Application
                             : $"starting via {session.PlatformLabel}";
                         var sessionItem = card != null
                             ? CreateGameMenuItem(card)
-                            : new MenuItem { Header = session.Game.Name, FontWeight = FontWeights.SemiBold, FontSize = 12.5 };
+                            : new MenuItem { Header = session.Game.Name, Style = TrayItemStyle };
+                        // The one row in the menu that earns bold: it's the game you're in.
+                        sessionItem.FontWeight = FontWeights.SemiBold;
                         sessionItem.Header = $"{session.Game.Name}  ·  {elapsed}";
                         sessionItem.Command = null;
 
@@ -584,7 +600,7 @@ public partial class App : Application
                             {
                                 Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: true));
                             }
-                        }, iconBrush: new SolidColorBrush(Color.FromRgb(255, 120, 100)));
+                        }, iconBrush: (Brush)FindResource("BrushDanger"));
                         forceClose.IsEnabled = session.CanForceClose;
                         sessionItem.Items.Add(forceClose);
                         menu.Items.Add(sessionItem);
@@ -617,6 +633,7 @@ public partial class App : Application
                         menu.Items.Add(new MenuItem
                         {
                             Header = "(No recently played games)",
+                            Style = TrayItemStyle,
                             IsEnabled = false,
                             IsHitTestVisible = false,
                             FontSize = 12,
@@ -723,29 +740,12 @@ public partial class App : Application
                             var categoryMenu = new MenuItem
                             {
                                 Header = $"{group.Key} ({group.Count()})",
-                                FontSize = 12.5,
-                                FontWeight = FontWeights.Normal
+                                Style = TrayItemStyle
                             };
-
-                            var catIconBox = new Border
+                            if (_mainViewModel.Settings.ShowTrayMenuIcons)
                             {
-                                Width = 24,
-                                Height = 24,
-                                CornerRadius = new CornerRadius(4),
-                                Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)),
-                                VerticalAlignment = VerticalAlignment.Center,
-                                HorizontalAlignment = HorizontalAlignment.Center
-                            };
-                            catIconBox.Child = new TextBlock
-                            {
-                                Text = "\uED25",
-                                FontFamily = (FontFamily)FindResource("IconFont"),
-                                FontSize = 12,
-                                Foreground = (Brush)FindResource("BrushTextSecondary"),
-                                HorizontalAlignment = HorizontalAlignment.Center,
-                                VerticalAlignment = VerticalAlignment.Center
-                            };
-                            categoryMenu.Icon = catIconBox;
+                                categoryMenu.Icon = CreateTrayGlyph("\uED25");
+                            }
 
                             foreach (var card in ApplyTraySort(group))
                             {
@@ -772,11 +772,24 @@ public partial class App : Application
 
             menu.Items.Add(new Separator());
 
-            var exitBrush = new SolidColorBrush(Color.FromRgb(0xE0, 0x6C, 0x75));
+            var exitBrush = (Brush)FindResource("BrushDanger");
             var exitItem = CreateNavMenuItem("Exit TrayTrigger", "\uE7E8", ExitApplication, exitBrush, exitBrush);
             menu.Items.Add(exitItem);
 
             _trayIcon.ContextMenu = menu;
+
+            // Left-click: the window (default) or this menu. Applied here, because this is the
+            // one place that runs both at startup and whenever a tray setting changes.
+            if (_mainViewModel.Settings.TrayLeftClickOpensMenu)
+            {
+                _trayIcon.LeftClickCommand = null;
+                _trayIcon.MenuActivation = H.NotifyIcon.Core.PopupActivationMode.LeftOrRightClick;
+            }
+            else
+            {
+                _trayIcon.LeftClickCommand ??= new RelayCommand(ToggleMainWindow);
+                _trayIcon.MenuActivation = H.NotifyIcon.Core.PopupActivationMode.RightClick;
+            }
         });
     }
 
@@ -796,8 +809,7 @@ public partial class App : Application
         var item = new MenuItem
         {
             Header = header,
-            FontWeight = FontWeights.Normal,
-            FontSize = 12.5,
+            Style = TrayItemStyle,
             Command = new RelayCommand(onClick)
         };
 
@@ -806,28 +818,9 @@ public partial class App : Application
             item.Foreground = textBrush;
         }
 
-        var iconBox = new Border
-        {
-            Width = 24,
-            Height = 24,
-            CornerRadius = new CornerRadius(4),
-            Background = new SolidColorBrush(Color.FromArgb(18, 255, 255, 255)),
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-
-        var glyph = new TextBlock
-        {
-            Text = iconGlyph,
-            FontFamily = (FontFamily)FindResource("IconFont"),
-            FontSize = 12,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = iconBrush ?? (Brush)FindResource("BrushTextSecondary")
-        };
-
-        iconBox.Child = glyph;
-        item.Icon = iconBox;
+        // Nav glyphs stay even with game icons off: a menu with no marks at all reads as one
+        // undifferentiated list, and there are only four of them.
+        item.Icon = CreateTrayGlyph(iconGlyph, iconBrush);
         return item;
     }
 
@@ -836,50 +829,134 @@ public partial class App : Application
         var item = new MenuItem
         {
             Header = card.Name,
-            FontWeight = FontWeights.SemiBold,
-            FontSize = 12.5,
+            Style = TrayItemStyle,
             Command = new RelayCommand(() => _mainViewModel.LaunchGame(card))
         };
 
-        var iconBox = new Border
+        if (!_mainViewModel.Settings.ShowTrayMenuIcons)
         {
-            Width = 24,
-            Height = 24,
-            CornerRadius = new CornerRadius(4),
-            Background = new SolidColorBrush(Color.FromRgb(28, 28, 38)),
-            ClipToBounds = true,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
+            return item;
+        }
 
-        if (card.IconImage != null)
+        // The game's own icon; failing that its launcher's logo, so it still reads as "the Steam
+        // one". The generic controller is reserved for a local game with no icon - it is also the
+        // Games Library glyph, and a whole menu of it made games look like navigation.
+        var source = card.IconImage ?? GetLauncherLogo(card.Game);
+        if (source != null)
         {
             var img = new Image
             {
-                Source = card.IconImage,
-                Width = 24,
-                Height = 24,
-                Stretch = Stretch.UniformToFill
+                Source = source,
+                Width = TrayIconSize,
+                Height = TrayIconSize,
+                Stretch = Stretch.Uniform,
+                VerticalAlignment = VerticalAlignment.Center
             };
             RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-            iconBox.Child = img;
+            item.Icon = img;
         }
         else
         {
-            var fallback = new TextBlock
-            {
-                Text = "\uE7FC",
-                FontFamily = (FontFamily)FindResource("IconFont"),
-                FontSize = 12,
-                Foreground = (Brush)FindResource("BrushTextMuted"),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            iconBox.Child = fallback;
+            item.Icon = CreateTrayGlyph("\uE7FC", (Brush)FindResource("BrushTextMuted"));
         }
 
-        item.Icon = iconBox;
         return item;
+    }
+
+    // ------------------------------------------------------------------ tray menu helpers
+
+    private bool TrayCompact => _mainViewModel?.Settings.CompactTrayMenu == true;
+
+    private Style TrayItemStyle => (Style)FindResource(TrayCompact ? "TrayMenuCompactItemStyle" : "TrayMenuItemStyle");
+
+    private int TrayIconSize => TrayCompact ? 16 : 20;
+
+    /// <summary>A Segoe glyph sized to the same column as a game icon, so rows line up.</summary>
+    private TextBlock CreateTrayGlyph(string glyph, Brush? brush = null)
+    {
+        var block = new TextBlock
+        {
+            Text = glyph,
+            Style = (Style)FindResource("MenuGlyphIcon"),
+            Width = TrayIconSize,
+            FontSize = TrayCompact ? 11 : 13
+        };
+        if (brush != null) block.Foreground = brush;
+        return block;
+    }
+
+    // Decoded once per platform: the menu is rebuilt on every launch, exit and library change.
+    private readonly Dictionary<string, BitmapImage> _launcherLogoCache = new(StringComparer.Ordinal);
+
+    private BitmapImage? GetLauncherLogo(GameEntry game)
+    {
+        string? uri = LauncherLogos.PackUriFor(game);
+        if (uri == null) return null;
+        if (_launcherLogoCache.TryGetValue(uri, out var cached)) return cached;
+        try
+        {
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri(uri, UriKind.Absolute);
+            image.DecodePixelWidth = 40;
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.EndInit();
+            image.Freeze();
+            _launcherLogoCache[uri] = image;
+            return image;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("Tray", $"Launcher logo '{uri}' failed to load: {ex.Message}");
+            return null;
+        }
+    }
+
+    // ------------------------------------------------------------------ "always show in tray"
+
+    private static readonly int[] TrayPromotionRetryDelaysMs = [1000, 2000, 4000, 8000];
+
+    private void ApplyTrayPromotionWithRetry(int attempt)
+    {
+        var outcome = _trayPromotionService.TrySetAlwaysShow(true, out string message);
+        LoggingService.Info("App", $"Always show in tray (attempt {attempt + 1}): {outcome} - {message}");
+
+        if (outcome == TrayPromotionService.Outcome.NotRegisteredYet && attempt < TrayPromotionRetryDelaysMs.Length)
+        {
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(TrayPromotionRetryDelaysMs[attempt]) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (!_isShuttingDown) ApplyTrayPromotionWithRetry(attempt + 1);
+            };
+            timer.Start();
+            return;
+        }
+
+        if (_mainViewModel?.SettingsVM != null) _mainViewModel.SettingsVM.TrayPromotionStatus = message;
+    }
+
+    /// <summary>
+    /// Removes and re-adds the shell icon so Explorer looks up its NotifyIconSettings entry again.
+    /// TaskbarIcon maps its Visibility onto the shell icon, so a collapse/show round trip is a
+    /// delete and re-add without rebuilding the menu or tooltip.
+    /// </summary>
+    private void ReAddTrayIcon()
+    {
+        if (_trayIcon == null || _isShuttingDown) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                _trayIcon.Visibility = Visibility.Collapsed;
+                _trayIcon.Visibility = Visibility.Visible;
+                LoggingService.Verbose("App", "Tray icon re-added so Windows re-reads its 'always show' setting.");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("App", $"Could not re-add the tray icon: {ex.Message}");
+            }
+        });
     }
 
     public void OpenSection(NavSection section)

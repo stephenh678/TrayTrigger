@@ -56,6 +56,10 @@
         <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}"/>
         <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}"/>
         <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextMuted}"/>
+        <!-- Destructive actions: Remove from Library, Force Close, Exit. One brush for text and glyphs alike. -->
+        <SolidColorBrush x:Key="BrushDanger" Color="#E06C75"/>
+        <!-- A caution the user may override (a hotkey that shadows a common app shortcut). -->
+        <SolidColorBrush x:Key="BrushWarning" Color="#E5C07B"/>
 
         <!-- Global Font -->
         <FontFamily x:Key="AppFont">Segoe UI</FontFamily>
@@ -775,6 +779,12 @@
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ArrowGroup"/>
                                 </Grid.ColumnDefinitions>
                                 <ContentPresenter Grid.Column="0" ContentSource="Icon" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <!-- Current state for a checkable item (a profile tier, Run as Administrator). Hidden,
+                                     not collapsed, while unchecked so the siblings in a submenu keep one text column. -->
+                                <TextBlock x:Name="CheckGlyph" Grid.Column="0" Text="&#xE73E;" Margin="0,0,10,0"
+                                           FontFamily="{StaticResource IconFont}" FontSize="13" Width="20" TextAlignment="Center"
+                                           Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
                                 <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="SubmenuArrow" Grid.Column="2" Text="›" FontSize="14" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="16,0,2,0"
@@ -800,6 +810,12 @@
                             <Trigger Property="HasItems" Value="True">
                                 <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
                             </Trigger>
+                            <Trigger Property="IsCheckable" Value="True">
+                                <Setter TargetName="CheckGlyph" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
                             </Trigger>
@@ -807,6 +823,28 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- Tray menu rows. The default MenuItem padding (10,7) is sized for text-only rows; with a
+             20 px icon it made a 40 px row, taller than the in-app menus (33 px) and Windows' own
+             (32-36 px). 10,5 with a 20 px icon is 32 px. Compact drops to 26 px with 16 px icons. -->
+        <Style x:Key="TrayMenuItemStyle" TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+            <Setter Property="Padding" Value="10,5"/>
+        </Style>
+        <Style x:Key="TrayMenuCompactItemStyle" TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- A Segoe glyph in a MenuItem.Icon slot: 20 px wide so it lines up with a 20 px game icon
+             in the same column. Shared by the tray menu (built in code) and the in-app menus. -->
+        <Style x:Key="MenuGlyphIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
         </Style>
 
         <Style TargetType="Separator">

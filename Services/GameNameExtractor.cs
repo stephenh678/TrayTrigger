@@ -64,9 +64,9 @@ public static partial class GameNameExtractor
     /// folder, for every import route.
     ///
     /// This was a Settings checkbox from 1.0.0 until 1.4.1-beta.4, back when the matcher was much
-    /// weaker. It earns its keep - a folder scan of C:\Games turned up "Fatekeeper-AnkerGames",
-    /// "Mortal-Shell-Ii-AnkerGames" and "The-Blood-of-Dawnwalker-AnkerGames", where the exe's
-    /// FileDescription gave the real titles - but only for plain folder scans: every launcher
+    /// weaker. It earns its keep - a folder scan of C:\Games turned up folder names with extra
+    /// words appended to "Fatekeeper", "Mortal-Shell-Ii" and "The-Blood-of-Dawnwalker", where the
+    /// exe's FileDescription gave the real titles - but only for plain folder scans: every launcher
     /// import already carries a known name from the launcher, which wins ahead of either source.
     /// Since the folder name remains the fallback whenever the exe yields nothing useful, turning
     /// it off had no case to make, so the switch went and the behaviour stayed.
@@ -194,7 +194,7 @@ public static partial class GameNameExtractor
         LoggingService.Verbose("GameNameExtractor", $"Resolving match: localName='{localName}', knownName='{knownName}', exe='{exePath}', folderFallback='{folderFallback}', preferExe={preferExe}, minConfidence={minConfidence:F2}");
 
         if (!searchOnline)
-            return new GameResolutionResult(knownName ?? localName, null, null);
+            return Resolved(knownName ?? localName, null, null);
 
         steamSearch ??= new SteamSearchService();
 
@@ -213,7 +213,7 @@ public static partial class GameNameExtractor
                 if (knownMatch != null && knownMatch.SimilarityScore >= Math.Max(0.85, minConfidence))
                 {
                     LoggingService.Verbose("GameNameExtractor", $"Pass 0 match accepted: '{knownMatch.Name}' ({knownMatch.AppId})");
-                    return new GameResolutionResult(knownMatch.Name, knownMatch.AppId, knownMatch.ThumbnailUrl);
+                    return Resolved(knownMatch.Name, knownMatch.AppId, knownMatch.ThumbnailUrl);
                 }
             }
 
@@ -238,7 +238,7 @@ public static partial class GameNameExtractor
             if (match1 != null && match1.SimilarityScore >= Math.Max(0.85, minConfidence))
             {
                 LoggingService.Verbose("GameNameExtractor", $"Pass 1 decisive match accepted: '{match1.Name}' ({match1.AppId})");
-                return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
+                return Resolved(match1.Name, match1.AppId, match1.ThumbnailUrl);
             }
 
             // Pass 2: If Pass 1 wasn't decisive, search using cleaned meaningful folder name
@@ -260,7 +260,7 @@ public static partial class GameNameExtractor
                     if (match1 == null || match2.SimilarityScore > match1.SimilarityScore)
                     {
                         LoggingService.Verbose("GameNameExtractor", $"Pass 2 preferred over Pass 1: '{match2.Name}' ({match2.AppId})");
-                        return new GameResolutionResult(match2.Name, match2.AppId, match2.ThumbnailUrl);
+                        return Resolved(match2.Name, match2.AppId, match2.ThumbnailUrl);
                     }
                 }
             }
@@ -268,7 +268,20 @@ public static partial class GameNameExtractor
             if (match1 != null && match1.SimilarityScore >= minConfidence)
             {
                 LoggingService.Verbose("GameNameExtractor", $"Pass 1 match accepted: '{match1.Name}' ({match1.AppId})");
-                return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
+                return Resolved(match1.Name, match1.AppId, match1.ThumbnailUrl);
+            }
+
+            // Pass 3: nothing matched at all. The folder name was searched by one of the passes
+            // above (by Pass 1 when a generic exe name fell back to it), so retry it shortened.
+            if (!string.IsNullOrWhiteSpace(cleanedFolder) && !IsGenericFolder(cleanedFolder))
+            {
+                var match3 = await FindMatchForShortenedFolderNameAsync(steamSearch, cleanedFolder, minConfidence, cancellationToken).ConfigureAwait(false);
+                match3 = GuardAgainstKnownName(match3, knownName, minConfidence, "Pass 3");
+                if (match3 != null)
+                {
+                    LoggingService.Verbose("GameNameExtractor", $"Pass 3 match accepted: '{match3.Name}' ({match3.AppId})");
+                    return Resolved(match3.Name, match3.AppId, match3.ThumbnailUrl);
+                }
             }
         }
         catch (Exception ex)
@@ -279,7 +292,46 @@ public static partial class GameNameExtractor
         // Safe fallback: preserve the caller's trusted name if it gave us one, otherwise the
         // clean local guess - do not attach an incorrect SteamAppId either way.
         LoggingService.Verbose("GameNameExtractor", $"No online match reached confidence threshold {minConfidence:F2}. Preserving name='{knownName ?? localName}'.");
-        return new GameResolutionResult(knownName ?? localName, null, null);
+        return Resolved(knownName ?? localName, null, null);
+    }
+
+    /// <summary>
+    /// The result with ®, ™ and © removed from the title: Steam listings ("Overwatch®") and some
+    /// platforms' own names ("STAR WARS Jedi: Fallen Order™") carry them, and the name becomes the
+    /// game's library name. Matching already ignores them (see SteamSearchService).
+    /// </summary>
+    private static GameResolutionResult Resolved(string title, string? steamAppId, string? thumbnailUrl)
+    {
+        string cleaned = CleanMetadataTitle(title);
+        return new GameResolutionResult(cleaned.Length > 0 ? cleaned : title, steamAppId, thumbnailUrl);
+    }
+
+    private const int MaxFolderWordsDropped = 2;
+
+    /// <summary>
+    /// Folder names often end in words that aren't part of the title - a fan subtitle ("AC Black
+    /// Flag Resynced"), a site or uploader name, "Backup" - and Steam's store search returns
+    /// nothing at all for a term containing a word it doesn't recognise. Rather than keep a list
+    /// of such words, retry with the last word dropped, up to <see cref="MaxFolderWordsDropped"/>
+    /// times. A shortened term can only find a shorter title than the folder described, so it has
+    /// to clear the decisive bar instead of minConfidence: that is what stops 'Balls' (0.73
+    /// against 'Tiny Balls') or 'Steam' (0.73 against 'Steam Deck') from being accepted.
+    /// </summary>
+    private static async Task<SteamGameMatch?> FindMatchForShortenedFolderNameAsync(
+        SteamSearchService steamSearch, string folderName, double minConfidence, CancellationToken cancellationToken)
+    {
+        string[] words = folderName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        double decisive = Math.Max(0.85, minConfidence);
+
+        for (int drop = 1; drop <= MaxFolderWordsDropped && words.Length - drop >= 1; drop++)
+        {
+            string shortened = string.Join(' ', words, 0, words.Length - drop);
+            var match = await steamSearch.FindBestMatchAsync(shortened, decisive, cancellationToken).ConfigureAwait(false);
+            LoggingService.Verbose("GameNameExtractor", $"Pass 3 shortened folder candidate='{shortened}': {(match != null ? $"{match.Name} (score {match.SimilarityScore:F2})" : "None")}");
+            if (match != null) return match;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -316,6 +368,11 @@ public static partial class GameNameExtractor
     [GeneratedRegex(@"(?<=[a-z])(?=[A-Z])")]
     private static partial Regex CamelCaseBoundaryRegex();
 
+    // An acronym running into a capitalised word: 'ACBlackFlag' is "AC Black Flag", which the
+    // lower-to-upper rule alone left as "ACBlack Flag".
+    [GeneratedRegex(@"(?<=[A-Z])(?=[A-Z][a-z])")]
+    private static partial Regex AcronymBoundaryRegex();
+
     // A digit starts a new word only when a real word precedes it. Splitting at every
     // letter/digit boundary turned "R6-Extraction" into "R 6 Extraction", "P3R" into "P 3 R" and
     // "G1R" into "G 1 R" - names that match nothing, and that then became the *trusted* name the
@@ -341,7 +398,7 @@ public static partial class GameNameExtractor
     [GeneratedRegex(@"\bv?\d+(\.\d+){1,3}[a-z]?\b", RegexOptions.IgnoreCase)]
     private static partial Regex VersionRegex();
 
-    [GeneratedRegex(@"\b(x64|x86|win64|win32|repack|portable|rip|steamrip|gog|multi\d+)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(x64|x86|win64|win32)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ClutterWordRegex();
 
     public static string CleanMetadataTitle(string? title)
@@ -405,6 +462,7 @@ public static partial class GameNameExtractor
 
         // Split CamelCase / PascalCase and number boundaries
         stem = CamelCaseBoundaryRegex().Replace(stem, " ");
+        stem = AcronymBoundaryRegex().Replace(stem, " ");
         stem = LetterNumberBoundaryRegex().Replace(stem, " ");
         stem = NumberLetterBoundaryRegex().Replace(stem, " ");
 
@@ -424,7 +482,7 @@ public static partial class GameNameExtractor
     }
 
     /// <summary>
-    /// Cleans folder names by removing release tags, repackers, editions, versions, and correcting common typos.
+    /// Cleans folder names by removing store names, editions, versions, and correcting common typos.
     /// </summary>
     public static string CleanFolderName(string folderPathOrName)
     {
@@ -441,26 +499,23 @@ public static partial class GameNameExtractor
             cleaned = Regex.Replace(cleaned, pattern, correction, RegexOptions.IgnoreCase);
         }
 
-        // 2. Strip bracketed & parenthesized annotations like [FitGirl Repack], [DODI], (MULTi12), etc.
+        // 2. Strip bracketed & parenthesized annotations like [x64], (2023), etc.
         cleaned = BracketedAnnotationsRegex().Replace(cleaned, " ");
         cleaned = ParenthesesAnnotationsRegex().Replace(cleaned, " ");
 
-        // 3. Strip known release group / repack tags
-        foreach (var grp in TitleHeuristics.ReleaseGroups)
-        {
-            cleaned = Regex.Replace(cleaned, $@"(?:^|[-_.\s])+{Regex.Escape(grp)}(?:[-_.\s]|$)+", " ", RegexOptions.IgnoreCase);
-        }
-
-        // 4. Strip edition tags
+        // 3. Strip edition tags
         foreach (var ed in TitleHeuristics.EditionPhrases)
         {
             cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", " ", RegexOptions.IgnoreCase);
         }
 
-        // 5. Strip build and version tags
+        // 4. Strip build and version tags
         cleaned = BuildRegex().Replace(cleaned, " ");
         cleaned = VersionRegex().Replace(cleaned, " ");
         cleaned = ClutterWordRegex().Replace(cleaned, " ");
+
+        // 5. Strip a trailing store name ("Portal.2.Steam"), never the word inside a title
+        cleaned = TitleHeuristics.TrailingStoreNameRegex.Replace(cleaned, " ");
 
         // 6. Replace separators with space
         cleaned = cleaned.Replace('_', ' ').Replace('-', ' ').Replace('.', ' ');
@@ -492,9 +547,21 @@ public static partial class GameNameExtractor
                 try
                 {
                     var dir = new DirectoryInfo(candidate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    bool passedBinaries = false;
                     while (dir != null && IsGenericFolder(dir.Name))
                     {
+                        passedBinaries |= dir.Name.Equals("Binaries", StringComparison.OrdinalIgnoreCase);
                         dir = dir.Parent;
+                    }
+
+                    // A packaged Unreal game is <Title>\<Project>\Binaries\Win64, with <Title>\Engine
+                    // beside the project. The project folder is an internal code name - 'G1R',
+                    // 'P3R', 'BendGame' - so the install folder above it is the title to search.
+                    if (passedBinaries && dir?.Parent is { } installRoot &&
+                        !IsLibraryFolder(installRoot.Name) &&
+                        Directory.Exists(Path.Combine(installRoot.FullName, "Engine")))
+                    {
+                        dir = installRoot;
                     }
 
                     if (dir != null && !IsGenericFolder(dir.Name) && !IsLibraryFolder(dir.Name))
