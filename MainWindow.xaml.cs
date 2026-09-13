@@ -385,12 +385,23 @@ public partial class MainWindow : Window
         _viewModel.Library.Filter.IsOpen = false;
 
     /// <summary>
-    /// Library-only shortcuts documented in the About page's Quick Reference: Ctrl+F jumps focus
-    /// to the search box, Escape clears an active search filter. Both are no-ops outside the
-    /// Library section so they don't steal keystrokes while e.g. editing a Settings text field.
+    /// Library shortcuts documented in the About page's Quick Reference: Ctrl+F jumps focus
+    /// to the search box, Escape clears an active search filter. Settings and About get the same
+    /// pair for their card search (<see cref="HandlePageSearchKeys"/>); everything else is a no-op
+    /// outside those sections so it doesn't steal keystrokes.
     /// </summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (_viewModel.CurrentSection == NavSection.Settings)
+        {
+            HandlePageSearchKeys(e, SettingsSearchBox);
+            return;
+        }
+        if (_viewModel.CurrentSection == NavSection.About)
+        {
+            HandlePageSearchKeys(e, AboutSearchBox);
+            return;
+        }
         if (_viewModel.CurrentSection != NavSection.Library) return;
 
         if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
@@ -423,6 +434,25 @@ public partial class MainWindow : Window
         else if (e.Key == Key.Escape && !string.IsNullOrEmpty(_viewModel.SearchText))
         {
             _viewModel.SearchText = string.Empty;
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// A page's search box beside its tabs: Ctrl+F focuses it; Escape clears the search unless
+    /// another text field has focus.
+    /// </summary>
+    private static void HandlePageSearchKeys(KeyEventArgs e, SearchBox box)
+    {
+        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            box.FocusBox();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && !string.IsNullOrEmpty(box.Text) &&
+                 (box.IsBoxFocused || Keyboard.FocusedElement is not System.Windows.Controls.TextBox))
+        {
+            box.Clear();
             e.Handled = true;
         }
     }

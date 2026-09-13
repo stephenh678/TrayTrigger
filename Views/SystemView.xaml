@@ -130,8 +130,9 @@
 
         <!-- 1. HEADER -->
         <DockPanel Grid.Row="0" Margin="0,0,0,14">
-            <!-- Right: Live Telemetry Indicator -->
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+            <!-- Right: Live Telemetry Indicator - only where the live readings are (All, Hardware Specs) -->
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                        Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" 
                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <TextBlock Text="Live Hardware Telemetry" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" 
@@ -142,7 +143,7 @@
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="System &amp; Performance" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                <TextBlock Text="Hardware specs, verified performance tweaks, and per-game performance profiles"
+                <TextBlock Text="Hardware specs, always-on performance tweaks, and per-game performance profiles"
                            FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                            FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
             </StackPanel>
@@ -369,9 +370,9 @@
                         </StackPanel>
                     </Border>
 
-                    </StackPanel>
 
-                    <!-- 8. Windows Gaming Utilities -->
+                    <!-- 8. Windows Gaming Utilities. Hidden with the spec cards while they load: alone
+                         under the "Detecting hardware…" card it read as one more spec. -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
@@ -393,6 +394,8 @@
                         </StackPanel>
                     </Border>
 
+                    </StackPanel>
+
                 </StackPanel>
 
                 <!-- ========================================================== -->
@@ -412,14 +415,16 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
+                            <TextBlock Text="&#xE9E9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="PERFORMANCE TWEAKS" FontSize="11.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                            <TextBlock Text="·  Always on, system-wide" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Preset & Optimization Overview Card -->
+                    <!-- Performance Optimization Status: preset, reset and refresh for every tweak below -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,8">
@@ -461,58 +466,66 @@
                             <!-- No badge legend here on purpose: the badges (OPTIMAL, OPT-IN, RESTART, ADMIN,
                                  RESTORE POINT) are defined in the "How tweaks work" help topic this links to. -->
                             <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
-                                <DockPanel LastChildFill="False">
+                                <!-- The link is docked before the note, so the note wraps in what's left
+                                     instead of pushing the link off the edge. -->
+                                <DockPanel LastChildFill="True">
                                     <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
                                                VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
-                                    <TextBlock Text="Documented Windows settings only - no registry cleaners. What each badge means is explained under How tweaks work."
-                                               Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="12,0,0,0"
                                             VerticalAlignment="Center" DockPanel.Dock="Right"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
+                                    <TextBlock Text="System-wide, always on until you reset them. Documented Windows settings only - no registry cleaners."
+                                               Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </Border>
                         </StackPanel>
                     </Border>
 
-                    <!-- 1. Input & Display Latency -->
+                    <!-- 1. Display & Input -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Input &amp; Display Latency" FontSize="13.5" FontWeight="SemiBold" 
+                            <TextBlock Text="Display &amp; Input" FontSize="15" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding InputAndDisplaySummary}" FontSize="11.5"
+                                       Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="How Windows presents games and reads the mouse: GPU scheduling, flip-model and VRR for windowed games, Auto HDR, pointer precision, and the accessibility shortcuts that steal focus mid-game."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding InputAndDisplayTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- 2. CPU & Thread Scheduling Priority -->
+                    <!-- 2. CPU & Scheduling Priority -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="CPU &amp; Scheduling Priority" FontSize="13.5" FontWeight="SemiBold" 
+                            <TextBlock Text="CPU &amp; Scheduling Priority" FontSize="15" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding CpuAndPowerSummary}" FontSize="11.5"
+                                       Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="How much CPU the game gets: Game Mode, the system timer, foreground scheduling, the always-on power plan, and desktop effects the compositor pays for."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding CpuAndPowerTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- 3. Network & Background Telemetry -->
+                    <!-- 3. Network & Background Activity -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Network &amp; Background Telemetry" FontSize="13.5" FontWeight="SemiBold"
+                            <TextBlock Text="Network &amp; Background Activity" FontSize="15" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding NetworkAndBackgroundSummary}" FontSize="11.5"
+                                       Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="What runs behind the game: network packet throttling and Nagle, update seeding, Game Bar capture and overlay, telemetry sweeps, and driver replacement by Windows Update."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding NetworkAndBackgroundTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- 4. Security & System Virtualization -->
+                    <!-- 4. Security (status only) -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Security &amp; Virtualization (HVCI)" FontSize="13.5" FontWeight="SemiBold" 
+                            <TextBlock Text="Security (status only)" FontSize="15" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                            <TextBlock Text="Status only. Memory Integrity is a real security boundary with a documented cost in some games - the switch stays in Windows Security."
+                            <TextBlock Text="Memory Integrity is a real security boundary with a documented cost in some games - the switch stays in Windows Security."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding SecurityAndAdvancedTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
@@ -537,19 +550,21 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
+                            <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="PERFORMANCE PROFILES" FontSize="11.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                            <TextBlock Text="·  Per game, while it runs" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
                         </StackPanel>
                     </Border>
 
+                    <!-- How profiles apply. No title: the section heading (or on its own, the tab) already
+                         says Performance Profiles. -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Performance Profiles" FontSize="13.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="Assigned per game in Edit Game. Applied at launch, reverted at exit. Changing a tweak here affects every game on that profile."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
                         </StackPanel>
@@ -558,8 +573,10 @@
                     <!-- Optimized Profile -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Optimized" FontSize="13.5" FontWeight="SemiBold"
+                            <TextBlock Text="Optimized profile" FontSize="15" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding OptimizedProfileSummary}" FontSize="11.5"
+                                       Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="Balanced tweaks that are safe to apply to any game."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding OptimizedProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
@@ -569,9 +586,11 @@
                     <!-- Aggressive Profile -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <TextBlock Text="Aggressive" FontSize="13.5" FontWeight="SemiBold"
+                            <TextBlock Text="Aggressive profile (adds to Optimized)" FontSize="15" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                            <TextBlock Text="Always applies every Optimized tweak above too - only the additional tweaks it adds on top are listed here."
+                            <TextBlock Text="{Binding AggressiveProfileSummary}" FontSize="11.5"
+                                       Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Everything in Optimized, plus the tweaks below."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding AggressiveProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
                         </StackPanel>
@@ -624,9 +643,6 @@
         <DockPanel Grid.Row="3" Margin="0,10,0,0">
             <TextBlock Text="{Binding StatusMessage}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
                        FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <TextBlock Text="Low-risk gaming optimizations" FontSize="11" Foreground="{StaticResource BrushTextMuted}"/>
-            </StackPanel>
         </DockPanel>
 
     </Grid>

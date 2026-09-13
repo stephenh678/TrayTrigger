@@ -613,6 +613,79 @@ public partial class App
                 return;
             }
 
+            // --test-settings-search-bench <out.txt> <query>: types the query into Settings' card search one
+            // letter at a time and clears it, twice (the first round pays for JIT and templates), and
+            // writes how long each keystroke took to settle - layout and highlight pass included.
+            if ((e.Args[i].Equals("--test-settings-search-bench", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-test-settings-search-bench", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetTxt = e.Args[i + 1];
+                string query = e.Args[i + 2];
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.All;
+                _mainViewModel.CurrentSection = NavSection.Settings;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+
+                var report = new System.Text.StringBuilder();
+                void Step(string text)
+                {
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    _mainViewModel.SettingsVM.SettingsSearchText = text;
+                    _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    _mainWindow.UpdateLayout();
+                    report.AppendLine($"'{text}': {watch.Elapsed.TotalMilliseconds:0} ms");
+                }
+                for (int round = 1; round <= 2; round++)
+                {
+                    report.AppendLine($"-- round {round}");
+                    for (int n = 1; n <= query.Length; n++) Step(query[..n]);
+                    Step(string.Empty);
+                }
+                System.IO.File.WriteAllText(targetTxt, report.ToString());
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-about-search <out.png> <query>: About's card search on its All tab.
+            if ((e.Args[i].Equals("--screenshot-about-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-about-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.CurrentSection = NavSection.About;
+                _mainViewModel.CurrentAboutSection = AboutSubSection.All;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                // Search once the page has been laid out, so the help topic rows it reads exist.
+                _mainViewModel.AboutSearchText = e.Args[i + 2];
+                _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-settings-search <out.png> <query>: the card search on the General tab, which
+            // only searches that tab's cards.
+            if ((e.Args[i].Equals("--screenshot-settings-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-settings-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.General;
+                _mainViewModel.SettingsVM.SettingsSearchText = e.Args[i + 2];
+                _mainViewModel.CurrentSection = NavSection.Settings;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                // Let the deferred highlight pass (and its scroll to the first match) run first.
+                _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-settings-general", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-general", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)

@@ -81,6 +81,17 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    private string _settingsSearchText = string.Empty;
+    /// <summary>
+    /// The card search beside the tabs (see Views/CardSearch). It searches the tab you're on (All
+    /// searches everything) and stays as you switch tabs, filtering each one in turn.
+    /// </summary>
+    public string SettingsSearchText
+    {
+        get => _settingsSearchText;
+        set => SetProperty(ref _settingsSearchText, value ?? string.Empty);
+    }
+
     public bool IsAllTab => SelectedTab == SettingsCategoryTab.All;
     public bool IsGeneralTab => SelectedTab == SettingsCategoryTab.General;
     public bool IsLibraryTab => SelectedTab == SettingsCategoryTab.Library;

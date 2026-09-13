@@ -1,4 +1,4 @@
-# Windows Defender Exclusion (profile)
+# Windows Defender Exclusion for Game Files (profile)
 
 ## What it changes
 

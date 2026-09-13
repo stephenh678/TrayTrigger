@@ -1,4 +1,4 @@
-# Hardware-Accelerated GPU Scheduling
+# Hardware-Accelerated GPU Scheduling (HAGS)
 
 ## What it changes
 

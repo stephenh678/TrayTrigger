@@ -1,4 +1,4 @@
-# Disable Mouse Acceleration
+# Disable Mouse Acceleration (Enhanced Pointer Precision)
 
 ## What it changes
 

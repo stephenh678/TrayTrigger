@@ -561,6 +561,23 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private string _aboutSearchText = string.Empty;
+    /// <summary>
+    /// The About page's card search (see Views/CardSearch). Like Settings' search, it searches the
+    /// selected tab and stays as you switch tabs.
+    /// </summary>
+    public string AboutSearchText
+    {
+        get => _aboutSearchText;
+        set
+        {
+            value ??= string.Empty;
+            if (_aboutSearchText == value) return;
+            _aboutSearchText = value;
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsAboutAllTab => CurrentAboutSection == AboutSubSection.All;
     public bool IsAboutOverviewTab => CurrentAboutSection == AboutSubSection.Overview;
     public bool IsAboutFeaturesTab => CurrentAboutSection == AboutSubSection.Features;

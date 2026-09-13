@@ -1,4 +1,4 @@
-# Disable Fullscreen Optimization Shims
+# Disable Fullscreen Optimization Compatibility Shims
 
 ## What it changes
 

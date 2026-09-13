@@ -394,6 +394,25 @@ public class SystemViewModel : ViewModelBase
     public IEnumerable<SystemTweakViewModel> NetworkAndBackgroundTweaks => ForCategory(TweakCategory.NetworkAndBackground);
     public IEnumerable<SystemTweakViewModel> SecurityAndAdvancedTweaks => ForCategory(TweakCategory.SecurityAndAdvanced);
 
+    // The count line under each group heading ("8 tweaks · 6 optimal"), so a group reads as a group
+    // rather than as one more card. Kept current by the handlers in the constructor.
+    private string GroupSummary(TweakCategory category)
+    {
+        var tweaks = ForCategory(category).ToList();
+        return $"{Plural(tweaks.Count, "tweak")} · {tweaks.Count(t => t.IsOptimal)} optimal";
+    }
+
+    private static string ProfileSummary(IReadOnlyCollection<ProfileTweakToggleViewModel> toggles) =>
+        $"{Plural(toggles.Count, "tweak")} · {toggles.Count(t => t.IsEnabled)} enabled";
+
+    private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
+
+    public string InputAndDisplaySummary => GroupSummary(TweakCategory.InputAndDisplay);
+    public string CpuAndPowerSummary => GroupSummary(TweakCategory.CpuAndPower);
+    public string NetworkAndBackgroundSummary => GroupSummary(TweakCategory.NetworkAndBackground);
+    public string OptimizedProfileSummary => ProfileSummary(OptimizedProfileTweaks);
+    public string AggressiveProfileSummary => ProfileSummary(AggressiveProfileTweaks);
+
     // Optimal count summary
     // The score counts only the recommended set (available, toggleable, not opt-in, not
     // informational) so it reads as "how much of the preset is on", not as a nudge to enable
@@ -423,7 +442,7 @@ public class SystemViewModel : ViewModelBase
 
         return new ObservableCollection<ProfileTweakToggleViewModel>
         {
-            new("\"Ultimate Plan - TrayTrigger\" Power Plan",
+            new("\"Ultimate Plan - TrayTrigger\" Power Plan (profile)",
                 "Switches to a full-clock power plan (no core parking, no PCIe/USB power saving) while the game runs, then switches back.",
                 "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5–15ms to ramp back up and inducing 1% low frame drops when action begins. \"Ultimate Plan - TrayTrigger\" pins the CPU at 100% min/max state with aggressive boost and active cooling, and disables PCIe Link State Power Management and USB selective suspend so the GPU and input devices never stutter through a power-state transition mid-match.",
                 "profiles/power_plan",
@@ -465,7 +484,7 @@ public class SystemViewModel : ViewModelBase
 
         return new ObservableCollection<ProfileTweakToggleViewModel>
         {
-            new("System Responsiveness (MMCSS Gaming Reserve)",
+            new("System Responsiveness",
                 "Reduces the CPU reserve for lower-priority MMCSS tasks to the supported minimum.",
                 "Windows reserves 20% of CPU resources for low-priority background tasks by default. Microsoft's MMCSS documentation clamps any value below 10 back up to 20, so 10 is the lowest reserve Windows actually honors - it leaves more scheduling headroom for latency-sensitive foreground workloads like games.",
                 "profiles/system_responsiveness",
@@ -560,8 +579,9 @@ public class SystemViewModel : ViewModelBase
     public bool IsSpecsLoaded => !IsLoadingSpecs;
 
     private DateTime? _specsRefreshedAt;
-    /// <summary>"Detecting…" while loading, then "Last read 14:02:11" beside the Refresh Specs button.</summary>
-    public string SpecsRefreshedDisplay => IsLoadingSpecs ? "Detecting hardware…"
+    /// <summary>"Last read 14:02:11" beside the Refresh Specs button; empty while loading, when the
+    /// placeholder card already says "Detecting hardware…".</summary>
+    public string SpecsRefreshedDisplay => IsLoadingSpecs ? ""
         : _specsRefreshedAt is DateTime t ? $"Last read {t:HH:mm:ss}" : "";
 
     private string _statusMessage = "Ready";
@@ -614,6 +634,21 @@ public class SystemViewModel : ViewModelBase
 
         OptimizedProfileTweaks = BuildOptimizedProfileToggles(_settings.OptimizedProfileTweaks);
         AggressiveProfileTweaks = BuildAggressiveProfileToggles(_settings.AggressiveProfileTweaks);
+
+        // The group headings' count lines follow whatever they count: every path that changes a
+        // tweak's state already announces the optimization score, and every profile toggle announces
+        // its own change.
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(TweaksOptimizationScoreDisplay)) return;
+            OnPropertyChanged(nameof(InputAndDisplaySummary));
+            OnPropertyChanged(nameof(CpuAndPowerSummary));
+            OnPropertyChanged(nameof(NetworkAndBackgroundSummary));
+        };
+        foreach (var toggle in OptimizedProfileTweaks)
+            toggle.PropertyChanged += (_, _) => OnPropertyChanged(nameof(OptimizedProfileSummary));
+        foreach (var toggle in AggressiveProfileTweaks)
+            toggle.PropertyChanged += (_, _) => OnPropertyChanged(nameof(AggressiveProfileSummary));
 
         SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);

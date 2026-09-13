@@ -1,4 +1,4 @@
-# Disable Nagle's Algorithm
+# Disable Nagle's Algorithm (TCP Send Delay)
 
 ## What it changes
 

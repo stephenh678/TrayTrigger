@@ -2742,8 +2742,13 @@
                 </DockPanel>
 
                 <!-- Category Segmented Tabs -->
-                <Border Grid.Row="1" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
-                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16"
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
                         views:ScrollToTop.Target="{Binding ElementName=SettingsScroll}">
                     <StackPanel Orientation="Horizontal">
                         <Button Content="All" Command="{Binding SelectAllTabCommand}"
@@ -2760,18 +2765,25 @@
                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsDiagnosticsTab}"/>
                     </StackPanel>
                 </Border>
+                <!-- Card search (Views/CardSearch, Views/SearchBox), on every tab: it searches the selected
+                     tab and the text stays as you switch tabs (SettingsViewModel.SettingsSearchText). -->
+                <views:SearchBox x:Name="SettingsSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
+                                 Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
+                </Grid>
 
                 <!-- Settings Cards ScrollViewer -->
                 <ScrollViewer x:Name="SettingsScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14"
                               views:ScrollToTop.ResetOn="{Binding SelectedTab}">
-                    <StackPanel HorizontalAlignment="Stretch" Margin="0,0,12,0">
+                    <StackPanel x:Name="SettingsCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
+                                views:CardSearch.Query="{Binding SettingsSearchText}"
+                                views:CardSearch.Scope="{Binding SelectedTab}">
 
                         <!-- ============================================== -->
                         <!-- CATEGORY 1: GENERAL                            -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowGeneralSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -2960,7 +2972,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowLibrarySection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3315,7 +3327,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowTrayMenuSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3434,7 +3446,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowPerformanceTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3607,7 +3619,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowDiagnosticsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3736,6 +3748,18 @@
                     </StackPanel>
                 </ScrollViewer>
 
+                <!-- Card search found nothing. -->
+                <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0"
+                            Visibility="{Binding (views:CardSearch.NoMatches), ElementName=SettingsCardsPanel, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="36"
+                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                    <TextBlock Text="No settings match" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try a different word or another tab, or press Esc to clear the search."
+                               FontSize="13" Foreground="{StaticResource BrushTextSecondary}"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                </StackPanel>
+
                 <!-- Settings status line. SettingsViewModel.StatusMessage was previously bound
                      nowhere (the Library status bar is collapsed while Settings is shown), so
                      "Settings saved", "Added scan location", and the integration-toggle messages
@@ -3793,7 +3817,7 @@
 
                     <!-- Left: Title & Subtitle matching Settings -->
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="About TrayTrigger" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
+                        <TextBlock Text="About" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                                    FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                         <TextBlock Text="Application overview, key features, keyboard shortcuts, and support links" 
                                    FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
@@ -3801,9 +3825,14 @@
                     </StackPanel>
                 </DockPanel>
 
-                <!-- 2. Category Segmented Tabs -->
-                <Border Grid.Row="1" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
-                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16"
+                <!-- 2. Category Segmented Tabs, with the card search beside them -->
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
                         views:ScrollToTop.Target="{Binding ElementName=AboutScroll}">
                     <StackPanel Orientation="Horizontal">
                         <Button Content="All" Command="{Binding SelectAboutAllTabCommand}"
@@ -3818,18 +3847,25 @@
                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAboutSupportTab}"/>
                     </StackPanel>
                 </Border>
+                <!-- Card search (Views/CardSearch, Views/SearchBox), as on Settings: it searches the
+                     selected tab and the text stays as you switch tabs (MainViewModel.AboutSearchText). -->
+                <views:SearchBox x:Name="AboutSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
+                                 Text="{Binding AboutSearchText}"/>
+                </Grid>
 
                 <!-- 3. About Content ScrollViewer -->
                 <ScrollViewer x:Name="AboutScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14"
                               views:ScrollToTop.ResetOn="{Binding CurrentAboutSection}">
-                    <StackPanel HorizontalAlignment="Stretch" Margin="0,0,12,0">
+                    <StackPanel x:Name="AboutCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
+                                views:CardSearch.Query="{Binding AboutSearchText}"
+                                views:CardSearch.Scope="{Binding CurrentAboutSection}">
 
                         <!-- ============================================== -->
                         <!-- CATEGORY 1: APPLICATION OVERVIEW               -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutOverviewSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3930,7 +3966,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutFeaturesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -4082,7 +4118,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutShortcutsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -4207,7 +4243,7 @@
                                                         <TextBlock Text="F" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
                                                     </Border>
                                                 </StackPanel>
-                                                <TextBlock Text="Focus the search input bar in the Games Library" 
+                                                <TextBlock Text="Focus the search box in the Games Library, Settings or About"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                                             </DockPanel>
 
@@ -4218,7 +4254,7 @@
                                                         <TextBlock Text="Esc" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                                     </Border>
                                                 </StackPanel>
-                                                <TextBlock Text="Clear active search filter and restore all games" 
+                                                <TextBlock Text="Clear the search and show everything again"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                                             </DockPanel>
                                         </StackPanel>
@@ -4232,7 +4268,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutSupportSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -4356,6 +4392,18 @@
 
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- Card search found nothing. -->
+                <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0"
+                            Visibility="{Binding (views:CardSearch.NoMatches), ElementName=AboutCardsPanel, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="36"
+                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                    <TextBlock Text="No matches" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try a different word or another tab, or press Esc to clear the search."
+                               FontSize="13" Foreground="{StaticResource BrushTextSecondary}"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                </StackPanel>
             </Grid>
 
             <!-- ========================================================== -->
