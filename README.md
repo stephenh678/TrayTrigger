@@ -41,14 +41,14 @@
 </p>
 
 <p align="center">
-  <img src="Assets/LauncherLogos/steam.png" width="44" alt="Steam" title="Steam">&nbsp;&nbsp;
-  <img src="Assets/LauncherLogos/epic_games.png" width="44" alt="Epic Games" title="Epic Games">&nbsp;&nbsp;
-  <img src="Assets/LauncherLogos/gog_galaxy.png" width="44" alt="GOG Galaxy" title="GOG Galaxy">&nbsp;&nbsp;
-  <img src="Assets/LauncherLogos/ea_app.png" width="44" alt="EA app" title="EA app">&nbsp;&nbsp;
-  <img src="Assets/LauncherLogos/ubisoft_connect.png" width="44" alt="Ubisoft Connect" title="Ubisoft Connect">&nbsp;&nbsp;
-  <img src="Assets/LauncherLogos/xbox.png" width="44" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">&nbsp;&nbsp;
-  <img src="Assets/LauncherLogos/battlenet.png" width="44" alt="Battle.net" title="Battle.net">&nbsp;&nbsp;
-  <img src="Assets/LauncherLogos/local_games.png" width="44" alt="Local games" title="Any executable or shortcut">
+  <img src="Assets/LauncherLogos/steam.png" height="40" alt="Steam" title="Steam">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/epic_games.png" height="40" alt="Epic Games" title="Epic Games">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/gog_galaxy.png" height="40" alt="GOG Galaxy" title="GOG Galaxy">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/ea_app.png" height="40" alt="EA app" title="EA app">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/ubisoft_connect.png" height="40" alt="Ubisoft Connect" title="Ubisoft Connect">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/xbox.png" height="40" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/battlenet.png" height="40" alt="Battle.net" title="Battle.net">&nbsp;&nbsp;
+  <img src="Assets/LauncherLogos/local_games.png" height="40" alt="Local games" title="Any executable or shortcut">
   <br>
   <sub>Scans all seven, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></sub>
 </p>
