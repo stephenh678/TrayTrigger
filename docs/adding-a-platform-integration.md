@@ -247,7 +247,7 @@ Open (not tested):
 |---|---|
 | `BattleNetScannerService` | Reads uninstall entries (32- and 64-bit views) whose `UninstallString` is Blizzard's uninstaller with `--uid=`; skips uid `battle.net`. Exe = `DisplayIcon` when it exists under the install folder, else `ScanFolder`. Every scan reads the catalog and refreshes the saved code map |
 | `BattleNetCatalog` | Merges every cache file, maps uid → owning product `id`, keeps the id's case, refuses a uid claimed by two ids, validates ids (`[A-Za-z0-9_-]`) before they can reach a command line |
-| `BattleNetCodeStore` | `%APPDATA%\TrayTrigger\battlenet-codes.json`: add/update only, never delete; written only when something changed |
+| `BattleNetCodeStore` | `%APPDATA%\TrayTrigger\battlenet-codes.json`: add/update only, never delete; written only when something changed. `Installed` (uid → display name, from this machine's uninstall entries) sits above `Codes` (uid → program ID, Blizzard's whole catalog), so a person can find the one line that matters to them |
 | `GameEntry` | `IsBattleNetGame`, `BattleNetUid` (identity), `BattleNetProgramId` (saved launch code) |
 | `ProcessLauncherService.LaunchBattleNetGame` | Saved code → otherwise catalog, then saved map, then start the client and re-ask for 20 s → otherwise `focus play` + tray notice. Sends `--exec="launch <code>"` now and every 3 s until a non-helper process is under the install folder, for up to 90 s; then re-checks the catalog once (a different code is saved and gets a fresh 90 s), else `focus play` + tray notice. `TrackInstallDirSession` runs alongside, unchanged |
 | Close launcher | `Battle.net` process only; the Agent is left alone |

@@ -232,7 +232,7 @@ public partial class ProcessLauncherService
 
             string? installDir = session.Route == LaunchRoute.Steam
                 ? (UrlProtocolHelper.IsValidSteamAppId(session.Game.SteamAppId) ? _steamScannerService.FindInstallDirForAppId(session.Game.SteamAppId!) : null)
-                : ResolveInstallDir(session.Game);
+                : ResolveTrackedInstallDir(session.Game);
             if (string.IsNullOrWhiteSpace(installDir)) return;
 
             string normalized = ProcessPathResolver.NormalizeDirectory(installDir);
@@ -1140,6 +1140,17 @@ public partial class ProcessLauncherService
             : (Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
 
     /// <summary>
+    /// The folder a session's processes are watched (and force-closed) under. For a Battle.net
+    /// game that is the folder Blizzard's uninstall entry records now - a "Move install" leaves the
+    /// saved entry pointing at the old place - falling back to <see cref="ResolveInstallDir"/>.
+    /// Launch and force-close must agree on this, or a kill by folder looks in the wrong one.
+    /// </summary>
+    private string ResolveTrackedInstallDir(GameEntry game) =>
+        game.IsBattleNetGame
+            ? _battleNetScannerService.FindInstallDir(game.BattleNetUid) ?? ResolveInstallDir(game)
+            : ResolveInstallDir(game);
+
+    /// <summary>
     /// If a (non-helper) process is already running under the game's install directory, brings
     /// its window to the foreground and returns true - callers should skip dispatching a new
     /// launch in that case. Matches by directory rather than exe name because the client-registered
@@ -1390,7 +1401,17 @@ public partial class ProcessLauncherService
         // Track the folder Battle.net records now, not the saved one: a moved install, or a Local
         // entry linked from a versioned subfolder (StarCraft II's Versions\BaseNNNNN), would
         // otherwise be watched where the game no longer runs.
-        string installDir = _battleNetScannerService.FindInstallDir(game.BattleNetUid) ?? ResolveInstallDir(game);
+        string installDir = ResolveTrackedInstallDir(game);
+        if (string.IsNullOrWhiteSpace(installDir) || !Directory.Exists(installDir))
+        {
+            // Uninstalled in Battle.net (the card never shows a Battle.net game as missing, since
+            // its exe is never run). Without this, the profile was applied, the launch command
+            // sent, and the session rolled back a moment later with nothing shown to the user.
+            errorMessage = $"\"{game.Name}\" isn't installed in Battle.net anymore - its install folder wasn't found. Reinstall it in Battle.net, then try again.";
+            LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': no install folder for Battle.net uid '{game.BattleNetUid}' (saved folder '{installDir}').");
+            return false;
+        }
+
         if (TryActivateRunningProcessUnderDirectory(game, installDir, label))
         {
             return true;

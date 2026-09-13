@@ -8,6 +8,7 @@ public class IgnoredGamePathRowViewModel : ViewModelBase
     public IgnoredGamePath Model { get; }
     public string Name => Model.Name;
     public string DisplayPath => Model.ExePath
+        ?? (Model.FolderPath != null ? $"Folder {Model.FolderPath} (and everything under it)" : null)
         ?? (Model.SteamAppId != null ? $"Steam AppId {Model.SteamAppId}" : null)
         ?? (Model.GogGameId != null ? $"GOG GameId {Model.GogGameId}" : null)
         ?? (Model.EaContentId != null ? $"EA ContentId {Model.EaContentId}" : null)

@@ -12,12 +12,19 @@ namespace TrayTrigger.Services;
 /// is always asked first. Entries are added and updated, never removed - a code that disappears
 /// from Blizzard's catalog may still launch an older install. Nothing is shipped with the app;
 /// the file fills only from the user's own Battle.net.
+///
+/// <c>Codes</c> mirrors Blizzard's whole catalog (every vendor, PTR and dev uid, several hundred
+/// of them), because a game installed later must still resolve after the cache changes. That makes
+/// it unreadable on its own, so <c>Installed</c> records the display name of every uid seen in
+/// this machine's uninstall entries - the key a person needs to find, or hand-edit, the one line
+/// that matters to them. Names come from the uninstall entries; Blizzard's catalog carries none.
 /// </summary>
 public sealed class BattleNetCodeStore
 {
     private readonly string _filePath;
     private readonly object _lock = new();
     private Dictionary<string, string>? _codes;
+    private Dictionary<string, string>? _installed;
 
     public static string DefaultFilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TrayTrigger", "battlenet-codes.json");
@@ -34,12 +41,15 @@ public sealed class BattleNetCodeStore
     {
         public int Version { get; set; } = 1;
         public DateTime UpdatedUtc { get; set; }
+        /// <summary>uid -> display name, for the games installed on this machine. Written first so the file reads top-down.</summary>
+        public Dictionary<string, string> Installed { get; set; } = new();
+        /// <summary>uid -> program ID, for every uid Blizzard's catalog lists.</summary>
         public Dictionary<string, string> Codes { get; set; } = new();
     }
 
     public int Count
     {
-        get { lock (_lock) { return Load().Count; } }
+        get { lock (_lock) { return LoadCodes().Count; } }
     }
 
     /// <summary>The saved program ID for <paramref name="uid"/>, or null.</summary>
@@ -48,7 +58,18 @@ public sealed class BattleNetCodeStore
         if (string.IsNullOrWhiteSpace(uid)) return null;
         lock (_lock)
         {
-            return Load().TryGetValue(uid, out var code) ? code : null;
+            return LoadCodes().TryGetValue(uid, out var code) ? code : null;
+        }
+    }
+
+    /// <summary>The display name recorded for an installed <paramref name="uid"/>, or null.</summary>
+    public string? GetInstalledName(string? uid)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return null;
+        lock (_lock)
+        {
+            LoadCodes();
+            return _installed!.TryGetValue(uid, out var name) ? name : null;
         }
     }
 
@@ -60,7 +81,7 @@ public sealed class BattleNetCodeStore
     {
         lock (_lock)
         {
-            var current = Load();
+            var current = LoadCodes();
             int changed = 0;
             foreach (var (uid, code) in codes)
             {
@@ -70,16 +91,43 @@ public sealed class BattleNetCodeStore
                 changed++;
             }
 
-            if (changed > 0) Save(current);
+            if (changed > 0) Save();
             return changed;
         }
     }
 
-    private Dictionary<string, string> Load()
+    /// <summary>
+    /// Records the display name of each uid found installed (from Blizzard's uninstall entries).
+    /// Like <see cref="Merge"/>: adds and updates, never removes - an uninstalled game's line is
+    /// still the one a person would look for - and writes only on change. Returns how many
+    /// names were added or updated.
+    /// </summary>
+    public int RememberInstalled(IEnumerable<(string Uid, string Name)> installed)
+    {
+        lock (_lock)
+        {
+            LoadCodes();
+            int changed = 0;
+            foreach (var (uid, name) in installed)
+            {
+                if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(name)) continue;
+                if (_installed!.TryGetValue(uid, out var existing) && string.Equals(existing, name, StringComparison.Ordinal)) continue;
+                _installed[uid] = name;
+                changed++;
+            }
+
+            if (changed > 0) Save();
+            return changed;
+        }
+    }
+
+    /// <summary>Loads both maps on first use; returns the code map. Callers hold <see cref="_lock"/>.</summary>
+    private Dictionary<string, string> LoadCodes()
     {
         if (_codes != null) return _codes;
 
         _codes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        _installed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
             if (File.Exists(_filePath))
@@ -90,6 +138,13 @@ public sealed class BattleNetCodeStore
                     foreach (var (uid, code) in model.Codes)
                     {
                         if (!string.IsNullOrWhiteSpace(uid) && BattleNetCatalog.IsValidProgramId(code)) _codes[uid] = code;
+                    }
+                }
+                if (model?.Installed != null)
+                {
+                    foreach (var (uid, name) in model.Installed)
+                    {
+                        if (!string.IsNullOrWhiteSpace(uid) && !string.IsNullOrWhiteSpace(name)) _installed[uid] = name;
                     }
                 }
             }
@@ -103,14 +158,20 @@ public sealed class BattleNetCodeStore
         return _codes;
     }
 
-    private void Save(Dictionary<string, string> codes)
+    /// <summary>Writes both maps. Callers hold <see cref="_lock"/> and have loaded.</summary>
+    private void Save()
     {
         try
         {
             string? dir = Path.GetDirectoryName(_filePath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-            var model = new FileModel { UpdatedUtc = DateTime.UtcNow, Codes = new Dictionary<string, string>(codes, StringComparer.OrdinalIgnoreCase) };
+            var model = new FileModel
+            {
+                UpdatedUtc = DateTime.UtcNow,
+                Installed = new Dictionary<string, string>(_installed!, StringComparer.OrdinalIgnoreCase),
+                Codes = new Dictionary<string, string>(_codes!, StringComparer.OrdinalIgnoreCase)
+            };
             string tempPath = _filePath + ".tmp";
             File.WriteAllText(tempPath, JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(tempPath, _filePath, overwrite: true);

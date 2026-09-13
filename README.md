@@ -65,7 +65,7 @@
 
 ## Every launcher opens games. TrayTrigger runs the session.
 
-Steam, Playnite, and the rest stop at "the game is running." TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. All of it per game, all of it automatic, all of it reversible.
+A launcher's job ends when the game is running. TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. All of it per game, all of it automatic, all of it reversible.
 
 | When | What TrayTrigger does |
 |---|---|
@@ -74,21 +74,9 @@ Steam, Playnite, and the rest stop at "the game is running." TrayTrigger is what
 | **While playing** | Stays a tray icon. The tooltip and the tray menu's *Now Playing* section show what's running. |
 | **On exit** | Restores every setting to **exactly what it found**. Runs your **post-exit script**. Closes the launcher if you told it to. Crash-safe: if TrayTrigger or Windows dies mid-game, the snapshot is restored on next start. |
 
-### Why not just Steam? Why not Playnite?
+### Why not just Steam?
 
-| | Steam | Playnite | **TrayTrigger** |
-|---|:---:|:---:|:---:|
-| Launches games from every store | | ✅ | ✅ |
-| Per-game Windows performance profile | | | ✅ |
-| Reverts every change when the game exits | | | ✅ |
-| Your own pre-launch and post-exit scripts | | ✅ | ✅ |
-| Bundled example scripts, Test Run, per-game arguments, cancel-on-failure | | | ✅ |
-| Closes the launcher when the game exits | | | ✅ |
-| 21 documented, reversible Windows gaming tweaks | | | ✅ |
-| Lives in the tray, no window to manage | | | ✅ |
-| Full-screen library UI with a plugin ecosystem | | ✅ | |
-
-TrayTrigger isn't trying to replace Playnite's library or Steam's store. It's the layer under them.
+Steam launches Steam games. It doesn't change your power plan for one game and put it back after, pause your wallpaper, start your replay buffer, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam. It isn't a replacement for any store or launcher; it's the layer under them.
 
 ---
 
@@ -156,7 +144,7 @@ Scripts are off by default. Nothing runs until you enable them and choose one. S
 
 ## Verified and Reversible Windows Gaming Tweaks
 
-System-wide settings, separate from the per-game profiles. 21 documented Windows gaming settings, each toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
+System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a Core Isolation status readout, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
 <!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Reset Defaults) -->
 
@@ -175,7 +163,7 @@ Each link goes to the wiki page with what the tweak changes, the exact registry 
 
 ## Your Library
 
-The launcher part, so the session part has something to run.
+The launcher part, so the session part has something to run. A dark, Fluent-style interface built to look at home on Windows 11: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon.
 
 - **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net**: Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch.
 - **Artwork and metadata**: Steam's official metadata (description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB. Optional RAWG info for games that aren't on Steam (Game Pass, Epic exclusives, Battle.net games like Hearthstone and StarCraft II), with a per-game Steam | RAWG switch. Both need your own free API key and are off until you add one.
@@ -230,10 +218,10 @@ Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signe
 ## FAQ
 
 **Why do I need this if I already have Steam?**
-Steam launches Steam games. It doesn't change your power plan for one game and put it back after, pause your wallpaper, start your replay buffer, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam.
+Steam's job ends when the game is running. TrayTrigger handles what happens around that, for every game from every store, and it still launches Steam games through Steam. See [Why not just Steam?](#why-not-just-steam) above.
 
-**Why not Playnite?**
-Playnite is a library manager: a big window, themes, and a plugin ecosystem. TrayTrigger is a tray icon that manages the game session. If you want a full-screen library, use Playnite for that and TrayTrigger for the launch. They don't conflict.
+**Does it work alongside other launchers and library apps?**
+Yes. TrayTrigger launches each game through its own client and changes nothing about how those clients work. Run whatever front end you like; TrayTrigger manages the session around the launch.
 
 **Is it safe? What does it touch?**
 Only what you explicitly turn on. Every tweak records the state it found and restores exactly that, including after a crash. Bulk changes can create a System Restore point first. Scripts are off until you enable them and choose one, and they run as you. See [SECURITY.md](SECURITY.md) for the full breakdown.
@@ -255,7 +243,7 @@ Every tweak, profile option, script feature, and library setting has a page at t
 
 ## Tech Stack
 
-- **Framework**: .NET 10.0 (WPF) with C# 13
+- **Framework**: .NET 10.0 (WPF) with C# 14
 - **Tray Icon**: `H.NotifyIcon.Wpf`
 - **WMI & Hardware**: `System.Management`
 - **Serialization**: `System.Text.Json` Source Generation (`AppJsonContext`)

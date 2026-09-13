@@ -11,6 +11,8 @@
 <meta property="og:title" content="TrayTrigger: Launch. Automate. Play.">
 <meta property="og:description" content="Per-game Windows tuning and launch automation for PC gamers. Everything reverts when the game exits. Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.">
 <meta property="og:image" content="https://stephenh678.github.io/TrayTrigger/assets/social-preview.png">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
 <meta property="og:url" content="https://stephenh678.github.io/TrayTrigger/">
 <meta name="twitter:card" content="summary_large_image">
 <style>
@@ -72,6 +74,7 @@
   }
   .hero .icon { width: 96px; height: 96px; margin: 0 auto 18px; filter: drop-shadow(0 8px 28px rgba(47, 143, 255, .35)); }
   .hero h1 { font-size: clamp(40px, 6vw, 64px); margin-bottom: 6px; }
+  .accent { color: var(--accent); }
   .hero .tag { font-size: clamp(20px, 2.6vw, 26px); font-weight: 600; color: var(--accent-2); margin-bottom: 18px; }
   .hero .lead { max-width: 760px; margin: 0 auto 28px; font-size: 18px; color: var(--muted); }
   .hero .lead strong { color: var(--text); }
@@ -111,11 +114,17 @@
   .pillar { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; padding: 28px 0; }
   .pillar:nth-child(even) { direction: rtl; }
   .pillar:nth-child(even) > * { direction: ltr; }
+  .pillar.flip { direction: rtl; }
+  .pillar.flip > * { direction: ltr; }
   @media (max-width: 860px) { .pillar { grid-template-columns: 1fr; direction: ltr; } }
   .pillar ul { margin: 0; padding-left: 20px; color: var(--muted); }
   .pillar li { margin-bottom: 8px; }
   .pillar li strong { color: var(--text); }
   .shot { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.45); background: var(--panel); }
+  .shot img, header .card img { display: block; width: 100%; cursor: zoom-in; }
+  .lightbox { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(3,6,12,.9); cursor: zoom-out; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.6); }
   .kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 8px; }
   pre {
     background: #050810; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto;
@@ -129,10 +138,6 @@
   th { color: var(--dim); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
   td.c, th.c { text-align: center; }
   .yes { color: var(--ok); font-weight: 700; }
-  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-  .tbl table td:first-child { color: var(--muted); }
-  .tbl table th.tt { color: var(--accent-2); }
-  .tbl table td.tt { background: rgba(47, 143, 255, .06); }
 
   /* tweaks */
   .cat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
@@ -158,11 +163,12 @@
 
 <nav>
   <div class="wrap">
-    <a class="brand" href="#top"><img src="assets/app_icon.png" alt="">TrayTrigger</a>
+    <a class="brand" href="#top"><img src="assets/app_icon.png" alt="">Tray<span class="accent">Trigger</span></a>
     <div class="links">
       <a href="#session">How it works</a>
       <a href="#tweaks" class="hide-sm">Tweaks</a>
-      <a href="#compare" class="hide-sm">Compare</a>
+      <a href="#library" class="hide-sm">Library</a>
+      <a href="#compare" class="hide-sm">Why TrayTrigger</a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/stephenh678/TrayTrigger/wiki" class="hide-sm">Wiki</a>
       <a href="https://github.com/stephenh678/TrayTrigger">GitHub</a>
@@ -173,7 +179,7 @@
 <header class="hero" id="top">
   <div class="wrap">
     <img class="icon" src="assets/app_icon.png" alt="TrayTrigger icon">
-    <h1>TrayTrigger</h1>
+    <h1>Tray<span class="accent">Trigger</span></h1>
     <div class="tag">Launch. Automate. Play.</div>
     <p class="lead">
       Per-game Windows tuning and launch automation for PC gamers. Performance profiles, your own pre-launch and post-exit scripts, launch arguments, and launchers that close themselves.
@@ -198,7 +204,7 @@
     </div>
     <p class="dim" style="font-size:14px">Scans all seven, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></p>
 
-    <div class="card"><img src="assets/social-preview.png" alt="TrayTrigger: per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks, auto-close launchers"></div>
+    <div class="card"><img src="assets/social-preview.png" alt="TrayTrigger: Launch. Automate. Play. The games library on a monitor, ringed by the Steam, Epic, GOG, Battle.net, EA, Xbox, and Ubisoft logos"></div>
   </div>
 </header>
 
@@ -230,7 +236,22 @@
           <li>Every profile change is recorded and reverted on exit. Set it per game, or in bulk from the library.</li>
         </ul>
       </div>
-      <div class="shot"><img src="assets/about-features.png" alt="TrayTrigger feature overview"></div>
+      <div class="shot"><img src="assets/system-profiles.png" alt="Performance Profiles: the Optimized tier's tweaks with ENABLED and OPT-IN badges"></div>
+    </div>
+
+    <div class="pillar">
+      <div>
+        <div class="kicker">Launcher Control</div>
+        <h2>Launchers that get out of the way.</h2>
+        <ul>
+          <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
+          <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
+          <li><strong>Start Steam minimized</strong>: only the game appears.</li>
+          <li><strong>Run as Administrator</strong> per game, <strong>CPU core affinity</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
+          <li><strong>Hardware monitoring</strong> in the same window: live CPU and RAM load, GPU, VRAM, displays, drives, and DirectX capability, without a second app.</li>
+        </ul>
+      </div>
+      <div class="shot"><img src="assets/edit-launch.png" alt="Edit Game: the Launch card with launcher options, target, working directory, and arguments"></div>
     </div>
 
     <div class="pillar">
@@ -246,63 +267,55 @@
         <pre>:: close-discord.bat  (pre-launch)
 taskkill /IM Discord.exe /F >nul 2>&1</pre>
       </div>
-      <div class="shot"><img src="assets/library-grid.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
-    </div>
-
-    <div class="pillar">
-      <div>
-        <div class="kicker">Launcher Control</div>
-        <h2>Launchers that get out of the way.</h2>
-        <ul>
-          <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
-          <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
-          <li><strong>Start Steam minimized</strong>: only the game appears.</li>
-          <li><strong>Run as Administrator</strong> per game, <strong>CPU core affinity</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
-          <li><strong>Hardware monitoring</strong> in the same window: CPU, GPU, RAM, temperatures, without a second app.</li>
-        </ul>
-      </div>
-      <div class="shot"><img src="assets/system-hardware.png" alt="System page with hardware monitoring and Windows gaming tweaks"></div>
+      <div class="shot"><img src="assets/edit-scripts.png" alt="Edit Game: the Pre-Launch and Post-Exit Scripts card with Test Run buttons"></div>
     </div>
   </div>
 </section>
 
 <section id="tweaks">
   <div class="wrap">
-    <div class="section-head">
-      <h2>21 verified, reversible Windows gaming tweaks.</h2>
-      <p>System-wide settings, separate from per-game profiles. Each one shows Windows' <strong>real current state</strong> before you touch it, and each reverts to the exact state TrayTrigger found, not a hard-coded default. Every tweak has a wiki page that explains the trade-off honestly, because most aren't a guaranteed win for every game.</p>
+    <div class="pillar flip">
+      <div>
+        <div class="kicker">Performance Tweaks</div>
+        <h2>20 verified, reversible Windows gaming tweaks.</h2>
+        <p class="muted">System-wide settings, separate from per-game profiles. Each one shows Windows' <strong>real current state</strong> before you touch it, and each reverts to the exact state TrayTrigger found, not a hard-coded default. Every tweak has a wiki page that explains the trade-off honestly, because most aren't a guaranteed win for every game.</p>
+        <ul>
+          <li><strong>Input &amp; Display.</strong> Mouse acceleration · Sticky / Filter / Toggle Keys shortcuts · Optimizations for Windowed Games · Variable Refresh Rate for windowed games · Auto HDR · Hardware-Accelerated GPU Scheduling · Fullscreen optimizations · Multiplane Overlay</li>
+          <li><strong>CPU &amp; Scheduling.</strong> Windows Game Mode · System Timer Resolution · Foreground Priority Boost · Windows Visual Effects · "Ultimate Plan" power plan</li>
+          <li><strong>Network &amp; Background.</strong> MMCSS network throttling · Nagle's Algorithm · Delivery Optimization · Windows Update driver exclusion · Game Bar captures · Xbox Game Bar overlay · Diagnostic telemetry sweeps</li>
+          <li><strong>Security &amp; Advanced.</strong> Core Isolation / Memory Integrity: status only. Shown and linked to Windows Security, never counted as an "optimization".</li>
+          <li><strong>Apply Performance Preset</strong> turns on every recommended tweak with at most one UAC prompt. <strong>Reset Defaults</strong> reverts only what TrayTrigger changed. A System Restore point can be created before either. Full list: <a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">How Performance Tweaks work</a>.</li>
+        </ul>
+      </div>
+      <div class="shot"><img src="assets/system-tweaks.png" alt="Performance Tweaks page: recommended optimizations active, each with its real Windows state and a Revert to Default button"></div>
     </div>
-    <div class="grid grid-2">
-      <div class="cat"><h3>Input &amp; Display</h3><p>Mouse acceleration · Sticky / Filter / Toggle Keys shortcuts · Optimizations for Windowed Games · Variable Refresh Rate for windowed games · Auto HDR · Hardware-Accelerated GPU Scheduling · Fullscreen optimizations · Multiplane Overlay</p></div>
-      <div class="cat"><h3>CPU &amp; Scheduling</h3><p>Windows Game Mode · System Timer Resolution · Foreground Priority Boost · Windows Visual Effects · "Ultimate Plan" power plan</p></div>
-      <div class="cat"><h3>Network &amp; Background</h3><p>MMCSS network throttling · Nagle's Algorithm · Delivery Optimization · Windows Update driver exclusion · Game Bar captures · Xbox Game Bar overlay · Diagnostic telemetry sweeps</p></div>
-      <div class="cat"><h3>Security &amp; Advanced</h3><p>Core Isolation / Memory Integrity: status only. Shown and linked to Windows Security, never counted as an "optimization".</p></div>
+  </div>
+</section>
+
+<section id="library">
+  <div class="wrap">
+    <div class="pillar">
+      <div>
+        <div class="kicker">Your Library</div>
+        <h2>Built to look at home on Windows 11.</h2>
+        <p class="muted">A dark, Fluent-style interface: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon. The launcher part, so the session part has something to run.</p>
+        <ul>
+          <li><strong>Seven launchers, one scan.</strong> Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net games arrive with their real titles and launch through their own client. Drop any exe, shortcut, or folder for the rest.</li>
+          <li><strong>Artwork and info.</strong> Steam metadata and poster art, SteamGridDB box art and RAWG details where Steam has none, each behind your own free key.</li>
+          <li><strong>Three views</strong>: poster grid, large icons, detailed list. Filter by launcher, profile, or state; group by category; edit a whole selection at once, with undo.</li>
+          <li><strong>The tray menu.</strong> Now Playing, Recent, Favorites, and every category one right-click away, with game icons, a compact layout, and a per-game launch hotkey recorded from the keys you press.</li>
+        </ul>
+      </div>
+      <div class="shot"><img src="assets/library-grid.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
     </div>
-    <p class="muted" style="margin-top:22px"><strong>Apply Performance Preset</strong> turns on every recommended tweak with at most one UAC prompt. <strong>Reset Defaults</strong> reverts only what TrayTrigger changed. A System Restore point can be created before either. Full list with what each one changes: <a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">How Performance Tweaks work</a>.</p>
   </div>
 </section>
 
 <section id="compare">
   <div class="wrap">
     <div class="section-head">
-      <h2>Why not just Steam? Why not Playnite?</h2>
-      <p>TrayTrigger isn't trying to replace Playnite's library or Steam's store. It's the layer under them, and it launches Steam games through Steam.</p>
-    </div>
-    <div class="tbl">
-      <table>
-        <thead><tr><th></th><th class="c">Steam</th><th class="c">Playnite</th><th class="c tt">TrayTrigger</th></tr></thead>
-        <tbody>
-          <tr><td>Launches games from every store</td><td class="c"></td><td class="c yes">✓</td><td class="c tt yes">✓</td></tr>
-          <tr><td>Per-game Windows performance profile</td><td class="c"></td><td class="c"></td><td class="c tt yes">✓</td></tr>
-          <tr><td>Reverts every change when the game exits</td><td class="c"></td><td class="c"></td><td class="c tt yes">✓</td></tr>
-          <tr><td>Your own pre-launch and post-exit scripts</td><td class="c"></td><td class="c yes">✓</td><td class="c tt yes">✓</td></tr>
-          <tr><td>Bundled example scripts, Test Run, per-game arguments, cancel-on-failure</td><td class="c"></td><td class="c"></td><td class="c tt yes">✓</td></tr>
-          <tr><td>Closes the launcher when the game exits</td><td class="c"></td><td class="c"></td><td class="c tt yes">✓</td></tr>
-          <tr><td>21 documented, reversible Windows gaming tweaks</td><td class="c"></td><td class="c"></td><td class="c tt yes">✓</td></tr>
-          <tr><td>Lives in the tray, no window to manage</td><td class="c"></td><td class="c"></td><td class="c tt yes">✓</td></tr>
-          <tr><td>Full-screen library UI with a plugin ecosystem</td><td class="c"></td><td class="c yes">✓</td><td class="c tt"></td></tr>
-        </tbody>
-      </table>
+      <h2>Why not just Steam?</h2>
+      <p>Steam launches Steam games. It doesn't change your power plan for one game and put it back after, pause your wallpaper, start your replay buffer, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam. It isn't a replacement for any store or launcher; it's the layer under them.</p>
     </div>
   </div>
 </section>
@@ -343,6 +356,7 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
   </div>
 </footer>
 
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Enlarged screenshot"><img alt=""></div>
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
   fetch('https://api.github.com/repos/stephenh678/TrayTrigger/releases/latest')
@@ -359,6 +373,20 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
       if (zip) for (const id of ['dl-zip', 'dl-zip-2']) document.getElementById(id).href = zip.browser_download_url;
     })
     .catch(() => {});
+
+  // Screenshots open full size in an overlay; click anywhere or press Esc to close.
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = lightbox.querySelector('img');
+  for (const img of document.querySelectorAll('.shot img, header .card img')) {
+    img.addEventListener('click', () => {
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt;
+      lightbox.classList.add('open');
+    });
+  }
+  const closeLightbox = () => { lightbox.classList.remove('open'); lightboxImg.src = ''; };
+  lightbox.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 </script>
 </body>
 </html>

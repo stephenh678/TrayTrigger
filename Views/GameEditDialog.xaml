@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:services="clr-namespace:TrayTrigger.Services"
+        xmlns:views="clr-namespace:TrayTrigger.Views"
         mc:Ignorable="d"
         Title="Edit Game Configuration"
         Height="675" Width="820"
@@ -28,7 +29,7 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,12" VerticalAlignment="Center">
             <TextBlock Text="Edit Game Configuration" FontSize="18" FontWeight="SemiBold" 
                        Foreground="{StaticResource BrushTextPrimary}"/>
-            <TextBlock Text="Artwork, title and store link, launch path and hotkey, per-game performance profile, scripts, and launcher options"
+            <TextBlock Text="Artwork, title and store link, how the game launches, its performance profile, and its scripts"
                        FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
         </StackPanel>
 
@@ -193,11 +194,11 @@
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0">
                 <StackPanel>
 
-                    <!-- CARD 1: IDENTITY & STEAM ENRICHMENT -->
+                    <!-- CARD 1: IDENTITY & LIBRARY (title, category, hidden, store link) -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
                             BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
                         <StackPanel>
-                            <TextBlock Text="Identity &amp; Store Metadata" FontSize="12.5" FontWeight="SemiBold" 
+                            <TextBlock Text="Identity &amp; Library" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
                             <!-- Game Title -->
@@ -225,7 +226,15 @@
                             <ComboBox ItemsSource="{Binding ExistingCategories}"
                                       Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True"
-                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,12"/>
+                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,10"/>
+
+                            <!-- Hidden is a library-visibility flag like the category, so it lives here rather
+                                 than in a card of its own at the bottom. -->
+                            <CheckBox Content="Hide this game from the library"
+                                      IsChecked="{Binding IsHidden}"
+                                      Style="{StaticResource ModernCheckBox}"/>
+                            <TextBlock Text="Removed from the library grid and tray menu, but kept on record - Scan for Games and Add Folder will still recognize it and won't suggest it again. Unhide it anytime from the Library's &quot;Hidden&quot; filter tab or this game's right-click menu."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
 
                             <!-- Steam App ID Search & Linking -->
                             <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
@@ -249,17 +258,8 @@
                                                 Style="{StaticResource ModernOutlineButton}" Padding="12,4"/>
                                     </Grid>
 
-                                    <!-- Launch through Steam: offered only while the entry has no launcher
-                                         platform. Ticking it makes this a Steam-linked game and the launcher
-                                         box below takes over (with "launch this executable directly"), so
-                                         there is never more than one launch-route control on screen. -->
-                                    <StackPanel Margin="0,2,0,6" Visibility="{Binding CanOfferSteamLaunch, Converter={StaticResource BoolToVis}}">
-                                        <CheckBox Content="Launch through the Steam client (steam://rungameid/) instead of the executable"
-                                                  IsChecked="{Binding IsSteamGame}"
-                                                  Style="{StaticResource ModernCheckBox}"/>
-                                        <TextBlock Text="Only for a game installed in your Steam library - keeps Steam's overlay, cloud saves, and playtime. Leave it off for a standalone game that merely shares a Steam listing."
-                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
-                                    </StackPanel>
+                                    <!-- "Launch through the Steam client" is a route choice, so it sits at the top
+                                         of the Launch card with the other launcher options, not here. -->
 
                                     <!-- Force Apply Steam Overlay Tag Option - pointless for a game that already
                                          launches through Steam (its card carries the badge anyway). -->
@@ -275,12 +275,55 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- CARD 2: LAUNCH & FILE PATHS -->
+                    <!-- CARD 2: LAUNCH (route first, then target, folder, arguments, admin, hotkey) -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
                             BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
                         <StackPanel>
-                            <TextBlock Text="Launch Configuration &amp; Paths" FontSize="12.5" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                            <TextBlock Text="Launch" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How launching works" Margin="0,0,0,10"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/launch"/>
+
+                            <!-- The route first: which client, if any, starts this game. Everything under it
+                                 (target, folder, arguments, admin) is what TrayTrigger uses when it starts
+                                 the exe itself, so a reader learns whether that applies before reading it.
+                                 Collapsed for a plain Local game, whose card then starts at the target. -->
+                            <Border Background="#1B1B24" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="6" Padding="10,8" Margin="0,0,0,12"
+                                    Visibility="{Binding HasPlatform, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,6">
+                                        <TextBlock Text="{Binding PlatformDescription}" FontSize="11.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                        <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
+                                                Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"/>
+                                    </DockPanel>
+                                    <!-- Hidden for Xbox / Game Pass entries (a GDK exe can't run outside its package) and Battle.net
+                                         entries (the game needs the sign-in token only the client passes). -->
+                                    <StackPanel Visibility="{Binding CanOfferLaunchDirectly, Converter={StaticResource BoolToVis}}">
+                                        <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
+                                                  Style="{StaticResource ModernCheckBox}"/>
+                                        <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable below as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
+                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
+                                              Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"/>
+                                    <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. For Steam, also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears. Off by default - leave it off if you keep the client open for downloads or chat."
+                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Launch through Steam: offered only while the entry has no launcher platform and
+                                 has a Steam App ID. Ticking it makes this a Steam-linked game and the launcher
+                                 box above takes over (with "launch this executable directly"), so there is
+                                 never more than one launch-route control on screen. -->
+                            <StackPanel Margin="0,0,0,12" Visibility="{Binding CanOfferSteamLaunch, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Launch through the Steam client (steam://rungameid/) instead of the executable"
+                                          IsChecked="{Binding IsSteamGame}"
+                                          Style="{StaticResource ModernCheckBox}"/>
+                                <TextBlock Text="Only for a game installed in your Steam library - keeps Steam's overlay, cloud saves, and playtime. Leave it off for a standalone game that merely shares a Steam listing."
+                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                            </StackPanel>
 
                             <!-- Executable Path -->
                             <TextBlock Text="Executable / Shortcut Target" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
@@ -316,24 +359,37 @@
                             <TextBlock Text="{Binding ArgumentsHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
                                        TextWrapping="Wrap" Margin="0,4,0,10"/>
 
-                            <!-- Hotkey: a launch setting, so it lives with the launch path rather than
-                                 under "privileges". -->
+                            <!-- Run as Administrator lives here with the arguments: both apply only when
+                                 TrayTrigger starts the exe itself, and are ignored when a client launches
+                                 the game (see Help > How a game is launched). -->
+                            <CheckBox Content="Run as Administrator (requests elevated UAC permissions)"
+                                      IsChecked="{Binding RunAsAdmin}"
+                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,12"/>
+
+                            <!-- Hotkey: a launch setting, so it lives with the launch path. -->
                             <!-- The box is docked first so it keeps its 160px; the label then fills what is
                                  left and wraps. Docking the label first let its one-line hint claim the whole
                                  row and push the box underneath it. -->
-                            <DockPanel>
-                                <TextBox DockPanel.Dock="Right" Text="{Binding Hotkey, UpdateSourceTrigger=LostFocus}"
-                                         Style="{StaticResource ModernTextBox}" Width="160" VerticalAlignment="Center"
-                                         Margin="12,0,0,0" Tag="Ctrl+Alt+…"/>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
-                                    <TextBlock Text="Press it anywhere in Windows to launch this game (e.g. Ctrl+Alt+D, F10). Leave blank for none." FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </DockPanel>
+                            <StackPanel>
+                                <DockPanel>
+                                    <!-- Recorded from real key presses, and refused on the spot if another game, the
+                                         window hotkey, or another app already has the combo. Its message is rendered
+                                         below, across the whole row, rather than wrapped under the 160 px box. -->
+                                    <views:HotkeyRecorderBox x:Name="LaunchHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
+                                                             ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
+                                        <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none." FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DockPanel>
+                                <TextBlock Text="{Binding Message, ElementName=LaunchHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=LaunchHotkeyBox}"
+                                           Visibility="{Binding HasMessage, ElementName=LaunchHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                           FontSize="10.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <!-- CARD 2a: PERFORMANCE (session-scoped tweaks) - its own card so the profile
+                    <!-- CARD 3: PERFORMANCE (session-scoped tweaks) - its own card so the profile
                          is explained where it is chosen instead of only on the System page. -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
@@ -374,12 +430,12 @@
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
                             <TextBlock FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
                                 <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}"/>
-                                <Run Text=" are hidden. Turn them on under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
+                                <Run Text=" are hidden. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
                             </TextBlock>
                         </DockPanel>
                     </Border>
 
-                    <!-- CARD 2b: PRE-LAUNCH / POST-EXIT SCRIPTS (opt-in via Settings > Launch &
+                    <!-- CARD 4: PRE-LAUNCH / POST-EXIT SCRIPTS (opt-in via Settings > Launch &
                          Performance, or always shown for a game that already has a script) -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
@@ -458,7 +514,7 @@
 
                             <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10"
                                     Visibility="{Binding ShowScriptsDisabledNotice, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Game scripts are turned off in Settings › Launch &amp; Performance, so these scripts will NOT run until that switch is back on."
+                                <TextBlock Text="Scripts are turned off in Settings › Launch &amp; Performance (Enable scripts), so these will NOT run until that switch is back on."
                                            FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
                             </Border>
 
@@ -513,67 +569,6 @@
                                         Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="{x:Static services:HelpCommands.ScriptCatalogUrl}"
                                         ToolTip="Opens the TrayTrigger-Scripts catalog on GitHub in your browser. Scripts there are reviewed before listing; read one before you attach it."/>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- CARD 3: PRIVILEGES & LAUNCHER -->
-                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
-                        <StackPanel>
-                            <TextBlock Text="Privileges &amp; Launcher" FontSize="12.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
-
-                            <!-- Run As Admin -->
-                            <CheckBox Content="Run as Administrator (requests elevated UAC permissions)" 
-                                      IsChecked="{Binding RunAsAdmin}" 
-                                      Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"/>
-
-                            <!-- Launcher platform (GOG / EA / Epic / Ubisoft / Steam): where the entry came
-                                 from, the option to bypass the client so an edited exe actually runs, and
-                                 a way out of the platform tag entirely. Hidden for plain Local games. -->
-                            <Border Background="#1B1B24" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
-                                    CornerRadius="6" Padding="10,8" Margin="0,2,0,2"
-                                    Visibility="{Binding HasPlatform, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <DockPanel LastChildFill="False" Margin="0,0,0,6">
-                                        <TextBlock Text="{Binding PlatformDescription}" FontSize="11.5" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                        <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
-                                                Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"/>
-                                    </DockPanel>
-                                    <!-- Hidden for Xbox / Game Pass entries (a GDK exe can't run outside its package) and Battle.net
-                                         entries (the game needs the sign-in token only the client passes). -->
-                                    <StackPanel Visibility="{Binding CanOfferLaunchDirectly, Converter={StaticResource BoolToVis}}">
-                                        <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
-                                                  Style="{StaticResource ModernCheckBox}"/>
-                                        <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable above as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
-                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
-                                    </StackPanel>
-                                    <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
-                                              Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"/>
-                                    <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. For Steam, also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears. Off by default - leave it off if you keep the client open for downloads or chat."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
-                                </StackPanel>
-                            </Border>
-                            <!-- The old standalone "Launch via Steam Client protocol" checkbox lived here.
-                                 It duplicated the launcher box's "launch this executable directly" with the
-                                 opposite polarity; the option now sits in the Steam App ID box (card 1)
-                                 and only while the game has no launcher platform. -->
-                        </StackPanel>
-                    </Border>
-
-                    <!-- CARD 4: HIDDEN -->
-                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
-                            BorderThickness="1" CornerRadius="8" Padding="14">
-                        <StackPanel>
-                            <TextBlock Text="Hidden" FontSize="12.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
-
-                            <CheckBox Content="Hide this game from the library"
-                                      IsChecked="{Binding IsHidden}"
-                                      Style="{StaticResource ModernCheckBox}"/>
-                            <TextBlock Text="Removed from the library grid and tray menu, but kept on record - Scan for Games and Add Folder will still recognize it and won't suggest it again. Unhide it anytime from the Library's &quot;Hidden&quot; filter tab or this game's right-click menu."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                         </StackPanel>
                     </Border>
 

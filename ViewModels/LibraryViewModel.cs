@@ -368,6 +368,11 @@ public class LibraryViewModel : ViewModelBase
                 {
                     card.ApplyHeavyState(isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
                 }
+
+                // The tray menu was built by LoadLibrary before any icon existed, and nothing else
+                // rebuilds it until a launch or a library edit - so a user who starts minimized to
+                // the tray saw the fallback glyph on every game. Its only subscriber is that rebuild.
+                NotifyLibraryUpdated();
             });
         });
     }
@@ -581,12 +586,10 @@ public class LibraryViewModel : ViewModelBase
     public bool BatchCpuAffinityIsDefault => BatchCpuAffinity == CpuAffinityMode.Default;
     public bool BatchCpuAffinityIsPerformanceCores => BatchCpuAffinity == CpuAffinityMode.PerformanceCoresOnly;
 
-    /// <summary>Every selected game already runs elevated - the batch menu's check, and what flips its label.</summary>
+    /// <summary>Every selected game already runs elevated - the batch menu's check. Mixed selections show no check, and a click turns every game on.</summary>
     public bool BatchAllRunAsAdmin => HasSelection && SelectedCards.All(c => c.Game.RunAsAdmin);
-    public string BatchRunAsAdminLabel => BatchAllRunAsAdmin ? "Don't Run as Administrator" : "Run as Administrator";
     /// <summary>Every selected game already closes its launcher on exit.</summary>
     public bool BatchAllCloseLauncher => HasSelection && SelectedCards.All(c => c.Game.CloseLauncherOnExit);
-    public string BatchCloseLauncherLabel => BatchAllCloseLauncher ? "Leave Launcher Running After Exit" : "Close Launcher After Game Exits";
 
     private void NotifySelectionChanged()
     {
@@ -606,9 +609,7 @@ public class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(BatchCpuAffinityIsDefault));
         OnPropertyChanged(nameof(BatchCpuAffinityIsPerformanceCores));
         OnPropertyChanged(nameof(BatchAllRunAsAdmin));
-        OnPropertyChanged(nameof(BatchRunAsAdminLabel));
         OnPropertyChanged(nameof(BatchAllCloseLauncher));
-        OnPropertyChanged(nameof(BatchCloseLauncherLabel));
     }
 
     /// <summary>Same effect as picking the tier in Edit Game for each selected game. A game that

@@ -98,6 +98,11 @@ public class ImportCoordinator : ViewModelBase
         _shortcutService = shortcutService;
         _iconExtractorService = iconExtractorService;
         _folderScannerService = folderScannerService;
+        // Folders ignored in Settings are pruned by the scanner itself (never walked), for every
+        // route that uses it: Scan for Games, Add Folder, and a dropped folder. Read live, so a
+        // folder ignored a moment ago is skipped by the next scan without a restart.
+        _folderScannerService.IgnoredFolderProvider = () =>
+            _settings.IgnoredGamePaths.Where(p => !string.IsNullOrWhiteSpace(p.FolderPath)).Select(p => p.FolderPath!);
         _steamScannerService = steamScannerService;
         _gogScannerService = gogScannerService;
         _eaScannerService = eaScannerService;
@@ -1766,10 +1771,18 @@ public class ImportCoordinator : ViewModelBase
     /// game through Steam's own record, and ignoring a Steam AppId in the scan picker must also
     /// apply when the same game arrives via Add Folder.
     /// </summary>
-    private static IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates, HashSet<string> ignoredExePaths, HashSet<string> ignoredPlatformKeys)
+    private IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates, HashSet<string> ignoredExePaths, HashSet<string> ignoredPlatformKeys)
         => candidates.Where(c => c.Platform != null
             ? !ignoredPlatformKeys.Contains(PlatformKey(c.Platform))
-            : !ignoredExePaths.Contains(c.ExePath));
+            // The scanner already prunes ignored folders; this catches a candidate that reached
+            // here another way (a folder dropped or added that is itself under an ignored one).
+            : !ignoredExePaths.Contains(c.ExePath) && !IsUnderIgnoredFolder(c.ExePath));
+
+    private bool IsUnderIgnoredFolder(string exePath)
+    {
+        string? dir = Path.GetDirectoryName(exePath);
+        return !string.IsNullOrEmpty(dir) && _folderScannerService.IsIgnoredFolder(dir);
+    }
 
     private HashSet<string> BuildIgnoredExePathSet()
         => new(

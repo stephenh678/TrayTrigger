@@ -33,6 +33,10 @@ Folder scanning uses heuristics, so it can occasionally offer something that isn
 
 > Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net games can be ignored too, by their own platform ID rather than file path - useful for something registered as a "game" that isn't really one (a soundtrack, an SDK, a demo).
 
+## Ignoring a whole folder
+
+A scan location often holds folders that aren't games: Utilities, Mods, an emulator's bios folder, a benchmark. Ignoring their exes one at a time means one entry per file, redone whenever a tool renames itself. "+ Ignore a Folder" under Ignored Games keeps the scanner out of that folder and everything under it, whatever it contains later. It applies to Scan for Games, Add Folder, and a folder dropped on the window. A scan location itself can't be ignored; untick or remove it instead.
+
 ## Add Folder vs. Scan Locations
 
 The Library page's "Add Folder" button is a separate, one-off way to add games from a folder you don't want to track permanently. If it turns out to hold multiple games, you'll be offered a checkbox to also remember that folder as a Scan Location - so future scans pick up new installs there too, without a separate trip to Settings.

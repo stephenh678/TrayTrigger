@@ -1,6 +1,12 @@
 # How the tray menu works
 
-Right-clicking the TrayTrigger tray icon opens a menu built fresh from your library each time, using these preferences to decide what shows and in what order. Left-clicking the icon shows or hides the window.
+Right-clicking the TrayTrigger tray icon opens a menu built fresh from your library each time, using these preferences to decide what shows and in what order. Left-clicking the icon shows or hides the window, unless you turn on "Left-click on the tray icon opens the game menu", in which case both clicks open the menu. Double-clicking always opens the window.
+
+## Icons and size
+
+- Each game shows its own icon. A game with no icon shows its launcher's logo instead (Steam, GOG, Battle.net and so on); only a local game with no icon gets the generic controller.
+- "Show game icons in the tray menu" turns the icons off for a text-only menu.
+- "Compact tray menu" tightens the rows and shrinks the icons, so a long library fits on screen without scrolling.
 
 ## Now Playing
 

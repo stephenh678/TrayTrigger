@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -96,12 +95,7 @@ public partial class BattleNetScannerService
 
     public bool IsClientInstalled() => GetClientPath() != null;
 
-    public static bool IsClientRunning()
-    {
-        var processes = Process.GetProcessesByName(ClientProcessName);
-        try { return processes.Length > 0; }
-        finally { foreach (var p in processes) p.Dispose(); }
-    }
+    public static bool IsClientRunning() => LauncherClientCloser.IsClientRunning(Models.LauncherPlatform.BattleNet);
 
     // ------------------------------------------------------------------ discovery
 
@@ -116,6 +110,9 @@ public partial class BattleNetScannerService
                 .Where(e => !e.Uid.Equals(ClientUid, StringComparison.OrdinalIgnoreCase))
                 .ToList();
             if (installs.Count == 0) return results;
+
+            // The names next to the codes in the saved map: the only place they exist is here.
+            _codeStore.RememberInstalled(installs.Select(i => (i.Uid, i.Name)));
 
             var catalog = ReadCatalog();
             RememberCodes(catalog);

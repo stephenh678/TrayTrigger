@@ -66,14 +66,12 @@ public class BatchQuickSettingsTests : IDisposable
         SelectAll(library);
 
         Assert.False(library.BatchAllRunAsAdmin);
-        Assert.Equal("Run as Administrator", library.BatchRunAsAdminLabel);
 
         library.BatchRunAsAdminCommand.Execute(null);
 
         Assert.True(a.RunAsAdmin);
         Assert.True(b.RunAsAdmin);
         Assert.True(library.BatchAllRunAsAdmin);
-        Assert.Equal("Don't Run as Administrator", library.BatchRunAsAdminLabel);
     });
 
     [Fact]

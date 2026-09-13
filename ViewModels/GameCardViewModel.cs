@@ -236,6 +236,23 @@ public class GameCardViewModel : ViewModelBase
     public bool ShowCategoryBadge =>
         !string.Equals(Category, LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase) &&
         !string.Equals(Category, LibraryConstants.PlatformCategoryFor(Game), StringComparison.OrdinalIgnoreCase);
+    /// <summary>True while this card's right-click menu is open. The menu takes the mouse, so the
+    /// card's hover state drops the moment it opens; the views use this to keep the card
+    /// highlighted, so it stays clear which game the menu is changing. UI state only.</summary>
+    public bool IsContextMenuOpen
+    {
+        get => _isContextMenuOpen;
+        set
+        {
+            if (_isContextMenuOpen != value)
+            {
+                _isContextMenuOpen = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+    private bool _isContextMenuOpen;
+
     /// <summary>Part of the library's Ctrl/Shift+click multi-selection (see LibraryViewModel).
     /// Purely UI state - never saved.</summary>
     public bool IsSelected

@@ -27,6 +27,11 @@ public partial class MainWindow : Window
         // Not settable from XAML - it's a delegate, not a value.
         LibraryFilterPopup.CustomPopupPlacementCallback = PlaceLibraryFilterPopup;
 
+        // Both card menus are shared resources; the card they were opened on is remembered in
+        // OnCardContextMenuOpening and its highlight cleared here when the menu goes away.
+        ((System.Windows.Controls.ContextMenu)FindResource("GameItemContextMenu")).Closed += OnCardContextMenuClosed;
+        ((System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu")).Closed += OnCardContextMenuClosed;
+
         try
         {
             var iconUri = new Uri("pack://application:,,,/TrayTrigger;component/Assets/app_icon.ico", UriKind.RelativeOrAbsolute);
@@ -615,18 +620,42 @@ public partial class MainWindow : Window
     {
         if (sender is not FrameworkElement element || element.DataContext is not GameCardViewModel card) return;
 
+        // A previous card is cleared first in case a menu closed without raising Closed.
+        if (_contextMenuCard != null) _contextMenuCard.IsContextMenuOpen = false;
+        _contextMenuCard = null;
+
+        bool batch = card.IsSelected && _viewModel.SelectedCount >= 2;
+        if (!batch)
+        {
+            // Keep the card lit while its menu is open (see GameCardViewModel.IsContextMenuOpen).
+            // Not for the batch menu: the selection outline already marks every game it applies
+            // to, and zooming the one under the cursor would read as if the menu were about it alone.
+            _contextMenuCard = card;
+            card.IsContextMenuOpen = true;
+        }
+
         if (!card.IsSelected)
         {
             _viewModel.ClearSelection();
             return;
         }
-        if (_viewModel.SelectedCount < 2) return;
+        if (!batch) return;
 
         e.Handled = true;
         var menu = (System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu");
         menu.DataContext = _viewModel;
         menu.PlacementTarget = element;
         menu.IsOpen = true;
+    }
+
+    /// <summary>The card whose right-click menu is open, if any - see <see cref="OnCardContextMenuOpening"/>.</summary>
+    private GameCardViewModel? _contextMenuCard;
+
+    private void OnCardContextMenuClosed(object sender, RoutedEventArgs e)
+    {
+        if (_contextMenuCard == null) return;
+        _contextMenuCard.IsContextMenuOpen = false;
+        _contextMenuCard = null;
     }
 
     private void OnRequestBatchCategory(List<GameCardViewModel> cards)

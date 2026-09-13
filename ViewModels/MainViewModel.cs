@@ -292,18 +292,32 @@ public class MainViewModel : ViewModelBase
         {
             try
             {
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine("### TrayTrigger Environment Report");
-                sb.AppendLine($"- **App Version**: {UpdateService.CurrentVersionDisplay}");
-                sb.AppendLine($"- **OS**: {Environment.OSVersion.VersionString} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
-                sb.AppendLine($"- **Runtime**: .NET {Environment.Version}");
-                sb.AppendLine($"- **Architecture**: {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}");
-                sb.AppendLine($"- **Total Games**: {Games.Count}");
-                Clipboard.SetText(sb.ToString());
+                Clipboard.SetText(BuildDiagnosticReport());
+                Library.StatusMessage = "Diagnostic report copied to the clipboard.";
             }
             catch (Exception ex)
             {
-                LoggingService.Error("MainViewModel", "Failed to copy system info to clipboard", ex);
+                LoggingService.Error("MainViewModel", "Failed to copy the diagnostic report to the clipboard", ex);
+            }
+        });
+        SaveDiagnosticReportCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                var dialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Save Diagnostic Report",
+                    FileName = $"TrayTrigger-diagnostics-{DateTime.Now:yyyyMMdd-HHmm}.md",
+                    Filter = "Markdown (*.md)|*.md|Text (*.txt)|*.txt",
+                    DefaultExt = ".md"
+                };
+                if (FileDialogCloak.Show(dialog) != true) return;
+                System.IO.File.WriteAllText(dialog.FileName, BuildDiagnosticReport());
+                Library.StatusMessage = $"Diagnostic report saved to {dialog.FileName}";
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error("MainViewModel", "Failed to save the diagnostic report", ex);
             }
         });
         ExitApplicationCommand = new RelayCommand(PromptExitApplication);
@@ -455,6 +469,65 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenGitHubCommand { get; }
     public ICommand OpenGitHubIssuesCommand { get; }
     public ICommand CopySystemInfoCommand { get; }
+    public ICommand SaveDiagnosticReportCommand { get; }
+
+    /// <summary>
+    /// Everything a bug report needs, from the app's own state plus a machine probe - see
+    /// <see cref="DiagnosticReportService"/>. Tweak state is read live, which costs a registry
+    /// walk; fine for a button press.
+    /// </summary>
+    private string BuildDiagnosticReport()
+    {
+        var launchers = new List<DiagnosticReportService.LauncherStatus>
+        {
+            new("Steam", _settings.SteamIntegrationEnabled, Try(() => _steamScannerService.GetSteamInstallPath() != null)),
+            new("GOG Galaxy", _settings.GogIntegrationEnabled, Try(() => _gogScannerService.GetGalaxyClientPath() != null)),
+            new("EA app", _settings.EaIntegrationEnabled, Try(() => _eaScannerService.IsEaAppInstalled())),
+            new("Epic Games", _settings.EpicIntegrationEnabled, Try(() => _epicScannerService.IsEpicLauncherInstalled())),
+            new("Ubisoft Connect", _settings.UbisoftIntegrationEnabled, Try(() => _ubisoftScannerService.IsUbisoftConnectInstalled())),
+            new("Xbox / PC Game Pass", _settings.XboxIntegrationEnabled, null),
+            new("Battle.net", _settings.BattleNetIntegrationEnabled, Try(() => _battleNetScannerService.IsClientInstalled())),
+        };
+
+        var sessions = _launcherService.GetActiveSessions()
+            .Select(s => new DiagnosticReportService.SessionStatus(s.Game.Name, s.PlatformLabel, s.GameStarted))
+            .ToList();
+
+        IReadOnlyList<string>? appliedTweaks = null;
+        try
+        {
+            appliedTweaks = _systemTweaksService.GetAllTweaks()
+                .Where(t => t.IsOptimal && !t.IsInformational)
+                .Select(t => t.Name)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("MainViewModel", $"Tweak state unavailable for the diagnostic report: {ex.Message}");
+        }
+
+        bool startedMinimized = Environment.GetCommandLineArgs().Any(a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
+
+        return DiagnosticReportService.Build(new DiagnosticReportService.Inputs
+        {
+            Settings = _settings,
+            Games = Games.Select(g => g.Game).ToList(),
+            Launchers = launchers,
+            Sessions = sessions,
+            AppliedTweaks = appliedTweaks,
+            TrayPromotionStatus = SettingsVM.TrayPromotionStatus,
+            DataDirectory = _storageService.BaseDirectory,
+            CacheDirectory = _storageService.LocalCacheDirectory,
+            LogPath = LoggingService.LogFilePath,
+            AppVersion = UpdateService.CurrentVersionDisplay,
+            StartedMinimized = startedMinimized
+        });
+
+        static bool? Try(Func<bool> probe)
+        {
+            try { return probe(); } catch { return null; }
+        }
+    }
     public ICommand CheckForUpdatesCommand => Update.CheckForUpdatesCommand;
     public ICommand ExitApplicationCommand { get; }
 
@@ -598,9 +671,7 @@ public class MainViewModel : ViewModelBase
     public ICommand BatchCloseLauncherCommand => Library.BatchCloseLauncherCommand;
     public ICommand BatchSetCpuAffinityCommand => Library.BatchSetCpuAffinityCommand;
     public bool BatchAllRunAsAdmin => Library.BatchAllRunAsAdmin;
-    public string BatchRunAsAdminLabel => Library.BatchRunAsAdminLabel;
     public bool BatchAllCloseLauncher => Library.BatchAllCloseLauncher;
-    public string BatchCloseLauncherLabel => Library.BatchCloseLauncherLabel;
     public bool BatchCpuAffinityIsDefault => Library.BatchCpuAffinityIsDefault;
     public bool BatchCpuAffinityIsPerformanceCores => Library.BatchCpuAffinityIsPerformanceCores;
 

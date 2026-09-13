@@ -53,4 +53,29 @@ public class UrlProtocolHelperTests
     {
         Assert.False(UrlProtocolHelper.IsValidSteamAppId(id));
     }
+
+    /// <summary>
+    /// The EA app registers its origin2 handler without quotes around a path full of spaces.
+    /// Only reading the quoted form reported the EA app as not installed, so EA games launched
+    /// by their own exe instead of through the client.
+    /// </summary>
+    [Theory]
+    [InlineData(@"""C:\Program Files (x86)\Steam\steam.exe"" ""%1""", @"C:\Program Files (x86)\Steam\steam.exe")]
+    [InlineData(@"C:\Program Files\Electronic Arts\EA Desktop\EA Desktop\EALauncher.exe ""%1""", @"C:\Program Files\Electronic Arts\EA Desktop\EA Desktop\EALauncher.exe")]
+    [InlineData(@"C:\Ubisoft\UbisoftConnect.EXE %1", @"C:\Ubisoft\UbisoftConnect.EXE")]
+    [InlineData(@"  ""D:\Epic\Launcher.exe""  ", @"D:\Epic\Launcher.exe")]
+    public void ParseHandlerCommand_FindsTheExeQuotedOrNot(string command, string expected)
+    {
+        Assert.Equal(expected, UrlProtocolHelper.ParseHandlerCommand(command));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\"\"")]
+    [InlineData("notepad %1")]
+    public void ParseHandlerCommand_ReturnsNullWithoutAnExe(string command)
+    {
+        Assert.Null(UrlProtocolHelper.ParseHandlerCommand(command));
+    }
 }
