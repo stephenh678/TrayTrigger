@@ -30,13 +30,13 @@ internal sealed class CountingSteamSearchService : SteamSearchService
 public class SteamSearchServiceTests
 {
     [Theory]
-    [InlineData("Cyberpunk 2077 FitGirl Repack", "Cyberpunk 2077")]
-    [InlineData("Elden Ring CODEX", "Elden Ring")]
+    [InlineData("Cyberpunk 2077 v1.63", "Cyberpunk 2077")]
+    [InlineData("Elden Ring x64", "Elden Ring")]
     [InlineData("Half-Life Deluxe Edition", "Half Life")]
     [InlineData("reamek of the fallen", "remake of the fallen")] // common misspelling correction
     [InlineData("GTA V GOG", "GTA V")]
-    [InlineData("Portal 2 Steam", "Portal 2")] // "Steam" release-group tag stripped. See L-11.
-    public void SanitizeSearchQuery_StripsReleaseGroupsAndEditionTags(string input, string expected)
+    [InlineData("Portal 2 Steam", "Portal 2")] // "Steam" store name stripped. See L-11.
+    public void SanitizeSearchQuery_StripsStoreNamesVersionsAndEditionTags(string input, string expected)
     {
         Assert.Equal(expected, SteamSearchService.SanitizeSearchQuery(input));
     }
@@ -173,6 +173,7 @@ public class SteamSearchServiceTests
     [InlineData("Gothic 1 reamek", "Gothic 1 Remake")]          // typo, numbers agree
     [InlineData("Civilization VI", "Civilization 6")]           // roman numeral normalisation
     [InlineData("Resident Evil 4 (2023)", "Resident Evil 4")]   // extra number on one side only
+    [InlineData("BALLxPIT", "BALL x PIT")]                      // same letters, spacing differs
     public void CalculateSimilarity_SameGame_ScoresAtOrAboveDefaultConfidence(string query, string candidate)
     {
         double score = SteamSearchService.CalculateSimilarity(query, candidate);

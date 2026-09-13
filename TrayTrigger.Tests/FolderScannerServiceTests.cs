@@ -88,6 +88,22 @@ public class FolderScannerServiceTests : IDisposable
         Assert.Equal(2, result.DiscoveredGames.Count);
     }
 
+    /// <summary>
+    /// Dylan's C:\Games\Steam is the Steam client, not a game: steam.exe was offered for import
+    /// and matched online as "Steam Deck".
+    /// </summary>
+    [Fact]
+    public void ScanKnownLibraryLocation_SteamClientInstall_IsNotScanned()
+    {
+        CreateGameFolder("Fatekeeper", "Fatekeeper.exe");
+        string steam = CreateGameFolder("Steam", "steam.exe");
+        Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
+
+        var results = new FolderScannerService().ScanKnownLibraryLocation(_tempDir);
+
+        Assert.Equal("Fatekeeper", Assert.Single(results).Name);
+    }
+
     [Fact]
     public void IsDisqualified_TinyStub_IsDisqualified()
     {

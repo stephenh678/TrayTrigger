@@ -232,7 +232,7 @@ public partial class FolderScannerService
         // library imported exactly one game. Any child that is itself named like a library
         // container is replaced by its own children (repeatedly, bounded), so the per-subfolder
         // game detection below runs against the real game folders.
-        subdirs = ExpandLibraryContainers(subdirs);
+        subdirs = ExpandLibraryContainers(subdirs).Where(d => !IsSteamClientInstall(d)).ToList();
 
         var detectedSubGames = new List<GameCandidate>();
 
@@ -294,7 +294,7 @@ public partial class FolderScannerService
         try
         {
             subdirs = Directory.GetDirectories(folderPath)
-                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)))
+                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)) && !IsSteamClientInstall(d))
                 .ToList();
         }
         catch (Exception ex)
@@ -595,6 +595,21 @@ public partial class FolderScannerService
             if (!expandedAny) break;
         }
         return current;
+    }
+
+    /// <summary>
+    /// The Steam client's own install folder, not a game. Installed under a scan location - Dylan's
+    /// is C:\Games\Steam - it was scanned like any other subfolder: steam.exe scored 150, came
+    /// back as the folder's "game", and online matching named it "Steam Deck". Its games are
+    /// imported by SteamScannerService already, so there is nothing here for a folder scan to add.
+    /// </summary>
+    internal static bool IsSteamClientInstall(string dir)
+    {
+        if (!File.Exists(Path.Combine(dir, "steam.exe")) || !Directory.Exists(Path.Combine(dir, "steamapps")))
+            return false;
+
+        LoggingService.Verbose("FolderScanner", $"Skipped Steam client install folder: '{dir}'");
+        return true;
     }
 
     private static bool ShouldPruneDirectory(string dirName)

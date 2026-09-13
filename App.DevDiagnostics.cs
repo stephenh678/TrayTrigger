@@ -117,17 +117,17 @@ public partial class App
                 var resGothic = GameNameExtractor.ResolveGameMatchAsync(gothicExe, gothicFolder, preferExe: true, searchOnline: true, steamSearch: steam).GetAwaiter().GetResult();
                 Console.WriteLine($"[TEST 1 - Gothic 1 reamek] Title: \"{resGothic.ResolvedTitle}\" | SteamAppId: {resGothic.SteamAppId ?? "NULL"}");
 
-                // Test 2: Release group clutter AnkerGames
-                string dawnExe = @"C:\Games\The-Blood-of-Dawnwalker-AnkerGames\The Blood of Dawnwalker\Dawnwalker\Binaries\Win64\Dawnwalker.exe";
-                string dawnFolder = "The-Blood-of-Dawnwalker-AnkerGames";
+                // Test 2: Trailing non-title word in the folder name
+                string dawnExe = @"C:\Games\The-Blood-of-Dawnwalker-Backup\The Blood of Dawnwalker\Dawnwalker\Binaries\Win64\Dawnwalker.exe";
+                string dawnFolder = "The-Blood-of-Dawnwalker-Backup";
                 var resDawn = GameNameExtractor.ResolveGameMatchAsync(dawnExe, dawnFolder, preferExe: true, searchOnline: true, steamSearch: steam).GetAwaiter().GetResult();
-                Console.WriteLine($"[TEST 2 - AnkerGames] Title: \"{resDawn.ResolvedTitle}\" | SteamAppId: {resDawn.SteamAppId ?? "NULL"}");
+                Console.WriteLine($"[TEST 2 - Trailing word] Title: \"{resDawn.ResolvedTitle}\" | SteamAppId: {resDawn.SteamAppId ?? "NULL"}");
 
-                // Test 3: Clutter DODI + version number
-                string hkExe = @"C:\Games\Hollow.Knight.v1.5.78.11833.GoG-DODI\hollow_knight.exe";
-                string hkFolder = "Hollow.Knight.v1.5.78.11833.GoG-DODI";
+                // Test 3: Store name + version number
+                string hkExe = @"C:\Games\Hollow.Knight.v1.5.78.11833.GoG\hollow_knight.exe";
+                string hkFolder = "Hollow.Knight.v1.5.78.11833.GoG";
                 var resHk = GameNameExtractor.ResolveGameMatchAsync(hkExe, hkFolder, preferExe: true, searchOnline: true, steamSearch: steam).GetAwaiter().GetResult();
-                Console.WriteLine($"[TEST 3 - DODI / Version] Title: \"{resHk.ResolvedTitle}\" | SteamAppId: {resHk.SteamAppId ?? "NULL"}");
+                Console.WriteLine($"[TEST 3 - Store / Version] Title: \"{resHk.ResolvedTitle}\" | SteamAppId: {resHk.SteamAppId ?? "NULL"}");
 
                 // Test 4: Unknown / non-Steam game should reject low-confidence matches and preserve clean local name
                 string fakeExe = @"C:\Games\CustomUnreleasedGame2026\CustomUnreleasedGame2026.exe";
@@ -193,8 +193,8 @@ public partial class App
             if (e.Args[i].Equals("--test-gamename", StringComparison.OrdinalIgnoreCase) ||
                 e.Args[i].Equals("-test-gamename", StringComparison.OrdinalIgnoreCase))
             {
-                string testExe = @"C:\Games\The-Blood-of-Dawnwalker-AnkerGames\The Blood of Dawnwalker\Dawnwalker\Binaries\Win64\Dawnwalker.exe";
-                string folder = "The-Blood-of-Dawnwalker-AnkerGames";
+                string testExe = @"C:\Games\The-Blood-of-Dawnwalker-Backup\The Blood of Dawnwalker\Dawnwalker\Binaries\Win64\Dawnwalker.exe";
+                string folder = "The-Blood-of-Dawnwalker-Backup";
                 string localName = GameNameExtractor.ExtractGameName(testExe, folder, preferExe: true);
                 var steamSearch = new SteamSearchService();
                 var match = steamSearch.FindBestMatchAsync(localName).GetAwaiter().GetResult();

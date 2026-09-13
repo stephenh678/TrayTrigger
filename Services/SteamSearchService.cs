@@ -85,11 +85,11 @@ public partial class SteamSearchService
     [GeneratedRegex(@"\bv?\d+(\.\d+){1,3}[a-z]?\b", RegexOptions.IgnoreCase)]
     private static partial Regex VersionNumberRegex();
 
-    [GeneratedRegex(@"\b(x64|x86|win64|win32|repack|portable|rip|steamrip)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(x64|x86|win64|win32)\b", RegexOptions.IgnoreCase)]
     private static partial Regex TechClutterRegex();
 
     /// <summary>
-    /// Sanitizes game title query by fixing common typos, stripping release groups, clutter, and edition tags.
+    /// Sanitizes game title query by fixing common typos, stripping store names, clutter, and edition tags.
     /// </summary>
     public static string SanitizeSearchQuery(string query)
     {
@@ -107,10 +107,10 @@ public partial class SteamSearchService
         cleaned = BracketClutterRegex().Replace(cleaned, " ");
         cleaned = ParenthesesClutterRegex().Replace(cleaned, " ");
 
-        // 3. Strip release groups
-        foreach (var grp in TitleHeuristics.ReleaseGroups)
+        // 3. Strip store names
+        foreach (var store in TitleHeuristics.StoreNames)
         {
-            cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(grp)}\b", "", RegexOptions.IgnoreCase);
+            cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(store)}\b", "", RegexOptions.IgnoreCase);
         }
 
         // 4. Strip edition tags (which often break Steam API search matching)
@@ -119,7 +119,7 @@ public partial class SteamSearchService
             cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", "", RegexOptions.IgnoreCase);
         }
 
-        // 5. Strip builds, version numbers, and tech architecture tags
+        // 5. Strip builds, version numbers, and architecture tags
         cleaned = BuildNumberRegex().Replace(cleaned, "");
         cleaned = VersionNumberRegex().Replace(cleaned, "");
         cleaned = TechClutterRegex().Replace(cleaned, "");
@@ -372,6 +372,12 @@ public partial class SteamSearchService
         {
             return compactQuery.Equals(compactCand, StringComparison.OrdinalIgnoreCase) ? 1.0 : 0.0;
         }
+
+        // Same letters, different spacing: a folder called 'BALLxPIT' is 'BALL x PIT', but as
+        // one token against three it scored 0.28 - so Dylan's library took the exe-stem guess
+        // 'Balls' -> 'Tiny Balls' (0.73) instead.
+        if (compactQuery.Equals(compactCand, StringComparison.OrdinalIgnoreCase))
+            return 1.0;
 
         string[] qTokens = normQuery.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries);
         string[] cTokens = normCand.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries);

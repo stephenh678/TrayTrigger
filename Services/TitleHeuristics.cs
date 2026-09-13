@@ -4,18 +4,18 @@ namespace TrayTrigger.Services;
 /// Title-cleanup tables shared by <see cref="SteamSearchService"/> (matching a local title
 /// against Steam search results) and <see cref="GameNameExtractor"/> (deriving a display name
 /// from a file/folder name). These used to be duplicated in both files and had already drifted
-/// apart (only one of the two release-group lists included "Steam"); kept in one place so a
-/// fix to one only needs to be made once. See L-11.
+/// apart (only one of the two tag lists included "Steam"); kept in one place so a fix to one
+/// only needs to be made once. See L-11.
 /// </summary>
 public static class TitleHeuristics
 {
-    public static readonly string[] ReleaseGroups =
-    [
-        "AnkerGames", "FitGirl", "DODI", "ElAmigos", "KaOs", "TENOKE", "RUNE",
-        "FLT", "FairLight", "SKIDROW", "CODEX", "Razor1911", "RELOADED", "PLAZA",
-        "TiNYiSO", "DARKSiDERS", "EMPRESS", "CPY", "GOG", "Steam", "PROPHET", "HOODLUM",
-        "CHRONOS", "VACE", "Goldberg", "ALI213", "3DM"
-    ];
+    /// <summary>
+    /// Storefront names people append to their own folder names ("Portal.2.Steam"). Deliberately
+    /// not a list of uploaders or release groups: TrayTrigger doesn't care where a game came from,
+    /// and a trailing word Steam doesn't recognise is handled generically instead - see
+    /// GameNameExtractor.FindMatchForShortenedFolderNameAsync.
+    /// </summary>
+    public static readonly string[] StoreNames = ["GOG", "Steam"];
 
     public static readonly string[] EditionPhrases =
     [
