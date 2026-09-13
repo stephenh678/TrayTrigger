@@ -13,7 +13,8 @@ public enum DetectedLauncher
     Ea,
     Epic,
     Ubisoft,
-    Xbox
+    Xbox,
+    BattleNet
 }
 
 public class DetectedLauncherOption : INotifyPropertyChanged
@@ -56,6 +57,7 @@ public class DetectedLauncherOption : INotifyPropertyChanged
         DetectedLauncher.Epic => "epic_games.png",
         DetectedLauncher.Ubisoft => "ubisoft_connect.png",
         DetectedLauncher.Xbox => "xbox.png",
+        DetectedLauncher.BattleNet => "battlenet.png",
         _ => "steam.png"
     };
 

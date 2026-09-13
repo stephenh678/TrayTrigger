@@ -15,7 +15,7 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 - Post-exit runs after the Performance Profile is restored, so your script sees the machine back in its normal state. It needs an exit signal, which exists for:
   - direct .exe launches (the process itself);
   - Steam games (Steam's own "running" flag for the game);
-  - GOG, EA, Epic, and Ubisoft games launched through their client or directly (TrayTrigger watches the game's install folder for its real process, since the client-registered exe is often only a stub).
+  - GOG, EA, Epic, Ubisoft, Xbox and Battle.net games launched through their client or directly (TrayTrigger watches the game's install folder for its real process, since the client-registered exe is often only a stub).
 - A bare launcher link, meaning a dropped .url or protocol shortcut with no platform ID behind it, has no exit signal. Pre-launch still runs; post-exit is skipped.
 - If TrayTrigger closes while a game with a post-exit script is still running, the script runs then rather than never.
 

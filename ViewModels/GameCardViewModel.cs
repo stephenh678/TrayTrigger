@@ -224,6 +224,7 @@ public class GameCardViewModel : ViewModelBase
     public bool IsEpicGame => Game.IsEpicGame;
     public bool IsUbisoftGame => Game.IsUbisoftGame;
     public bool IsXboxGame => Game.IsXboxGame;
+    public bool IsBattleNetGame => Game.IsBattleNetGame;
     /// <summary>True for a game added via a plain exe/shortcut/folder scan rather than any
     /// supported launcher - shown with the generic "Local Games" badge instead of a platform
     /// one. A forced Steam badge (<see cref="ForceSteamOverlayTag"/>) replaces the local badge
@@ -470,6 +471,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEpicGame));
         OnPropertyChanged(nameof(IsUbisoftGame));
         OnPropertyChanged(nameof(IsXboxGame));
+        OnPropertyChanged(nameof(IsBattleNetGame));
         OnPropertyChanged(nameof(IsLocalGame));
         OnPropertyChanged(nameof(ShowCategoryBadge));
         OnPropertyChanged(nameof(IsFavorite));

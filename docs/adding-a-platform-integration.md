@@ -1,7 +1,7 @@
 # Adding a game-platform integration
 
 How TrayTrigger integrates a launcher platform (Steam, GOG, EA App, Epic, Ubisoft Connect, Xbox /
-PC Game Pass so far) into Scan for Games, manual import, launching and session tracking.
+PC Game Pass and Battle.net so far) into Scan for Games, manual import, launching and session tracking.
 
 This used to be a chronological build log - GOG, then EA, Epic, Ubisoft, Xbox - where each chapter
 added rules and later chapters renamed or overrode earlier ones. It is now organised as
@@ -45,9 +45,11 @@ platform's row of the reference table.
    Steam/RAWG matching as `knownName` and fallback guesses can't rename it.
 9. **State what won't be found.** If discovery has a real gap (EA custom install folders, legacy
    UWP Store games), say so in the Settings toggle's own description, not only here.
-10. **Share instead of copying, and don't let copies pile up.** Extract a shared helper when the
-    third copy of the same thing appears. The per-platform import plumbing is well past that point
-    (section 5) - consolidating it is part of the next platform's scope, not a follow-up.
+10. **Each platform keeps its own copy of the plumbing - for now.** Import, ignore, scan-dialog and
+    badge wiring are copied per platform (section 4), so a change to one integration can't ripple
+    into the others. Merging them into shared code is a possible future option, not a rule and not
+    part of any platform's scope; the user decides if and when. Until then, whoever changes one
+    platform's copy checks the others' and says which need the same change.
 
 ### Decisions that belong to the user
 
@@ -56,7 +58,7 @@ Ask rather than decide:
 - **Launch path** - client, direct, or both - including any trade-off, such as losing the client
   overlay or a fallback that sometimes needs a second click.
 - **Accepting a discovery gap** - "these games won't be found; still worth building?"
-- **Consolidate first, or add another copy** - when a platform would grow duplicated plumbing.
+- **Whether to ever merge the per-platform copies** into shared code (principle 10).
 - **Any table or list that would need maintenance** (principle 2).
 - **Live tests with side effects** - launching the user's games, closing their client.
 
@@ -101,7 +103,7 @@ Probing techniques that worked:
 | Epic | `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests\*.item` JSON | `EpicAppName` | `com.epicgames.launcher://apps/<AppName>?action=launch&silent=true` | Direct exe | Everything needed is in the manifest |
 | Ubisoft | `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs\<id>` (`InstallDir` only, forward slashes) | `UbisoftGameId` | `uplay://launch/<id>/0` | Direct exe | No name or exe in the records: folder scan with `preferExe: false`. Registered exe can be a chained stub (R6 Extraction) |
 | Xbox | `HKLM\SOFTWARE\Microsoft\GamingServices\GameConfig\<PackageFullName>` + per-user AppModel repository | `XboxAumid` | `IApplicationActivationManager` on the AUMID (`explorer shell:AppsFolder\<AUMID>` fallback) | **None** - GDK exes need package identity | Track by the junction target, not the WindowsApps root. Full name and root change every update, so they're re-resolved at launch. **Gap:** legacy UWP Store games. Accepted: always-resident tray helpers (Roblox) block the profile |
-| Battle.net | *Researched and launch-tested 2026-09-12, not built - see section 3.1.* Uninstall entries: `--uid=<uid>` in `UninstallString`, `InstallLocation`, `DisplayName`; `DisplayIcon` is usually the game exe but can be a switcher (StarCraft II) | uid (e.g. `btlr`, `hs_beta`) | `Battle.net.exe --exec="launch <program id>"`, where the program ID comes from the client's local catalog cache, not from the uid | **None** - the client passes an SSO token the game needs (`-launcherlogin`, `-sso=1`). `--exec="focus play"` when no program ID is found | A cold client drops the command: resend every 3 s until a process appears under the install folder (duplicates are harmless). Close `Battle.net`, not `Agent`. Skip the client's own `battle.net` uid |
+| Battle.net | *Built in 1.4.2-beta.2 (`BattleNetScannerService`, `BattleNetCatalog`, `BattleNetCodeStore`); research and tests in section 3.1.* Uninstall entries: `--uid=<uid>` in `UninstallString`, `InstallLocation`, `DisplayName`; `DisplayIcon` is usually the game exe but can be a switcher (StarCraft II) | `BattleNetUid` (e.g. `btlr`, `hs_beta`), plus the saved launch code `BattleNetProgramId` and a backup uid → code map in `%APPDATA%\TrayTrigger\battlenet-codes.json` | `Battle.net.exe --exec="launch <program id>"`, where the program ID comes from the client's local catalog cache, not from the uid | **None** - the client passes an SSO token the game needs (`-launcherlogin`, `-sso=1`). `--exec="focus play"` when no program ID is found | A cold client drops the command: resend every 3 s until a process appears under the install folder (duplicates are harmless). Close `Battle.net`, not `Agent`. Skip the client's own `battle.net` uid |
 
 ### 3.1 Battle.net research and launch tests (2026-09-12)
 
@@ -239,6 +241,33 @@ Open (not tested):
   once), and each rewrites `Agent.dat` with its own port. Worth knowing for diagnostics - its
   response marks switchers (`"switcher": true`, plus a `regex` for the real game exe).
 
+### 3.2 Battle.net as built (1.4.2-beta.2)
+
+| Piece | What it does |
+|---|---|
+| `BattleNetScannerService` | Reads uninstall entries (32- and 64-bit views) whose `UninstallString` is Blizzard's uninstaller with `--uid=`; skips uid `battle.net`. Exe = `DisplayIcon` when it exists under the install folder, else `ScanFolder`. Every scan reads the catalog and refreshes the saved code map |
+| `BattleNetCatalog` | Merges every cache file, maps uid → owning product `id`, keeps the id's case, refuses a uid claimed by two ids, validates ids (`[A-Za-z0-9_-]`) before they can reach a command line |
+| `BattleNetCodeStore` | `%APPDATA%\TrayTrigger\battlenet-codes.json`: add/update only, never delete; written only when something changed |
+| `GameEntry` | `IsBattleNetGame`, `BattleNetUid` (identity), `BattleNetProgramId` (saved launch code) |
+| `ProcessLauncherService.LaunchBattleNetGame` | Saved code → otherwise catalog, then saved map, then start the client and re-ask for 20 s → otherwise `focus play` + tray notice. Sends `--exec="launch <code>"` now and every 3 s until a non-helper process is under the install folder, for up to 90 s; then re-checks the catalog once (a different code is saved and gets a fresh 90 s), else `focus play` + tray notice. `TrackInstallDirSession` runs alongside, unchanged |
+| Close launcher | `Battle.net` process only; the Agent is left alone |
+| Helpers | `BlizzardError` and `BlizzardBrowser` added to `ProcessPathResolver`'s helper list; Battle.net's own install folder is skipped by folder scans |
+
+End-to-end on the test machine, through the real services (scan → `ProcessLauncherService.LaunchGame`
+→ close the game), 2026-09-12:
+
+| Scenario | Result |
+|---|---|
+| Scan | 4 games in 0.2 s, all with codes (`BTLR`, `WTCG`, `Pro`, `S2`); 229 catalog files, 454 uids saved to the code map; dropped SC2 / Overwatch paths resolve to Battle.net; the client folder isn't offered |
+| Hearthstone, client closed | ✅ 3 sends (matches the research), game tracked, session ended on exit |
+| Hearthstone, client open | ✅ 1 send |
+| StarCraft II, client closed | ✅ 3 sends; tracker attached to `SC2_x64.exe`, not the switcher |
+| Overwatch, client open | ✅ 1 send; `CrashMailer_64` ignored as a helper |
+| Black Ops 6, client open | ✅ 1 send; tracker attached to `cod24-cod.exe` past `bootstrapper.exe` and both crash handlers |
+| No saved code | ✅ Catalog lookup at launch, code saved, 1 send |
+| Wrong saved code (`WRONG1`) | ✅ 90 s of resends, catalog re-check, code corrected to `WTCG`, game started |
+| No catalog and no saved map | ✅ 20 s catalog wait, `focus play`, tray notice, session rolled back when ended |
+
 ## 4. Code map
 
 ### Shared - reuse, don't copy
@@ -284,10 +313,10 @@ catches the rest.
 | ⚠ Dev diagnostics | `App.DevDiagnostics.cs` constructs `ScanForGamesDialog` directly |
 | ⚠ Folder scans | If the client can be installed under a Scan Location, skip its install folder in `FolderScannerService` |
 
-Six platforms have each added a copy to the import, ignore, bucket, scan-dialog and badge rows.
-Principle 10 applies: the next platform should come with (or right after) collapsing those rows
-into one platform descriptor - ID, label, logo, category, route, scanner - with the user
-deciding the order.
+Seven platforms each have their own copy of the import, ignore, bucket, scan-dialog and badge rows,
+by the user's choice (principle 10). Merging them into one platform descriptor - ID, label, logo,
+category, route, scanner - is a possible future option the user decides on; it is not part of adding
+a platform. When one platform's copy changes, check the other six.
 
 ## 5. Pitfalls
 

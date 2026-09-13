@@ -42,6 +42,7 @@ public partial class App : Application
     private EpicScannerService _epicScannerService = null!;
     private UbisoftScannerService _ubisoftScannerService = null!;
     private XboxScannerService _xboxScannerService = null!;
+    private BattleNetScannerService _battleNetScannerService = null!;
     private PerformanceProfileService _performanceProfileService = null!;
     private ProcessLauncherService _launcherService = null!;
     private GameScriptService? _gameScriptService;
@@ -256,6 +257,7 @@ public partial class App : Application
         _epicScannerService = new EpicScannerService();
         _ubisoftScannerService = new UbisoftScannerService();
         _xboxScannerService = new XboxScannerService();
+        _battleNetScannerService = new BattleNetScannerService();
         // Same live-settings provider as _gameScriptService below, rather than the convenience
         // constructor's () => storageService.LoadSettings(): that re-read and re-decrypted
         // settings.json from disk on every profile apply and restore - twice per game launch, on
@@ -277,7 +279,7 @@ public partial class App : Application
             var scriptLibrary = new ScriptLibraryService(_storageService.BaseDirectory);
             _ = Task.Run(() => scriptLibrary.EnsureInstalled());
         }
-        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService);
+        _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService);
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -297,6 +299,7 @@ public partial class App : Application
             _epicScannerService,
             _ubisoftScannerService,
             _xboxScannerService,
+            _battleNetScannerService,
             _launcherService,
             _hotkeyManager,
             _startupManager,

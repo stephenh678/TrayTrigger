@@ -68,6 +68,16 @@ public class GameEntry
     public bool IsXboxGame { get; set; }
     /// <summary>Application User Model ID, "&lt;PackageFamilyName&gt;!&lt;AppId&gt;" - stable across updates.</summary>
     public string? XboxAumid { get; set; }
+    /// <summary>True for a game imported via Battle.net scanning. Like Xbox there is no direct-exe
+    /// fallback: Battle.net hands the game a sign-in token only the client can supply, so the game
+    /// is always launched with <c>Battle.net.exe --exec="launch &lt;BattleNetProgramId&gt;"</c>.</summary>
+    public bool IsBattleNetGame { get; set; }
+    /// <summary>Battle.net's install uid (hs_beta, prometheus, s2) - the game's identity, from its uninstall entry.</summary>
+    public string? BattleNetUid { get; set; }
+    /// <summary>The launch code (WTCG, Pro, S2) read from Battle.net's catalog at import and
+    /// refreshed when a launch finds a different one. Saved so a cleared cache can't stop the
+    /// game launching.</summary>
+    public string? BattleNetProgramId { get; set; }
     /// <summary>Which source the Game Details window shows text metadata from (a per-game view
     /// preference; never affects the library category, art, or sorting). Auto by default - Steam
     /// when there's a Steam App ID, otherwise RAWG. See <see cref="MetadataSource"/>.</summary>

@@ -31,10 +31,11 @@ public class ScannedGameItemViewModel : ViewModelBase
     public DiscoveredEpicGame? EpicGame { get; }
     public DiscoveredUbisoftGame? UbisoftGame { get; }
     public DiscoveredXboxGame? XboxGame { get; }
+    public DiscoveredBattleNetGame? BattleNetGame { get; }
     public GameCandidate? FolderCandidate { get; }
 
-    public string Name => SteamGame?.Name ?? GogGame?.Name ?? EaGame?.Name ?? EpicGame?.Name ?? UbisoftGame?.Name ?? XboxGame?.Name ?? FolderCandidate!.Name;
-    public string PathDisplay => SteamGame?.InstallDir ?? GogGame?.InstallDir ?? EaGame?.InstallDir ?? EpicGame?.InstallDir ?? UbisoftGame?.InstallDir ?? XboxGame?.InstallDir ?? FolderCandidate!.DisplayPath;
+    public string Name => SteamGame?.Name ?? GogGame?.Name ?? EaGame?.Name ?? EpicGame?.Name ?? UbisoftGame?.Name ?? XboxGame?.Name ?? BattleNetGame?.Name ?? FolderCandidate!.Name;
+    public string PathDisplay => SteamGame?.InstallDir ?? GogGame?.InstallDir ?? EaGame?.InstallDir ?? EpicGame?.InstallDir ?? UbisoftGame?.InstallDir ?? XboxGame?.InstallDir ?? BattleNetGame?.InstallDir ?? FolderCandidate!.DisplayPath;
 
     /// <summary>Pack URI to the same launcher logo used on poster cards and the first-launch
     /// picker - a folder-scanned candidate has no launcher, so it gets the generic "Local Games"
@@ -45,6 +46,7 @@ public class ScannedGameItemViewModel : ViewModelBase
         : EpicGame != null ? "pack://application:,,,/Assets/LauncherLogos/epic_games.png"
         : UbisoftGame != null ? "pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
         : XboxGame != null ? "pack://application:,,,/Assets/LauncherLogos/xbox.png"
+        : BattleNetGame != null ? "pack://application:,,,/Assets/LauncherLogos/battlenet.png"
         : "pack://application:,,,/Assets/LauncherLogos/local_games.png";
 
     /// <summary>Raised when the user clicks "Ignore" - the parent VM removes this row and persists the ignore.</summary>
@@ -119,6 +121,13 @@ public class ScannedGameItemViewModel : ViewModelBase
         LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(xboxGame.IconPath));
     }
 
+    public ScannedGameItemViewModel(DiscoveredBattleNetGame battleNetGame)
+    {
+        IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
+        BattleNetGame = battleNetGame;
+        LoadIconAsync(() => IconExtractorService.LoadIconOrExtractFromExe(battleNetGame.IconPath));
+    }
+
     public ScannedGameItemViewModel(GameCandidate candidate)
     {
         IgnoreCommand = new RelayCommand(() => IgnoreRequested?.Invoke(this));
@@ -161,7 +170,7 @@ public class ScanForGamesViewModel : ViewModelBase
     public ObservableCollection<ScannedGameItemViewModel> Results { get; } = new();
     public ICollectionView FilteredResults { get; }
 
-    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<GameCandidate>>? ImportConfirmed;
+    public event Action<List<DiscoveredSteamGame>, List<DiscoveredGogGame>, List<DiscoveredEaGame>, List<DiscoveredEpicGame>, List<DiscoveredUbisoftGame>, List<DiscoveredXboxGame>, List<DiscoveredBattleNetGame>, List<GameCandidate>>? ImportConfirmed;
     public event Action? RequestClose;
 
     public ICommand SelectAllCommand { get; }
@@ -176,10 +185,12 @@ public class ScanForGamesViewModel : ViewModelBase
     private readonly Action<DiscoveredEpicGame> _onIgnoreEpicGame;
     private readonly Action<DiscoveredUbisoftGame> _onIgnoreUbisoftGame;
     private readonly Action<DiscoveredXboxGame> _onIgnoreXboxGame;
+    private readonly Action<DiscoveredBattleNetGame> _onIgnoreBattleNetGame;
 
-    public ScanForGamesViewModel(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<GameCandidate> folderCandidates,
-        Action<GameCandidate> onIgnoreCandidate, Action<DiscoveredSteamGame> onIgnoreSteamGame, Action<DiscoveredGogGame> onIgnoreGogGame, Action<DiscoveredEaGame> onIgnoreEaGame, Action<DiscoveredEpicGame> onIgnoreEpicGame, Action<DiscoveredUbisoftGame> onIgnoreUbisoftGame, Action<DiscoveredXboxGame> onIgnoreXboxGame)
+    public ScanForGamesViewModel(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<GameCandidate> folderCandidates,
+        Action<GameCandidate> onIgnoreCandidate, Action<DiscoveredSteamGame> onIgnoreSteamGame, Action<DiscoveredGogGame> onIgnoreGogGame, Action<DiscoveredEaGame> onIgnoreEaGame, Action<DiscoveredEpicGame> onIgnoreEpicGame, Action<DiscoveredUbisoftGame> onIgnoreUbisoftGame, Action<DiscoveredXboxGame> onIgnoreXboxGame, Action<DiscoveredBattleNetGame> onIgnoreBattleNetGame)
     {
+        _onIgnoreBattleNetGame = onIgnoreBattleNetGame;
         _onIgnoreCandidate = onIgnoreCandidate;
         _onIgnoreSteamGame = onIgnoreSteamGame;
         _onIgnoreGogGame = onIgnoreGogGame;
@@ -219,6 +230,12 @@ public class ScanForGamesViewModel : ViewModelBase
             Results.Add(item);
         }
         foreach (var g in xboxGames)
+        {
+            var item = new ScannedGameItemViewModel(g);
+            item.IgnoreRequested += OnItemIgnoreRequested;
+            Results.Add(item);
+        }
+        foreach (var g in battleNetGames)
         {
             var item = new ScannedGameItemViewModel(g);
             item.IgnoreRequested += OnItemIgnoreRequested;
@@ -298,6 +315,10 @@ public class ScanForGamesViewModel : ViewModelBase
         {
             _onIgnoreXboxGame(item.XboxGame);
         }
+        else if (item.BattleNetGame != null)
+        {
+            _onIgnoreBattleNetGame(item.BattleNetGame);
+        }
 
         item.IgnoreRequested -= OnItemIgnoreRequested;
         Results.Remove(item);
@@ -343,12 +364,13 @@ public class ScanForGamesViewModel : ViewModelBase
         var selectedEpic = Results.Where(r => r.IsSelected && r.EpicGame != null).Select(r => r.EpicGame!).ToList();
         var selectedUbisoft = Results.Where(r => r.IsSelected && r.UbisoftGame != null).Select(r => r.UbisoftGame!).ToList();
         var selectedXbox = Results.Where(r => r.IsSelected && r.XboxGame != null).Select(r => r.XboxGame!).ToList();
+        var selectedBattleNet = Results.Where(r => r.IsSelected && r.BattleNetGame != null).Select(r => r.BattleNetGame!).ToList();
         var selectedFolder = Results.Where(r => r.IsSelected && r.FolderCandidate != null).Select(r => r.FolderCandidate!).ToList();
 
-        if (selectedSteam.Count > 0 || selectedGog.Count > 0 || selectedEa.Count > 0 || selectedEpic.Count > 0 || selectedUbisoft.Count > 0 || selectedXbox.Count > 0 || selectedFolder.Count > 0)
+        if (selectedSteam.Count > 0 || selectedGog.Count > 0 || selectedEa.Count > 0 || selectedEpic.Count > 0 || selectedUbisoft.Count > 0 || selectedXbox.Count > 0 || selectedBattleNet.Count > 0 || selectedFolder.Count > 0)
         {
-            LoggingService.Info("ScanForGames", $"Confirmed import of {selectedSteam.Count} Steam game(s), {selectedGog.Count} GOG game(s), {selectedEa.Count} EA game(s), {selectedEpic.Count} Epic game(s), {selectedUbisoft.Count} Ubisoft game(s), {selectedXbox.Count} Xbox game(s), and {selectedFolder.Count} folder game(s) out of {Results.Count} scan result(s).");
-            ImportConfirmed?.Invoke(selectedSteam, selectedGog, selectedEa, selectedEpic, selectedUbisoft, selectedXbox, selectedFolder);
+            LoggingService.Info("ScanForGames", $"Confirmed import of {selectedSteam.Count} Steam game(s), {selectedGog.Count} GOG game(s), {selectedEa.Count} EA game(s), {selectedEpic.Count} Epic game(s), {selectedUbisoft.Count} Ubisoft game(s), {selectedXbox.Count} Xbox game(s), {selectedBattleNet.Count} Battle.net game(s), and {selectedFolder.Count} folder game(s) out of {Results.Count} scan result(s).");
+            ImportConfirmed?.Invoke(selectedSteam, selectedGog, selectedEa, selectedEpic, selectedUbisoft, selectedXbox, selectedBattleNet, selectedFolder);
         }
         else
         {

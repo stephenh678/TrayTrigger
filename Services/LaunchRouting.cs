@@ -27,6 +27,9 @@ public enum LaunchRoute
     /// <summary>Shell activation of the game's AUMID (PC Game Pass / Store GDK title), tracked by
     /// package root. No direct variant: GDK exes refuse to start without package identity.</summary>
     Xbox,
+    /// <summary>Battle.net.exe --exec="launch &lt;program id&gt;", re-sent until the game appears, tracked
+    /// by install directory. No direct variant: the game needs a sign-in token only the client supplies.</summary>
+    BattleNet,
     /// <summary>A non-file URL whose scheme is on the allow-list: fire-and-forget, pre-launch script only.</summary>
     ProtocolUrl,
     /// <summary>A non-file URL whose scheme is NOT on the allow-list: refused.</summary>
@@ -96,6 +99,14 @@ public static class LaunchRouter
             return LaunchRoute.Xbox;
         }
 
+        // Same for Battle.net: its games need a sign-in token only the client passes, so there is
+        // no direct route and Edit Game hides the option. The launch code isn't required here -
+        // the launcher looks it up (or falls back to the client's Play tab) when it's missing.
+        if (game.IsBattleNetGame && !string.IsNullOrWhiteSpace(game.BattleNetUid))
+        {
+            return LaunchRoute.BattleNet;
+        }
+
         if (string.IsNullOrWhiteSpace(path))
         {
             return LaunchRoute.MissingPath;
@@ -136,6 +147,7 @@ public static class LaunchRouter
         LaunchRoute.EpicClient or LaunchRoute.EpicDirect => LauncherPlatform.Epic,
         LaunchRoute.UbisoftClient or LaunchRoute.UbisoftDirect => LauncherPlatform.Ubisoft,
         LaunchRoute.Xbox => LauncherPlatform.Xbox,
+        LaunchRoute.BattleNet => LauncherPlatform.BattleNet,
         _ => null
     };
 
@@ -149,6 +161,7 @@ public static class LaunchRouter
         LaunchRoute.EpicClient or LaunchRoute.EpicDirect => "Epic Games",
         LaunchRoute.UbisoftClient or LaunchRoute.UbisoftDirect => "Ubisoft Connect",
         LaunchRoute.Xbox => "Xbox",
+        LaunchRoute.BattleNet => "Battle.net",
         LaunchRoute.ProtocolUrl => "link",
         _ => "Local"
     };

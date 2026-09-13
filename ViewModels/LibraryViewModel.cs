@@ -1596,6 +1596,7 @@ public class LibraryViewModel : ViewModelBase
             { Epic: { } p } => string.Equals(g.Game.EpicAppName, p.AppName, StringComparison.OrdinalIgnoreCase),
             { Ubisoft: { } u } => string.Equals(g.Game.UbisoftGameId, u.GameId, StringComparison.OrdinalIgnoreCase),
             { Xbox: { } x } => string.Equals(g.Game.XboxAumid, x.Aumid, StringComparison.OrdinalIgnoreCase),
+            { BattleNet: { } b } => string.Equals(g.Game.BattleNetUid, b.Uid, StringComparison.OrdinalIgnoreCase),
             _ => false
         });
     }
@@ -1660,6 +1661,7 @@ public class LibraryViewModel : ViewModelBase
             DetectedLauncher.Epic => game.IsEpicGame,
             DetectedLauncher.Ubisoft => game.IsUbisoftGame,
             DetectedLauncher.Xbox => game.IsXboxGame,
+            DetectedLauncher.BattleNet => game.IsBattleNetGame,
             _ => false
         };
     }
@@ -1671,6 +1673,7 @@ public class LibraryViewModel : ViewModelBase
         DetectedLauncher.Ea => LauncherPlatform.Ea,
         DetectedLauncher.Epic => LauncherPlatform.Epic,
         DetectedLauncher.Xbox => LauncherPlatform.Xbox,
+        DetectedLauncher.BattleNet => LauncherPlatform.BattleNet,
         _ => LauncherPlatform.Ubisoft
     };
 

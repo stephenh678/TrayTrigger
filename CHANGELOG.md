@@ -8,6 +8,12 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.4.2
+
+- **Battle.net library integration** — Scan for Games now finds games installed through Battle.net (World of Warcraft, Overwatch, Diablo, Hearthstone, StarCraft, Call of Duty and the rest) on any drive, with their real titles, and launches them through Battle.net. If Battle.net is closed, TrayTrigger starts it and keeps asking until the game opens, so one click works even while Battle.net is still signing in. Each game's launch code is read from Battle.net itself and saved, so there's no list to go out of date.
+- **Better game names from folders** — titles written without spaces (BALLxPIT), acronyms run into a word (ACBlackFlag), packaged Unreal games (Gothic 1 Remake, Persona 3 Reload), and folders with an extra trailing word now match the right game.
+- The Steam and Battle.net client folders are no longer offered as games when a scan location contains them.
+
 ## 1.4.1
 
 - **Library filters** — a filter flyout beside the sort box narrows the library by launcher, performance profile, and state (never played, favorite, missing executable, has a hotkey, has scripts, runs elevated). A count badge shows how many filters are active, and an empty result explains itself instead of looking like an empty library.

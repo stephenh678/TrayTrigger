@@ -232,7 +232,7 @@ public partial class FolderScannerService
         // library imported exactly one game. Any child that is itself named like a library
         // container is replaced by its own children (repeatedly, bounded), so the per-subfolder
         // game detection below runs against the real game folders.
-        subdirs = ExpandLibraryContainers(subdirs).Where(d => !IsSteamClientInstall(d)).ToList();
+        subdirs = ExpandLibraryContainers(subdirs).Where(d => !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d)).ToList();
 
         var detectedSubGames = new List<GameCandidate>();
 
@@ -294,7 +294,7 @@ public partial class FolderScannerService
         try
         {
             subdirs = Directory.GetDirectories(folderPath)
-                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)) && !IsSteamClientInstall(d))
+                .Where(d => !ShouldPruneDirectory(Path.GetFileName(d)) && !IsSteamClientInstall(d) && !IsBattleNetClientInstall(d))
                 .ToList();
         }
         catch (Exception ex)
@@ -609,6 +609,19 @@ public partial class FolderScannerService
             return false;
 
         LoggingService.Verbose("FolderScanner", $"Skipped Steam client install folder: '{dir}'");
+        return true;
+    }
+
+    /// <summary>
+    /// Battle.net's own install folder, not a game - same reasoning as <see cref="IsSteamClientInstall"/>.
+    /// Its games live in their own folders and are imported by BattleNetScannerService.
+    /// </summary>
+    internal static bool IsBattleNetClientInstall(string dir)
+    {
+        if (!File.Exists(Path.Combine(dir, "Battle.net.exe")) || !File.Exists(Path.Combine(dir, "Battle.net Launcher.exe")))
+            return false;
+
+        LoggingService.Verbose("FolderScanner", $"Skipped Battle.net client install folder: '{dir}'");
         return true;
     }
 

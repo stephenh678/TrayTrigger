@@ -48,7 +48,7 @@ public class LibraryViewModelSelectionTests : IDisposable
             new EaScannerService(),
             new EpicScannerService(),
             new UbisoftScannerService(),
-            new XboxScannerService());
+            new XboxScannerService(), new BattleNetScannerService());
         var settings = new AppSettings();
         var library = new LibraryViewModel(
             storage,

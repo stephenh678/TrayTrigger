@@ -444,7 +444,7 @@
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPostExitScriptCommand}"/>
                             </StackPanel>
-                            <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
+                            <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft / Xbox / Battle.net games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Script arguments: free text appended after the five positional
@@ -541,7 +541,8 @@
                                         <Button Content="Convert to Local game" Command="{Binding ConvertToLocalCommand}"
                                                 Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"/>
                                     </DockPanel>
-                                    <!-- Hidden for Xbox / Game Pass entries: a GDK exe can't run outside its package. -->
+                                    <!-- Hidden for Xbox / Game Pass entries (a GDK exe can't run outside its package) and Battle.net
+                                         entries (the game needs the sign-in token only the client passes). -->
                                     <StackPanel Visibility="{Binding CanOfferLaunchDirectly, Converter={StaticResource BoolToVis}}">
                                         <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
                                                   Style="{StaticResource ModernCheckBox}"/>

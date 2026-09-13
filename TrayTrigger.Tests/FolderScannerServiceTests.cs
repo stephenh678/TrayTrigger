@@ -105,6 +105,19 @@ public class FolderScannerServiceTests : IDisposable
     }
 
     [Fact]
+    public void ScanKnownLibraryLocation_BattleNetClientInstall_IsNotScanned()
+    {
+        // Battle.net installs under Program Files (x86) beside its games; its own folder is not a game.
+        CreateGameFolder("Fatekeeper", "Fatekeeper.exe");
+        string client = CreateGameFolder("Battle.net", "Battle.net.exe");
+        File.WriteAllBytes(Path.Combine(client, "Battle.net Launcher.exe"), new byte[1024]);
+
+        var results = new FolderScannerService().ScanKnownLibraryLocation(_tempDir);
+
+        Assert.Equal("Fatekeeper", Assert.Single(results).Name);
+    }
+
+    [Fact]
     public void IsDisqualified_TinyStub_IsDisqualified()
     {
         // Stubs under 60KB are almost never real games.

@@ -4,7 +4,9 @@
 
 ## Launcher Integrations
 
-Each "Enable X Library Integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Epic/Ubisoft's registry entries, EA's install manifests, Windows' Gaming Services records for Xbox / PC Game Pass), so no folder setup is needed.
+Each "Enable X Library Integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Epic/Ubisoft's registry entries, EA's install manifests, Windows' Gaming Services records for Xbox / PC Game Pass, Blizzard's install records for Battle.net), so no folder setup is needed.
+
+Battle.net games launch through Battle.net, which signs the game in. If Battle.net is closed, TrayTrigger starts it and keeps asking until the game opens. Each game's launch code is read from Battle.net's own data and saved with the game, so no list has to be kept up to date. If the code can't be found (for example, just after Battle.net's cache was cleared), TrayTrigger opens Battle.net's Play tab and tells you to click Play; performance profiles and scripts still apply.
 
 - **Steam** is the one platform with several possible library folders. They're detected automatically and listed under the Steam toggle; untick one to skip that library on the next scan, or click "Refresh" to re-detect them (e.g. after adding a library to a new drive in Steam).
 - **EA** can only find games installed to EA's own default install folders. A game moved to a custom location won't be found - see the note under EA's toggle for details.
@@ -29,7 +31,7 @@ Dropping a game folder or exe onto the Library, or using "Add Folder", also reco
 
 Folder scanning uses heuristics, so it can occasionally offer something that isn't really a game (a bundled tool, an installer, a benchmark). Click "Ignore" next to a candidate in the New Games Found picker to permanently exclude that exact file from every future scan. Ignored items are listed under "Ignored Games" here, where you can remove one to let it be detected again.
 
-> Steam, GOG, EA, Epic, Ubisoft, and Xbox games can be ignored too, by their own platform ID rather than file path - useful for something registered as a "game" that isn't really one (a soundtrack, an SDK, a demo).
+> Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net games can be ignored too, by their own platform ID rather than file path - useful for something registered as a "game" that isn't really one (a soundtrack, an SDK, a demo).
 
 ## Add Folder vs. Scan Locations
 

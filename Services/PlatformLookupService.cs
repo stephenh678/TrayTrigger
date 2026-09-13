@@ -18,6 +18,7 @@ public sealed class PlatformMatch
     public DiscoveredEpicGame? Epic { get; init; }
     public DiscoveredUbisoftGame? Ubisoft { get; init; }
     public DiscoveredXboxGame? Xbox { get; init; }
+    public DiscoveredBattleNetGame? BattleNet { get; init; }
 
     private PlatformMatch(string platform) => Platform = platform;
 
@@ -27,8 +28,9 @@ public sealed class PlatformMatch
     public static PlatformMatch ForEpic(DiscoveredEpicGame g) => new("Epic") { Epic = g };
     public static PlatformMatch ForUbisoft(DiscoveredUbisoftGame g) => new("Ubisoft") { Ubisoft = g };
     public static PlatformMatch ForXbox(DiscoveredXboxGame g) => new("Xbox") { Xbox = g };
+    public static PlatformMatch ForBattleNet(DiscoveredBattleNetGame g) => new("Battle.net") { BattleNet = g };
 
-    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? Xbox?.Name ?? string.Empty;
+    public string Name => Steam?.Name ?? Gog?.Name ?? Ea?.Name ?? Epic?.Name ?? Ubisoft?.Name ?? Xbox?.Name ?? BattleNet?.Name ?? string.Empty;
 }
 
 /// <summary>
@@ -60,6 +62,7 @@ public class PlatformLookupService
     private readonly EpicScannerService _epic;
     private readonly UbisoftScannerService _ubisoft;
     private readonly XboxScannerService _xbox;
+    private readonly BattleNetScannerService _battleNet;
 
     public PlatformLookupService(
         SteamScannerService steam,
@@ -67,7 +70,8 @@ public class PlatformLookupService
         EaScannerService ea,
         EpicScannerService epic,
         UbisoftScannerService ubisoft,
-        XboxScannerService xbox)
+        XboxScannerService xbox,
+        BattleNetScannerService battleNet)
     {
         _steam = steam;
         _gog = gog;
@@ -75,6 +79,7 @@ public class PlatformLookupService
         _epic = epic;
         _ubisoft = ubisoft;
         _xbox = xbox;
+        _battleNet = battleNet;
     }
 
     /// <summary>
@@ -129,6 +134,7 @@ public class PlatformLookupService
         private List<DiscoveredEpicGame>? _epicGames;
         private List<(string GameId, string InstallDir)>? _ubisoftInstalls;
         private List<DiscoveredXboxGame>? _xboxGames;
+        private List<DiscoveredBattleNetGame>? _battleNetGames;
         // Resolved-once caches for the two platforms whose full record costs a filesystem walk.
         private readonly Dictionary<string, DiscoveredSteamGame?> _steamResolved = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, DiscoveredUbisoftGame?> _ubisoftResolved = new(StringComparer.OrdinalIgnoreCase);
@@ -191,6 +197,11 @@ public class PlatformLookupService
             _xboxGames ??= Try(() => _owner._xbox.ScanInstalledGames([]), "Xbox", path) ?? [];
             var xbox = _xboxGames.FirstOrDefault(g => IsPathUnderDirectory(path, g.InstallDir) || IsPathUnderDirectory(path, g.PackageRoot));
             if (xbox != null) return PlatformMatch.ForXbox(xbox);
+
+            // Blizzard's uninstall entries pin every Battle.net game's folder, wherever it is.
+            _battleNetGames ??= Try(() => _owner._battleNet.ScanInstalledGames([]), "Battle.net", path) ?? [];
+            var battleNet = _battleNetGames.FirstOrDefault(g => IsPathUnderDirectory(path, g.InstallDir));
+            if (battleNet != null) return PlatformMatch.ForBattleNet(battleNet);
 
             return null;
         }

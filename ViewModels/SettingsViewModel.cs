@@ -1016,6 +1016,13 @@ public class SettingsViewModel : ViewModelBase
         set => SetIntegrationEnabled(DetectedLauncher.Xbox, "Xbox", _settings.XboxIntegrationEnabled, value, v => _settings.XboxIntegrationEnabled = v);
     }
 
+    /// <summary>Same no-scan-location-needed reasoning as GogIntegrationEnabled.</summary>
+    public bool BattleNetIntegrationEnabled
+    {
+        get => _settings.BattleNetIntegrationEnabled;
+        set => SetIntegrationEnabled(DetectedLauncher.BattleNet, "Battle.net", _settings.BattleNetIntegrationEnabled, value, v => _settings.BattleNetIntegrationEnabled = v);
+    }
+
     // True while ApplyDetectedLauncherChoices runs: the first-launch picker is choosing initial
     // defaults on an (effectively) empty library, so the "also remove its games?" prompt and the
     // "run Scan for Games" hint would both be noise there.
@@ -1132,6 +1139,7 @@ public class SettingsViewModel : ViewModelBase
             if (Probed(DetectedLauncher.Epic)) EpicIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Epic);
             if (Probed(DetectedLauncher.Ubisoft)) UbisoftIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Ubisoft);
             if (Probed(DetectedLauncher.Xbox)) XboxIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.Xbox);
+            if (Probed(DetectedLauncher.BattleNet)) BattleNetIntegrationEnabled = enabledLaunchers.Contains(DetectedLauncher.BattleNet);
         }
         finally
         {
@@ -1627,6 +1635,7 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.EpicIntegrationEnabled),
             nameof(AppSettings.UbisoftIntegrationEnabled),
             nameof(AppSettings.XboxIntegrationEnabled),
+            nameof(AppSettings.BattleNetIntegrationEnabled),
             // UI layout state / one-time-prompt state, same as LastCategoryFilter above.
             nameof(AppSettings.IsSidebarExpanded),
             nameof(AppSettings.MainWindowLeft),

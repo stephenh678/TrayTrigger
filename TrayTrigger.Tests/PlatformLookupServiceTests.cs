@@ -67,6 +67,20 @@ public class PlatformLookupServiceTests
         Assert.Null(match.Epic);
         Assert.Null(match.Ubisoft);
         Assert.Null(match.Xbox);
+        Assert.Null(match.BattleNet);
+    }
+
+    [Fact]
+    public void PlatformMatch_ForBattleNet()
+    {
+        var game = new DiscoveredBattleNetGame("s2", "StarCraft II", @"C:\Program Files (x86)\StarCraft II",
+            @"C:\Program Files (x86)\StarCraft II\Support\SC2Switcher.exe", null, "S2", false);
+        var match = PlatformMatch.ForBattleNet(game);
+
+        Assert.Equal("Battle.net", match.Platform);
+        Assert.Equal("StarCraft II", match.Name);
+        Assert.Same(game, match.BattleNet);
+        Assert.Null(match.Xbox);
     }
 
     [Fact]

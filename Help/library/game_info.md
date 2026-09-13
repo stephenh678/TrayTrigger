@@ -4,7 +4,7 @@ The Game Details window (click a game card) shows the developer, publisher, rele
 
 ## Steam
 
-Used for any game linked to a Steam App ID. Steam is the richer source: it alone has the review summary, PC requirements and patch notes. Games from GOG, EA, Epic and Ubisoft are usually on Steam too, so they get Steam info even though they launch through their own client.
+Used for any game linked to a Steam App ID. Steam is the richer source: it alone has the review summary, PC requirements and patch notes. Games from GOG, EA, Epic, Ubisoft and Battle.net are often on Steam too, so they get Steam info even though they launch through their own client.
 
 ## RAWG
 
