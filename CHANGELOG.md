@@ -13,6 +13,7 @@ stable version they lead to.
 - **Battle.net library integration** — Scan for Games now finds games installed through Battle.net (World of Warcraft, Overwatch, Diablo, Hearthstone, StarCraft, Call of Duty and the rest) on any drive, with their real titles, and launches them through Battle.net. If Battle.net is closed, TrayTrigger starts it and keeps asking until the game opens, so one click works even while Battle.net is still signing in. Each game's launch code is read from Battle.net itself and saved, so there's no list to go out of date.
 - **Better game names from folders** — titles written without spaces (BALLxPIT), acronyms run into a word (ACBlackFlag), packaged Unreal games (Gothic 1 Remake, Persona 3 Reload), and folders with an extra trailing word now match the right game.
 - The Steam and Battle.net client folders are no longer offered as games when a scan location contains them.
+- Game names matched online no longer keep ®, ™ or © from the store listing ("Overwatch®" is now "Overwatch").
 
 ## 1.4.1
 

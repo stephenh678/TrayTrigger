@@ -194,7 +194,7 @@ public static partial class GameNameExtractor
         LoggingService.Verbose("GameNameExtractor", $"Resolving match: localName='{localName}', knownName='{knownName}', exe='{exePath}', folderFallback='{folderFallback}', preferExe={preferExe}, minConfidence={minConfidence:F2}");
 
         if (!searchOnline)
-            return new GameResolutionResult(knownName ?? localName, null, null);
+            return Resolved(knownName ?? localName, null, null);
 
         steamSearch ??= new SteamSearchService();
 
@@ -213,7 +213,7 @@ public static partial class GameNameExtractor
                 if (knownMatch != null && knownMatch.SimilarityScore >= Math.Max(0.85, minConfidence))
                 {
                     LoggingService.Verbose("GameNameExtractor", $"Pass 0 match accepted: '{knownMatch.Name}' ({knownMatch.AppId})");
-                    return new GameResolutionResult(knownMatch.Name, knownMatch.AppId, knownMatch.ThumbnailUrl);
+                    return Resolved(knownMatch.Name, knownMatch.AppId, knownMatch.ThumbnailUrl);
                 }
             }
 
@@ -238,7 +238,7 @@ public static partial class GameNameExtractor
             if (match1 != null && match1.SimilarityScore >= Math.Max(0.85, minConfidence))
             {
                 LoggingService.Verbose("GameNameExtractor", $"Pass 1 decisive match accepted: '{match1.Name}' ({match1.AppId})");
-                return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
+                return Resolved(match1.Name, match1.AppId, match1.ThumbnailUrl);
             }
 
             // Pass 2: If Pass 1 wasn't decisive, search using cleaned meaningful folder name
@@ -260,7 +260,7 @@ public static partial class GameNameExtractor
                     if (match1 == null || match2.SimilarityScore > match1.SimilarityScore)
                     {
                         LoggingService.Verbose("GameNameExtractor", $"Pass 2 preferred over Pass 1: '{match2.Name}' ({match2.AppId})");
-                        return new GameResolutionResult(match2.Name, match2.AppId, match2.ThumbnailUrl);
+                        return Resolved(match2.Name, match2.AppId, match2.ThumbnailUrl);
                     }
                 }
             }
@@ -268,7 +268,7 @@ public static partial class GameNameExtractor
             if (match1 != null && match1.SimilarityScore >= minConfidence)
             {
                 LoggingService.Verbose("GameNameExtractor", $"Pass 1 match accepted: '{match1.Name}' ({match1.AppId})");
-                return new GameResolutionResult(match1.Name, match1.AppId, match1.ThumbnailUrl);
+                return Resolved(match1.Name, match1.AppId, match1.ThumbnailUrl);
             }
 
             // Pass 3: nothing matched at all. The folder name was searched by one of the passes
@@ -280,7 +280,7 @@ public static partial class GameNameExtractor
                 if (match3 != null)
                 {
                     LoggingService.Verbose("GameNameExtractor", $"Pass 3 match accepted: '{match3.Name}' ({match3.AppId})");
-                    return new GameResolutionResult(match3.Name, match3.AppId, match3.ThumbnailUrl);
+                    return Resolved(match3.Name, match3.AppId, match3.ThumbnailUrl);
                 }
             }
         }
@@ -292,7 +292,18 @@ public static partial class GameNameExtractor
         // Safe fallback: preserve the caller's trusted name if it gave us one, otherwise the
         // clean local guess - do not attach an incorrect SteamAppId either way.
         LoggingService.Verbose("GameNameExtractor", $"No online match reached confidence threshold {minConfidence:F2}. Preserving name='{knownName ?? localName}'.");
-        return new GameResolutionResult(knownName ?? localName, null, null);
+        return Resolved(knownName ?? localName, null, null);
+    }
+
+    /// <summary>
+    /// The result with ®, ™ and © removed from the title: Steam listings ("Overwatch®") and some
+    /// platforms' own names ("STAR WARS Jedi: Fallen Order™") carry them, and the name becomes the
+    /// game's library name. Matching already ignores them (see SteamSearchService).
+    /// </summary>
+    private static GameResolutionResult Resolved(string title, string? steamAppId, string? thumbnailUrl)
+    {
+        string cleaned = CleanMetadataTitle(title);
+        return new GameResolutionResult(cleaned.Length > 0 ? cleaned : title, steamAppId, thumbnailUrl);
     }
 
     private const int MaxFolderWordsDropped = 2;

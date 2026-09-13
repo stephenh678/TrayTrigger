@@ -187,6 +187,38 @@ public class ShortenedFolderNameTests
     }
 }
 
+public class ResolvedTitleSymbolTests
+{
+    private static string UniqueWord() => "Zq" + Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>Steph's beta 2 import named games "Overwatch®" and "Call of Duty®: Black Ops 6" -
+    /// the Steam listing's title, kept verbatim.</summary>
+    [Fact]
+    public async Task SteamMatch_StripsTrademarkSymbolsFromTheTitle()
+    {
+        string word = UniqueWord();
+        var steam = new CatalogueSteamSearchService(new SteamGameMatch($"{word}®", "42", null));
+
+        var result = await GameNameExtractor.ResolveGameMatchAsync(@"C:\Games\x\game.exe", @"C:\Games\x", steamSearch: steam, knownName: word);
+
+        Assert.Equal(word, result.ResolvedTitle);
+        Assert.Equal("42", result.SteamAppId);
+    }
+
+    /// <summary>A platform's own name carries them too ("STAR WARS Jedi: Fallen Order™" from EA).</summary>
+    [Fact]
+    public async Task NoMatch_StripsTrademarkSymbolsFromTheKnownName()
+    {
+        string word = UniqueWord();
+        var steam = new CatalogueSteamSearchService();
+
+        var result = await GameNameExtractor.ResolveGameMatchAsync(@"C:\Games\x\game.exe", @"C:\Games\x", steamSearch: steam, knownName: $"{word} Jedi™");
+
+        Assert.Equal($"{word} Jedi", result.ResolvedTitle);
+        Assert.Null(result.SteamAppId);
+    }
+}
+
 public class KnownNameGuardTests
 {
     private static readonly SteamGameMatch ContentWarning = new("Content Warning", "2881650", null, 0.72);
