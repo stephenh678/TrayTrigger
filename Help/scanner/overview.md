@@ -15,6 +15,16 @@ Turning an integration off only stops *new* games from that platform being detec
 
 Dropping a game folder or exe onto the Library, or using "Add Folder", also recognizes launcher-owned installs regardless of these toggles: a folder inside a Steam or GOG install is imported as that platform's game, not as a plain local exe.
 
+## Keeping the launcher minimized
+
+"Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon, on by default) asks each launcher that supports it to start quietly, so only the game opens. It works whether or not that launcher's integration toggle is on, because games already in your library keep launching through their launcher either way.
+
+- Steam: when Steam isn't running, it starts minimized to the tray and launches the game in the same step. An open Steam is left as it is; its normal launch doesn't bring its window up.
+- Epic Games Launcher: the launch asks Epic for a silent start.
+- GOG Galaxy: when Galaxy isn't running, it's started in the background with the game, the same way Playnite starts it. When Galaxy is already open, the game's own exe is started instead, so Galaxy isn't involved.
+- The EA app and Ubisoft Connect have no way to start quietly, so their windows are left as they are.
+- Xbox games start through Windows without opening the Xbox app. Battle.net is left alone: its launch keeps re-sending until Battle.net has signed in, and its fallback opens Battle.net's Play tab for you.
+
 ## Scan Locations
 
 - Add any folder yourself with "+ Add a Scan Location" - a folder like "D:\Games" that holds many game subfolders. Every scan location is treated as a library root: each of its immediate subfolders is checked for its own game, not just the folder itself.

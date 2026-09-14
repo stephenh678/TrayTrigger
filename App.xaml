@@ -35,6 +35,9 @@
         <Color x:Key="ColorAccent">#007ACC</Color>
         <Color x:Key="ColorAccentHover">#0098FF</Color>
         <Color x:Key="ColorAccentPressed">#005A9E</Color>
+        <!-- The blue of the logo's lower T (tools/IconGen Accent). For the "Trigger" half of the
+             TrayTrigger wordmark only; controls keep the accent colours above. -->
+        <Color x:Key="ColorBrand">#2F8FFF</Color>
         <Color x:Key="ColorTextPrimary">#FFFFFF</Color>
         <Color x:Key="ColorTextSecondary">#9E9EAA</Color>
         <Color x:Key="ColorTextMuted">#6E6E7A</Color>
@@ -52,6 +55,7 @@
         <SolidColorBrush x:Key="BrushBorderAccent" Color="#2A5A8A"/>
         <SolidColorBrush x:Key="BrushAccent" Color="{StaticResource ColorAccent}"/>
         <SolidColorBrush x:Key="BrushAccentHover" Color="{StaticResource ColorAccentHover}"/>
+        <SolidColorBrush x:Key="BrushBrand" Color="{StaticResource ColorBrand}"/>
         <SolidColorBrush x:Key="BrushAccentPressed" Color="{StaticResource ColorAccentPressed}"/>
         <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}"/>
         <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}"/>

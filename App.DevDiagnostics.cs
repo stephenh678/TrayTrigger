@@ -392,6 +392,24 @@ public partial class App
                 return;
             }
 
+            // --screenshot-sidebar-expanded <out.png>: the window with the sidebar open (brand mark and
+            // name). The setting saves itself, so it's put back the way it was before exiting.
+            if ((e.Args[i].Equals("--screenshot-sidebar-expanded", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-sidebar-expanded", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                bool wasExpanded = _mainViewModel.IsSidebarExpanded;
+                _mainViewModel.IsSidebarExpanded = true;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                _mainViewModel.IsSidebarExpanded = wasExpanded;
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-updater-dialog", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-updater-dialog", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -613,6 +631,81 @@ public partial class App
                 return;
             }
 
+            // --test-settings-search-bench <out.txt> <query>: types the query into Settings' card search one
+            // letter at a time and clears it, twice (the first round pays for JIT and templates), and
+            // writes how long each keystroke took to settle - layout and highlight pass included.
+            if ((e.Args[i].Equals("--test-settings-search-bench", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-test-settings-search-bench", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetTxt = e.Args[i + 1];
+                string query = e.Args[i + 2];
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.All;
+                _mainViewModel.CurrentSection = NavSection.Settings;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+
+                var report = new System.Text.StringBuilder();
+                void Step(string text)
+                {
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    _mainViewModel.SettingsVM.SettingsSearchText = text;
+                    _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    _mainWindow.UpdateLayout();
+                    report.AppendLine($"'{text}': {watch.Elapsed.TotalMilliseconds:0} ms");
+                }
+                for (int round = 1; round <= 2; round++)
+                {
+                    report.AppendLine($"-- round {round}");
+                    for (int n = 1; n <= query.Length; n++) Step(query[..n]);
+                    Step(string.Empty);
+                }
+                System.IO.File.WriteAllText(targetTxt, report.ToString());
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-about-search <out.png> <query>: About's card search on its All tab.
+            if ((e.Args[i].Equals("--screenshot-about-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-about-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.CurrentSection = NavSection.About;
+                _mainViewModel.CurrentAboutSection = AboutSubSection.All;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                // Search once the page has been laid out, so the help topic rows it reads exist.
+                _mainViewModel.AboutSearchText = e.Args[i + 2];
+                _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-settings-search <out.png> <query>: the card search on the General tab, which
+            // only searches that tab's cards.
+            if ((e.Args[i].Equals("--screenshot-settings-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-settings-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.General;
+                _mainViewModel.CurrentSection = NavSection.Settings;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                // Typed once the page is on screen, as a person would: a search that's already set when
+                // the page appears highlights without moving.
+                _mainViewModel.SettingsVM.SettingsSearchText = e.Args[i + 2];
+                // Let the deferred highlight pass (and its scroll to the first match) run first.
+                _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-settings-general", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-general", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -761,6 +854,18 @@ public partial class App
                 return;
             }
 
+            // --screenshot-system-search <out.png> <query>: System's card search on its All tab, typed
+            // once hardware detection has finished (up to 15 s) so the spec cards are there to search.
+            if ((e.Args[i].Equals("--screenshot-system-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-system-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                string query = e.Args[i + 2];
+                CaptureSystemOnceSpecsLoad(targetPng, () => _mainViewModel.SystemVM.SystemSearchText = query);
+                return;
+            }
+
             // --screenshot-system-ready <out.png>: the System "All" tab captured only once hardware
             // detection has finished (up to 15 s), so the README shot shows real specs rather than
             // "Detecting hardware...".
@@ -769,28 +874,7 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                _mainViewModel.CurrentSection = NavSection.System;
-                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All;
-                _mainWindow.Show();
-                _mainWindow.UpdateLayout();
-                var started = DateTime.Now;
-                var poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-                poll.Tick += (s, args) =>
-                {
-                    if (!_mainViewModel.SystemVM.IsSpecsLoaded && DateTime.Now - started < TimeSpan.FromSeconds(15)) return;
-                    poll.Stop();
-                    // One more beat so the bound cards have laid out with the detected values.
-                    var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
-                    settle.Tick += (s2, args2) =>
-                    {
-                        settle.Stop();
-                        _mainWindow.UpdateLayout();
-                        CaptureVisual(_mainWindow, 960, 750, targetPng);
-                        ExitApplication();
-                    };
-                    settle.Start();
-                };
-                poll.Start();
+                CaptureSystemOnceSpecsLoad(targetPng);
                 return;
             }
 
@@ -799,12 +883,8 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                _mainViewModel.CurrentSection = NavSection.System;
-                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.HardwareSpecs;
-                _mainWindow.Show();
-                _mainWindow.UpdateLayout();
-                CaptureVisual(_mainWindow, 960, 750, targetPng);
-                ExitApplication();
+                // Waits for detection, so the README shot shows real specs, not "Detecting hardware...".
+                CaptureSystemOnceSpecsLoad(targetPng, tab: SystemSubSection.HardwareSpecs);
                 return;
             }
 
@@ -2945,6 +3025,44 @@ public partial class App
         {
             _logger($"[CaptureScreen] Error: {ex}");
         }
+    }
+
+    /// <summary>
+    /// Shows System on <paramref name="tab"/>, waits for hardware detection (up to 15 s) and a settle
+    /// beat, runs <paramref name="beforeCapture"/> if given (and lets what it queued finish), then
+    /// captures <paramref name="targetPng"/> and exits. Shared by --screenshot-system-ready, -specs
+    /// and -search.
+    /// </summary>
+    private void CaptureSystemOnceSpecsLoad(string targetPng, Action? beforeCapture = null, SystemSubSection tab = SystemSubSection.All)
+    {
+        _mainViewModel.CurrentSection = NavSection.System;
+        _mainViewModel.SystemVM.CurrentSubSection = tab;
+        _mainWindow.Show();
+        _mainWindow.UpdateLayout();
+        var started = DateTime.Now;
+        var poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        poll.Tick += (s, args) =>
+        {
+            if (!_mainViewModel.SystemVM.IsSpecsLoaded && DateTime.Now - started < TimeSpan.FromSeconds(15)) return;
+            poll.Stop();
+            // One more beat so the bound cards have laid out with the detected values.
+            var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+            settle.Tick += (s2, args2) =>
+            {
+                settle.Stop();
+                _mainWindow.UpdateLayout();
+                if (beforeCapture != null)
+                {
+                    beforeCapture();
+                    _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    _mainWindow.UpdateLayout();
+                }
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+            };
+            settle.Start();
+        };
+        poll.Start();
     }
 
 #endif

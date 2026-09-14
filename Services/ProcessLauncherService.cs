@@ -43,7 +43,6 @@ public sealed class ActiveGameSession
 
     internal Action? CancelTracking;
     internal int Finished;
-    internal int WindowReadySignalled;
     internal int GameStartedSignalled;
 }
 
@@ -97,13 +96,6 @@ public partial class ProcessLauncherService
 
     /// <summary>LastPlayed/playtime changed - the library should refresh and save.</summary>
     public event Action<GameEntry>? GameUpdated;
-
-    /// <summary>
-    /// Fired once a freshly-launched game's window has been found and given foreground focus (or,
-    /// failing that, once a bounded wait for it gives up) - the signal LibraryViewModel uses to
-    /// minimize TrayTrigger to tray instead of guessing with a fixed delay.
-    /// </summary>
-    public event Action<GameEntry>? GameWindowReady;
 
     /// <summary>A tracked session began (profile applied / launch dispatched). Raised on a background thread.</summary>
     public event Action<ActiveGameSession>? SessionStarted;
@@ -161,6 +153,36 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
+    /// Set by App from Settings: "Keep game launchers minimized when launching a game", honored by
+    /// the Steam, Epic and GOG Galaxy launches with each client's own start-quietly switch. Unset means never.
+    /// </summary>
+    public Func<bool>? KeepLaunchersMinimized { get; set; }
+
+    private bool ShouldKeepLaunchersMinimized => KeepLaunchersMinimized?.Invoke() == true;
+
+    /// <summary>The Epic launch link. "silent=true" asks the launcher not to show its window.</summary>
+    internal static string BuildEpicLaunchUrl(string appName, bool silent) =>
+        $"com.epicgames.launcher://apps/{Uri.EscapeDataString(appName)}?action=launch{(silent ? "&silent=true" : string.Empty)}";
+
+    /// <summary>
+    /// GalaxyClient.exe's arguments for a game launch with Galaxy closed (the only case the Galaxy
+    /// route is used - see LaunchRouter). Each flag must be a single "/name=value" token: Galaxy's
+    /// parser silently ignores anything it doesn't recognize instead of erroring.
+    /// "/launchViaAutostart" is the switch Galaxy writes into its own Run entry to start in the
+    /// background. Playnite's GOG plugin sends it in front of the same runGame command, and it is
+    /// reported to keep Galaxy down only when Galaxy isn't already running.
+    /// </summary>
+    internal static List<string> BuildGalaxyRunGameArguments(string gameId, string? installDir, bool launchMinimized)
+    {
+        var arguments = new List<string>(4);
+        if (launchMinimized) arguments.Add("/launchViaAutostart");
+        arguments.Add("/command=runGame");
+        arguments.Add($"/gameId={gameId}");
+        if (!string.IsNullOrWhiteSpace(installDir)) arguments.Add($"/path={installDir}");
+        return arguments;
+    }
+
+    /// <summary>
     /// True for a launcher protocol URL (e.g. "com.epicgames.launcher://...", "goggalaxy://...")
     /// as opposed to a filesystem path - including a plain "C:\..." path, which Uri also parses
     /// successfully but as the "file" scheme.
@@ -182,6 +204,12 @@ public partial class ProcessLauncherService
     public bool IsSessionActive(string gameId)
     {
         lock (_sessionsLock) { return _sessions.ContainsKey(gameId); }
+    }
+
+    /// <summary>A session is tracked for this game and its game hasn't started yet.</summary>
+    public bool IsWaitingForGame(string gameId)
+    {
+        lock (_sessionsLock) { return _sessions.TryGetValue(gameId, out var session) && !session.GameStarted; }
     }
 
     private ActiveGameSession? GetSession(string gameId)
@@ -356,9 +384,6 @@ public partial class ProcessLauncherService
             _scriptService.UntrackPostExit(game);
         }
 
-        // Make sure a window-ready waiter never hangs on a session that ended before a window appeared.
-        SignalWindowReady(session);
-
         try { session.Process?.Dispose(); } catch { }
         session.Process = null;
 
@@ -368,12 +393,6 @@ public partial class ProcessLauncherService
         {
             LauncherClientCloser.Close(platform, _steamScannerService.GetSteamInstallPath());
         }
-    }
-
-    private void SignalWindowReady(ActiveGameSession session)
-    {
-        if (Interlocked.Exchange(ref session.WindowReadySignalled, 1) != 0) return;
-        GameWindowReady?.Invoke(session.Game);
     }
 
     /// <summary>
@@ -465,7 +484,6 @@ public partial class ProcessLauncherService
                 LoggingService.Info("Launcher", inFlight.GameStarted
                     ? $"'{game.Name}' is already running (tracked session); activated its window instead of relaunching."
                     : $"'{game.Name}' launch is still in progress (waiting for {inFlight.PlatformLabel}); not dispatching again.");
-                GameWindowReady?.Invoke(game);
                 return true;
             }
 
@@ -505,7 +523,7 @@ public partial class ProcessLauncherService
 
                 case LaunchRoute.EpicClient:
                     return LaunchViaClientUrl(game, route,
-                        $"com.epicgames.launcher://apps/{Uri.EscapeDataString(game.EpicAppName ?? string.Empty)}?action=launch&silent=true", out errorMessage);
+                        BuildEpicLaunchUrl(game.EpicAppName ?? string.Empty, ShouldKeepLaunchersMinimized), out errorMessage);
 
                 case LaunchRoute.UbisoftClient:
                     return LaunchViaClientUrl(game, route,
@@ -651,7 +669,6 @@ public partial class ProcessLauncherService
 
             MarkLaunched(game);
             LoggingService.Info("Launcher", $"'{game.Name}' is already running according to Steam{(existing != null ? " (tracked session)" : "")}; activated its window instead of relaunching.");
-            GameWindowReady?.Invoke(game);
             return true;
         }
 
@@ -696,17 +713,18 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
-    /// "Close the launcher after this game exits" implies the user treats Steam as incidental to
-    /// the game, so when that option is on and Steam is not already running, cold-start it with
-    /// "steam.exe -silent -applaunch &lt;id&gt; [args]" (Valve's documented switches) instead of a
-    /// steam:// URL: the client comes up minimized to the tray and only the game shows. When
-    /// Steam is already open the URL is used as before - "-silent" only affects client startup.
-    /// Returns false when the URL path should be taken (option off, Steam running, no AppId,
-    /// steam.exe not found, or the start failed), so the caller can fall back.
+    /// "Keep game launchers minimized when launching a game" (Settings), or this game's "Close the launcher
+    /// after this game exits" (the user treats Steam as incidental to the game): when either is on
+    /// and Steam is not already running, cold-start it with "steam.exe -silent -applaunch &lt;id&gt;
+    /// [args]" (Valve's documented switches) instead of a steam:// URL, so the client comes up
+    /// minimized to the tray and only the game shows. When Steam is already open the URL is used as
+    /// before - "-silent" only affects client startup, and an open Steam doesn't raise its window
+    /// for a steam:// launch. Returns false when the URL path should be taken (both options off,
+    /// Steam running, no AppId, steam.exe not found, or the start failed), so the caller can fall back.
     /// </summary>
     private bool TryLaunchSteamSilently(GameEntry game, string? appId)
     {
-        if (appId == null || !game.CloseLauncherOnExit) return false;
+        if (appId == null || !(game.CloseLauncherOnExit || ShouldKeepLaunchersMinimized)) return false;
         if (LauncherClientCloser.IsClientRunning(LauncherPlatform.Steam)) return false;
 
         string? steamPath = _steamScannerService.GetSteamInstallPath();
@@ -817,12 +835,6 @@ public partial class ProcessLauncherService
                         WaitForWindowAndActivate(session, proc);
                     }
                 }
-
-                if (session.Process == null && (installDir == null || processSearchTicks >= SteamProcessSearchTicks))
-                {
-                    // Nothing to focus - let the library minimize anyway rather than wait forever.
-                    SignalWindowReady(session);
-                }
             }
             return true;
         });
@@ -931,7 +943,6 @@ public partial class ProcessLauncherService
 
             MarkLaunched(game);
             LoggingService.Info("Launcher", $"'{game.Name}' already running (PID {activeProc.Id}). Activated existing window.");
-            GameWindowReady?.Invoke(game);
             return true;
         }
         catch (Exception ex)
@@ -1035,11 +1046,11 @@ public partial class ProcessLauncherService
 
     /// <summary>
     /// Polls briefly for a freshly-launched game process to create its main window, then gives it
-    /// foreground focus and signals <see cref="GameWindowReady"/>. A process existing and having a
-    /// window are two different moments - confirmed via real launches where the gap was several
-    /// seconds - and this is what LibraryViewModel needs before it's safe to minimize TrayTrigger
-    /// without other windows ending up in front of the game. Bounded so a console-only process,
-    /// or a game slow enough to blow past the window, still eventually signals.
+    /// foreground focus. A process existing and having a window are two different moments -
+    /// confirmed via real launches where the gap was several seconds. TrayTrigger has usually
+    /// hidden itself by then, so whatever window took focus in the meantime is replaced by the
+    /// game. Bounded so a console-only process, or a game slow enough to blow past the window,
+    /// still ends the wait.
     /// </summary>
     private void WaitForWindowAndActivate(ActiveGameSession session, Process process)
     {
@@ -1048,7 +1059,7 @@ public partial class ProcessLauncherService
 
         _ = new Poller(WindowActivationPollInterval, () =>
         {
-            if (Volatile.Read(ref session.Finished) != 0 || Volatile.Read(ref session.WindowReadySignalled) != 0) return false;
+            if (Volatile.Read(ref session.Finished) != 0) return false;
 
             IntPtr hWnd = IntPtr.Zero;
             bool exited;
@@ -1082,7 +1093,6 @@ public partial class ProcessLauncherService
                 LoggingService.Verbose("Launcher", $"No window found to activate for '{game.Name}' ({(exited ? "process exited" : "timed out")}).");
             }
 
-            SignalWindowReady(session);
             return false;
         });
     }
@@ -1176,7 +1186,6 @@ public partial class ProcessLauncherService
 
         MarkLaunched(game);
         LoggingService.Info("Launcher", $"'{game.Name}' already running via {platformLabel} (PID {alreadyRunning.Id}{(existing != null ? ", tracked session" : "")}). Activated existing window.");
-        GameWindowReady?.Invoke(game);
         return true;
     }
 
@@ -1207,14 +1216,11 @@ public partial class ProcessLauncherService
             return true;
         }
 
+        bool keepMinimized = ShouldKeepLaunchersMinimized;
         var galaxyStartInfo = new ProcessStartInfo { FileName = galaxyClientPath, UseShellExecute = false };
-        // Each flag must be a single "/name=value" token - Galaxy's parser silently ignores
-        // anything it doesn't recognize instead of erroring.
-        galaxyStartInfo.ArgumentList.Add("/command=runGame");
-        galaxyStartInfo.ArgumentList.Add($"/gameId={game.GogGameId}");
-        if (!string.IsNullOrWhiteSpace(installDir))
+        foreach (string argument in BuildGalaxyRunGameArguments(game.GogGameId ?? string.Empty, installDir, keepMinimized))
         {
-            galaxyStartInfo.ArgumentList.Add($"/path={installDir}");
+            galaxyStartInfo.ArgumentList.Add(argument);
         }
 
         var session = BeginSession(game, LaunchRoute.GogGalaxy, out string? abortReason);
@@ -1226,7 +1232,7 @@ public partial class ProcessLauncherService
 
         try
         {
-            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' via GOG Galaxy (gameId {game.GogGameId}).");
+            LoggingService.Verbose("Launcher", $"Launching '{game.Name}' via GOG Galaxy (gameId {game.GogGameId}{(keepMinimized ? ", Galaxy started in the background" : string.Empty)}).");
             Process.Start(galaxyStartInfo);
             MarkLaunched(game);
             LoggingService.Info("Launcher", $"Dispatched GOG Galaxy launch for '{game.Name}'.");
@@ -1304,7 +1310,7 @@ public partial class ProcessLauncherService
         if (current == null)
         {
             errorMessage = $"\"{game.Name}\" is no longer installed through the Xbox app.";
-            LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Xbox package '{game.XboxAumid}' is not registered for this user.");
+            LoggingService.Warn("Launcher", $"Cannot launch '{game.Name}': Xbox package '{game.XboxAumid}' is not registered for this user, or its install folder is missing.");
             return false;
         }
 
@@ -1706,6 +1712,36 @@ public partial class ProcessLauncherService
         int? pendingCandidatePid = null;
         int pendingCandidateSightings = 0;
 
+        // Focus at first sight. A game started by its launcher can't take the foreground from the
+        // window the user pressed Play in, so it sat behind TrayTrigger until the stable-sightings
+        // check below confirmed it - 4-6 s, and seen at ~4 s with the EA app (2026-09-13). The
+        // first window-owning process under the install folder gets focus straight away; the
+        // session still only attaches after RequiredStableSightings. If that window was a stub's,
+        // the real game's window gets focus when it shows up. That includes a stub handoff
+        // (ownsProcessAlready): the successor is the real game starting, and nothing else focuses it.
+        IntPtr earlyFocusedWindow = IntPtr.Zero;
+        void GiveEarlyFocus(int pid, bool hasMainWindow)
+        {
+            if (!hasMainWindow) return;
+            IntPtr hWnd;
+            string exeName;
+            try
+            {
+                using var process = Process.GetProcessById(pid);
+                hWnd = process.MainWindowHandle;
+                exeName = process.ProcessName;
+            }
+            catch
+            {
+                return;
+            }
+            if (hWnd == IntPtr.Zero || hWnd == earlyFocusedWindow) return;
+
+            earlyFocusedWindow = hWnd;
+            ActivateWindow(hWnd);
+            LoggingService.Verbose("Launcher", $"Gave '{game.Name}' focus as soon as a window appeared under its install folder (PID {pid}, {exeName}), {(DateTime.UtcNow - waitStartedUtc).TotalSeconds:0.0}s after launching via {platformLabel}; still confirming it's the game.");
+        }
+
         Poller? poller = null;
         poller = new Poller(InstallDirLaunchPollInterval, () =>
         {
@@ -1715,6 +1751,7 @@ public partial class ProcessLauncherService
             if (candidates.Count > 0)
             {
                 var best = candidates[0];
+                GiveEarlyFocus(best.Pid, best.HasMainWindow);
                 if (pendingCandidatePid == best.Pid)
                 {
                     pendingCandidateSightings++;

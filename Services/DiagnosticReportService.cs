@@ -138,7 +138,7 @@ public static class DiagnosticReportService
         sb.AppendLine("**Settings**");
         sb.AppendLine($"- Scripts: {OnOff(s.EnableGameScripts)}; default scripts: {OnOff(s.ScriptDefaults.Enabled)}" +
                       (s.ScriptDefaults.Enabled ? $" (pre-launch {(string.IsNullOrWhiteSpace(s.ScriptDefaults.PreLaunchScriptPath) ? "none" : "set")}, post-exit {(string.IsNullOrWhiteSpace(s.ScriptDefaults.PostExitScriptPath) ? "none" : "set")})" : ""));
-        sb.AppendLine($"- Start with Windows: {OnOff(s.StartWithWindows)}; start minimized: {OnOff(s.StartMinimizedToTray)}; minimize on launch: {OnOff(s.MinimizeOnGameLaunch)}");
+        sb.AppendLine($"- Start with Windows: {OnOff(s.StartWithWindows)}; start minimized: {OnOff(s.StartMinimizedToTray)}; minimize on launch: {OnOff(s.MinimizeOnGameLaunch)}; keep launchers minimized: {OnOff(s.KeepLaunchersMinimized)}; launch popup: {OnOff(s.ShowLaunchPopup)} (every launch {OnOff(s.ShowLaunchPopupOnEveryLaunch)})");
         sb.AppendLine($"- Always show in tray: {OnOff(s.AlwaysShowTrayIcon)}" +
                       (string.IsNullOrWhiteSpace(inputs.TrayPromotionStatus) ? "" : $" - last result: {inputs.TrayPromotionStatus}"));
         sb.AppendLine($"- Tray menu: left-click opens menu {OnOff(s.TrayLeftClickOpensMenu)}, icons {OnOff(s.ShowTrayMenuIcons)}, compact {OnOff(s.CompactTrayMenu)}, grouped {OnOff(s.GroupTrayMenuByCategory)}");

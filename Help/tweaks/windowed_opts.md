@@ -1,4 +1,4 @@
-# Optimizations for Windowed Games
+# Optimizations for Windowed Games (DirectFlip Model)
 
 ## What it changes
 

@@ -1,0 +1,39 @@
+<UserControl x:Class="TrayTrigger.Views.SearchBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="160">
+    <!-- A fixed 160 wide by default: the smallest that fits a "Search settings..." hint beside the
+         clear x, and the same size at any window width on every page that has one. -->
+    <Grid>
+        <TextBox x:Name="Box" Style="{StaticResource ModernTextBox}" VerticalAlignment="Stretch"
+                 VerticalContentAlignment="Center" Padding="9,5,28,5"/>
+        <!-- The same clear x as the hotkey box: shown once there's text. -->
+        <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
+                Click="OnClearClick" ToolTip="Clear search" AutomationProperties.Name="Clear search"
+                Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="9"
+                Background="Transparent" BorderThickness="0" Padding="6,4" Cursor="Hand" Focusable="False">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Button.Template>
+            <Button.Style>
+                <Style TargetType="Button">
+                    <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                        </Trigger>
+                        <!-- Reads the box, not Text, so it shows with the first letter rather than
+                             after the typing delay. -->
+                        <DataTrigger Binding="{Binding Text, ElementName=Box}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+    </Grid>
+</UserControl>

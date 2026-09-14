@@ -518,7 +518,20 @@ public class GameCardViewModel : ViewModelBase
             }
             else if (Directory.Exists(Game.WorkingDirectory))
             {
-                using var proc = Process.Start("explorer.exe", $"\"{Game.WorkingDirectory}\"");
+                // Follow a junction to the real folder (an Xbox game's is a WindowsApps package
+                // folder linked to D:\XboxGames\<Game>\Content). A junction whose target is gone
+                // still passes Directory.Exists, and Explorer shows Documents for it instead.
+                if (LinkedDirectory.Resolve(Game.WorkingDirectory, out string folder) == LinkedDirectoryState.BrokenLink)
+                {
+                    LoggingService.Warn("GameCardViewModel", $"Cannot open the folder for '{Game.Name}': '{Game.WorkingDirectory}' links to a folder or drive that no longer exists.");
+                    Views.ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "Folder Not Found",
+                        $"The folder for \"{Game.Name}\" no longer exists.",
+                        $"{Game.WorkingDirectory} points to a folder or drive that has been removed or isn't connected.");
+                }
+                else
+                {
+                    using var proc = Process.Start("explorer.exe", $"\"{folder}\"");
+                }
             }
         }
         catch (Exception ex)

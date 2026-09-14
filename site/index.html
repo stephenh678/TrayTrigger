@@ -216,7 +216,7 @@
     </div>
     <div class="grid grid-4">
       <div class="tile"><div class="step">1 · Before launch</div><p>Snapshots your current settings. Applies the game's <strong>Performance Profile</strong>: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your <strong>pre-launch script</strong>.</p></div>
-      <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam can start minimized so only the game appears.</p></div>
+      <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears.</p></div>
       <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past.</p></div>
       <div class="tile"><div class="step">4 · On exit</div><p>Restores every setting to <strong>exactly what it found</strong>. Runs your <strong>post-exit script</strong>. Closes the launcher if you told it to. Crash-safe: a snapshot survives a crash and is restored on next start.</p></div>
     </div>
@@ -246,7 +246,8 @@
         <ul>
           <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
           <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
-          <li><strong>Start Steam minimized</strong>: only the game appears.</li>
+          <li><strong>Launchers stay minimized</strong>: Steam and GOG Galaxy start in the background and Epic launches silently, so only the game appears.</li>
+          <li><strong>Launch popup</strong> by the tray clock for hotkey and tray launches: what the game is waiting on, and the reason if a launch fails.</li>
           <li><strong>Run as Administrator</strong> per game, <strong>CPU core affinity</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
           <li><strong>Hardware monitoring</strong> in the same window: live CPU and RAM load, GPU, VRAM, displays, drives, and DirectX capability, without a second app.</li>
         </ul>
@@ -280,10 +281,10 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
         <h2>20 verified, reversible Windows gaming tweaks.</h2>
         <p class="muted">System-wide settings, separate from per-game profiles. Each one shows Windows' <strong>real current state</strong> before you touch it, and each reverts to the exact state TrayTrigger found, not a hard-coded default. Every tweak has a wiki page that explains the trade-off honestly, because most aren't a guaranteed win for every game.</p>
         <ul>
-          <li><strong>Input &amp; Display.</strong> Mouse acceleration · Sticky / Filter / Toggle Keys shortcuts · Optimizations for Windowed Games · Variable Refresh Rate for windowed games · Auto HDR · Hardware-Accelerated GPU Scheduling · Fullscreen optimizations · Multiplane Overlay</li>
-          <li><strong>CPU &amp; Scheduling.</strong> Windows Game Mode · System Timer Resolution · Foreground Priority Boost · Windows Visual Effects · "Ultimate Plan" power plan</li>
-          <li><strong>Network &amp; Background.</strong> MMCSS network throttling · Nagle's Algorithm · Delivery Optimization · Windows Update driver exclusion · Game Bar captures · Xbox Game Bar overlay · Diagnostic telemetry sweeps</li>
-          <li><strong>Security &amp; Advanced.</strong> Core Isolation / Memory Integrity: status only. Shown and linked to Windows Security, never counted as an "optimization".</li>
+          <li><strong>Display &amp; Input.</strong> Mouse acceleration · Sticky, Filter, and Toggle Keys shortcuts · Optimizations for Windowed Games · Variable Refresh Rate for windowed games · Auto HDR · Hardware-Accelerated GPU Scheduling · Fullscreen optimizations · Multiplane Overlay</li>
+          <li><strong>CPU &amp; Scheduling Priority.</strong> Windows Game Mode · System Timer Resolution · Foreground Priority Boost · Windows Visual Effects · "Ultimate Plan" power plan</li>
+          <li><strong>Network &amp; Background Activity.</strong> MMCSS network throttling · Nagle's Algorithm · Delivery Optimization · Windows Update driver exclusion · Game Bar captures · Xbox Game Bar overlay · Diagnostic telemetry sweeps</li>
+          <li><strong>Security (status only).</strong> Core Isolation / Memory Integrity: shown and linked to Windows Security, never counted as an "optimization".</li>
           <li><strong>Apply Performance Preset</strong> turns on every recommended tweak with at most one UAC prompt. <strong>Reset Defaults</strong> reverts only what TrayTrigger changed. A System Restore point can be created before either. Full list: <a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">How Performance Tweaks work</a>.</li>
         </ul>
       </div>

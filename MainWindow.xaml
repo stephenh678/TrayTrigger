@@ -18,6 +18,7 @@
         Drop="Window_Drop"
         DragOver="Window_DragOver"
         PreviewKeyDown="Window_PreviewKeyDown"
+        KeyDown="Window_KeyDown"
         PreviewMouseDown="Window_PreviewMouseDown">
 
     <Window.Resources>
@@ -367,8 +368,10 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="TrayTrigger" FontSize="14.5" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource BrushTextPrimary}" FontFamily="{StaticResource AppFont}"/>
+                        <!-- The wordmark, "Trigger" in the logo's blue, sized to fill the ~120 px beside the
+                             toggle in the 190 px expanded sidebar. Runs on one line, so no space creeps in. -->
+                        <TextBlock FontSize="18" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
+                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"><Run Text="Tray"/><Run Text="Trigger" Foreground="{StaticResource BrushBrand}"/></TextBlock>
                     </StackPanel>
                 </DockPanel>
 
@@ -752,9 +755,21 @@
                                 </Border.Effect>
                                 <StackPanel>
                                     <DockPanel Margin="8,0,8,8">
+                                        <!-- Clear resets and leaves the flyout open. Hidden rather than collapsed
+                                             at zero, so the header doesn't reflow under the pointer that pressed it;
+                                             the Click handler moves keyboard focus off it onto the first option. -->
                                         <Button DockPanel.Dock="Right" Content="Clear" Command="{Binding Library.Filter.ClearCommand}"
-                                                Style="{StaticResource HelpLinkButton}"
-                                                Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}"/>
+                                                Click="LibraryFilterClear_Click">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource HelpLinkButton}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Library.Filter.HasActiveFilters}" Value="False">
+                                                            <Setter Property="Visibility" Value="Hidden"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
                                         <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="12" FontWeight="SemiBold"
                                                    Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                                     </DockPanel>
@@ -865,8 +880,8 @@
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
-                            <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="42"
-                                       Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                            <Image Source="pack://application:,,,/Assets/app_icon.png" Width="64" Height="64"
+                                   HorizontalAlignment="Center" Margin="0,0,0,14" RenderOptions.BitmapScalingMode="HighQuality"/>
                             <TextBlock Text="Your library is empty"
                                        FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
@@ -948,7 +963,7 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock Text="&#xE734;" FontFamily="{StaticResource IconFont}" FontSize="40"
-                                       Foreground="#FFFFFFFF" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                       Foreground="#FFD700" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                             <TextBlock Text="No favorites yet"
                                        FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
@@ -2723,15 +2738,21 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Application Settings" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                                    FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                        <TextBlock Text="Startup and updates, launcher integrations and artwork, the tray menu, launch behaviour, and logs"
+                        <TextBlock Text="Startup and updates, launcher integrations and artwork, the tray menu, launch scripts and tweak safety, and diagnostics"
                                    FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                                    FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </DockPanel>
 
                 <!-- Category Segmented Tabs -->
-                <Border Grid.Row="1" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
-                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16">
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
+                        views:ScrollToTop.Target="{Binding ElementName=SettingsScroll}">
                     <StackPanel Orientation="Horizontal">
                         <Button Content="All" Command="{Binding SelectAllTabCommand}"
                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}"/>
@@ -2747,17 +2768,25 @@
                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsDiagnosticsTab}"/>
                     </StackPanel>
                 </Border>
+                <!-- Card search (Views/CardSearch, Views/SearchBox), on every tab: it searches the selected
+                     tab and the text stays as you switch tabs (SettingsViewModel.SettingsSearchText). -->
+                <views:SearchBox x:Name="SettingsSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
+                                 Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
+                </Grid>
 
                 <!-- Settings Cards ScrollViewer -->
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
-                    <StackPanel HorizontalAlignment="Stretch" Margin="0,0,12,0">
+                <ScrollViewer x:Name="SettingsScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14"
+                              views:ScrollToTop.ResetOn="{Binding SelectedTab}">
+                    <StackPanel x:Name="SettingsCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
+                                views:CardSearch.Query="{Binding SettingsSearchText}"
+                                views:CardSearch.Scope="{Binding SelectedTab}">
 
                         <!-- ============================================== -->
-                        <!-- CATEGORY 1: GENERAL & SYSTEM INTEGRATION       -->
+                        <!-- CATEGORY 1: GENERAL                            -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowGeneralSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -2810,6 +2839,14 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,12" TextWrapping="Wrap"/>
 
+                                    <!-- Sits with the option above: both keep windows off the game while it starts. -->
+                                    <CheckBox Content="Keep game launchers minimized when launching a game"
+                                              IsChecked="{Binding KeepLaunchersMinimized}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game opens. The EA app, Ubisoft Connect, Xbox and Battle.net are left as they are."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,12" TextWrapping="Wrap"/>
+
                                     <DockPanel LastChildFill="False">
                                         <CheckBox Content="Always show icon in tray (prevent collapsing into overflow)" 
                                                   IsChecked="{Binding AlwaysShowTrayIcon}" 
@@ -2844,6 +2881,27 @@
                                     <TextBlock Text="Off: left-click shows or hides the window and right-click opens the menu. On: both clicks open the menu. Double-click always opens the window."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                                    <!-- The icon's launch popup: what a launch from a game hotkey or the tray menu shows
+                                         while the window is out of sight. A launch from the open window uses it only when
+                                         the window is about to hide (minimize on launch) or with the every-launch option. -->
+                                    <CheckBox Content="Show a launch popup by the tray icon"
+                                              IsChecked="{Binding ShowLaunchPopup}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="While TrayTrigger is hidden, a game started from its hotkey or the tray menu shows a small card by the tray icon: the game, what it's waiting for, and any launch error. It never takes focus and closes once the game starts."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,0" TextWrapping="Wrap"/>
+
+                                    <!-- Nested sub-toggle: the popup for launches from the open window too. -->
+                                    <StackPanel Margin="24,8,0,12">
+                                        <CheckBox Content="Show it on every game launch"
+                                                  IsChecked="{Binding ShowLaunchPopupOnEveryLaunch}"
+                                                  IsEnabled="{Binding ShowLaunchPopup}"
+                                                  Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                        <TextBlock Text="Off: only while TrayTrigger is hidden, or when &quot;Minimize to system tray when launching a game&quot; is about to hide it. On: every launch from the open window uses the popup, in place of the notice inside the window. A launch error still opens a dialog while the window is in front."
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="10.5"
+                                                   Margin="24,2,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
 
                                     <TextBlock Text="Show / Hide Window Hotkey" FontSize="12.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
@@ -2913,11 +2971,11 @@
                         </StackPanel>
 
                         <!-- ============================================== -->
-                        <!-- CATEGORY 2: LIBRARY & ARTWORK                  -->
+                        <!-- CATEGORY 2: LIBRARY & ART                      -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowLibrarySection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -2931,7 +2989,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="LIBRARY &amp; ARTWORK" FontSize="11.5" FontWeight="SemiBold" 
+                                    <TextBlock Text="LIBRARY &amp; ART" FontSize="11.5" FontWeight="SemiBold" 
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
@@ -3268,11 +3326,11 @@
                         </StackPanel>
 
                         <!-- ============================================== -->
-                        <!-- CATEGORY 3: SYSTEM TRAY MENU                   -->
+                        <!-- CATEGORY 3: TRAY MENU                          -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowTrayMenuSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3286,7 +3344,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="SYSTEM TRAY MENU" FontSize="11.5" FontWeight="SemiBold" 
+                                    <TextBlock Text="TRAY MENU" FontSize="11.5" FontWeight="SemiBold" 
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
@@ -3387,11 +3445,11 @@
                         </StackPanel>
 
                         <!-- ============================================== -->
-                        <!-- CATEGORY 4: PERFORMANCE TWEAKS                 -->
+                        <!-- CATEGORY 4: LAUNCH & PERFORMANCE               -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowPerformanceTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3560,11 +3618,11 @@
                         </StackPanel>
 
                         <!-- ============================================== -->
-                        <!-- CATEGORY 5: STORAGE & DIAGNOSTICS              -->
+                        <!-- CATEGORY 5: DIAGNOSTICS & STORAGE              -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowDiagnosticsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All Settings view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3693,6 +3751,9 @@
                     </StackPanel>
                 </ScrollViewer>
 
+                <!-- Card search found nothing. -->
+                <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SettingsCardsPanel}" Title="No settings match"/>
+
                 <!-- Settings status line. SettingsViewModel.StatusMessage was previously bound
                      nowhere (the Library status bar is collapsed while Settings is shown), so
                      "Settings saved", "Added scan location", and the integration-toggle messages
@@ -3750,17 +3811,23 @@
 
                     <!-- Left: Title & Subtitle matching Settings -->
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="About TrayTrigger" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
+                        <TextBlock Text="About" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                                    FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                        <TextBlock Text="Application overview, keyboard shortcuts, verified features, and diagnostics" 
+                        <TextBlock Text="Application overview, key features, keyboard shortcuts, and support links" 
                                    FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                                    FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </DockPanel>
 
-                <!-- 2. Category Segmented Tabs -->
-                <Border Grid.Row="1" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
-                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16">
+                <!-- 2. Category Segmented Tabs, with the card search beside them -->
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                        BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
+                        views:ScrollToTop.Target="{Binding ElementName=AboutScroll}">
                     <StackPanel Orientation="Horizontal">
                         <Button Content="All" Command="{Binding SelectAboutAllTabCommand}"
                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAboutAllTab}"/>
@@ -3774,17 +3841,25 @@
                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAboutSupportTab}"/>
                     </StackPanel>
                 </Border>
+                <!-- Card search (Views/CardSearch, Views/SearchBox), as on Settings: it searches the
+                     selected tab and the text stays as you switch tabs (MainViewModel.AboutSearchText). -->
+                <views:SearchBox x:Name="AboutSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
+                                 Text="{Binding AboutSearchText}"/>
+                </Grid>
 
                 <!-- 3. About Content ScrollViewer -->
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
-                    <StackPanel HorizontalAlignment="Stretch" Margin="0,0,12,0">
+                <ScrollViewer x:Name="AboutScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14"
+                              views:ScrollToTop.ResetOn="{Binding CurrentAboutSection}">
+                    <StackPanel x:Name="AboutCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
+                                views:CardSearch.Query="{Binding AboutSearchText}"
+                                views:CardSearch.Scope="{Binding CurrentAboutSection}">
 
                         <!-- ============================================== -->
                         <!-- CATEGORY 1: APPLICATION OVERVIEW               -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutOverviewSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3820,8 +3895,9 @@
 
                                     <StackPanel VerticalAlignment="Center">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="TrayTrigger" FontSize="19" FontWeight="SemiBold" 
-                                                       Foreground="{StaticResource BrushTextPrimary}" FontFamily="{StaticResource AppFont}"/>
+                                            <!-- The wordmark: "Trigger" in the logo's blue. Runs on one line, so no space creeps in. -->
+                                            <TextBlock FontSize="19" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
+                                                       Foreground="{StaticResource BrushTextPrimary}"><Run Text="Tray"/><Run Text="Trigger" Foreground="{StaticResource BrushBrand}"/></TextBlock>
                                             <Border Background="#1C2E3D" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding AppVersionDisplay}" FontSize="11" Foreground="{StaticResource BrushAccentHover}" FontWeight="SemiBold"/>
                                             </Border>
@@ -3885,7 +3961,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutFeaturesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -3899,7 +3975,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="KEY FEATURES &amp; CAPABILITIES" FontSize="11.5" FontWeight="SemiBold" 
+                                    <TextBlock Text="KEY FEATURES" FontSize="11.5" FontWeight="SemiBold" 
                                                Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
@@ -4037,7 +4113,7 @@
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutShortcutsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -4162,7 +4238,7 @@
                                                         <TextBlock Text="F" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
                                                     </Border>
                                                 </StackPanel>
-                                                <TextBlock Text="Focus the search input bar in the Games Library" 
+                                                <TextBlock Text="Focus the search box in the Games Library, Settings or About"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                                             </DockPanel>
 
@@ -4173,7 +4249,7 @@
                                                         <TextBlock Text="Esc" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                                     </Border>
                                                 </StackPanel>
-                                                <TextBlock Text="Clear active search filter and restore all games" 
+                                                <TextBlock Text="Clear the search and show everything again"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                                             </DockPanel>
                                         </StackPanel>
@@ -4183,11 +4259,11 @@
                         </StackPanel>
 
                         <!-- ============================================== -->
-                        <!-- CATEGORY 4: SUPPORT & DIAGNOSTICS              -->
+                        <!-- CATEGORY 4: SUPPORT & LINKS                    -->
                         <!-- ============================================== -->
                         <StackPanel Visibility="{Binding ShowAboutSupportSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                             <!-- Section Header (shown in All view) -->
-                            <Border Margin="0,2,0,8">
+                            <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -4311,6 +4387,9 @@
 
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- Card search found nothing. -->
+                <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=AboutCardsPanel}"/>
             </Grid>
 
             <!-- ========================================================== -->
@@ -4328,7 +4407,7 @@
                     </Style>
                 </Grid.Style>
 
-                <views:SystemView DataContext="{Binding SystemVM}"/>
+                <views:SystemView x:Name="SystemPage" DataContext="{Binding SystemVM}"/>
             </Grid>
 
         </Grid>

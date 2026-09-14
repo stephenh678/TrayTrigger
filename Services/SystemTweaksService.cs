@@ -214,7 +214,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "sticky_keys",
-            Name = "Disable Sticky / Filter / Toggle Keys Shortcuts",
+            Name = "Disable Sticky, Filter, and Toggle Keys Shortcuts",
             Category = TweakCategory.InputAndDisplay,
             ShortDescription = "Stops five Shift taps, an 8-second Shift hold, or a 5-second Num Lock hold from popping an accessibility dialog over your game.",
             WhyItMatters = "Tapping Shift five times mid-match opens the Sticky Keys prompt and steals focus; holding Right Shift for eight seconds turns on Filter Keys and starts dropping keystrokes. Both are the accessibility shortcuts' defaults. This turns off only the keyboard shortcuts (the features stay available from Settings > Accessibility), which is exactly what the Ease of Access page offers.",
@@ -268,7 +268,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "power_plan",
-            Name = "\"Ultimate Plan - TrayTrigger\" Power Plan",
+            Name = "\"Ultimate Plan - TrayTrigger\" Power Plan (always on)",
             Category = TweakCategory.CpuAndPower,
             ShortDescription = "Keeps the CPU at full clock with core parking and PCIe/USB power saving off, all the time - not just during a game session."
                 + (SystemInfoService.HasBattery() ? " Laptop detected: this applies on battery too and will cut battery life and raise temperatures." : ""),
@@ -312,7 +312,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "visual_fx",
-            Name = "Windows Visual Effects (Performance Mode for DWM)",
+            Name = "Windows Visual Effects (Performance Mode)",
             Category = TweakCategory.CpuAndPower,
             ShortDescription = "Disables desktop window minimize animations and drop shadows to reduce compositor load.",
             WhyItMatters = "Frees a small amount of Desktop Window Manager (DWM) GPU overhead. On modern GPUs/compositors the gaming performance impact is marginal - this is mostly a visual-polish-for-a-small-gain tradeoff, so it's off by default and left to you to decide.",
@@ -365,7 +365,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "delivery_opt",
-            Name = "Disable Delivery Optimization (P2P Ping Spikes)",
+            Name = "Disable Delivery Optimization",
             Category = TweakCategory.NetworkAndBackground,
             ShortDescription = "Stops Windows from silently seeding and uploading updates to other computers.",
             WhyItMatters = "Windows P2P update sharing can secretly saturate your upstream bandwidth, causing sudden 150ms+ ping spikes and packet loss mid-match.",
@@ -379,7 +379,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "game_dvr",
-            Name = "Disable Game Bar Captures & Background Recording",
+            Name = "Disable Game Bar Captures and Background Recording",
             Category = TweakCategory.NetworkAndBackground,
             ShortDescription = "Turns off Game Bar's capture feature, including the continuous background recording loop that writes clips to disk.",
             WhyItMatters = "Background recording (\"Record what happened\") constantly ties up NVENC/AMD GPU encoders and writes temporary files to your SSD, introducing encoder contention and frame dips. This disables Game Bar capture as a whole - background recording, Win+Alt+R manual recording, and Game Bar screenshots - so use OBS/ShadowPlay/ReLive for clips if you want them.",
@@ -393,7 +393,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "telemetry_sweeps",
-            Name = "Disable Diagnostic Telemetry Scheduled Sweeps",
+            Name = "Disable Diagnostic Telemetry Sweeps",
             Category = TweakCategory.NetworkAndBackground,
             ShortDescription = "Sets the telemetry policy to its lowest level to reduce automated background collection tasks.",
             WhyItMatters = "Lowers how often Windows CompatTelRunner and related diagnostic tasks spin up CPU threads and disk I/O in the background. On Home/Pro editions Windows silently floors this policy at \"Basic\" rather than fully off (only Enterprise/Education can reach zero), so treat this as a reduction, not a complete elimination, of telemetry activity.",
@@ -436,7 +436,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "priority_separation",
-            Name = "Foreground Priority Boost (Win32PrioritySeparation)",
+            Name = "Foreground Priority Boost",
             Category = TweakCategory.CpuAndPower,
             ShortDescription = "Gives the foreground program short, variable CPU quanta with a 3:1 boost over background processes.",
             WhyItMatters = "The documented scheduler setting behind System Properties > Performance > \"Adjust for best performance of: Programs\". Windows client already favours the foreground (0x02); 0x26 sharpens it with shorter quanta so a CPU-bound game keeps the core when Discord, a browser, or an updater wants it. Modest, real, and reversible to the exact prior value - but it can make heavy background work (encoding, compiling) slower while a game has focus, so it's opt-in.",
@@ -455,7 +455,7 @@ public partial class SystemTweaksService
         list.Add(new SystemTweakItem
         {
             Id = "core_isolation",
-            Name = "Core Isolation / Memory Integrity (HVCI) Status",
+            Name = "Core Isolation / Memory Integrity (HVCI)",
             Category = TweakCategory.SecurityAndAdvanced,
             ShortDescription = "Kernel driver protection that costs some CPU headroom in games. Status only - change it in Windows Security.",
             WhyItMatters = "Microsoft has documented a CPU frame rate penalty (roughly 3-8%) in certain games while HVCI is enabled, but it's also a real security boundary against kernel-level exploits and vulnerable driver attacks. This is informational only - weigh the tradeoff yourself and change it in Windows Security if you want to. The state shown is what is running now (Win32_DeviceGuard), which lags the Windows Security switch until you restart.",

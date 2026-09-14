@@ -81,6 +81,17 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    private string _settingsSearchText = string.Empty;
+    /// <summary>
+    /// The card search beside the tabs (see Views/CardSearch). It searches the tab you're on (All
+    /// searches everything) and stays as you switch tabs, filtering each one in turn.
+    /// </summary>
+    public string SettingsSearchText
+    {
+        get => _settingsSearchText;
+        set => SetProperty(ref _settingsSearchText, value ?? string.Empty);
+    }
+
     public bool IsAllTab => SelectedTab == SettingsCategoryTab.All;
     public bool IsGeneralTab => SelectedTab == SettingsCategoryTab.General;
     public bool IsLibraryTab => SelectedTab == SettingsCategoryTab.Library;
@@ -593,6 +604,48 @@ public class SettingsViewModel : ViewModelBase
             if (_settings.MinimizeOnGameLaunch != value)
             {
                 _settings.MinimizeOnGameLaunch = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool KeepLaunchersMinimized
+    {
+        get => _settings.KeepLaunchersMinimized;
+        set
+        {
+            if (_settings.KeepLaunchersMinimized != value)
+            {
+                _settings.KeepLaunchersMinimized = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool ShowLaunchPopup
+    {
+        get => _settings.ShowLaunchPopup;
+        set
+        {
+            if (_settings.ShowLaunchPopup != value)
+            {
+                _settings.ShowLaunchPopup = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    public bool ShowLaunchPopupOnEveryLaunch
+    {
+        get => _settings.ShowLaunchPopupOnEveryLaunch;
+        set
+        {
+            if (_settings.ShowLaunchPopupOnEveryLaunch != value)
+            {
+                _settings.ShowLaunchPopupOnEveryLaunch = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
             }
@@ -1802,6 +1855,12 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
+        OnPropertyChanged(nameof(KeepLaunchersMinimized));
+        OnPropertyChanged(nameof(ShowLaunchPopup));
+        OnPropertyChanged(nameof(ShowLaunchPopupOnEveryLaunch));
+        OnPropertyChanged(nameof(ShowTrayMenuIcons));
+        OnPropertyChanged(nameof(CompactTrayMenu));
+        OnPropertyChanged(nameof(TrayLeftClickOpensMenu));
         OnPropertyChanged(nameof(AutoCheckForUpdates));
         OnPropertyChanged(nameof(IncludePrereleaseUpdates));
         OnPropertyChanged(nameof(GitHubRepository));

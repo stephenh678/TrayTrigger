@@ -136,10 +136,10 @@ public sealed class LibraryFilterViewModel : ViewModelBase
         Groups.Add(_profiles);
         Groups.Add(_status);
 
-        // Clear closes the flyout. Leaving it open would strand the user in front of a panel with
-        // nothing ticked, and the Clear button itself vanishes at zero - so it would disappear from
-        // under the pointer that just pressed it.
-        ClearCommand = new RelayCommand(() => { ClearAll(); IsOpen = false; });
+        // Clear is a reset, not a close: the flyout stays open so the user can tick something else
+        // straight away. The button is hidden (not collapsed) at zero so nothing reflows under the
+        // pointer, and MainWindow moves keyboard focus off it (LibraryFilterClear_Click).
+        ClearCommand = new RelayCommand(ClearAll);
         ToggleOpenCommand = new RelayCommand(() => IsOpen = !IsOpen);
     }
 

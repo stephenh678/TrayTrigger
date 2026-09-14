@@ -344,6 +344,26 @@ public partial class App : Application
         _launcherService.SessionGameStarted += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
         _launcherService.SessionEnded += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
 
+        // The launch popup: what a game hotkey or tray-menu launch shows while the window is out of
+        // sight. The launcher raises its events on background threads.
+        _launchPopup = new LaunchPopupCoordinator(
+            isEnabled: () => _mainViewModel?.Settings.ShowLaunchPopup == true,
+            // "Minimize to system tray when launching a game" hides the window right after the
+            // launch, so the in-window notice would vanish with it: the popup is used instead.
+            showWhileAppInFront: () => _mainViewModel?.Settings is { } s && (s.ShowLaunchPopupOnEveryLaunch || s.MinimizeOnGameLaunch),
+            isAppInFront: IsAppInFront,
+            isWaitingForGame: id => _launcherService?.IsWaitingForGame(id) == true,
+            showMainWindow: ShowMainWindow,
+            iconFor: GetGameIcon,
+            view: new LaunchPopupHost());
+        _mainViewModel.Library.LaunchPopup = _launchPopup;
+        _launcherService.SessionStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionStarted(s.GameId, s.PlatformLabel));
+        _launcherService.SessionGameStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnGameStarted(s.GameId));
+        _launcherService.SessionEnded += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionEnded(s.GameId));
+
+        // "Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon).
+        _launcherService.KeepLaunchersMinimized = () => _mainViewModel?.Settings.KeepLaunchersMinimized == true;
+
         // Windows shutdown / sign-out: WPF raises SessionEnding instead of going through the tray
         // Exit path, so without this a running game's Performance Profile (power plan, MMCSS,
         // HDR) simply stayed applied until the next TrayTrigger start. Anything that would need
@@ -885,6 +905,27 @@ public partial class App : Application
         return block;
     }
 
+    private LaunchPopupCoordinator? _launchPopup;
+
+    /// <summary>
+    /// The TrayTrigger window is on screen and one of TrayTrigger's windows has focus, so the
+    /// in-window launch toast and dialogs can be seen. The tray menu is a popup rather than a
+    /// window, so a launch from it counts as out of sight.
+    /// </summary>
+    private bool IsAppInFront()
+    {
+        if (_mainWindow == null || !_mainWindow.IsVisible || _mainWindow.WindowState == WindowState.Minimized) return false;
+        foreach (Window window in Windows)
+        {
+            if (window.IsActive && window is not LaunchPopupWindow) return true;
+        }
+        return false;
+    }
+
+    /// <summary>The picture the tray menu shows for a game: its own icon, else its launcher's logo.</summary>
+    private ImageSource? GetGameIcon(GameEntry game) =>
+        _mainViewModel?.Library.Games.FirstOrDefault(c => c.Id == game.Id)?.IconImage ?? GetLauncherLogo(game);
+
     // Decoded once per platform: the menu is rebuilt on every launch, exit and library change.
     private readonly Dictionary<string, BitmapImage> _launcherLogoCache = new(StringComparer.Ordinal);
 
@@ -1070,6 +1111,7 @@ public partial class App : Application
             _trayToolTipTimer?.Stop();
             _trayToolTipTimer = null;
             _hotkeyManager?.Dispose();
+            _launchPopup?.Dispose();
             _trayIcon?.Dispose();
 
             if (_mainWindow != null)
@@ -1134,6 +1176,7 @@ public partial class App : Application
             LoggingService.Warn("App", $"Failed to save settings during OnExit: {ex.Message}");
         }
         _hotkeyManager?.Dispose();
+        _launchPopup?.Dispose();
         _trayIcon?.Dispose();
         base.OnExit(e);
     }

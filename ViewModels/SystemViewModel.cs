@@ -331,8 +331,20 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ShowGameProfilesSection));
                 OnPropertyChanged(nameof(RestorePointBadgeText));
                 OnPropertyChanged(nameof(RestorePointBadgeColor));
+                OnPropertyChanged(nameof(SearchScope));
             }
         }
+    }
+
+    private string _systemSearchText = string.Empty;
+    /// <summary>
+    /// The page's card search (see Views/CardSearch). Like Settings and About, it searches the selected
+    /// tab and stays as you switch tabs.
+    /// </summary>
+    public string SystemSearchText
+    {
+        get => _systemSearchText;
+        set => SetProperty(ref _systemSearchText, value ?? string.Empty);
     }
 
     public bool IsAllTab => CurrentSubSection == SystemSubSection.All;
@@ -394,6 +406,46 @@ public class SystemViewModel : ViewModelBase
     public IEnumerable<SystemTweakViewModel> NetworkAndBackgroundTweaks => ForCategory(TweakCategory.NetworkAndBackground);
     public IEnumerable<SystemTweakViewModel> SecurityAndAdvancedTweaks => ForCategory(TweakCategory.SecurityAndAdvanced);
 
+    // The count line under each group heading ("8 tweaks · 6 optimal"), so a group reads as a group
+    // rather than as one more card. Kept current by NotifyTweakStateChanged and the profile toggle
+    // handlers in the constructor.
+    private string GroupSummary(TweakCategory category)
+    {
+        var tweaks = ForCategory(category).ToList();
+        return $"{Plural(tweaks.Count, "tweak")} · {tweaks.Count(t => t.IsOptimal)} optimal";
+    }
+
+    private static string ProfileSummary(IReadOnlyCollection<ProfileTweakToggleViewModel> toggles) =>
+        $"{Plural(toggles.Count, "tweak")} · {toggles.Count(t => t.IsEnabled)} enabled";
+
+    private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
+
+    public string InputAndDisplaySummary => GroupSummary(TweakCategory.InputAndDisplay);
+    public string CpuAndPowerSummary => GroupSummary(TweakCategory.CpuAndPower);
+    public string NetworkAndBackgroundSummary => GroupSummary(TweakCategory.NetworkAndBackground);
+    public string OptimizedProfileSummary => ProfileSummary(OptimizedProfileTweaks);
+    public string AggressiveProfileSummary => ProfileSummary(AggressiveProfileTweaks);
+
+    /// <summary>
+    /// What the page's card search re-filters on (Views/CardSearch.Scope): the tab, the spec cards
+    /// replacing their loading placeholder, and the tweak and profile rows' state - each changes what's
+    /// on screen to search.
+    /// </summary>
+    public object SearchScope =>
+        (CurrentSubSection, IsSpecsLoaded, Tweaks.Count, TweaksOptimizationScoreDisplay, OptimizedProfileSummary, AggressiveProfileSummary);
+
+    /// <summary>After any change to the tweaks' state: the score line, each group's count line, and the
+    /// search, which may need to re-filter what the rows now say.</summary>
+    private void NotifyTweakStateChanged()
+    {
+        OnPropertyChanged(nameof(OptimalTweakCount));
+        OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        OnPropertyChanged(nameof(InputAndDisplaySummary));
+        OnPropertyChanged(nameof(CpuAndPowerSummary));
+        OnPropertyChanged(nameof(NetworkAndBackgroundSummary));
+        OnPropertyChanged(nameof(SearchScope));
+    }
+
     // Optimal count summary
     // The score counts only the recommended set (available, toggleable, not opt-in, not
     // informational) so it reads as "how much of the preset is on", not as a nudge to enable
@@ -423,7 +475,7 @@ public class SystemViewModel : ViewModelBase
 
         return new ObservableCollection<ProfileTweakToggleViewModel>
         {
-            new("\"Ultimate Plan - TrayTrigger\" Power Plan",
+            new("\"Ultimate Plan - TrayTrigger\" Power Plan (profile)",
                 "Switches to a full-clock power plan (no core parking, no PCIe/USB power saving) while the game runs, then switches back.",
                 "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5–15ms to ramp back up and inducing 1% low frame drops when action begins. \"Ultimate Plan - TrayTrigger\" pins the CPU at 100% min/max state with aggressive boost and active cooling, and disables PCIe Link State Power Management and USB selective suspend so the GPU and input devices never stutter through a power-state transition mid-match.",
                 "profiles/power_plan",
@@ -465,7 +517,7 @@ public class SystemViewModel : ViewModelBase
 
         return new ObservableCollection<ProfileTweakToggleViewModel>
         {
-            new("System Responsiveness (MMCSS Gaming Reserve)",
+            new("System Responsiveness",
                 "Reduces the CPU reserve for lower-priority MMCSS tasks to the supported minimum.",
                 "Windows reserves 20% of CPU resources for low-priority background tasks by default. Microsoft's MMCSS documentation clamps any value below 10 back up to 20, so 10 is the lowest reserve Windows actually honors - it leaves more scheduling headroom for latency-sensitive foreground workloads like games.",
                 "profiles/system_responsiveness",
@@ -552,6 +604,7 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsSpecsLoaded));
                 OnPropertyChanged(nameof(SpecsRefreshedDisplay));
+                OnPropertyChanged(nameof(SearchScope));
             }
         }
     }
@@ -560,8 +613,9 @@ public class SystemViewModel : ViewModelBase
     public bool IsSpecsLoaded => !IsLoadingSpecs;
 
     private DateTime? _specsRefreshedAt;
-    /// <summary>"Detecting…" while loading, then "Last read 14:02:11" beside the Refresh Specs button.</summary>
-    public string SpecsRefreshedDisplay => IsLoadingSpecs ? "Detecting hardware…"
+    /// <summary>"Last read 14:02:11" beside the Refresh Specs button; empty while loading, when the
+    /// placeholder card already says "Detecting hardware…".</summary>
+    public string SpecsRefreshedDisplay => IsLoadingSpecs ? ""
         : _specsRefreshedAt is DateTime t ? $"Last read {t:HH:mm:ss}" : "";
 
     private string _statusMessage = "Ready";
@@ -614,6 +668,20 @@ public class SystemViewModel : ViewModelBase
 
         OptimizedProfileTweaks = BuildOptimizedProfileToggles(_settings.OptimizedProfileTweaks);
         AggressiveProfileTweaks = BuildAggressiveProfileToggles(_settings.AggressiveProfileTweaks);
+
+        // A profile toggle announces its own change; its tier's count line and the search follow it.
+        foreach (var toggle in OptimizedProfileTweaks)
+            toggle.PropertyChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(OptimizedProfileSummary));
+                OnPropertyChanged(nameof(SearchScope));
+            };
+        foreach (var toggle in AggressiveProfileTweaks)
+            toggle.PropertyChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(AggressiveProfileSummary));
+                OnPropertyChanged(nameof(SearchScope));
+            };
 
         SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
@@ -712,13 +780,11 @@ public class SystemViewModel : ViewModelBase
             Tweaks.Add(new SystemTweakViewModel(item, _tweaksService, msg =>
             {
                 StatusMessage = msg;
-                OnPropertyChanged(nameof(OptimalTweakCount));
-                OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+                NotifyTweakStateChanged();
             }));
         }
-        OnPropertyChanged(nameof(OptimalTweakCount));
         OnPropertyChanged(nameof(TotalTweakCount));
-        OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        NotifyTweakStateChanged();
         OnPropertyChanged(nameof(InputAndDisplayTweaks));
         OnPropertyChanged(nameof(CpuAndPowerTweaks));
         OnPropertyChanged(nameof(NetworkAndBackgroundTweaks));
@@ -737,9 +803,8 @@ public class SystemViewModel : ViewModelBase
                 vm.RefreshState(updated);
             }
         }
-        OnPropertyChanged(nameof(OptimalTweakCount));
         OnPropertyChanged(nameof(TotalTweakCount));
-        OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        NotifyTweakStateChanged();
         OnPropertyChanged(nameof(RestorePointBadgeText));
         OnPropertyChanged(nameof(RestorePointBadgeColor));
         if (statusOnDone != null) StatusMessage = statusOnDone;

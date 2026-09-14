@@ -28,14 +28,10 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Update Icon Badge -->
-                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22" 
-                        Background="#1C2E3D" BorderBrush="#25547C" BorderThickness="1.5" 
-                        Margin="0,0,16,0" VerticalAlignment="Top" HorizontalAlignment="Center">
-                    <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="18" 
-                               Foreground="{StaticResource BrushAccentHover}" 
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
+                <!-- The app icon, as in the Welcome dialog: it has its own background art, so no badge circle. -->
+                <Image Grid.Column="0" Source="pack://application:,,,/Assets/app_icon.png"
+                       Width="48" Height="48" Stretch="Uniform" Margin="0,0,16,0" VerticalAlignment="Top"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
 
                 <!-- Title & Version Row -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">

@@ -77,6 +77,8 @@ public class MainViewModel : ViewModelBase
     public ObservableCollection<CategoryTabItem> CategoryTabs => Library.CategoryTabs;
     public ObservableCollection<string> SortOptions => Library.SortOptions;
     public ICollectionView FilteredGames => Library.FilteredGames;
+    // The library empty states bind this; without it the first-run and "No favorites yet" panels never show.
+    public bool HasAnyGames => Library.HasAnyGames;
 
     public AppSettings Settings => _settings;
     public IconExtractorService IconExtractorService => _iconExtractorService;
@@ -327,13 +329,17 @@ public class MainViewModel : ViewModelBase
         OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
 
         _launcherService.GameUpdated += Library.OnGameUpdatedFromLauncher;
-        _launcherService.GameWindowReady += Library.OnGameWindowReady;
         _launcherService.SessionStarted += Library.OnSessionStarted;
         _launcherService.SessionEnded += Library.OnSessionEnded;
         // A launch that needs the user after it was dispatched (Battle.net couldn't find the game's
         // launch code, or the game never started) - raised on a background thread.
-        _launcherService.LaunchNotice += (_, message) =>
-            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => NotifyTray("TrayTrigger", message));
+        // With the window out of sight the launch popup carries it; otherwise the tray does.
+        _launcherService.LaunchNotice += (game, message) =>
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                if (Library.LaunchPopup?.TryShowNotice(game, message) == true) return;
+                NotifyTray("TrayTrigger", message);
+            });
         _hotkeyManager.GameHotkeyTriggered += Library.OnGameHotkeyTriggered;
 
         Library.LoadLibrary();
@@ -553,6 +559,17 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ShowAboutSupportSection));
             }
         }
+    }
+
+    private string _aboutSearchText = string.Empty;
+    /// <summary>
+    /// The About page's card search (see Views/CardSearch). Like Settings' search, it searches the
+    /// selected tab and stays as you switch tabs.
+    /// </summary>
+    public string AboutSearchText
+    {
+        get => _aboutSearchText;
+        set => SetProperty(ref _aboutSearchText, value ?? string.Empty);
     }
 
     public bool IsAboutAllTab => CurrentAboutSection == AboutSubSection.All;

@@ -89,9 +89,9 @@ public class LibraryViewModel : ViewModelBase
     private string _launchToastMessage = string.Empty;
     private DispatcherTimer? _launchToastTimer;
 
-    // Tracks which just-launched game we're waiting to minimize for (see DispatchLaunch/OnGameWindowReady)
-    private string? _pendingMinimizeGameId;
-    private DispatcherTimer? _minimizeFallbackTimer;
+    /// <summary>Set by App: the popup a launch reports to while the window is out of sight. Null
+    /// (tests, or before startup finishes) keeps the in-window toast and dialogs.</summary>
+    public ILaunchPopup? LaunchPopup { get; set; }
 
     public ObservableCollection<GameCardViewModel> Games { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
@@ -941,17 +941,11 @@ public class LibraryViewModel : ViewModelBase
         Window? owner = WindowHelper.ActiveOwner();
         if (card.IsMissing)
         {
-            var res = ModernDialog.Confirm(
-                owner,
-                "Game Executable Missing",
-                $"The executable for \"{card.Name}\" was not found.",
-                $"Expected location:\n{card.Game.ExecutablePath}\n\nWould you like to locate the game executable now?",
-                confirmText: "Locate...",
-                cancelText: "Cancel");
-
-            if (res)
+            // From a hotkey or the tray there's no window for the dialog to sit on.
+            if (LaunchPopup?.TryShowFailure(card.Game, "Its executable wasn't found.", "Locate executable...",
+                    () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
             {
-                RelocateGame(card);
+                PromptLocateMissingExecutable(card, owner);
             }
             return;
         }
@@ -960,7 +954,12 @@ public class LibraryViewModel : ViewModelBase
         // actual launch happens - a fast-launching game (e.g. Steam) can take focus/fullscreen
         // within a few hundred ms of the process spawning, which would cover this window before
         // the toast is ever noticed if it were shown at the same instant as the launch call.
-        ShowLaunchToast($"Launching \"{card.Name}\"...");
+        // With the window hidden or behind another app the toast can't be seen at all, so the
+        // launch popup stands in for it.
+        if (LaunchPopup?.TryBeginLaunch(card.Game) != true)
+        {
+            ShowLaunchToast($"Launching \"{card.Name}\"...");
+        }
 
         var launchDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
         launchDelayTimer.Tick += (s, e) =>
@@ -969,6 +968,22 @@ public class LibraryViewModel : ViewModelBase
             DispatchLaunch(card, owner);
         };
         launchDelayTimer.Start();
+    }
+
+    private void PromptLocateMissingExecutable(GameCardViewModel card, Window? owner)
+    {
+        var res = ModernDialog.Confirm(
+            owner,
+            "Game Executable Missing",
+            $"The executable for \"{card.Name}\" was not found.",
+            $"Expected location:\n{card.Game.ExecutablePath}\n\nWould you like to locate the game executable now?",
+            confirmText: "Locate...",
+            cancelText: "Cancel");
+
+        if (res)
+        {
+            RelocateGame(card);
+        }
     }
 
     private void DispatchLaunch(GameCardViewModel card, Window? owner)
@@ -1005,50 +1020,36 @@ public class LibraryViewModel : ViewModelBase
             // doing it again here was a redundant second full games.json + settings.json rewrite
             // on every launch.
             StatusMessage = $"Launched {card.Name}";
+            LaunchPopup?.LaunchDispatched(card.Game.Id);
 
             if (_settings.MinimizeOnGameLaunch)
             {
-                // Don't minimize on a fixed guess - the actual game window (as opposed to its
-                // process existing) can take many seconds to appear, and hiding TrayTrigger
-                // before then just hands focus to whatever other window was next in line instead
-                // of the game. Wait for ProcessLauncherService's confirmation that the game's
-                // window has been found and given focus (see OnGameWindowReady below); the
-                // fallback timer covers launch paths with no process to track at all (e.g. a bare
-                // Steam dispatch) so TrayTrigger still eventually hides either way.
-                _pendingMinimizeGameId = card.Game.Id;
-                _minimizeFallbackTimer?.Stop();
-                _minimizeFallbackTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-                _minimizeFallbackTimer.Tick += (s, e) =>
-                {
-                    _minimizeFallbackTimer?.Stop();
-                    _pendingMinimizeGameId = null;
-                    RequestMinimizeToTray?.Invoke();
-                };
-                _minimizeFallbackTimer.Start();
+                // Hidden as soon as the launch is dispatched. The launch popup stands in for the
+                // in-window notice whenever this option is on (see App's LaunchPopupCoordinator),
+                // and ProcessLauncherService gives the game's window focus as soon as it appears,
+                // over whatever window Windows handed focus to when this one hid.
+                RequestMinimizeToTray?.Invoke();
             }
         }
         else if (isMissing)
         {
             IsLaunchToastVisible = false;
             card.RefreshProperties();
-            var res = ModernDialog.Confirm(
-                owner,
-                "Game Executable Missing",
-                $"The executable for \"{card.Name}\" was not found.",
-                $"Expected location:\n{card.Game.ExecutablePath}\n\nWould you like to locate the game executable now?",
-                confirmText: "Locate...",
-                cancelText: "Cancel");
-
-            if (res)
+            if (LaunchPopup?.TryShowFailure(card.Game, "Its executable wasn't found.", "Locate executable...",
+                    () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
             {
-                RelocateGame(card);
+                PromptLocateMissingExecutable(card, owner);
             }
         }
         else
         {
             IsLaunchToastVisible = false;
             StatusMessage = $"Error: {err}";
-            ModernDialog.ShowWarning(owner, "Launch Error", err ?? "Failed to launch game.");
+            string message = err ?? "Failed to launch game.";
+            if (LaunchPopup?.TryShowFailure(card.Game, message, "Open TrayTrigger", action: null) != true)
+            {
+                ModernDialog.ShowWarning(owner, "Launch Error", message);
+            }
         }
     }
 
@@ -1779,25 +1780,6 @@ public class LibraryViewModel : ViewModelBase
             card?.RefreshProperties();
             SaveGamesOnly();
             ApplySort();
-        });
-    }
-
-    /// <summary>
-    /// Fired by ProcessLauncherService once the just-launched game's window has been found and
-    /// given focus (or a bounded wait for it gave up) - see DispatchLaunch. Only acts if it's for
-    /// the game we're actually waiting on, in case a second launch started before this one's
-    /// signal arrived.
-    /// </summary>
-    public void OnGameWindowReady(GameEntry game)
-    {
-        RunOnUiThread(() =>
-        {
-            if (_pendingMinimizeGameId == null || game.Id != _pendingMinimizeGameId) return;
-
-            _pendingMinimizeGameId = null;
-            _minimizeFallbackTimer?.Stop();
-            _minimizeFallbackTimer = null;
-            RequestMinimizeToTray?.Invoke();
         });
     }
 

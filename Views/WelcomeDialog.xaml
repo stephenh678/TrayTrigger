@@ -37,8 +37,9 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="GETTING STARTED" FontSize="10" FontWeight="Bold"
                                Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,3"/>
-                    <TextBlock Text="Welcome to TrayTrigger" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"/>
+                    <!-- The wordmark: "Trigger" in the logo's blue. Runs on one line, so no space creeps in. -->
+                    <TextBlock FontSize="15" FontWeight="SemiBold"
+                               Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"><Run Text="Welcome to Tray"/><Run Text="Trigger" Foreground="{StaticResource BrushBrand}"/></TextBlock>
                 </StackPanel>
             </Grid>
 

@@ -26,6 +26,14 @@ public class AppSettings
     public bool UbisoftIntegrationEnabled { get; set; } = true;
     public bool XboxIntegrationEnabled { get; set; } = true;
     public bool BattleNetIntegrationEnabled { get; set; } = true;
+    /// <summary>
+    /// "Keep game launchers minimized when launching a game": each launcher's own start-quietly switch.
+    /// Steam cold-starts with -silent, Epic gets its silent launch link, and GOG Galaxy starts with
+    /// /launchViaAutostart. The EA app and Ubisoft Connect have no such switch, so their windows are
+    /// left as they are. Xbox launches never open the Xbox app, and Battle.net is left alone because
+    /// its launch retries and Play-tab fallback need its window.
+    /// </summary>
+    public bool KeepLaunchersMinimized { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
     public bool IsSidebarExpanded { get; set; } = false;
     /// <summary>
@@ -63,6 +71,14 @@ public class AppSettings
     public bool CompactTrayMenu { get; set; } = false;
     /// <summary>Left-click on the tray icon opens the game menu instead of showing or hiding the window. Double-click always opens the window.</summary>
     public bool TrayLeftClickOpensMenu { get; set; } = false;
+    /// <summary>A small always-on-top popup near the tray while a game launches from a hotkey or the tray menu with
+    /// the window hidden: the game, what it is waiting on, and any launch error. It never takes focus and closes
+    /// once the game starts. Off: those launches show nothing, as before 1.4.3.</summary>
+    public bool ShowLaunchPopup { get; set; } = true;
+    /// <summary>With <see cref="ShowLaunchPopup"/> on, also show the popup for launches from the open window, in place
+    /// of the in-window launch notice. Off: only while the window is out of sight, or about to hide because
+    /// MinimizeOnGameLaunch is on.</summary>
+    public bool ShowLaunchPopupOnEveryLaunch { get; set; } = false;
     public bool SearchOfficialTitleOnline { get; set; } = true;
     public double OnlineMatchConfidenceThreshold { get; set; } = 0.60;
     public bool AutoCategorizeFromSteam { get; set; } = true;
