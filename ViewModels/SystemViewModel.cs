@@ -331,8 +331,20 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ShowGameProfilesSection));
                 OnPropertyChanged(nameof(RestorePointBadgeText));
                 OnPropertyChanged(nameof(RestorePointBadgeColor));
+                OnPropertyChanged(nameof(SearchScope));
             }
         }
+    }
+
+    private string _systemSearchText = string.Empty;
+    /// <summary>
+    /// The page's card search (see Views/CardSearch). Like Settings and About, it searches the selected
+    /// tab and stays as you switch tabs.
+    /// </summary>
+    public string SystemSearchText
+    {
+        get => _systemSearchText;
+        set => SetProperty(ref _systemSearchText, value ?? string.Empty);
     }
 
     public bool IsAllTab => CurrentSubSection == SystemSubSection.All;
@@ -395,7 +407,8 @@ public class SystemViewModel : ViewModelBase
     public IEnumerable<SystemTweakViewModel> SecurityAndAdvancedTweaks => ForCategory(TweakCategory.SecurityAndAdvanced);
 
     // The count line under each group heading ("8 tweaks · 6 optimal"), so a group reads as a group
-    // rather than as one more card. Kept current by the handlers in the constructor.
+    // rather than as one more card. Kept current by NotifyTweakStateChanged and the profile toggle
+    // handlers in the constructor.
     private string GroupSummary(TweakCategory category)
     {
         var tweaks = ForCategory(category).ToList();
@@ -412,6 +425,26 @@ public class SystemViewModel : ViewModelBase
     public string NetworkAndBackgroundSummary => GroupSummary(TweakCategory.NetworkAndBackground);
     public string OptimizedProfileSummary => ProfileSummary(OptimizedProfileTweaks);
     public string AggressiveProfileSummary => ProfileSummary(AggressiveProfileTweaks);
+
+    /// <summary>
+    /// What the page's card search re-filters on (Views/CardSearch.Scope): the tab, the spec cards
+    /// replacing their loading placeholder, and the tweak and profile rows' state - each changes what's
+    /// on screen to search.
+    /// </summary>
+    public object SearchScope =>
+        (CurrentSubSection, IsSpecsLoaded, Tweaks.Count, TweaksOptimizationScoreDisplay, OptimizedProfileSummary, AggressiveProfileSummary);
+
+    /// <summary>After any change to the tweaks' state: the score line, each group's count line, and the
+    /// search, which may need to re-filter what the rows now say.</summary>
+    private void NotifyTweakStateChanged()
+    {
+        OnPropertyChanged(nameof(OptimalTweakCount));
+        OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        OnPropertyChanged(nameof(InputAndDisplaySummary));
+        OnPropertyChanged(nameof(CpuAndPowerSummary));
+        OnPropertyChanged(nameof(NetworkAndBackgroundSummary));
+        OnPropertyChanged(nameof(SearchScope));
+    }
 
     // Optimal count summary
     // The score counts only the recommended set (available, toggleable, not opt-in, not
@@ -571,6 +604,7 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsSpecsLoaded));
                 OnPropertyChanged(nameof(SpecsRefreshedDisplay));
+                OnPropertyChanged(nameof(SearchScope));
             }
         }
     }
@@ -635,20 +669,19 @@ public class SystemViewModel : ViewModelBase
         OptimizedProfileTweaks = BuildOptimizedProfileToggles(_settings.OptimizedProfileTweaks);
         AggressiveProfileTweaks = BuildAggressiveProfileToggles(_settings.AggressiveProfileTweaks);
 
-        // The group headings' count lines follow whatever they count: every path that changes a
-        // tweak's state already announces the optimization score, and every profile toggle announces
-        // its own change.
-        PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName != nameof(TweaksOptimizationScoreDisplay)) return;
-            OnPropertyChanged(nameof(InputAndDisplaySummary));
-            OnPropertyChanged(nameof(CpuAndPowerSummary));
-            OnPropertyChanged(nameof(NetworkAndBackgroundSummary));
-        };
+        // A profile toggle announces its own change; its tier's count line and the search follow it.
         foreach (var toggle in OptimizedProfileTweaks)
-            toggle.PropertyChanged += (_, _) => OnPropertyChanged(nameof(OptimizedProfileSummary));
+            toggle.PropertyChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(OptimizedProfileSummary));
+                OnPropertyChanged(nameof(SearchScope));
+            };
         foreach (var toggle in AggressiveProfileTweaks)
-            toggle.PropertyChanged += (_, _) => OnPropertyChanged(nameof(AggressiveProfileSummary));
+            toggle.PropertyChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(AggressiveProfileSummary));
+                OnPropertyChanged(nameof(SearchScope));
+            };
 
         SelectAllTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.All);
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
@@ -747,13 +780,11 @@ public class SystemViewModel : ViewModelBase
             Tweaks.Add(new SystemTweakViewModel(item, _tweaksService, msg =>
             {
                 StatusMessage = msg;
-                OnPropertyChanged(nameof(OptimalTweakCount));
-                OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+                NotifyTweakStateChanged();
             }));
         }
-        OnPropertyChanged(nameof(OptimalTweakCount));
         OnPropertyChanged(nameof(TotalTweakCount));
-        OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        NotifyTweakStateChanged();
         OnPropertyChanged(nameof(InputAndDisplayTweaks));
         OnPropertyChanged(nameof(CpuAndPowerTweaks));
         OnPropertyChanged(nameof(NetworkAndBackgroundTweaks));
@@ -772,9 +803,8 @@ public class SystemViewModel : ViewModelBase
                 vm.RefreshState(updated);
             }
         }
-        OnPropertyChanged(nameof(OptimalTweakCount));
         OnPropertyChanged(nameof(TotalTweakCount));
-        OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        NotifyTweakStateChanged();
         OnPropertyChanged(nameof(RestorePointBadgeText));
         OnPropertyChanged(nameof(RestorePointBadgeColor));
         if (statusOnDone != null) StatusMessage = statusOnDone;

@@ -149,6 +149,71 @@ public class CardSearchTests
     }
 
     [Fact]
+    public void Apply_IgnoresCardsTheirOwnRuleHides()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var host = new StackPanel();
+            var specs = Section(host, "HARDWARE SPECS", "Graphics Card (GPU)");
+            // Like System's loading placeholder once the specs are in: collapsed by its own rule.
+            var placeholder = new Border { Child = new TextBlock { Text = "Detecting hardware…" }, Visibility = Visibility.Collapsed };
+            specs.Children.Add(placeholder);
+
+            CardSearch.Apply(host, "detecting");
+
+            Assert.True(CardSearch.GetNoMatches(host));
+            Assert.Equal(Visibility.Collapsed, placeholder.Visibility);
+            Assert.Equal(Visibility.Collapsed, specs.Visibility);
+
+            CardSearch.Apply(host, "");
+            Assert.Equal(Visibility.Collapsed, placeholder.Visibility);
+            Assert.Equal(Visibility.Visible, specs.Visibility);
+        });
+    }
+
+    [Fact]
+    public void Apply_RefiltersCardsWhoseOwnRuleChangedWhileSearching()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var host = new StackPanel();
+            var specs = Section(host, "HARDWARE SPECS", "Graphics Card (GPU)", "System Memory (RAM)");
+            var specsLoaded = new TabRule();
+            foreach (var card in specs.Children.OfType<Border>().Skip(1))
+                BindingOperations.SetBinding(card, UIElement.VisibilityProperty, new Binding(nameof(TabRule.Visibility)) { Source = specsLoaded });
+            var gpu = specs.Children[1];
+            var ram = specs.Children[2];
+
+            CardSearch.Apply(host, "memory");
+            Assert.Equal(Visibility.Collapsed, gpu.Visibility);
+            Assert.Equal(Visibility.Visible, ram.Visibility);
+
+            // Refresh Specs: the cards' own rule hides them and brings them back, overwriting the
+            // search's hold - so the page re-runs the search.
+            specsLoaded.Visibility = Visibility.Collapsed;
+            specsLoaded.Visibility = Visibility.Visible;
+            Assert.Equal(Visibility.Visible, gpu.Visibility);
+
+            CardSearch.Apply(host, "memory", moveToResults: false);
+            Assert.Equal(Visibility.Collapsed, gpu.Visibility);
+            Assert.Equal(Visibility.Visible, ram.Visibility);
+            Assert.False(CardSearch.GetNoMatches(host));
+        });
+    }
+
+    [Fact]
+    public void CollectText_ReadsAListsTextItemsBeforeItHasRows()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // A ComboBox whose dropdown has never opened has no item containers yet.
+            var combo = new ComboBox { ItemsSource = new[] { "Alphabetical (A - Z)", "Recently Played" } };
+
+            Assert.Contains("Recently Played", CardSearch.CollectText(new Border { Child = combo }));
+        });
+    }
+
+    [Fact]
     public void FindRanges_FindsEveryWord_MergingOverlaps()
     {
         Assert.Equal(new[] { (0, 4), (15, 4) }, SearchHighlight.FindRanges("Tray icon, the tray", ["TRAY"]));

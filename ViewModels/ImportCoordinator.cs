@@ -137,9 +137,18 @@ public class ImportCoordinator : ViewModelBase
         entry.PerformanceProfile = PerformanceProfileMode.Optimized;
         await _library.EnrichGameWithSteamMetadataAsync(entry);
         // Stamp it like EnrichLibraryAsync does, or the next startup re-searches every game this
-        // import just looked up and couldn't match (Xbox, Battle.net titles not on Steam).
-        entry.LastEnrichmentAttemptUtc = DateTime.UtcNow;
+        // import just looked up and couldn't match (Xbox, Battle.net titles not on Steam). Only when a
+        // lookup could run, though: with every source off nothing was tried, and a stamp would keep
+        // the game out of the pass that runs once one is switched on.
+        if (AnyEnrichmentSourceEnabled)
+            entry.LastEnrichmentAttemptUtc = DateTime.UtcNow;
     }
+
+    // What EnrichLibraryAsync can run with - and so what makes an import's lookup count as an attempt.
+    private bool AnyEnrichmentSourceEnabled =>
+        _settings.AutoCategorizeFromSteam || _settings.SearchOfficialTitleOnline || RawgEnabled;
+
+    private bool RawgEnabled => _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey);
 
     // Shared commit step of every import pipeline: add the prepared entries to the visible
     // library and refresh everything that depends on it. See L-12.
@@ -311,8 +320,8 @@ public class ImportCoordinator : ViewModelBase
     {
         // RAWG enrichment (match id, category, canonical title for poster search) rides the same
         // pass, so an enabled RAWG source is reason enough to run it.
-        bool rawgEnabled = _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey);
-        if (!_settings.AutoCategorizeFromSteam && !_settings.SearchOfficialTitleOnline && !rawgEnabled)
+        bool rawgEnabled = RawgEnabled;
+        if (!AnyEnrichmentSourceEnabled)
             return;
 
         // Settings toggles, library load, and post-import enrichment can all request this

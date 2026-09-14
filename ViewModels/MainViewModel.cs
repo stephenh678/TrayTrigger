@@ -569,13 +569,7 @@ public class MainViewModel : ViewModelBase
     public string AboutSearchText
     {
         get => _aboutSearchText;
-        set
-        {
-            value ??= string.Empty;
-            if (_aboutSearchText == value) return;
-            _aboutSearchText = value;
-            OnPropertyChanged();
-        }
+        set => SetProperty(ref _aboutSearchText, value ?? string.Empty);
     }
 
     public bool IsAboutAllTab => CurrentAboutSection == AboutSubSection.All;

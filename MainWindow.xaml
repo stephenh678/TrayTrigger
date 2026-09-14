@@ -18,6 +18,7 @@
         Drop="Window_Drop"
         DragOver="Window_DragOver"
         PreviewKeyDown="Window_PreviewKeyDown"
+        KeyDown="Window_KeyDown"
         PreviewMouseDown="Window_PreviewMouseDown">
 
     <Window.Resources>
@@ -3749,16 +3750,7 @@
                 </ScrollViewer>
 
                 <!-- Card search found nothing. -->
-                <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0"
-                            Visibility="{Binding (views:CardSearch.NoMatches), ElementName=SettingsCardsPanel, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="36"
-                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                    <TextBlock Text="No settings match" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
-                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Try a different word or another tab, or press Esc to clear the search."
-                               FontSize="13" Foreground="{StaticResource BrushTextSecondary}"
-                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                </StackPanel>
+                <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SettingsCardsPanel}" Title="No settings match"/>
 
                 <!-- Settings status line. SettingsViewModel.StatusMessage was previously bound
                      nowhere (the Library status bar is collapsed while Settings is shown), so
@@ -4394,16 +4386,7 @@
                 </ScrollViewer>
 
                 <!-- Card search found nothing. -->
-                <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0"
-                            Visibility="{Binding (views:CardSearch.NoMatches), ElementName=AboutCardsPanel, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="36"
-                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                    <TextBlock Text="No matches" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
-                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Try a different word or another tab, or press Esc to clear the search."
-                               FontSize="13" Foreground="{StaticResource BrushTextSecondary}"
-                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                </StackPanel>
+                <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=AboutCardsPanel}"/>
             </Grid>
 
             <!-- ========================================================== -->
@@ -4421,7 +4404,7 @@
                     </Style>
                 </Grid.Style>
 
-                <views:SystemView DataContext="{Binding SystemVM}"/>
+                <views:SystemView x:Name="SystemPage" DataContext="{Binding SystemVM}"/>
             </Grid>
 
         </Grid>

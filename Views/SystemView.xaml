@@ -149,9 +149,14 @@
             </StackPanel>
         </DockPanel>
 
-        <!-- 2. CATEGORY SEGMENTED TABS -->
-        <Border Grid.Row="1" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
-                BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16"
+        <!-- 2. CATEGORY SEGMENTED TABS, with the card search beside them -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}" 
+                BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
                 views:ScrollToTop.Target="{Binding ElementName=ContentScroll}">
             <StackPanel Orientation="Horizontal">
                 <Button Content="All" Command="{Binding SelectAllTabCommand}"
@@ -164,18 +169,25 @@
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsGameProfilesTab}"/>
             </StackPanel>
         </Border>
+        <!-- Card search (Views/CardSearch, Views/SearchBox), as on Settings and About: it searches the
+             selected tab and the text stays as you switch tabs (SystemViewModel.SystemSearchText). -->
+        <views:SearchBox x:Name="SystemSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
+                         Text="{Binding SystemSearchText}" Placeholder="Search system..."/>
+        </Grid>
 
         <!-- 3. CONTENT AREA -->
         <ScrollViewer x:Name="ContentScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14"
                       views:ScrollToTop.ResetOn="{Binding CurrentSubSection}">
-            <StackPanel HorizontalAlignment="Stretch" Margin="0,0,12,0">
+            <StackPanel x:Name="SystemCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
+                        views:CardSearch.Query="{Binding SystemSearchText}"
+                        views:CardSearch.Scope="{Binding SearchScope}">
 
                 <!-- ========================================================== -->
                 <!-- CATEGORY 1: HARDWARE SPECS                                 -->
                 <!-- ========================================================== -->
                 <StackPanel Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                     <!-- Section Header (shown in All view) -->
-                    <Border Margin="0,2,0,8">
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -215,10 +227,11 @@
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
+                    <!-- Each spec card carries its own IsSpecsLoaded rule instead of sharing a wrapper
+                         panel, so the card search sees them as separate cards. -->
 
                     <!-- 1. Graphics Card (GPU) -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
                                 <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
@@ -238,7 +251,7 @@
                     </Border>
 
                     <!-- 2. Displays & Refresh Rate -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
                                 <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
@@ -260,7 +273,7 @@
                     </Border>
 
                     <!-- 3. Processor (CPU) -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding Cpu.CurrentUsagePercent, Mode=OneWay, StringFormat='Load: {0}%'}" 
@@ -282,7 +295,7 @@
                     </Border>
 
                     <!-- 4. System Memory (RAM) -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding Ram.UsagePercent, Mode=OneWay, StringFormat='Used: {0}%'}" 
@@ -305,7 +318,7 @@
                     </Border>
 
                     <!-- 5. Storage & Gaming Drives -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Storage &amp; Gaming Drives" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
@@ -337,7 +350,7 @@
                     </Border>
 
                     <!-- 6. Network & Latency -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
                                 <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
@@ -352,7 +365,7 @@
                     </Border>
 
                     <!-- 7. Operating System & Power -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Operating System &amp; Power" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
@@ -373,7 +386,7 @@
 
                     <!-- 8. Windows Gaming Utilities. Hidden with the spec cards while they load: alone
                          under the "Detecting hardware…" card it read as one more spec. -->
-                    <Border Style="{StaticResource SettingsCard}">
+                    <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
                                 <TextBlock Text="Windows Gaming Utilities" FontSize="13.5" FontWeight="SemiBold"
@@ -394,8 +407,6 @@
                         </StackPanel>
                     </Border>
 
-                    </StackPanel>
-
                 </StackPanel>
 
                 <!-- ========================================================== -->
@@ -403,7 +414,7 @@
                 <!-- ========================================================== -->
                 <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                     <!-- Section Header (shown in All view) -->
-                    <Border Margin="0,2,0,8">
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -538,7 +549,7 @@
                 <!-- ========================================================== -->
                 <StackPanel Visibility="{Binding ShowGameProfilesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                     <!-- Section Header (shown in All view) -->
-                    <Border Margin="0,2,0,8">
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -599,6 +610,9 @@
 
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Card search found nothing. -->
+        <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SystemCardsPanel}"/>
 
         <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Reset Defaults runs) -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"

@@ -11,15 +11,15 @@ using System.Windows.Threading;
 namespace TrayTrigger.Views;
 
 /// <summary>
-/// Card-level search for a sectioned page (Settings › All). <c>Query</c> goes on the panel inside the
-/// page's ScrollViewer: each Panel child of that host is a section, the section child marked
-/// <c>IsHeader</c> is its heading, and every other section child is a card. A card stays visible when
-/// every word of the query appears somewhere in its text - titles, descriptions, option labels,
-/// tooltips - and a heading that matches keeps its whole section. A section left with no cards hides,
-/// heading and all, and <c>NoMatches</c> on the host says the whole page came up empty. The words
-/// themselves are highlighted in what's left on screen, first match scrolled into view
+/// Card-level search for a sectioned page (Settings, About, System). <c>Query</c> goes on the panel
+/// inside the page's ScrollViewer: each Panel child of that host is a section, the section child
+/// marked <c>IsHeader</c> is its heading, and every other section child is a card. A card stays
+/// visible when every word of the query appears somewhere in its text - titles, descriptions, option
+/// labels, tooltips - and a heading that matches keeps its whole section. A section left with no cards
+/// hides, heading and all, and <c>NoMatches</c> on the host says the whole page came up empty. The
+/// words themselves are highlighted in what's left on screen, first match scrolled into view
 /// (<see cref="SearchHighlight"/>). Only the sections the page is showing take part, so on a single
-/// tab the search stays within that tab; <c>Scope</c> re-runs it when the tab changes.
+/// tab the search stays within that tab; <c>Scope</c> re-runs it when what's on screen changes.
 /// <para>
 /// Nothing's own visibility rules are overwritten: an element with no local Visibility is hidden with
 /// a local value and restored with ClearValue, so style triggers (the headings' "All tab only") take
@@ -37,17 +37,14 @@ public static class CardSearch
     public static void SetQuery(DependencyObject d, string? value) => d.SetValue(QueryProperty, value);
 
     /// <summary>
-    /// What the page is showing right now (Settings binds its selected tab). A change re-runs the search
-    /// against the sections now on screen - deferred, because this binding can update before the tab's
-    /// own section bindings do.
+    /// What's on screen: the selected tab, plus anything else that adds, removes or rewrites cards
+    /// (System binds its specs loading and its tweak state too). A change re-runs the search against
+    /// what's there now, leaving the scroll position alone - deferred and coalesced, because this
+    /// binding can update before the page's own visibility bindings do.
     /// </summary>
     public static readonly DependencyProperty ScopeProperty = DependencyProperty.RegisterAttached(
         "Scope", typeof(object), typeof(CardSearch),
-        new PropertyMetadata(null, (d, _) =>
-        {
-            if (d is Panel host)
-                host.Dispatcher.InvokeAsync(() => Apply(host, GetQuery(host)), DispatcherPriority.DataBind);
-        }));
+        new PropertyMetadata(null, (d, _) => { if (d is Panel host) ScheduleReapply(host); }));
 
     public static object? GetScope(DependencyObject d) => d.GetValue(ScopeProperty);
     public static void SetScope(DependencyObject d, object? value) => d.SetValue(ScopeProperty, value);
@@ -69,7 +66,23 @@ public static class CardSearch
     private static readonly DependencyProperty HiddenBySearchProperty = DependencyProperty.RegisterAttached(
         "HiddenBySearch", typeof(bool), typeof(CardSearch), new PropertyMetadata(false));
 
-    internal static void Apply(Panel host, string? query)
+    private static readonly DependencyProperty ReapplyPendingProperty = DependencyProperty.RegisterAttached(
+        "ReapplyPending", typeof(bool), typeof(CardSearch), new PropertyMetadata(false));
+
+    private static void ScheduleReapply(Panel host)
+    {
+        if ((bool)host.GetValue(ReapplyPendingProperty)) return;
+        host.SetValue(ReapplyPendingProperty, true);
+        host.Dispatcher.InvokeAsync(() =>
+        {
+            host.SetValue(ReapplyPendingProperty, false);
+            Apply(host, GetQuery(host), moveToResults: false);
+        }, DispatcherPriority.DataBind);
+    }
+
+    /// <param name="moveToResults">True when the query itself changed: back to the top, and the first
+    /// match parked in view. A re-run because the page changed under the search leaves the view alone.</param>
+    internal static void Apply(Panel host, string? query, bool moveToResults = true)
     {
         string[] terms = SplitTerms(query);
         bool searching = terms.Length > 0;
@@ -77,11 +90,9 @@ public static class CardSearch
 
         foreach (var section in host.Children.OfType<Panel>())
         {
-            // Only sections the selected tab shows take part. Hand the section back to its tab rule to
-            // find out; if that hides it, undo anything an earlier search hid inside it, so nothing is
-            // missing when that tab is picked.
-            SetHidden(section, false);
-            if (section.Visibility != Visibility.Visible)
+            // Sections the selected tab hides take no part; undo anything an earlier search hid inside
+            // them, so nothing is missing when that tab is picked.
+            if (!IsOwnRuleVisible(section))
             {
                 foreach (UIElement child in section.Children) SetHidden(child, false);
                 continue;
@@ -94,20 +105,42 @@ public static class CardSearch
             foreach (UIElement child in section.Children)
             {
                 if (child == header) continue;
+                // A card its own rule hides (System's loading placeholder once specs are in) takes no part.
+                if (!IsOwnRuleVisible(child)) continue;
                 bool show = !searching || headerMatches || Matches(CollectText(child), terms);
                 SetHidden(child, !show);
+                // Handing a card back to its own rule is the only way to learn that rule has hidden it
+                // since an earlier search did.
+                if (show && child.Visibility != Visibility.Visible) continue;
                 sectionHasCards |= show;
             }
 
             bool hideSection = searching && !sectionHasCards;
             if (header != null) SetHidden(header, hideSection);
             SetHidden(section, hideSection);
+            // Likewise a section whose tab rule hid it while an earlier search was hiding it.
+            if (!hideSection && section.Visibility != Visibility.Visible) continue;
             anyCardShown |= sectionHasCards;
         }
 
         host.SetValue(NoMatchesKey, searching && !anyCardShown);
-        (host.Parent as ScrollViewer)?.ScrollToTop();
-        SearchHighlight.Refresh(host, terms);
+        if (moveToResults) (host.Parent as ScrollViewer)?.ScrollToTop();
+        SearchHighlight.Refresh(host, terms, moveToResults);
+    }
+
+    /// <summary>
+    /// Whether the element's own rule (binding, style or default) shows it, read without touching it -
+    /// probing by un-hiding would ripple IsVisible through the whole card on every keystroke. One the
+    /// search is hiding was showing when it was hidden; if a binding has since pushed Visible over the
+    /// search's value, the search's hold is gone, so its marker is dropped. A binding that has since
+    /// pushed Collapsed looks the same as the search's own Collapsed; <see cref="Apply"/> finds that
+    /// out when it hands the element back.
+    /// </summary>
+    private static bool IsOwnRuleVisible(UIElement element)
+    {
+        if (!(bool)element.GetValue(HiddenBySearchProperty)) return element.Visibility == Visibility.Visible;
+        if (element.Visibility == Visibility.Visible) element.SetValue(HiddenBySearchProperty, false);
+        return true;
     }
 
     internal static string[] SplitTerms(string? query) =>
@@ -141,14 +174,16 @@ public static class CardSearch
         if (node is TextBox) return;
 
         // Rows generated from an ItemsSource (About's help topics) aren't logical children, so read
-        // what those rows show instead. A list that has never been on screen has no rows yet and
-        // contributes nothing until it has been.
+        // what those rows show instead. A list that hasn't generated a row - a dropdown never opened,
+        // a list never on screen - still offers its plain text items.
         if (node is ItemsControl { ItemsSource: not null } list)
         {
             foreach (object item in list.Items)
             {
                 if (list.ItemContainerGenerator.ContainerFromItem(item) is DependencyObject row)
                     CollectShown(row, text);
+                else if (item is string itemText)
+                    text.Append(itemText).Append(' ');
             }
             return;
         }

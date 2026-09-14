@@ -674,10 +674,12 @@ public partial class App
             {
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.General;
-                _mainViewModel.SettingsVM.SettingsSearchText = e.Args[i + 2];
                 _mainViewModel.CurrentSection = NavSection.Settings;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
+                // Typed once the page is on screen, as a person would: a search that's already set when
+                // the page appears highlights without moving.
+                _mainViewModel.SettingsVM.SettingsSearchText = e.Args[i + 2];
                 // Let the deferred highlight pass (and its scroll to the first match) run first.
                 _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                 _mainWindow.UpdateLayout();
@@ -834,6 +836,18 @@ public partial class App
                 return;
             }
 
+            // --screenshot-system-search <out.png> <query>: System's card search on its All tab, typed
+            // once hardware detection has finished (up to 15 s) so the spec cards are there to search.
+            if ((e.Args[i].Equals("--screenshot-system-search", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-system-search", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                string query = e.Args[i + 2];
+                CaptureSystemOnceSpecsLoad(targetPng, () => _mainViewModel.SystemVM.SystemSearchText = query);
+                return;
+            }
+
             // --screenshot-system-ready <out.png>: the System "All" tab captured only once hardware
             // detection has finished (up to 15 s), so the README shot shows real specs rather than
             // "Detecting hardware...".
@@ -842,28 +856,7 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                _mainViewModel.CurrentSection = NavSection.System;
-                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All;
-                _mainWindow.Show();
-                _mainWindow.UpdateLayout();
-                var started = DateTime.Now;
-                var poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-                poll.Tick += (s, args) =>
-                {
-                    if (!_mainViewModel.SystemVM.IsSpecsLoaded && DateTime.Now - started < TimeSpan.FromSeconds(15)) return;
-                    poll.Stop();
-                    // One more beat so the bound cards have laid out with the detected values.
-                    var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
-                    settle.Tick += (s2, args2) =>
-                    {
-                        settle.Stop();
-                        _mainWindow.UpdateLayout();
-                        CaptureVisual(_mainWindow, 960, 750, targetPng);
-                        ExitApplication();
-                    };
-                    settle.Start();
-                };
-                poll.Start();
+                CaptureSystemOnceSpecsLoad(targetPng);
                 return;
             }
 
@@ -3018,6 +3011,43 @@ public partial class App
         {
             _logger($"[CaptureScreen] Error: {ex}");
         }
+    }
+
+    /// <summary>
+    /// Shows System's All tab, waits for hardware detection (up to 15 s) and a settle beat, runs
+    /// <paramref name="beforeCapture"/> if given (and lets what it queued finish), then captures
+    /// <paramref name="targetPng"/> and exits. Shared by --screenshot-system-ready and -search.
+    /// </summary>
+    private void CaptureSystemOnceSpecsLoad(string targetPng, Action? beforeCapture = null)
+    {
+        _mainViewModel.CurrentSection = NavSection.System;
+        _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All;
+        _mainWindow.Show();
+        _mainWindow.UpdateLayout();
+        var started = DateTime.Now;
+        var poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        poll.Tick += (s, args) =>
+        {
+            if (!_mainViewModel.SystemVM.IsSpecsLoaded && DateTime.Now - started < TimeSpan.FromSeconds(15)) return;
+            poll.Stop();
+            // One more beat so the bound cards have laid out with the detected values.
+            var settle = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+            settle.Tick += (s2, args2) =>
+            {
+                settle.Stop();
+                _mainWindow.UpdateLayout();
+                if (beforeCapture != null)
+                {
+                    beforeCapture();
+                    _mainWindow.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    _mainWindow.UpdateLayout();
+                }
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+            };
+            settle.Start();
+        };
+        poll.Start();
     }
 
 #endif

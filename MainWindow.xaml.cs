@@ -386,20 +386,19 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Library shortcuts documented in the About page's Quick Reference: Ctrl+F jumps focus
-    /// to the search box, Escape clears an active search filter. Settings and About get the same
-    /// pair for their card search (<see cref="HandlePageSearchKeys"/>); everything else is a no-op
-    /// outside those sections so it doesn't steal keystrokes.
+    /// to the search box, Escape clears an active search filter. Settings, About and System get the
+    /// same pair for their card search - Ctrl+F here, Escape in <see cref="Window_KeyDown"/>; everything
+    /// else is a no-op outside those sections so it doesn't steal keystrokes.
     /// </summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (_viewModel.CurrentSection == NavSection.Settings)
+        if (CurrentPageSearchBox is { } pageSearch)
         {
-            HandlePageSearchKeys(e, SettingsSearchBox);
-            return;
-        }
-        if (_viewModel.CurrentSection == NavSection.About)
-        {
-            HandlePageSearchKeys(e, AboutSearchBox);
+            if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                pageSearch.FocusBox();
+                e.Handled = true;
+            }
             return;
         }
         if (_viewModel.CurrentSection != NavSection.Library) return;
@@ -438,23 +437,28 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// A page's search box beside its tabs: Ctrl+F focuses it; Escape clears the search unless
-    /// another text field has focus.
-    /// </summary>
-    private static void HandlePageSearchKeys(KeyEventArgs e, SearchBox box)
+    /// <summary>The search box of the page on screen, when that page has one.</summary>
+    private SearchBox? CurrentPageSearchBox => _viewModel.CurrentSection switch
     {
-        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            box.FocusBox();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Escape && !string.IsNullOrEmpty(box.Text) &&
-                 (box.IsBoxFocused || Keyboard.FocusedElement is not System.Windows.Controls.TextBox))
-        {
-            box.Clear();
-            e.Handled = true;
-        }
+        NavSection.Settings => SettingsSearchBox,
+        NavSection.About => AboutSearchBox,
+        NavSection.System => SystemPage.PageSearchBox,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Escape clears the page's search. Handled here, bubbling, rather than in Window_PreviewKeyDown, so
+    /// a control that uses Escape itself - the hotkey recorder cancelling, an open dropdown closing -
+    /// gets it first; one that does marks it handled and this never runs. Escape in another text field
+    /// is left to that field.
+    /// </summary>
+    private void Window_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || Keyboard.Modifiers != ModifierKeys.None) return;
+        if (CurrentPageSearchBox is not { } box || string.IsNullOrEmpty(box.Text)) return;
+        if (!box.IsBoxFocused && Keyboard.FocusedElement is System.Windows.Controls.TextBox) return;
+        box.Clear();
+        e.Handled = true;
     }
 
     private void Window_DragOver(object sender, DragEventArgs e)
