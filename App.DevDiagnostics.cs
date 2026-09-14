@@ -883,12 +883,8 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                _mainViewModel.CurrentSection = NavSection.System;
-                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.HardwareSpecs;
-                _mainWindow.Show();
-                _mainWindow.UpdateLayout();
-                CaptureVisual(_mainWindow, 960, 750, targetPng);
-                ExitApplication();
+                // Waits for detection, so the README shot shows real specs, not "Detecting hardware...".
+                CaptureSystemOnceSpecsLoad(targetPng, tab: SystemSubSection.HardwareSpecs);
                 return;
             }
 
@@ -3032,14 +3028,15 @@ public partial class App
     }
 
     /// <summary>
-    /// Shows System's All tab, waits for hardware detection (up to 15 s) and a settle beat, runs
-    /// <paramref name="beforeCapture"/> if given (and lets what it queued finish), then captures
-    /// <paramref name="targetPng"/> and exits. Shared by --screenshot-system-ready and -search.
+    /// Shows System on <paramref name="tab"/>, waits for hardware detection (up to 15 s) and a settle
+    /// beat, runs <paramref name="beforeCapture"/> if given (and lets what it queued finish), then
+    /// captures <paramref name="targetPng"/> and exits. Shared by --screenshot-system-ready, -specs
+    /// and -search.
     /// </summary>
-    private void CaptureSystemOnceSpecsLoad(string targetPng, Action? beforeCapture = null)
+    private void CaptureSystemOnceSpecsLoad(string targetPng, Action? beforeCapture = null, SystemSubSection tab = SystemSubSection.All)
     {
         _mainViewModel.CurrentSection = NavSection.System;
-        _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.All;
+        _mainViewModel.SystemVM.CurrentSubSection = tab;
         _mainWindow.Show();
         _mainWindow.UpdateLayout();
         var started = DateTime.Now;
