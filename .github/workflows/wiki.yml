@@ -1,13 +1,15 @@
 name: Sync Wiki
 
-# The wiki is generated from Help/ (the app's "Learn more" pages) so the two never drift.
-# Runs whenever a help page or the generator changes on main; can also be run by hand.
+# The wiki is generated from Help/ (the app's "Learn more" pages) and the bundled example
+# scripts' headers, so the two never drift. Runs whenever any of those or the generator
+# changes on main; can also be run by hand.
 on:
   push:
     branches: [main]
     paths:
       - 'Help/**'
       - 'tools/Export-Wiki.ps1'
+      - 'Scripts/Library/Example-*.ps1'
       - '.github/workflows/wiki.yml'
   workflow_dispatch:
 

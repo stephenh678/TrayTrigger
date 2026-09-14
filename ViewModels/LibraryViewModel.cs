@@ -350,10 +350,15 @@ public class LibraryViewModel : ViewModelBase
     /// inside the constructor loop above, so the window stayed hidden until every File.Exists and
     /// bitmap decode in the whole library finished.
     /// </summary>
-    private void LoadCardHeavyStateInBackground()
+    /// <param name="cards">The cards to load; every card in the library when null.</param>
+    /// <summary>The most recent <see cref="LoadCardHeavyStateInBackground"/> run; completed once its
+    /// results have been applied on the UI thread. The release screenshot waits on it.</summary>
+    internal Task HeavyStateLoad { get; private set; } = Task.CompletedTask;
+
+    internal void LoadCardHeavyStateInBackground(IReadOnlyList<GameCardViewModel>? cards = null)
     {
-        var cardsSnapshot = Games.ToList();
-        _ = Task.Run(() =>
+        var cardsSnapshot = cards?.ToList() ?? Games.ToList();
+        HeavyStateLoad = Task.Run(() =>
         {
             var results = new System.Collections.Generic.List<(GameCardViewModel Card, bool IsMissing, System.Windows.Media.Imaging.BitmapImage? Icon, DateTime? IconWriteTimeUtc, System.Windows.Media.Imaging.BitmapImage? Cover, DateTime? CoverWriteTimeUtc)>();
             foreach (var card in cardsSnapshot)
@@ -367,6 +372,14 @@ public class LibraryViewModel : ViewModelBase
                 foreach (var (card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) in results)
                 {
                     card.ApplyHeavyState(isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
+                }
+
+                // A saved "Executable missing" tick was applied while every card still read
+                // IsMissing = false, so the filter has to run again now that it's known.
+                if (Filter.HasActiveFilters)
+                {
+                    FilteredGames.Refresh();
+                    OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
                 }
 
                 // The tray menu was built by LoadLibrary before any icon existed, and nothing else
@@ -824,8 +837,7 @@ public class LibraryViewModel : ViewModelBase
     public void ApplyCategoryToMany(List<GameCardViewModel> cards, string newCategory)
     {
         if (cards.Count == 0) return;
-        if (string.IsNullOrWhiteSpace(newCategory)) newCategory = LibraryConstants.Uncategorized;
-        newCategory = newCategory.Trim();
+        newCategory = LibraryConstants.NormalizeCategory(newCategory);
 
         foreach (var card in cards)
         {
@@ -1205,18 +1217,16 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
-        if (!trimmed.All(char.IsDigit))
+        if (!UrlProtocolHelper.IsValidSteamAppId(trimmed))
         {
             ModernDialog.ShowWarning(Application.Current?.MainWindow, "Invalid App ID", "Steam App ID must be a numeric ID (e.g. 1245620).");
             return;
         }
 
         card.Game.SteamAppId = trimmed;
-        // IMPORTANT: Never change IsSteamGame to true! Non-Steam games link Steam App ID purely for metadata/art.
-        if (!string.IsNullOrWhiteSpace(card.Game.ExecutablePath) && !card.Game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
-        {
-            card.Game.IsSteamGame = false;
-        }
+        // IsSteamGame is left alone: a Local game links an App ID purely for metadata and art,
+        // and a Steam game set to launch its executable directly (a real path, not steam://)
+        // must not be demoted to Local by re-linking its ID.
 
         StatusMessage = $"Fetching Steam metadata for App ID {trimmed}...";
         SteamMetadataService.InvalidateCache(trimmed);
@@ -1231,7 +1241,8 @@ public class LibraryViewModel : ViewModelBase
             {
                 card.Game.CoverImagePath = details.CoverImagePath;
             }
-            if ((string.IsNullOrWhiteSpace(card.Game.Category) || card.Game.Category.Equals(LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase)) &&
+            // The same setting and rule as the enrichment pass and Game Details.
+            if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game.Category) &&
                 !string.IsNullOrWhiteSpace(details.PrimaryGenre))
             {
                 card.Game.Category = details.PrimaryGenre;
@@ -1471,11 +1482,8 @@ public class LibraryViewModel : ViewModelBase
 
     public void ApplyCategory(GameCardViewModel card, string newCategory)
     {
-        if (string.IsNullOrWhiteSpace(newCategory))
-            newCategory = LibraryConstants.Uncategorized;
-
         string oldCategory = card.Category;
-        card.Game.Category = newCategory.Trim();
+        card.Game.Category = LibraryConstants.NormalizeCategory(newCategory);
         card.RefreshProperties();
         RebuildCategories();
         SaveLibrary();
@@ -1829,9 +1837,12 @@ public class LibraryViewModel : ViewModelBase
             Categories.Add(LibraryConstants.HiddenCategory);
         }
 
-        if (Categories.Contains(previous))
+        // Categories are deduped case-insensitively above, so the kept spelling can differ from
+        // the selected one ("RPG" vs "rpg"); match the same way.
+        string? kept = Categories.FirstOrDefault(c => string.Equals(c, previous, StringComparison.OrdinalIgnoreCase));
+        if (kept != null)
         {
-            _selectedCategory = previous;
+            _selectedCategory = kept;
         }
         else
         {

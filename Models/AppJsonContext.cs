@@ -1,35 +1,22 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using TrayTrigger.Models;
 
 namespace TrayTrigger.Models;
 
+/// <summary>
+/// Source-generated serializer metadata for every JSON file TrayTrigger reads or writes. Only the
+/// root types are listed; the generator emits the nested ones (GameEntry, ScanLocation,
+/// GitHubReleaseAsset, the tweak configs and snapshots, SteamNewsItem, ...) from these.
+/// </summary>
 [JsonSourceGenerationOptions(
     WriteIndented = true,
     PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(List<GameEntry>))]
 [JsonSerializable(typeof(AppSettings))]
-[JsonSerializable(typeof(Dictionary<string, string>))]
-[JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(GitHubReleaseInfo))]
 [JsonSerializable(typeof(List<GitHubReleaseInfo>))]
-[JsonSerializable(typeof(GitHubReleaseAsset))]
-[JsonSerializable(typeof(List<GitHubReleaseAsset>))]
 [JsonSerializable(typeof(PerformanceProfileSessionSnapshot))]
-[JsonSerializable(typeof(OptimizedProfileTweakConfig))]
-[JsonSerializable(typeof(AggressiveProfileTweakConfig))]
-[JsonSerializable(typeof(PerGameProfileSnapshot))]
-[JsonSerializable(typeof(List<PerGameProfileSnapshot>))]
-[JsonSerializable(typeof(HdrDisplaySnapshot))]
-[JsonSerializable(typeof(List<HdrDisplaySnapshot>))]
-[JsonSerializable(typeof(ScanLocation))]
-[JsonSerializable(typeof(List<ScanLocation>))]
-[JsonSerializable(typeof(IgnoredGamePath))]
-[JsonSerializable(typeof(List<IgnoredGamePath>))]
-[JsonSerializable(typeof(SteamAppDetails))]
-[JsonSerializable(typeof(SteamNewsItem))]
 [JsonSerializable(typeof(Dictionary<string, SteamAppDetails>))]
-[JsonSerializable(typeof(RawgGameDetails))]
 [JsonSerializable(typeof(Dictionary<int, RawgGameDetails>))]
 public partial class AppJsonContext : JsonSerializerContext
 {

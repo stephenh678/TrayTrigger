@@ -98,9 +98,9 @@ public partial class SteamSearchService
         string cleaned = query;
 
         // 1. Correct common spelling mistakes
-        foreach (var (pattern, correction) in TitleHeuristics.CommonSpellingCorrections)
+        foreach (var (pattern, correction) in TitleHeuristics.SpellingCorrectionRegexes)
         {
-            cleaned = Regex.Replace(cleaned, pattern, correction, RegexOptions.IgnoreCase);
+            cleaned = pattern.Replace(cleaned, correction);
         }
 
         // 2. Strip bracketed & parenthesized annotations
@@ -108,9 +108,9 @@ public partial class SteamSearchService
         cleaned = ParenthesesClutterRegex().Replace(cleaned, " ");
 
         // 3. Strip edition tags (which often break Steam API search matching)
-        foreach (var ed in TitleHeuristics.EditionPhrases)
+        foreach (var edition in TitleHeuristics.EditionPhraseRegexes)
         {
-            cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", "", RegexOptions.IgnoreCase);
+            cleaned = edition.Replace(cleaned, "");
         }
 
         // 4. Strip builds, version numbers, and architecture tags
@@ -151,24 +151,30 @@ public partial class SteamSearchService
 
         if (ReferenceEquals(pending, claim.Task))
         {
-            try
-            {
-                // Deliberately not the caller's token: the result is shared, so one caller
-                // walking away must not cancel the search the others are waiting on. They each
-                // stop waiting on their own token below instead.
-                claim.SetResult(await SearchGamesUncachedAsync(trimmed, CancellationToken.None).ConfigureAwait(false));
-            }
-            catch (Exception ex)
-            {
-                claim.SetException(ex);
-            }
-            finally
-            {
-                InFlight.TryRemove(new KeyValuePair<string, Task<List<SteamGameMatch>>>(trimmed, claim.Task));
-            }
+            // Not awaited here: the claimant waits on its own token below like everyone else,
+            // rather than being held until the whole search finishes.
+            _ = RunClaimedSearchAsync(claim, trimmed);
         }
 
         return await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task RunClaimedSearchAsync(TaskCompletionSource<List<SteamGameMatch>> claim, string trimmed)
+    {
+        try
+        {
+            // Deliberately not a caller's token: the result is shared, so one caller walking
+            // away must not cancel the search the others are waiting on.
+            claim.SetResult(await SearchGamesUncachedAsync(trimmed, CancellationToken.None).ConfigureAwait(false));
+        }
+        catch (Exception ex)
+        {
+            claim.SetException(ex);
+        }
+        finally
+        {
+            InFlight.TryRemove(new KeyValuePair<string, Task<List<SteamGameMatch>>>(trimmed, claim.Task));
+        }
     }
 
     /// <summary>
@@ -182,28 +188,37 @@ public partial class SteamSearchService
 
         LoggingService.Verbose("SteamSearch", $"Searching Steam for query='{trimmed}' (sanitized='{effectiveQuery}')");
 
-        var results = await QueryStoreSearchApiAsync(effectiveQuery, cancellationToken).ConfigureAwait(false);
+        var primary = await QueryStoreSearchApiAsync(effectiveQuery, cancellationToken).ConfigureAwait(false);
+        bool anyRequestFailed = primary == null;
+        var results = primary ?? [];
 
         // If primary API returned nothing, and sanitized was different, try original query
         if (results.Count == 0 && !sanitized.Equals(trimmed, StringComparison.OrdinalIgnoreCase))
         {
             LoggingService.Verbose("SteamSearch", $"Sanitized search yielded 0 results; retrying raw query='{trimmed}'");
-            results = await QueryStoreSearchApiAsync(trimmed, cancellationToken).ConfigureAwait(false);
+            var raw = await QueryStoreSearchApiAsync(trimmed, cancellationToken).ConfigureAwait(false);
+            anyRequestFailed |= raw == null;
+            results = raw ?? [];
         }
 
         // If still nothing, fallback to Steam Suggest endpoint
         if (results.Count == 0)
         {
             LoggingService.Verbose("SteamSearch", $"Primary storesearch API yielded 0 results; querying Suggest endpoint for '{effectiveQuery}'");
-            results = await QuerySuggestApiAsync(effectiveQuery, cancellationToken).ConfigureAwait(false);
+            var suggested = await QuerySuggestApiAsync(effectiveQuery, cancellationToken).ConfigureAwait(false);
+            anyRequestFailed |= suggested == null;
+            results = suggested ?? [];
         }
 
         LoggingService.Verbose("SteamSearch", $"Total {results.Count} candidate(s) found for '{trimmed}'");
-        Cache[trimmed] = results;
+        // An empty result is only an answer when every request got through. One that failed on
+        // the way must not be remembered as "Steam has no such game" for the whole session.
+        if (results.Count > 0 || !anyRequestFailed) Cache[trimmed] = results;
         return results;
     }
 
-    private async Task<List<SteamGameMatch>> QueryStoreSearchApiAsync(string term, CancellationToken cancellationToken)
+    /// <summary>The storesearch results for <paramref name="term"/>; null when the request failed.</summary>
+    private async Task<List<SteamGameMatch>?> QueryStoreSearchApiAsync(string term, CancellationToken cancellationToken)
     {
         string url = $"https://store.steampowered.com/api/storesearch/?term={Uri.EscapeDataString(term)}&l=english&cc=US";
 
@@ -211,7 +226,7 @@ public partial class SteamSearchService
         {
             using var response = await HttpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
-                return [];
+                return null;
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -248,11 +263,12 @@ public partial class SteamSearchService
         catch (Exception ex)
         {
             LoggingService.Warn("SteamSearchService", $"Storesearch error for '{term}': {ex.Message}");
-            return [];
+            return null;
         }
     }
 
-    private async Task<List<SteamGameMatch>> QuerySuggestApiAsync(string term, CancellationToken cancellationToken)
+    /// <summary>The Suggest endpoint's results for <paramref name="term"/>; null when the request failed.</summary>
+    private async Task<List<SteamGameMatch>?> QuerySuggestApiAsync(string term, CancellationToken cancellationToken)
     {
         string url = $"https://store.steampowered.com/search/suggest?term={Uri.EscapeDataString(term)}&f=games&cc=US&l=english";
 
@@ -260,7 +276,7 @@ public partial class SteamSearchService
         {
             using var response = await HttpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
-                return [];
+                return null;
 
             string html = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(html))
@@ -287,7 +303,7 @@ public partial class SteamSearchService
         catch (Exception ex)
         {
             LoggingService.Warn("SteamSearchService", $"Suggest error for '{term}': {ex.Message}");
-            return [];
+            return null;
         }
     }
 

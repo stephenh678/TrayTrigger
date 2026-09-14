@@ -387,6 +387,11 @@ public class StorageService : IProfileSnapshotStore
                 catch (Exception ex)
                 {
                     LoggingService.Error("Storage", $"Backup settings.json.bak failed to parse: {ex.Message}", ex);
+                    // As for games.json.bak: keep a copy before the next save's rolling backup
+                    // overwrites the last trace of the user's settings.
+                    string bakArchive = ArchiveCorruptFile(_settingsBakFilePath);
+                    SettingsLoadWarning = (SettingsLoadWarning ?? string.Empty) +
+                        $" The backup could not be read either; a copy was kept at '{bakArchive}'.";
                 }
             }
 

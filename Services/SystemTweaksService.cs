@@ -139,7 +139,7 @@ public partial class SystemTweaksService
         });
 
         var hags = HagsQuery.Query();
-        bool hagsEnabled = CheckHagsEnabled();
+        bool hagsEnabled = CheckHagsEnabled(hags);
         bool hagsSupported = !hags.Queried || hags.Supported;
         list.Add(new SystemTweakItem
         {
@@ -666,10 +666,15 @@ public partial class SystemTweaksService
         var ids = tweakIds.ToHashSet(StringComparer.Ordinal);
         if (ids.Count == 0) return;
 
-        foreach (var id in new[] { "mouse_accel", "power_plan", "windowed_opts", "vrr_global", "auto_hdr", "fse_behavior", "game_mode", "game_dvr", "visual_fx", "game_bar_overlay", "sticky_keys" })
+        foreach (var id in new[] { "mouse_accel", "power_plan", "windowed_opts", "vrr_global", "auto_hdr", "fse_behavior", "game_dvr", "visual_fx", "game_bar_overlay", "sticky_keys" })
         {
             if (ids.Contains(id)) ApplyTweak(id, false);
         }
+
+        // Game Mode is on by default, so "what it was before TrayTrigger" is on. Switching it off
+        // here turned off a Windows default on every machine that still had it; removing the
+        // values hands the choice back to Windows instead.
+        if (ids.Contains("game_mode")) RestoreGameModeDefault();
 
         // Policy values and driver-decides switches: on a stock machine they are simply absent, so
         // "reset" restores that absence rather than writing a different fixed number.
@@ -794,9 +799,9 @@ public partial class SystemTweaksService
     /// only as a fallback. The registry alone is wrong in both directions: "2" on an unsupported
     /// GPU changes nothing, and an absent value on a modern driver often means HAGS is on by default.
     /// </summary>
-    private static bool CheckHagsEnabled()
+    private static bool CheckHagsEnabled(HagsQuery.HagsState? known = null)
     {
-        var state = HagsQuery.Query();
+        var state = known ?? HagsQuery.Query();
         if (state.Queried)
         {
             return state.Supported && state.Enabled;
@@ -1329,6 +1334,23 @@ public partial class SystemTweaksService
         }
         catch { }
         return false;
+    }
+
+    private static bool RestoreGameModeDefault()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar", writable: true);
+            key?.DeleteValue("AllowAutoGameMode", throwOnMissingValue: false);
+            key?.DeleteValue("AutoGameModeEnabled", throwOnMissingValue: false);
+            LoggingService.Info("SystemTweaksService", "Tweak 'game_mode' -> Default: Windows' own setting restored.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemTweaksService", $"RestoreGameModeDefault failed: {ex.Message}");
+            return false;
+        }
     }
 
     // Windows' built-in hidden "Ultimate Performance" scheme, used as the base we duplicate.

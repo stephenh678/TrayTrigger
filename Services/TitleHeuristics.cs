@@ -46,4 +46,19 @@ public static class TitleHeuristics
         (@"\bremasterd\b", "remastered"),
         (@"\bdirectors\b", "director's")
     ];
+
+    // Built once. Calling the static Regex.Replace with these ~29 patterns on every title
+    // overflowed Regex's 15-entry cache, so nearly every call re-parsed every pattern.
+
+    /// <summary><see cref="CommonSpellingCorrections"/> as ready-made case-insensitive regexes.</summary>
+    public static readonly (System.Text.RegularExpressions.Regex Pattern, string Correction)[] SpellingCorrectionRegexes =
+        System.Array.ConvertAll(CommonSpellingCorrections, c => (
+            new System.Text.RegularExpressions.Regex(c.Misspelling, System.Text.RegularExpressions.RegexOptions.IgnoreCase),
+            c.Correction));
+
+    /// <summary>Each of <see cref="EditionPhrases"/> as a whole-word, case-insensitive regex, in the same order.</summary>
+    public static readonly System.Text.RegularExpressions.Regex[] EditionPhraseRegexes =
+        System.Array.ConvertAll(EditionPhrases, ed => new System.Text.RegularExpressions.Regex(
+            $@"\b{System.Text.RegularExpressions.Regex.Escape(ed)}\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase));
 }

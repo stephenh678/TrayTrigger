@@ -7,20 +7,29 @@ using System.Windows.Media;
 namespace TrayTrigger.Converters;
 
 /// <summary>
+/// The (active, hovered) pair both segmented-tab converters are fed: values[0] is the button's
+/// Tag (a bool when bound to a view-model flag; the string "False" from the style's default
+/// setter, which counts as inactive), values[1] its live IsMouseOver.
+/// </summary>
+internal static class TabState
+{
+    public static (bool IsActive, bool IsHovered) Read(object[] values) =>
+        (values.Length > 0 && values[0] is bool a && a,
+         values.Length > 1 && values[1] is bool h && h);
+}
+
+/// <summary>
 /// Resolves a segmented tab's background from its "is active" flag (values[0], bound via Tag)
 /// and live IsMouseOver state (values[1]). Implemented as a converter rather than XAML triggers
 /// because matching a string trigger Value against a boxed bool read through an object-typed
 /// property (Tag) via RelativeSource TemplatedParent is unreliable in WPF - a converter works
 /// with the actual runtime values directly, with no markup-time type coercion involved.
 /// </summary>
-public class TabBackgroundConverter : IMultiValueConverter
+public sealed class TabBackgroundConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object? parameter, CultureInfo culture)
     {
-        bool isActive = values.Length > 0 && values[0] is bool a && a;
-        bool isHovered = values.Length > 1 && values[1] is bool h && h;
-
-        string? key = (isActive, isHovered) switch
+        string? key = TabState.Read(values) switch
         {
             (true, true) => "BrushAccentHover",
             (true, false) => "BrushAccent",
@@ -40,12 +49,11 @@ public class TabBackgroundConverter : IMultiValueConverter
 /// Companion to <see cref="TabBackgroundConverter"/> - resolves a segmented tab's text color for
 /// the same active/hover state combination.
 /// </summary>
-public class TabForegroundConverter : IMultiValueConverter
+public sealed class TabForegroundConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object? parameter, CultureInfo culture)
     {
-        bool isActive = values.Length > 0 && values[0] is bool a && a;
-        bool isHovered = values.Length > 1 && values[1] is bool h && h;
+        var (isActive, isHovered) = TabState.Read(values);
 
         if (isActive || isHovered) return Brushes.White;
         return Application.Current?.TryFindResource("BrushTextSecondary") as Brush ?? Brushes.Gray;

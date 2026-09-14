@@ -142,26 +142,6 @@ public partial class SteamScannerService
         return results.OrderBy(g => g.Name).ToList();
     }
 
-    /// <summary>
-    /// Resolves the single installed Steam game whose install folder contains <paramref name="path"/>
-    /// (an exe or any file/folder inside the game's steamapps\common\&lt;installdir&gt; tree), or null
-    /// if the path isn't inside any Steam library's installed game. Used by
-    /// <see cref="PlatformLookupService"/> so a game dropped/browsed into the library from a Steam
-    /// install directory is imported with its real AppId rather than as a Local exe. Only the
-    /// cheap manifest header is read per game; the exe/icon walk runs for the one match only.
-    /// </summary>
-    public DiscoveredSteamGame? FindGameByPath(string path)
-    {
-        foreach (var entry in GetInstalledGameEntries())
-        {
-            if (PlatformLookupService.IsPathUnderDirectory(path, entry.CommonDir))
-            {
-                return ResolveInstalledGame(entry);
-            }
-        }
-        return null;
-    }
-
     /// <summary>One installed Steam game's location, read from just its manifest header - the
     /// cheap half of discovery, for containment matching without the per-game exe/icon walk.</summary>
     public readonly record struct SteamInstallEntry(string ManifestPath, string LibraryFolder, string SteamPath, string CommonDir);
@@ -320,15 +300,13 @@ public partial class SteamScannerService
             }
 
             // 1. Priority: Pull Steam's own cached icon / artwork for this appId
-            // Check steam client games icon cache (e.g. steam\games\<hash or appid>.ico)
-            string steamGamesIconDir = Path.Combine(steamPath, "steam", "games");
-            if (Directory.Exists(steamGamesIconDir))
+            // Check steam client games icon cache. Most files there are named by a 40-hex hash, so
+            // only an exact <appid>.ico counts: a "*<appid>*" glob matched any hash that happened
+            // to contain those digits and gave the game someone else's icon.
+            string steamGamesIcon = Path.Combine(steamPath, "steam", "games", $"{appId}.ico");
+            if (File.Exists(steamGamesIcon))
             {
-                var iconFiles = Directory.GetFiles(steamGamesIconDir, $"*{appId}*.ico");
-                if (iconFiles.Length > 0)
-                {
-                    bestIcon = iconFiles[0];
-                }
+                bestIcon = steamGamesIcon;
             }
 
             // Check steam appcache library cache (e.g. appcache\librarycache\<appid>_icon.jpg, etc.)
@@ -337,8 +315,10 @@ public partial class SteamScannerService
                 string libraryCacheDir = Path.Combine(steamPath, "appcache", "librarycache");
                 if (Directory.Exists(libraryCacheDir))
                 {
-                    var cacheFiles = Directory.GetFiles(libraryCacheDir, $"{appId}_icon.*")
-                        .Concat(Directory.GetFiles(libraryCacheDir, $"*{appId}*icon*.*"))
+                    // Anchored at the start: "*730*icon*" also matched 1730_icon.jpg. The plain
+                    // <appid>_icon file, when there is one, sorts ahead of other icon variants.
+                    var cacheFiles = Directory.GetFiles(libraryCacheDir, $"{appId}_*icon*.*")
+                        .OrderBy(f => Path.GetFileNameWithoutExtension(f).Equals($"{appId}_icon", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
                         .Concat(Directory.GetFiles(libraryCacheDir, $"{appId}_header.*"))
                         .ToList();
 

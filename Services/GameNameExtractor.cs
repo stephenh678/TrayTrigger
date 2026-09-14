@@ -475,7 +475,8 @@ public static partial class GameNameExtractor
         // If all lowercase, capitalize each word for clean presentation
         if (stem.All(c => !char.IsLetter(c) || char.IsLower(c)))
         {
-            stem = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(stem);
+            // Invariant: a game title must not pick up locale casing (Turkish "i" -> "İ").
+            stem = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(stem);
         }
 
         return stem;
@@ -494,9 +495,9 @@ public static partial class GameNameExtractor
         string cleaned = folderName;
 
         // 1. Correct common spelling mistakes
-        foreach (var (pattern, correction) in TitleHeuristics.CommonSpellingCorrections)
+        foreach (var (pattern, correction) in TitleHeuristics.SpellingCorrectionRegexes)
         {
-            cleaned = Regex.Replace(cleaned, pattern, correction, RegexOptions.IgnoreCase);
+            cleaned = pattern.Replace(cleaned, correction);
         }
 
         // 2. Strip bracketed & parenthesized annotations like [x64], (2023), etc.
@@ -504,9 +505,9 @@ public static partial class GameNameExtractor
         cleaned = ParenthesesAnnotationsRegex().Replace(cleaned, " ");
 
         // 3. Strip edition tags
-        foreach (var ed in TitleHeuristics.EditionPhrases)
+        foreach (var edition in TitleHeuristics.EditionPhraseRegexes)
         {
-            cleaned = Regex.Replace(cleaned, $@"\b{Regex.Escape(ed)}\b", " ", RegexOptions.IgnoreCase);
+            cleaned = edition.Replace(cleaned, " ");
         }
 
         // 4. Strip build and version tags
@@ -526,7 +527,7 @@ public static partial class GameNameExtractor
         // 8. If all lowercase or uppercase with spaces, capitalize words for clean presentation
         if (!string.IsNullOrWhiteSpace(cleaned) && (cleaned.All(c => !char.IsLetter(c) || char.IsLower(c)) || cleaned.All(c => !char.IsLetter(c) || char.IsUpper(c))))
         {
-            cleaned = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(cleaned.ToLowerInvariant());
+            cleaned = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(cleaned.ToLowerInvariant());
         }
 
         return cleaned;

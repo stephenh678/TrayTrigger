@@ -142,10 +142,13 @@ public class PerformanceProfileService
             // applied instead of leaving mutated system state with nothing on disk to undo it.
             bool appliedAnything = ApplyPreLaunchTweaks(game, settings, isFirstSession, _snapshot);
 
-            if (!appliedAnything)
+            // A later game that adds no per-exe tweaks of its own still relies on the machine-wide
+            // ones the first session applied, so it joins the session: otherwise the first game
+            // ending restores them while this one is still running.
+            if (!appliedAnything && isFirstSession)
             {
                 LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
-                if (isFirstSession && IsEmpty(_snapshot))
+                if (IsEmpty(_snapshot))
                 {
                     _snapshot = null;
                 }
@@ -187,9 +190,8 @@ public class PerformanceProfileService
         // --- Machine-wide (first session only) ---
         if (isFirstSession)
         {
-            if (settings.OptimizedProfileTweaks.PowerPlanEnabled)
+            if (settings.OptimizedProfileTweaks.PowerPlanEnabled && ApplyPowerPlan(snapshot))
             {
-                ApplyPowerPlan(snapshot);
                 applied = true;
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
@@ -359,17 +361,26 @@ public class PerformanceProfileService
         return File.Exists(game.ExecutablePath) ? game.ExecutablePath : null;
     }
 
-    private void ApplyPowerPlan(PerformanceProfileSessionSnapshot snapshot)
+    /// <summary>True when the previous scheme was captured, and so has to be restored later.</summary>
+    private bool ApplyPowerPlan(PerformanceProfileSessionSnapshot snapshot)
     {
-        snapshot.PreviousPowerSchemeGuid = _backend.GetActivePowerSchemeGuid();
+        string? previous = _backend.GetActivePowerSchemeGuid();
+        if (previous == null)
+        {
+            // Nothing to put back afterwards, so switching now would leave the Ultimate plan on for good.
+            LoggingService.Warn("PerformanceProfile", "Power Plan: could not read the active scheme, so it was left unchanged.");
+            return false;
+        }
+        snapshot.PreviousPowerSchemeGuid = previous;
         snapshot.PowerPlanCaptured = true;
 
         if (!_backend.ActivateUltimatePowerPlan())
         {
             LoggingService.Warn("PerformanceProfile", "Could not create or locate the 'Ultimate Plan - TrayTrigger' power scheme.");
-            return;
+            return true;
         }
         LoggingService.Verbose("PerformanceProfile", $"Power Plan: switched active scheme to 'Ultimate Plan - TrayTrigger' (was {snapshot.PreviousPowerSchemeGuid ?? "unknown"}).");
+        return true;
     }
 
     private void RestorePowerPlan(PerformanceProfileSessionSnapshot snapshot)
@@ -730,14 +741,15 @@ public class PerformanceProfileService
     {
         try
         {
-            bool alreadyExcluded = _backend.GetDefenderExclusionPaths().Contains(exePath, StringComparer.OrdinalIgnoreCase);
+            // Only an exclusion this session actually added is removed on restore. The add checks
+            // for an existing one itself, elevated: an unelevated process can't read the list.
+            bool added = _backend.AddDefenderExclusion(exePath);
             snapshot.DefenderExclusionPath = exePath;
-            snapshot.DefenderExclusionWasPreExisting = alreadyExcluded;
+            snapshot.DefenderExclusionWasPreExisting = !added;
             snapshot.DefenderExclusionCaptured = true;
 
-            if (!alreadyExcluded)
+            if (added)
             {
-                _backend.AddDefenderExclusion(exePath);
                 LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: added '{exePath}'.");
             }
             else

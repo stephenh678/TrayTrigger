@@ -313,8 +313,9 @@ public partial class SystemInfoService
                         DriverDate = cardKey.GetValue("DriverDate") as string ?? "Unknown"
                     };
 
-                    // Clean driver version for NVIDIA (e.g. 31.0.15.5186 -> 551.86)
-                    if (gpu.DriverVersion.Contains('.'))
+                    // Clean driver version for NVIDIA (e.g. 31.0.15.5186 -> 551.86). NVIDIA's
+                    // numbering only: the same arithmetic turns Intel's 31.0.101.5382 into "153.82".
+                    if (desc.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) && gpu.DriverVersion.Contains('.'))
                     {
                         var parts = gpu.DriverVersion.Split('.');
                         if (parts.Length >= 4 && parts[^2].Length >= 1)
@@ -451,15 +452,16 @@ public partial class SystemInfoService
                 });
             }
 
-            // Check secondary displays
-            for (int i = 1; i <= 4; i++)
+            // Check secondary displays. Device numbers have gaps and grow as monitors are
+            // reconnected, and the primary need not be DISPLAY1.
+            for (int i = 1; i <= 16; i++)
             {
                 string deviceName = $@"\\.\DISPLAY{i}";
                 var extraMode = new DEVMODEW { dmSize = (ushort)Marshal.SizeOf<DEVMODEW>() };
                 if (EnumDisplaySettingsW(deviceName, ENUM_CURRENT_SETTINGS, ref extraMode))
                 {
-                    // Avoid duplicating primary
-                    if (list.Count > 0 && i == 1 && list[0].Width == (int)extraMode.dmPelsWidth && list[0].Height == (int)extraMode.dmPelsHeight && list[0].RefreshRateHz == (int)extraMode.dmDisplayFrequency)
+                    // Avoid duplicating primary: it is the display at the desktop origin.
+                    if (list.Count > 0 && extraMode.dmPositionX == 0 && extraMode.dmPositionY == 0)
                     {
                         continue;
                     }

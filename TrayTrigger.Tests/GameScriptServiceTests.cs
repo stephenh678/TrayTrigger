@@ -175,14 +175,21 @@ public class GameScriptServiceTests : IDisposable
     [Fact]
     public void FeatureSwitch_Off_SkipsScripts()
     {
-        string path = MakeScript("pre.bat");
-        var game = new GameEntry { Name = "Test", ExecutablePath = @"C:\Games\T\t.exe", PreLaunchScriptPath = path, PostExitScriptPath = path };
+        string marker = Path.Combine(_dir, "ran.txt");
+        string path = Path.Combine(_dir, "pre.bat");
+        File.WriteAllText(path, $"@echo ran>> \"{marker}\"\r\n");
+        // Waiting on the pre-launch script means that, were the switch ignored, it would have
+        // finished writing the marker before RunPreLaunch returned.
+        var game = new GameEntry { Name = "Test", ExecutablePath = @"C:\Games\T\t.exe", PreLaunchScriptPath = path, PostExitScriptPath = path, WaitForPreLaunchScript = true, RunScriptsHidden = true };
 
-        // With the Settings switch off nothing must run - so no exception, no process, and
-        // (observable here) no post-exit tracking either.
+        // With the Settings switch off nothing must run, in either phase.
         var svc = new GameScriptService(() => false);
-        svc.RunPreLaunch(game);
+        Assert.True(svc.RunPreLaunch(game).ProceedWithLaunch);
+        Assert.False(File.Exists(marker), "pre-launch script ran with scripts switched off");
+
         svc.RunPostExit(game, 1);
+        Thread.Sleep(500); // post-exit is fire-and-forget
+        Assert.False(File.Exists(marker), "post-exit script ran with scripts switched off");
     }
 
     [Theory]
@@ -385,7 +392,9 @@ public class GameScriptServiceTests : IDisposable
         for (int i = 0; i < 50 && content.Length == 0; i++)
         {
             Thread.Sleep(100);
-            if (File.Exists(marker)) content = File.ReadAllText(marker).Trim();
+            // cmd.exe can still hold the file open for writing; that's a sharing violation, not a failure.
+            try { if (File.Exists(marker)) content = File.ReadAllText(marker).Trim(); }
+            catch (IOException) { }
         }
         Assert.Equal("postexit;[0]", content);
     }
@@ -482,6 +491,39 @@ public class GameScriptServiceTests : IDisposable
         Assert.False(r.Succeeded);
         Assert.Contains("hello prelaunch abc123 []", r.Output);
         Assert.Contains("[stderr] oops", r.Output);
+    }
+
+    /// <summary>
+    /// A program started with cmd's "start" inherits the script's redirected output pipes and holds
+    /// them open. Waiting for those pipes to close waited for that program, not the script.
+    /// </summary>
+    [Fact]
+    public void TestRun_ScriptThatStartsABackgroundProgram_ReturnsWhenTheScriptExits()
+    {
+        string script = Path.Combine(_dir, "starts-child.bat");
+        // /d moves the background program off this test's folder, which it would otherwise hold
+        // as its current directory for 20 s - long enough for Dispose's delete to fail.
+        File.WriteAllText(script, "@start \"\" /d \"%SystemRoot%\" /b ping -n 20 127.0.0.1 >nul\r\n@echo started\r\n");
+
+        var r = GameScriptService.TestRun(script, _game, GameScriptService.PhasePreLaunch, playedMinutes: null);
+
+        Assert.True(r.Succeeded, $"exit={r.ExitCode} timedOut={r.TimedOut} err={r.Error}");
+        Assert.Contains("started", r.Output);
+        Assert.True(r.Elapsed < TimeSpan.FromSeconds(10), $"took {r.Elapsed}");
+    }
+
+    [Fact]
+    public void RunPreLaunch_WaitedScriptThatStartsABackgroundProgram_DoesNotHoldTheLaunch()
+    {
+        string script = Path.Combine(_dir, "pre-starts-child.bat");
+        File.WriteAllText(script, "@start \"\" /d \"%SystemRoot%\" /b ping -n 20 127.0.0.1 >nul\r\n");
+        var game = new GameEntry { Id = "bg", Name = "BG", ExecutablePath = @"C:\x\y.exe", PreLaunchScriptPath = script, WaitForPreLaunchScript = true, PreLaunchScriptTimeoutSeconds = 30, RunScriptsHidden = true };
+
+        var sw = Stopwatch.StartNew();
+        var result = new GameScriptService().RunPreLaunch(game);
+
+        Assert.True(result.ProceedWithLaunch);
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(10), $"took {sw.Elapsed}");
     }
 
     [Fact]

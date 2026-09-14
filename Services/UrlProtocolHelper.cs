@@ -37,7 +37,7 @@ public static class UrlProtocolHelper
     /// <summary>True if the value is a plausible Steam App ID (digits only, non-empty) - the only
     /// shape ever embedded in a cache filename or query string.</summary>
     public static bool IsValidSteamAppId(string? appId)
-        => !string.IsNullOrWhiteSpace(appId) && appId.Length <= 12 && appId.All(char.IsDigit);
+        => !string.IsNullOrWhiteSpace(appId) && appId.Length <= 12 && appId.All(char.IsAsciiDigit);
 
     public static string? GetHandlerExecutablePath(string scheme, string callerTag = "UrlProtocolHelper")
     {

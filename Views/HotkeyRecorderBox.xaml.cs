@@ -176,8 +176,8 @@ public partial class HotkeyRecorderBox : UserControl
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
         var modifiers = Keyboard.Modifiers;
 
-        // Plain Tab still moves focus, so the box can't trap keyboard users.
-        if (key == Key.Tab && modifiers == ModifierKeys.None) return;
+        // Tab and Shift+Tab still move focus, so the box can't trap keyboard users.
+        if (key == Key.Tab && modifiers is ModifierKeys.None or ModifierKeys.Shift) return;
 
         e.Handled = true;
 

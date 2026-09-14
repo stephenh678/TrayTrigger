@@ -97,25 +97,6 @@ public class XboxScannerService
         }
     }
 
-    /// <summary>
-    /// The installed game whose install directory or package root contains <paramref name="path"/>,
-    /// or null. Used by <see cref="PlatformLookupService"/> so a folder dropped from
-    /// "D:\XboxGames\&lt;Game&gt;" is imported as that game rather than as a Local exe (which
-    /// could never launch anyway - GDK exes need package identity).
-    /// </summary>
-    public DiscoveredXboxGame? FindGameByPath(string path)
-    {
-        foreach (var game in EnumerateInstalledGames())
-        {
-            if (PlatformLookupService.IsPathUnderDirectory(path, game.InstallDir) ||
-                PlatformLookupService.IsPathUnderDirectory(path, game.PackageRoot))
-            {
-                return game;
-            }
-        }
-        return null;
-    }
-
     private IEnumerable<DiscoveredXboxGame> EnumerateInstalledGames()
     {
         using var gameConfigKey = Registry.LocalMachine.OpenSubKey(GameConfigKeyPath);

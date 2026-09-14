@@ -96,11 +96,12 @@ public class UpdateCoordinator : ViewModelBase
                     string.Equals(_settings.SkippedUpdateVersion, result.LatestRelease.TagName, StringComparison.OrdinalIgnoreCase) &&
                     _settings.RemindAfterUtc.HasValue && DateTime.UtcNow < _settings.RemindAfterUtc.Value;
 
-                if (interactive || mainWindowVisible)
+                if (interactive || (mainWindowVisible && !alreadySnoozed))
                 {
                     // Surface the modal when the user explicitly asked (interactive), or when a
                     // quiet background check (startup / 24h timer) finds the window is actually
-                    // visible - a silently-updated badge alone is easy to miss in that case.
+                    // visible - a silently-updated badge alone is easy to miss in that case. A
+                    // "Remind Later" snooze still holds for those background checks.
                     Window? owner = WindowHelper.ActiveOwner();
                     bool remindLater = UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
                     if (remindLater)

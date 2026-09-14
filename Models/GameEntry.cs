@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json.Serialization;
+using TrayTrigger.Services;
 
 namespace TrayTrigger.Models;
 
@@ -11,7 +12,7 @@ public class GameEntry
     public string Arguments { get; set; } = string.Empty;
     public string WorkingDirectory { get; set; } = string.Empty;
     public bool RunAsAdmin { get; set; }
-    public string Category { get; set; } = "Uncategorized";
+    public string Category { get; set; } = LibraryConstants.Uncategorized;
     public bool IsFavorite { get; set; }
     /// <summary>
     /// Hidden from the library grid and tray menu, but the record itself is kept - unlike

@@ -45,6 +45,11 @@ public class GameCardViewModel : ViewModelBase
     private DateTime? _loadedIconWriteTimeUtc;
     private string? _loadedCoverPath;
     private DateTime? _loadedCoverWriteTimeUtc;
+    // Set once the card has loaded that piece itself, so a background snapshot computed before
+    // then (ApplyHeavyState) can't replace it with older state.
+    private bool _iconLoaded;
+    private bool _coverLoaded;
+    private bool _missingChecked;
 
     public GameEntry Game { get; }
 
@@ -202,13 +207,23 @@ public class GameCardViewModel : ViewModelBase
     /// </summary>
     public void ApplyHeavyState(bool isMissing, BitmapImage? icon, DateTime? iconWriteTimeUtc, BitmapImage? cover, DateTime? coverWriteTimeUtc)
     {
-        IsMissing = isMissing;
-        IconImage = icon;
-        _loadedIconPath = Game.IconPath;
-        _loadedIconWriteTimeUtc = iconWriteTimeUtc;
-        CoverImage = cover;
-        _loadedCoverPath = Game.CoverImagePath;
-        _loadedCoverWriteTimeUtc = coverWriteTimeUtc;
+        // Computed a while ago on another thread. Whatever the card loaded since - a
+        // RefreshProperties after startup enrichment downloaded a poster - is newer and stays.
+        if (!_missingChecked) IsMissing = isMissing;
+        if (!_iconLoaded)
+        {
+            IconImage = icon;
+            _loadedIconPath = Game.IconPath;
+            _loadedIconWriteTimeUtc = iconWriteTimeUtc;
+            _iconLoaded = true;
+        }
+        if (!_coverLoaded)
+        {
+            CoverImage = cover;
+            _loadedCoverPath = Game.CoverImagePath;
+            _loadedCoverWriteTimeUtc = coverWriteTimeUtc;
+            _coverLoaded = true;
+        }
     }
 
     public string Id => Game.Id;
@@ -292,6 +307,7 @@ public class GameCardViewModel : ViewModelBase
     public void CheckIsMissing()
     {
         IsMissing = ComputeIsMissing(Game);
+        _missingChecked = true;
     }
 
     /// <summary>True while ProcessLauncherService is tracking a session for this game (profile
@@ -455,6 +471,7 @@ public class GameCardViewModel : ViewModelBase
         IconImage = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 64);
         _loadedIconPath = Game.IconPath;
         _loadedIconWriteTimeUtc = writeTimeUtc;
+        _iconLoaded = true;
     }
 
     /// <summary>Same skip-if-unchanged behavior as <see cref="ReloadIcon"/>, for the cover art.</summary>
@@ -471,6 +488,7 @@ public class GameCardViewModel : ViewModelBase
             : null;
         _loadedCoverPath = Game.CoverImagePath;
         _loadedCoverWriteTimeUtc = writeTimeUtc;
+        _coverLoaded = true;
         OnPropertyChanged(nameof(ShowPosterArt));
     }
 
@@ -501,6 +519,7 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamAppIdDisplay));
         OnPropertyChanged(nameof(SteamAppIdTooltip));
         OnPropertyChanged(nameof(PlaytimeDisplay));
+        OnPropertyChanged(nameof(ListPlaytimeDisplay));
         OnPropertyChanged(nameof(LastPlayedDisplay));
         NotifyQuickSettingsChanged();
         ReloadIcon();

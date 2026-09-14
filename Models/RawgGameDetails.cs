@@ -41,20 +41,9 @@ public class RawgGameDetails
     public string BackgroundImageUrl { get; set; } = string.Empty;
     public DateTime FetchedUtc { get; set; }
 
-    /// <summary>The genre used to categorise a game when it's still Uncategorized. "Indie" is a
-    /// scale, not a kind of game, so it is skipped when anything else is listed. Empty when RAWG
-    /// lists no genre - nothing is invented.</summary>
+    /// <summary>The genre used to categorise a game when it's still Uncategorized -
+    /// <see cref="GenreRules.PrimaryOf"/>, shared with Steam: "Indie" is a scale, not a kind of
+    /// game, so it is skipped when anything else is listed; empty when RAWG lists no genre.</summary>
     [JsonIgnore]
-    public string PrimaryGenre
-    {
-        get
-        {
-            foreach (var g in Genres)
-            {
-                if (!string.Equals(g, "Indie", StringComparison.OrdinalIgnoreCase))
-                    return g;
-            }
-            return Genres.Count > 0 ? Genres[0] : string.Empty;
-        }
-    }
+    public string PrimaryGenre => GenreRules.PrimaryOf(Genres);
 }

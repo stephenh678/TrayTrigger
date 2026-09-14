@@ -116,7 +116,9 @@ public static class HelpContentService
 
             var links = items
                 .OrderBy(t => t.Id.EndsWith("/overview", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(t => t.Topic!.Title, StringComparer.OrdinalIgnoreCase)
+                // Quotes are not part of the word: "\"Ultimate Plan\" ..." sorts under U, not first.
+                // tools/Export-Wiki.ps1 orders the wiki index the same way.
+                .ThenBy(t => t.Topic!.Title.Replace("\"", ""), StringComparer.OrdinalIgnoreCase)
                 .Select(t => new HelpTopicLink(t.Id, t.Topic!.Title))
                 .ToList();
 

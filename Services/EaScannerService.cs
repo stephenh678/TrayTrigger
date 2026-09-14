@@ -35,13 +35,21 @@ public partial class EaScannerService
 {
     private const string OriginGamesKeyPath = @"SOFTWARE\Origin Games";
 
-    private static readonly string[] DefaultInstallRoots =
+    // Under the real Program Files folders, wherever they are: the system drive is not always C:.
+    private static readonly string[] DefaultInstallRoots = BuildDefaultInstallRoots();
+
+    private static string[] BuildDefaultInstallRoots()
     {
-        @"C:\Program Files\EA Games",
-        @"C:\Program Files (x86)\EA Games",
-        @"C:\Program Files\Origin Games",
-        @"C:\Program Files (x86)\Origin Games",
-    };
+        var roots = new List<string>();
+        foreach (var folder in new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 })
+        {
+            string baseDir = Environment.GetFolderPath(folder);
+            if (baseDir.Length == 0) continue;
+            roots.Add(Path.Combine(baseDir, "EA Games"));
+            roots.Add(Path.Combine(baseDir, "Origin Games"));
+        }
+        return roots.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
 
     // Content IDs aren't always numeric - EA/Origin has historically used prefixed forms too
     // (e.g. "OFB-EAST:54866"), so this captures anything up to the closing tag rather than \d+.

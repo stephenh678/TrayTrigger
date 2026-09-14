@@ -55,6 +55,24 @@ public class StartupManager
         }
     }
 
+    /// <summary>
+    /// Turning startup on from TrayTrigger must override an earlier Task Manager "Disable":
+    /// that flag outlives the Run value, so without clearing it the entry stays disabled and
+    /// <see cref="IsStartupEnabled"/> reports the toggle as off again.
+    /// </summary>
+    private static void ClearTaskManagerDisabledFlag()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(StartupApprovedRunKeyPath, true);
+            key?.DeleteValue(AppName, throwOnMissingValue: false);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("StartupManager", $"Error clearing StartupApproved flag: {ex.Message}");
+        }
+    }
+
     public void SetStartupEnabled(bool enabled, bool startMinimized = true)
     {
         try
@@ -71,6 +89,7 @@ public class StartupManager
                 {
                     string command = startMinimized ? $"\"{exePath}\" --minimized" : $"\"{exePath}\"";
                     key.SetValue(AppName, command);
+                    ClearTaskManagerDisabledFlag();
                 }
             }
             else

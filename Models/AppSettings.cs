@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using TrayTrigger.Services;
 
 namespace TrayTrigger.Models;
 
@@ -47,7 +48,7 @@ public class AppSettings
     public double? MainWindowHeight { get; set; }
     public bool MainWindowMaximized { get; set; } = false;
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
-    public string LastCategoryFilter { get; set; } = "All";
+    public string LastCategoryFilter { get; set; } = LibraryConstants.AllCategory;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
 
     /// <summary>
@@ -94,7 +95,7 @@ public class AppSettings
     public bool UseRawgMetadata { get; set; } = false;
     /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
     /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<MetadataRefreshInterval>))]
+    [JsonConverter(typeof(MetadataRefreshIntervalJsonConverter))]
     public MetadataRefreshInterval MetadataRefreshInterval { get; set; } = MetadataRefreshInterval.Every3Days;
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
@@ -131,8 +132,8 @@ public class AppSettings
     public string? SkippedUpdateVersion { get; set; }
     public System.DateTime? RemindAfterUtc { get; set; }
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
-    public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new() { PowerPlanEnabled = true, GpuPreferenceEnabled = true };
-    public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new() { SystemResponsivenessEnabled = true, MmcssGamesPriorityEnabled = true, AboveNormalPriorityEnabled = true, DefenderExclusionEnabled = false, TimerResolutionEnabled = true };
+    public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new();
+    public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new();
 
     /// <summary>
     /// What a permanent System &amp; Performance tweak found on the machine before it was applied,

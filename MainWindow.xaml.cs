@@ -60,6 +60,7 @@ public partial class MainWindow : Window
         Loaded += (s, e) =>
         {
             LoggingService.Verbose("MainWindow", "Loaded.");
+            if (SuppressOneTimePrompts) return;
             // Read before the Welcome prompt marks itself seen: a brand-new install gets the
             // SteamGridDB / RAWG tip inside the Welcome dialog instead of a second popup.
             bool isFreshInstall = !_viewModel.SettingsVM.Settings.HasSeenWelcomePrompt;
@@ -98,6 +99,13 @@ public partial class MainWindow : Window
     {
         _isExplicitExit = true;
     }
+
+    /// <summary>
+    /// Skips the one-time prompts (Welcome, profile migration, metadata sources) when the window is
+    /// shown for a capture or test run: a modal dialog would stop the run, and marking them seen
+    /// would write settings.json from a process that must not.
+    /// </summary>
+    public bool SuppressOneTimePrompts { get; init; }
 
     /// <summary>
     /// Apply the placement saved by <see cref="CaptureWindowPlacement"/> before the window is
@@ -306,14 +314,17 @@ public partial class MainWindow : Window
             e.Cancel = true;
             CaptureWindowPlacement();
             Hide();
-            _viewModel.SettingsVM.AutoSaveSettings();
 
             // First hide via the title-bar X: tell the user the app is still running, once.
-            // Without this the X looked like an exit and the tray icon went unnoticed.
+            // Without this the X looked like an exit and the tray icon went unnoticed. The flag is
+            // set before the save below so that save persists it.
             var settings = _viewModel.SettingsVM.Settings;
-            if (!settings.HasSeenTrayHideNotice)
+            bool firstHide = !settings.HasSeenTrayHideNotice;
+            settings.HasSeenTrayHideNotice = true;
+            _viewModel.SettingsVM.AutoSaveSettings();
+
+            if (firstHide)
             {
-                settings.HasSeenTrayHideNotice = true;
                 _viewModel.NotifyTray("TrayTrigger is still running",
                     "Your hotkeys and tray menu stay active. Left-click the tray icon to reopen, or right-click it to exit.");
             }
@@ -402,6 +413,9 @@ public partial class MainWindow : Window
             return;
         }
         if (_viewModel.CurrentSection != NavSection.Library) return;
+        // Escape inside the open filter flyout is the flyout's (LibraryFilterPopup_PreviewKeyDown);
+        // this tunnelling handler runs first and would spend it on the selection or the search.
+        if (e.Key == Key.Escape && LibraryFilterPopup.IsOpen) return;
 
         if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
         {
@@ -480,7 +494,19 @@ public partial class MainWindow : Window
         Focus();
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
-            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            string[]? files;
+            try
+            {
+                files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            }
+            catch (Exception ex)
+            {
+                // A source that offers FileDrop but cannot deliver it (virtual files from a mail
+                // client or an archive tool) throws here, which reached the dispatcher's unhandled
+                // handler and its "an error was logged" toast.
+                LoggingService.Warn("MainWindow", $"Could not read the dropped files: {ex.Message}");
+                return;
+            }
             if (files != null && files.Length > 0)
             {
                 // Defer to a fresh dispatcher cycle: this Drop handler still runs inside the
@@ -548,6 +574,9 @@ public partial class MainWindow : Window
 
     private void OnRequestMinimizeToTray()
     {
+        // A tray-menu or hotkey launch while the window is already hidden has nothing to hide and
+        // no placement to persist; the save was a full settings.json rewrite per launch.
+        if (!IsVisible) return;
         CaptureWindowPlacement();
         Hide();
         _viewModel.SettingsVM.AutoSaveSettings();
@@ -619,9 +648,14 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Categories a game can be put in: the library's category tabs minus All, Favorites and
+    /// Hidden, which are views rather than categories.</summary>
+    private IEnumerable<string> AssignableCategories() =>
+        _viewModel.Categories.Where(c => c is not (LibraryConstants.AllCategory or LibraryConstants.FavoritesCategory or LibraryConstants.HiddenCategory));
+
     private void OnRequestQuickCategory(GameCardViewModel card)
     {
-        var suggestions = _viewModel.Categories.Where(c => c != "All");
+        var suggestions = AssignableCategories();
         var dialog = new QuickInputDialog("Change Category", "Change Category", $"Select or enter a category for \"{card.Name}\":", card.Category, suggestions);
         dialog.Owner = this;
         if (dialog.ShowDialog() == true)
@@ -711,7 +745,7 @@ public partial class MainWindow : Window
 
     private void OnRequestBatchCategory(List<GameCardViewModel> cards)
     {
-        var suggestions = _viewModel.Categories.Where(c => c != "All");
+        var suggestions = AssignableCategories();
         // Pre-fill only when every selected game already shares one category.
         string initial = cards.Select(c => c.Category).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1 ? cards[0].Category : string.Empty;
         string prompt = cards.Count == 1
@@ -742,13 +776,15 @@ public partial class MainWindow : Window
     /// <summary>Blocks non-digit keystrokes on tray "max items" TextBoxes (e.g. MaxRecentInTray).</summary>
     private void NumericTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        e.Handled = !e.Text.All(char.IsDigit);
+        // ASCII only: char.IsDigit also passes Arabic-Indic and other Unicode digits, which the
+        // int binding then rejects with a validation error instead of the keystroke being blocked.
+        e.Handled = !e.Text.All(char.IsAsciiDigit);
     }
 
     /// <summary>Blocks pasting non-numeric text into tray "max items" TextBoxes.</summary>
     private void NumericTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
     {
-        if (e.DataObject.GetDataPresent(typeof(string)) && ((string)e.DataObject.GetData(typeof(string))!).All(char.IsDigit))
+        if (e.DataObject.GetDataPresent(typeof(string)) && e.DataObject.GetData(typeof(string)) is string text && text.All(char.IsAsciiDigit))
         {
             return;
         }

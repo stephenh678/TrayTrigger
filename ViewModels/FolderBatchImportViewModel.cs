@@ -215,14 +215,18 @@ public class FolderBatchImportViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanImport));
     }
 
-    public string SubtitleText => $"Found {Games.Count} games in \"{FolderName}\". Select the games to add to TrayTrigger:";
+    public string SubtitleText => Games.Count == 1
+        ? $"Found 1 game in \"{FolderName}\". Select it to add it to TrayTrigger:"
+        : $"Found {Games.Count} games in \"{FolderName}\". Select the games to add to TrayTrigger:";
 
     public string SelectedCountDisplay
     {
         get
         {
             int selected = Games.Count(g => g.IsSelected);
-            return $"{selected} of {Games.Count} games selected";
+            return Games.Count == 1
+                ? $"{selected} of 1 game selected"
+                : $"{selected} of {Games.Count} games selected";
         }
     }
 

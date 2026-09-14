@@ -67,9 +67,15 @@ public partial class App : Application
     private static extern int GetSystemMetrics(int nIndex);
     private MainWindow? _mainWindow;
     private bool _isShuttingDown = false;
-    /// <summary>Set once <see cref="ExitApplication"/> has flushed settings, so the ProcessExit
-    /// fallback does not write the same file a second time on a normal shutdown.</summary>
+    /// <summary>Set by the first shutdown save (see <see cref="SaveSettingsOnShutdown"/>), so the
+    /// paths that follow it - OnExit, the ProcessExit fallback - do not write the same file again.</summary>
     private volatile bool _settingsSavedOnExit;
+    /// <summary>Process exit code for <see cref="ExitApplication"/>: non-zero when the release
+    /// screenshot could not be written, so a script refreshing the site image can tell.</summary>
+    private int _exitCode;
+    /// <summary>Set by the release screenshot: that run resizes the window for the capture and may
+    /// share settings.json with a running instance, so nothing it holds is written back.</summary>
+    private volatile bool _skipSettingsSaveOnExit;
     private Action<string> _logger = _ => { };
 
     public App()
@@ -110,14 +116,7 @@ public partial class App : Application
                 // Task Manager, a Windows log-off). When the normal exit path did run it has
                 // already written the same object moments earlier, so repeating it here is a
                 // second full encrypt-and-replace of settings.json for no gain.
-                if (_settingsSavedOnExit)
-                {
-                    LoggingService.Verbose("App", "ProcessExit: settings already saved by ExitApplication; skipping duplicate save.");
-                }
-                else if (_mainViewModel != null && _storageService != null)
-                {
-                    _storageService.SaveSettings(_mainViewModel.Settings, source: "App.ProcessExit");
-                }
+                SaveSettingsOnShutdown("App.ProcessExit");
             }
             catch (Exception ex)
             {
@@ -270,7 +269,12 @@ public partial class App : Application
             _storageService,
             () => _mainViewModel?.Settings ?? startupSettings,
             new WindowsTweakBackend());
-        _performanceProfileService.RecoverFromCrashIfNeeded();
+        // A screenshot run skips the single-instance check, so the snapshot on disk may belong to
+        // a game the real instance is running right now - not a crash to recover from.
+        if (!isScreenshot)
+        {
+            _performanceProfileService.RecoverFromCrashIfNeeded();
+        }
         // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
         _gameScriptService = new GameScriptService(
             () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
@@ -322,7 +326,9 @@ public partial class App : Application
         if (!startMinimized || isScreenshot)
         {
             Log("Initializing MainWindow...");
-            _mainWindow = new MainWindow(_mainViewModel);
+            // A capture or test run must not stop on the Welcome / migration / metadata prompts,
+            // nor let those prompts write settings.json (see _skipSettingsSaveOnExit).
+            _mainWindow = new MainWindow(_mainViewModel) { SuppressOneTimePrompts = isScreenshot };
             MainWindow = _mainWindow;
         }
 
@@ -377,10 +383,12 @@ public partial class App : Application
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
                 FinalizePendingRemovalOnShutdown();
-                if (_mainViewModel != null && _storageService != null)
-                {
-                    _storageService.SaveSettings(_mainViewModel.Settings);
-                }
+                SaveSettingsOnShutdown("App.SessionEnding");
+                // WPF answers the session-end query by calling Shutdown(), which closes this window
+                // with Closing's Cancel ignored. Without this the close ran the title-bar-X path:
+                // hide, mark the tray-hide notice as seen, save settings again and show a "still
+                // running" balloon - during a log-off.
+                _mainWindow?.MarkExplicitExit();
             }
             catch (Exception ex)
             {
@@ -525,7 +533,6 @@ public partial class App : Application
         });
     }
 
-    /// <summary>"47m" under an hour, "1h 12m" past it - the tray tooltip has no room for more.</summary>
     /// <summary>
     /// The tray tooltip for a set of live sessions. "Starting X via Steam" is only ever correct
     /// before the game itself is up: <see cref="ProcessLauncherService.SessionGameStarted"/> is
@@ -544,7 +551,7 @@ public partial class App : Application
         {
             var session = sessions[0];
             text = session.GameStarted
-                ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(now - session.StartedAt)}"
+                ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(now.ToUniversalTime() - session.StartedAtUtc)}"
                 : $"Starting {session.Game.Name} via {session.PlatformLabel}";
         }
         else
@@ -557,6 +564,7 @@ public partial class App : Application
             : text;
     }
 
+    /// <summary>"47m" under an hour, "1h 12m" past it - the tray tooltip has no room for more.</summary>
     private static string FormatPlayingElapsed(TimeSpan elapsed)
     {
         if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
@@ -597,7 +605,7 @@ public partial class App : Application
                     {
                         var card = games.FirstOrDefault(g => g.Id == session.GameId);
                         string elapsed = session.GameStarted
-                            ? $"{Math.Max(0, (DateTime.Now - session.StartedAt).TotalMinutes):0}m"
+                            ? $"{Math.Max(0, (DateTime.UtcNow - session.StartedAtUtc).TotalMinutes):0}m"
                             : $"starting via {session.PlatformLabel}";
                         var sessionItem = card != null
                             ? CreateGameMenuItem(card)
@@ -1049,6 +1057,13 @@ public partial class App : Application
             LoggingService.Error("App", $"Exception in ShowMainWindow: {ex.Message}", ex);
             try
             {
+                // Close the failed window first: until it closes it is still subscribed to the view
+                // model's dialog requests, and every request would open a dialog from both windows.
+                if (_mainWindow is { } failed)
+                {
+                    try { failed.MarkExplicitExit(); failed.Close(); }
+                    catch (Exception closeEx) { LoggingService.Verbose("App", $"Closing the failed MainWindow threw: {closeEx.Message}"); }
+                }
                 _mainWindow = new MainWindow(_mainViewModel);
                 MainWindow = _mainWindow;
                 _mainWindow.Show();
@@ -1101,12 +1116,7 @@ public partial class App : Application
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
             FinalizePendingRemovalOnShutdown();
 
-            if (_mainViewModel != null && _storageService != null)
-            {
-                _storageService.SaveSettings(_mainViewModel.Settings, source: "App.ExitApplication");
-                _settingsSavedOnExit = true;
-                LoggingService.Info("App", "Settings successfully saved during application exit.");
-            }
+            SaveSettingsOnShutdown("App.ExitApplication");
 
             _trayToolTipTimer?.Stop();
             _trayToolTipTimer = null;
@@ -1138,8 +1148,8 @@ public partial class App : Application
         }
         finally
         {
-            Shutdown();
-            Environment.Exit(0);
+            Shutdown(_exitCode);
+            Environment.Exit(_exitCode);
         }
     }
 
@@ -1160,16 +1170,33 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// The one settings write of a shutdown. Every exit path ends here - the tray Exit, a Windows
+    /// log-off, WPF's Exit and the ProcessExit fallback - and the first to run wins: the ones after
+    /// it would only encrypt and replace settings.json again with the same object. The release
+    /// screenshot never writes (<see cref="_skipSettingsSaveOnExit"/>): its window was resized for
+    /// the capture and its settings may be shared with a running instance.
+    /// </summary>
+    private void SaveSettingsOnShutdown(string source)
+    {
+        if (_skipSettingsSaveOnExit || _settingsSavedOnExit || _mainViewModel == null || _storageService == null)
+        {
+            LoggingService.Verbose("App", $"{source}: settings already saved (or not to be saved); skipping.");
+            return;
+        }
+
+        _storageService.SaveSettings(_mainViewModel.Settings, source: source);
+        _settingsSavedOnExit = true;
+        LoggingService.Info("App", $"Settings saved during shutdown ({source}).");
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         LoggingService.Info("App", $"OnExit called. ExitCode={e.ApplicationExitCode}");
         FinalizePendingRemovalOnShutdown();
         try
         {
-            if (_mainViewModel != null && _storageService != null)
-            {
-                _storageService.SaveSettings(_mainViewModel.Settings);
-            }
+            SaveSettingsOnShutdown("App.OnExit");
         }
         catch (Exception ex)
         {

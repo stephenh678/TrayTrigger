@@ -22,7 +22,8 @@ public sealed class ActiveGameSession
     {
         Game = game;
         Route = route;
-        LaunchedAt = DateTime.Now;
+        LaunchedAtUtc = DateTime.UtcNow;
+        LaunchedAt = LaunchedAtUtc.ToLocalTime();
         StartedAt = LaunchedAt;
     }
 
@@ -32,8 +33,24 @@ public sealed class ActiveGameSession
     public string PlatformLabel => LaunchRouter.PlatformLabelFor(Route);
     /// <summary>When TrayTrigger dispatched the launch.</summary>
     public DateTime LaunchedAt { get; }
+    /// <summary>
+    /// <see cref="LaunchedAt"/> in UTC. Every elapsed-time check uses the UTC pair: subtracting
+    /// local times puts a daylight-saving change's hour into the result.
+    /// </summary>
+    internal DateTime LaunchedAtUtc { get; }
     /// <summary>When the real game was first seen running (playtime starts here, not at dispatch).</summary>
-    public DateTime StartedAt { get; internal set; }
+    public DateTime StartedAt
+    {
+        get => _startedAt;
+        internal set
+        {
+            _startedAt = value;
+            StartedAtUtc = value.ToUniversalTime();
+        }
+    }
+    private DateTime _startedAt;
+    /// <summary><see cref="StartedAt"/> in UTC - see <see cref="LaunchedAtUtc"/>.</summary>
+    internal DateTime StartedAtUtc { get; private set; }
     /// <summary>True once the real game process (or Steam's Running flag) has been observed.</summary>
     public bool GameStarted { get; internal set; }
     /// <summary>The game's process when TrayTrigger has a handle to it; null for a Steam session whose
@@ -93,6 +110,8 @@ public partial class ProcessLauncherService
 
     private readonly Lock _sessionsLock = new();
     private readonly Dictionary<string, ActiveGameSession> _sessions = new(StringComparer.Ordinal);
+    /// <summary>Games whose LaunchGame call is still deciding its route, before any session exists. Guarded by <see cref="_sessionsLock"/>.</summary>
+    private readonly HashSet<string> _launchesInProgress = new(StringComparer.Ordinal);
 
     /// <summary>LastPlayed/playtime changed - the library should refresh and save.</summary>
     public event Action<GameEntry>? GameUpdated;
@@ -311,7 +330,10 @@ public partial class ProcessLauncherService
             return null;
         }
 
-        SessionStarted?.Invoke(session);
+        // Guarded like SessionGameStarted and SessionEnded: a subscriber's failure must not turn
+        // into a rolled-back session and a "launch failed" for a game that was about to start.
+        try { SessionStarted?.Invoke(session); }
+        catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionStarted handler failed: {ex.Message}"); }
         return session;
     }
 
@@ -347,7 +369,7 @@ public partial class ProcessLauncherService
         {
             if (gameRan)
             {
-                TimeSpan played = DateTime.Now - session.StartedAt;
+                TimeSpan played = DateTime.UtcNow - session.StartedAtUtc;
                 minutes = (long)Math.Max(0, Math.Round(played.TotalMinutes));
                 if (minutes > 0)
                 {
@@ -467,6 +489,7 @@ public partial class ProcessLauncherService
     {
         errorMessage = null;
         isMissing = false;
+        bool claimed = false;
 
         try
         {
@@ -475,7 +498,22 @@ public partial class ProcessLauncherService
             // A session already tracked for this game means a launch is in flight (or the game is
             // running). Re-dispatching would re-run the pre-launch script and start a second
             // tracker; focus what's there instead. "End session" in the tray clears a stuck one.
-            var inFlight = GetSession(game.Id);
+            // The claim covers the time before a route registers its session: two launches that
+            // arrive together (a hotkey pressed twice) would otherwise both find nothing here.
+            ActiveGameSession? inFlight;
+            lock (_sessionsLock)
+            {
+                inFlight = _sessions.GetValueOrDefault(game.Id);
+                if (inFlight == null)
+                {
+                    claimed = _launchesInProgress.Add(game.Id);
+                    if (!claimed)
+                    {
+                        LoggingService.Info("Launcher", $"'{game.Name}' is already being launched; not dispatching again.");
+                        return true;
+                    }
+                }
+            }
             if (inFlight != null)
             {
                 IntPtr hWnd = IntPtr.Zero;
@@ -554,6 +592,13 @@ public partial class ProcessLauncherService
             var stray = GetSession(game.Id);
             if (stray != null) RollbackSession(stray);
             return false;
+        }
+        finally
+        {
+            if (claimed)
+            {
+                lock (_sessionsLock) { _launchesInProgress.Remove(game.Id); }
+            }
         }
     }
 
@@ -794,7 +839,7 @@ public partial class ProcessLauncherService
                     return true;
                 }
 
-                if (DateTime.Now - session.LaunchedAt > SteamSessionStartTimeout)
+                if (DateTime.UtcNow - session.LaunchedAtUtc > SteamSessionStartTimeout)
                 {
                     LoggingService.Verbose("Launcher", $"'{game.Name}' never reported running via Steam within {SteamSessionStartTimeout.TotalMinutes:0}m; rolling back its Performance Profile.");
                     FinishSession(session, gameRan: false, "Steam never reported the game running");
@@ -980,12 +1025,13 @@ public partial class ProcessLauncherService
         {
             if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
 
-            if (allowStubHandoff && DateTime.Now - session.StartedAt < StubHandoffWindow)
+            TimeSpan ranFor = DateTime.UtcNow - session.StartedAtUtc;
+            if (allowStubHandoff && ranFor < StubHandoffWindow)
             {
                 string installDir = ResolveInstallDir(game);
                 if (!string.IsNullOrWhiteSpace(installDir))
                 {
-                    LoggingService.Info("Launcher", $"'{game.Name}' exited {(DateTime.Now - session.StartedAt).TotalSeconds:0.0}s after starting - treating it as a launcher stub and looking for the real game under '{installDir}'.");
+                    LoggingService.Info("Launcher", $"'{game.Name}' exited {ranFor.TotalSeconds:0.0}s after starting - treating it as a launcher stub and looking for the real game under '{installDir}'.");
                     try { process.Dispose(); } catch { }
                     if (ReferenceEquals(session.Process, process)) session.Process = null;
                     TrackInstallDirSession(session, installDir, "direct launch", StubHandoffSearchTimeout, ownsProcessAlready: true);

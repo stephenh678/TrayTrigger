@@ -32,6 +32,9 @@ $root = Split-Path -Parent $PSScriptRoot
 $helpDir = Join-Path $root 'Help'
 if (-not (Test-Path $helpDir)) { throw "Help folder not found at $helpDir" }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+# .NET file APIs resolve a relative path against the process's start directory, not the session's
+# current location, so a relative -OutDir is made absolute once here.
+$OutDir = Convert-Path -LiteralPath $OutDir
 
 # Same order and labels as HelpContentService.SectionOrder.
 $sectionOrder = @(
@@ -54,6 +57,15 @@ function ConvertTo-PageName([string] $title) {
     return $t.Trim() -replace ' ', '-'
 }
 
+# Drops the first "# Title" line only, as HelpContentService does; a later "# " line is content.
+function Skip-TitleLine([string[]] $lines) {
+    $seen = $false
+    foreach ($l in $lines) {
+        if (-not $seen -and $l -match '^# ') { $seen = $true; continue }
+        $l
+    }
+}
+
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 function Write-Page([string] $name, [string] $body) {
     [System.IO.File]::WriteAllText((Join-Path $OutDir "$name.md"), $body, $utf8)
@@ -65,7 +77,7 @@ foreach ($file in Get-ChildItem $helpDir -Recurse -Filter *.md | Sort-Object Ful
     $rel = $file.FullName.Substring($helpDir.Length + 1) -replace '\\', '/'
     $section = ($rel -split '/')[0]
     $lines = Get-Content $file.FullName -Encoding UTF8
-    $title = ($lines | Where-Object { $_ -match '^# ' } | Select-Object -First 1) -replace '^# ', ''
+    $title = (($lines | Where-Object { $_ -match '^# ' } | Select-Object -First 1) -replace '^# ', '').Trim()
     if (-not $title) { $title = [System.IO.Path]::GetFileNameWithoutExtension($file.Name) }
     $topics += [pscustomobject]@{
         Section  = $section
@@ -74,7 +86,7 @@ foreach ($file in Get-ChildItem $helpDir -Recurse -Filter *.md | Sort-Object Ful
         Page     = ConvertTo-PageName $title
         IsOverview = $file.BaseName -eq 'overview'
         # The wiki shows the page name as its title, so the "# Title" line would appear twice.
-        Body     = (($lines | Where-Object { $_ -notmatch '^# ' }) -join "`n").Trim()
+        Body     = ((Skip-TitleLine $lines) -join "`n").Trim()
         Note     = "This page is the same text as the app's Learn more button"
     }
 }
@@ -133,7 +145,8 @@ foreach ($file in Get-ChildItem $scriptsDir -Filter 'Example-*.ps1' | Sort-Objec
 $dupes = $topics | Group-Object Page | Where-Object Count -gt 1
 if ($dupes) { throw "Two help topics map to the same wiki page name: $($dupes.Name -join ', ')" }
 
-# Group by section in display order, overview first then alphabetical (as the app's index does).
+# Group by section in display order, overview first then alphabetical by title with quotes
+# ignored, as HelpContentService.GetIndex does.
 $groups = @()
 $known = $sectionOrder | ForEach-Object { $_.Key }
 $extra = $topics.Section | Sort-Object -Unique | Where-Object { $_ -notin $known }

@@ -92,10 +92,24 @@ public static partial class ProcessPathResolver
         string name = Path.GetFileNameWithoutExtension(exePath);
         if (KnownHelperProcessNames.Contains(name)) return true;
         // Generic patterns: anything self-describing as a crash tool, an installer, or an uninstaller.
-        return name.Contains("crash", StringComparison.OrdinalIgnoreCase)
+        return IsCrashTool(name)
             || name.StartsWith("unins", StringComparison.OrdinalIgnoreCase)
             || name.EndsWith("setup", StringComparison.OrdinalIgnoreCase)
             || name.EndsWith("installer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>What a crash tool does with the crash. "crash" on its own is not enough: Crashlands
+    /// and every Crash Bandicoot exe contain it, and were being skipped as helpers.</summary>
+    private static readonly string[] CrashToolWords = ["handler", "report", "sender", "pad", "dump", "upload", "helper", "monitor", "catcher"];
+
+    private static bool IsCrashTool(string name)
+    {
+        if (!name.Contains("crash", StringComparison.OrdinalIgnoreCase)) return false;
+        foreach (string word in CrashToolWords)
+        {
+            if (name.Contains(word, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
 
     /// <summary>One running process whose image lives under a watched install folder.</summary>

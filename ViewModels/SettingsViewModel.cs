@@ -298,8 +298,8 @@ public class SettingsViewModel : ViewModelBase
         OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
         SetViewModeCommand = new RelayCommand(mode => LibraryViewMode = mode?.ToString() ?? ViewModePosterGrid);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
-        OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
-        OpenRawgSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://rawg.io/apidocs") { UseShellExecute = true }));
+        OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://www.steamgriddb.com/profile/preferences"));
+        OpenRawgSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://rawg.io/apidocs"));
         ClearMetadataCacheCommand = new RelayCommand(() =>
         {
             SteamMetadataService.ClearCache();
@@ -1624,7 +1624,7 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             var result = await Task.Run(() => GameScriptService.TestRun(path, probe, phase, playtime));
-            StatusMessage = null;
+            StatusMessage = string.Empty;
             var report = new ScriptTestReport(isPreLaunch, path, result, DefaultRunScriptsAsAdmin, DefaultRunScriptsHidden,
                 ProbeDescription: $"placeholder values (name \"{probeName}\", game ID \"default\", empty exe, no script arguments)");
             new ScriptTestResultDialog(report).ShowDialog();
@@ -1793,6 +1793,8 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),
+            nameof(AppSettings.HasSeenMetadataSourcesReminder),
+            nameof(AppSettings.HasSeenTrayHideNotice),
             // Describes the machine (what a tweak found before it was applied), not a preference.
             nameof(AppSettings.TweakPriorState),
         };

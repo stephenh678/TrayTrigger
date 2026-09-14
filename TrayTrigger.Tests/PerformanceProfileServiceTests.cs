@@ -52,8 +52,12 @@ public class PerformanceProfileServiceTests : IDisposable
         public void SetGpuPreference(string exePath, string value) { GpuPrefs[exePath] = value; Log.Add($"gpu:{Path.GetFileName(exePath)}={value}"); }
         public void DeleteGpuPreference(string exePath) { GpuPrefs.Remove(exePath); Log.Add($"gpu:{Path.GetFileName(exePath)}=<deleted>"); }
 
-        public HashSet<string> GetDefenderExclusionPaths() => new(Defender, StringComparer.OrdinalIgnoreCase);
-        public bool AddDefenderExclusion(string exePath) { Defender.Add(exePath); Log.Add("defender:+" + Path.GetFileName(exePath)); return true; }
+        public bool AddDefenderExclusion(string exePath)
+        {
+            if (!Defender.Add(exePath)) return false;
+            Log.Add("defender:+" + Path.GetFileName(exePath));
+            return true;
+        }
         public bool RemoveDefenderExclusion(string exePath) { Defender.Remove(exePath); Log.Add("defender:-" + Path.GetFileName(exePath)); return true; }
 
         public void SetProcessPriority(Process process, ProcessPriorityClass priority) => Log.Add("priority:" + priority);
@@ -160,6 +164,20 @@ public class PerformanceProfileServiceTests : IDisposable
         _service.EndGameSession("g");
         Assert.Contains(_exeA, _backend.Defender);
         Assert.DoesNotContain("defender:-a.exe", _backend.Log);
+    }
+
+    [Fact]
+    public void SecondGameWithNoPerExeTweaks_KeepsMachineWideTweaksUntilItEnds()
+    {
+        Assert.True(_service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.True(_service.BeginGameSession(Game("b", "steam://rungameid/10", PerformanceProfileMode.Optimized)));
+
+        _service.EndGameSession("a");
+        Assert.Equal("ultimate", _backend.ActiveScheme);
+
+        _service.EndGameSession("b");
+        Assert.Equal("381b4222-f694-41f0-9685-ff5bb260df2e", _backend.ActiveScheme);
+        Assert.Null(_store.OnDisk);
     }
 
     [Fact]

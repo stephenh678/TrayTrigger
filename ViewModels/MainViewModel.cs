@@ -326,7 +326,7 @@ public class MainViewModel : ViewModelBase
 
         OpenSettingsCommand = new RelayCommand(OpenSettings);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
-        OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
+        OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://www.steamgriddb.com/profile/preferences"));
 
         _launcherService.GameUpdated += Library.OnGameUpdatedFromLauncher;
         _launcherService.SessionStarted += Library.OnSessionStarted;
