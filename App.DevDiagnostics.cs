@@ -392,6 +392,24 @@ public partial class App
                 return;
             }
 
+            // --screenshot-sidebar-expanded <out.png>: the window with the sidebar open (brand mark and
+            // name). The setting saves itself, so it's put back the way it was before exiting.
+            if ((e.Args[i].Equals("--screenshot-sidebar-expanded", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-sidebar-expanded", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                bool wasExpanded = _mainViewModel.IsSidebarExpanded;
+                _mainViewModel.IsSidebarExpanded = true;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                _mainViewModel.IsSidebarExpanded = wasExpanded;
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-updater-dialog", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-updater-dialog", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
