@@ -1,0 +1,171 @@
+<Window x:Class="TrayTrigger.Views.ToolEditDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:services="clr-namespace:TrayTrigger.Services"
+        xmlns:views="clr-namespace:TrayTrigger.Views"
+        mc:Ignorable="d"
+        Title="Edit Tool"
+        Height="640" Width="620"
+        MinHeight="520" MinWidth="560"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{StaticResource BrushDialogBg}"
+        Foreground="{StaticResource BrushTextPrimary}"
+        FontFamily="{StaticResource AppFont}">
+
+    <Grid Margin="22,18,22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Divider -->
+            <RowDefinition Height="*"/>    <!-- Cards -->
+            <RowDefinition Height="Auto"/> <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Edit Tool" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+            <TextBlock Text="Its name, category and icon, and how the program starts"
+                       FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <Rectangle Grid.Row="1" Height="1" Fill="{StaticResource BrushBorderDark}" Margin="0,0,0,14"/>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
+            <StackPanel Margin="0,0,6,0">
+                <!-- CARD 1: IDENTITY -->
+                <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                        BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Tool" FontSize="12.5" FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Icon -->
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0" Width="96">
+                                <Border Width="72" Height="72" CornerRadius="8" Background="#111116"
+                                        BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" HorizontalAlignment="Center">
+                                    <Grid>
+                                        <Image Source="{Binding IconPreview}" Width="56" Height="56"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="26"
+                                                   Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasIconPreview}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                                <Button Content="Change Icon..." Command="{Binding ChangeIconCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Margin="0,8,0,0" Padding="8,4" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding IconNote}" FontSize="10" Foreground="{StaticResource BrushTextMuted}"
+                                           TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Name" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="Category" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding ExistingCategories}"
+                                          Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Tool categories are separate from game categories. Leave it blank for Uncategorized."
+                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                <CheckBox Content="Favorite" IsChecked="{Binding IsFavorite}" Style="{StaticResource ModernCheckBox}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- CARD 2: LAUNCH -->
+                <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                        BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Launch" FontSize="12.5" FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Program (.exe)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseTargetCommand}"
+                                    Style="{StaticResource ModernOutlineButton}"/>
+                        </Grid>
+
+                        <TextBlock Text="Working Folder" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}"
+                                    Style="{StaticResource ModernOutlineButton}"/>
+                        </Grid>
+                        <TextBlock Text="Blank uses the program's own folder."
+                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Launch Arguments (optional)" FontSize="11.5"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
+
+                        <CheckBox Content="Run as Administrator" IsChecked="{Binding RunAsAdmin}"
+                                  Style="{StaticResource ModernCheckBox}"/>
+                        <TextBlock Text="Windows asks for permission with its own prompt each time. Programs that always need admin get that prompt even with this off. Declining it just leaves the tool closed."
+                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+
+                        <StackPanel>
+                            <DockPanel>
+                                <views:HotkeyRecorderBox x:Name="ToolHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding OwnerId}"
+                                                         ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none."
+                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <TextBlock Text="{Binding Message, ElementName=ToolHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ToolHotkeyBox}"
+                                       Visibility="{Binding HasMessage, ElementName=ToolHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                       FontSize="10.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- FOOTER -->
+        <DockPanel Grid.Row="3" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True"
+                        Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0" MinWidth="90"/>
+                <Button Content="Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
+                        Style="{StaticResource ModernAccentButton}" MinWidth="120"/>
+            </StackPanel>
+            <TextBlock Text="{Binding ValidationMessage}" Foreground="{StaticResource BrushDanger}" FontSize="11.5"
+                       TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"
+                       Visibility="{Binding HasValidationMessage, Converter={StaticResource BoolToVis}}"/>
+        </DockPanel>
+    </Grid>
+</Window>

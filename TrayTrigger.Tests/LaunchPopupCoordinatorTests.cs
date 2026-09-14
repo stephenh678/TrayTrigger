@@ -69,7 +69,7 @@ public class LaunchPopupCoordinatorTests
         }
     }
 
-    private static GameEntry Game(string id, string name = "DOOM: The Dark Ages") => new() { Id = id, Name = name };
+    private static LaunchTarget Game(string id, string name = "DOOM: The Dark Ages") => new(id, name);
 
     [Fact]
     public void ShowLaunchPopup_DefaultsToOn_OnlyWhenHidden()
@@ -130,7 +130,7 @@ public class LaunchPopupCoordinatorTests
 
         Assert.True(rig.View.Visible);
         Assert.Equal(LaunchPopupKind.Launching, rig.View.Shown!.Kind);
-        Assert.Equal("DOOM: The Dark Ages", rig.View.Shown.GameName);
+        Assert.Equal("DOOM: The Dark Ages", rig.View.Shown.Name);
         Assert.True(rig.View.Shown.ShowsProgress);
         Assert.False(rig.View.Shown.IsInteractive);
     }
@@ -188,10 +188,10 @@ public class LaunchPopupCoordinatorTests
     [Fact]
     public void LaunchingDetail_IncludesTheProfileTier()
     {
-        var game = new GameEntry { Id = "a", Name = "X", PerformanceProfile = PerformanceProfileMode.Optimized };
+        var game = LaunchTarget.ForGame(new GameEntry { Id = "a", Name = "X", PerformanceProfile = PerformanceProfileMode.Optimized });
         Assert.Equal("Starting through Xbox · Optimized profile", LaunchPopupCoordinator.LaunchingDetail(game, "Xbox"));
         Assert.Equal("Optimized profile", LaunchPopupCoordinator.LaunchingDetail(game, "Local"));
-        Assert.Null(LaunchPopupCoordinator.LaunchingDetail(new GameEntry { Id = "b", Name = "Y" }, null));
+        Assert.Null(LaunchPopupCoordinator.LaunchingDetail(new LaunchTarget("b", "Y"), null));
     }
 
     [Fact]
@@ -301,11 +301,56 @@ public class LaunchPopupCoordinatorTests
         rig.Popup.TryBeginLaunch(Game("b", "Second"));
 
         rig.Fire(d => d == LaunchPopupCoordinator.WaitingAfter);
-        Assert.Equal("Second", rig.View.Shown!.GameName);
+        Assert.Equal("Second", rig.View.Shown!.Name);
         Assert.Equal(LaunchPopupKind.Waiting, rig.View.Shown.Kind);
 
         rig.Now += TimeSpan.FromSeconds(10);
         rig.Popup.OnGameStarted("a");
         Assert.True(rig.View.Visible);
+    }
+
+    [Fact]
+    public void LaunchTarget_ForGame_CarriesIdNameProfileAndLauncherLogo()
+    {
+        var game = new GameEntry { Id = "g1", Name = "Diablo IV", PerformanceProfile = PerformanceProfileMode.Aggressive, IsBattleNetGame = true };
+        var target = LaunchTarget.ForGame(game);
+
+        Assert.Equal("g1", target.Id);
+        Assert.Equal("Diablo IV", target.Name);
+        Assert.Equal(PerformanceProfileMode.Aggressive, target.PerformanceProfile);
+        Assert.Equal(TrayTrigger.Services.LauncherLogos.PackUriFor(game), target.FallbackIconUri);
+        Assert.Null(LaunchTarget.ForGame(new GameEntry { Id = "g2", Name = "Local" }).FallbackIconUri);
+    }
+
+    [Fact]
+    public void NonGameTarget_ShowsItsName_AndNoProfileDetail()
+    {
+        var rig = new Rig();
+        Assert.True(rig.Popup.TryBeginLaunch(new LaunchTarget("t1", "DLSS Swapper")));
+
+        Assert.Equal("DLSS Swapper", rig.View.Shown!.Name);
+        Assert.Null(rig.View.Shown.Detail);
+    }
+
+    [Fact]
+    public void IconLookup_ReceivesTheTargetBeingShown()
+    {
+        LaunchTarget? asked = null;
+        var view = new FakeView();
+        var popup = new LaunchPopupCoordinator(
+            isEnabled: () => true,
+            showWhileAppInFront: () => false,
+            isAppInFront: () => false,
+            isWaitingForGame: _ => true,
+            showMainWindow: () => { },
+            iconFor: t => { asked = t; return null; },
+            view: view,
+            schedule: (_, _) => new Handle(),
+            utcNow: () => DateTime.UtcNow);
+
+        var target = new LaunchTarget("t1", "Vortex", FallbackIconUri: "pack://application:,,,/x.png");
+        popup.TryBeginLaunch(target);
+
+        Assert.Equal(target, asked);
     }
 }

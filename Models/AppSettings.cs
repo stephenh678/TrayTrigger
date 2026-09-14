@@ -109,6 +109,22 @@ public class AppSettings
     public bool EnableGameScripts { get; set; } = false;
     /// <summary>Scripts that run for every game without one of its own. See <see cref="Models.ScriptDefaults"/>.</summary>
     public ScriptDefaults ScriptDefaults { get; set; } = new();
+    /// <summary>
+    /// The Tools feature switch: a sidebar page of saved program shortcuts (DLSS Swapper, Vortex,
+    /// Afterburner). Off by default. While off, the page, the tray submenu and tool hotkeys are gone,
+    /// but tools.json is kept, so turning it back on restores every tool.
+    /// </summary>
+    public bool EnableTools { get; set; } = false;
+    /// <summary>A "Tools" submenu in the tray menu, after the games. Off by default; only applies while <see cref="EnableTools"/> is on.</summary>
+    public bool ShowToolsInTray { get; set; } = false;
+    /// <summary>Order of the tray's Tools submenu. One of <see cref="Services.ToolCatalog.SortOptions"/>.</summary>
+    public string ToolsTraySortOption { get; set; } = ToolCatalog.SortAlphabetical;
+    /// <summary>Order of the Tools page, separate from the tray's. View state, like <see cref="LastSortOption"/>.</summary>
+    public string ToolsSortOption { get; set; } = ToolCatalog.SortAlphabetical;
+    /// <summary>Tools page layout. One of <see cref="Services.ToolCatalog.ViewModes"/>.</summary>
+    public string ToolsViewMode { get; set; } = ToolCatalog.ViewLargeIcons;
+    /// <summary>The Tools page's selected category tab, kept across restarts like <see cref="LastCategoryFilter"/>.</summary>
+    public string LastToolsCategoryTab { get; set; } = LibraryConstants.AllCategory;
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";

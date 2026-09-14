@@ -25,7 +25,8 @@ public enum NavSection
     Library,
     Settings,
     About,
-    System
+    System,
+    Tools
 }
 
 public enum AboutSubSection
@@ -163,6 +164,9 @@ public class MainViewModel : ViewModelBase
             getRawgApiKeyOrNull: () => SettingsVM?.RawgApiKeyOrNull
         );
 
+        // Tools: saved program shortcuts with their own file, categories and launcher. See ToolsViewModel.
+        Tools = new ToolsViewModel(_storageService, _iconExtractorService, _shortcutService, new ToolLauncherService(), _settings);
+
         Import = new ImportCoordinator(
             Library,
             _shortcutService,
@@ -213,6 +217,21 @@ public class MainViewModel : ViewModelBase
         Library.RequestEditSteamAppId += card => RequestEditSteamAppId?.Invoke(card);
         Library.RequestMinimizeToTray += () => RequestMinimizeToTray?.Invoke();
         Library.LibraryUpdated += () => LibraryUpdated?.Invoke();
+        Tools.ShowLaunchNotice = Library.ShowLaunchNotice;
+        Tools.HideLaunchNotice = () => Library.IsLaunchToastVisible = false;
+        Tools.ToolsChanged += () =>
+        {
+            UpdateHotkeys();
+            LibraryUpdated?.Invoke();
+        };
+        // Settings > General "Enable Tools" (and Reset to Defaults, which raises every property).
+        SettingsVM.PropertyChanged += (s, e) =>
+        {
+            if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(SettingsViewModel.EnableTools))
+            {
+                OnToolsEnabledChanged();
+            }
+        };
 
         Import.RequestScanResultsPicker += (steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, folderCandidates) => RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, folderCandidates);
         Import.RequestLauncherDetectionPrompt += detected => RequestLauncherDetectionPrompt?.Invoke(detected);
@@ -239,6 +258,10 @@ public class MainViewModel : ViewModelBase
         ToggleSidebarCommand = new RelayCommand(() => IsSidebarExpanded = !IsSidebarExpanded);
         SelectLibraryCommand = new RelayCommand(() => CurrentSection = NavSection.Library);
         SelectSystemCommand = new RelayCommand(() => CurrentSection = NavSection.System);
+        SelectToolsCommand = new RelayCommand(() =>
+        {
+            if (IsToolsEnabled) CurrentSection = NavSection.Tools;
+        });
         SelectSettingsCommand = new RelayCommand(() => CurrentSection = NavSection.Settings);
         OpenDiagnosticsSettingsCommand = new RelayCommand(() =>
         {
@@ -337,10 +360,18 @@ public class MainViewModel : ViewModelBase
         _launcherService.LaunchNotice += (game, message) =>
             System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
             {
-                if (Library.LaunchPopup?.TryShowNotice(game, message) == true) return;
+                if (Library.LaunchPopup?.TryShowNotice(LaunchTarget.ForGame(game), message) == true) return;
                 NotifyTray("TrayTrigger", message);
             });
         _hotkeyManager.GameHotkeyTriggered += Library.OnGameHotkeyTriggered;
+        // All launch hotkeys are registered here, from every section that has them.
+        Library.RefreshHotkeys = UpdateHotkeys;
+        _hotkeyManager.ToolHotkeyTriggered += id =>
+        {
+            if (_settings.EnableTools) Tools.OnHotkeyTriggered(id);
+        };
+        // Loaded before the library, so the first hotkey registration already knows every tool.
+        Tools.Load();
 
         Library.LoadLibrary();
         _ = Import.EnrichLibraryAsync();
@@ -350,9 +381,9 @@ public class MainViewModel : ViewModelBase
             _ = Import.ScanForGamesAsync(silent: true);
         }
 
-        if (_storageService.SettingsLoadWarning != null || _storageService.GamesLoadWarning != null)
+        if (_storageService.SettingsLoadWarning != null || _storageService.GamesLoadWarning != null || _storageService.ToolsLoadWarning != null)
         {
-            string warning = string.Join(" ", new[] { _storageService.SettingsLoadWarning, _storageService.GamesLoadWarning }
+            string warning = string.Join(" ", new[] { _storageService.SettingsLoadWarning, _storageService.GamesLoadWarning, _storageService.ToolsLoadWarning?.Trim() }
                 .Where(w => w != null));
             ModernDialog.ShowWarning(null, "Data File Recovered", warning);
         }
@@ -377,6 +408,7 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsSystemView));
                 OnPropertyChanged(nameof(IsSettingsView));
                 OnPropertyChanged(nameof(IsAboutView));
+                OnPropertyChanged(nameof(IsToolsView));
 
                 if (_currentSection == NavSection.System)
                 {
@@ -407,6 +439,22 @@ public class MainViewModel : ViewModelBase
     public bool IsSystemView => CurrentSection == NavSection.System;
     public bool IsSettingsView => CurrentSection == NavSection.Settings;
     public bool IsAboutView => CurrentSection == NavSection.About;
+    public bool IsToolsView => CurrentSection == NavSection.Tools;
+    /// <summary>Settings > General "Enable Tools": the sidebar button, the page, and (with its own option) the tray submenu.</summary>
+    public bool IsToolsEnabled => _settings.EnableTools;
+    public ToolsViewModel Tools { get; }
+    public ICommand SelectToolsCommand { get; }
+
+    private void OnToolsEnabledChanged()
+    {
+        OnPropertyChanged(nameof(IsToolsEnabled));
+        if (!IsToolsEnabled && CurrentSection == NavSection.Tools)
+        {
+            CurrentSection = NavSection.Library;
+        }
+        UpdateHotkeys();
+        LibraryUpdated?.Invoke();
+    }
 
     public bool IsSidebarExpanded
     {
@@ -723,8 +771,25 @@ public class MainViewModel : ViewModelBase
     public bool CanRefreshAllPosters => Import.CanRefreshAllPosters;
     public Task RefreshAllPostersAsync(IProgress<string>? progress = null) => Import.RefreshAllPostersAsync(progress);
     public Task EnrichLibraryAsync() => Import.EnrichLibraryAsync();
-    public void HandleFileDrop(string[] files) => Import.HandleFileDrop(files);
-    public Task HandleFileDropAsync(string[] files) => Import.HandleFileDropAsync(files);
+    /// <summary>A drop while the Tools page is showing adds tools, never games.</summary>
+    public void HandleFileDrop(string[] files)
+    {
+        if (CurrentSection == NavSection.Tools && IsToolsEnabled)
+        {
+            Tools.HandleDrop(files);
+            return;
+        }
+        Import.HandleFileDrop(files);
+    }
+    public Task HandleFileDropAsync(string[] files)
+    {
+        if (CurrentSection == NavSection.Tools && IsToolsEnabled)
+        {
+            Tools.HandleDrop(files);
+            return Task.CompletedTask;
+        }
+        return Import.HandleFileDropAsync(files);
+    }
     public Task ProcessFolderAddBatchAsync(List<string> folderPaths) => Import.ProcessFolderAddBatchAsync(folderPaths);
     public void ProcessFolderAdd(string folderPath) => Import.ProcessFolderAdd(folderPath);
     public Task ProcessFolderAddAsync(string folderPath) => Import.ProcessFolderAddAsync(folderPath);
@@ -838,7 +903,38 @@ public class MainViewModel : ViewModelBase
 
     // --- Forwarded to LibraryViewModel; see L-13 ---
     public void SaveLibrary([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "") => Library.SaveLibrary(callerMember, callerFile);
-    public void UpdateHotkeys() => Library.UpdateHotkeys();
+    /// <summary>Registers the window hotkey and every launch hotkey. The single place registration happens.</summary>
+    /// <remarks>Tool hotkeys register only while Tools is on. While it is off they stay reserved, so a
+    /// game can't take one and break it when Tools comes back; one that still fails is reported on the Tools page.</remarks>
+    public void UpdateHotkeys()
+    {
+        bool toolsOn = _settings.EnableTools;
+        var failed = _hotkeyManager.RegisterHotkeys(
+            _settings.GlobalManageHotkey,
+            toolsOn ? Library.HotkeyBindings.Concat(Tools.HotkeyBindings) : Library.HotkeyBindings,
+            reserved: toolsOn ? null : Tools.HotkeyBindings);
+
+        var failedTools = failed.Where(b => b.Kind == HotkeyOwnerKind.Tool).ToList();
+        string? warning = failedTools.Count switch
+        {
+            0 => null,
+            1 => $"The hotkey {failedTools[0].Hotkey} for \"{failedTools[0].OwnerName}\" isn't active: it's already in use.",
+            _ => $"{failedTools.Count} tool hotkeys aren't active: they're already in use."
+        };
+        if (warning != null)
+        {
+            Tools.StatusMessage = warning;
+        }
+        else if (_toolHotkeyWarning != null && Tools.StatusMessage == _toolHotkeyWarning)
+        {
+            // The clash is gone: don't leave the old warning on the Tools page.
+            Tools.StatusMessage = string.Empty;
+        }
+        _toolHotkeyWarning = warning;
+    }
+
+    /// <summary>The tool hotkey warning last put on the Tools status bar, so it can be cleared once it no longer applies.</summary>
+    private string? _toolHotkeyWarning;
     public void RebuildCategories() => Library.RebuildCategories();
     public void RebuildCategoryTabs() => Library.RebuildCategoryTabs();
     public void SelectCategoryTab(string category) => Library.SelectCategoryTab(category);

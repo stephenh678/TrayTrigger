@@ -360,9 +360,10 @@ public partial class App : Application
             isAppInFront: IsAppInFront,
             isWaitingForGame: id => _launcherService?.IsWaitingForGame(id) == true,
             showMainWindow: ShowMainWindow,
-            iconFor: GetGameIcon,
+            iconFor: GetLaunchTargetIcon,
             view: new LaunchPopupHost());
         _mainViewModel.Library.LaunchPopup = _launchPopup;
+        _mainViewModel.Tools.LaunchPopup = _launchPopup;
         _launcherService.SessionStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionStarted(s.GameId, s.PlatformLabel));
         _launcherService.SessionGameStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnGameStarted(s.GameId));
         _launcherService.SessionEnded += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionEnded(s.GameId));
@@ -786,6 +787,30 @@ public partial class App : Application
                 }
             }
 
+            // Tools: one flat submenu after the games, in its own sort order. Only with Tools on and its
+            // tray option ticked (both off by default); no categories or favorites section here.
+            if (_mainViewModel.Settings.EnableTools && _mainViewModel.Settings.ShowToolsInTray)
+            {
+                var tools = _mainViewModel.Tools.TrayTools();
+                if (tools.Count > 0)
+                {
+                    var toolsMenu = new MenuItem
+                    {
+                        Header = $"Tools ({tools.Count})",
+                        Style = TrayItemStyle
+                    };
+                    if (_mainViewModel.Settings.ShowTrayMenuIcons)
+                    {
+                        toolsMenu.Icon = CreateTrayGlyph("");
+                    }
+                    foreach (var tool in tools)
+                    {
+                        toolsMenu.Items.Add(CreateToolMenuItem(tool));
+                    }
+                    menu.Items.Add(toolsMenu);
+                }
+            }
+
             menu.Items.Add(new Separator());
 
             // Navigation & exit items. A tray-first launcher should reach its two most common
@@ -891,6 +916,41 @@ public partial class App : Application
         return item;
     }
 
+    private MenuItem CreateToolMenuItem(ToolCardViewModel card)
+    {
+        var item = new MenuItem
+        {
+            Header = card.Name,
+            Style = TrayItemStyle,
+            Command = new RelayCommand(() => _mainViewModel.Tools.Launch(card))
+        };
+
+        if (!_mainViewModel.Settings.ShowTrayMenuIcons)
+        {
+            return item;
+        }
+
+        if (card.IconImage != null)
+        {
+            var img = new Image
+            {
+                Source = card.IconImage,
+                Width = TrayIconSize,
+                Height = TrayIconSize,
+                Stretch = Stretch.Uniform,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+            item.Icon = img;
+        }
+        else
+        {
+            item.Icon = CreateTrayGlyph("", (Brush)FindResource("BrushTextMuted"));
+        }
+
+        return item;
+    }
+
     // ------------------------------------------------------------------ tray menu helpers
 
     private bool TrayCompact => _mainViewModel?.Settings.CompactTrayMenu == true;
@@ -930,16 +990,19 @@ public partial class App : Application
         return false;
     }
 
-    /// <summary>The picture the tray menu shows for a game: its own icon, else its launcher's logo.</summary>
-    private ImageSource? GetGameIcon(GameEntry game) =>
-        _mainViewModel?.Library.Games.FirstOrDefault(c => c.Id == game.Id)?.IconImage ?? GetLauncherLogo(game);
+    /// <summary>The launch popup's picture: the entry's own icon, else its fallback logo.</summary>
+    private ImageSource? GetLaunchTargetIcon(LaunchTarget target) =>
+        _mainViewModel?.Library.Games.FirstOrDefault(c => c.Id == target.Id)?.IconImage
+        ?? _mainViewModel?.Tools.FindCard(target.Id)?.IconImage
+        ?? GetLauncherLogo(target.FallbackIconUri);
 
     // Decoded once per platform: the menu is rebuilt on every launch, exit and library change.
     private readonly Dictionary<string, BitmapImage> _launcherLogoCache = new(StringComparer.Ordinal);
 
-    private BitmapImage? GetLauncherLogo(GameEntry game)
+    private BitmapImage? GetLauncherLogo(GameEntry game) => GetLauncherLogo(LauncherLogos.PackUriFor(game));
+
+    private BitmapImage? GetLauncherLogo(string? uri)
     {
-        string? uri = LauncherLogos.PackUriFor(game);
         if (uri == null) return null;
         if (_launcherLogoCache.TryGetValue(uri, out var cached)) return cached;
         try

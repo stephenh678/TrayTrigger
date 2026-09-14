@@ -1150,7 +1150,7 @@ public partial class ProcessLauncherService
     /// itself had focus - exactly the situation here, since TrayTrigger hides itself and the real
     /// game window can appear many seconds later.
     /// </summary>
-    private static void ActivateWindow(IntPtr hWnd)
+    internal static void ActivateWindow(IntPtr hWnd)
     {
         IntPtr foregroundWindow = GetForegroundWindow();
         uint foregroundThreadId = GetWindowThreadProcessId(foregroundWindow, IntPtr.Zero);

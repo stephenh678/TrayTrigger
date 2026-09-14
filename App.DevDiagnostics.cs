@@ -553,6 +553,36 @@ public partial class App
                 return;
             }
 
+            if ((e.Args[i].Equals("--screenshot-tools", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-tools", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                // The Tools page with sample tools that are never saved:
+                // --screenshot-tools <file.png> [Large Icons|Small Icons|List]
+                string targetPng = e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                if (i + 2 < e.Args.Length && !e.Args[i + 2].StartsWith("-", StringComparison.Ordinal))
+                {
+                    _mainViewModel.Settings.ToolsViewMode = ToolCatalog.NormalizeViewMode(e.Args[i + 2]);
+                }
+                string system = Environment.SystemDirectory;
+                string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                _mainViewModel.Tools.ReplaceToolsForCapture(new[]
+                {
+                    new ToolEntry { Name = "DLSS Swapper", TargetPath = System.IO.Path.Combine(system, "notepad.exe"), Category = "Graphics", IsFavorite = true, Hotkey = "Ctrl+Alt+D" },
+                    new ToolEntry { Name = "MSI Afterburner", TargetPath = System.IO.Path.Combine(system, "calc.exe"), Category = "Graphics", RunAsAdmin = true },
+                    new ToolEntry { Name = "Vortex", TargetPath = System.IO.Path.Combine(windows, "explorer.exe"), Category = "Mods", IsFavorite = true },
+                    new ToolEntry { Name = "Discord", TargetPath = System.IO.Path.Combine(system, "cmd.exe"), Category = "Chat" },
+                    new ToolEntry { Name = "Old Trainer", TargetPath = @"C:\Missing\trainer.exe", Category = "Mods" },
+                });
+                _mainViewModel.CurrentSection = NavSection.Tools;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 700, targetPng);
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-settings", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)

@@ -339,6 +339,129 @@ public class StorageService : IProfileSnapshotStore
         }
     }
 
+    // ------------------------------------------------------------------ tools.json
+    // Same durability as games.json: write to .tmp, keep a rolling .bak, fall back to the .bak and
+    // keep a copy of an unreadable primary. A separate file, so the game library never holds tools.
+
+    private readonly Lock _toolsLock = new();
+    private bool _toolsPrimaryUnreadableThisSession;
+
+    private string ToolsFilePath => Path.Combine(_baseDirectory, "tools.json");
+    private string ToolsBakFilePath => Path.Combine(_baseDirectory, "tools.json.bak");
+
+    public string? ToolsLoadWarning { get; private set; }
+
+    public List<ToolEntry> LoadTools()
+    {
+        lock (_toolsLock)
+        {
+            EnsureDirectories();
+
+            if (File.Exists(ToolsFilePath))
+            {
+                try
+                {
+                    var tools = JsonSerializer.Deserialize(File.ReadAllText(ToolsFilePath), AppJsonContext.Default.ListToolEntry);
+                    if (tools != null)
+                    {
+                        LoggingService.Verbose("Storage", $"Loaded {tools.Count} tool(s) from '{ToolsFilePath}'.");
+                        return SanitizeTools(tools);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn("Storage", $"Primary tools.json failed to parse: {ex.Message}. Attempting backup recovery...");
+                    string archivePath = ArchiveCorruptFile(ToolsFilePath);
+                    _toolsPrimaryUnreadableThisSession = true;
+                    ToolsLoadWarning = $"Your tools file could not be read and a copy was kept at '{archivePath}'.";
+                }
+            }
+
+            if (File.Exists(ToolsBakFilePath))
+            {
+                try
+                {
+                    var bakTools = JsonSerializer.Deserialize(File.ReadAllText(ToolsBakFilePath), AppJsonContext.Default.ListToolEntry);
+                    if (bakTools != null)
+                    {
+                        LoggingService.Info("Storage", $"Recovered {bakTools.Count} tool(s) from '{ToolsBakFilePath}'.");
+                        return SanitizeTools(bakTools);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Error("Storage", $"Backup tools.json.bak failed to parse: {ex.Message}", ex);
+                    string bakArchive = ArchiveCorruptFile(ToolsBakFilePath);
+                    ToolsLoadWarning = (ToolsLoadWarning ?? string.Empty) +
+                        $" The backup could not be read either; a copy was kept at '{bakArchive}'.";
+                }
+            }
+
+            if (_toolsPrimaryUnreadableThisSession)
+            {
+                ToolsLoadWarning += " Your tools could not be recovered and the list was reset to empty.";
+            }
+            return new List<ToolEntry>();
+        }
+    }
+
+    /// <summary>
+    /// tools.json is user-editable: drops null entries, fills null text, and gives a blank, repeated or
+    /// non-alphanumeric Id a fresh one. The Id names the tool's cached icon file and owns its hotkey,
+    /// so it must be unique and safe to use as a file name.
+    /// </summary>
+    internal static List<ToolEntry> SanitizeTools(IEnumerable<ToolEntry?> tools)
+    {
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var clean = new List<ToolEntry>();
+        foreach (var tool in tools)
+        {
+            if (tool == null) continue;
+            if (string.IsNullOrWhiteSpace(tool.Id) || !tool.Id.All(char.IsAsciiLetterOrDigit) || !ids.Add(tool.Id))
+            {
+                tool.Id = Guid.NewGuid().ToString("N");
+                ids.Add(tool.Id);
+            }
+            tool.Name ??= string.Empty;
+            tool.TargetPath ??= string.Empty;
+            tool.Arguments ??= string.Empty;
+            tool.WorkingDirectory ??= string.Empty;
+            tool.IconPath ??= string.Empty;
+            tool.Hotkey ??= string.Empty;
+            tool.Category ??= LibraryConstants.Uncategorized;
+            clean.Add(tool);
+        }
+        return clean;
+    }
+
+    public void SaveTools(IEnumerable<ToolEntry> tools, [CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
+    {
+        lock (_toolsLock)
+        {
+            try
+            {
+                EnsureDirectories();
+                var list = tools.ToList();
+                string json = JsonSerializer.Serialize(list, AppJsonContext.Default.ListToolEntry);
+                string tempFile = ToolsFilePath + ".tmp";
+                File.WriteAllText(tempFile, json);
+
+                // Same rule as games.json: an unreadable primary must not overwrite a good backup.
+                if (File.Exists(ToolsFilePath) && !_toolsPrimaryUnreadableThisSession)
+                {
+                    File.Copy(ToolsFilePath, ToolsBakFilePath, overwrite: true);
+                }
+
+                SafeReplaceFile(tempFile, ToolsFilePath);
+                LoggingService.Verbose("Storage", $"Saved {list.Count} tool(s) to '{ToolsFilePath}' (from {CallerTag(callerFile, callerMember)}).");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error("Storage", $"Error saving tools to '{ToolsFilePath}': {ex.Message}", ex);
+            }
+        }
+    }
+
     public AppSettings LoadSettings([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
     {
         lock (_settingsLock)

@@ -124,7 +124,7 @@ public class HelpContentServiceTests
         var index = HelpContentService.GetIndex();
 
         Assert.Equal(
-            new[] { "tweaks", "profiles", "scanner", "traymenu", "scripts", "library", "updates", "troubleshooting" },
+            new[] { "tweaks", "profiles", "scanner", "traymenu", "tools", "scripts", "library", "updates", "troubleshooting" },
             index.Select(g => g.Section).ToArray());
 
         var tweaks = index.First(g => g.Section == "tweaks");

@@ -1,6 +1,6 @@
 # Tools section: design plan
 
-Status: design agreed in discussion 2026-09-14. Build step 1 (launch delay) done; the rest not started.
+Status: design agreed in discussion 2026-09-14. Built on the prerelease branch; see Build order.
 Target: 1.4.4 prerelease. Reviewed by Gemini in [apps-section-review.md](apps-section-review.md); the
 decisions below supersede it.
 
@@ -28,7 +28,7 @@ launch popup games use. It does **not** carry over the Library's game features.
 | Run as admin | Per-tool checkbox, pre-ticked from the shortcut's own "Run as administrator" flag. Windows UAC handles the prompt; TrayTrigger never intercepts it. A declined prompt is logged only. |
 | Launch popup | Tools use the same popup and the same popup settings as games |
 | Launch delay | 2 seconds for games and tools, one shared value. **Done** (`LibraryViewModel.LaunchDispatchDelay`). |
-| Not included | Scanning, online lookup, platform detection, art, game details, sessions, performance profiles, CPU cores, scripts, playtime, last played, hidden, multi-select, filters, recently launched |
+| Not included | Scanning, online lookup, platform detection, art, game details, sessions, performance profiles, CPU cores, scripts, playtime, last played, hidden, filters, recently launched |
 | Discoverability | Changelog and help topic only. No welcome or What's New prompt. |
 
 ## Why a separate section
@@ -44,10 +44,10 @@ separate model that borrows the Library's shared styles and dialogs is the small
 ## Settings
 
 - **General tab: "Enable Tools"** (`EnableTools`, default `false`).
-- **Tray Menu tab: "Show Tools in tray menu"** (`ShowToolsInTray`, default `false`). Always visible,
-  greyed out while Tools is disabled. Keeps its value when Tools is toggled.
-- **Tray Menu tab: "Tools sort order"** (`ToolsTraySortOption`, default A to Z). Greyed out while
-  Tools or "Show Tools in tray menu" is off.
+- **Tray Menu tab: "Show Tools in tray menu"** (`ShowToolsInTray`, default `false`). Hidden while
+  Tools is disabled. Keeps its value when Tools is toggled.
+- **Tray Menu tab: "Tools sort order"** (`ToolsTraySortOption`, default A to Z). Hidden with the option above;
+  greyed out while "Show Tools in tray menu" is off.
 - **Tools page state** (saved like the Library's): `ToolsViewMode` (default Large Icons),
   `ToolsSortOption` (default A to Z), `LastToolsCategoryTab` (default All).
 - **Launch popup settings** (`ShowLaunchPopup`, `ShowLaunchPopupOnEveryLaunch`): labels and help say
@@ -79,7 +79,10 @@ separate model that borrows the Library's shared styles and dialogs is the small
 - Validation: target must be a local, existing `.exe`. Network paths refused. Anything else refused
   with a plain reason.
 - Working folder falls back to the exe's own folder (already `ShortcutService` behaviour).
-- Name from the file name minus " - Shortcut". Adding a target already in Tools asks first.
+- Name from the file name minus " - Shortcut". Adding the same program with the same arguments as a
+  tool already in Tools asks first; different arguments make a different tool.
+- Already running: a tool with no arguments matches any running copy of its exe. A tool with arguments
+  only matches the copy TrayTrigger started for it, so tools sharing a program each start their own.
 - **Drop routing:** `MainWindow.Window_Drop` sends every drop to game import today, whatever page is
   showing. It must route to Tools import while the Tools page is showing. Other pages keep today's
   behaviour.
@@ -105,7 +108,7 @@ separate model that borrows the Library's shared styles and dialogs is the small
 - **Context menu:** Launch, Add to / Remove from Favorites, Edit..., Rename..., Change Category...,
   Change Icon..., Open File Location, Remove.
 - **Keyboard:** Enter launches, F2 renames, Delete removes after confirmation, Ctrl+F searches.
-- Single selection.
+- Multi-select with Ctrl+click, Shift+click and Ctrl+A; right-clicking a selection opens a batch menu (favorite, category, Run as administrator, remove).
 
 ### Views
 
@@ -202,18 +205,21 @@ games. Move the constant somewhere neutral when the tool launcher needs it.
 
 ## Out of scope for v1
 
-.url links, Microsoft Store apps, hidden tools, multi-select and batch actions, filters, drag-to-reorder,
+.url links, Microsoft Store apps, hidden tools, filters, drag-to-reorder,
 recently launched sort, categories or favorites in the tray, running-state indicator, launching tools
 with a game.
 
 ## Build order
 
 1. ~~Launch delay to 2 s for games.~~ Done, committed in 1.4.4-beta.2.
-2. Popup refactor to a launch-target description, with tests, no behaviour change.
-3. Hotkey registration moved to a shared place, no behaviour change.
-4. Card styles moved to shared resources, no behaviour change.
-5. Tools model, storage, settings.
-6. Tools page: views, category tabs, favorites, sort, search, add/edit/remove, drop routing.
-7. Tool launcher, popup and hotkeys wired in.
-8. Tray submenu and tray sort setting.
-9. Help, docs, diagnostics, changelog.
+2. ~~Popup refactor to a launch-target description, with tests, no behaviour change.~~ Done (`LaunchTarget`).
+3. ~~Hotkey registration moved to a shared place, no behaviour change.~~ Done (`HotkeyBinding`, `MainViewModel.UpdateHotkeys`).
+4. ~~Card styles moved to shared resources.~~ Not needed: the icon and list cards Tools copies only use styles already in `App.xaml`; the poster zoom styles aren't used by those views.
+5. ~~Tools model, storage, settings.~~ Done.
+6. ~~Tools page: views, category tabs, favorites, sort, search, add/edit/remove, drop routing.~~ Done.
+7. ~~Tool launcher, popup and hotkeys wired in.~~ Done.
+8. ~~Tray submenu and tray sort setting.~~ Done.
+9. ~~Help, docs, diagnostics, changelog.~~ Done (`Help/tools/overview.md`, README, site, wiki section table, diagnostics line, CHANGELOG).
+
+Dev capture: a Debug build renders the page with sample tools, saving nothing:
+`TrayTrigger.exe --screenshot-tools <file.png> [Large Icons|Small Icons|List]`.

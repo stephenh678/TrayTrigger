@@ -677,8 +677,20 @@ public partial class MainWindow : Window
     /// </summary>
     private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (!_viewModel.HasSelection) return;
         var source = e.OriginalSource as DependencyObject;
+
+        // The Tools page gets the same click-away: a press on anything but a tool drops its
+        // selection. The scrollbar is exempt, so scrolling to reach more tools keeps it.
+        if (_viewModel.CurrentSection == NavSection.Tools)
+        {
+            if (_viewModel.Tools.SelectedTools.Count == 0) return;
+            if (IsWithin(source, static fe => fe.DataContext is ToolCardViewModel)) return;
+            if (IsWithin(source, static fe => fe is System.Windows.Controls.TextBox or System.Windows.Controls.Primitives.ScrollBar)) return;
+            ToolsPage.ClearSelection();
+            return;
+        }
+
+        if (!_viewModel.HasSelection) return;
         if (IsWithin(source, static fe => fe.DataContext is GameCardViewModel)) return;
         if (IsWithin(source, static fe => fe is System.Windows.Controls.TextBox)) return;
         _viewModel.ClearSelection();

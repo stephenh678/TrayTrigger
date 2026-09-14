@@ -75,6 +75,7 @@ public static class HelpContentService
         ("profiles", "Performance Profiles"),
         ("scanner", "Game Scanner"),
         ("traymenu", "Tray Menu"),
+        ("tools", "Tools"),
         ("scripts", "Game Scripts"),
         ("library", "Library & Artwork"),
         ("updates", "Updates"),

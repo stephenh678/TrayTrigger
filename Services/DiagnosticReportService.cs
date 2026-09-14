@@ -142,6 +142,7 @@ public static class DiagnosticReportService
         sb.AppendLine($"- Always show in tray: {OnOff(s.AlwaysShowTrayIcon)}" +
                       (string.IsNullOrWhiteSpace(inputs.TrayPromotionStatus) ? "" : $" - last result: {inputs.TrayPromotionStatus}"));
         sb.AppendLine($"- Tray menu: left-click opens menu {OnOff(s.TrayLeftClickOpensMenu)}, icons {OnOff(s.ShowTrayMenuIcons)}, compact {OnOff(s.CompactTrayMenu)}, grouped {OnOff(s.GroupTrayMenuByCategory)}");
+        sb.AppendLine($"- Tools: {OnOff(s.EnableTools)}; in tray {OnOff(s.ShowToolsInTray)} (sort {s.ToolsTraySortOption}); page view {s.ToolsViewMode}, sort {s.ToolsSortOption}");
         sb.AppendLine($"- Scan on startup: {OnOff(s.AutoScanForGamesOnStartup)}; online title search: {OnOff(s.SearchOfficialTitleOnline)}; poster art: {OnOff(s.UseVerticalPosterArt)}");
         sb.AppendLine($"- SteamGridDB: {OnOff(s.UseSteamGridDbArt)}, key {Presence(s.SteamGridDbApiKey)}; RAWG: {OnOff(s.UseRawgMetadata)}, key {Presence(s.RawgApiKey)}");
         sb.AppendLine($"- Restore point before presets: {OnOff(s.CreateRestorePointBeforeTweaks)}; verbose logging: {OnOff(s.VerboseLoggingEnabled)}; beta updates: {OnOff(s.IncludePrereleaseUpdates)}");

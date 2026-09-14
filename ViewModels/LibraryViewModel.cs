@@ -965,7 +965,7 @@ public class LibraryViewModel : ViewModelBase
         if (card.IsMissing)
         {
             // From a hotkey or the tray there's no window for the dialog to sit on.
-            if (LaunchPopup?.TryShowFailure(card.Game, "Its executable wasn't found.", "Locate executable...",
+            if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), "Its executable wasn't found.", "Locate executable...",
                     () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
             {
                 PromptLocateMissingExecutable(card, owner);
@@ -977,7 +977,7 @@ public class LibraryViewModel : ViewModelBase
         // before the actual launch happens, so a game that takes focus or goes fullscreen almost
         // at once can't cover the notice before it is read. With the window hidden or behind
         // another app the toast can't be seen at all, so the launch popup stands in for it.
-        if (LaunchPopup?.TryBeginLaunch(card.Game) != true)
+        if (LaunchPopup?.TryBeginLaunch(LaunchTarget.ForGame(card.Game)) != true)
         {
             ShowLaunchToast($"Launching \"{card.Name}\"...",
                 seconds: (int)Math.Ceiling((LaunchDispatchDelay + LaunchToastAfterDispatch).TotalSeconds));
@@ -1057,7 +1057,7 @@ public class LibraryViewModel : ViewModelBase
         {
             IsLaunchToastVisible = false;
             card.RefreshProperties();
-            if (LaunchPopup?.TryShowFailure(card.Game, "Its executable wasn't found.", "Locate executable...",
+            if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), "Its executable wasn't found.", "Locate executable...",
                     () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
             {
                 PromptLocateMissingExecutable(card, owner);
@@ -1068,7 +1068,7 @@ public class LibraryViewModel : ViewModelBase
             IsLaunchToastVisible = false;
             StatusMessage = $"Error: {err}";
             string message = err ?? "Failed to launch game.";
-            if (LaunchPopup?.TryShowFailure(card.Game, message, "Open TrayTrigger", action: null) != true)
+            if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), message, "Open TrayTrigger", action: null) != true)
             {
                 ModernDialog.ShowWarning(owner, "Launch Error", message);
             }
@@ -1100,6 +1100,10 @@ public class LibraryViewModel : ViewModelBase
     /// <summary>Shows the floating launch toast for a few seconds - same non-blocking overlay
     /// pattern as the undo-delete toast, but auto-dismissing since there's no action to take.
     /// The toast lives outside the per-section grids, so it renders on every section.</summary>
+    /// <summary>The in-window "Launching..." notice for a launch outside the library (a tool), with a game launch's timing.</summary>
+    public void ShowLaunchNotice(string message) =>
+        ShowLaunchToast(message, seconds: (int)Math.Ceiling((LaunchDispatchDelay + LaunchToastAfterDispatch).TotalSeconds));
+
     private void ShowLaunchToast(string message, string icon = "", int seconds = 3)
     {
         _launchToastTimer?.Stop();
@@ -1785,9 +1789,23 @@ public class LibraryViewModel : ViewModelBase
         NotifyLibraryUpdated();
     }
 
+    /// <summary>Every game's launch hotkey, for the one place that registers all of TrayTrigger's hotkeys.</summary>
+    public IEnumerable<HotkeyBinding> HotkeyBindings => Games.Select(g => HotkeyBinding.ForGame(g.Game));
+
+    /// <summary>
+    /// Set by MainViewModel, which registers games' and tools' hotkeys together. A library used on
+    /// its own (the tests) leaves it null and registers its games directly.
+    /// </summary>
+    public Action? RefreshHotkeys { get; set; }
+
     public void UpdateHotkeys()
     {
-        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, Games.Select(g => g.Game));
+        if (RefreshHotkeys != null)
+        {
+            RefreshHotkeys();
+            return;
+        }
+        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings);
     }
 
     public void OnGameUpdatedFromLauncher(GameEntry game)

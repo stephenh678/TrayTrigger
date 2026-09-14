@@ -12,6 +12,7 @@ namespace TrayTrigger.Models;
     WriteIndented = true,
     PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(List<GameEntry>))]
+[JsonSerializable(typeof(List<ToolEntry>))]
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(GitHubReleaseInfo))]
 [JsonSerializable(typeof(List<GitHubReleaseInfo>))]

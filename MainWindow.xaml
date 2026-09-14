@@ -417,6 +417,37 @@
                             </DockPanel>
                         </Button>
 
+                        <!-- 1b. Tools: only while Settings > General > Enable Tools is on -->
+                        <Button Command="{Binding SelectToolsCommand}" AutomationProperties.Name="Tools" Margin="0,0,0,6"
+                                Visibility="{Binding IsToolsEnabled, Converter={StaticResource BoolToVis}}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsToolsView}" Value="True">
+                                            <Setter Property="Background" Value="#1C2E3D"/>
+                                            <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <DockPanel LastChildFill="True" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="16"
+                                           Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                <TextBlock Text="Tools" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DockPanel>
+                        </Button>
+
                         <!-- 2. System & Performance -->
                         <Button Command="{Binding SelectSystemCommand}" AutomationProperties.Name="System &amp; Performance" Margin="0,0,0,6">
                             <Button.Style>
@@ -2888,13 +2919,13 @@
                                     <CheckBox Content="Show a launch popup by the tray icon"
                                               IsChecked="{Binding ShowLaunchPopup}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                    <TextBlock Text="While TrayTrigger is hidden, a game started from its hotkey or the tray menu shows a small card by the tray icon: the game, what it's waiting for, and any launch error. It never takes focus and closes once the game starts."
+                                    <TextBlock Text="{Binding LaunchPopupDescription}"
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,0" TextWrapping="Wrap"/>
 
                                     <!-- Nested sub-toggle: the popup for launches from the open window too. -->
                                     <StackPanel Margin="24,8,0,12">
-                                        <CheckBox Content="Show it on every game launch"
+                                        <CheckBox Content="{Binding LaunchPopupEveryLaunchLabel}"
                                                   IsChecked="{Binding ShowLaunchPopupOnEveryLaunch}"
                                                   IsEnabled="{Binding ShowLaunchPopup}"
                                                   Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
@@ -2914,6 +2945,17 @@
                                                FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
                                     <TextBlock Text="Press this key combination anywhere in Windows to show or hide the TrayTrigger window (default: Ctrl+Alt+G). Click the box and press the keys: Ctrl, Alt or Shift plus a key, or a function key on its own."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+
+                                    <!-- Tools: the optional Tools page. Its tray option is under Tray Menu. -->
+                                    <TextBlock Text="Tools" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                                    <CheckBox Content="Enable Tools" IsChecked="{Binding EnableTools}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Adds a Tools page to the sidebar for the programs you use alongside games, like DLSS Swapper, Vortex or MSI Afterburner. Drop a program or its shortcut to add it, sort tools into their own categories, star favorites and give them hotkeys. Turning it off hides the page and keeps your tools for next time."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,0" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" Margin="24,4,0,0" HorizontalAlignment="Left"
+                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/overview"/>
                                 </StackPanel>
                             </Border>
 
@@ -3408,6 +3450,24 @@
                                                   SelectedItem="{Binding FavoritesTraySortOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                     </DockPanel>
+
+                                    <!-- Tools in the tray: shown only while Tools is on (Settings > General). -->
+                                    <StackPanel Visibility="{Binding EnableTools, Converter={StaticResource BoolToVis}}">
+                                        <CheckBox Content="Show Tools in tray menu"
+                                                  IsChecked="{Binding ShowToolsInTray}"
+                                                  Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                        <TextBlock Text="Adds a 'Tools' submenu after your games, with every tool in one list."
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                                   Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                                        <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowToolsInTray}">
+                                            <TextBlock Text="Tools sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                                       FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <ComboBox ItemsSource="{Binding ToolsSortOptions}"
+                                                      SelectedItem="{Binding ToolsTraySortOption, Mode=TwoWay}"
+                                                      Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
+                                        </DockPanel>
+                                    </StackPanel>
 
                                     <CheckBox Content="Group tray context menu by category"
                                               IsChecked="{Binding GroupTrayMenuByCategory}" 
@@ -4408,6 +4468,24 @@
                 </Grid.Style>
 
                 <views:SystemView x:Name="SystemPage" DataContext="{Binding SystemVM}"/>
+            </Grid>
+
+            <!-- ========================================================== -->
+            <!-- TOOLS VIEW                                                 -->
+            <!-- ========================================================== -->
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsToolsView}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <views:ToolsView x:Name="ToolsPage" DataContext="{Binding Tools}"/>
             </Grid>
 
         </Grid>

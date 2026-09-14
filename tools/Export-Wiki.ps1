@@ -42,6 +42,7 @@ $sectionOrder = @(
     @{ Key = 'profiles';        Label = 'Performance Profiles' },
     @{ Key = 'scanner';         Label = 'Game Scanner' },
     @{ Key = 'traymenu';        Label = 'Tray Menu' },
+    @{ Key = 'tools';           Label = 'Tools' },
     @{ Key = 'scripts';         Label = 'Game Scripts' },
     @{ Key = 'library';         Label = 'Library & Artwork' },
     @{ Key = 'updates';         Label = 'Updates' },
