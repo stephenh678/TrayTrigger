@@ -948,6 +948,17 @@ public class LibraryViewModel : ViewModelBase
         SaveLibrary();
     }
 
+    /// <summary>
+    /// How long a launch is held after its notice (in-window toast or launch popup) appears and
+    /// before it is dispatched. A fast-launching game can take focus or go fullscreen within a few
+    /// hundred ms of its process spawning, covering the notice before it is ever read. Raised from
+    /// 0.8 s in 1.4.4; the planned Tools launcher uses the same value so both feel identical.
+    /// </summary>
+    internal static readonly TimeSpan LaunchDispatchDelay = TimeSpan.FromSeconds(2);
+
+    /// <summary>How long the in-window launch toast stays up after the launch is dispatched.</summary>
+    private static readonly TimeSpan LaunchToastAfterDispatch = TimeSpan.FromSeconds(2);
+
     public void LaunchGame(GameCardViewModel card)
     {
         Window? owner = WindowHelper.ActiveOwner();
@@ -962,18 +973,17 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
-        // Shown before dispatching, then held for a moment via a non-blocking timer before the
-        // actual launch happens - a fast-launching game (e.g. Steam) can take focus/fullscreen
-        // within a few hundred ms of the process spawning, which would cover this window before
-        // the toast is ever noticed if it were shown at the same instant as the launch call.
-        // With the window hidden or behind another app the toast can't be seen at all, so the
-        // launch popup stands in for it.
+        // Shown before dispatching, then held for LaunchDispatchDelay via a non-blocking timer
+        // before the actual launch happens, so a game that takes focus or goes fullscreen almost
+        // at once can't cover the notice before it is read. With the window hidden or behind
+        // another app the toast can't be seen at all, so the launch popup stands in for it.
         if (LaunchPopup?.TryBeginLaunch(card.Game) != true)
         {
-            ShowLaunchToast($"Launching \"{card.Name}\"...");
+            ShowLaunchToast($"Launching \"{card.Name}\"...",
+                seconds: (int)Math.Ceiling((LaunchDispatchDelay + LaunchToastAfterDispatch).TotalSeconds));
         }
 
-        var launchDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+        var launchDelayTimer = new DispatcherTimer { Interval = LaunchDispatchDelay };
         launchDelayTimer.Tick += (s, e) =>
         {
             launchDelayTimer.Stop();

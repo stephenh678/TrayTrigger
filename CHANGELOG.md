@@ -8,6 +8,10 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.4.4
+
+- **Launch notice stays up long enough to read** — pressing Play, a game's hotkey or a tray menu entry now shows the "Launching..." notice or launch popup for 2 seconds before the game starts, up from under a second, so a game that goes fullscreen straight away no longer covers it before you see it.
+
 ## 1.4.3
 
 - **Search in Settings, About and System & Performance** — a search box sits beside the tabs: type a word ("hotkey", "HDR", "log") and the tab you're on keeps only the cards that mention it, with the word highlighted and the first match scrolled into view. All searches every section, and the search stays as you switch tabs. Ctrl+F jumps to the box; its x or Esc clears it.
