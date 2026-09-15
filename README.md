@@ -5,12 +5,12 @@
 <h1 align="center">TrayTrigger</h1>
 
 <p align="center">
-  <strong>Launch. Automate. Play.</strong>
+  <img src="Assets/readme/tagline.png" width="640" alt="Launch. Automate. Play.">
 </p>
 
 <p align="center">
-  Per-game Windows tuning and launch automation for PC gamers.<br>
-  Performance profiles, your own pre-launch and post-exit scripts, launch arguments, and launchers that close themselves.<br>
+  Launch automation and per-game Windows tuning for PC gamers.<br>
+  Launchers that close themselves, launch arguments, performance profiles, and your own pre-launch and post-exit scripts.<br>
   <strong>Everything reverts when the game exits.</strong> Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.
 </p>
 
@@ -56,14 +56,14 @@
 ---
 
 <p align="center">
-  <img src="Assets/social-preview.png" alt="TrayTrigger: per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks, auto-close launchers">
+  <img src="Assets/social-preview.png" alt="TrayTrigger: launchers that close themselves, per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks">
 </p>
 
 <!-- HERO GIF: Assets/screenshots/tweaks-apply-revert.gif goes here once recorded. -->
 
 ---
 
-## Every launcher opens games. TrayTrigger runs the session.
+## From launch to exit, handled
 
 A launcher's job ends when the game is running. TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. All of it per game, all of it automatic, all of it reversible.
 
@@ -80,7 +80,59 @@ Steam launches Steam games. It doesn't change your power plan for one game and p
 
 ---
 
-## Performance Profiles
+<p align="center">
+  <img src="Assets/readme/launch.png" width="560" alt="Launch">
+</p>
+
+## Launch
+
+Every game from every store in one library, started through its own launcher the way you want it.
+
+### Your Library
+
+The launcher part, so the session part has something to run. A dark, Fluent-style interface built to look at home on Windows 11: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon.
+
+- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net**: Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch.
+- **Artwork and metadata**: Steam's official metadata (description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB. Optional RAWG info for games that aren't on Steam (Game Pass, Epic exclusives, Battle.net games like Hearthstone and StarCraft II), with a per-game Steam | RAWG switch. Both need your own free API key and are off until you add one.
+- **Three views**: poster grid, large icons, detailed list. Poster cards zoom on hover.
+- **Filters**: by launcher, performance profile, and state (never played, favorite, missing executable, has a hotkey, has scripts, runs elevated).
+- **Favorites and categories**: favorites pin to the top of the tray menu; the rest goes into custom categories or a flat list.
+- **Batch editing**: Ctrl+click, Shift+click, or Ctrl+A, then right-click to favorite, hide, re-categorize, set the Performance Profile, CPU Cores, or launch options, refresh art, or remove, with undo.
+- **Drag and drop** an executable or shortcut onto the window to add it. **Batch folder scanner** with executable scoring that filters out uninstallers and launcher stubs. **Icon extraction** from executables, shortcuts, and game folders.
+- **Search Settings, System & Performance, and About** from a box beside their tabs: the cards that mention your words stay, with the words highlighted.
+
+<p align="center">
+  <img src="Assets/screenshots/library-grid.png" width="800" alt="Games library, poster grid view"><br>
+  <em>Poster grid with automatic art, categories, filters, and launcher badges</em>
+</p>
+
+<!-- GIF: Assets/screenshots/tray-launch.gif (tray icon → right-click → launch) -->
+
+### Launcher Control
+
+- **Launch arguments** per game, passed exactly as typed.
+- **Run as Administrator** per game.
+- **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, the Xbox app, or Battle.net shut down once the session ends, so they don't stay resident with their overlays and background processes.
+- **Launchers stay minimized** (on by default): Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game shows.
+- **Launch popup** by the tray clock for hotkey and tray launches: the game, what it's waiting on, and the reason if a launch fails, without opening the window.
+- **Global hotkey** to open the library, and per-game hotkeys to launch.
+- **One-click launch from the tray menu**: Recent, Favorites, and Categories, no window to open.
+
+### Tools
+
+Optional, off by default: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. Drop a program, script, shortcut, or Microsoft Store app on the Tools page to add it.
+
+---
+
+<p align="center">
+  <img src="Assets/readme/automate.png" width="560" alt="Automate">
+</p>
+
+## Automate
+
+What happens around every launch, set once per game and undone when it exits.
+
+### Performance Profiles
 
 Assign each game a tier in Edit Game. It applies the moment the game launches and reverts the moment it closes.
 
@@ -96,9 +148,7 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 - **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
 - **End Session / Force Close** in the game's right-click menu if a launcher ever stalls. A game that never appears is rolled back automatically after three minutes.
 
----
-
-## Pre-Launch and Post-Exit Scripts
+### Pre-Launch and Post-Exit Scripts
 
 Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
 
@@ -132,19 +182,15 @@ Scripts are off by default. Nothing runs until you enable them and choose one. S
 
 ---
 
-## Launcher Control
+<p align="center">
+  <img src="Assets/readme/play.png" width="560" alt="Play">
+</p>
 
-- **Launch arguments** per game, passed exactly as typed.
-- **Run as Administrator** per game.
-- **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, the Xbox app, or Battle.net shut down once the session ends, so they don't stay resident with their overlays and background processes.
-- **Launchers stay minimized** (on by default): Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game shows.
-- **Launch popup** by the tray clock for hotkey and tray launches: the game, what it's waiting on, and the reason if a launch fails, without opening the window.
-- **Global hotkey** to open the library, and per-game hotkeys to launch.
-- **One-click launch from the tray menu**: Recent, Favorites, and Categories, no window to open.
+## Play
 
----
+Windows set up for games, and an eye on the hardware running them.
 
-## Verified and Reversible Windows Gaming Tweaks
+### Performance Tweaks
 
 System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a Core Isolation status readout, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
@@ -161,38 +207,7 @@ Each link goes to the wiki page with what the tweak changes, the exact registry 
 
 **Apply Performance Preset** turns on every recommended tweak in one pass with at most one UAC prompt. **Reset Defaults** reverts only what TrayTrigger changed. An optional **System Restore point** is created before either, if enabled in Settings (on by default).
 
----
-
-## Your Library
-
-The launcher part, so the session part has something to run. A dark, Fluent-style interface built to look at home on Windows 11: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon.
-
-- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net**: Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch.
-- **Artwork and metadata**: Steam's official metadata (description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB. Optional RAWG info for games that aren't on Steam (Game Pass, Epic exclusives, Battle.net games like Hearthstone and StarCraft II), with a per-game Steam | RAWG switch. Both need your own free API key and are off until you add one.
-- **Three views**: poster grid, large icons, detailed list. Poster cards zoom on hover.
-- **Filters**: by launcher, performance profile, and state (never played, favorite, missing executable, has a hotkey, has scripts, runs elevated).
-- **Favorites and categories**: favorites pin to the top of the tray menu; the rest goes into custom categories or a flat list.
-- **Batch editing**: Ctrl+click, Shift+click, or Ctrl+A, then right-click to favorite, hide, re-categorize, set the Performance Profile, CPU Cores, or launch options, refresh art, or remove, with undo.
-- **Drag and drop** an executable or shortcut onto the window to add it. **Batch folder scanner** with executable scoring that filters out uninstallers and launcher stubs. **Icon extraction** from executables, shortcuts, and game folders.
-- **Search Settings, System & Performance, and About** from a box beside their tabs: the cards that mention your words stay, with the words highlighted.
-
-<p align="center">
-  <img src="Assets/screenshots/library-grid.png" width="800" alt="Games library, poster grid view"><br>
-  <em>Poster grid with automatic art, categories, filters, and launcher badges</em>
-</p>
-
-<!-- GIF: Assets/screenshots/tray-launch.gif (tray icon → right-click → launch) -->
-
-## Tools
-
-An optional page for the programs you run alongside your games, like DLSS Swapper, Vortex, MSI Afterburner or Discord. Off by default: turn it on under Settings > General.
-
-- **Just shortcuts**: drop a program, a script (.bat, .cmd, .ps1), a shortcut, or a Microsoft Store app dragged from Browse Apps on the Tools page. Nothing is scanned or looked up, and no game features apply (no profile, scripts or playtime).
-- **Organized like the library**: tools-only categories, favorites, A to Z / Z to A / favorites-first sorting, search, and three views (large icons, small icons, list).
-- **Launched like a game**: double-click, a global hotkey, or an optional Tools submenu in the tray menu, with the same launch popup. A tool that's already running comes to the front instead of opening twice.
-- **Run as administrator** is a checkbox. Windows shows its own permission prompt, and a shortcut's own "Run as administrator" setting comes across when you drop it.
-
-## Hardware Monitoring
+### Hardware Monitoring
 
 Instant breakdown of CPU, GPU, VRAM, RAM, displays, motherboard, BIOS, OS version, and DirectX capability, so you can sanity-check specs before deciding which profile a game gets.
 
