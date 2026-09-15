@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TrayTrigger: launch control for PC games on Windows</title>
-<meta name="description" content="Per-game Windows tuning and launch automation for PC gamers. Performance profiles, pre-launch and post-exit scripts, launch arguments, launchers that close themselves. Everything reverts when the game exits. Free, open source, no telemetry.">
+<meta name="description" content="Launch automation and per-game Windows tuning for PC gamers. Launchers that close themselves, launch arguments, performance profiles, pre-launch and post-exit scripts. Everything reverts when the game exits. Free, open source, no telemetry.">
 <link rel="icon" href="assets/app_icon.png">
 <link rel="canonical" href="https://stephenh678.github.io/TrayTrigger/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="TrayTrigger: Launch. Automate. Play.">
-<meta property="og:description" content="Per-game Windows tuning and launch automation for PC gamers. Everything reverts when the game exits. Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.">
+<meta property="og:description" content="Launch automation and per-game Windows tuning for PC gamers. Everything reverts when the game exits. Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.">
 <meta property="og:image" content="https://stephenh678.github.io/TrayTrigger/assets/social-preview.png">
 <meta property="og:image:width" content="1536">
 <meta property="og:image:height" content="1024">
@@ -58,6 +58,7 @@
     border-bottom: 1px solid var(--line);
   }
   nav .wrap { display: flex; align-items: center; gap: 18px; height: 60px; }
+  /* The name is one span: a flex gap between "Tray" and "Trigger" would split the word in two. */
   nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
   nav .brand img { width: 28px; height: 28px; }
   nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
@@ -114,8 +115,6 @@
   .pillar { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; padding: 28px 0; }
   .pillar:nth-child(even) { direction: rtl; }
   .pillar:nth-child(even) > * { direction: ltr; }
-  .pillar.flip { direction: rtl; }
-  .pillar.flip > * { direction: ltr; }
   @media (max-width: 860px) { .pillar { grid-template-columns: 1fr; direction: ltr; } }
   .pillar ul { margin: 0; padding-left: 20px; color: var(--muted); }
   .pillar li { margin-bottom: 8px; }
@@ -163,11 +162,11 @@
 
 <nav>
   <div class="wrap">
-    <a class="brand" href="#top"><img src="assets/app_icon.png" alt="">Tray<span class="accent">Trigger</span></a>
+    <a class="brand" href="#top"><img src="assets/app_icon.png" alt=""><span>Tray<span class="accent">Trigger</span></span></a>
     <div class="links">
       <a href="#session">How it works</a>
-      <a href="#tweaks" class="hide-sm">Tweaks</a>
       <a href="#library" class="hide-sm">Library</a>
+      <a href="#tweaks" class="hide-sm">Tweaks</a>
       <a href="#compare" class="hide-sm">Why TrayTrigger</a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/stephenh678/TrayTrigger/wiki" class="hide-sm">Wiki</a>
@@ -182,7 +181,7 @@
     <h1>Tray<span class="accent">Trigger</span></h1>
     <div class="tag">Launch. Automate. <span class="accent">Play.</span></div>
     <p class="lead">
-      Per-game Windows tuning and launch automation for PC gamers. Performance profiles, your own pre-launch and post-exit scripts, launch arguments, and launchers that close themselves.
+      Launch automation and per-game Windows tuning for PC gamers. Launchers that close themselves, launch arguments, performance profiles, and your own pre-launch and post-exit scripts.
       <strong>Everything reverts when the game exits.</strong>
     </p>
     <div class="cta">
@@ -211,8 +210,8 @@
 <section id="session">
   <div class="wrap">
     <div class="section-head">
-      <h2>Every launcher opens games. TrayTrigger runs the session.</h2>
-      <p>Pick a game from the tray. TrayTrigger tunes Windows for it, runs your scripts, starts it through its own launcher, and puts everything back the moment it exits.</p>
+      <h2>From launch to exit, handled</h2>
+      <p>Pick a game from the tray. TrayTrigger launches it through its own launcher, with Windows tuned for it and your scripts run first, and puts everything back the moment it exits.</p>
     </div>
     <div class="grid grid-4">
       <div class="tile"><div class="step">1 · Before launch</div><p>Snapshots your current settings. Applies the game's <strong>Performance Profile</strong>: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your <strong>pre-launch script</strong>.</p></div>
@@ -223,12 +222,50 @@
   </div>
 </section>
 
-<section id="pillars">
+<!-- Grouped by the tagline, in its order: Launch, then Automate, then Play. Each kicker names its group. -->
+<section id="launch">
+  <div class="wrap">
+    <div class="pillar" id="library">
+      <div>
+        <div class="kicker">Launch · Your Library</div>
+        <h2>Every game in one library</h2>
+        <p class="muted">A dark, Fluent-style interface: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon. The launcher part, so the session part has something to run.</p>
+        <ul>
+          <li><strong>Seven launchers, one scan.</strong> Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net games arrive with their real titles and launch through their own client. Drop any exe, shortcut, or folder for the rest.</li>
+          <li><strong>Artwork and info.</strong> Steam metadata and poster art, SteamGridDB box art and RAWG details where Steam has none, each behind your own free key.</li>
+          <li><strong>Three views</strong>: poster grid, large icons, detailed list. Filter by launcher, profile, or state; group by category; edit a whole selection at once, with undo.</li>
+          <li><strong>The tray menu.</strong> Now Playing, Recent, Favorites, and every category one right-click away, with game icons, a compact layout, and a per-game launch hotkey recorded from the keys you press.</li>
+        </ul>
+      </div>
+      <div class="shot"><img src="assets/library-grid.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
+    </div>
+
+    <div class="pillar">
+      <div>
+        <div class="kicker">Launch · Launcher Control</div>
+        <h2>Launchers that stay out of the way</h2>
+        <ul>
+          <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
+          <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
+          <li><strong>Launchers stay minimized</strong>: Steam and GOG Galaxy start in the background and Epic launches silently, so only the game appears.</li>
+          <li><strong>Launch popup</strong> by the tray clock for hotkey and tray launches: what the game is waiting on, and the reason if a launch fails.</li>
+          <li><strong>Tools</strong> (optional): launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys.</li>
+          <li><strong>Run as Administrator</strong> per game, <strong>CPU core affinity</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
+          <li><strong>Hardware monitoring</strong> in the same window: live CPU and RAM load, GPU, VRAM, displays, drives, and DirectX capability, without a second app.</li>
+        </ul>
+      </div>
+      <div class="shot"><img src="assets/edit-launch.png" alt="Edit Game: the Launch card with launcher options, target, working directory, and arguments"></div>
+    </div>
+
+  </div>
+</section>
+
+<section id="automate">
   <div class="wrap">
     <div class="pillar">
       <div>
-        <div class="kicker">Performance Profiles</div>
-        <h2>One setting per game. Off, Optimized, or Aggressive.</h2>
+        <div class="kicker">Automate · Performance Profiles</div>
+        <h2>Tuned for each game, restored on exit</h2>
         <ul>
           <li><strong>Off</strong>: no per-game tweaks. TrayTrigger just launches the game.</li>
           <li><strong>Optimized</strong>: your custom high-performance power plan and high-performance GPU preference for that game. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers.</li>
@@ -239,27 +276,10 @@
       <div class="shot"><img src="assets/system-profiles.png" alt="Performance Profiles: the Optimized tier's tweaks with ENABLED and OPT-IN badges"></div>
     </div>
 
-    <div class="pillar">
+    <div class="pillar" id="scripts">
       <div>
-        <div class="kicker">Launcher Control</div>
-        <h2>Launchers that get out of the way.</h2>
-        <ul>
-          <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
-          <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
-          <li><strong>Launchers stay minimized</strong>: Steam and GOG Galaxy start in the background and Epic launches silently, so only the game appears.</li>
-          <li><strong>Launch popup</strong> by the tray clock for hotkey and tray launches: what the game is waiting on, and the reason if a launch fails.</li>
-          <li><strong>Tools</strong>, off by default: a page for DLSS Swapper, Vortex, MSI Afterburner and the rest, with their own categories, favorites, hotkeys and the same launch popup. Drop a program, a shortcut or a Microsoft Store app to add it; nothing is scanned.</li>
-          <li><strong>Run as Administrator</strong> per game, <strong>CPU core affinity</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
-          <li><strong>Hardware monitoring</strong> in the same window: live CPU and RAM load, GPU, VRAM, displays, drives, and DirectX capability, without a second app.</li>
-        </ul>
-      </div>
-      <div class="shot"><img src="assets/edit-launch.png" alt="Edit Game: the Launch card with launcher options, target, working directory, and arguments"></div>
-    </div>
-
-    <div class="pillar">
-      <div>
-        <div class="kicker">Pre-Launch and Post-Exit Scripts <span class="badge">advanced, off by default</span></div>
-        <h2>Your PowerShell or batch file, before and after every game.</h2>
+        <div class="kicker">Automate · Pre-Launch and Post-Exit Scripts <span class="badge">advanced, off by default</span></div>
+        <h2>Your scripts, before and after every game</h2>
         <ul>
           <li>Five real-world examples ship with it: <strong>pause Wallpaper Engine</strong>, <strong>Quiet Mode</strong> (close Discord and friends, reopen after), <strong>Companion Apps</strong>, <strong>OBS replay buffer</strong>, <strong>Save Backup</strong>.</li>
           <li>Per-game <strong>Script Arguments</strong>, a <strong>Test Run</strong> button with captured output, timeouts, and cancel-the-launch-on-failure.</li>
@@ -274,13 +294,13 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
   </div>
 </section>
 
-<section id="tweaks">
+<section id="play">
   <div class="wrap">
-    <div class="pillar flip">
+    <div class="pillar" id="tweaks">
       <div>
-        <div class="kicker">Performance Tweaks</div>
-        <h2>20 verified, reversible Windows gaming tweaks.</h2>
-        <p class="muted">System-wide settings, separate from per-game profiles. Each one shows Windows' <strong>real current state</strong> before you touch it, and each reverts to the exact state TrayTrigger found, not a hard-coded default. Every tweak has a wiki page that explains the trade-off honestly, because most aren't a guaranteed win for every game.</p>
+        <div class="kicker">Play · Performance Tweaks</div>
+        <h2>Windows, ready for play</h2>
+        <p class="muted">20 system-wide settings, separate from per-game profiles. Each one shows Windows' <strong>real current state</strong> before you touch it, and each reverts to the exact state TrayTrigger found, not a hard-coded default. Every tweak has a wiki page that explains the trade-off honestly, because most aren't a guaranteed win for every game.</p>
         <ul>
           <li><strong>Display &amp; Input.</strong> Mouse acceleration · Sticky, Filter, and Toggle Keys shortcuts · Optimizations for Windowed Games · Variable Refresh Rate for windowed games · Auto HDR · Hardware-Accelerated GPU Scheduling · Fullscreen optimizations · Multiplane Overlay</li>
           <li><strong>CPU &amp; Scheduling Priority.</strong> Windows Game Mode · System Timer Resolution · Foreground Priority Boost · Windows Visual Effects · "Ultimate Plan" power plan</li>
@@ -290,25 +310,6 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
         </ul>
       </div>
       <div class="shot"><img src="assets/system-tweaks.png" alt="Performance Tweaks page: recommended optimizations active, each with its real Windows state and a Revert to Default button"></div>
-    </div>
-  </div>
-</section>
-
-<section id="library">
-  <div class="wrap">
-    <div class="pillar">
-      <div>
-        <div class="kicker">Your Library</div>
-        <h2>Built to look at home on Windows 11.</h2>
-        <p class="muted">A dark, Fluent-style interface: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon. The launcher part, so the session part has something to run.</p>
-        <ul>
-          <li><strong>Seven launchers, one scan.</strong> Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net games arrive with their real titles and launch through their own client. Drop any exe, shortcut, or folder for the rest.</li>
-          <li><strong>Artwork and info.</strong> Steam metadata and poster art, SteamGridDB box art and RAWG details where Steam has none, each behind your own free key.</li>
-          <li><strong>Three views</strong>: poster grid, large icons, detailed list. Filter by launcher, profile, or state; group by category; edit a whole selection at once, with undo.</li>
-          <li><strong>The tray menu.</strong> Now Playing, Recent, Favorites, and every category one right-click away, with game icons, a compact layout, and a per-game launch hotkey recorded from the keys you press.</li>
-        </ul>
-      </div>
-      <div class="shot"><img src="assets/library-grid.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
     </div>
   </div>
 </section>
@@ -336,8 +337,8 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
 
 <section class="download-band">
   <div class="wrap">
-    <h2>Free. Open source. Lives in your tray.</h2>
-    <p class="muted" style="max-width:600px;margin:0 auto 26px">Installer or portable ZIP. Windows 10 or 11, 64-bit. Nothing to sign up for.</p>
+    <h2>Ready to play?</h2>
+    <p class="muted" style="max-width:600px;margin:0 auto 26px">Free and open source. Installer or portable ZIP. Windows 10 or 11, 64-bit. Nothing to sign up for.</p>
     <div class="cta">
       <a class="btn primary" id="dl-setup-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest">⬇ Download for Windows</a>
       <a class="btn" id="dl-zip-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
