@@ -233,6 +233,8 @@ jobs:
           $sections += ""
           $sections += "**Install:** download ``TrayTrigger-v$env:VERSION-Setup.exe`` below (or the portable ``.zip``). Both are self-contained; no .NET install needed. Verify against ``SHA256SUMS.txt``."
           $sections += ""
+          $sections += "Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org)."
+          $sections += ""
           $sections += $compareLine
 
           ($sections -join "`n") | Out-File -FilePath release_notes.md -Encoding utf8
