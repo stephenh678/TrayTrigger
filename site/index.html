@@ -124,6 +124,14 @@
   .lightbox { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(3,6,12,.9); cursor: zoom-out; }
   .lightbox.open { display: flex; }
   .lightbox img { max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.6); }
+  /* Group bands: the tagline with the group's own word lit, like the README's banners. */
+  .theme-band {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 0 .45em; margin: 0 0 24px; padding: 26px 24px;
+    border: 1px solid var(--line); border-radius: 18px; color: #4a566e;
+    background: radial-gradient(520px 150px at 50% -30px, rgba(30, 95, 192, .35), transparent 70%), linear-gradient(180deg, #0e162a, var(--bg));
+    font-size: clamp(28px, 4.6vw, 48px); font-weight: 700; line-height: 1.1; letter-spacing: -.01em;
+  }
+  .theme-band .on { color: var(--accent); }
   .kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 8px; }
   pre {
     background: #050810; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto;
@@ -222,12 +230,13 @@
   </div>
 </section>
 
-<!-- Grouped by the tagline, in its order: Launch, then Automate, then Play. Each kicker names its group. -->
+<!-- Grouped by the tagline, in its order: Launch, then Automate, then Play. Each group opens with its band. -->
 <section id="launch">
   <div class="wrap">
+    <div class="theme-band" aria-hidden="true"><span class="on">Launch.</span><span>Automate.</span><span>Play.</span></div>
     <div class="pillar" id="library">
       <div>
-        <div class="kicker">Launch · Your Library</div>
+        <div class="kicker">Your Library</div>
         <h2>Every game in one library</h2>
         <p class="muted">A dark, Fluent-style interface: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon. The launcher part, so the session part has something to run.</p>
         <ul>
@@ -242,7 +251,7 @@
 
     <div class="pillar">
       <div>
-        <div class="kicker">Launch · Launcher Control</div>
+        <div class="kicker">Launcher Control</div>
         <h2>Launchers that stay out of the way</h2>
         <ul>
           <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
@@ -262,9 +271,10 @@
 
 <section id="automate">
   <div class="wrap">
+    <div class="theme-band" aria-hidden="true"><span>Launch.</span><span class="on">Automate.</span><span>Play.</span></div>
     <div class="pillar">
       <div>
-        <div class="kicker">Automate · Performance Profiles</div>
+        <div class="kicker">Performance Profiles</div>
         <h2>Tuned for each game, restored on exit</h2>
         <ul>
           <li><strong>Off</strong>: no per-game tweaks. TrayTrigger just launches the game.</li>
@@ -278,7 +288,7 @@
 
     <div class="pillar" id="scripts">
       <div>
-        <div class="kicker">Automate · Pre-Launch and Post-Exit Scripts <span class="badge">advanced, off by default</span></div>
+        <div class="kicker">Pre-Launch and Post-Exit Scripts<span class="badge">advanced, off by default</span></div>
         <h2>Your scripts, before and after every game</h2>
         <ul>
           <li>Five real-world examples ship with it: <strong>pause Wallpaper Engine</strong>, <strong>Quiet Mode</strong> (close Discord and friends, reopen after), <strong>Companion Apps</strong>, <strong>OBS replay buffer</strong>, <strong>Save Backup</strong>.</li>
@@ -296,9 +306,10 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
 
 <section id="play">
   <div class="wrap">
+    <div class="theme-band" aria-hidden="true"><span>Launch.</span><span>Automate.</span><span class="on">Play.</span></div>
     <div class="pillar" id="tweaks">
       <div>
-        <div class="kicker">Play · Performance Tweaks</div>
+        <div class="kicker">Performance Tweaks</div>
         <h2>Windows, ready for play</h2>
         <p class="muted">20 system-wide settings, separate from per-game profiles. Each one shows Windows' <strong>real current state</strong> before you touch it, and each reverts to the exact state TrayTrigger found, not a hard-coded default. Every tweak has a wiki page that explains the trade-off honestly, because most aren't a guaranteed win for every game.</p>
         <ul>
