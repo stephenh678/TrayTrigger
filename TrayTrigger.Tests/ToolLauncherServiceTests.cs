@@ -58,8 +58,9 @@ public class ToolLauncherServiceTests
     [Fact]
     public void Launch_ExistingNonExe_IsRefused_NotRunByAssociation()
     {
-        string script = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".bat");
-        File.WriteAllText(script, "@echo off");
+        // .bat, .cmd and .ps1 are script tools now; any other script type still has only its file association to run it.
+        string script = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".vbs");
+        File.WriteAllText(script, "' nothing");
         try
         {
             var result = new ToolLauncherService().Launch(new ToolEntry { Name = "Script", TargetPath = script });

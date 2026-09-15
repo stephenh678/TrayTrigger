@@ -38,6 +38,8 @@ public sealed class ToolCardViewModel : ViewModelBase
     public bool IsStoreApp => ToolCatalog.IsStoreApp(Tool);
     /// <summary>A program (.exe): it has a file location and can run as administrator, which a Store app can't.</summary>
     public bool IsProgram => !IsStoreApp;
+    /// <summary>A .bat, .cmd or .ps1 script (a kind of program here: it has a file location and can run as administrator).</summary>
+    public bool IsScript => ToolCatalog.IsScript(Tool);
     public bool IsFavorite => Tool.IsFavorite;
     public bool RunAsAdmin => Tool.RunAsAdmin && IsProgram;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";

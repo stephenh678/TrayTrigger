@@ -434,7 +434,7 @@
                                Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" Margin="0,0,0,14"/>
                     <TextBlock Text="No tools yet" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Drop a program (.exe) or its shortcut anywhere on this page, or use Add Tool. For a Microsoft Store app, use Browse Apps and drag the app here. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
+                    <TextBlock Text="Drop a program (.exe), a script (.bat, .cmd, .ps1) or a shortcut anywhere on this page, or use Add Tool. For a Microsoft Store app, use Browse Apps and drag the app here. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
                                FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">

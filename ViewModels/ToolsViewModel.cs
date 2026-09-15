@@ -273,7 +273,7 @@ public sealed class ToolsViewModel : ViewModelBase
         var dialog = new OpenFileDialog
         {
             Title = "Add Tool",
-            Filter = "Programs and shortcuts (*.exe;*.lnk)|*.exe;*.lnk",
+            Filter = "Programs, scripts and shortcuts (*.exe;*.bat;*.cmd;*.ps1;*.lnk)|*.exe;*.bat;*.cmd;*.ps1;*.lnk",
             Multiselect = true,
             CheckFileExists = true
         };
@@ -453,7 +453,7 @@ public sealed class ToolsViewModel : ViewModelBase
                 ? shortcut.IconLocation
                 : target;
         }
-        else if (string.Equals(ext, ".exe", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(ext, ".exe", StringComparison.OrdinalIgnoreCase) || ToolCatalog.IsScriptPath(path))
         {
             target = path;
             workingDirectory = Path.GetDirectoryName(path) ?? string.Empty;
@@ -563,10 +563,14 @@ public sealed class ToolsViewModel : ViewModelBase
             case ToolLaunchOutcome.AlreadyRunningNoWindow:
             {
                 HideLaunchNotice?.Invoke();
-                string message = $"\"{card.Name}\" is already running.";
+                // A script with no window to show is a hidden one (or one in Windows Terminal), not a tray program.
+                string message = card.IsScript ? $"\"{card.Name}\" is still running." : $"\"{card.Name}\" is already running.";
+                string notice = card.IsScript
+                    ? "It hasn't finished yet, so it wasn't started again."
+                    : "It's already running and has no window to bring forward. Look for its icon in the system tray.";
                 StatusMessage = message;
                 LaunchPopup?.LaunchDispatched(card.Id);
-                if (LaunchPopup?.TryShowNotice(target, "It's already running and has no window to bring forward. Look for its icon in the system tray.") != true)
+                if (LaunchPopup?.TryShowNotice(target, notice) != true)
                 {
                     ShowLaunchNotice?.Invoke(message);
                 }
@@ -632,8 +636,8 @@ public sealed class ToolsViewModel : ViewModelBase
         if (card.IsStoreApp) return;
         var dialog = new OpenFileDialog
         {
-            Title = $"Locate Program for {card.Name}",
-            Filter = "Programs (*.exe)|*.exe",
+            Title = $"Locate {(card.IsScript ? "Script" : "Program")} for {card.Name}",
+            Filter = "Programs and scripts (*.exe;*.bat;*.cmd;*.ps1)|*.exe;*.bat;*.cmd;*.ps1",
             CheckFileExists = true
         };
         if (FileDialogCloak.Show(dialog) != true) return;

@@ -48,6 +48,15 @@ public static class ToolCatalog
     /// <summary>A Store app that Gaming Services knows as a game (Game Pass, a Store game) is a game, not a tool.</summary>
     public static string? GameReason(string appId, Func<string, bool> isXboxGame) => isXboxGame(appId) ? IsAGameReason : null;
 
+    /// <summary>The scripts a tool can be. Each always runs through its own interpreter (ToolLauncherService.BuildScriptStartInfo), never by file association.</summary>
+    public static readonly IReadOnlyList<string> ScriptExtensions = [".bat", ".cmd", ".ps1"];
+
+    public static bool IsScriptPath(string? path) =>
+        !string.IsNullOrWhiteSpace(path) && ScriptExtensions.Contains(Path.GetExtension(path.Trim()), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>A script tool (.bat, .cmd, .ps1) rather than a program or a Store app.</summary>
+    public static bool IsScript(ToolEntry tool) => !IsStoreApp(tool) && IsScriptPath(tool.TargetPath);
+
     /// <summary>A Store app, started by its app ID, rather than a program (.exe).</summary>
     public static bool IsStoreApp(ToolEntry tool) => !string.IsNullOrWhiteSpace(tool.AppId);
 
@@ -160,10 +169,11 @@ public static class ToolCatalog
     public static string CategoryForNewTool(string? selectedTab) => LibraryConstants.NormalizeCategory(selectedTab);
 
     /// <summary>
-    /// Why <paramref name="target"/> can't be a tool, or null when it can: only an existing .exe on a
-    /// local drive, by its full path. Links, network shares and mapped network drives, relative paths,
-    /// scripts and other files are refused - a tool is launched through the shell, so anything else
-    /// would run by file association, or resolve to a different program than the one checked.
+    /// Why <paramref name="target"/> can't be a tool, or null when it can: only an existing .exe or
+    /// script (.bat, .cmd, .ps1) on a local drive, by its full path. Links, network shares and mapped
+    /// network drives, relative paths and other files are refused - a program is launched through the
+    /// shell and a script through its interpreter, so anything else would run by file association, or
+    /// resolve to a different file than the one checked.
     /// </summary>
     public static string? ValidateTarget(string? target, Func<string, bool>? fileExists = null, Func<string, bool>? isOnNetworkDrive = null)
     {
@@ -171,13 +181,18 @@ public static class ToolCatalog
         isOnNetworkDrive ??= IsOnNetworkDrive;
         string path = target?.Trim() ?? string.Empty;
         if (path.Length == 0) return "it has no target";
-        if (path.Contains("://", StringComparison.Ordinal)) return "it's a link - Tools only take programs (.exe)";
+        if (path.Contains("://", StringComparison.Ordinal)) return "it's a link - Tools only take programs and scripts";
         if (path.StartsWith(@"\\", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal) || isOnNetworkDrive(path))
-            return "it points at a network location - copy the program locally first";
-        if (!Path.IsPathFullyQualified(path)) return "it isn't the full path to a program";
-        if (!string.Equals(Path.GetExtension(path), ".exe", StringComparison.OrdinalIgnoreCase))
-            return "it doesn't point at a program (.exe)";
-        if (!fileExists(path)) return "its program file doesn't exist";
+            return "it points at a network location - copy it locally first";
+        if (!Path.IsPathFullyQualified(path)) return "it isn't the full path to a program or script";
+
+        string extension = Path.GetExtension(path);
+        if (!string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase) && !IsScriptPath(path))
+            return "it doesn't point at a program (.exe) or a script (.bat, .cmd, .ps1)";
+        // Command Prompt expands %NAME% in its command line before it reads quotes, so it could run a different file.
+        if (path.Contains('%') && (string.Equals(extension, ".bat", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".cmd", StringComparison.OrdinalIgnoreCase)))
+            return "its path has a % sign, which Command Prompt would change";
+        if (!fileExists(path)) return "its file doesn't exist";
         return null;
     }
 

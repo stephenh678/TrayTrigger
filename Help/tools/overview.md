@@ -6,8 +6,8 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Adding a tool
 
-- Drop a program (.exe), its shortcut (.lnk), or an app dragged from Browse Apps anywhere on the Tools page, or use Add Tool. You can add several at once.
-- Only programs and Store apps are accepted. Web links, scripts (.bat, .ps1) and shortcuts that point at anything else are refused, and so are programs on a network drive.
+- Drop a program (.exe), a script (.bat, .cmd, .ps1), a shortcut (.lnk), or an app dragged from Browse Apps anywhere on the Tools page, or use Add Tool. You can add several at once.
+- Only programs, scripts and Store apps are accepted. Web links and shortcuts that point at anything else are refused, and so are files on a network drive.
 - The name comes from the file name, without " - Shortcut". Rename it from its right-click menu or Edit Tool.
 - A shortcut brings its arguments, working folder and its "Run as administrator" setting with it.
 - Adding a program with the same arguments as a tool you already have asks first. The same program with different arguments is a different tool.
@@ -24,6 +24,17 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - If the app is uninstalled, the tool shows MISSING. Install it again from the Microsoft Store, or remove the tool.
 - A desktop app dragged from shell:AppsFolder is added as the program its Start menu entry starts, like any other program.
 - Games aren't tools. A Game Pass or Microsoft Store game, or a Steam game's shortcut, dropped here isn't added: Scan for Games puts it in your Library instead.
+
+## Scripts
+
+- A .bat or .cmd script runs in Command Prompt, and a .ps1 script in Windows PowerShell. TrayTrigger always starts them that way, never with whatever program opens those files on your PC.
+- PowerShell scripts run with the execution policy bypassed, as game scripts do. A script policy set by your organization still applies.
+- Launch arguments go to the script. For .bat and .cmd they reach Command Prompt exactly as typed.
+- The script's window shows while it runs and closes when it finishes. Put pause at the end of the script to keep it open.
+- Tick "Hide Window" in Edit Tool for a script that just does something quietly. What it prints goes to TrayTrigger's log. A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager.
+- Launching a script that's still running doesn't start it again; you get a "still running" notice instead.
+- Run as Administrator works for scripts too.
+- A .bat or .cmd script whose path contains a % sign isn't accepted, because Command Prompt would change the path.
 
 ## Categories, favorites and sorting
 

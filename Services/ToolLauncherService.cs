@@ -73,9 +73,11 @@ public class ToolLauncherService
         try
         {
             var startInfo = BuildStartInfo(tool);
-            LoggingService.Verbose("ToolLauncher", $"Starting tool '{tool.Name}': '{startInfo.FileName}', Args='{startInfo.Arguments}', WorkDir='{startInfo.WorkingDirectory}', RunAsAdmin={tool.RunAsAdmin}.");
+            string argumentsForLog = startInfo.ArgumentList.Count > 0 ? string.Join(' ', startInfo.ArgumentList) : startInfo.Arguments;
+            LoggingService.Verbose("ToolLauncher", $"Starting tool '{tool.Name}': '{startInfo.FileName}', Args='{argumentsForLog}', WorkDir='{startInfo.WorkingDirectory}', RunAsAdmin={tool.RunAsAdmin}, Hidden={startInfo.CreateNoWindow}.");
             var process = Process.Start(startInfo);
             LoggingService.Info("ToolLauncher", $"Started tool '{tool.Name}'{(process != null ? $" (PID {process.Id})" : string.Empty)}.");
+            if (process != null && startInfo.RedirectStandardOutput) LogScriptOutput(process, tool.Name);
             if (process != null && !anyRunningCopy)
             {
                 Track(tool, process);
@@ -158,6 +160,8 @@ public class ToolLauncherService
 
     internal static ProcessStartInfo BuildStartInfo(ToolEntry tool, Func<string, bool>? directoryExists = null)
     {
+        if (ToolCatalog.IsScript(tool)) return BuildScriptStartInfo(tool, ResolveWorkingDirectory(tool, directoryExists));
+
         var startInfo = new ProcessStartInfo
         {
             FileName = tool.TargetPath,
@@ -172,12 +176,87 @@ public class ToolLauncherService
         return startInfo;
     }
 
+    private static readonly string CommandPromptPath = Path.Combine(Environment.SystemDirectory, "cmd.exe");
+    private static readonly string WindowsPowerShellPath = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
+
+    /// <summary>
+    /// A script tool, run by its interpreter from the Windows folder by full path - never by file
+    /// association, which could open it in an editor or in whatever program claims the extension.
+    /// Follows game scripts (<see cref="GameScriptService.BuildStartInfo"/>): cmd.exe /d /s /c with the
+    /// script path quoted and the arguments raw, as a batch author writes them; PowerShell with
+    /// -NoProfile -ExecutionPolicy Bypass -File and the arguments split the way Windows splits a command
+    /// line. A script execution policy set by Group Policy still applies over Bypass.
+    /// </summary>
+    internal static ProcessStartInfo BuildScriptStartInfo(ToolEntry tool, string workingDirectory)
+    {
+        string path = tool.TargetPath.Trim();
+        string arguments = tool.Arguments?.Trim() ?? string.Empty;
+        bool hidden = tool.HideWindow;
+        bool elevated = tool.RunAsAdmin;
+
+        var startInfo = new ProcessStartInfo
+        {
+            WorkingDirectory = workingDirectory,
+            // The shell is needed for "runas", and gives a visible script its own console. A hidden one
+            // is started directly, so no window flashes up and its output can be read into the log.
+            UseShellExecute = elevated || !hidden,
+            CreateNoWindow = hidden && !elevated,
+            WindowStyle = hidden ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
+        };
+        if (elevated)
+        {
+            startInfo.Verb = "runas";
+        }
+        else if (hidden)
+        {
+            startInfo.RedirectStandardOutput = true;
+            startInfo.RedirectStandardError = true;
+        }
+
+        if (string.Equals(Path.GetExtension(path), ".ps1", StringComparison.OrdinalIgnoreCase))
+        {
+            startInfo.FileName = WindowsPowerShellPath;
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-ExecutionPolicy");
+            startInfo.ArgumentList.Add("Bypass");
+            if (hidden)
+            {
+                startInfo.ArgumentList.Add("-WindowStyle");
+                startInfo.ArgumentList.Add("Hidden");
+            }
+            startInfo.ArgumentList.Add("-File");
+            startInfo.ArgumentList.Add(path);
+            foreach (string token in GameScriptService.SplitScriptArguments(arguments))
+            {
+                startInfo.ArgumentList.Add(token);
+            }
+        }
+        else
+        {
+            // /s strips only the outer quotes, so the quoted script path survives. A path can't hold a
+            // quote, and ValidateTarget refuses a % sign, which cmd would expand before reading quotes.
+            startInfo.FileName = CommandPromptPath;
+            startInfo.Arguments = "/d /s /c \"\"" + path + "\"" + (arguments.Length > 0 ? " " + arguments : string.Empty) + "\"";
+        }
+        return startInfo;
+    }
+
+    /// <summary>A hidden script's output, read into the log as it comes so a chatty script never stalls on a full pipe.</summary>
+    private static void LogScriptOutput(Process process, string toolName)
+    {
+        process.OutputDataReceived += (_, e) => { if (e.Data != null) LoggingService.Verbose("ToolScript", $"[{toolName}] {e.Data}"); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data != null) LoggingService.Warn("ToolScript", $"[{toolName}] {e.Data}"); };
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+    }
+
     /// <summary>
     /// Which running copy counts as this tool already running. With no arguments the tool is just its
     /// program, so any running copy of the exe does. With arguments only the copy TrayTrigger started
     /// for this tool does, so two tools sharing a program each start their own.
     /// </summary>
-    internal static bool ChecksAnyRunningCopy(ToolEntry tool) => string.IsNullOrWhiteSpace(tool.Arguments);
+    /// A script always counts only its own copy: its process is cmd.exe or powershell.exe, which lots of other things run.
+    internal static bool ChecksAnyRunningCopy(ToolEntry tool) => !ToolCatalog.IsScript(tool) && string.IsNullOrWhiteSpace(tool.Arguments);
 
     /// <summary>
     /// For a tool with arguments: when the copy started for it is still running with the same program

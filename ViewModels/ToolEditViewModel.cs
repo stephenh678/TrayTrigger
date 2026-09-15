@@ -23,6 +23,7 @@ public sealed class ToolEditViewModel : ViewModelBase
     private string _workingDirectory;
     private string _hotkey;
     private bool _runAsAdmin;
+    private bool _hideWindow;
     private bool _isFavorite;
     private string _validationMessage = string.Empty;
     private string? _pendingIconSource;
@@ -40,6 +41,7 @@ public sealed class ToolEditViewModel : ViewModelBase
         _workingDirectory = tool.WorkingDirectory;
         _hotkey = tool.Hotkey;
         _runAsAdmin = tool.RunAsAdmin;
+        _hideWindow = tool.HideWindow;
         _isFavorite = tool.IsFavorite;
         ExistingCategories = categories.ToList();
         _iconPreview = IconExtractorService.LoadBitmapSafely(tool.IconPath, decodePixelWidth: 64);
@@ -64,7 +66,18 @@ public sealed class ToolEditViewModel : ViewModelBase
 
     public string Name { get => _name; set => SetProperty(ref _name, value ?? string.Empty); }
     public string Category { get => _category; set => SetProperty(ref _category, value ?? string.Empty); }
-    public string TargetPath { get => _targetPath; set => SetProperty(ref _targetPath, value ?? string.Empty); }
+    public string TargetPath
+    {
+        get => _targetPath;
+        set
+        {
+            if (SetProperty(ref _targetPath, value ?? string.Empty)) OnPropertyChanged(nameof(IsScript));
+        }
+    }
+
+    /// <summary>The target is a script, so Hide Window applies. Follows the path as it's edited.</summary>
+    public bool IsScript => IsProgram && ToolCatalog.IsScriptPath(TargetPath);
+    public bool HideWindow { get => _hideWindow; set => SetProperty(ref _hideWindow, value); }
     public string Arguments { get => _arguments; set => SetProperty(ref _arguments, value ?? string.Empty); }
     public string WorkingDirectory { get => _workingDirectory; set => SetProperty(ref _workingDirectory, value ?? string.Empty); }
     public string Hotkey { get => _hotkey; set => SetProperty(ref _hotkey, value ?? string.Empty); }
@@ -109,8 +122,8 @@ public sealed class ToolEditViewModel : ViewModelBase
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Select Program",
-            Filter = "Programs (*.exe)|*.exe",
+            Title = "Select Program or Script",
+            Filter = "Programs and scripts (*.exe;*.bat;*.cmd;*.ps1)|*.exe;*.bat;*.cmd;*.ps1",
             CheckFileExists = true
         };
         if (FileDialogCloak.Show(dialog) != true) return;
@@ -178,6 +191,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             _tool.TargetPath = target;
             _tool.WorkingDirectory = WorkingDirectory.Trim();
             _tool.RunAsAdmin = RunAsAdmin;
+            _tool.HideWindow = ToolCatalog.IsScriptPath(target) && HideWindow;
         }
 
         _tool.Name = name;

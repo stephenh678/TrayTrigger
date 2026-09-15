@@ -121,14 +121,14 @@ public class ToolCatalogTests
     }
 
     [Theory]
-    [InlineData(@"C:\Tools\backup.bat")]
-    [InlineData(@"C:\Tools\setup.ps1")]
+    [InlineData(@"C:\Tools\backup.vbs")]
+    [InlineData(@"C:\Tools\setup.py")]
     [InlineData(@"C:\Tools\readme.txt")]
     [InlineData("https://www.nexusmods.com")]
     [InlineData("steam://rungameid/10")]
     [InlineData(@"\\server\share\tool.exe")]
     [InlineData("")]
-    public void ValidateTarget_RefusesAnythingButALocalExe(string target)
+    public void ValidateTarget_RefusesAnythingButALocalExeOrScript(string target)
     {
         Assert.NotNull(ToolCatalog.ValidateTarget(target, _ => true));
     }

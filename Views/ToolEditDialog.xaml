@@ -110,7 +110,7 @@
                         </StackPanel>
 
                         <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Program (.exe)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Program or Script (.exe, .bat, .cmd, .ps1)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -147,6 +147,13 @@
                                       Style="{StaticResource ModernCheckBox}"/>
                             <TextBlock Text="Windows asks for permission with its own prompt each time. Programs that always need admin get that prompt even with this off. Declining it just leaves the tool closed."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+
+                            <StackPanel Visibility="{Binding IsScript, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Hide Window" IsChecked="{Binding HideWindow}"
+                                          Style="{StaticResource ModernCheckBox}"/>
+                                <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log. A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
+                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                            </StackPanel>
                         </StackPanel>
 
                         <StackPanel>

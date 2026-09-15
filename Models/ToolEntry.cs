@@ -13,7 +13,7 @@ public class ToolEntry
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = string.Empty;
-    /// <summary>The program to start: always a local .exe (see <see cref="ToolCatalog.ValidateTarget"/>). Blank for a Store app.</summary>
+    /// <summary>The program or script to start: a local .exe, .bat, .cmd or .ps1 (see <see cref="ToolCatalog.ValidateTarget"/>). Blank for a Store app.</summary>
     public string TargetPath { get; set; } = string.Empty;
     /// <summary>
     /// A Microsoft Store (packaged) app's Application User Model ID, "&lt;PackageFamilyName&gt;!&lt;AppId&gt;",
@@ -27,6 +27,8 @@ public class ToolEntry
     public string WorkingDirectory { get; set; } = string.Empty;
     /// <summary>Start through the "runas" verb. Windows shows its own UAC prompt; TrayTrigger never intercepts it. Never set for a Store app.</summary>
     public bool RunAsAdmin { get; set; }
+    /// <summary>A script only: run it with no console window, its output going to the log. Ignored for programs and Store apps.</summary>
+    public bool HideWindow { get; set; }
     public string IconPath { get; set; } = string.Empty;
     public string Hotkey { get; set; } = string.Empty;
     /// <summary>A tools-only category; never shared with game categories.</summary>
