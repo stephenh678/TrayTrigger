@@ -13,8 +13,16 @@ namespace TrayTrigger.Tests;
 /// Ring via Steam" still said that an hour later. ProcessLauncherService.SessionGameStarted is the
 /// signal that brings App.UpdateTrayToolTip back; MarkGameStarted is the one place that raises it.
 /// </summary>
-public class TrayToolTipTests
+public class TrayToolTipTests : IDisposable
 {
+    // StorageService creates its data and cache folders on construction.
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTrayTip", Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_root, recursive: true); } catch { }
+    }
+
     private static ActiveGameSession Session(string name, LaunchRoute route = LaunchRoute.Steam) =>
         new(new GameEntry { Name = name }, route);
 
@@ -93,10 +101,9 @@ public class TrayToolTipTests
         Assert.Equal("Playing Hades · 0m", textAtEvent);
     }
 
-    private static ProcessLauncherService NewLauncher()
+    private ProcessLauncherService NewLauncher()
     {
-        string root = Path.Combine(Path.GetTempPath(), "TrayTriggerTrayTip", Guid.NewGuid().ToString("N"));
-        var storage = new StorageService(Path.Combine(root, "roaming"), Path.Combine(root, "local"));
+        var storage = new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"));
         return new ProcessLauncherService(
             storage, new PerformanceProfileService(storage), new GameScriptService(),
             new SteamScannerService(), new GogScannerService(), new EaScannerService(),

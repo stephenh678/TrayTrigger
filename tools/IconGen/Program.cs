@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -20,20 +21,35 @@ internal static class Program
         // social <out.png> <library screenshot.png>: the 1280x640 GitHub social preview card.
         if (args.Length >= 3 && args[0] == "social")
         {
+            // A mistyped path would otherwise overwrite the card with one missing its screenshot.
+            if (!File.Exists(args[2]))
+            {
+                Console.Error.WriteLine($"Screenshot not found: {args[2]}");
+                return 1;
+            }
             SavePng(RenderSocialPreview(args[2]), args[1]);
             Console.WriteLine($"Wrote {args[1]}");
             return 0;
         }
 
         // mark <size> <out.png>: the app mark rendered at one size (store listings, Ko-fi, etc.).
-        if (args.Length >= 3 && args[0] == "mark" && int.TryParse(args[1], out int markSize))
+        if (args.Length >= 3 && args[0] == "mark" && int.TryParse(args[1], out int markSize) && markSize > 0)
         {
             SavePng(RenderMark(markSize), args[2]);
             Console.WriteLine($"Wrote {args[2]} ({markSize}x{markSize})");
             return 0;
         }
 
-        string outDir = args.Length > 0 ? args[0] : "Assets";
+        // A command with missing or bad arguments must not fall through to icon generation,
+        // which would take the command word as the output folder ("social\app_icon.ico").
+        if (args.Length > 0 && args[0] is "social" or "mark")
+        {
+            Console.Error.WriteLine(Usage);
+            return 1;
+        }
+
+        // "preview" and "glyphs" are options, not an output folder: "preview out" still writes to Assets.
+        string outDir = args.Length > 0 && !IsOption(args[0]) ? args[0] : "Assets";
         Directory.CreateDirectory(outDir);
 
         var frames = new Dictionary<int, BitmapSource>();
@@ -49,7 +65,7 @@ internal static class Program
         int previewIdx = Array.IndexOf(args, "preview");
         if (previewIdx >= 0)
         {
-            string previewDir = args.Length > previewIdx + 1 ? args[previewIdx + 1] : outDir;
+            string previewDir = args.Length > previewIdx + 1 && !IsOption(args[previewIdx + 1]) ? args[previewIdx + 1] : outDir;
             Directory.CreateDirectory(previewDir);
             foreach (var (size, bmp) in frames)
             {
@@ -60,15 +76,43 @@ internal static class Program
         }
 
         int glyphIdx = Array.IndexOf(args, "glyphs");
-        if (glyphIdx >= 0 && args.Length > glyphIdx + 1)
+        if (glyphIdx >= 0 && args.Length > glyphIdx + 1 && !IsOption(args[glyphIdx + 1]))
         {
             string glyphOut = args[glyphIdx + 1];
-            var codes = args.Skip(glyphIdx + 2).ToArray();
-            SavePng(RenderGlyphSheet(codes), glyphOut);
+            var glyphs = new List<(string Label, int CodePoint)>();
+            foreach (string code in args.Skip(glyphIdx + 2).TakeWhile(a => !IsOption(a)))
+            {
+                if (!TryParseCodePoint(code, out int codePoint))
+                {
+                    Console.Error.WriteLine($"Not a Unicode code point: {code} (expected hex such as E735 or U+E735)");
+                    return 1;
+                }
+                glyphs.Add((code.ToUpperInvariant(), codePoint));
+            }
+            SavePng(RenderGlyphSheet(glyphs), glyphOut);
             Console.WriteLine($"Glyph sheet written to {glyphOut}");
         }
 
         return 0;
+    }
+
+    private static bool IsOption(string arg) => arg is "preview" or "glyphs";
+
+    private const string Usage = """
+        Usage:
+          IconGen [outDir] [preview [dir]] [glyphs <sheet.png> <hex code point>...]
+          IconGen social <out.png> <library screenshot.png>
+          IconGen mark <size> <out.png>
+        """;
+
+    /// <summary>"E735", "e735", "0xE735" or "U+E735" to a code point char.ConvertFromUtf32 accepts.</summary>
+    private static bool TryParseCodePoint(string text, out int codePoint)
+    {
+        string hex = text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) || text.StartsWith("U+", StringComparison.OrdinalIgnoreCase)
+            ? text.Substring(2)
+            : text;
+        return int.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out codePoint)
+            && codePoint is >= 0 and <= 0x10FFFF and not (>= 0xD800 and <= 0xDFFF);
     }
 
     // ---------------------------------------------------------------- social preview
@@ -97,26 +141,24 @@ internal static class Program
                 Center = new Point(0.18, 0.28), GradientOrigin = new Point(0.18, 0.28), RadiusX = 0.42, RadiusY = 0.8
             }, null, new Rect(0, 0, W, H));
 
-            // Library screenshot, right side, fading in from the text column.
-            if (File.Exists(screenshotPath))
-            {
-                var shot = new BitmapImage(new Uri(Path.GetFullPath(screenshotPath)));
-                double scale = 880.0 / shot.PixelWidth;
-                var target = new Rect(560, 52, shot.PixelWidth * scale, shot.PixelHeight * scale);
-                dc.PushClip(new RectangleGeometry(new Rect(560, 52, W - 560 + 40, H - 52), 14, 14));
-                dc.PushOpacityMask(new LinearGradientBrush(
-                    new GradientStopCollection
-                    {
-                        new GradientStop(Color.FromArgb(0x00, 0, 0, 0), 0.0),
-                        new GradientStop(Color.FromArgb(0xFF, 0, 0, 0), 0.28),
-                        new GradientStop(Color.FromArgb(0xFF, 0, 0, 0), 1.0),
-                    }, new Point(0, 0), new Point(1, 0)) { MappingMode = BrushMappingMode.RelativeToBoundingBox });
-                dc.PushOpacity(0.92);
-                dc.DrawImage(shot, target);
-                dc.Pop(); dc.Pop(); dc.Pop();
-                // Soft bottom fade so the cut-off edge does not read as a hard crop.
-                dc.DrawRectangle(new LinearGradientBrush(Color.FromArgb(0x00, 0x05, 0x08, 0x0F), Color.FromArgb(0xFF, 0x05, 0x08, 0x0F), new Point(0, 0), new Point(0, 1)), null, new Rect(560, H - 140, W - 560, 140));
-            }
+            // Library screenshot (Main has already checked the file exists), right side, fading
+            // in from the text column.
+            var shot = new BitmapImage(new Uri(Path.GetFullPath(screenshotPath)));
+            double scale = 880.0 / shot.PixelWidth;
+            var target = new Rect(560, 52, shot.PixelWidth * scale, shot.PixelHeight * scale);
+            dc.PushClip(new RectangleGeometry(new Rect(560, 52, W - 560 + 40, H - 52), 14, 14));
+            dc.PushOpacityMask(new LinearGradientBrush(
+                new GradientStopCollection
+                {
+                    new GradientStop(Color.FromArgb(0x00, 0, 0, 0), 0.0),
+                    new GradientStop(Color.FromArgb(0xFF, 0, 0, 0), 0.28),
+                    new GradientStop(Color.FromArgb(0xFF, 0, 0, 0), 1.0),
+                }, new Point(0, 0), new Point(1, 0)) { MappingMode = BrushMappingMode.RelativeToBoundingBox });
+            dc.PushOpacity(0.92);
+            dc.DrawImage(shot, target);
+            dc.Pop(); dc.Pop(); dc.Pop();
+            // Soft bottom fade so the cut-off edge does not read as a hard crop.
+            dc.DrawRectangle(new LinearGradientBrush(Color.FromArgb(0x00, 0x05, 0x08, 0x0F), Color.FromArgb(0xFF, 0x05, 0x08, 0x0F), new Point(0, 0), new Point(0, 1)), null, new Rect(560, H - 140, W - 560, 140));
 
             // Mark.
             var mark = RenderMark(256);
@@ -168,7 +210,7 @@ internal static class Program
     }
 
     private static FormattedText Text(string text, Typeface face, double size, Color color) =>
-        new(text, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, new SolidColorBrush(color), 1.0)
+        new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, new SolidColorBrush(color), 1.0)
         {
             TextAlignment = TextAlignment.Left
         };
@@ -259,9 +301,9 @@ internal static class Program
         dc.DrawGeometry(blueFill, null, blue);
     }
 
-    /// <summary>Upright T as a single polygon; origin = top-left of its bounding box.</summary>
     private static double Snap(double v, bool snap) => snap ? Math.Round(v) : v;
 
+    /// <summary>Upright T as a single polygon; origin = top-left of its bounding box.</summary>
     private static Geometry TGeometry(Point origin, double box, double bar, double stem, bool snap)
     {
         double sx = Snap(origin.X + (box - stem) / 2, snap);
@@ -319,10 +361,10 @@ internal static class Program
     }
 
     /// <summary>Renders Segoe MDL2 code points with labels so a glyph can be chosen by eye.</summary>
-    private static BitmapSource RenderGlyphSheet(string[] hexCodes)
+    private static BitmapSource RenderGlyphSheet(IReadOnlyList<(string Label, int CodePoint)> glyphs)
     {
         int cell = 96, cols = 6;
-        int rows = (hexCodes.Length + cols - 1) / cols;
+        int rows = (glyphs.Count + cols - 1) / cols;
         int w = cols * cell, h = Math.Max(1, rows) * cell;
         var visual = new DrawingVisual();
         var tf = new Typeface(new FontFamily("Segoe MDL2 Assets, Segoe Fluent Icons"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
@@ -330,13 +372,13 @@ internal static class Program
         using (DrawingContext dc = visual.RenderOpen())
         {
             dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x1C)), null, new Rect(0, 0, w, h));
-            for (int i = 0; i < hexCodes.Length; i++)
+            for (int i = 0; i < glyphs.Count; i++)
             {
                 int cx = (i % cols) * cell, cy = (i / cols) * cell;
-                string glyph = char.ConvertFromUtf32(Convert.ToInt32(hexCodes[i], 16));
-                var ft = new FormattedText(glyph, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 36, Brushes.White, 1.0);
+                string glyph = char.ConvertFromUtf32(glyphs[i].CodePoint);
+                var ft = new FormattedText(glyph, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 36, Brushes.White, 1.0);
                 dc.DrawText(ft, new Point(cx + (cell - ft.Width) / 2, cy + 14));
-                var lt = new FormattedText(hexCodes[i].ToUpperInvariant(), System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, labelTf, 12, Brushes.LightGray, 1.0);
+                var lt = new FormattedText(glyphs[i].Label, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, labelTf, 12, Brushes.LightGray, 1.0);
                 dc.DrawText(lt, new Point(cx + (cell - lt.Width) / 2, cy + cell - 24));
             }
         }
@@ -349,6 +391,9 @@ internal static class Program
 
     private static void SavePng(BitmapSource bmp, string path)
     {
+        // "mark 512 out\mark.png" may name a folder that does not exist yet.
+        string? dir = Path.GetDirectoryName(Path.GetFullPath(path));
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         var enc = new PngBitmapEncoder();
         enc.Frames.Add(BitmapFrame.Create(bmp));
         using var fs = File.Create(path);

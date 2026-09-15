@@ -56,6 +56,8 @@ public class UpdateService
     public static UpdateService Instance => _instance.Value;
 
     private readonly HttpClient _httpClient;
+    /// <summary>Bound on the SHA256SUMS.txt fetch: the client itself has no timeout (see the constructor).</summary>
+    private static readonly TimeSpan ManifestFetchTimeout = TimeSpan.FromSeconds(30);
 
     public static Version CurrentVersion
     {
@@ -273,8 +275,22 @@ public class UpdateService
                 $"The release does not include {GitHubReleaseInfo.ChecksumsAssetName}, so the installer cannot be verified.");
         }
 
-        // Fetch the manifest first: if it's unreachable there's no point pulling 50 MB.
-        string sumsText = await _httpClient.GetStringAsync(checksums.BrowserDownloadUrl, cancellationToken).ConfigureAwait(false);
+        // Fetch the manifest first: if it's unreachable there's no point pulling 50 MB. Bounded on
+        // its own: a stalled request for this one-kilobyte file would otherwise hold the update
+        // dialog at 0% until the user cancelled.
+        string sumsText;
+        using (var manifestCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+        {
+            manifestCts.CancelAfter(ManifestFetchTimeout);
+            try
+            {
+                sumsText = await _httpClient.GetStringAsync(checksums.BrowserDownloadUrl, manifestCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new HttpRequestException($"Timed out fetching {GitHubReleaseInfo.ChecksumsAssetName}.");
+            }
+        }
         string? expectedHash = FindExpectedSha256(sumsText, asset.Name);
         if (expectedHash == null)
         {
@@ -495,6 +511,9 @@ public class UpdateService
     /// </summary>
     internal const string InstallerUpdateArguments = "/SILENT /NORESTART /SP- /SUPPRESSMSGBOXES /UPDATE";
 
+    /// <summary>ERROR_CANCELLED: what ShellExecute reports when an elevation prompt is declined.</summary>
+    private const int ErrorCancelled = 1223;
+
     /// <summary>
     /// Launches the downloaded installer and gracefully exits TrayTrigger so files can be updated.
     /// </summary>
@@ -514,7 +533,18 @@ public class UpdateService
             UseShellExecute = true
         };
 
-        Process.Start(psi);
+        try
+        {
+            Process.Start(psi);
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
+        {
+            // The user declined the installer's elevation prompt. Not a download failure, which is
+            // what the dialog's catch-all made of it - "check your internet connection" and a
+            // Retry Download button for a file that had downloaded and verified.
+            LoggingService.Info("UpdateService", "Installer launch cancelled at the elevation prompt.");
+            throw new OperationCanceledException("The installer's elevation prompt was declined.", ex);
+        }
 
         Application.Current?.Dispatcher.Invoke(() =>
         {

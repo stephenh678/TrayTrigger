@@ -94,9 +94,13 @@ public class DiagnosticReportServiceTests : IDisposable
         Assert.Contains("problem 20", recent[4]);
         Assert.DoesNotContain(recent, l => l.Contains("noise"));
 
+        // The report keeps the last LogTailLines (15) of the 20 problems: 6 through 20.
         string report = DiagnosticReportService.Build(SampleInputs(log), () => "- Windows: x");
-        Assert.Contains("problem 20", report);
-        Assert.DoesNotContain("problem 1]", report);
+        var reportLines = report.Split('\n').Select(l => l.TrimEnd()).ToList();
+        Assert.Contains(reportLines, l => l.EndsWith("problem 20"));
+        Assert.Contains(reportLines, l => l.EndsWith("problem 6"));
+        Assert.DoesNotContain(reportLines, l => l.EndsWith("problem 5"));
+        Assert.DoesNotContain(reportLines, l => l.EndsWith("problem 1"));
     }
 
     [Theory]

@@ -134,10 +134,11 @@ public class PlatformLookupService
         private List<DiscoveredEpicGame>? _epicGames;
         private List<(string GameId, string InstallDir)>? _ubisoftInstalls;
         private List<DiscoveredXboxGame>? _xboxGames;
-        private List<DiscoveredBattleNetGame>? _battleNetGames;
-        // Resolved-once caches for the two platforms whose full record costs a filesystem walk.
+        private List<BattleNetScannerService.InstallEntry>? _battleNetInstalls;
+        // Resolved-once caches for the platforms whose full record costs a filesystem walk.
         private readonly Dictionary<string, DiscoveredSteamGame?> _steamResolved = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, DiscoveredUbisoftGame?> _ubisoftResolved = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, DiscoveredBattleNetGame?> _battleNetResolved = new(StringComparer.OrdinalIgnoreCase);
 
         internal Index(PlatformLookupService owner) => _owner = owner;
 
@@ -198,10 +199,21 @@ public class PlatformLookupService
             var xbox = _xboxGames.FirstOrDefault(g => IsPathUnderDirectory(path, g.InstallDir) || IsPathUnderDirectory(path, g.PackageRoot));
             if (xbox != null) return PlatformMatch.ForXbox(xbox);
 
-            // Blizzard's uninstall entries pin every Battle.net game's folder, wherever it is.
-            _battleNetGames ??= Try(() => _owner._battleNet.ScanInstalledGames([]), "Battle.net", path) ?? [];
-            var battleNet = _battleNetGames.FirstOrDefault(g => IsPathUnderDirectory(path, g.InstallDir));
-            if (battleNet != null) return PlatformMatch.ForBattleNet(battleNet);
+            // Blizzard's uninstall entries pin every Battle.net game's folder, wherever it is. Only
+            // the entries are read up front; the catalog read and exe search run for a match alone.
+            _battleNetInstalls ??= Try(() => BattleNetScannerService.ReadUninstallEntries()
+                .Where(e => !e.Uid.Equals(BattleNetScannerService.ClientUid, StringComparison.OrdinalIgnoreCase))
+                .ToList(), "Battle.net", path) ?? [];
+            foreach (var install in _battleNetInstalls)
+            {
+                if (!IsPathUnderDirectory(path, install.InstallDir)) continue;
+                if (!_battleNetResolved.TryGetValue(install.Uid, out var battleNet))
+                {
+                    battleNet = Try(() => _owner._battleNet.ResolveInstall(install), "Battle.net", path);
+                    _battleNetResolved[install.Uid] = battleNet;
+                }
+                if (battleNet != null) return PlatformMatch.ForBattleNet(battleNet);
+            }
 
             return null;
         }

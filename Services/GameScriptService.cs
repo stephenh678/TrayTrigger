@@ -208,8 +208,9 @@ public class GameScriptService
             if (process.WaitForExit((int)timeout.TotalMilliseconds))
             {
                 // With redirected output the timed overload can return before the async
-                // readers have drained; the untimed one waits for them.
-                if (psi.RedirectStandardOutput) process.WaitForExit();
+                // readers have drained. Bounded, because a program the script started in the
+                // background inherits the pipes and holds them open long after the script exits.
+                if (psi.RedirectStandardOutput) WaitForOutputDrain(process);
 
                 int exitCode = process.ExitCode;
                 if (exitCode != 0)
@@ -405,7 +406,7 @@ public class GameScriptService
             }
 
             // Let the async readers drain (the timed overload can return before they have).
-            process.WaitForExit();
+            WaitForOutputDrain(process);
             int exitCode = process.ExitCode;
             LoggingService.Info("GameScript", $"Test run of {phase} script for '{game.Name}' exited with code {exitCode} after {sw.Elapsed.TotalSeconds:0.0}s.");
             return new ScriptTestResult(true, exitCode, false, JoinOutput(), null, sw.Elapsed);
@@ -425,6 +426,18 @@ public class GameScriptService
                 return string.Join(Environment.NewLine, all);
             }
         }
+    }
+
+    /// <summary>
+    /// After the script has exited, waits a short while for its redirected output to finish
+    /// arriving. The untimed WaitForExit() waits for the pipes to close, and a program the script
+    /// started with "start" holds them open for as long as that program runs.
+    /// </summary>
+    private static void WaitForOutputDrain(Process process)
+    {
+        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
+        try { process.WaitForExitAsync(cts.Token).GetAwaiter().GetResult(); }
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>

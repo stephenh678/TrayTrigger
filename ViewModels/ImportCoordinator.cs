@@ -150,14 +150,24 @@ public class ImportCoordinator : ViewModelBase
 
     private bool RawgEnabled => _settings.UseRawgMetadata && !string.IsNullOrWhiteSpace(_settings.RawgApiKey);
 
+    /// <summary>The category a hand-added game gets: the tab the user is on, unless that tab is a
+    /// view (All, Favorites, Hidden) rather than a category a game can belong to.</summary>
+    private string NewEntryCategory => LibraryConstants.NormalizeCategory(_library.SelectedCategory);
+
     // Shared commit step of every import pipeline: add the prepared entries to the visible
     // library and refresh everything that depends on it. See L-12.
     internal void CommitImportedEntries(IEnumerable<GameEntry> entries, string? statusMessage)
     {
+        // Cards start light and decode their icon and poster off the UI thread, as at startup: a
+        // scan adding hundreds of games otherwise decoded every bitmap here, on the dispatcher.
+        var cards = new List<GameCardViewModel>();
         foreach (var entry in entries)
         {
-            _library.Games.Add(_library.CreateCardViewModel(entry));
+            var card = _library.CreateCardViewModel(entry, deferHeavyInit: true);
+            _library.Games.Add(card);
+            cards.Add(card);
         }
+        _library.LoadCardHeavyStateInBackground(cards);
 
         _library.RebuildCategories();
         PersistCommittedLibrary();
@@ -512,7 +522,7 @@ public class ImportCoordinator : ViewModelBase
                         ExecutablePath = shortcut.TargetPath,
                         Arguments = shortcut.Arguments,
                         WorkingDirectory = shortcut.WorkingDirectory,
-                        Category = _library.SelectedCategory != LibraryConstants.AllCategory ? _library.SelectedCategory : LibraryConstants.Uncategorized,
+                        Category = NewEntryCategory,
                         IsSteamGame = shortcut.IsSteamUrl,
                         SteamAppId = onlineAppId
                     };
@@ -607,6 +617,12 @@ public class ImportCoordinator : ViewModelBase
                 }
             }
         }
+
+        // Folders dropped together can overlap (C:\Games and C:\Games\Hades): an exe found under
+        // both is offered once, not once per folder.
+        aggregated = aggregated
+            .DistinctBy(c => c.ExePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         if (aggregated.Count == 0)
         {
@@ -734,8 +750,13 @@ public class ImportCoordinator : ViewModelBase
             _library.StatusMessage = $"Importing {candidates.Count} game(s)...";
         }
 
-        int localAdded = localCandidates.Count > 0 ? await ImportLocalCandidatesAsync(localCandidates, announceProgress: false) : 0;
-        var platformResult = await ImportPlatformBucketsAsync(platformBuckets);
+        int localAdded;
+        PlatformImportResult platformResult;
+        using (BeginCommitBatch())
+        {
+            localAdded = localCandidates.Count > 0 ? await ImportLocalCandidatesAsync(localCandidates, announceProgress: false) : 0;
+            platformResult = await ImportPlatformBucketsAsync(platformBuckets);
+        }
 
         if (localAdded < 0 || platformResult.Added < 0)
         {
@@ -796,6 +817,7 @@ public class ImportCoordinator : ViewModelBase
             // Avoid duplicates
             var toProcess = candidates
                 .Where(c => !_library.Games.Any(g => g.Game.ExecutablePath.Equals(c.ExePath, StringComparison.OrdinalIgnoreCase)))
+                .DistinctBy(c => c.ExePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             int skippedDuplicates = candidates.Count - toProcess.Count;
@@ -851,7 +873,7 @@ public class ImportCoordinator : ViewModelBase
                         Name = gameName,
                         ExecutablePath = c.ExePath,
                         WorkingDirectory = c.WorkingDirectory,
-                        Category = _library.SelectedCategory != LibraryConstants.AllCategory ? _library.SelectedCategory : LibraryConstants.Uncategorized,
+                        Category = NewEntryCategory,
                         SteamAppId = matchedAppId
                     };
 
@@ -991,7 +1013,7 @@ public class ImportCoordinator : ViewModelBase
                 Name = finalName,
                 ExecutablePath = candidate.ExePath,
                 WorkingDirectory = candidate.WorkingDirectory,
-                Category = _library.SelectedCategory != LibraryConstants.AllCategory ? _library.SelectedCategory : LibraryConstants.Uncategorized,
+                Category = NewEntryCategory,
                 SteamAppId = matchedAppId
             };
 
@@ -1225,7 +1247,8 @@ public class ImportCoordinator : ViewModelBase
         if (upgraded > 0)
         {
             _library.RebuildCategories();
-            _library.SaveLibrary();
+            // Joins the caller's commit batch, so the legs that follow share its one save.
+            PersistCommittedLibrary();
             _library.ApplySort();
         }
         return upgraded;
@@ -1285,6 +1308,9 @@ public class ImportCoordinator : ViewModelBase
     /// </summary>
     private async Task<PlatformImportResult> ImportPlatformBucketsAsync(PlatformImportBuckets buckets)
     {
+        // One save and one hotkey rebuild for the upgrades and every leg, not one each.
+        using var commitBatch = BeginCommitBatch();
+
         // Existing Local entries for the same exe are linked in place and leave the buckets
         // before any leg runs, so they can't be duplicated by the ID-only dedup in the legs.
         var linked = new Dictionary<string, int>();
@@ -1558,8 +1584,11 @@ public class ImportCoordinator : ViewModelBase
         {
             _library.StatusMessage = "Scanning for games...";
 
+            // Any entry carrying the App ID, not only Steam-launched ones: ImportSteamGamesAsync
+            // dedupes on the ID alone, so a Local entry linked by online matching was offered as
+            // new on every scan and then silently skipped when imported.
             var existingAppIds = _library.Games
-                .Where(g => g.IsSteamGame && !string.IsNullOrEmpty(g.Game.SteamAppId))
+                .Where(g => !string.IsNullOrEmpty(g.Game.SteamAppId))
                 .Select(g => g.Game.SteamAppId!)
                 .ToList();
             var existingGogGameIds = _library.Games

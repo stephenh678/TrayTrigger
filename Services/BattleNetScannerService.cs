@@ -154,6 +154,27 @@ public partial class BattleNetScannerService
     }
 
     /// <summary>
+    /// The discovery record for one install from <see cref="ReadUninstallEntries"/>, or null when
+    /// its folder is gone. For resolving a single dropped path: unlike <see cref="ScanInstalledGames"/>
+    /// it pays for the catalog read and the exe search only for this one game.
+    /// </summary>
+    internal DiscoveredBattleNetGame? ResolveInstall(InstallEntry install)
+    {
+        if (!Directory.Exists(install.InstallDir)) return null;
+
+        var lookup = LookUpProgramId(install.Uid);
+        string? exe = ResolveExe(install, out string? iconFile);
+        return new DiscoveredBattleNetGame(
+            Uid: install.Uid,
+            Name: install.Name,
+            InstallDir: install.InstallDir,
+            ExePath: exe,
+            IconPath: iconFile ?? exe,
+            ProgramId: lookup.ProgramId,
+            IsAlreadyImported: false);
+    }
+
+    /// <summary>
     /// The install folder Blizzard's uninstall entry currently records for <paramref name="uid"/>,
     /// or null. Follows a game moved with Battle.net's "Move install", which the saved entry doesn't.
     /// </summary>

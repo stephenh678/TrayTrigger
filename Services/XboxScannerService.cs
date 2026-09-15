@@ -52,7 +52,7 @@ public record DiscoveredXboxGame(
 public class XboxScannerService
 {
     private const string GameConfigKeyPath = @"SOFTWARE\Microsoft\GamingServices\GameConfig";
-    private const string PackageRepositoryKeyPath = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
+    internal const string PackageRepositoryKeyPath = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
 
     /// <summary>Package family name of the Xbox app (Microsoft.GamingApp) - the "client" for
     /// <see cref="LauncherClientCloser"/> purposes. Not required to launch games; Gaming Services does that.</summary>
@@ -95,25 +95,6 @@ public class XboxScannerService
             LoggingService.Warn("XboxScannerService", $"Error resolving Xbox game '{aumid}': {ex.Message}");
             return null;
         }
-    }
-
-    /// <summary>
-    /// The installed game whose install directory or package root contains <paramref name="path"/>,
-    /// or null. Used by <see cref="PlatformLookupService"/> so a folder dropped from
-    /// "D:\XboxGames\&lt;Game&gt;" is imported as that game rather than as a Local exe (which
-    /// could never launch anyway - GDK exes need package identity).
-    /// </summary>
-    public DiscoveredXboxGame? FindGameByPath(string path)
-    {
-        foreach (var game in EnumerateInstalledGames())
-        {
-            if (PlatformLookupService.IsPathUnderDirectory(path, game.InstallDir) ||
-                PlatformLookupService.IsPathUnderDirectory(path, game.PackageRoot))
-            {
-                return game;
-            }
-        }
-        return null;
     }
 
     private IEnumerable<DiscoveredXboxGame> EnumerateInstalledGames()

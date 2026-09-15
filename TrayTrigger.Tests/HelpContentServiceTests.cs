@@ -124,7 +124,7 @@ public class HelpContentServiceTests
         var index = HelpContentService.GetIndex();
 
         Assert.Equal(
-            new[] { "tweaks", "profiles", "scanner", "traymenu", "scripts", "library", "updates", "troubleshooting" },
+            new[] { "tweaks", "profiles", "scanner", "traymenu", "tools", "scripts", "library", "updates", "troubleshooting" },
             index.Select(g => g.Section).ToArray());
 
         var tweaks = index.First(g => g.Section == "tweaks");
@@ -133,9 +133,12 @@ public class HelpContentServiceTests
         Assert.Equal("How Performance Tweaks work", tweaks.Topics[0].Title);
         Assert.True(tweaks.Topics.Count >= 17);
 
-        // Everything after the overview is alphabetical by title.
+        // Everything after the overview is alphabetical by title, quotes ignored: the section has
+        // "\"Ultimate Plan - TrayTrigger\" Power Plan (always on)", which belongs under U, not first.
         var rest = tweaks.Topics.Skip(1).Select(t => t.Title).ToList();
-        Assert.Equal(rest.OrderBy(t => t, StringComparer.OrdinalIgnoreCase), rest);
+        Assert.Equal(rest.OrderBy(t => t.Replace("\"", ""), StringComparer.OrdinalIgnoreCase), rest);
+        Assert.Contains(rest, t => t.StartsWith('"'));
+        Assert.False(rest[0].StartsWith('"'), "a leading quote must not sort a topic to the top");
     }
 
     [Theory]

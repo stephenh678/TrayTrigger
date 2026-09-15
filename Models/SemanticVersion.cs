@@ -106,10 +106,17 @@ public sealed class SemanticVersion : IComparable<SemanticVersion>, IEquatable<S
     public override bool Equals(object? obj) => Equals(obj as SemanticVersion);
     public override int GetHashCode() => HashCode.Combine(Major, Minor, Patch, Prerelease);
 
-    public static bool operator >(SemanticVersion a, SemanticVersion b) => a.CompareTo(b) > 0;
-    public static bool operator <(SemanticVersion a, SemanticVersion b) => a.CompareTo(b) < 0;
-    public static bool operator >=(SemanticVersion a, SemanticVersion b) => a.CompareTo(b) >= 0;
-    public static bool operator <=(SemanticVersion a, SemanticVersion b) => a.CompareTo(b) <= 0;
+    /// <summary>
+    /// Value equality, like <see cref="Equals(SemanticVersion?)"/> - without these, == would compare
+    /// references while every other operator compares versions. All six accept null on either side:
+    /// null is lower than every version and equal only to null, matching <see cref="CompareTo"/>.
+    /// </summary>
+    public static bool operator ==(SemanticVersion? a, SemanticVersion? b) => a is null ? b is null : a.Equals(b);
+    public static bool operator !=(SemanticVersion? a, SemanticVersion? b) => !(a == b);
+    public static bool operator >(SemanticVersion? a, SemanticVersion? b) => a is not null && a.CompareTo(b) > 0;
+    public static bool operator <(SemanticVersion? a, SemanticVersion? b) => a is null ? b is not null : a.CompareTo(b) < 0;
+    public static bool operator >=(SemanticVersion? a, SemanticVersion? b) => a is null ? b is null : a.CompareTo(b) >= 0;
+    public static bool operator <=(SemanticVersion? a, SemanticVersion? b) => a is null || a.CompareTo(b) <= 0;
 
     public override string ToString() =>
         IsPrerelease ? $"{Major}.{Minor}.{Patch}-{Prerelease}" : $"{Major}.{Minor}.{Patch}";

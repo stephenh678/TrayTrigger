@@ -74,6 +74,16 @@ public partial class ModernDialog : Window
                 target.Focus();
             }
         };
+
+        // Escape reaches an IsCancel button only while it is visible; an information or warning
+        // dialog collapses its Cancel, so Escape dismisses it here instead (the same result as
+        // its title-bar close).
+        PreviewKeyDown += (s, e) =>
+        {
+            if (e.Key != System.Windows.Input.Key.Escape || CancelBtn.Visibility == Visibility.Visible) return;
+            e.Handled = true;
+            OnCancelClick(s, e);
+        };
     }
 
     /// <summary>

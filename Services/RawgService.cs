@@ -84,9 +84,11 @@ public class RawgService
         }
     }
 
-    /// <summary>Names that produced no acceptable match this session - reopening the same game's
-    /// details shouldn't cost another two requests against the monthly quota.</summary>
-    private static readonly HashSet<string> NoMatchCache = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Names that produced no acceptable match this session, with the best similarity
+    /// RAWG offered (0 when it returned nothing) - reopening the same game's details shouldn't cost
+    /// another two requests against the monthly quota. Kept as a score rather than a yes/no so a
+    /// lower confidence threshold set later still gets to ask again.</summary>
+    private static readonly Dictionary<string, double> NoMatchCache = new(StringComparer.OrdinalIgnoreCase);
 
     // ------------------------------------------------------------------ lookups
 
@@ -103,7 +105,7 @@ public class RawgService
 
         lock (NoMatchCache)
         {
-            if (NoMatchCache.Contains(gameName))
+            if (NoMatchCache.TryGetValue(gameName, out double bestSeen) && bestSeen < minConfidence)
                 return RawgLookupResult.NoMatch;
         }
 
@@ -128,7 +130,7 @@ public class RawgService
             {
                 if (best.Id != null)
                     LoggingService.Verbose("RawgService", $"Rejected RAWG match '{best.Name}' for '{gameName}' (similarity {best.Similarity:F2} < {minConfidence:F2}).");
-                lock (NoMatchCache) NoMatchCache.Add(gameName);
+                lock (NoMatchCache) NoMatchCache[gameName] = best.Id != null ? best.Similarity : 0;
                 return RawgLookupResult.NoMatch;
             }
 

@@ -186,19 +186,8 @@ public partial class GameMatchPickerDialog : Window
         Close();
     }
 
-    private void AttributionLink_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_attributionUrl))
-            return;
-        try
-        {
-            Process.Start(new ProcessStartInfo(_attributionUrl) { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("GameMatchPickerDialog", $"Failed to open '{_attributionUrl}': {ex.Message}");
-        }
-    }
+    // Through the https-only helper, which also logs a failure to launch the browser.
+    private void AttributionLink_Click(object sender, RoutedEventArgs e) => HelpCommands.OpenUrl.Execute(_attributionUrl);
 
     private void ConfirmSelection()
     {

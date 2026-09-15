@@ -34,6 +34,12 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 - Turn it off with "Show a launch popup by the tray icon" under Settings > General > Window & Tray Icon, below the tray icon's left-click option.
 - Launches from the open window use the popup too when "Minimize to system tray when launching a game" is on, since the window hides as soon as the game is launched. Otherwise they keep the notice inside the window, unless you tick "Show it on every game launch" under the same setting. A launch error still opens a dialog while the window is in front.
 
+## Tools
+
+- With Tools turned on (Settings > General) and "Show Tools in tray menu" ticked (Settings > Tray Menu), a Tools submenu follows your games. Both are off by default.
+- It's one flat list of every tool in "Tools sort order": A to Z, Z to A, or favorites first. Tool categories and favorites don't get sections of their own.
+- A tool launched from the tray gets the same launch popup as a game.
+
 ## Shortcuts at the bottom
 
 Games Library opens the window on the library, Scan for Games... runs a scan straight away, Settings opens the window on Settings, and Exit TrayTrigger quits the app immediately (unlike the window's Exit button, which asks first).

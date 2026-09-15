@@ -23,7 +23,9 @@ public record DiscoveredEpicGame(
 /// </summary>
 public class EpicScannerService
 {
-    private const string ManifestsDir = @"C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests";
+    // Under %ProgramData%, wherever that is: the system drive is not always C:.
+    private static readonly string ManifestsDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Epic", "EpicGamesLauncher", "Data", "Manifests");
 
     /// <summary>True if Epic Games Launcher's "com.epicgames.launcher://" protocol is registered
     /// and its handler exe still exists - callers should fall back to launching the game's own exe

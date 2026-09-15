@@ -20,6 +20,9 @@ public class GameEditViewModel : ViewModelBase
     private readonly IconExtractorService _iconExtractorService;
     private readonly string? _steamGridDbApiKey;
     private readonly double _minConfidence;
+    /// <summary>One for every edit dialog: the service keeps no per-instance state, and its
+    /// constructor re-scans the legacy covers folder each time one is built.</summary>
+    private static readonly Lazy<SteamMetadataService> SharedMetadataService = new(() => new SteamMetadataService());
     private bool _isRefreshingMetadata;
     private string _name;
     private string _executablePath;
@@ -133,7 +136,8 @@ public class GameEditViewModel : ViewModelBase
         _customIconPath = game.IconPath;
         _customCoverPath = game.CoverImagePath;
 
-        foreach (var cat in categories.Where(c => c != LibraryConstants.AllCategory).Distinct())
+        // All, Favorites and Hidden are library views, not categories a game can be put in.
+        foreach (var cat in categories.Where(c => c is not (LibraryConstants.AllCategory or LibraryConstants.FavoritesCategory or LibraryConstants.HiddenCategory)).Distinct())
         {
             ExistingCategories.Add(cat);
         }
@@ -703,31 +707,10 @@ public class GameEditViewModel : ViewModelBase
         _customIconPath = string.Empty;
         OnPropertyChanged(nameof(CustomIconPath));
 
-        if (!string.IsNullOrEmpty(ExecutablePath) && File.Exists(ExecutablePath))
+        if (!string.IsNullOrEmpty(ExecutablePath) && File.Exists(ExecutablePath) && ExtractIconPreview(ExecutablePath) is { } preview)
         {
-            try
-            {
-                using var ico = System.Drawing.Icon.ExtractAssociatedIcon(ExecutablePath);
-                if (ico != null)
-                {
-                    using var bmp = ico.ToBitmap();
-                    using var ms = new MemoryStream();
-                    bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                    ms.Position = 0;
-                    var bi = new BitmapImage();
-                    bi.BeginInit();
-                    bi.CacheOption = BitmapCacheOption.OnLoad;
-                    bi.StreamSource = ms;
-                    bi.EndInit();
-                    bi.Freeze();
-                    IconPreview = bi;
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Warn("GameEditViewModel", $"Failed to extract icon preview from '{ExecutablePath}': {ex.Message}");
-            }
+            IconPreview = preview;
+            return;
         }
 
         UpdateIconPreview();
@@ -738,31 +721,10 @@ public class GameEditViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(_customIconPath) && File.Exists(_customIconPath))
         {
             string ext = Path.GetExtension(_customIconPath).ToLowerInvariant();
-            if (ext == ".exe" || ext == ".dll" || ext == ".lnk")
+            if ((ext == ".exe" || ext == ".dll" || ext == ".lnk") && ExtractIconPreview(_customIconPath) is { } fromFile)
             {
-                try
-                {
-                    using var ico = System.Drawing.Icon.ExtractAssociatedIcon(_customIconPath);
-                    if (ico != null)
-                    {
-                        using var bmp = ico.ToBitmap();
-                        using var ms = new MemoryStream();
-                        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                        ms.Position = 0;
-                        var bi = new BitmapImage();
-                        bi.BeginInit();
-                        bi.CacheOption = BitmapCacheOption.OnLoad;
-                        bi.StreamSource = ms;
-                        bi.EndInit();
-                        bi.Freeze();
-                        IconPreview = bi;
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.Warn("GameEditViewModel", $"Failed to extract icon preview from '{_customIconPath}': {ex.Message}");
-                }
+                IconPreview = fromFile;
+                return;
             }
 
             IconPreview = IconExtractorService.LoadBitmapSafely(_customIconPath);
@@ -775,34 +737,35 @@ public class GameEditViewModel : ViewModelBase
             return;
         }
 
-        if (!string.IsNullOrEmpty(ExecutablePath) && File.Exists(ExecutablePath))
-        {
-            try
-            {
-                using var ico = System.Drawing.Icon.ExtractAssociatedIcon(ExecutablePath);
-                if (ico != null)
-                {
-                    using var bmp = ico.ToBitmap();
-                    using var ms = new MemoryStream();
-                    bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                    ms.Position = 0;
-                    var bi = new BitmapImage();
-                    bi.BeginInit();
-                    bi.CacheOption = BitmapCacheOption.OnLoad;
-                    bi.StreamSource = ms;
-                    bi.EndInit();
-                    bi.Freeze();
-                    IconPreview = bi;
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Warn("GameEditViewModel", $"Failed to extract icon preview from '{ExecutablePath}': {ex.Message}");
-            }
-        }
+        IconPreview = !string.IsNullOrEmpty(ExecutablePath) && File.Exists(ExecutablePath)
+            ? ExtractIconPreview(ExecutablePath)
+            : null;
+    }
 
-        IconPreview = null;
+    /// <summary>The file's associated icon as a frozen bitmap for the preview, or null when it has none.</summary>
+    private static BitmapImage? ExtractIconPreview(string path)
+    {
+        try
+        {
+            using var ico = System.Drawing.Icon.ExtractAssociatedIcon(path);
+            if (ico == null) return null;
+            using var bmp = ico.ToBitmap();
+            using var ms = new MemoryStream();
+            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            ms.Position = 0;
+            var bi = new BitmapImage();
+            bi.BeginInit();
+            bi.CacheOption = BitmapCacheOption.OnLoad;
+            bi.StreamSource = ms;
+            bi.EndInit();
+            bi.Freeze();
+            return bi;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("GameEditViewModel", $"Failed to extract icon preview from '{path}': {ex.Message}");
+            return null;
+        }
     }
 
     private void BrowseCover()
@@ -899,7 +862,7 @@ public class GameEditViewModel : ViewModelBase
             if (match != null && !string.IsNullOrWhiteSpace(match.AppId))
             {
                 // Steam hit: pull full details (title, poster, genre) exactly like Fetch by ID.
-                var metadataService = new SteamMetadataService();
+                var metadataService = SharedMetadataService.Value;
                 var details = await metadataService.GetAppDetailsAsync(match.AppId, _steamGridDbApiKey, forceRefresh: true);
                 if (details != null && !string.IsNullOrWhiteSpace(details.Name))
                 {
@@ -940,7 +903,7 @@ public class GameEditViewModel : ViewModelBase
         }
 
         StatusMessage = $"No Steam match; searching SteamGridDB art for \"{term}\"...";
-        var metadataService = new SteamMetadataService();
+        var metadataService = SharedMetadataService.Value;
         var art = await metadataService.DownloadAndCacheGridArtByNameAsync(SourceGame.Id, term, _steamGridDbApiKey);
         if (art == null)
         {
@@ -966,14 +929,13 @@ public class GameEditViewModel : ViewModelBase
     {
         Name = details.Name;
         SteamAppId = appId;
-        // Preserves non-Steam launch: a local executable must NOT be flipped to a steam:// game.
-        if (!string.IsNullOrWhiteSpace(ExecutablePath) && !ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
-        {
-            IsSteamGame = false;
-        }
+        // IsSteamGame is left as it is: a Local game links an App ID purely for metadata and
+        // art, and a Steam game set to launch its executable directly (a real path, not
+        // steam://) must not be demoted to Local by a lookup.
         ApplyFetchedCover(details.CoverImagePath);
-        if ((string.IsNullOrWhiteSpace(Category) || Category.Equals(LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase)) &&
-            !string.IsNullOrWhiteSpace(details.PrimaryGenre))
+        // The same placeholder rule as the library's enrichment: a platform's default category
+        // ("Steam", "GOG") is replaced like Uncategorized; a category the user chose is kept.
+        if (LibraryConstants.IsEnrichableCategory(Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
         {
             Category = details.PrimaryGenre;
         }
@@ -991,7 +953,7 @@ public class GameEditViewModel : ViewModelBase
     public async Task FetchBySteamIdAsync()
     {
         string id = SteamAppId?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(id) || !id.All(char.IsDigit))
+        if (!UrlProtocolHelper.IsValidSteamAppId(id))
         {
             StatusMessage = "Please enter a valid numeric Steam App ID.";
             LoggingService.Warn("GameEditViewModel", $"Invalid Steam AppID '{id}' supplied for manual match.");
@@ -1003,7 +965,7 @@ public class GameEditViewModel : ViewModelBase
         try
         {
             SteamMetadataService.InvalidateCache(id);
-            var metadataService = new SteamMetadataService();
+            var metadataService = SharedMetadataService.Value;
             var details = await metadataService.GetAppDetailsAsync(id, _steamGridDbApiKey, forceRefresh: true);
             if (details == null || string.IsNullOrWhiteSpace(details.Name))
             {
@@ -1036,7 +998,7 @@ public class GameEditViewModel : ViewModelBase
     public async Task RefreshPosterAsync()
     {
         string id = SteamAppId?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(id) || !id.All(char.IsDigit))
+        if (!UrlProtocolHelper.IsValidSteamAppId(id))
         {
             StatusMessage = "Cannot refresh poster: no valid numeric Steam App ID set.";
             LoggingService.Warn("GameEditViewModel", "Cannot refresh poster: no valid numeric Steam AppID set for this game.");
@@ -1048,7 +1010,7 @@ public class GameEditViewModel : ViewModelBase
         try
         {
             SteamMetadataService.InvalidateCache(id);
-            var metadataService = new SteamMetadataService();
+            var metadataService = SharedMetadataService.Value;
             string? cover = await metadataService.DownloadAndCachePosterAsync(id, null, _steamGridDbApiKey, forceRefresh: true);
             if (!string.IsNullOrWhiteSpace(cover))
             {
@@ -1263,7 +1225,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.Arguments = Arguments?.Trim() ?? string.Empty;
         SourceGame.WorkingDirectory = WorkingDirectory?.Trim() ?? string.Empty;
         SourceGame.RunAsAdmin = RunAsAdmin;
-        SourceGame.Category = string.IsNullOrWhiteSpace(Category) ? LibraryConstants.Uncategorized : Category.Trim();
+        SourceGame.Category = LibraryConstants.NormalizeCategory(Category);
         SourceGame.Hotkey = Hotkey?.Trim() ?? string.Empty;
         SourceGame.IsSteamGame = IsSteamGame;
         SourceGame.ForceSteamOverlayTag = ForceSteamOverlayTag;

@@ -350,10 +350,15 @@ public class LibraryViewModel : ViewModelBase
     /// inside the constructor loop above, so the window stayed hidden until every File.Exists and
     /// bitmap decode in the whole library finished.
     /// </summary>
-    private void LoadCardHeavyStateInBackground()
+    /// <param name="cards">The cards to load; every card in the library when null.</param>
+    /// <summary>The most recent <see cref="LoadCardHeavyStateInBackground"/> run; completed once its
+    /// results have been applied on the UI thread. The release screenshot waits on it.</summary>
+    internal Task HeavyStateLoad { get; private set; } = Task.CompletedTask;
+
+    internal void LoadCardHeavyStateInBackground(IReadOnlyList<GameCardViewModel>? cards = null)
     {
-        var cardsSnapshot = Games.ToList();
-        _ = Task.Run(() =>
+        var cardsSnapshot = cards?.ToList() ?? Games.ToList();
+        HeavyStateLoad = Task.Run(() =>
         {
             var results = new System.Collections.Generic.List<(GameCardViewModel Card, bool IsMissing, System.Windows.Media.Imaging.BitmapImage? Icon, DateTime? IconWriteTimeUtc, System.Windows.Media.Imaging.BitmapImage? Cover, DateTime? CoverWriteTimeUtc)>();
             foreach (var card in cardsSnapshot)
@@ -367,6 +372,14 @@ public class LibraryViewModel : ViewModelBase
                 foreach (var (card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) in results)
                 {
                     card.ApplyHeavyState(isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
+                }
+
+                // A saved "Executable missing" tick was applied while every card still read
+                // IsMissing = false, so the filter has to run again now that it's known.
+                if (Filter.HasActiveFilters)
+                {
+                    FilteredGames.Refresh();
+                    OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
                 }
 
                 // The tray menu was built by LoadLibrary before any icon existed, and nothing else
@@ -824,8 +837,7 @@ public class LibraryViewModel : ViewModelBase
     public void ApplyCategoryToMany(List<GameCardViewModel> cards, string newCategory)
     {
         if (cards.Count == 0) return;
-        if (string.IsNullOrWhiteSpace(newCategory)) newCategory = LibraryConstants.Uncategorized;
-        newCategory = newCategory.Trim();
+        newCategory = LibraryConstants.NormalizeCategory(newCategory);
 
         foreach (var card in cards)
         {
@@ -936,13 +948,24 @@ public class LibraryViewModel : ViewModelBase
         SaveLibrary();
     }
 
+    /// <summary>
+    /// How long a launch is held after its notice (in-window toast or launch popup) appears and
+    /// before it is dispatched. A fast-launching game can take focus or go fullscreen within a few
+    /// hundred ms of its process spawning, covering the notice before it is ever read. Raised from
+    /// 0.8 s in 1.4.4; the planned Tools launcher uses the same value so both feel identical.
+    /// </summary>
+    internal static readonly TimeSpan LaunchDispatchDelay = TimeSpan.FromSeconds(2);
+
+    /// <summary>How long the in-window launch toast stays up after the launch is dispatched.</summary>
+    private static readonly TimeSpan LaunchToastAfterDispatch = TimeSpan.FromSeconds(2);
+
     public void LaunchGame(GameCardViewModel card)
     {
         Window? owner = WindowHelper.ActiveOwner();
         if (card.IsMissing)
         {
             // From a hotkey or the tray there's no window for the dialog to sit on.
-            if (LaunchPopup?.TryShowFailure(card.Game, "Its executable wasn't found.", "Locate executable...",
+            if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), "Its executable wasn't found.", "Locate executable...",
                     () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
             {
                 PromptLocateMissingExecutable(card, owner);
@@ -950,18 +973,17 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
-        // Shown before dispatching, then held for a moment via a non-blocking timer before the
-        // actual launch happens - a fast-launching game (e.g. Steam) can take focus/fullscreen
-        // within a few hundred ms of the process spawning, which would cover this window before
-        // the toast is ever noticed if it were shown at the same instant as the launch call.
-        // With the window hidden or behind another app the toast can't be seen at all, so the
-        // launch popup stands in for it.
-        if (LaunchPopup?.TryBeginLaunch(card.Game) != true)
+        // Shown before dispatching, then held for LaunchDispatchDelay via a non-blocking timer
+        // before the actual launch happens, so a game that takes focus or goes fullscreen almost
+        // at once can't cover the notice before it is read. With the window hidden or behind
+        // another app the toast can't be seen at all, so the launch popup stands in for it.
+        if (LaunchPopup?.TryBeginLaunch(LaunchTarget.ForGame(card.Game)) != true)
         {
-            ShowLaunchToast($"Launching \"{card.Name}\"...");
+            ShowLaunchToast($"Launching \"{card.Name}\"...",
+                seconds: (int)Math.Ceiling((LaunchDispatchDelay + LaunchToastAfterDispatch).TotalSeconds));
         }
 
-        var launchDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+        var launchDelayTimer = new DispatcherTimer { Interval = LaunchDispatchDelay };
         launchDelayTimer.Tick += (s, e) =>
         {
             launchDelayTimer.Stop();
@@ -1035,7 +1057,7 @@ public class LibraryViewModel : ViewModelBase
         {
             IsLaunchToastVisible = false;
             card.RefreshProperties();
-            if (LaunchPopup?.TryShowFailure(card.Game, "Its executable wasn't found.", "Locate executable...",
+            if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), "Its executable wasn't found.", "Locate executable...",
                     () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
             {
                 PromptLocateMissingExecutable(card, owner);
@@ -1046,7 +1068,7 @@ public class LibraryViewModel : ViewModelBase
             IsLaunchToastVisible = false;
             StatusMessage = $"Error: {err}";
             string message = err ?? "Failed to launch game.";
-            if (LaunchPopup?.TryShowFailure(card.Game, message, "Open TrayTrigger", action: null) != true)
+            if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), message, "Open TrayTrigger", action: null) != true)
             {
                 ModernDialog.ShowWarning(owner, "Launch Error", message);
             }
@@ -1078,6 +1100,10 @@ public class LibraryViewModel : ViewModelBase
     /// <summary>Shows the floating launch toast for a few seconds - same non-blocking overlay
     /// pattern as the undo-delete toast, but auto-dismissing since there's no action to take.
     /// The toast lives outside the per-section grids, so it renders on every section.</summary>
+    /// <summary>The in-window "Launching..." notice for a launch outside the library (a tool), with a game launch's timing.</summary>
+    public void ShowLaunchNotice(string message) =>
+        ShowLaunchToast(message, seconds: (int)Math.Ceiling((LaunchDispatchDelay + LaunchToastAfterDispatch).TotalSeconds));
+
     private void ShowLaunchToast(string message, string icon = "", int seconds = 3)
     {
         _launchToastTimer?.Stop();
@@ -1205,18 +1231,16 @@ public class LibraryViewModel : ViewModelBase
             return;
         }
 
-        if (!trimmed.All(char.IsDigit))
+        if (!UrlProtocolHelper.IsValidSteamAppId(trimmed))
         {
             ModernDialog.ShowWarning(Application.Current?.MainWindow, "Invalid App ID", "Steam App ID must be a numeric ID (e.g. 1245620).");
             return;
         }
 
         card.Game.SteamAppId = trimmed;
-        // IMPORTANT: Never change IsSteamGame to true! Non-Steam games link Steam App ID purely for metadata/art.
-        if (!string.IsNullOrWhiteSpace(card.Game.ExecutablePath) && !card.Game.ExecutablePath.StartsWith("steam://", StringComparison.OrdinalIgnoreCase))
-        {
-            card.Game.IsSteamGame = false;
-        }
+        // IsSteamGame is left alone: a Local game links an App ID purely for metadata and art,
+        // and a Steam game set to launch its executable directly (a real path, not steam://)
+        // must not be demoted to Local by re-linking its ID.
 
         StatusMessage = $"Fetching Steam metadata for App ID {trimmed}...";
         SteamMetadataService.InvalidateCache(trimmed);
@@ -1231,7 +1255,8 @@ public class LibraryViewModel : ViewModelBase
             {
                 card.Game.CoverImagePath = details.CoverImagePath;
             }
-            if ((string.IsNullOrWhiteSpace(card.Game.Category) || card.Game.Category.Equals(LibraryConstants.Uncategorized, StringComparison.OrdinalIgnoreCase)) &&
+            // The same setting and rule as the enrichment pass and Game Details.
+            if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(card.Game.Category) &&
                 !string.IsNullOrWhiteSpace(details.PrimaryGenre))
             {
                 card.Game.Category = details.PrimaryGenre;
@@ -1471,11 +1496,8 @@ public class LibraryViewModel : ViewModelBase
 
     public void ApplyCategory(GameCardViewModel card, string newCategory)
     {
-        if (string.IsNullOrWhiteSpace(newCategory))
-            newCategory = LibraryConstants.Uncategorized;
-
         string oldCategory = card.Category;
-        card.Game.Category = newCategory.Trim();
+        card.Game.Category = LibraryConstants.NormalizeCategory(newCategory);
         card.RefreshProperties();
         RebuildCategories();
         SaveLibrary();
@@ -1767,9 +1789,23 @@ public class LibraryViewModel : ViewModelBase
         NotifyLibraryUpdated();
     }
 
+    /// <summary>Every game's launch hotkey, for the one place that registers all of TrayTrigger's hotkeys.</summary>
+    public IEnumerable<HotkeyBinding> HotkeyBindings => Games.Select(g => HotkeyBinding.ForGame(g.Game));
+
+    /// <summary>
+    /// Set by MainViewModel, which registers games' and tools' hotkeys together. A library used on
+    /// its own (the tests) leaves it null and registers its games directly.
+    /// </summary>
+    public Action? RefreshHotkeys { get; set; }
+
     public void UpdateHotkeys()
     {
-        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, Games.Select(g => g.Game));
+        if (RefreshHotkeys != null)
+        {
+            RefreshHotkeys();
+            return;
+        }
+        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings);
     }
 
     public void OnGameUpdatedFromLauncher(GameEntry game)
@@ -1829,9 +1865,12 @@ public class LibraryViewModel : ViewModelBase
             Categories.Add(LibraryConstants.HiddenCategory);
         }
 
-        if (Categories.Contains(previous))
+        // Categories are deduped case-insensitively above, so the kept spelling can differ from
+        // the selected one ("RPG" vs "rpg"); match the same way.
+        string? kept = Categories.FirstOrDefault(c => string.Equals(c, previous, StringComparison.OrdinalIgnoreCase));
+        if (kept != null)
         {
-            _selectedCategory = previous;
+            _selectedCategory = kept;
         }
         else
         {

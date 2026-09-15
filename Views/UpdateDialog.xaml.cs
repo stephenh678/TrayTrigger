@@ -77,14 +77,15 @@ public partial class UpdateDialog : Window
 
     /// <summary>
     /// GitHub release bodies are Markdown but the notes box is plain text, so drop the markers
-    /// that would otherwise show literally ("### Highlights:", "**bold**", "- item").
+    /// that would otherwise show literally ("### Highlights:", "**bold**", "- item"), and the
+    /// collapsible "All changes" wrapper the release workflow adds (&lt;details&gt;/&lt;summary&gt;).
     /// </summary>
     internal static string StripMarkdown(string body)
     {
         var lines = body.Replace("\r\n", "\n").Split('\n');
         for (int i = 0; i < lines.Length; i++)
         {
-            string l = lines[i].TrimEnd();
+            string l = System.Text.RegularExpressions.Regex.Replace(lines[i], @"</?(details|summary)\b[^>]*>", "").TrimEnd();
             l = System.Text.RegularExpressions.Regex.Replace(l, @"^\s*#{1,6}\s*", "");
             l = System.Text.RegularExpressions.Regex.Replace(l, @"^\s*[-*]\s+", "• ");
             lines[i] = l.Replace("**", "").Replace("`", "");
@@ -94,16 +95,13 @@ public partial class UpdateDialog : Window
 
     private void OnViewOnGitHubClick(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            string url = !string.IsNullOrWhiteSpace(_release.HtmlUrl) ? _release.HtmlUrl : "https://github.com";
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Error("UpdateDialog", "Failed to open GitHub release URL", ex);
-        }
+        // Through the https-only helper: the URL comes from the GitHub API response, not from code.
+        string url = IsHttps(_release.HtmlUrl) ? _release.HtmlUrl! : "https://github.com";
+        HelpCommands.OpenUrl.Execute(url);
     }
+
+    private static bool IsHttps(string? url) =>
+        !string.IsNullOrWhiteSpace(url) && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
     public bool WasRemindLaterClicked { get; private set; }
 
@@ -119,21 +117,14 @@ public partial class UpdateDialog : Window
         if (installer == null)
         {
             var zip = _release.ZipAsset;
-            if (zip != null && !string.IsNullOrWhiteSpace(zip.BrowserDownloadUrl))
+            if (zip != null && IsHttps(zip.BrowserDownloadUrl))
             {
-                try
-                {
-                    Process.Start(new ProcessStartInfo(zip.BrowserDownloadUrl) { UseShellExecute = true });
-                    Close();
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.Error("UpdateDialog", "Failed to open browser download for zip asset", ex);
-                }
+                HelpCommands.OpenUrl.Execute(zip.BrowserDownloadUrl);
             }
-
-            OnViewOnGitHubClick(sender, e);
+            else
+            {
+                OnViewOnGitHubClick(sender, e);
+            }
             Close();
             return;
         }

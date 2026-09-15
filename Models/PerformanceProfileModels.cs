@@ -12,12 +12,13 @@ public enum PerformanceProfileMode
 /// <summary>
 /// Tweaks that apply starting at the Optimized tier - and therefore also under Aggressive, since
 /// Aggressive always builds on top of Optimized rather than configuring the same tweak twice.
-/// Add a new bool here when a future tweak should apply to both tiers.
+/// Add a new bool here, with its tier default as the initializer, when a future tweak should
+/// apply to both tiers.
 /// </summary>
 public class OptimizedProfileTweakConfig
 {
-    public bool PowerPlanEnabled { get; set; }
-    public bool GpuPreferenceEnabled { get; set; }
+    public bool PowerPlanEnabled { get; set; } = true;
+    public bool GpuPreferenceEnabled { get; set; } = true;
 
     /// <summary>
     /// Defaults to false even within Optimized - forcing HDR on changes how the screen looks for
@@ -45,13 +46,14 @@ public class OptimizedProfileTweakConfig
 /// <summary>
 /// Tweaks Aggressive adds on top of whatever Optimized already applies. These are never shown or
 /// configured under Optimized - Aggressive's effective tweak set is Optimized's enabled tweaks
-/// plus these. Add a new bool here when a future tweak should be Aggressive-only.
+/// plus these. Add a new bool here, with its tier default as the initializer, when a future
+/// tweak should be Aggressive-only.
 /// </summary>
 public class AggressiveProfileTweakConfig
 {
-    public bool SystemResponsivenessEnabled { get; set; }
-    public bool MmcssGamesPriorityEnabled { get; set; }
-    public bool AboveNormalPriorityEnabled { get; set; }
+    public bool SystemResponsivenessEnabled { get; set; } = true;
+    public bool MmcssGamesPriorityEnabled { get; set; } = true;
+    public bool AboveNormalPriorityEnabled { get; set; } = true;
 
     /// <summary>
     /// Defaults to false even within Aggressive - unlike the other tweaks this narrows real-time
@@ -66,7 +68,7 @@ public class AggressiveProfileTweakConfig
     /// processes when the permanent "System Timer Resolution" tweak (GlobalTimerResolutionRequests)
     /// is on; TrayTrigger's own request is released when the last session ends.
     /// </summary>
-    public bool TimerResolutionEnabled { get; set; }
+    public bool TimerResolutionEnabled { get; set; } = true;
 }
 
 /// <summary>

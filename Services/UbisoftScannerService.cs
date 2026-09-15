@@ -65,24 +65,6 @@ public class UbisoftScannerService
         return results.OrderBy(g => g.Name).ToList();
     }
 
-    /// <summary>
-    /// Resolves the single installed Ubisoft game whose registry InstallDir contains
-    /// <paramref name="path"/>, or null. Used by <see cref="PlatformLookupService"/> so a game
-    /// dropped/browsed into the library from a Ubisoft install directory is imported with its real
-    /// game ID rather than as a Local exe. Only the matched install pays for the folder scan.
-    /// </summary>
-    public DiscoveredUbisoftGame? FindGameByPath(string path)
-    {
-        foreach (var (gameId, installDir) in GetInstallDirs())
-        {
-            if (PlatformLookupService.IsPathUnderDirectory(path, installDir))
-            {
-                return ResolveInstall(gameId, installDir);
-            }
-        }
-        return null;
-    }
-
     /// <summary>Every registered Ubisoft install's (gameId, InstallDir) from the registry alone -
     /// no folder scan. <see cref="PlatformLookupService"/> caches this once per import operation.</summary>
     public List<(string GameId, string InstallDir)> GetInstallDirs()

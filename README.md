@@ -183,6 +183,15 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 
 <!-- GIF: Assets/screenshots/tray-launch.gif (tray icon → right-click → launch) -->
 
+## Tools
+
+An optional page for the programs you run alongside your games, like DLSS Swapper, Vortex, MSI Afterburner or Discord. Off by default: turn it on under Settings > General.
+
+- **Just shortcuts**: drop a program, a script (.bat, .cmd, .ps1), a shortcut, or a Microsoft Store app dragged from Browse Apps on the Tools page. Nothing is scanned or looked up, and no game features apply (no profile, scripts or playtime).
+- **Organized like the library**: tools-only categories, favorites, A to Z / Z to A / favorites-first sorting, search, and three views (large icons, small icons, list).
+- **Launched like a game**: double-click, a global hotkey, or an optional Tools submenu in the tray menu, with the same launch popup. A tool that's already running comes to the front instead of opening twice.
+- **Run as administrator** is a checkbox. Windows shows its own permission prompt, and a shortcut's own "Run as administrator" setting comes across when you drop it.
+
 ## Hardware Monitoring
 
 Instant breakdown of CPU, GPU, VRAM, RAM, displays, motherboard, BIOS, OS version, and DirectX capability, so you can sanity-check specs before deciding which profile a game gets.
@@ -208,7 +217,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.4.3-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.4.4-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signed releases (see [Code signing](#code-signing)) also show a valid publisher in the file's Properties → Digital Signatures tab.
 

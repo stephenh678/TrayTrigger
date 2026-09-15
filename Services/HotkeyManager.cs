@@ -14,6 +14,7 @@ public partial class HotkeyManager : IDisposable
     private const int MANAGE_WINDOW_HOTKEY_ID = 1;
     private const int PROBE_HOTKEY_ID = 2;
     private const int GAME_HOTKEY_BASE_ID = 1000;
+    private const int TOOL_HOTKEY_BASE_ID = 5000;
 
     private const uint MOD_ALT = 0x0001;
     private const uint MOD_CONTROL = 0x0002;
@@ -23,7 +24,7 @@ public partial class HotkeyManager : IDisposable
 
     private const int ERROR_HOTKEY_ALREADY_REGISTERED = 1409;
 
-    /// <summary>The owner id the show/hide window hotkey is registered under; games use their <see cref="GameEntry.Id"/>.</summary>
+    /// <summary>The owner id the show/hide window hotkey is registered under; games and tools use their entry's id.</summary>
     public const string ManageOwnerId = "__manage__";
 
     [LibraryImport("user32.dll", SetLastError = true)]
@@ -35,13 +36,16 @@ public partial class HotkeyManager : IDisposable
     private static partial bool UnregisterHotKey(IntPtr hWnd, int id);
 
     private readonly HwndSource _hwndSource;
-    private readonly Dictionary<int, string> _registeredGameHotkeys = new();
+    /// <summary>Every launch hotkey currently registered, by Windows hotkey id.</summary>
+    private readonly Dictionary<int, HotkeyBinding> _registeredHotkeys = new();
     /// <summary>Every combo currently held, by (modifiers, virtual key) -> who holds it. What the recorder checks against.</summary>
     private readonly Dictionary<(uint Mod, uint Vk), (string OwnerId, string OwnerName)> _owners = new();
     private bool _isManageHotkeyRegistered;
 
     public event Action? ManageHotkeyTriggered;
     public event Action<string>? GameHotkeyTriggered;
+    /// <summary>A tool's hotkey was pressed; carries the tool's id.</summary>
+    public event Action<string>? ToolHotkeyTriggered;
 
     /// <summary>
     /// The app's one manager, for the hotkey recorder control: it validates a combo against what is
@@ -72,17 +76,55 @@ public partial class HotkeyManager : IDisposable
                 ManageHotkeyTriggered?.Invoke();
                 handled = true;
             }
-            else if (_registeredGameHotkeys.TryGetValue(id, out string? gameId))
+            else if (_registeredHotkeys.TryGetValue(id, out HotkeyBinding? binding))
             {
-                LoggingService.Info("HotkeyManager", $"Hotkey triggered for game id '{gameId}'.");
-                GameHotkeyTriggered?.Invoke(gameId);
+                LoggingService.Info("HotkeyManager", $"Hotkey triggered for {KindLabel(binding.Kind)} id '{binding.OwnerId}'.");
+                if (binding.Kind == HotkeyOwnerKind.Tool)
+                {
+                    ToolHotkeyTriggered?.Invoke(binding.OwnerId);
+                }
+                else
+                {
+                    GameHotkeyTriggered?.Invoke(binding.OwnerId);
+                }
                 handled = true;
             }
         }
         return IntPtr.Zero;
     }
 
-    public void RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<GameEntry> games)
+    /// <summary>
+    /// Replaces every registration with the window hotkey plus <paramref name="bindings"/>. Games are
+    /// registered before tools (see <see cref="HotkeyBinding.InRegistrationOrder"/>), so when a game
+    /// and a tool share a combo the game keeps it and the tool's is logged as not registered.
+    /// <paramref name="reserved"/> (tool hotkeys while Tools is off) are not registered with Windows,
+    /// but count as taken for <see cref="CheckAvailability"/>, so a game can't claim one meanwhile.
+    /// Returns the launch bindings that could not be registered.
+    /// </summary>
+    public IReadOnlyList<HotkeyBinding> RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, IEnumerable<HotkeyBinding>? reserved = null)
+    {
+        var failed = new List<HotkeyBinding>();
+        try
+        {
+            RegisterCore(globalManageHotkeyStr, bindings, failed);
+        }
+        finally
+        {
+            if (reserved != null)
+            {
+                foreach (var binding in HotkeyBinding.InRegistrationOrder(reserved))
+                {
+                    if (ParseHotkey(binding.Hotkey, out uint rMod, out uint rVk))
+                    {
+                        _owners.TryAdd((rMod, rVk), (binding.OwnerId, binding.OwnerName));
+                    }
+                }
+            }
+        }
+        return failed;
+    }
+
+    private void RegisterCore(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, List<HotkeyBinding> failed)
     {
         UnregisterAll();
 
@@ -105,37 +147,45 @@ public partial class HotkeyManager : IDisposable
             LoggingService.Warn("HotkeyManager", $"Global hotkey '{globalManageHotkeyStr}' failed to parse - not registered.");
         }
 
-        // Register Per-Game Hotkeys
-        int currentId = GAME_HOTKEY_BASE_ID;
-        foreach (var game in games)
+        // Register per-game, then per-tool, launch hotkeys
+        int nextGameId = GAME_HOTKEY_BASE_ID;
+        int nextToolId = TOOL_HOTKEY_BASE_ID;
+        int gameCount = 0;
+        int toolCount = 0;
+        foreach (var binding in HotkeyBinding.InRegistrationOrder(bindings))
         {
-            if (!string.IsNullOrWhiteSpace(game.Hotkey))
+            string kind = KindLabel(binding.Kind);
+            if (!ParseHotkey(binding.Hotkey, out uint bMod, out uint bVk))
             {
-                if (ParseHotkey(game.Hotkey, out uint gMod, out uint gVk))
-                {
-                    if (RegisterHotKey(_hwndSource.Handle, currentId, gMod | MOD_NOREPEAT, gVk))
-                    {
-                        _registeredGameHotkeys[currentId] = game.Id;
-                        _owners[(gMod, gVk)] = (game.Id, game.Name);
-                        LoggingService.Verbose("HotkeyManager", $"Registered hotkey '{game.Hotkey}' for game '{game.Name}'.");
-                        currentId++;
-                    }
-                    else
-                    {
-                        // 1409 here is usually our own earlier registration: two games with the
-                        // same combo, or one matching the window hotkey. The first one wins.
-                        LoggingService.Warn("HotkeyManager", $"Failed to register hotkey '{game.Hotkey}' for game '{game.Name}': {DescribeLastError(gMod, gVk)}");
-                    }
-                }
-                else
-                {
-                    LoggingService.Warn("HotkeyManager", $"Hotkey '{game.Hotkey}' for game '{game.Name}' failed to parse - not registered.");
-                }
+                LoggingService.Warn("HotkeyManager", $"Hotkey '{binding.Hotkey}' for {kind} '{binding.OwnerName}' failed to parse - not registered.");
+                failed.Add(binding);
+                continue;
+            }
+
+            bool isTool = binding.Kind == HotkeyOwnerKind.Tool;
+            int id = isTool ? nextToolId : nextGameId;
+            if (RegisterHotKey(_hwndSource.Handle, id, bMod | MOD_NOREPEAT, bVk))
+            {
+                _registeredHotkeys[id] = binding;
+                _owners[(bMod, bVk)] = (binding.OwnerId, binding.OwnerName);
+                LoggingService.Verbose("HotkeyManager", $"Registered hotkey '{binding.Hotkey}' for {kind} '{binding.OwnerName}'.");
+                if (isTool) { nextToolId++; toolCount++; }
+                else { nextGameId++; gameCount++; }
+            }
+            else
+            {
+                // 1409 here is usually our own earlier registration: two entries with the same
+                // combo, or one matching the window hotkey. The first one wins.
+                LoggingService.Warn("HotkeyManager", $"Failed to register hotkey '{binding.Hotkey}' for {kind} '{binding.OwnerName}': {DescribeLastError(bMod, bVk)}");
+                failed.Add(binding);
             }
         }
 
-        LoggingService.Info("HotkeyManager", $"Hotkey registration complete: global={(_isManageHotkeyRegistered ? "on" : "off")}, {_registeredGameHotkeys.Count} game hotkey(s) active.");
+        string tools = toolCount > 0 ? $", {toolCount} tool hotkey(s)" : string.Empty;
+        LoggingService.Info("HotkeyManager", $"Hotkey registration complete: global={(_isManageHotkeyRegistered ? "on" : "off")}, {gameCount} game hotkey(s){tools} active.");
     }
+
+    private static string KindLabel(HotkeyOwnerKind kind) => kind == HotkeyOwnerKind.Tool ? "tool" : "game";
 
     /// <summary>
     /// Why the last RegisterHotKey call failed, in words. When the combo is one this manager
@@ -164,17 +214,17 @@ public partial class HotkeyManager : IDisposable
             _isManageHotkeyRegistered = false;
         }
 
-        int unregisteredCount = _registeredGameHotkeys.Count;
-        foreach (var id in _registeredGameHotkeys.Keys)
+        int unregisteredCount = _registeredHotkeys.Count;
+        foreach (var id in _registeredHotkeys.Keys)
         {
             UnregisterHotKey(_hwndSource.Handle, id);
         }
-        _registeredGameHotkeys.Clear();
+        _registeredHotkeys.Clear();
         _owners.Clear();
 
         if (unregisteredCount > 0)
         {
-            LoggingService.Verbose("HotkeyManager", $"Unregistered {unregisteredCount} game hotkey(s).");
+            LoggingService.Verbose("HotkeyManager", $"Unregistered {unregisteredCount} launch hotkey(s).");
         }
     }
 

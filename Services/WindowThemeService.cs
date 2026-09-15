@@ -235,8 +235,10 @@ public static partial class WindowThemeService
         if (window.Owner == null)
         {
             // No owner to center over - fall back to centering on the work area.
-            window.Left = (SystemParameters.WorkArea.Width - window.ActualWidth) / 2;
-            window.Top = (SystemParameters.WorkArea.Height - window.ActualHeight) / 2;
+            // WorkArea's origin moves off (0,0) when the taskbar is docked top or left.
+            var workArea = SystemParameters.WorkArea;
+            window.Left = workArea.Left + (workArea.Width - window.ActualWidth) / 2;
+            window.Top = workArea.Top + (workArea.Height - window.ActualHeight) / 2;
             return;
         }
 

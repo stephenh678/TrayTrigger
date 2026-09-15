@@ -56,11 +56,10 @@ public class DisplayHardwareInfo
     public int Height { get; set; }
     public int RefreshRateHz { get; set; }
     public bool IsPrimary { get; set; } = true;
-    public string ResolutionDisplay
-    {
-        get => $"{Width} × {Height} @ {RefreshRateHz}Hz";
-        set { }
-    }
+    /// <summary>"1920 × 1080 @ 144Hz". EnumDisplaySettings reports 0 or 1 for "the default refresh
+    /// rate" (remote-desktop and virtual displays), and then the rate is left off.</summary>
+    public string ResolutionDisplay =>
+        RefreshRateHz > 1 ? $"{Width} × {Height} @ {RefreshRateHz}Hz" : $"{Width} × {Height}";
 }
 
 public class DriveStorageInfo
@@ -70,23 +69,11 @@ public class DriveStorageInfo
     public string MediaTypeDisplay { get; set; } = "";
     public double TotalGigabytes { get; set; }
     public double FreeGigabytes { get; set; }
-    public double UsedGigabytes
-    {
-        get => Math.Max(0, TotalGigabytes - FreeGigabytes);
-        set { }
-    }
-    public int UsagePercent
-    {
-        get => TotalGigabytes > 0 ? (int)Math.Round((UsedGigabytes / TotalGigabytes) * 100) : 0;
-        set { }
-    }
-    public string DisplayName
-    {
-        get => string.IsNullOrWhiteSpace(VolumeLabel)
-            ? $"Local Disk ({DriveLetter})"
-            : $"{VolumeLabel} ({DriveLetter})";
-        set { }
-    }
+    public double UsedGigabytes => Math.Max(0, TotalGigabytes - FreeGigabytes);
+    public int UsagePercent => TotalGigabytes > 0 ? (int)Math.Round((UsedGigabytes / TotalGigabytes) * 100) : 0;
+    public string DisplayName => string.IsNullOrWhiteSpace(VolumeLabel)
+        ? $"Local Disk ({DriveLetter})"
+        : $"{VolumeLabel} ({DriveLetter})";
     public bool HasMediaTypeInfo => !string.IsNullOrWhiteSpace(MediaTypeDisplay);
 }
 
@@ -101,10 +88,18 @@ public class OsEnvironmentInfo
     public string MotherboardModel { get; set; } = "";
     public string BiosVersion { get; set; } = "";
     public DateTime? LastBootTime { get; set; }
+    /// <summary>"Windows 11 Pro 24H2 (Build 26100)". DisplayVersion doesn't exist before Windows 10
+    /// 20H2 and both values are empty when the CurrentVersion key can't be read, so each part is
+    /// only included when it has a value.</summary>
     public string FullOsTitle
     {
-        get => $"{WindowsEdition} {DisplayVersion} (Build {BuildNumber})".Trim();
-        set { }
+        get
+        {
+            string title = WindowsEdition.Trim();
+            if (!string.IsNullOrWhiteSpace(DisplayVersion)) title += $" {DisplayVersion.Trim()}";
+            if (!string.IsNullOrWhiteSpace(BuildNumber)) title += $" (Build {BuildNumber.Trim()})";
+            return title;
+        }
     }
     public string MotherboardDisplay
     {
@@ -114,7 +109,6 @@ public class OsEnvironmentInfo
             if (string.IsNullOrWhiteSpace(board)) return "";
             return string.IsNullOrWhiteSpace(BiosVersion) ? board : $"{board} (BIOS {BiosVersion})";
         }
-        set { }
     }
     public string UptimeDisplay
     {
@@ -128,7 +122,6 @@ public class OsEnvironmentInfo
                 return $"Up {(int)uptime.TotalHours}h {uptime.Minutes}m (since {LastBootTime.Value:h:mm tt})";
             return $"Up {uptime.Minutes}m (since {LastBootTime.Value:h:mm tt})";
         }
-        set { }
     }
     public bool HasMotherboardInfo => !string.IsNullOrWhiteSpace(MotherboardDisplay);
     public bool HasUptimeInfo => LastBootTime != null;
@@ -139,25 +132,19 @@ public class PowerBatteryInfo
     public bool HasBattery { get; set; }
     public bool IsPluggedIn { get; set; } = true;
     public int BatteryPercent { get; set; } = 100;
-    public string StatusText
-    {
-        get => !HasBattery 
-            ? "Desktop PC (AC Power)" 
-            : (IsPluggedIn ? $"Plugged In ({BatteryPercent}%)" : $"On Battery ({BatteryPercent}%)");
-        set { }
-    }
+    public string StatusText => !HasBattery
+        ? "Desktop PC (AC Power)"
+        : (IsPluggedIn ? $"Plugged In ({BatteryPercent}%)" : $"On Battery ({BatteryPercent}%)");
 }
 
 public class NetworkTelemetryInfo
 {
     public string AdapterName { get; set; } = "Ethernet";
     public string ConnectionType { get; set; } = "Wired";
+    /// <summary>Round trip to 8.8.8.8 in milliseconds, or -1 when the ping failed or timed out.
+    /// The report is measured before it reaches the view, so there is no "not yet measured" state.</summary>
     public int PingMs { get; set; } = -1;
-    public string PingDisplay
-    {
-        get => PingMs >= 0 ? $"{PingMs} ms" : "Measuring...";
-        set { }
-    }
+    public string PingDisplay => PingMs >= 0 ? $"{PingMs} ms" : "Unavailable";
 }
 
 public class SystemHardwareReport

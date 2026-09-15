@@ -42,6 +42,24 @@ public static class LibraryConstants
            || string.Equals(category, Uncategorized, StringComparison.OrdinalIgnoreCase)
            || PlatformCategories.Contains(category);
 
+    /// <summary>
+    /// The category to store for what a user typed or picked: trimmed, and <see cref="Uncategorized"/>
+    /// when it is blank or one of the library views (All, Favorites, Hidden) - those are tabs, not
+    /// categories, and a game filed under one of them had no tab of its own to appear in.
+    /// </summary>
+    public static string NormalizeCategory(string? category)
+    {
+        string trimmed = category?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0
+            || string.Equals(trimmed, AllCategory, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, FavoritesCategory, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, HiddenCategory, StringComparison.OrdinalIgnoreCase))
+        {
+            return Uncategorized;
+        }
+        return trimmed;
+    }
+
     /// <summary>The placeholder category an entry gets from its platform tag, or null for a Local game.</summary>
     public static string? PlatformCategoryFor(GameEntry game)
         => game.IsGogGame ? GogCategory

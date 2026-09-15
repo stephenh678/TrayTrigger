@@ -31,10 +31,11 @@ public class SteamAppDetails
     public int? ReviewScorePercent { get; set; }
 
     public List<string> Genres { get; set; } = new();
-    /// <summary>The genre used for auto-categorisation. Empty when Steam lists none - nothing is
-    /// invented, so RAWG's genre can fill the category instead (every caller guards on empty).</summary>
+    /// <summary>The genre used for auto-categorisation - <see cref="GenreRules.PrimaryOf"/>, the same
+    /// rule RAWG uses (skips "Indie"). Empty when Steam lists none - nothing is invented, so RAWG's
+    /// genre can fill the category instead (every caller guards on empty).</summary>
     [JsonIgnore]
-    public string PrimaryGenre => Genres.Count > 0 ? Genres[0] : string.Empty;
+    public string PrimaryGenre => GenreRules.PrimaryOf(Genres);
 
     public List<string> PlayModes { get; set; } = new();
     public string? PcRequirementsMin { get; set; }

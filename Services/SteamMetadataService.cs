@@ -703,26 +703,37 @@ public partial class SteamMetadataService
             Directory.CreateDirectory(dir);
         }
 
-        for (int i = 0; i < 5; i++)
+        // Written beside the target and moved into place, so an interrupted write (app closed,
+        // lookup cancelled) never leaves a truncated poster that the "file exists and is over
+        // 1000 bytes" cache check would then keep serving.
+        string tempPath = Path.Combine(dir, $"{Path.GetFileName(localPath)}.{Guid.NewGuid():N}.tmp");
+        try
         {
-            try
+            await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
+
+            for (int attempt = 1; ; attempt++)
             {
-                using var fs = new FileStream(localPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
-                await fs.WriteAsync(bytes, ct).ConfigureAwait(false);
-                return localPath;
-            }
-            catch (IOException) when (i < 4)
-            {
+                try
+                {
+                    File.Move(tempPath, localPath, overwrite: true);
+                    return localPath;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    if (attempt == 5) break;
+                }
                 await Task.Delay(100, ct).ConfigureAwait(false);
             }
-        }
 
-        string altPath = Path.Combine(dir, $"{Path.GetFileNameWithoutExtension(localPath)}_{DateTime.UtcNow.Ticks}.jpg");
-        using (var fs = new FileStream(altPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
-        {
-            await fs.WriteAsync(bytes, ct).ConfigureAwait(false);
+            // Target still locked by another process: keep the new art under a unique name.
+            string altPath = Path.Combine(dir, $"{Path.GetFileNameWithoutExtension(localPath)}_{DateTime.UtcNow.Ticks}.jpg");
+            File.Move(tempPath, altPath, overwrite: true);
+            return altPath;
         }
-        return altPath;
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+        }
     }
 
     private const int PosterWidth = 600;

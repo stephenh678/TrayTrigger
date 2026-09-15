@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using TrayTrigger.Services;
 
 namespace TrayTrigger.Models;
 
@@ -47,7 +48,7 @@ public class AppSettings
     public double? MainWindowHeight { get; set; }
     public bool MainWindowMaximized { get; set; } = false;
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
-    public string LastCategoryFilter { get; set; } = "All";
+    public string LastCategoryFilter { get; set; } = LibraryConstants.AllCategory;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
 
     /// <summary>
@@ -94,7 +95,7 @@ public class AppSettings
     public bool UseRawgMetadata { get; set; } = false;
     /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
     /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<MetadataRefreshInterval>))]
+    [JsonConverter(typeof(MetadataRefreshIntervalJsonConverter))]
     public MetadataRefreshInterval MetadataRefreshInterval { get; set; } = MetadataRefreshInterval.Every3Days;
     public string LibraryViewMode { get; set; } = "Poster Grid";
     public bool MinimizeOnGameLaunch { get; set; } = true;
@@ -108,6 +109,22 @@ public class AppSettings
     public bool EnableGameScripts { get; set; } = false;
     /// <summary>Scripts that run for every game without one of its own. See <see cref="Models.ScriptDefaults"/>.</summary>
     public ScriptDefaults ScriptDefaults { get; set; } = new();
+    /// <summary>
+    /// The Tools feature switch: a sidebar page of saved program shortcuts (DLSS Swapper, Vortex,
+    /// Afterburner). Off by default. While off, the page, the tray submenu and tool hotkeys are gone,
+    /// but tools.json is kept, so turning it back on restores every tool.
+    /// </summary>
+    public bool EnableTools { get; set; } = false;
+    /// <summary>A "Tools" submenu in the tray menu, after the games. Off by default; only applies while <see cref="EnableTools"/> is on.</summary>
+    public bool ShowToolsInTray { get; set; } = false;
+    /// <summary>Order of the tray's Tools submenu. One of <see cref="Services.ToolCatalog.SortOptions"/>.</summary>
+    public string ToolsTraySortOption { get; set; } = ToolCatalog.SortAlphabetical;
+    /// <summary>Order of the Tools page, separate from the tray's. View state, like <see cref="LastSortOption"/>.</summary>
+    public string ToolsSortOption { get; set; } = ToolCatalog.SortAlphabetical;
+    /// <summary>Tools page layout. One of <see cref="Services.ToolCatalog.ViewModes"/>.</summary>
+    public string ToolsViewMode { get; set; } = ToolCatalog.ViewLargeIcons;
+    /// <summary>The Tools page's selected category tab, kept across restarts like <see cref="LastCategoryFilter"/>.</summary>
+    public string LastToolsCategoryTab { get; set; } = LibraryConstants.AllCategory;
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
     public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
@@ -131,8 +148,8 @@ public class AppSettings
     public string? SkippedUpdateVersion { get; set; }
     public System.DateTime? RemindAfterUtc { get; set; }
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
-    public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new() { PowerPlanEnabled = true, GpuPreferenceEnabled = true };
-    public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new() { SystemResponsivenessEnabled = true, MmcssGamesPriorityEnabled = true, AboveNormalPriorityEnabled = true, DefenderExclusionEnabled = false, TimerResolutionEnabled = true };
+    public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new();
+    public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new();
 
     /// <summary>
     /// What a permanent System &amp; Performance tweak found on the machine before it was applied,

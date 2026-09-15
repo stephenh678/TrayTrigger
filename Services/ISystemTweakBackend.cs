@@ -38,7 +38,7 @@ public interface ISystemTweakBackend
     void SetGpuPreference(string exePath, string value);
     void DeleteGpuPreference(string exePath);
 
-    HashSet<string> GetDefenderExclusionPaths();
+    /// <summary>Adds the exclusion unless it already exists. True only when this call added it.</summary>
     bool AddDefenderExclusion(string exePath);
     bool RemoveDefenderExclusion(string exePath);
 
@@ -128,47 +128,17 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
         key?.DeleteValue(exePath, throwOnMissingValue: false);
     }
 
-    public HashSet<string> GetDefenderExclusionPaths()
+    /// <summary>
+    /// Returns true only when this call added the exclusion. The presence check runs inside the
+    /// elevated command because an unelevated process cannot read Defender's exclusion list (it
+    /// answers "N/A: Must be an administrator to view exclusions"), so an exclusion the user
+    /// already had would otherwise look new and be removed on restore.
+    /// </summary>
+    public bool AddDefenderExclusion(string exePath)
     {
-        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true
-            };
-            psi.ArgumentList.Add("-NoProfile");
-            psi.ArgumentList.Add("-NonInteractive");
-            psi.ArgumentList.Add("-Command");
-            psi.ArgumentList.Add("(Get-MpPreference).ExclusionPath");
-
-            using var proc = Process.Start(psi);
-            if (proc == null) return result;
-
-            string output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(15000);
-
-            foreach (var line in output.Split('\n'))
-            {
-                string trimmed = line.Trim();
-                if (!string.IsNullOrEmpty(trimmed))
-                {
-                    result.Add(trimmed);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("PerformanceProfile", $"Failed to read Defender exclusions: {ex.Message}");
-        }
-        return result;
+        string path = EscapeForPowerShellSingleQuoted(exePath);
+        return RunElevatedPowerShell($"if (@((Get-MpPreference).ExclusionPath) -contains '{path}') {{ exit 3 }}; Add-MpPreference -ExclusionPath '{path}'");
     }
-
-    public bool AddDefenderExclusion(string exePath) =>
-        RunElevatedPowerShell($"Add-MpPreference -ExclusionPath '{EscapeForPowerShellSingleQuoted(exePath)}'");
 
     public bool RemoveDefenderExclusion(string exePath) =>
         RunElevatedPowerShell($"Remove-MpPreference -ExclusionPath '{EscapeForPowerShellSingleQuoted(exePath)}'");

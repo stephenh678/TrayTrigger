@@ -5,6 +5,7 @@ using System.Text;
 
 namespace TrayTrigger.Services;
 
+/// <param name="RunAsAdmin">The .lnk has "Run as administrator" ticked in its advanced properties. Always false for .url and .exe.</param>
 public record ShortcutResolution(
     string Name,
     string TargetPath,
@@ -13,7 +14,8 @@ public record ShortcutResolution(
     string IconLocation,
     int IconIndex,
     bool IsSteamUrl,
-    string? SteamAppId
+    string? SteamAppId,
+    bool RunAsAdmin = false
 );
 
 public class ShortcutService
@@ -59,6 +61,22 @@ public class ShortcutService
         void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string pszFileName);
         void GetCurFile([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder ppszFileName);
     }
+
+    /// <summary>The shell link's extra data and flags - where "Run as administrator" is kept.</summary>
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("45E2B4AE-B1C3-11D0-B92F-00A0C90312E1")]
+    private interface IShellLinkDataList
+    {
+        void AddDataBlock(IntPtr pDataBlock);
+        void CopyDataBlock(uint dwSig, out IntPtr ppDataBlock);
+        void RemoveDataBlock(uint dwSig);
+        void GetFlags(out uint pdwFlags);
+        void SetFlags(uint dwFlags);
+    }
+
+    /// <summary>SHELL_LINK_DATA_FLAGS.SLDF_RUNAS_USER: the shortcut's "Run as administrator" box.</summary>
+    private const uint SLDF_RUNAS_USER = 0x00002000;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct WIN32_FIND_DATAW
@@ -111,7 +129,7 @@ public class ShortcutService
             );
         }
 
-        LoggingService.Verbose("ShortcutService", $"Resolved '{filePath}' -> Name='{resolution.Name}', Target='{resolution.TargetPath}', IsSteamUrl={resolution.IsSteamUrl}.");
+        LoggingService.Verbose("ShortcutService", $"Resolved '{filePath}' -> Name='{resolution.Name}', Target='{resolution.TargetPath}', IsSteamUrl={resolution.IsSteamUrl}, RunAsAdmin={resolution.RunAsAdmin}.");
         return resolution;
     }
 
@@ -201,6 +219,8 @@ public class ShortcutService
             link.GetIconLocation(iconSb, iconSb.Capacity, out int iconIndex);
             string iconLocation = iconSb.ToString();
 
+            bool runAsAdmin = ReadRunAsAdminFlag(link, lnkPath);
+
             if (string.IsNullOrEmpty(workDir) && !string.IsNullOrEmpty(targetPath) && File.Exists(targetPath))
             {
                 workDir = Path.GetDirectoryName(targetPath) ?? string.Empty;
@@ -239,7 +259,8 @@ public class ShortcutService
                 IconLocation: finalIcon,
                 IconIndex: iconIndex,
                 IsSteamUrl: isSteam,
-                SteamAppId: steamAppId
+                SteamAppId: steamAppId,
+                RunAsAdmin: runAsAdmin
             );
         }
         catch (Exception ex)
@@ -269,6 +290,59 @@ public class ShortcutService
                     LoggingService.Verbose("ShortcutService", $"FinalReleaseComObject failed while resolving '{lnkPath}': {ex.Message}");
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// What a shortcut with no file target starts, read from the shell item it points at: a Store app
+    /// (a shell:AppsFolder entry dragged to the desktop) or a desktop app's Start menu entry. Null when
+    /// the shortcut or its item can't be read.
+    /// </summary>
+    public ShellApp? ResolveShellItemTarget(string lnkPath)
+    {
+        IShellLinkW? link = null;
+        IntPtr pidl = IntPtr.Zero;
+        try
+        {
+            link = (IShellLinkW)new ShellLink();
+            ((IPersistFile)link).Load(lnkPath, 0);
+            link.GetIDList(out pidl);
+            return ShellAppResolver.FromIdList(pidl);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("ShortcutService", $"Could not read the shell item behind '{lnkPath}': {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
+            if (link != null)
+            {
+                try
+                {
+                    Marshal.FinalReleaseComObject(link);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Verbose("ShortcutService", $"FinalReleaseComObject failed after reading '{lnkPath}': {ex.Message}");
+                }
+            }
+        }
+    }
+
+    /// <summary>Whether the shortcut's "Run as administrator" box is ticked. False when it can't be read.</summary>
+    private static bool ReadRunAsAdminFlag(IShellLinkW link, string lnkPath)
+    {
+        try
+        {
+            ((IShellLinkDataList)link).GetFlags(out uint flags);
+            return (flags & SLDF_RUNAS_USER) != 0;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("ShortcutService", $"Could not read the run-as-administrator flag of '{lnkPath}': {ex.Message}");
+            return false;
         }
     }
 

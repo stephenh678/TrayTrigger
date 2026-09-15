@@ -47,10 +47,20 @@ public partial class App
                 continue;
 
             string targetPng = args[i + 1];
+            // Before the window shows: the capture resizes it, and saving would make that the
+            // user's window placement (and could overwrite a running instance's settings).
+            _skipSettingsSaveOnExit = true;
             _mainViewModel.CurrentSection = NavSection.Library;
             _mainWindow.Show();
+            // Icons and covers are decoded off the UI thread after the library loads; a capture
+            // taken before they land shows the fallback glyph on every card.
+            var heavyState = _mainViewModel.Library.HeavyStateLoad;
+            PumpDispatcher(TimeSpan.FromSeconds(10), () => heavyState.IsCompleted);
             _mainWindow.UpdateLayout();
-            CaptureVisual(_mainWindow, ScreenshotWidth, ScreenshotHeight, targetPng);
+            if (!CaptureVisual(_mainWindow, ScreenshotWidth, ScreenshotHeight, targetPng))
+            {
+                _exitCode = 1;
+            }
             ExitApplication();
             return true;
         }
@@ -87,7 +97,8 @@ public partial class App
         public int Y;
     }
 
-    private void CaptureVisual(Window window, int width, int height, string targetPng)
+    /// <summary>Writes the window to <paramref name="targetPng"/>; false when it could not be.</summary>
+    private bool CaptureVisual(Window window, int width, int height, string targetPng)
     {
         try
         {
@@ -112,11 +123,38 @@ public partial class App
 
             bmp.Save(targetPng, System.Drawing.Imaging.ImageFormat.Png);
             _logger($"[CaptureVisual] Success: {targetPng}");
+            return true;
         }
         catch (Exception ex)
         {
             _logger($"[CaptureVisual] Error: {ex}");
+            return false;
         }
+    }
+
+    /// <summary>
+    /// Runs the dispatcher for up to <paramref name="timeout"/>, or until <paramref name="until"/>
+    /// holds, so queued work (the first frame, DWM painting the title bar, a background load's
+    /// dispatch back to the UI thread) lands before the capture that follows.
+    /// </summary>
+    private static void PumpDispatcher(TimeSpan timeout, Func<bool>? until = null)
+    {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var deadline = DateTime.UtcNow + timeout;
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = until == null ? timeout : TimeSpan.FromMilliseconds(50)
+        };
+        timer.Tick += (s, args) =>
+        {
+            if (until == null || until() || DateTime.UtcNow >= deadline)
+            {
+                timer.Stop();
+                frame.Continue = false;
+            }
+        };
+        timer.Start();
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
     }
 
     /// <summary>
@@ -126,6 +164,9 @@ public partial class App
     /// </summary>
     private System.Drawing.Bitmap CaptureVisualBitmap(Window window, int width, int height)
     {
+        // A placement restored as Maximized ignores Width/Height and would be captured at the
+        // monitor's size.
+        window.WindowState = WindowState.Normal;
         window.Width = width;
         window.Height = height;
         window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -135,18 +176,7 @@ public partial class App
         window.UpdateLayout();
 
         // Pump dispatcher events to allow DWM to paint titlebar
-        var frame = new System.Windows.Threading.DispatcherFrame();
-        var timer = new System.Windows.Threading.DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(400)
-        };
-        timer.Tick += (s, args) =>
-        {
-            timer.Stop();
-            frame.Continue = false;
-        };
-        timer.Start();
-        System.Windows.Threading.Dispatcher.PushFrame(frame);
+        PumpDispatcher(TimeSpan.FromMilliseconds(400));
 
         IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
         int clientW = width;

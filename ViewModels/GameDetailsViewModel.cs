@@ -413,10 +413,24 @@ public class GameDetailsViewModel : ViewModelBase
         get
         {
             if (IsRawgActive && !string.IsNullOrWhiteSpace(_rawgDetails?.BackgroundImageUrl))
-                return LoadRemoteImage(_rawgDetails!.BackgroundImageUrl) ?? DisplayCoverImage;
+            {
+                // Kept per URL: this is re-read on every source toggle and refresh notification,
+                // and each LoadRemoteImage is a new BitmapImage that rebinds the backdrop and can
+                // start another download of the same screenshot.
+                string url = _rawgDetails!.BackgroundImageUrl!;
+                if (!string.Equals(_ambientImageUrl, url, StringComparison.Ordinal))
+                {
+                    _ambientImageUrl = url;
+                    _ambientImage = LoadRemoteImage(url);
+                }
+                return _ambientImage ?? DisplayCoverImage;
+            }
             return DisplayCoverImage;
         }
     }
+
+    private string? _ambientImageUrl;
+    private ImageSource? _ambientImage;
 
     private static ImageSource? LoadRemoteImage(string url)
     {
@@ -770,6 +784,10 @@ public class GameDetailsViewModel : ViewModelBase
     /// keeping whatever the wrong match downloaded.</summary>
     private bool _replaceCoverOnNextLoad;
 
+    /// <summary>Bumped by every <see cref="LoadDetailsAsync"/>, so a load that a newer one (a
+    /// rematch, Refresh) overtook while it waited on Steam can tell, and discard its answer.</summary>
+    private int _steamLoadVersion;
+
     /// <summary>
     /// Loads RAWG metadata for this game once (by remembered id, else by name with the same
     /// similarity guard the Steam title match uses). A no-op without a key. The resolved RAWG id
@@ -927,6 +945,7 @@ public class GameDetailsViewModel : ViewModelBase
 
     public async Task LoadDetailsAsync()
     {
+        int loadVersion = ++_steamLoadVersion;
         if (_details == null)
         {
             IsLoading = true;
@@ -941,6 +960,8 @@ public class GameDetailsViewModel : ViewModelBase
             if (string.IsNullOrWhiteSpace(targetAppId))
             {
                 var match = await _steamSearchService.FindBestMatchAsync(Game.Name, _minConfidence);
+                if (loadVersion != _steamLoadVersion)
+                    return;
                 if (match != null && !string.IsNullOrWhiteSpace(match.AppId))
                 {
                     targetAppId = match.AppId;
@@ -1006,15 +1027,23 @@ public class GameDetailsViewModel : ViewModelBase
                 if (revalidating)
                     EndRefreshing();
             }
+            // A rematch or Refresh started a newer load while this one waited on Steam: that App
+            // ID is the game's now, so this older answer must not replace it or use its flags.
+            if (loadVersion != _steamLoadVersion)
+                return;
             if (loaded != null)
             {
                 Details = loaded;
+
+                // A below-threshold name match is shown this once without being linked (see
+                // above), so its poster and genre must not be written onto the game either.
+                bool linked = string.Equals(Game.SteamAppId, targetAppId, StringComparison.OrdinalIgnoreCase);
 
                 // Sync cover image back to game if missing or updated - or unconditionally after
                 // a manual Steam rematch, where the old poster belongs to the wrong game.
                 bool replaceCover = _replaceCoverOnNextLoad;
                 _replaceCoverOnNextLoad = false;
-                if (!string.IsNullOrWhiteSpace(loaded.CoverImagePath) &&
+                if (linked && !string.IsNullOrWhiteSpace(loaded.CoverImagePath) &&
                     (replaceCover || string.IsNullOrWhiteSpace(Game.CoverImagePath) || !File.Exists(Game.CoverImagePath)))
                 {
                     Game.CoverImagePath = loaded.CoverImagePath;
@@ -1022,8 +1051,8 @@ public class GameDetailsViewModel : ViewModelBase
                     OnPropertyChanged(nameof(DisplayCoverImage));
                 }
 
-                // Auto-categorize if game is still uncategorized
-                if ((string.IsNullOrWhiteSpace(Game.Category) || Game.Category.Equals("Uncategorized", StringComparison.OrdinalIgnoreCase)) &&
+                // Auto-categorize under the same setting and rule as the library's enrichment pass.
+                if (linked && _autoCategorize && LibraryConstants.IsEnrichableCategory(Game.Category) &&
                     !string.IsNullOrWhiteSpace(loaded.PrimaryGenre))
                 {
                     Game.Category = loaded.PrimaryGenre;
@@ -1060,14 +1089,16 @@ public class GameDetailsViewModel : ViewModelBase
         catch (Exception ex)
         {
             LoggingService.Warn("GameDetailsViewModel", $"Error loading Steam details for '{Game.Name}': {ex.Message}");
-            if (_details == null && _activeSource == MetadataSource.Steam)
+            if (loadVersion == _steamLoadVersion && _details == null && _activeSource == MetadataSource.Steam)
             {
                 ErrorMessage = $"Error loading Steam information: {ex.Message}";
             }
         }
         finally
         {
-            IsLoading = false;
+            // A superseded load leaves the spinner to the newer one still running.
+            if (loadVersion == _steamLoadVersion)
+                IsLoading = false;
         }
     }
 

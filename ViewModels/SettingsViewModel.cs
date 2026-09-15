@@ -298,8 +298,8 @@ public class SettingsViewModel : ViewModelBase
         OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
         SetViewModeCommand = new RelayCommand(mode => LibraryViewMode = mode?.ToString() ?? ViewModePosterGrid);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
-        OpenSteamGridDbSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://www.steamgriddb.com/profile/preferences") { UseShellExecute = true }));
-        OpenRawgSiteCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://rawg.io/apidocs") { UseShellExecute = true }));
+        OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://www.steamgriddb.com/profile/preferences"));
+        OpenRawgSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://rawg.io/apidocs"));
         ClearMetadataCacheCommand = new RelayCommand(() =>
         {
             SteamMetadataService.ClearCache();
@@ -1310,6 +1310,68 @@ public class SettingsViewModel : ViewModelBase
 
     // --- Global Manage Hotkey ---
 
+    // --- Tools ---
+
+    /// <summary>Settings > General "Enable Tools". The tray options are hidden while it is off.</summary>
+    public bool EnableTools
+    {
+        get => _settings.EnableTools;
+        set
+        {
+            if (_settings.EnableTools != value)
+            {
+                _settings.EnableTools = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(LaunchPopupDescription));
+                OnPropertyChanged(nameof(LaunchPopupEveryLaunchLabel));
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    /// <summary>Settings > Tray Menu "Show Tools in tray menu". Off by default.</summary>
+    public bool ShowToolsInTray
+    {
+        get => _settings.ShowToolsInTray;
+        set
+        {
+            if (_settings.ShowToolsInTray != value)
+            {
+                _settings.ShowToolsInTray = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+
+    public IReadOnlyList<string> ToolsSortOptions => ToolCatalog.SortOptions;
+
+    public string ToolsTraySortOption
+    {
+        get => ToolCatalog.NormalizeSortOption(_settings.ToolsTraySortOption);
+        set
+        {
+            string next = ToolCatalog.NormalizeSortOption(value);
+            if (_settings.ToolsTraySortOption != next)
+            {
+                _settings.ToolsTraySortOption = next;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
+    /// <summary>The launch popup's description names tools once Tools is on.</summary>
+    public string LaunchPopupDescription => EnableTools
+        ? "While TrayTrigger is hidden, a game or tool started from its hotkey or the tray menu shows a small card by the tray icon: what's starting, what it's waiting for, and any launch error. It never takes focus and closes once it starts."
+        : "While TrayTrigger is hidden, a game started from its hotkey or the tray menu shows a small card by the tray icon: the game, what it's waiting for, and any launch error. It never takes focus and closes once the game starts.";
+
+    public string LaunchPopupEveryLaunchLabel => EnableTools ? "Show it on every game and tool launch" : "Show it on every game launch";
+
     public bool EnableGameScripts
     {
         get => _settings.EnableGameScripts;
@@ -1624,7 +1686,7 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             var result = await Task.Run(() => GameScriptService.TestRun(path, probe, phase, playtime));
-            StatusMessage = null;
+            StatusMessage = string.Empty;
             var report = new ScriptTestReport(isPreLaunch, path, result, DefaultRunScriptsAsAdmin, DefaultRunScriptsHidden,
                 ProbeDescription: $"placeholder values (name \"{probeName}\", game ID \"default\", empty exe, no script arguments)");
             new ScriptTestResultDialog(report).ShowDialog();
@@ -1760,6 +1822,10 @@ public class SettingsViewModel : ViewModelBase
         {
             nameof(AppSettings.LastCategoryFilter),
             nameof(AppSettings.LastSortOption),
+            // Tools page view state, the same bucket as the Library's two above.
+            nameof(AppSettings.ToolsSortOption),
+            nameof(AppSettings.ToolsViewMode),
+            nameof(AppSettings.LastToolsCategoryTab),
             // Same bucket: which slice of the library is on screen, not a preference. Also the
             // only sane answer here - the tick boxes live in LibraryFilterViewModel, and clearing
             // the saved keys behind its back would leave them ticked and write them straight back.
@@ -1793,6 +1859,8 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),
+            nameof(AppSettings.HasSeenMetadataSourcesReminder),
+            nameof(AppSettings.HasSeenTrayHideNotice),
             // Describes the machine (what a tweak found before it was applied), not a preference.
             nameof(AppSettings.TweakPriorState),
         };
@@ -1866,6 +1934,11 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
         OnPropertyChanged(nameof(EnableGameScripts));
+        OnPropertyChanged(nameof(EnableTools));
+        OnPropertyChanged(nameof(ShowToolsInTray));
+        OnPropertyChanged(nameof(ToolsTraySortOption));
+        OnPropertyChanged(nameof(LaunchPopupDescription));
+        OnPropertyChanged(nameof(LaunchPopupEveryLaunchLabel));
         // "Reset to defaults" swaps the ScriptDefaults object, so re-derive the mirrored-path tick.
         _defaultUseSameScriptForBoth = null;
         NotifyDefaultScriptsChanged();

@@ -143,9 +143,6 @@ public class GitHubReleaseInfo
         }
     }
 
-    /// <summary>
-    /// Finds the portable zip asset if available.
-    /// </summary>
     /// <summary>Name of the checksum manifest the release workflow publishes next to the installer.</summary>
     public const string ChecksumsAssetName = "SHA256SUMS.txt";
 
@@ -173,6 +170,7 @@ public class GitHubReleaseInfo
         }
     }
 
+    /// <summary>Finds the portable zip asset if available.</summary>
     [JsonIgnore]
     public GitHubReleaseAsset? ZipAsset
     {

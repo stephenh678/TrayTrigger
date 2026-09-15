@@ -50,7 +50,7 @@ public partial class LaunchPopupWindow : Window
         var secondary = (Brush)FindResource("BrushTextSecondary");
 
         Card.BorderBrush = accent;
-        NameText.Text = content.GameName;
+        NameText.Text = content.Name;
         StatusText.Text = content.Status;
         StatusText.Foreground = content.IsInteractive ? accent : secondary;
 

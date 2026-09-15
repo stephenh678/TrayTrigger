@@ -409,7 +409,10 @@ public partial class FolderScannerService
         // ------------------------------------------------------------------
         // Factor 1: Name Alignment with Root Folder (0 to 75 points)
         // ------------------------------------------------------------------
-        if (fileNorm.Equals(rootNorm, StringComparison.OrdinalIgnoreCase))
+        // Normalize keeps ASCII letters and digits only, so a folder named in another script
+        // ("Игры", "ゲーム") normalizes to "" - which every string "contains". Name comparisons
+        // only mean something when there is a name left to compare.
+        if (rootNorm.Length > 0 && fileNorm.Equals(rootNorm, StringComparison.OrdinalIgnoreCase))
         {
             score += 75; // Exact normalized match!
         }
@@ -529,8 +532,9 @@ public partial class FolderScannerService
             string descNorm = Normalize(vi.FileDescription ?? "");
             string prodNorm = Normalize(vi.ProductName ?? "");
 
-            if (descNorm.Contains(rootNorm, StringComparison.OrdinalIgnoreCase) ||
-                prodNorm.Contains(rootNorm, StringComparison.OrdinalIgnoreCase))
+            if (rootNorm.Length > 0 &&
+                (descNorm.Contains(rootNorm, StringComparison.OrdinalIgnoreCase) ||
+                 prodNorm.Contains(rootNorm, StringComparison.OrdinalIgnoreCase)))
             {
                 score += 25;
             }

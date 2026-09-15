@@ -19,9 +19,28 @@ public enum LaunchPopupKind
     Notice,
 }
 
+/// <summary>
+/// What the launch popup needs to know about the thing being launched. Games supply one through
+/// <see cref="ForGame"/>; anything else TrayTrigger launches (the planned Tools section) builds its
+/// own, so the popup never depends on <see cref="GameEntry"/>.
+/// </summary>
+/// <param name="Id">The entry's id: what the launcher's session events and <see cref="ILaunchPopup.LaunchDispatched"/> carry.</param>
+/// <param name="Name">Shown as the popup's title.</param>
+/// <param name="PerformanceProfile">Named in the "Launching" detail when it isn't Off.</param>
+/// <param name="FallbackIconUri">Pack URI of the picture shown when the entry has no icon of its own (a launcher logo), or null.</param>
+public sealed record LaunchTarget(
+    string Id,
+    string Name,
+    PerformanceProfileMode PerformanceProfile = PerformanceProfileMode.Off,
+    string? FallbackIconUri = null)
+{
+    public static LaunchTarget ForGame(GameEntry game) =>
+        new(game.Id, game.Name, game.PerformanceProfile, LauncherLogos.PackUriFor(game));
+}
+
 public sealed record LaunchPopupContent(
     LaunchPopupKind Kind,
-    string GameName,
+    string Name,
     string Status,
     string? Detail,
     ImageSource? Icon,
@@ -47,17 +66,17 @@ public interface ILaunchPopup
     /// <summary>Shows the popup for a launch about to be dispatched. False when the setting is off, or
     /// TrayTrigger is in front and the popup isn't wanted there (App's showWhileAppInFront: the
     /// every-launch option, or the window about to hide on launch); the in-window launch toast is used then.</summary>
-    bool TryBeginLaunch(GameEntry game);
+    bool TryBeginLaunch(LaunchTarget target);
 
     /// <summary>The launch call returned successfully.</summary>
-    void LaunchDispatched(string gameId);
+    void LaunchDispatched(string id);
 
     /// <summary>Shows a launch failure in the popup instead of a dialog. False means show the dialog.
     /// <paramref name="action"/> runs after the window is brought up.</summary>
-    bool TryShowFailure(GameEntry game, string message, string? actionText, Action? action);
+    bool TryShowFailure(LaunchTarget target, string message, string? actionText, Action? action);
 
     /// <summary>Shows a launcher notice in the popup instead of a tray notification. False means use the tray.</summary>
-    bool TryShowNotice(GameEntry game, string message);
+    bool TryShowNotice(LaunchTarget target, string message);
 }
 
 /// <summary>
@@ -84,12 +103,12 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     private readonly Func<bool> _isAppInFront;
     private readonly Func<string, bool> _isWaitingForGame;
     private readonly Action _showMainWindow;
-    private readonly Func<GameEntry, ImageSource?> _iconFor;
+    private readonly Func<LaunchTarget, ImageSource?> _iconFor;
     private readonly ILaunchPopupView _view;
     private readonly Func<TimeSpan, Action, IDisposable> _schedule;
     private readonly Func<DateTime> _utcNow;
 
-    private GameEntry? _game;
+    private LaunchTarget? _target;
     private LaunchPopupKind _kind;
     private string? _platform;
     private string? _message;
@@ -107,7 +126,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         Func<bool> isAppInFront,
         Func<string, bool> isWaitingForGame,
         Action showMainWindow,
-        Func<GameEntry, ImageSource?> iconFor,
+        Func<LaunchTarget, ImageSource?> iconFor,
         ILaunchPopupView view,
         Func<TimeSpan, Action, IDisposable>? schedule = null,
         Func<DateTime>? utcNow = null)
@@ -126,13 +145,13 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _view.CloseClicked += Hide;
     }
 
-    public bool TryBeginLaunch(GameEntry game)
+    public bool TryBeginLaunch(LaunchTarget target)
     {
         if (!_isEnabled()) return false;
         bool appInFront = _isAppInFront();
         if (appInFront && !_showWhileAppInFront()) return false;
 
-        Start(game, LaunchPopupKind.Launching, message: null, actionText: null, action: null);
+        Start(target, LaunchPopupKind.Launching, message: null, actionText: null, action: null);
         _shownAtUtc = _utcNow();
 
         int token = _token;
@@ -143,60 +162,60 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _capTimer = _schedule(MaxWait, () =>
         {
             if (token != _token || !IsProgress) return;
-            LoggingService.Verbose("LaunchPopup", $"'{game.Name}' still hadn't started after {MaxWait.TotalSeconds:0}s; closed the launch popup.");
+            LoggingService.Verbose("LaunchPopup", $"'{target.Name}' still hadn't started after {MaxWait.TotalSeconds:0}s; closed the launch popup.");
             Hide();
         });
 
-        LoggingService.Verbose("LaunchPopup", $"Showing the launch popup for '{game.Name}' ({(appInFront ? "launched from the TrayTrigger window" : "TrayTrigger window not in front")}).");
+        LoggingService.Verbose("LaunchPopup", $"Showing the launch popup for '{target.Name}' ({(appInFront ? "launched from the TrayTrigger window" : "TrayTrigger window not in front")}).");
         return true;
     }
 
     /// <summary>The launcher registered a session; its platform label names what the game waits on.</summary>
-    public void OnSessionStarted(string gameId, string platformLabel)
+    public void OnSessionStarted(string id, string platformLabel)
     {
-        if (!IsProgressFor(gameId)) return;
+        if (!IsProgressFor(id)) return;
         _platform = platformLabel;
         Render(_kind);
     }
 
     /// <summary>The game's own process is running.</summary>
-    public void OnGameStarted(string gameId)
+    public void OnGameStarted(string id)
     {
-        if (IsProgressFor(gameId)) CloseSoon();
+        if (IsProgressFor(id)) CloseSoon();
     }
 
     /// <summary>The session ended, with or without the game having run.</summary>
-    public void OnSessionEnded(string gameId)
+    public void OnSessionEnded(string id)
     {
-        if (IsProgressFor(gameId)) CloseSoon();
+        if (IsProgressFor(id)) CloseSoon();
     }
 
-    public void LaunchDispatched(string gameId)
+    public void LaunchDispatched(string id)
     {
         // Nothing to wait for: no session (an untracked game that was already running got focus),
         // or a tracked session whose game is already running, so SessionGameStarted won't come again.
-        if (IsProgressFor(gameId) && !_isWaitingForGame(gameId)) CloseSoon();
+        if (IsProgressFor(id) && !_isWaitingForGame(id)) CloseSoon();
     }
 
-    public bool TryShowFailure(GameEntry game, string message, string? actionText, Action? action)
+    public bool TryShowFailure(LaunchTarget target, string message, string? actionText, Action? action)
     {
         if (!_isEnabled() || _isAppInFront())
         {
             // With the window in front, a dialog on it is the clearer place for an error. A progress
             // popup for this launch (the every-launch option) makes way for it.
-            if (IsProgressFor(game.Id)) Hide();
+            if (IsProgressFor(target.Id)) Hide();
             return false;
         }
-        Start(game, LaunchPopupKind.Failed, message, actionText, action);
-        LoggingService.Verbose("LaunchPopup", $"Showing a launch failure for '{game.Name}' in the popup.");
+        Start(target, LaunchPopupKind.Failed, message, actionText, action);
+        LoggingService.Verbose("LaunchPopup", $"Showing a launch failure for '{target.Name}' in the popup.");
         return true;
     }
 
-    public bool TryShowNotice(GameEntry game, string message)
+    public bool TryShowNotice(LaunchTarget target, string message)
     {
         // With the window in front the tray notification is used, as before the popup existed.
         if (!_isEnabled() || _isAppInFront()) return false;
-        Start(game, LaunchPopupKind.Notice, message, actionText: null, action: null);
+        Start(target, LaunchPopupKind.Notice, message, actionText: null, action: null);
         return true;
     }
 
@@ -208,15 +227,15 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _view.Dispose();
     }
 
-    private bool IsProgress => _game != null && _kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting;
+    private bool IsProgress => _target != null && _kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting;
 
-    private bool IsProgressFor(string gameId) => IsProgress && _game!.Id == gameId;
+    private bool IsProgressFor(string id) => IsProgress && _target!.Id == id;
 
-    private void Start(GameEntry game, LaunchPopupKind kind, string? message, string? actionText, Action? action)
+    private void Start(LaunchTarget target, LaunchPopupKind kind, string? message, string? actionText, Action? action)
     {
         CancelTimers();
         _token++;
-        _game = game;
+        _target = target;
         _platform = null;
         _message = message;
         _actionText = actionText;
@@ -226,7 +245,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
 
     private void Render(LaunchPopupKind kind)
     {
-        if (_game == null) return;
+        if (_target == null) return;
         _kind = kind;
 
         string status = kind switch
@@ -239,19 +258,19 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
 
         string? detail = kind switch
         {
-            LaunchPopupKind.Launching => LaunchingDetail(_game, _platform),
+            LaunchPopupKind.Launching => LaunchingDetail(_target, _platform),
             LaunchPopupKind.Waiting => WaitingDetail(_platform),
             _ => _message,
         };
 
-        _view.Show(new LaunchPopupContent(kind, _game.Name, status, detail, _iconFor(_game), _actionText));
+        _view.Show(new LaunchPopupContent(kind, _target.Name, status, detail, _iconFor(_target), _actionText));
     }
 
-    internal static string? LaunchingDetail(GameEntry game, string? platform)
+    internal static string? LaunchingDetail(LaunchTarget target, string? platform)
     {
         var parts = new List<string>(2);
         if (IsLauncher(platform)) parts.Add($"Starting through {platform}");
-        if (game.PerformanceProfile != PerformanceProfileMode.Off) parts.Add($"{game.PerformanceProfile} profile");
+        if (target.PerformanceProfile != PerformanceProfileMode.Off) parts.Add($"{target.PerformanceProfile} profile");
         return parts.Count == 0 ? null : string.Join(" · ", parts);
     }
 
@@ -287,7 +306,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     {
         CancelTimers();
         _token++;
-        _game = null;
+        _target = null;
         _action = null;
         _view.Hide();
     }

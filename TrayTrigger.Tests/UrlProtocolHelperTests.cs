@@ -49,6 +49,8 @@ public class UrlProtocolHelperTests
     [InlineData(@"..\..\x")]
     [InlineData("440/extra")]
     [InlineData("1234567890123")]
+    [InlineData("７３０")] // fullwidth 730: char.IsDigit says yes, Steam says no
+    [InlineData("٧٣٠")] // Arabic-Indic digits
     public void IsValidSteamAppId_RejectsAnythingElse(string? id)
     {
         Assert.False(UrlProtocolHelper.IsValidSteamAppId(id));

@@ -110,9 +110,9 @@
 
         <!-- Buttons -->
         <DockPanel Grid.Row="4">
-            <Button x:Name="UseButton" DockPanel.Dock="Right" Content="Use Selected" Click="UseButton_Click" IsEnabled="False"
+            <Button x:Name="UseButton" DockPanel.Dock="Right" Content="Use Selected" Click="UseButton_Click" IsDefault="True" IsEnabled="False"
                     Style="{StaticResource ModernAccentButton}" MinWidth="120" Margin="10,0,0,0"/>
-            <Button DockPanel.Dock="Right" Content="Cancel" Click="CancelButton_Click"
+            <Button DockPanel.Dock="Right" Content="Cancel" Click="CancelButton_Click" IsCancel="True"
                     Style="{StaticResource ModernGhostButton}" MinWidth="80"/>
         </DockPanel>
     </Grid>
