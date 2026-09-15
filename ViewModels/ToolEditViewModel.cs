@@ -183,7 +183,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             string? problem = ToolCatalog.ValidateTarget(target);
             if (problem != null)
             {
-                ValidationMessage = $"This program can't be used because {problem}.";
+                ValidationMessage = $"This file can't be used because {problem}.";
                 return;
             }
             targetChanged = !string.Equals(target, _tool.TargetPath, StringComparison.OrdinalIgnoreCase);

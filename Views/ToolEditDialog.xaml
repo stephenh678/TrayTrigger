@@ -105,7 +105,7 @@
                             <TextBlock Text="Store App" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Windows starts it the way its Start menu entry does, and brings it forward if it's already open. Store apps can't run as administrator."
+                            <TextBlock Text="Windows starts it the way its Start menu entry does. If it's already open, most apps come to the front; ones that allow several windows open another. Store apps can't run as administrator."
                                        FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                         </StackPanel>
 
@@ -151,7 +151,7 @@
                             <StackPanel Visibility="{Binding IsScript, Converter={StaticResource BoolToVis}}">
                                 <CheckBox Content="Hide Window" IsChecked="{Binding HideWindow}"
                                           Style="{StaticResource ModernCheckBox}"/>
-                                <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log. A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
+                                <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log (not when it also runs as administrator). A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
                                            FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
                             </StackPanel>
                         </StackPanel>

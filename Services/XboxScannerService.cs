@@ -52,7 +52,7 @@ public record DiscoveredXboxGame(
 public class XboxScannerService
 {
     private const string GameConfigKeyPath = @"SOFTWARE\Microsoft\GamingServices\GameConfig";
-    private const string PackageRepositoryKeyPath = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
+    internal const string PackageRepositoryKeyPath = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
 
     /// <summary>Package family name of the Xbox app (Microsoft.GamingApp) - the "client" for
     /// <see cref="LauncherClientCloser"/> purposes. Not required to launch games; Gaming Services does that.</summary>

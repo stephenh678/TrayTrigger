@@ -121,6 +121,16 @@ public class StoreAppToolTests
     }
 
     [Fact]
+    public void GamePassGameExe_IsRefused_ByItsGameFolder()
+    {
+        string?[] folders = [@"D:\XboxGames\Forza Horizon 5\Content", null, @"C:\Program Files\WindowsApps\Microsoft.624F8B84B80_3.0.0.0_x64__8wekyb3d8bbwe\"];
+        Assert.Equal(ToolCatalog.IsAGameReason, ToolCatalog.GameReason(@"D:\XboxGames\Forza Horizon 5\Content\ForzaHorizon5.exe", folders));
+        Assert.Equal(ToolCatalog.IsAGameReason, ToolCatalog.GameReason(@"c:\program files\windowsapps\Microsoft.624F8B84B80_3.0.0.0_x64__8wekyb3d8bbwe\game.exe", folders));
+        Assert.Null(ToolCatalog.GameReason(@"D:\XboxGames\Forza Horizon 5\ContentTools\editor.exe", folders));
+        Assert.Null(ToolCatalog.GameReason(@"C:\Tools\Vortex.exe", folders));
+    }
+
+    [Fact]
     public void SanitizedTools_NeverHaveANullAppId()
     {
         var tool = Assert.Single(StorageService.SanitizeTools([new ToolEntry { Id = "t1", AppId = null! }]));

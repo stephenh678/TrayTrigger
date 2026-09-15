@@ -336,21 +336,21 @@ public sealed class ToolsViewModel : ViewModelBase
         }
         if (app.ProgramPath != null)
         {
-            string? problem = ToolCatalog.ValidateTarget(app.ProgramPath);
-            if (problem != null) return new ToolCandidate(label, null, problem);
-            var tool = new ToolEntry
-            {
-                Name = label,
-                TargetPath = app.ProgramPath,
-                WorkingDirectory = Path.GetDirectoryName(app.ProgramPath) ?? string.Empty,
-                Category = ToolCatalog.CategoryForNewTool(SelectedCategory)
-            };
-            return new ToolCandidate(label, tool, null, app.ProgramPath);
+            // The same rules as a dropped .exe, named the way Windows shows the app rather than after its file.
+            var candidate = FileCandidate(app.ProgramPath) ?? new ToolCandidate(label, null, "its file doesn't exist");
+            if (candidate.Tool != null) candidate.Tool.Name = label;
+            return candidate with { Label = label };
         }
         return new ToolCandidate(label, null, "it isn't a program or a Store app");
     }
 
     private string? XboxGameReason(string appId) => ToolCatalog.GameReason(appId, id => _xboxScanner.FindByAumid(id) != null);
+
+    /// <summary>A Game Pass or Store game's own .exe (under its install or package folder) is refused like the game itself.</summary>
+    private string? XboxGameProgramReason(string target) =>
+        string.Equals(Path.GetExtension(target), ".exe", StringComparison.OrdinalIgnoreCase)
+            ? ToolCatalog.GameReason(target, _xboxScanner.ScanInstalledGames([]).SelectMany(g => new[] { g.InstallDir, g.PackageRoot }))
+            : null;
 
     private ToolEntry NewStoreAppTool(string name, string appId, string arguments = "") => new()
     {
@@ -467,7 +467,7 @@ public sealed class ToolsViewModel : ViewModelBase
             return null;
         }
 
-        reason = ToolCatalog.ValidateTarget(target);
+        reason = ToolCatalog.ValidateTarget(target) ?? XboxGameProgramReason(target);
         if (reason != null) return null;
 
         return new ToolEntry

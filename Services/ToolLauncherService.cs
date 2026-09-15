@@ -58,7 +58,7 @@ public class ToolLauncherService
             return new ToolLaunchResult(ToolLaunchOutcome.Missing);
         }
 
-        // tools.json is user-editable: never hand anything but a local exe to the shell.
+        // tools.json is user-editable: only a local .exe goes to the shell, and a local script only to its own interpreter (BuildScriptStartInfo).
         string? problem = ToolCatalog.ValidateTarget(tool.TargetPath);
         if (problem != null)
         {
@@ -102,9 +102,9 @@ public class ToolLauncherService
     }
 
     /// <summary>
-    /// A Store app: activated by its app ID, the way its Start menu tile starts it. Windows brings a
-    /// running copy forward itself, so there's no running-copy check, and no elevation or working
-    /// folder to apply.
+    /// A Store app: activated by its app ID, the way its Start menu tile starts it. Activation decides
+    /// what an open app does (a single-window app comes forward, a multi-window one opens another), so
+    /// there's no running-copy check, and no elevation or working folder to apply.
     /// </summary>
     private static ToolLaunchResult LaunchStoreApp(ToolEntry tool)
     {
@@ -115,6 +115,10 @@ public class ToolLauncherService
             string appId = tool.AppId.Trim();
             LoggingService.Verbose("ToolLauncher", $"Activating Store app tool '{tool.Name}': '{appId}', Args='{tool.Arguments}'.");
             uint pid = PackagedAppActivator.Activate(appId, tool.Arguments);
+            if (pid == 0 && !string.IsNullOrWhiteSpace(tool.Arguments))
+            {
+                LoggingService.Warn("ToolLauncher", $"Store app tool '{tool.Name}' was started through shell:AppsFolder, which can't pass its arguments ('{tool.Arguments}').");
+            }
             LoggingService.Info("ToolLauncher", $"Started Store app tool '{tool.Name}'{(pid != 0 ? $" (PID {pid})" : string.Empty)}.");
             return new ToolLaunchResult(ToolLaunchOutcome.Started);
         }
@@ -241,10 +245,13 @@ public class ToolLauncherService
         return startInfo;
     }
 
-    /// <summary>A hidden script's output, read into the log as it comes so a chatty script never stalls on a full pipe.</summary>
+    /// <summary>
+    /// A hidden script's output, read into the log as it comes so a chatty script never stalls on a full
+    /// pipe. At Info, not Verbose: the user hid the window and was told to look in the log for it.
+    /// </summary>
     private static void LogScriptOutput(Process process, string toolName)
     {
-        process.OutputDataReceived += (_, e) => { if (e.Data != null) LoggingService.Verbose("ToolScript", $"[{toolName}] {e.Data}"); };
+        process.OutputDataReceived += (_, e) => { if (e.Data != null) LoggingService.Info("ToolScript", $"[{toolName}] {e.Data}"); };
         process.ErrorDataReceived += (_, e) => { if (e.Data != null) LoggingService.Warn("ToolScript", $"[{toolName}] {e.Data}"); };
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();

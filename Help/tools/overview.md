@@ -18,12 +18,12 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 - Apps from the Microsoft Store, like Xbox or Windows Terminal, can be tools too. Click Browse Apps next to Add Tool (it opens Windows' list of every app in the Start menu, shell:AppsFolder), then drag the app onto the Tools page. A desktop shortcut made by dragging an app out of that folder works too.
 - The name is the app's name as Windows shows it (or the shortcut's file name).
-- A Store app is started the way its Start menu entry starts it. If it's already open, Windows brings it to the front.
+- A Store app is started the way its Start menu entry starts it. If it's already open, most apps come to the front; apps that allow several windows, like Windows Terminal, open another one.
 - Edit Tool shows the app's ID instead of a program path. Store apps have no working folder or file location and can't run as administrator, so those options aren't shown for them, and a batch Run as Administrator leaves them out.
 - Launch arguments are passed on, though most Store apps ignore them.
 - If the app is uninstalled, the tool shows MISSING. Install it again from the Microsoft Store, or remove the tool.
 - A desktop app dragged from shell:AppsFolder is added as the program its Start menu entry starts, like any other program.
-- Games aren't tools. A Game Pass or Microsoft Store game, or a Steam game's shortcut, dropped here isn't added: Scan for Games puts it in your Library instead.
+- Games aren't tools. A Game Pass or Microsoft Store game (or its .exe), or a Steam game's shortcut, dropped here isn't added: Scan for Games puts it in your Library instead.
 
 ## Scripts
 
@@ -31,7 +31,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - PowerShell scripts run with the execution policy bypassed, as game scripts do. A script policy set by your organization still applies.
 - Launch arguments go to the script. For .bat and .cmd they reach Command Prompt exactly as typed.
 - The script's window shows while it runs and closes when it finishes. Put pause at the end of the script to keep it open.
-- Tick "Hide Window" in Edit Tool for a script that just does something quietly. What it prints goes to TrayTrigger's log. A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager.
+- Tick "Hide Window" in Edit Tool for a script that just does something quietly. What it prints goes to TrayTrigger's log, except for a script that also runs as administrator. A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager.
 - Launching a script that's still running doesn't start it again; you get a "still running" notice instead.
 - Run as Administrator works for scripts too.
 - A .bat or .cmd script whose path contains a % sign isn't accepted, because Command Prompt would change the path.

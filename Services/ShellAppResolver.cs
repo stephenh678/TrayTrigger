@@ -12,11 +12,8 @@ namespace TrayTrigger.Services;
 /// <param name="FilePath">A real file on disk, to be handled like a dropped file.</param>
 /// <param name="AppId">A Store app's app ID ("Microsoft.GamingApp_8wekyb3d8bbwe!Microsoft.Xbox.App").</param>
 /// <param name="ProgramPath">A desktop app's .exe, resolved from its Start menu entry.</param>
-public sealed record ShellApp(string Name, string? FilePath = null, string? AppId = null, string? ProgramPath = null)
-{
-    /// <summary>Nothing TrayTrigger can start was found: a Control Panel item, a website, a folder that isn't on disk.</summary>
-    public bool IsUnresolved => FilePath == null && AppId == null && ProgramPath == null;
-}
+/// <remarks>All three null: nothing TrayTrigger can start (a Control Panel item, a website, a folder that isn't on disk).</remarks>
+public sealed record ShellApp(string Name, string? FilePath = null, string? AppId = null, string? ProgramPath = null);
 
 /// <summary>
 /// Reads shell items: the ones Explorer hands over when something is dragged from shell:AppsFolder

@@ -48,6 +48,23 @@ public static class ToolCatalog
     /// <summary>A Store app that Gaming Services knows as a game (Game Pass, a Store game) is a game, not a tool.</summary>
     public static string? GameReason(string appId, Func<string, bool> isXboxGame) => isXboxGame(appId) ? IsAGameReason : null;
 
+    /// <summary>
+    /// A program inside an installed Game Pass or Store (GDK) game's folders is that game: it can't start
+    /// without its package identity, and the Library already imports it.
+    /// </summary>
+    public static string? GameReason(string programPath, IEnumerable<string?> gameFolders)
+    {
+        string path = programPath.Trim();
+        return gameFolders.Any(folder => IsInFolder(path, folder)) ? IsAGameReason : null;
+    }
+
+    private static bool IsInFolder(string path, string? folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder)) return false;
+        string prefix = Path.TrimEndingDirectorySeparator(folder.Trim()) + Path.DirectorySeparatorChar;
+        return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>The scripts a tool can be. Each always runs through its own interpreter (ToolLauncherService.BuildScriptStartInfo), never by file association.</summary>
     public static readonly IReadOnlyList<string> ScriptExtensions = [".bat", ".cmd", ".ps1"];
 

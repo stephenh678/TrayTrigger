@@ -12,8 +12,6 @@ namespace TrayTrigger.Services;
 /// </summary>
 public static class PackagedApps
 {
-    private const string PackageRepositoryKeyPath = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
-
     /// <summary>
     /// True when <paramref name="appId"/>'s package is installed for this user. A malformed ID is never
     /// installed. When the registry can't be read the answer is true: unknown isn't missing, so the
@@ -25,7 +23,7 @@ public static class PackagedApps
         if (family == null) return false;
         try
         {
-            using var repository = Registry.CurrentUser.OpenSubKey(PackageRepositoryKeyPath);
+            using var repository = Registry.CurrentUser.OpenSubKey(XboxScannerService.PackageRepositoryKeyPath);
             if (repository == null) return false;
             foreach (string fullName in repository.GetSubKeyNames().Where(n => IsVersionOf(n, family)))
             {
