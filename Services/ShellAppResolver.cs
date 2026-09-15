@@ -162,7 +162,15 @@ public static class ShellAppResolver
         string? program = AsProgramPath(GetString(item, LinkTargetParsingPathKey))
             ?? AsProgramPath(parsingName)
             ?? AsProgramPath(ExpandKnownFolder(parsingName, KnownFolderPath));
-        return new ShellApp(name, ProgramPath: program);
+        if (program != null) return new ShellApp(name, ProgramPath: program);
+
+        // An entry that is some other file (a Steam game's .url, a help file) goes through the file
+        // rules, so it's refused with the reason that fits it.
+        if (parsingName != null && Path.IsPathFullyQualified(parsingName) && File.Exists(parsingName))
+        {
+            return new ShellApp(name, FilePath: parsingName);
+        }
+        return new ShellApp(name);
     }
 
     private static string? AsProgramPath(string? path)

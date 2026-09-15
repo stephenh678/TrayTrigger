@@ -109,6 +109,18 @@ public class StoreAppToolTests
     }
 
     [Fact]
+    public void Games_AreRefused_WithAPointerToTheLibrary()
+    {
+        var steamGame = new ShortcutResolution("Hades", "steam://rungameid/1145360", "", "", "", 0, IsSteamUrl: true, SteamAppId: "1145360");
+        var program = new ShortcutResolution("Vortex", @"C:\Tools\Vortex.exe", "", "", "", 0, IsSteamUrl: false, SteamAppId: null);
+        Assert.Equal(ToolCatalog.IsAGameReason, ToolCatalog.GameReason(steamGame));
+        Assert.Null(ToolCatalog.GameReason(program));
+
+        Assert.Equal(ToolCatalog.IsAGameReason, ToolCatalog.GameReason("Microsoft.624F8B84B80_8wekyb3d8bbwe!Game", _ => true));
+        Assert.Null(ToolCatalog.GameReason(XboxAppId, _ => false));
+    }
+
+    [Fact]
     public void SanitizedTools_NeverHaveANullAppId()
     {
         var tool = Assert.Single(StorageService.SanitizeTools([new ToolEntry { Id = "t1", AppId = null! }]));

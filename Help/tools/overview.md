@@ -23,6 +23,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - Launch arguments are passed on, though most Store apps ignore them.
 - If the app is uninstalled, the tool shows MISSING. Install it again from the Microsoft Store, or remove the tool.
 - A desktop app dragged from shell:AppsFolder is added as the program its Start menu entry starts, like any other program.
+- Games aren't tools. A Game Pass or Microsoft Store game, or a Steam game's shortcut, dropped here isn't added: Scan for Games puts it in your Library instead.
 
 ## Categories, favorites and sorting
 

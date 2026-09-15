@@ -39,6 +39,15 @@ public static class ToolCatalog
             : string.Equals(a.TargetPath?.Trim(), b.TargetPath?.Trim(), StringComparison.OrdinalIgnoreCase))
         && string.Equals(a.Arguments?.Trim() ?? string.Empty, b.Arguments?.Trim() ?? string.Empty, StringComparison.Ordinal);
 
+    /// <summary>Why a game dropped on the Tools page isn't added: games belong in the Library, which Scan for Games already fills.</summary>
+    public const string IsAGameReason = "it's a game; add it from the Library with Scan for Games";
+
+    /// <summary>A shortcut that starts a Steam game (a steam://rungameid link, or steam.exe -applaunch) is a game, not a tool.</summary>
+    public static string? GameReason(ShortcutResolution shortcut) => shortcut.IsSteamUrl ? IsAGameReason : null;
+
+    /// <summary>A Store app that Gaming Services knows as a game (Game Pass, a Store game) is a game, not a tool.</summary>
+    public static string? GameReason(string appId, Func<string, bool> isXboxGame) => isXboxGame(appId) ? IsAGameReason : null;
+
     /// <summary>A Store app, started by its app ID, rather than a program (.exe).</summary>
     public static bool IsStoreApp(ToolEntry tool) => !string.IsNullOrWhiteSpace(tool.AppId);
 

@@ -29,6 +29,7 @@ public sealed class ToolsViewModel : ViewModelBase
     private readonly IconExtractorService _icons;
     private readonly ShortcutService _shortcuts;
     private readonly ToolLauncherService _launcher;
+    private readonly XboxScannerService _xboxScanner;
     private readonly AppSettings _settings;
 
     /// <summary>Tools waiting in the launch delay or at an admin prompt: a second press is ignored until they finish.</summary>
@@ -38,12 +39,13 @@ public sealed class ToolsViewModel : ViewModelBase
     private string _searchText = string.Empty;
     private string _statusMessage = string.Empty;
 
-    public ToolsViewModel(StorageService storage, IconExtractorService icons, ShortcutService shortcuts, ToolLauncherService launcher, AppSettings settings)
+    public ToolsViewModel(StorageService storage, IconExtractorService icons, ShortcutService shortcuts, ToolLauncherService launcher, XboxScannerService xboxScanner, AppSettings settings)
     {
         _storage = storage;
         _icons = icons;
         _shortcuts = shortcuts;
         _launcher = launcher;
+        _xboxScanner = xboxScanner;
         _settings = settings;
         _selectedCategory = string.IsNullOrWhiteSpace(settings.LastToolsCategoryTab) ? LibraryConstants.AllCategory : settings.LastToolsCategoryTab;
 
@@ -329,6 +331,7 @@ public sealed class ToolsViewModel : ViewModelBase
         string label = app.Name.Length > 0 ? app.Name : "Unnamed app";
         if (app.AppId != null)
         {
+            if (XboxGameReason(app.AppId) is { } gameReason) return new ToolCandidate(label, null, gameReason);
             return new ToolCandidate(label, NewStoreAppTool(label, app.AppId), null, ToolCatalog.AppsFolderPath(app.AppId));
         }
         if (app.ProgramPath != null)
@@ -346,6 +349,8 @@ public sealed class ToolsViewModel : ViewModelBase
         }
         return new ToolCandidate(label, null, "it isn't a program or a Store app");
     }
+
+    private string? XboxGameReason(string appId) => ToolCatalog.GameReason(appId, id => _xboxScanner.FindByAumid(id) != null);
 
     private ToolEntry NewStoreAppTool(string name, string appId, string arguments = "") => new()
     {
@@ -419,6 +424,8 @@ public sealed class ToolsViewModel : ViewModelBase
         if (string.Equals(ext, ".lnk", StringComparison.OrdinalIgnoreCase))
         {
             var shortcut = _shortcuts.Resolve(path);
+            reason = ToolCatalog.GameReason(shortcut);
+            if (reason != null) return null;
             target = shortcut.TargetPath;
             arguments = shortcut.Arguments;
             workingDirectory = shortcut.WorkingDirectory;
@@ -429,7 +436,8 @@ public sealed class ToolsViewModel : ViewModelBase
             {
                 if (shellTarget.AppId != null)
                 {
-                    reason = null;
+                    reason = XboxGameReason(shellTarget.AppId);
+                    if (reason != null) return null;
                     iconSource = ToolCatalog.AppsFolderPath(shellTarget.AppId);
                     return NewStoreAppTool(ToolCatalog.NameFromFile(path), shellTarget.AppId, arguments);
                 }
@@ -453,7 +461,9 @@ public sealed class ToolsViewModel : ViewModelBase
         }
         else
         {
-            reason = "it isn't a program (.exe) or a shortcut (.lnk)";
+            // A Steam game's Start menu or desktop entry is a .url: say where it belongs instead.
+            reason = string.Equals(ext, ".url", StringComparison.OrdinalIgnoreCase) ? ToolCatalog.GameReason(_shortcuts.Resolve(path)) : null;
+            reason ??= "it isn't a program (.exe) or a shortcut (.lnk)";
             return null;
         }
 

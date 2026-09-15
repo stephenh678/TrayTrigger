@@ -165,7 +165,7 @@ public class MainViewModel : ViewModelBase
         );
 
         // Tools: saved program shortcuts with their own file, categories and launcher. See ToolsViewModel.
-        Tools = new ToolsViewModel(_storageService, _iconExtractorService, _shortcutService, new ToolLauncherService(), _settings);
+        Tools = new ToolsViewModel(_storageService, _iconExtractorService, _shortcutService, new ToolLauncherService(), _xboxScannerService, _settings);
 
         Import = new ImportCoordinator(
             Library,
