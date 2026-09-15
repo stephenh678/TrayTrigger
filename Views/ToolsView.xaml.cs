@@ -36,10 +36,20 @@ public partial class ToolsView : UserControl
     private void OnDragOver(object sender, DragEventArgs e)
     {
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(ShellAppResolver.IdListFormat)
-            ? DragDropEffects.Copy
+            ? DropEffectFor(e.AllowedEffects)
             : DragDropEffects.None;
         e.Handled = true;
     }
+
+    /// <summary>
+    /// Copy when the source allows it, else Link. An app dragged from shell:AppsFolder only allows Link
+    /// (there is no file to copy, so the desktop makes a shortcut of it), and asking for Copy there makes
+    /// Windows refuse the drop before it arrives. Adding a tool changes nothing at the source either way.
+    /// </summary>
+    internal static DragDropEffects DropEffectFor(DragDropEffects allowed) =>
+        allowed.HasFlag(DragDropEffects.Copy) ? DragDropEffects.Copy
+        : allowed.HasFlag(DragDropEffects.Link) ? DragDropEffects.Link
+        : DragDropEffects.None;
 
     /// <summary>
     /// Handled here so the drop never bubbles to the window's game import. Deferred to a fresh
@@ -53,8 +63,9 @@ public partial class ToolsView : UserControl
         e.Handled = true;
         if (ViewModel is not { } viewModel) return;
 
+        // A source can offer file names that aren't on disk alongside its shell items; those go to the shell items.
         string[]? files = ReadDroppedFiles(e.Data);
-        if (files is { Length: > 0 })
+        if (files != null && files.Any(f => File.Exists(f) || Directory.Exists(f)))
         {
             Dispatcher.BeginInvoke(new Action(() => viewModel.HandleDrop(files)), DispatcherPriority.Background);
             return;

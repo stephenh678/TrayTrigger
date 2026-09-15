@@ -117,6 +117,14 @@ public class StoreAppToolTests
 
     // ------------------------------------------------------------------ dropped shell items
 
+    [Fact]
+    public void DropEffect_IsCopyWhenAllowed_ElseLink_ForAppsFolderDrags()
+    {
+        Assert.Equal(System.Windows.DragDropEffects.Copy, Views.ToolsView.DropEffectFor(System.Windows.DragDropEffects.Copy | System.Windows.DragDropEffects.Move | System.Windows.DragDropEffects.Link));
+        Assert.Equal(System.Windows.DragDropEffects.Link, Views.ToolsView.DropEffectFor(System.Windows.DragDropEffects.Link));
+        Assert.Equal(System.Windows.DragDropEffects.None, Views.ToolsView.DropEffectFor(System.Windows.DragDropEffects.Move));
+    }
+
     /// <summary>A CIDA: count, then count + 1 offsets, then the ID lists they point at.</summary>
     private static byte[] IdListArray(params byte[][] idLists)
     {
