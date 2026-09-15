@@ -66,8 +66,17 @@ public partial class IconExtractorService
 
         try
         {
+            // A Store app tool (ToolCatalog.AppsFolderPath): the shell has its icon, there's no file to read.
+            if (ToolCatalog.AppIdFromAppsFolderPath(sourcePath) is { } appId)
+            {
+                if (ShellAppResolver.TrySaveIcon(appId, cachedIconPath))
+                {
+                    LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' cached from Store app '{appId}'.");
+                    return cachedIconPath;
+                }
+            }
             // If source is already a valid image/icon file
-            if (!string.IsNullOrEmpty(sourcePath) && File.Exists(sourcePath))
+            else if (!string.IsNullOrEmpty(sourcePath) && File.Exists(sourcePath))
             {
                 string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
                 if (ext == ".png")

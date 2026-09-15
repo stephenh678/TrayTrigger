@@ -13,8 +13,11 @@
             <MenuItem Header="Launch" Command="{Binding LaunchCommand}" FontWeight="SemiBold"/>
             <Separator/>
             <MenuItem Header="{Binding FavoriteMenuLabel}" Command="{Binding ToggleFavoriteCommand}"/>
-            <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding RunAsAdmin, Mode=OneWay}" Command="{Binding ToggleRunAsAdminCommand}"/>
-            <MenuItem Header="Open File Location" Command="{Binding OpenFolderCommand}"/>
+            <!-- A Store app has neither: it can't be elevated, and its files belong to Windows. -->
+            <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding RunAsAdmin, Mode=OneWay}" Command="{Binding ToggleRunAsAdminCommand}"
+                      Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}"/>
+            <MenuItem Header="Open File Location" Command="{Binding OpenFolderCommand}"
+                      Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}"/>
             <Separator/>
             <MenuItem Header="Edit Tool..." Command="{Binding EditCommand}"/>
             <MenuItem Header="Rename..." Command="{Binding RenameCommand}"/>
@@ -30,7 +33,8 @@
             <Separator/>
             <MenuItem Header="{Binding BatchFavoriteLabel}" Command="{Binding BatchFavoriteCommand}"/>
             <MenuItem Header="Change Category..." Command="{Binding BatchChangeCategoryCommand}"/>
-            <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding BatchAllRunAsAdmin, Mode=OneWay}" Command="{Binding BatchRunAsAdminCommand}"/>
+            <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding BatchAllRunAsAdmin, Mode=OneWay}" Command="{Binding BatchRunAsAdminCommand}"
+                      IsEnabled="{Binding BatchCanRunAsAdmin}"/>
             <Separator/>
             <MenuItem Header="Remove from Tools" Command="{Binding BatchRemoveCommand}" Foreground="{StaticResource BrushDanger}"/>
         </ContextMenu>
@@ -218,7 +222,7 @@
 
                     <TextBlock Grid.Column="2" Text="{Binding Category}" FontSize="12" FontFamily="{StaticResource AppFont}"
                                Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="3" Text="{Binding TargetPath}" FontSize="11.5" FontFamily="{StaticResource AppFont}"
+                    <TextBlock Grid.Column="3" Text="{Binding LaunchDisplay}" FontSize="11.5" FontFamily="{StaticResource AppFont}"
                                Foreground="{StaticResource BrushTextMuted}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <TextBlock Grid.Column="4" Text="{Binding HotkeyDisplay}" FontSize="11.5" FontFamily="{StaticResource AppFont}"
                                Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
@@ -423,7 +427,7 @@
                                Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" Margin="0,0,0,14"/>
                     <TextBlock Text="No tools yet" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
                                FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Drop a program (.exe) or its shortcut anywhere on this page, or use Add Tool. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
+                    <TextBlock Text="Drop a program (.exe), its shortcut, or an app from shell:AppsFolder anywhere on this page, or use Add Tool. Nothing is scanned: a tool is just a saved shortcut you can launch from here, the tray or a hotkey."
                                FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                     <Button Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}" HorizontalAlignment="Center">

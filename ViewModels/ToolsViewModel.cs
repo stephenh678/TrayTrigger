@@ -282,28 +282,75 @@ public sealed class ToolsViewModel : ViewModelBase
     /// <summary>Files dropped on the Tools page (or anywhere on the window while it is showing).</summary>
     public void HandleDrop(string[] files) => AddFiles(files.Where(f => !string.IsNullOrWhiteSpace(f)));
 
-    private void AddFiles(IEnumerable<string> paths)
+    /// <summary>Apps dropped from shell:AppsFolder, which come as shell items with no file path.</summary>
+    public void HandleShellDrop(IReadOnlyList<ShellApp> apps) => AddCandidates(apps.Select(ShellCandidate).OfType<ToolCandidate>());
+
+    private void AddFiles(IEnumerable<string> paths) => AddCandidates(paths.Select(FileCandidate).OfType<ToolCandidate>());
+
+    /// <summary>A tool about to be added (<see cref="Tool"/>), or why the dropped item can't be one (<see cref="Reason"/>).</summary>
+    /// <param name="Label">How the item is named in the "Not Added" list and the log.</param>
+    /// <param name="IconSource">Where the icon comes from: a file, or a Store app's <see cref="ToolCatalog.AppsFolderPath"/>. Not extracted until the tool is really added.</param>
+    private sealed record ToolCandidate(string Label, ToolEntry? Tool, string? Reason, string IconSource = "");
+
+    /// <summary>The candidate for a dropped or picked file. Null for a file that is gone, which is skipped silently.</summary>
+    private ToolCandidate? FileCandidate(string path)
+    {
+        string label = Path.GetFileName(path);
+        if (Directory.Exists(path)) return new ToolCandidate(label, null, "it's a folder; drop the program or its shortcut instead");
+        if (!File.Exists(path)) return null;
+
+        var tool = TryCreateTool(path, out string? reason, out string iconSource);
+        return new ToolCandidate(label, tool, reason, iconSource);
+    }
+
+    private ToolCandidate? ShellCandidate(ShellApp app)
+    {
+        if (app.FilePath != null) return FileCandidate(app.FilePath);
+
+        string label = app.Name.Length > 0 ? app.Name : "Unnamed app";
+        if (app.AppId != null)
+        {
+            return new ToolCandidate(label, NewStoreAppTool(label, app.AppId), null, ToolCatalog.AppsFolderPath(app.AppId));
+        }
+        if (app.ProgramPath != null)
+        {
+            string? problem = ToolCatalog.ValidateTarget(app.ProgramPath);
+            if (problem != null) return new ToolCandidate(label, null, problem);
+            var tool = new ToolEntry
+            {
+                Name = label,
+                TargetPath = app.ProgramPath,
+                WorkingDirectory = Path.GetDirectoryName(app.ProgramPath) ?? string.Empty,
+                Category = ToolCatalog.CategoryForNewTool(SelectedCategory)
+            };
+            return new ToolCandidate(label, tool, null, app.ProgramPath);
+        }
+        return new ToolCandidate(label, null, "it isn't a program or a Store app");
+    }
+
+    private ToolEntry NewStoreAppTool(string name, string appId, string arguments = "") => new()
+    {
+        Name = name,
+        AppId = appId.Trim(),
+        Arguments = arguments,
+        Category = ToolCatalog.CategoryForNewTool(SelectedCategory)
+    };
+
+    private void AddCandidates(IEnumerable<ToolCandidate> candidates)
     {
         var added = new List<ToolEntry>();
         var skipped = new List<string>();
         Window? owner = WindowHelper.ActiveOwner();
 
-        foreach (string path in paths)
+        foreach (var candidate in candidates)
         {
-            if (Directory.Exists(path))
+            if (candidate.Tool is not { } tool)
             {
-                skipped.Add($"{Path.GetFileName(path)} - it's a folder; drop the program or its shortcut instead");
+                skipped.Add($"{candidate.Label} - {candidate.Reason}");
+                LoggingService.Warn("Tools", $"Skipped '{candidate.Label}': {candidate.Reason}.");
                 continue;
             }
-            if (!File.Exists(path)) continue;
-
-            var tool = TryCreateTool(path, out string? reason, out string iconSource);
-            if (tool == null)
-            {
-                skipped.Add($"{Path.GetFileName(path)} - {reason}");
-                LoggingService.Warn("Tools", $"Skipped '{path}': {reason}.");
-                continue;
-            }
+            string iconSource = candidate.IconSource;
 
             // The same program with other arguments is a different tool (cmd.exe running another script).
             var duplicate = Tools.FirstOrDefault(c => ToolCatalog.IsSameLaunch(c.Tool, tool));
@@ -322,7 +369,7 @@ public sealed class ToolsViewModel : ViewModelBase
             tool.IconPath = _icons.ExtractAndCacheIcon(tool.Id, iconSource, tool.Name);
             Tools.Add(new ToolCardViewModel(tool, this));
             added.Add(tool);
-            LoggingService.Info("Tools", $"Added tool '{tool.Name}' ('{tool.TargetPath}', category '{tool.Category}', run as admin {tool.RunAsAdmin}).");
+            LoggingService.Info("Tools", $"Added tool '{tool.Name}' ('{ToolCatalog.LaunchDisplay(tool)}', category '{tool.Category}', run as admin {tool.RunAsAdmin}).");
         }
 
         if (added.Count > 0)
@@ -335,7 +382,7 @@ public sealed class ToolsViewModel : ViewModelBase
             ModernDialog.ShowWarning(
                 owner,
                 "Not Added",
-                skipped.Count == 1 ? "This file wasn't added to Tools:" : "These files weren't added to Tools:",
+                skipped.Count == 1 ? "This wasn't added to Tools:" : "These weren't added to Tools:",
                 string.Join("\n", skipped));
         }
     }
@@ -357,6 +404,23 @@ public sealed class ToolsViewModel : ViewModelBase
             arguments = shortcut.Arguments;
             workingDirectory = shortcut.WorkingDirectory;
             runAsAdmin = shortcut.RunAsAdmin;
+
+            // No file target: a shortcut to a shell item, made by dragging an app out of shell:AppsFolder.
+            if (string.IsNullOrWhiteSpace(target) && _shortcuts.ResolveShellItemTarget(path) is { } shellTarget)
+            {
+                if (shellTarget.AppId != null)
+                {
+                    reason = null;
+                    iconSource = ToolCatalog.AppsFolderPath(shellTarget.AppId);
+                    return NewStoreAppTool(ToolCatalog.NameFromFile(path), shellTarget.AppId, arguments);
+                }
+                if (shellTarget.ProgramPath != null)
+                {
+                    target = shellTarget.ProgramPath;
+                    if (string.IsNullOrWhiteSpace(workingDirectory)) workingDirectory = Path.GetDirectoryName(target) ?? string.Empty;
+                }
+            }
+
             // A shortcut's own .ico wins; anything else (an index into a DLL) falls back to the program.
             iconSource = string.Equals(Path.GetExtension(shortcut.IconLocation), ".ico", StringComparison.OrdinalIgnoreCase) && File.Exists(shortcut.IconLocation)
                 ? shortcut.IconLocation
@@ -502,6 +566,20 @@ public sealed class ToolsViewModel : ViewModelBase
 
     private void ShowMissing(ToolCardViewModel card, LaunchTarget target)
     {
+        if (card.IsStoreApp)
+        {
+            // Nothing to locate: a Store app lives where Windows installs it, or not at all.
+            if (LaunchPopup?.TryShowFailure(target, "Its Store app isn't installed any more.", "Open TrayTrigger", action: null) != true)
+            {
+                ModernDialog.ShowWarning(
+                    WindowHelper.ActiveOwner(),
+                    "Store App Not Installed",
+                    $"\"{card.Name}\" isn't installed for this Windows user any more.",
+                    "Install it again from the Microsoft Store, or remove it from Tools.");
+            }
+            return;
+        }
+
         if (LaunchPopup?.TryShowFailure(target, "Its program wasn't found.", "Locate program...", () => Locate(card)) != true)
         {
             PromptLocate(card);
@@ -522,6 +600,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
     public void Locate(ToolCardViewModel card)
     {
+        if (card.IsStoreApp) return;
         var dialog = new OpenFileDialog
         {
             Title = $"Locate Program for {card.Name}",
@@ -634,6 +713,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
     public void OpenFolder(ToolCardViewModel card)
     {
+        if (card.IsStoreApp) return;
         try
         {
             if (File.Exists(card.TargetPath))
@@ -686,6 +766,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
     public void ToggleRunAsAdmin(ToolCardViewModel card)
     {
+        if (card.IsStoreApp) return;
         card.Tool.RunAsAdmin = !card.Tool.RunAsAdmin;
         card.RefreshState();
         CommitChanges(card.RunAsAdmin ? $"\"{card.Name}\" now runs as administrator" : $"\"{card.Name}\" no longer runs as administrator");
@@ -704,7 +785,9 @@ public sealed class ToolsViewModel : ViewModelBase
     public bool HasMultipleSelection => _selectedTools.Count > 1;
     public string SelectionSummary => $"{_selectedTools.Count} tools selected";
     public string BatchFavoriteLabel => ToolCatalog.ShouldFavoriteAll(_selectedTools.Select(c => c.Tool)) ? "Add to Favorites" : "Remove from Favorites";
-    public bool BatchAllRunAsAdmin => _selectedTools.Count > 0 && _selectedTools.All(c => c.RunAsAdmin);
+    /// <summary>Store apps can't run as administrator, so the batch item only looks at programs and is off when none is selected.</summary>
+    public bool BatchCanRunAsAdmin => _selectedTools.Any(c => !c.IsStoreApp);
+    public bool BatchAllRunAsAdmin => BatchCanRunAsAdmin && _selectedTools.Where(c => !c.IsStoreApp).All(c => c.RunAsAdmin);
 
     public ICommand BatchFavoriteCommand => _batchFavoriteCommand ??= new RelayCommand(BatchFavorite);
     public ICommand BatchChangeCategoryCommand => _batchChangeCategoryCommand ??= new RelayCommand(BatchChangeCategory);
@@ -723,6 +806,7 @@ public sealed class ToolsViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasMultipleSelection));
         OnPropertyChanged(nameof(SelectionSummary));
         OnPropertyChanged(nameof(BatchFavoriteLabel));
+        OnPropertyChanged(nameof(BatchCanRunAsAdmin));
         OnPropertyChanged(nameof(BatchAllRunAsAdmin));
     }
 
@@ -767,7 +851,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
     private void BatchRunAsAdmin()
     {
-        var cards = _selectedTools.ToList();
+        var cards = _selectedTools.Where(c => !c.IsStoreApp).ToList();
         if (cards.Count == 0) return;
         bool runAsAdmin = ToolCatalog.ShouldRunAllAsAdmin(cards.Select(c => c.Tool));
         foreach (var card in cards)

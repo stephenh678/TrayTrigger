@@ -6,20 +6,30 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Adding a tool
 
-- Drop a program (.exe) or its shortcut (.lnk) anywhere on the Tools page, or use Add Tool. You can add several at once.
-- Only programs are accepted. Web links, scripts (.bat, .ps1) and shortcuts that point at anything other than a program are refused, and so are programs on a network drive.
+- Drop a program (.exe), its shortcut (.lnk), or an app dragged from shell:AppsFolder anywhere on the Tools page, or use Add Tool. You can add several at once.
+- Only programs and Store apps are accepted. Web links, scripts (.bat, .ps1) and shortcuts that point at anything else are refused, and so are programs on a network drive.
 - The name comes from the file name, without " - Shortcut". Rename it from its right-click menu or Edit Tool.
 - A shortcut brings its arguments, working folder and its "Run as administrator" setting with it.
 - Adding a program with the same arguments as a tool you already have asks first. The same program with different arguments is a different tool.
 - Adding a tool while a category tab is selected puts it in that category.
 - Dropping a file on the Tools page never adds it to your game library.
 
+## Store apps
+
+- Apps from the Microsoft Store, like Xbox or Windows Terminal, can be tools too. Press Win+R, type shell:AppsFolder and press Enter, then drag the app onto the Tools page. A desktop shortcut made by dragging an app out of that folder works too.
+- The name is the app's name as Windows shows it (or the shortcut's file name).
+- A Store app is started the way its Start menu entry starts it. If it's already open, Windows brings it to the front.
+- Edit Tool shows the app's ID instead of a program path. Store apps have no working folder or file location and can't run as administrator, so those options aren't shown for them, and a batch Run as Administrator leaves them out.
+- Launch arguments are passed on, though most Store apps ignore them.
+- If the app is uninstalled, the tool shows MISSING. Install it again from the Microsoft Store, or remove the tool.
+- A desktop app dragged from shell:AppsFolder is added as the program its Start menu entry starts, like any other program.
+
 ## Categories, favorites and sorting
 
 - Tools have their own categories, separate from game categories. Set one with Change Category... or in Edit Tool; the picker suggests the categories your tools already use.
 - The tabs are All Tools, Favorites, then each category A to Z. A category tab disappears when its last tool leaves it.
 - Click the star on a tool to make it a favorite.
-- Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category or program path.
+- Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category, program path or Store app ID.
 - Three views: Large Icons, Small Icons and List. The page remembers the view, sort and tab you last used.
 
 ## Changing several tools at once

@@ -33,8 +33,13 @@ public sealed class ToolCardViewModel : ViewModelBase
     public string Name => Tool.Name;
     public string Category => LibraryConstants.NormalizeCategory(Tool.Category);
     public string TargetPath => Tool.TargetPath;
+    /// <summary>The program's path, or the Store app's ID: the list view's "where it starts from" column.</summary>
+    public string LaunchDisplay => ToolCatalog.LaunchDisplay(Tool);
+    public bool IsStoreApp => ToolCatalog.IsStoreApp(Tool);
+    /// <summary>A program (.exe): it has a file location and can run as administrator, which a Store app can't.</summary>
+    public bool IsProgram => !IsStoreApp;
     public bool IsFavorite => Tool.IsFavorite;
-    public bool RunAsAdmin => Tool.RunAsAdmin;
+    public bool RunAsAdmin => Tool.RunAsAdmin && IsProgram;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public string HotkeyDisplay => HotkeyManager.Normalize(Tool.Hotkey) ?? string.Empty;
     public bool HasHotkey => HotkeyDisplay.Length > 0;
@@ -70,10 +75,12 @@ public sealed class ToolCardViewModel : ViewModelBase
         RefreshState();
     }
 
-    /// <summary>Re-checks the program's presence and refreshes every binding, for a change that leaves the icon alone.</summary>
+    /// <summary>Re-checks the program's (or Store app's) presence and refreshes every binding, for a change that leaves the icon alone.</summary>
     public void RefreshState()
     {
-        IsMissing = string.IsNullOrWhiteSpace(Tool.TargetPath) || !File.Exists(Tool.TargetPath);
+        IsMissing = IsStoreApp
+            ? !PackagedApps.IsInstalled(Tool.AppId)
+            : string.IsNullOrWhiteSpace(Tool.TargetPath) || !File.Exists(Tool.TargetPath);
         OnPropertyChanged(string.Empty);
     }
 }

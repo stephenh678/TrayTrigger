@@ -50,6 +50,8 @@ public class ToolLauncherService
 
     public ToolLaunchResult Launch(ToolEntry tool)
     {
+        if (ToolCatalog.IsStoreApp(tool)) return LaunchStoreApp(tool);
+
         if (string.IsNullOrWhiteSpace(tool.TargetPath) || !File.Exists(tool.TargetPath))
         {
             LoggingService.Warn("ToolLauncher", $"Cannot launch tool '{tool.Name}': program missing at '{tool.TargetPath}'.");
@@ -95,6 +97,50 @@ public class ToolLauncherService
             LoggingService.Error("ToolLauncher", $"Failed to start tool '{tool.Name}': {ex.Message}", ex);
             return new ToolLaunchResult(ToolLaunchOutcome.Failed, ex.Message);
         }
+    }
+
+    /// <summary>
+    /// A Store app: activated by its app ID, the way its Start menu tile starts it. Windows brings a
+    /// running copy forward itself, so there's no running-copy check, and no elevation or working
+    /// folder to apply.
+    /// </summary>
+    private static ToolLaunchResult LaunchStoreApp(ToolEntry tool)
+    {
+        if (CheckStoreApp(tool, PackagedApps.IsInstalled) is { } refused) return refused;
+
+        try
+        {
+            string appId = tool.AppId.Trim();
+            LoggingService.Verbose("ToolLauncher", $"Activating Store app tool '{tool.Name}': '{appId}', Args='{tool.Arguments}'.");
+            uint pid = PackagedAppActivator.Activate(appId, tool.Arguments);
+            LoggingService.Info("ToolLauncher", $"Started Store app tool '{tool.Name}'{(pid != 0 ? $" (PID {pid})" : string.Empty)}.");
+            return new ToolLaunchResult(ToolLaunchOutcome.Started);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("ToolLauncher", $"Failed to start Store app tool '{tool.Name}': {ex.Message}", ex);
+            return new ToolLaunchResult(ToolLaunchOutcome.Failed, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Why a Store app tool can't be started, or null when it can. tools.json is user-editable, and the
+    /// app ID can reach explorer.exe's command line, so a malformed one is refused before anything runs.
+    /// </summary>
+    internal static ToolLaunchResult? CheckStoreApp(ToolEntry tool, Func<string, bool> isInstalled)
+    {
+        string? problem = ToolCatalog.ValidateAppId(tool.AppId);
+        if (problem != null)
+        {
+            LoggingService.Warn("ToolLauncher", $"Refused to launch tool '{tool.Name}': {problem} ('{tool.AppId}').");
+            return new ToolLaunchResult(ToolLaunchOutcome.Failed, $"\"{tool.Name}\" can't be launched because {problem}.");
+        }
+        if (!isInstalled(tool.AppId.Trim()))
+        {
+            LoggingService.Warn("ToolLauncher", $"Cannot launch tool '{tool.Name}': Store app '{tool.AppId}' isn't installed for this user.");
+            return new ToolLaunchResult(ToolLaunchOutcome.Missing);
+        }
+        return null;
     }
 
     /// <summary>A declined UAC prompt is a cancel, not a failure.</summary>

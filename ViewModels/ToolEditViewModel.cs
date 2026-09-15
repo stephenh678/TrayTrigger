@@ -57,6 +57,11 @@ public sealed class ToolEditViewModel : ViewModelBase
     public string OwnerId => _tool.Id;
     public IReadOnlyList<string> ExistingCategories { get; }
 
+    /// <summary>A Store app: shown by its app ID, with no program, working folder or Run as Administrator to edit.</summary>
+    public bool IsStoreApp => ToolCatalog.IsStoreApp(_tool);
+    public bool IsProgram => !IsStoreApp;
+    public string AppId => _tool.AppId;
+
     public string Name { get => _name; set => SetProperty(ref _name, value ?? string.Empty); }
     public string Category { get => _category; set => SetProperty(ref _category, value ?? string.Empty); }
     public string TargetPath { get => _targetPath; set => SetProperty(ref _targetPath, value ?? string.Empty); }
@@ -159,21 +164,25 @@ public sealed class ToolEditViewModel : ViewModelBase
         }
 
         string target = TargetPath.Trim();
-        string? problem = ToolCatalog.ValidateTarget(target);
-        if (problem != null)
+        bool targetChanged = false;
+        if (IsProgram)
         {
-            ValidationMessage = $"This program can't be used because {problem}.";
-            return;
-        }
+            string? problem = ToolCatalog.ValidateTarget(target);
+            if (problem != null)
+            {
+                ValidationMessage = $"This program can't be used because {problem}.";
+                return;
+            }
+            targetChanged = !string.Equals(target, _tool.TargetPath, StringComparison.OrdinalIgnoreCase);
 
-        bool targetChanged = !string.Equals(target, _tool.TargetPath, StringComparison.OrdinalIgnoreCase);
+            _tool.TargetPath = target;
+            _tool.WorkingDirectory = WorkingDirectory.Trim();
+            _tool.RunAsAdmin = RunAsAdmin;
+        }
 
         _tool.Name = name;
         _tool.Category = LibraryConstants.NormalizeCategory(Category);
-        _tool.TargetPath = target;
         _tool.Arguments = Arguments.Trim();
-        _tool.WorkingDirectory = WorkingDirectory.Trim();
-        _tool.RunAsAdmin = RunAsAdmin;
         _tool.IsFavorite = IsFavorite;
         _tool.Hotkey = HotkeyManager.Normalize(Hotkey) ?? string.Empty;
 
@@ -185,7 +194,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             if (!string.IsNullOrEmpty(cached)) _tool.IconPath = cached;
         }
 
-        LoggingService.Info("Tools", $"Saved tool '{name}' ('{target}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}').");
+        LoggingService.Info("Tools", $"Saved tool '{name}' ('{ToolCatalog.LaunchDisplay(_tool)}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}').");
         RequestClose?.Invoke(true);
     }
 }

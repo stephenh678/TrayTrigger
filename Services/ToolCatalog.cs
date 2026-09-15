@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -32,8 +33,52 @@ public static class ToolCatalog
     /// in Tools" means when adding one, and which running copy a tool with arguments comes back to.
     /// </summary>
     public static bool IsSameLaunch(ToolEntry a, ToolEntry b) =>
-        string.Equals(a.TargetPath?.Trim(), b.TargetPath?.Trim(), StringComparison.OrdinalIgnoreCase)
+        IsStoreApp(a) == IsStoreApp(b)
+        && (IsStoreApp(a)
+            ? string.Equals(a.AppId.Trim(), b.AppId.Trim(), StringComparison.OrdinalIgnoreCase)
+            : string.Equals(a.TargetPath?.Trim(), b.TargetPath?.Trim(), StringComparison.OrdinalIgnoreCase))
         && string.Equals(a.Arguments?.Trim() ?? string.Empty, b.Arguments?.Trim() ?? string.Empty, StringComparison.Ordinal);
+
+    /// <summary>A Store app, started by its app ID, rather than a program (.exe).</summary>
+    public static bool IsStoreApp(ToolEntry tool) => !string.IsNullOrWhiteSpace(tool.AppId);
+
+    /// <summary>What the list view and search show for where a tool starts from: the program's path, or the Store app's ID.</summary>
+    public static string LaunchDisplay(ToolEntry tool) => IsStoreApp(tool) ? $"Store app: {tool.AppId.Trim()}" : tool.TargetPath;
+
+    private const string AppsFolderPrefix = @"shell:AppsFolder\";
+
+    /// <summary>The shell path a Store app's icon is read through. Also what a tool hands the icon cache as its icon source.</summary>
+    public static string AppsFolderPath(string appId) => AppsFolderPrefix + appId.Trim();
+
+    /// <summary>The app ID in a path made by <see cref="AppsFolderPath"/>, or null for anything else (a file path, say).</summary>
+    public static string? AppIdFromAppsFolderPath(string? path) =>
+        path != null && path.StartsWith(AppsFolderPrefix, StringComparison.OrdinalIgnoreCase) && ValidateAppId(path[AppsFolderPrefix.Length..]) == null
+            ? path[AppsFolderPrefix.Length..].Trim()
+            : null;
+
+    /// <summary>
+    /// "&lt;PackageName&gt;_&lt;PublisherId&gt;!&lt;ApplicationId&gt;", as the package manifest schema allows each
+    /// part. Strict on purpose: tools.json is user-editable and the ID ends up on explorer.exe's
+    /// command line when activation falls back to shell:AppsFolder, so no quote, space, slash or
+    /// switch may get through.
+    /// </summary>
+    private static readonly Regex AppIdPattern = new(
+        @"^(?<name>[A-Za-z0-9.\-]{3,50})_(?<publisher>[A-Za-z0-9]{13})!(?<app>[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*)$",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>Why <paramref name="appId"/> can't be a Store app tool, or null when it is a well-formed app ID.</summary>
+    public static string? ValidateAppId(string? appId)
+    {
+        string id = appId?.Trim() ?? string.Empty;
+        if (id.Length == 0) return "it has no app ID";
+        var match = AppIdPattern.Match(id);
+        if (!match.Success || match.Groups["app"].Length > 64) return "its app ID isn't a Store app ID";
+        return null;
+    }
+
+    /// <summary>The package family name ("Microsoft.GamingApp_8wekyb3d8bbwe") of a well-formed app ID, else null.</summary>
+    public static string? PackageFamilyNameOf(string? appId) =>
+        ValidateAppId(appId) == null ? appId!.Trim()[..appId!.Trim().IndexOf('!')] : null;
 
     /// <summary>A stored sort option, or A to Z when it is blank or not one of <see cref="SortOptions"/>.</summary>
     public static string NormalizeSortOption(string? option) =>
@@ -91,14 +136,15 @@ public static class ToolCatalog
         return string.Equals(LibraryConstants.NormalizeCategory(tool.Category), tab, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Search matches the name, category or target path, case-insensitively. Blank matches everything.</summary>
+    /// <summary>Search matches the name, category, target path or Store app ID, case-insensitively. Blank matches everything.</summary>
     public static bool MatchesSearch(ToolEntry tool, string? text)
     {
         string query = text?.Trim() ?? string.Empty;
         if (query.Length == 0) return true;
         return tool.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
             || tool.Category.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || tool.TargetPath.Contains(query, StringComparison.OrdinalIgnoreCase);
+            || tool.TargetPath.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || tool.AppId.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>A tool added while a category tab is selected goes into that category; from All or Favorites it is Uncategorized.</summary>
@@ -173,8 +219,11 @@ public static class ToolCatalog
     /// <summary>A batch favorite toggle: adds them all unless every one is already a favorite, then removes them all.</summary>
     public static bool ShouldFavoriteAll(IEnumerable<ToolEntry> tools) => !tools.All(t => t.IsFavorite);
 
-    /// <summary>A batch Run as Administrator toggle: ticks them all unless every one already runs as admin, then unticks them all.</summary>
-    public static bool ShouldRunAllAsAdmin(IEnumerable<ToolEntry> tools) => !tools.All(t => t.RunAsAdmin);
+    /// <summary>
+    /// A batch Run as Administrator toggle: ticks them all unless every one already runs as admin, then
+    /// unticks them all. Store apps can't be started elevated, so only programs count.
+    /// </summary>
+    public static bool ShouldRunAllAsAdmin(IEnumerable<ToolEntry> tools) => !tools.Where(t => !IsStoreApp(t)).All(t => t.RunAsAdmin);
 
     /// <summary>The category the batch dialog starts with: the shared one when every tool has the same, else blank.</summary>
     public static string CommonCategory(IEnumerable<ToolEntry> tools)

@@ -100,6 +100,16 @@
                         <TextBlock Text="Launch" FontSize="12.5" FontWeight="SemiBold"
                                    Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
+                        <!-- A Store app has no program, folder or elevation to edit: it starts by its app ID, like its Start menu tile. -->
+                        <StackPanel Visibility="{Binding IsStoreApp, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Store App" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
+                                     Style="{StaticResource ModernTextBox}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Windows starts it the way its Start menu entry does, and brings it forward if it's already open. Store apps can't run as administrator."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        </StackPanel>
+
+                        <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Program (.exe)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
@@ -125,16 +135,19 @@
                         </Grid>
                         <TextBlock Text="Blank uses the program's own folder."
                                    FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
+                        </StackPanel>
 
                         <TextBlock Text="Launch Arguments (optional)" FontSize="11.5"
                                    Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                         <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
-                        <CheckBox Content="Run as Administrator" IsChecked="{Binding RunAsAdmin}"
-                                  Style="{StaticResource ModernCheckBox}"/>
-                        <TextBlock Text="Windows asks for permission with its own prompt each time. Programs that always need admin get that prompt even with this off. Declining it just leaves the tool closed."
-                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                        <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
+                            <CheckBox Content="Run as Administrator" IsChecked="{Binding RunAsAdmin}"
+                                      Style="{StaticResource ModernCheckBox}"/>
+                            <TextBlock Text="Windows asks for permission with its own prompt each time. Programs that always need admin get that prompt even with this off. Declining it just leaves the tool closed."
+                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                        </StackPanel>
 
                         <StackPanel>
                             <DockPanel>

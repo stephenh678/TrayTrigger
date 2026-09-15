@@ -293,6 +293,44 @@ public class ShortcutService
         }
     }
 
+    /// <summary>
+    /// What a shortcut with no file target starts, read from the shell item it points at: a Store app
+    /// (a shell:AppsFolder entry dragged to the desktop) or a desktop app's Start menu entry. Null when
+    /// the shortcut or its item can't be read.
+    /// </summary>
+    public ShellApp? ResolveShellItemTarget(string lnkPath)
+    {
+        IShellLinkW? link = null;
+        IntPtr pidl = IntPtr.Zero;
+        try
+        {
+            link = (IShellLinkW)new ShellLink();
+            ((IPersistFile)link).Load(lnkPath, 0);
+            link.GetIDList(out pidl);
+            return ShellAppResolver.FromIdList(pidl);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("ShortcutService", $"Could not read the shell item behind '{lnkPath}': {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
+            if (link != null)
+            {
+                try
+                {
+                    Marshal.FinalReleaseComObject(link);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Verbose("ShortcutService", $"FinalReleaseComObject failed after reading '{lnkPath}': {ex.Message}");
+                }
+            }
+        }
+    }
+
     /// <summary>Whether the shortcut's "Run as administrator" box is ticked. False when it can't be read.</summary>
     private static bool ReadRunAsAdminFlag(IShellLinkW link, string lnkPath)
     {

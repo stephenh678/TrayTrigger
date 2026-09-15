@@ -13,12 +13,19 @@ public class ToolEntry
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = string.Empty;
-    /// <summary>The program to start: always a local .exe (see <see cref="ToolCatalog.ValidateTarget"/>).</summary>
+    /// <summary>The program to start: always a local .exe (see <see cref="ToolCatalog.ValidateTarget"/>). Blank for a Store app.</summary>
     public string TargetPath { get; set; } = string.Empty;
+    /// <summary>
+    /// A Microsoft Store (packaged) app's Application User Model ID, "&lt;PackageFamilyName&gt;!&lt;AppId&gt;",
+    /// or blank for a program. When set the tool is a Store app: it is started by shell activation
+    /// (<see cref="PackagedAppActivator"/>), and <see cref="TargetPath"/>, <see cref="WorkingDirectory"/>
+    /// and <see cref="RunAsAdmin"/> don't apply. See <see cref="ToolCatalog.ValidateAppId"/>.
+    /// </summary>
+    public string AppId { get; set; } = string.Empty;
     public string Arguments { get; set; } = string.Empty;
     /// <summary>Blank or missing means the target's own folder.</summary>
     public string WorkingDirectory { get; set; } = string.Empty;
-    /// <summary>Start through the "runas" verb. Windows shows its own UAC prompt; TrayTrigger never intercepts it.</summary>
+    /// <summary>Start through the "runas" verb. Windows shows its own UAC prompt; TrayTrigger never intercepts it. Never set for a Store app.</summary>
     public bool RunAsAdmin { get; set; }
     public string IconPath { get; set; } = string.Empty;
     public string Hotkey { get; set; } = string.Empty;

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -33,34 +35,65 @@ public partial class ToolsView : UserControl
 
     private void OnDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(ShellAppResolver.IdListFormat)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
         e.Handled = true;
     }
 
     /// <summary>
     /// Handled here so the drop never bubbles to the window's game import. Deferred to a fresh
     /// dispatcher cycle for the same reason as MainWindow.Window_Drop: a dialog opened inside the
-    /// OS drag loop can fail to repaint or close.
+    /// OS drag loop can fail to repaint or close. Files are used when the drop has them; apps dragged
+    /// from shell:AppsFolder come with no file path, only shell items, which are read before the
+    /// deferral because the drag's data isn't readable once it ends.
     /// </summary>
     private void OnDrop(object sender, DragEventArgs e)
     {
         e.Handled = true;
-        if (!e.Data.GetDataPresent(DataFormats.FileDrop) || ViewModel is not { } viewModel) return;
+        if (ViewModel is not { } viewModel) return;
 
-        string[]? files;
+        string[]? files = ReadDroppedFiles(e.Data);
+        if (files is { Length: > 0 })
+        {
+            Dispatcher.BeginInvoke(new Action(() => viewModel.HandleDrop(files)), DispatcherPriority.Background);
+            return;
+        }
+
+        var apps = ReadDroppedShellItems(e.Data);
+        if (apps.Count > 0)
+        {
+            Dispatcher.BeginInvoke(new Action(() => viewModel.HandleShellDrop(apps)), DispatcherPriority.Background);
+        }
+    }
+
+    private static string[]? ReadDroppedFiles(IDataObject data)
+    {
+        if (!data.GetDataPresent(DataFormats.FileDrop)) return null;
         try
         {
-            files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            return data.GetData(DataFormats.FileDrop) as string[];
         }
         catch (Exception ex)
         {
             LoggingService.Warn("ToolsView", $"Could not read the dropped files: {ex.Message}");
-            return;
+            return null;
         }
+    }
 
-        if (files is { Length: > 0 })
+    private static List<ShellApp> ReadDroppedShellItems(IDataObject data)
+    {
+        if (!data.GetDataPresent(ShellAppResolver.IdListFormat)) return [];
+        try
         {
-            Dispatcher.BeginInvoke(new Action(() => viewModel.HandleDrop(files)), DispatcherPriority.Background);
+            return data.GetData(ShellAppResolver.IdListFormat) is MemoryStream stream
+                ? ShellAppResolver.FromIdListArray(stream.ToArray())
+                : [];
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("ToolsView", $"Could not read the dropped apps: {ex.Message}");
+            return [];
         }
     }
 

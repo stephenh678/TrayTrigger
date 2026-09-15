@@ -424,6 +424,7 @@ public class StorageService : IProfileSnapshotStore
             }
             tool.Name ??= string.Empty;
             tool.TargetPath ??= string.Empty;
+            tool.AppId ??= string.Empty;
             tool.Arguments ??= string.Empty;
             tool.WorkingDirectory ??= string.Empty;
             tool.IconPath ??= string.Empty;
