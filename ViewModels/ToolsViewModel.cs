@@ -57,6 +57,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
         SetViewModeCommand = new RelayCommand(mode => ViewMode = mode?.ToString() ?? ToolCatalog.ViewLargeIcons);
         AddToolCommand = new RelayCommand(AddToolFromPicker);
+        OpenAppsFolderCommand = new RelayCommand(OpenAppsFolder);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
     }
 
@@ -68,6 +69,7 @@ public sealed class ToolsViewModel : ViewModelBase
 
     public ICommand SetViewModeCommand { get; }
     public ICommand AddToolCommand { get; }
+    public ICommand OpenAppsFolderCommand { get; }
     public ICommand ClearSearchCommand { get; }
 
     /// <summary>Set by App: the same launch popup games use.</summary>
@@ -276,6 +278,23 @@ public sealed class ToolsViewModel : ViewModelBase
         if (FileDialogCloak.Show(dialog) == true)
         {
             AddFiles(dialog.FileNames);
+        }
+    }
+
+    /// <summary>
+    /// Opens Windows' Applications folder (shell:AppsFolder), every app in the Start menu, so one can be
+    /// dragged onto the page. The only way to add a Store app, which has no .exe for Add Tool to pick.
+    /// </summary>
+    private void OpenAppsFolder()
+    {
+        try
+        {
+            using var _ = Process.Start(new ProcessStartInfo("explorer.exe", "shell:AppsFolder") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Tools", $"Could not open the Applications folder: {ex.Message}");
+            StatusMessage = "Couldn't open the Applications folder.";
         }
     }
 

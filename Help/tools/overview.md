@@ -6,7 +6,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Adding a tool
 
-- Drop a program (.exe), its shortcut (.lnk), or an app dragged from shell:AppsFolder anywhere on the Tools page, or use Add Tool. You can add several at once.
+- Drop a program (.exe), its shortcut (.lnk), or an app dragged from Browse Apps anywhere on the Tools page, or use Add Tool. You can add several at once.
 - Only programs and Store apps are accepted. Web links, scripts (.bat, .ps1) and shortcuts that point at anything else are refused, and so are programs on a network drive.
 - The name comes from the file name, without " - Shortcut". Rename it from its right-click menu or Edit Tool.
 - A shortcut brings its arguments, working folder and its "Run as administrator" setting with it.
@@ -16,7 +16,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Store apps
 
-- Apps from the Microsoft Store, like Xbox or Windows Terminal, can be tools too. Press Win+R, type shell:AppsFolder and press Enter, then drag the app onto the Tools page. A desktop shortcut made by dragging an app out of that folder works too.
+- Apps from the Microsoft Store, like Xbox or Windows Terminal, can be tools too. Click Browse Apps next to Add Tool (it opens Windows' list of every app in the Start menu, shell:AppsFolder), then drag the app onto the Tools page. A desktop shortcut made by dragging an app out of that folder works too.
 - The name is the app's name as Windows shows it (or the shortcut's file name).
 - A Store app is started the way its Start menu entry starts it. If it's already open, Windows brings it to the front.
 - Edit Tool shows the app's ID instead of a program path. Store apps have no working folder or file location and can't run as administrator, so those options aren't shown for them, and a batch Run as Administrator leaves them out.
