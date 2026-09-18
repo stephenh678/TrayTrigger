@@ -14,6 +14,7 @@ stable version they lead to.
 - **Stricter update checks** — each release's checksum file is now signed, and from this version on TrayTrigger only installs an update whose checksums carry that signature, so tampering with a release on GitHub is not enough to push an update. The installer must also be the one named for that release, and it is checked again at the moment it is started.
 - **Safer imports** — a dropped shortcut whose icon points at a network share or web address no longer has that address opened, a hand-edited games.json can't name cache files outside TrayTrigger's own folders, and artwork downloads have a size limit.
 - **Playtime counts when TrayTrigger closes first** — quitting TrayTrigger (or signing out) while a game is still running now records the time played so far instead of losing the session.
+- **Tidier menus and dialogs** — the tray menu and every right-click menu use the same thin separator, a favorite is no longer listed a second time under Recent, and tray icons are all the same rounded square. Checkboxes match the dark theme, Edit Game shows the game's name as its heading and loses its minimize and maximize buttons, unplayed games say only "Never played", and the status bar stays empty until there is something to report.
 - **Game scripts** — batch scripts no longer have a percent sign in the game's path expanded by Windows, a game whose name starts with a dash no longer breaks a PowerShell script, and a post-exit script run because TrayTrigger is closing is told the real playtime instead of 0.
 
 ## 1.4.4
