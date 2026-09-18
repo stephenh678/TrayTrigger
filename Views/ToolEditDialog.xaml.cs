@@ -12,6 +12,7 @@ public partial class ToolEditDialog : Window
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
+        WindowHelper.RemoveMinimizeAndMaximize(this);
         var viewModel = new ToolEditViewModel(tool, categories, iconExtractorService);
         DataContext = viewModel;
 

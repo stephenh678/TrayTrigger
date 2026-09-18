@@ -24,7 +24,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="Edit Tool" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+            <!-- The tool's name, live as it is edited; the title bar already says "Edit Tool". -->
+            <TextBlock Text="{Binding HeadingText}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="{StaticResource BrushTextPrimary}"/>
             <TextBlock Text="Its name, category and icon, and how the program starts"
                        FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
         </StackPanel>
