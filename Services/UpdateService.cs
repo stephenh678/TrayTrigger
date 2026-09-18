@@ -284,11 +284,22 @@ public class UpdateService
     /// <see cref="UpdateVerificationException"/> and the file is deleted. Callers should send
     /// the user to the GitHub release page in that case rather than retrying.
     /// </param>
+    /// <param name="checksumsSignature">
+    /// The release's <see cref="GitHubReleaseInfo.ChecksumsSignatureAsset"/>. Required once
+    /// <see cref="ReleaseManifestVerifier.IsEnforced"/>: the manifest must carry a valid signature
+    /// from a key compiled into this build, or the update is refused.
+    /// </param>
+    /// <param name="releaseTag">
+    /// The release's tag. When signatures are enforced the installer must be the one named for this
+    /// tag, so an older, genuinely signed release can't be re-published under a newer version.
+    /// </param>
     public async Task<string> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         GitHubReleaseAsset? checksums,
         IProgress<double>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        GitHubReleaseAsset? checksumsSignature = null,
+        string? releaseTag = null)
     {
         if (string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl))
         {
@@ -301,22 +312,35 @@ public class UpdateService
                 $"The release does not include {GitHubReleaseInfo.ChecksumsAssetName}, so the installer cannot be verified.");
         }
 
-        // Fetch the manifest first: if it's unreachable there's no point pulling 50 MB. Bounded on
-        // its own: a stalled request for this one-kilobyte file would otherwise hold the update
-        // dialog at 0% until the user cancelled.
-        string sumsText;
-        using (var manifestCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+        // Fetch the manifest first: if it's unreachable there's no point pulling 50 MB.
+        byte[] sumsBytes = await FetchSmallAssetAsync(checksums.BrowserDownloadUrl, GitHubReleaseInfo.ChecksumsAssetName, cancellationToken).ConfigureAwait(false);
+
+        if (ReleaseManifestVerifier.IsEnforced)
         {
-            manifestCts.CancelAfter(ManifestFetchTimeout);
-            try
+            if (checksumsSignature == null || string.IsNullOrWhiteSpace(checksumsSignature.BrowserDownloadUrl))
             {
-                sumsText = await _httpClient.GetStringAsync(checksums.BrowserDownloadUrl, manifestCts.Token).ConfigureAwait(false);
+                throw new UpdateVerificationException(
+                    $"The release does not include {GitHubReleaseInfo.ChecksumsSignatureAssetName}, so its checksums cannot be trusted.");
             }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+
+            byte[] signature = await FetchSmallAssetAsync(checksumsSignature.BrowserDownloadUrl, GitHubReleaseInfo.ChecksumsSignatureAssetName, cancellationToken).ConfigureAwait(false);
+            if (!ReleaseManifestVerifier.Verify(sumsBytes, signature))
             {
-                throw new HttpRequestException($"Timed out fetching {GitHubReleaseInfo.ChecksumsAssetName}.");
+                LoggingService.Error("UpdateService", $"{GitHubReleaseInfo.ChecksumsAssetName} is not signed by a TrayTrigger release key.");
+                throw new UpdateVerificationException(
+                    $"{GitHubReleaseInfo.ChecksumsAssetName} is not signed by a TrayTrigger release key.");
+            }
+            LoggingService.Info("UpdateService", $"{GitHubReleaseInfo.ChecksumsAssetName} signature verified.");
+
+            if (!IsInstallerNamedForRelease(asset.Name, releaseTag))
+            {
+                LoggingService.Error("UpdateService", $"Installer '{asset.Name}' is not the one named for release '{releaseTag}'.");
+                throw new UpdateVerificationException(
+                    $"The installer {asset.Name} does not belong to release {releaseTag}.");
             }
         }
+
+        string sumsText = System.Text.Encoding.UTF8.GetString(sumsBytes);
         string? expectedHash = FindExpectedSha256(sumsText, asset.Name);
         if (expectedHash == null)
         {
@@ -400,6 +424,60 @@ public class UpdateService
         LoggingService.Info("UpdateService", $"Installer signature verified: {actualSubject}");
         return null;
     }
+
+    /// <summary>
+    /// A signed manifest proves its files are genuine, not that they belong to this release: a whole
+    /// older release (installer, manifest, signature) could be re-published under a newer tag to move
+    /// users back to a build with known bugs. release.yml names the installer after the tag
+    /// (setup.iss OutputBaseFilename), so the name must be exactly that.
+    /// </summary>
+    internal static bool IsInstallerNamedForRelease(string assetName, string? releaseTag)
+    {
+        if (string.IsNullOrWhiteSpace(releaseTag)) return false;
+
+        string tag = releaseTag.Trim();
+        if (!tag.StartsWith('v') && !tag.StartsWith('V')) tag = "v" + tag;
+        return string.Equals(assetName, $"TrayTrigger-{tag}-Setup.exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A kilobyte-sized release asset (the manifest, its signature), fetched whole. Bounded on its
+    /// own: a stalled request would otherwise hold the update dialog at 0% until the user cancelled.
+    /// </summary>
+    private async Task<byte[]> FetchSmallAssetAsync(string url, string assetName, CancellationToken cancellationToken)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(ManifestFetchTimeout);
+        try
+        {
+            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength > MaxSmallAssetBytes)
+            {
+                throw new UpdateVerificationException($"{assetName} is larger than expected.");
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
+            using var buffer = new MemoryStream();
+            var chunk = new byte[8192];
+            int read;
+            while ((read = await stream.ReadAsync(chunk, cts.Token).ConfigureAwait(false)) > 0)
+            {
+                if (buffer.Length + read > MaxSmallAssetBytes)
+                {
+                    throw new UpdateVerificationException($"{assetName} is larger than expected.");
+                }
+                buffer.Write(chunk, 0, read);
+            }
+            return buffer.ToArray();
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new HttpRequestException($"Timed out fetching {assetName}.");
+        }
+    }
+
+    private const int MaxSmallAssetBytes = 1024 * 1024;
 
     /// <summary>VersionInfoProductName in setup.iss.</summary>
     internal const string ExpectedInstallerProductName = "TrayTrigger";

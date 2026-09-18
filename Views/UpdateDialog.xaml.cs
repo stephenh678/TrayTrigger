@@ -151,7 +151,9 @@ public partial class UpdateDialog : Window
                 installer,
                 _release.ChecksumsAsset,
                 progress,
-                _downloadCts.Token);
+                _downloadCts.Token,
+                _release.ChecksumsSignatureAsset,
+                _release.TagName);
 
             ProgressStatusText.Text = "Launching installer...";
             ProgressPercentText.Text = "100%";

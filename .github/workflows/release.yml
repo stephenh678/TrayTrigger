@@ -74,12 +74,11 @@ jobs:
       # Code signing (SignPath Foundation). DORMANT: the project's application was declined in
       # September 2026, so SIGNPATH_API_TOKEN is not set, every step below is skipped, and
       # releases are unsigned (the README and site say so). Kept so a later re-application, or
-      # another signing service, only needs the secret and variables. Two stages, because Inno Setup can't unpack an
-      # installer to sign what's inside it: sign TrayTrigger.exe, build the installer around
-      # the signed exe, then sign the installer. Every signing step is skipped when the
-      # SIGNPATH_API_TOKEN secret is absent, so the workflow keeps producing unsigned releases
-      # until the SignPath project exists. Each stage waits for an Approver to accept the
-      # request in the SignPath console (up to 2 h).
+      # another signing service, only needs the secret and variables.
+      #
+      # Two stages, because Inno Setup can't unpack an installer to sign what's inside it: sign
+      # TrayTrigger.exe, build the installer around the signed exe, then sign the installer. Each
+      # stage waits for an Approver to accept the request in the SignPath console (up to 2 h).
       #
       # Repository configuration once SignPath approves the project:
       #   secret  SIGNPATH_API_TOKEN            API token of a SignPath user with Submitter role
@@ -175,6 +174,20 @@ jobs:
           [System.IO.File]::WriteAllLines("$PWD/publish/installer/SHA256SUMS.txt", $lines, [System.Text.UTF8Encoding]::new($false))
           Get-Content publish/installer/SHA256SUMS.txt
 
+      # Releases are not Authenticode-signed, so SHA256SUMS.txt is signed instead: the in-app
+      # updater checks SHA256SUMS.txt.sig against the public keys compiled into
+      # Services/ReleaseManifestVerifier.cs and refuses an update without a valid one. The private
+      # key is the RELEASE_SIGNING_KEY secret (tools/ReleaseSigning new-keys). The tool fails the
+      # release if the app has trusted keys and the secret is missing, or if the secret is not one
+      # of those keys - either would publish a release no installed copy accepts.
+      - name: Sign SHA256SUMS.txt
+        shell: pwsh
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          dotnet run --file tools/ReleaseSigning/ReleaseSigning.cs -- sign publish/installer/SHA256SUMS.txt --trusted Services/ReleaseManifestVerifier.cs
+          if ($LASTEXITCODE -ne 0) { throw "Signing SHA256SUMS.txt failed." }
+
       - name: Verify Generated Assets
         shell: pwsh
         run: |
@@ -253,3 +266,4 @@ jobs:
             publish/installer/TrayTrigger-v*-Setup.exe
             publish/installer/TrayTrigger-v*-portable.zip
             publish/installer/SHA256SUMS.txt
+            publish/installer/SHA256SUMS.txt.sig

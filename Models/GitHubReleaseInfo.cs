@@ -170,6 +170,28 @@ public class GitHubReleaseInfo
         }
     }
 
+    /// <summary>Name of the detached signature of <see cref="ChecksumsAssetName"/> (see ReleaseManifestVerifier).</summary>
+    public const string ChecksumsSignatureAssetName = ChecksumsAssetName + ".sig";
+
+    [JsonIgnore]
+    public GitHubReleaseAsset? ChecksumsSignatureAsset
+    {
+        get
+        {
+            if (Assets == null) return null;
+
+            foreach (var a in Assets)
+            {
+                if (a.Name.Equals(ChecksumsSignatureAssetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return a;
+                }
+            }
+
+            return null;
+        }
+    }
+
     /// <summary>Finds the portable zip asset if available.</summary>
     [JsonIgnore]
     public GitHubReleaseAsset? ZipAsset
