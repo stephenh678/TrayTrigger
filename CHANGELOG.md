@@ -12,6 +12,8 @@ stable version they lead to.
 
 - **Safer elevated actions** — the Defender exclusion, System Restore point and "needs administrator" tweaks now start Windows' own tools by their full path, lock the temporary registry file until Windows has read it, and handle folders with a curly apostrophe in the name (Assassin’s Creed), which used to make the Defender exclusion fail.
 - **Stricter update checks** — the downloaded installer must be a TrayTrigger installer as well as carry the same signature, a revoked certificate is refused, and the file is checked again at the moment it is started.
+- **Safer imports** — a dropped shortcut whose icon points at a network share or web address no longer has that address opened, a hand-edited games.json can't name cache files outside TrayTrigger's own folders, and artwork downloads have a size limit.
+- **Playtime counts when TrayTrigger closes first** — quitting TrayTrigger (or signing out) while a game is still running now records the time played so far instead of losing the session.
 - **Game scripts** — batch scripts no longer have a percent sign in the game's path expanded by Windows, a game whose name starts with a dash no longer breaks a PowerShell script, and a post-exit script run because TrayTrigger is closing is told the real playtime instead of 0.
 
 ## 1.4.4

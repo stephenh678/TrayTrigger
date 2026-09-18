@@ -383,6 +383,7 @@ public partial class App : Application
             {
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
+                _launcherService?.RecordPlaytimeOnShutdown();
                 FinalizePendingRemovalOnShutdown();
                 SaveSettingsOnShutdown("App.SessionEnding");
                 // WPF answers the session-end query by calling Shutdown(), which closes this window
@@ -1177,6 +1178,7 @@ public partial class App : Application
         {
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
+            _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();
 
             SaveSettingsOnShutdown("App.ExitApplication");
