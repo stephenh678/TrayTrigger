@@ -185,7 +185,6 @@ public class LibraryViewModel : ViewModelBase
         {
             OnPropertyChanged(nameof(HasAnyGames));
             OnPropertyChanged(nameof(TotalGameCountDisplay));
-            OnPropertyChanged(nameof(LibrarySummary));
         };
 
         RefreshCategoriesCommand = new RelayCommand(RebuildCategories);
@@ -290,20 +289,6 @@ public class LibraryViewModel : ViewModelBase
     public int TotalGameCount => Games.Count;
     public string TotalGameCountDisplay => Games.Count == 1 ? "1 game" : $"{Games.Count} games";
 
-    /// <summary>
-    /// The line under "Games Library": "15 games · 2 favorites · 1 playing". Parts that would read
-    /// "0 ..." are left out, so an empty library says only "0 games".
-    /// </summary>
-    public string LibrarySummary => BuildLibrarySummary(Games.Count, Games.Count(g => g.Game.IsFavorite), Games.Count(g => g.IsPlaying));
-
-    internal static string BuildLibrarySummary(int games, int favorites, int playing)
-    {
-        var parts = new List<string> { games == 1 ? "1 game" : $"{games} games" };
-        if (favorites > 0) parts.Add(favorites == 1 ? "1 favorite" : $"{favorites} favorites");
-        if (playing > 0) parts.Add($"{playing} playing");
-        return string.Join("  ·  ", parts);
-    }
-
     /// <summary>False only when the library itself is empty. Lets the view tell "add your first
     /// game" apart from "nothing matches this search or category tab".</summary>
     public bool HasAnyGames => Games.Count > 0;
@@ -318,11 +303,7 @@ public class LibraryViewModel : ViewModelBase
     /// (which reads library state from outside this class). Events can only be raised from their
     /// declaring class, hence this thin wrapper.
     /// </summary>
-    public void NotifyLibraryUpdated()
-    {
-        OnPropertyChanged(nameof(LibrarySummary));
-        LibraryUpdated?.Invoke();
-    }
+    public void NotifyLibraryUpdated() => LibraryUpdated?.Invoke();
 
     public void NotifyAllCardsPosterArtChanged()
     {
@@ -340,7 +321,6 @@ public class LibraryViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(TotalGameCount));
         OnPropertyChanged(nameof(TotalGameCountDisplay));
-        OnPropertyChanged(nameof(LibrarySummary));
     }
 
     public void LoadLibrary()
@@ -469,7 +449,6 @@ public class LibraryViewModel : ViewModelBase
         {
             var card = Games.FirstOrDefault(g => g.Id == gameId);
             if (card != null) card.IsPlaying = isPlaying;
-            OnPropertyChanged(nameof(LibrarySummary));
         });
     }
 

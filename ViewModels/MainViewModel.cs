@@ -697,7 +697,6 @@ public class MainViewModel : ViewModelBase
 
     public int TotalGameCount => Library.TotalGameCount;
     public string TotalGameCountDisplay => Library.TotalGameCountDisplay;
-    public string LibrarySummary => Library.LibrarySummary;
 
     public ICommand AddGameCommand => Import.AddGameCommand;
     public ICommand AddFolderCommand => Import.AddFolderCommand;

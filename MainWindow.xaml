@@ -627,13 +627,19 @@
 
                 <!-- 1. Header -->
                 <DockPanel Grid.Row="0" Margin="0,0,0,14">
+                    <!-- Right: Live Game Count Status (matching Settings & System) -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" 
+                                   Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" 
+                                   FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                    </StackPanel>
+
                     <!-- Left: Title & Subtitle matching Settings & System -->
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Games Library" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                                    FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                        <!-- Live: games, favorites, playing. Replaced a fixed line listing the supported
-                             launchers, and the game count that used to sit at the right of this header. -->
-                        <TextBlock Text="{Binding LibrarySummary, Mode=OneWay}"
+                        <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, and local folders"
                                    FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                                    FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
                     </StackPanel>
