@@ -60,6 +60,9 @@ public class RawgService
         PooledConnectionLifetime = TimeSpan.FromMinutes(15)
     })
     {
+        // Everything these calls fetch is buffered in memory. JSON is kilobytes and a poster a few
+        // megabytes, so a response past this is a broken or hostile server, not a bigger image.
+        MaxResponseContentBufferSize = MetadataHttpLimits.MaxResponseBytes,
         Timeout = TimeSpan.FromSeconds(10)
     };
 

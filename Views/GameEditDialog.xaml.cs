@@ -23,6 +23,7 @@ public partial class GameEditDialog : Window
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
+        WindowHelper.RemoveMinimizeAndMaximize(this);
         _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary);
         DataContext = _viewModel;
 

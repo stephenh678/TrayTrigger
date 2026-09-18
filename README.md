@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  Launch automation and per-game Windows tuning for PC gamers.<br>
-  Launchers that close themselves, launch arguments, performance profiles, and your own pre-launch and post-exit scripts.<br>
-  <strong>Everything reverts when the game exits.</strong> Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.
+  <strong>Your games. Your settings. One tray menu.</strong><br>
+  Launch PC games from your Windows system tray and automate your before-and-after routine.<br>
+  Optional per-game profile settings restore when you finish. Free and open source.
 </p>
 
 <p align="center">
@@ -55,6 +55,17 @@
 
 ---
 
+## Quick start
+
+1. **Download** the installer or portable ZIP from the [latest release](https://github.com/stephenh678/TrayTrigger/releases/latest). Windows 10/11, 64-bit; no separate .NET install needed. See [signing status](#code-signing) and [download verification](#verifying-a-download).
+2. **Scan** with **Scan for Games** in the library. Add an executable or shortcut for anything the scan misses.
+3. **Launch** a game from TrayTrigger's right-click system-tray menu. Leave its performance profile **Off** to launch without per-game tweaks.
+
+[See the screenshot walkthrough](https://stephenh678.github.io/TrayTrigger/#walkthrough) · [Give feedback](https://github.com/stephenh678/TrayTrigger/discussions) · [Report a bug](https://github.com/stephenh678/TrayTrigger/issues/new/choose)
+
+**Did your first game launch successfully?** Tell us the game and launcher, and what you would like to automate next.
+
+
 <p align="center">
   <img src="Assets/social-preview.png" alt="TrayTrigger: launchers that close themselves, per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks">
 </p>
@@ -65,14 +76,14 @@
 
 ## From launch to exit, handled
 
-A launcher's job ends when the game is running. TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. All of it per game, all of it automatic, all of it reversible.
+A launcher's job ends when the game is running. TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. Per-game profiles restore their settings on exit. System-wide tweaks stay applied until you revert them; custom scripts need their own cleanup actions.
 
 | When | What TrayTrigger does |
 |---|---|
 | **Before launch** | Snapshots your current settings. Applies the game's **Performance Profile**: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your **pre-launch script**: pause Wallpaper Engine, start the OBS replay buffer, close Discord, back up saves. |
 | **On launch** | Starts the game with your **launch arguments**, as Administrator if you asked, through its own launcher (Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net) or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears. |
 | **While playing** | Stays a tray icon. A launch from a hotkey or the tray menu shows a small card by the clock with what the game is waiting on (Battle.net signing in, say) until it starts. The tooltip and the tray menu's *Now Playing* section show what's running. |
-| **On exit** | Restores every setting to **exactly what it found**. Runs your **post-exit script**. Closes the launcher if you told it to. Crash-safe: if TrayTrigger or Windows dies mid-game, the snapshot is restored on next start. |
+| **On exit** | Restores **per-game profile settings to their previous state**. Runs your **post-exit script**. Closes the launcher if you told it to. Crash-safe: if TrayTrigger or Windows dies mid-game, the snapshot is restored on next start. |
 
 ### Why not just Steam?
 
@@ -102,11 +113,14 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 - **Search Settings, System & Performance, and About** from a box beside their tabs: the cards that mention your words stay, with the words highlighted.
 
 <p align="center">
-  <img src="Assets/screenshots/library-grid.png" width="800" alt="Games library, poster grid view"><br>
+  <img src="site/assets/library-current.png" width="800" alt="Games library, poster grid view"><br>
   <em>Poster grid with automatic art, categories, filters, and launcher badges</em>
 </p>
 
-<!-- GIF: Assets/screenshots/tray-launch.gif (tray icon → right-click → launch) -->
+<p align="center">
+  <img src="site/assets/tray-menu.png" width="460" alt="TrayTrigger tray menu with Recent, Favorites, and an expanded game category"><br>
+  <em>Your next game, one tray menu away.</em>
+</p>
 
 ### Launcher Control
 
@@ -196,16 +210,7 @@ System-wide settings, separate from the per-game profiles. 20 documented Windows
 
 <!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Reset Defaults) -->
 
-| Category | Tweaks |
-|---|---|
-| **Display & Input** | [Mouse Acceleration](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Mouse-Acceleration-(Enhanced-Pointer-Precision)) · [Sticky, Filter, and Toggle Keys shortcuts](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Sticky,-Filter,-and-Toggle-Keys-Shortcuts) · [Optimizations for Windowed Games](https://github.com/stephenh678/TrayTrigger/wiki/Optimizations-for-Windowed-Games-(DirectFlip-Model)) · [Variable Refresh Rate for Windowed Games](https://github.com/stephenh678/TrayTrigger/wiki/Variable-Refresh-Rate-for-Windowed-Games) · [Auto HDR](https://github.com/stephenh678/TrayTrigger/wiki/Auto-HDR) *(opt-in)* · [Hardware-Accelerated GPU Scheduling](https://github.com/stephenh678/TrayTrigger/wiki/Hardware-Accelerated-GPU-Scheduling-(HAGS)) · [Disable Fullscreen Optimizations](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Fullscreen-Optimization-Compatibility-Shims) *(opt-in)* · [Disable Multiplane Overlay](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Multiplane-Overlay-(MPO)) *(opt-in)* |
-| **CPU & Scheduling Priority** | [Windows Game Mode](https://github.com/stephenh678/TrayTrigger/wiki/Windows-Game-Mode) · [System Timer Resolution](https://github.com/stephenh678/TrayTrigger/wiki/System-Timer-Resolution) · [Foreground Priority Boost](https://github.com/stephenh678/TrayTrigger/wiki/Foreground-Priority-Boost) *(opt-in)* · [Windows Visual Effects](https://github.com/stephenh678/TrayTrigger/wiki/Windows-Visual-Effects-(Performance-Mode)) *(opt-in)* · ["Ultimate Plan" Power Plan](https://github.com/stephenh678/TrayTrigger/wiki/Ultimate-Plan-TrayTrigger-Power-Plan-(always-on)) *(opt-in)* |
-| **Network & Background Activity** | [Disable MMCSS Network Throttling](https://github.com/stephenh678/TrayTrigger/wiki/Disable-MMCSS-Network-Throttling) · [Disable Nagle's Algorithm](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Nagle's-Algorithm-(TCP-Send-Delay)) *(opt-in)* · [Disable Delivery Optimization](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Delivery-Optimization) · [Exclude Drivers from Windows Update](https://github.com/stephenh678/TrayTrigger/wiki/Exclude-Drivers-from-Windows-Update) *(opt-in)* · [Disable Game Bar Captures](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Game-Bar-Captures-and-Background-Recording) · [Disable Xbox Game Bar Overlay](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Xbox-Game-Bar-Overlay) · [Disable Diagnostic Telemetry Sweeps](https://github.com/stephenh678/TrayTrigger/wiki/Disable-Diagnostic-Telemetry-Sweeps) |
-| **Security (status only)** | [Core Isolation / Memory Integrity](https://github.com/stephenh678/TrayTrigger/wiki/Core-Isolation-Memory-Integrity-(HVCI)) *(shown and linked to Windows Security, never counted as an optimization)* |
-
-Each link goes to the wiki page with what the tweak changes, the exact registry or API behind it, the trade-off, and how it's reverted. Start with [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work).
-
-**Apply Performance Preset** turns on every recommended tweak in one pass with at most one UAC prompt. **Reset Defaults** reverts only what TrayTrigger changed. An optional **System Restore point** is created before either, if enabled in Settings (on by default).
+See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Reset Defaults**. Bulk changes can create a System Restore point.
 
 ### Hardware Monitoring
 
@@ -232,9 +237,15 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.4.4-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.4.5-Setup.exe -Algorithm SHA256
 ```
-Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signed releases (see [Code signing](#code-signing)) also show a valid publisher in the file's Properties → Digital Signatures tab.
+Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
+
+From 1.4.5, `SHA256SUMS.txt` is itself signed by the release workflow, and each release includes `SHA256SUMS.txt.sig`. The in-app updater checks that signature against public keys built into TrayTrigger and refuses an update without a valid one, so replacing both the installer and its checksum on a release is not enough to get an update installed. To check it yourself, download both files and [`release-signing-key.pub.pem`](release-signing-key.pub.pem) from this repository, then run (OpenSSL ships with Git for Windows):
+```powershell
+openssl dgst -sha256 -verify release-signing-key.pub.pem -signature SHA256SUMS.txt.sig SHA256SUMS.txt
+```
+`Verified OK` means the checksums came from the release workflow. A release signed with the offline backup key verifies against [`release-signing-backup-key.pub.pem`](release-signing-backup-key.pub.pem) instead.
 
 ### Requirements
 - Windows 10 (version 1809+) or Windows 11, 64-bit
@@ -251,7 +262,7 @@ Steam's job ends when the game is running. TrayTrigger handles what happens arou
 Yes. TrayTrigger launches each game through its own client and changes nothing about how those clients work. Run whatever front end you like; TrayTrigger manages the session around the launch.
 
 **Is it safe? What does it touch?**
-Only what you explicitly turn on. Every tweak records the state it found and restores exactly that, including after a crash. Bulk changes can create a System Restore point first. Scripts are off until you enable them and choose one, and they run as you. See [SECURITY.md](SECURITY.md) for the full breakdown.
+Only the profiles, tweaks, and scripts you enable. Per-game profile settings restore on exit; system-wide tweaks stay applied until reverted. Scripts require their own cleanup actions. Bulk changes can create a System Restore point first. Scripts are off until you enable them and choose one, and they run as you. See [SECURITY.md](SECURITY.md) for the full breakdown.
 
 **Does it need administrator access?**
 Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the Defender exclusion list) and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.
@@ -260,7 +271,7 @@ Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the 
 No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), and GitHub Releases (update checks, which you can turn off).
 
 **Can changes be reverted?**
-Yes, all of them, automatically. Per-game profiles revert on exit. System tweaks revert with Reset Defaults or one at a time. A crash mid-session is restored on next start.
+Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Reset Defaults. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.
 
 ---
 
@@ -307,16 +318,11 @@ If you find a security issue, please see [SECURITY.md](SECURITY.md) for how to r
 
 ## Code signing
 
-> **Status:** code signing is being set up and current releases are **not yet signed**. Until then, verify downloads against `SHA256SUMS.txt` as described under [Updates](#updates). This section describes the process that will apply once signing is live.
+> **Status:** releases are **not code-signed**. Verify a download against `SHA256SUMS.txt` as described under [Verifying a download](#verifying-a-download).
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+Because the installer has no publisher certificate, Windows SmartScreen may show "Windows protected your PC" the first time you run it. Check the file's hash first, then choose **More info** > **Run anyway**. The portable ZIP is the same program without an installer.
 
-**Code signing policy.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners and signed through SignPath's GitHub integration; nothing is built or signed on a developer machine. Signed artifacts are `TrayTrigger.exe` (also inside the portable `.zip`) and `TrayTrigger-v*-Setup.exe`. The artifact configurations are kept in [`.signpath/artifact-configurations/`](.signpath/artifact-configurations/).
-
-**Team roles.**
-- Author (commits without external review): [@stephenh678](https://github.com/stephenh678)
-- Reviewer (reviews and merges third-party pull requests): [@stephenh678](https://github.com/stephenh678)
-- Approver (approves each signing request): [@stephenh678](https://github.com/stephenh678)
+**How releases are built.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners; nothing is built on a developer machine. Each release publishes `TrayTrigger-v*-Setup.exe`, the portable `.zip`, a `SHA256SUMS.txt` covering both, and a signature of that file, `SHA256SUMS.txt.sig`. The in-app updater refuses an installer that doesn't match, or a checksum file that isn't signed by a TrayTrigger release key.
 
 **Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), RAWG (game info for non-Steam titles, only if you enter your own API key), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
 

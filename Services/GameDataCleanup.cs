@@ -154,7 +154,9 @@ public static class GameDataCleanup
             _keys.Contains(KeyOf(fullPath));
     }
 
-    private static bool IsSafeKey(string? key) =>
+    /// <summary>True when <paramref name="key"/> can be used as a file name as it stands - no
+    /// separators, no "..", nothing Windows refuses.</summary>
+    internal static bool IsSafeKey(string? key) =>
         !string.IsNullOrWhiteSpace(key) &&
         key != "." && key != ".." &&
         key.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;

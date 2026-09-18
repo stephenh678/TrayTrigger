@@ -720,6 +720,54 @@
             <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <!-- Without a template this was the stock white Windows box, the one bright square in a
+                 dark window. Unchecked: an outlined dark box. Checked: accent fill, white tick.
+                 Indeterminate: accent fill, white dash. Keyboard focus rings the box in the accent. -->
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent" SnapsToDevicePixels="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="FocusRing" Width="22" Height="22" CornerRadius="6" BorderThickness="2"
+                                    BorderBrush="{StaticResource BrushAccentHover}" Visibility="Collapsed" Margin="-3"/>
+                            <Border x:Name="Box" Width="16" Height="16" CornerRadius="4" VerticalAlignment="Center"
+                                    Background="#14141B" BorderBrush="#6A6A7C" BorderThickness="1">
+                                <Grid>
+                                    <Path x:Name="Tick" Data="M 3.5,8.2 L 6.6,11.2 L 12.4,4.9" Stroke="White" StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed"/>
+                                    <Rectangle x:Name="Dash" Width="8" Height="2" RadiusX="1" RadiusY="1" Fill="White" Visibility="Collapsed"/>
+                                </Grid>
+                            </Border>
+                            <ContentPresenter Grid.Column="1" Margin="8,0,0,0" RecognizesAccessKey="True"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource BrushAccentHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="{x:Null}">
+                                <Setter TargetName="Box" Property="Background" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="Dash" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
             <Style.Triggers>
                 <!-- Disabled = "not relevant yet": keep the tick visible so the default is still
                      readable, but fade the whole row so it isn't mistaken for an active choice. -->
@@ -851,17 +899,29 @@
             <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
         </Style>
 
-        <Style TargetType="Separator">
+        <!-- One separator everywhere: a 1 px low-contrast line. -->
+        <Style x:Key="AppSeparatorStyle" TargetType="Separator">
             <Setter Property="Background" Value="#282836"/>
             <Setter Property="Margin" Value="4,5"/>
             <Setter Property="Height" Value="1"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Separator">
-                        <Border Background="{TemplateBinding Background}" Height="1"/>
+                        <Border Background="{TemplateBinding Background}" Height="1" SnapsToDevicePixels="True"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style TargetType="Separator" BasedOn="{StaticResource AppSeparatorStyle}"/>
+
+        <!-- WPF does not give a Separator inside a Menu or ContextMenu the implicit style above: it
+             looks up this key instead, and without it falls back to the system default - the
+             bright, heavy rule the tray menu and the card, batch and tool context menus all had. -->
+        <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator" BasedOn="{StaticResource AppSeparatorStyle}">
+            <Setter Property="Margin" Value="8,4"/>
         </Style>
 
         <!-- Tray Context Menu Section Header (Non-interactive) -->

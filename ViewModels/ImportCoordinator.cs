@@ -102,7 +102,7 @@ public class ImportCoordinator : ViewModelBase
         // route that uses it: Scan for Games, Add Folder, and a dropped folder. Read live, so a
         // folder ignored a moment ago is skipped by the next scan without a restart.
         _folderScannerService.IgnoredFolderProvider = () =>
-            _settings.IgnoredGamePaths.Where(p => !string.IsNullOrWhiteSpace(p.FolderPath)).Select(p => p.FolderPath!);
+            settings.IgnoredGamePaths.Where(p => !string.IsNullOrWhiteSpace(p.FolderPath)).Select(p => p.FolderPath!);
         _steamScannerService = steamScannerService;
         _gogScannerService = gogScannerService;
         _eaScannerService = eaScannerService;

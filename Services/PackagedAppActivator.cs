@@ -28,7 +28,7 @@ public static class PackagedAppActivator
             LoggingService.Warn("PackagedAppActivator", $"IApplicationActivationManager failed for '{aumid}' ({ex.Message}); falling back to shell:AppsFolder.");
         }
 
-        using var _ = Process.Start(new ProcessStartInfo("explorer.exe", $"shell:AppsFolder\\{aumid}") { UseShellExecute = true });
+        using var _ = Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"shell:AppsFolder\\{aumid}") { UseShellExecute = true });
         return 0;
     }
 

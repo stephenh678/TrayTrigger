@@ -15,6 +15,7 @@ public partial class GameDetailsDialog : Window
         InitializeComponent();
         _viewModel = viewModel;
         WindowThemeService.PrepareForFirstShow(this);
+        WindowHelper.RemoveMinimizeAndMaximize(this);
         DataContext = viewModel;
 
         viewModel.RequestClose += () =>

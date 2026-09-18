@@ -27,7 +27,11 @@ public static class AuthenticodeVerifier
     {
         try
         {
+            // SYSLIB0057 points at X509CertificateLoader, which has no equivalent for reading the
+            // signer out of a signed PE file; this remains the supported way to do that.
+#pragma warning disable SYSLIB0057
             using var cert = X509Certificate2.CreateFromSignedFile(path);
+#pragma warning restore SYSLIB0057
             return cert.Subject;
         }
         catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or IOException or UnauthorizedAccessException)
@@ -39,10 +43,16 @@ public static class AuthenticodeVerifier
 
     /// <summary>
     /// True when WinVerifyTrust accepts the file's Authenticode signature. Revocation is checked
-    /// from the local cache only, so a machine without internet access (or with a slow CRL
-    /// server) doesn't stall the update dialog.
+    /// for the whole chain but from the local cache only, so a machine without internet access (or
+    /// with a slow CRL server) doesn't stall the update dialog. A certificate known to be revoked
+    /// fails; one whose revocation status simply isn't cached is accepted, as it was before the
+    /// check existed.
     /// </summary>
-    public static bool IsTrusted(string path)
+    public static bool IsTrusted(string path) => Verify(path, checkRevocation: true);
+
+    private static bool IsTrustedWithoutRevocation(string path) => Verify(path, checkRevocation: false);
+
+    private static bool Verify(string path, bool checkRevocation)
     {
         if (!OperatingSystem.IsWindows()) return false;
 
@@ -55,9 +65,11 @@ public static class AuthenticodeVerifier
         };
 
         IntPtr fileInfoPtr = Marshal.AllocHGlobal((int)fileInfo.cbStruct);
+        bool marshalled = false;
         try
         {
             Marshal.StructureToPtr(fileInfo, fileInfoPtr, false);
+            marshalled = true;
 
             var data = new WINTRUST_DATA
             {
@@ -65,13 +77,13 @@ public static class AuthenticodeVerifier
                 pPolicyCallbackData = IntPtr.Zero,
                 pSIPClientData = IntPtr.Zero,
                 dwUIChoice = WTD_UI_NONE,
-                fdwRevocationChecks = WTD_REVOKE_NONE,
+                fdwRevocationChecks = checkRevocation ? WTD_REVOKE_WHOLECHAIN : WTD_REVOKE_NONE,
                 dwUnionChoice = WTD_CHOICE_FILE,
                 pFile = fileInfoPtr,
                 dwStateAction = WTD_STATEACTION_VERIFY,
                 hWVTStateData = IntPtr.Zero,
                 pwszURLReference = IntPtr.Zero,
-                dwProvFlags = WTD_CACHE_ONLY_URL_RETRIEVAL,
+                dwProvFlags = WTD_CACHE_ONLY_URL_RETRIEVAL | (checkRevocation ? WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT : 0),
                 dwUIContext = 0
             };
 
@@ -82,6 +94,12 @@ public static class AuthenticodeVerifier
             data.dwStateAction = WTD_STATEACTION_CLOSE;
             WinVerifyTrust(IntPtr.Zero, ref action, ref data);
 
+            if (checkRevocation && IsRevocationUnknown(result))
+            {
+                LoggingService.Verbose("Authenticode", $"Revocation status for {path} is not cached (0x{result:X8}); accepting the otherwise valid signature.");
+                return IsTrustedWithoutRevocation(path);
+            }
+
             return result == 0;
         }
         catch (Exception ex)
@@ -91,9 +109,18 @@ public static class AuthenticodeVerifier
         }
         finally
         {
+            // StructureToPtr allocated the path string inside the block; free it with the block.
+            if (marshalled) Marshal.DestroyStructure<WINTRUST_FILE_INFO>(fileInfoPtr);
             Marshal.FreeHGlobal(fileInfoPtr);
         }
     }
+
+    /// <summary>
+    /// "Couldn't find out", as opposed to CERT_E_REVOKED: no cached CRL or OCSP response, and
+    /// fetching one was not allowed.
+    /// </summary>
+    private static bool IsRevocationUnknown(int result) =>
+        unchecked((uint)result) is CERT_E_REVOCATION_FAILURE or CRYPT_E_REVOCATION_OFFLINE or CRYPT_E_NO_REVOCATION_CHECK;
 
     #region WinTrust interop
 
@@ -101,6 +128,11 @@ public static class AuthenticodeVerifier
 
     private const uint WTD_UI_NONE = 2;
     private const uint WTD_REVOKE_NONE = 0;
+    private const uint WTD_REVOKE_WHOLECHAIN = 1;
+    private const uint WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT = 0x80;
+    private const uint CERT_E_REVOCATION_FAILURE = 0x800B010E;
+    private const uint CRYPT_E_REVOCATION_OFFLINE = 0x80092013;
+    private const uint CRYPT_E_NO_REVOCATION_CHECK = 0x80092012;
     private const uint WTD_CHOICE_FILE = 1;
     private const uint WTD_STATEACTION_VERIFY = 1;
     private const uint WTD_STATEACTION_CLOSE = 2;

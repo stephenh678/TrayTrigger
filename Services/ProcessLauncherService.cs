@@ -418,6 +418,35 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
+    /// TrayTrigger is exiting while games it launched may still be running. Nothing will see them
+    /// exit, so the time played so far is recorded now; without this a session that outlived
+    /// TrayTrigger added nothing to the game's playtime. Each session is marked finished so a
+    /// tracker that fires during shutdown can't count it a second time. The profile restore and
+    /// post-exit scripts have their own shutdown paths in App.
+    /// </summary>
+    public void RecordPlaytimeOnShutdown()
+    {
+        List<ActiveGameSession> sessions;
+        lock (_sessionsLock) { sessions = _sessions.Values.ToList(); }
+
+        foreach (var session in sessions)
+        {
+            if (!session.GameStarted) continue;
+            if (Interlocked.Exchange(ref session.Finished, 1) != 0) continue;
+
+            try { session.CancelTracking?.Invoke(); } catch { }
+
+            long minutes = (long)Math.Max(0, Math.Round((DateTime.UtcNow - session.StartedAtUtc).TotalMinutes));
+            if (minutes <= 0) continue;
+
+            session.Game.CumulativePlaytimeMinutes += minutes;
+            LoggingService.Info("Launcher", $"'{session.Game.Name}' is still running at exit. +{minutes}m playtime recorded.");
+            try { GameUpdated?.Invoke(session.Game); }
+            catch (Exception ex) { LoggingService.Warn("Launcher", $"Could not save playtime for '{session.Game.Name}' at exit: {ex.Message}"); }
+        }
+    }
+
+    /// <summary>
     /// A <see cref="Timer"/> that never overlaps its own callback: the period is infinite and the
     /// timer is re-armed only after the callback returns. The old pattern (periodic timer,
     /// re-entrant callbacks) let a slow tick - process enumeration, an elevated restore - overlap
@@ -821,7 +850,7 @@ public partial class ProcessLauncherService
 
         // Registered up front (not on the Running flip) so a TrayTrigger exit during Steam's
         // own startup still runs the post-exit script on shutdown.
-        _scriptService.TrackPostExit(game);
+        _scriptService.TrackPostExit(game, () => session.GameStarted ? session.StartedAtUtc : null);
 
         Poller? poller = null;
         poller = new Poller(SteamSessionPollInterval, () =>
@@ -1047,7 +1076,7 @@ public partial class ProcessLauncherService
         {
             _performanceProfileService.OnGameProcessStarted(game, process);
             CpuTopologyService.ApplyAffinity(process, game);
-            _scriptService.TrackPostExit(game);
+            _scriptService.TrackPostExit(game, () => session.GameStarted ? session.StartedAtUtc : null);
 
             // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited on a
             // thread-pool thread almost immediately for a process that already exited.

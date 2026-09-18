@@ -174,7 +174,7 @@ public class GameEditViewModel : ViewModelBase
     public string Name
     {
         get => _name;
-        set { _name = value; OnPropertyChanged(); }
+        set { _name = value; OnPropertyChanged(); OnPropertyChanged(nameof(HeadingText)); }
     }
 
     public string ExecutablePath
@@ -246,14 +246,17 @@ public class GameEditViewModel : ViewModelBase
     };
 
     /// <summary>Tells the user whether the option can do anything on this machine.</summary>
+    /// <summary>The dialog's heading: the game being edited, or "New Game" until it has a name.</summary>
+    public string HeadingText => string.IsNullOrWhiteSpace(Name) ? "New Game" : Name.Trim();
+
     public string CpuAffinityHint
     {
         get
         {
             var topology = CpuTopologyService.GetTopology();
             return topology.IsHybrid
-                ? $"This CPU is hybrid: {topology.PerformanceCoreCount} performance cores of {topology.LogicalProcessorCount} logical processors. Pinning helps older engines and some anti-cheat titles that stutter when threads land on efficiency cores."
-                : "This CPU is not hybrid (no separate efficiency cores), so this option has no effect here. Kept per game so a library moved to a hybrid machine picks it up.";
+                ? $"Hybrid CPU ({topology.PerformanceCoreCount} performance cores of {topology.LogicalProcessorCount} logical processors). Pinning helps games that stutter on efficiency cores."
+                : "This CPU has no efficiency cores, so this setting has no effect on this PC.";
         }
     }
 

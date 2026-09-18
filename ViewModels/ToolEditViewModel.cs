@@ -64,7 +64,18 @@ public sealed class ToolEditViewModel : ViewModelBase
     public bool IsProgram => !IsStoreApp;
     public string AppId => _tool.AppId;
 
-    public string Name { get => _name; set => SetProperty(ref _name, value ?? string.Empty); }
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            SetProperty(ref _name, value ?? string.Empty);
+            OnPropertyChanged(nameof(HeadingText));
+        }
+    }
+
+    /// <summary>The dialog's heading: the tool being edited, or "New Tool" until it has a name.</summary>
+    public string HeadingText => string.IsNullOrWhiteSpace(Name) ? "New Tool" : Name.Trim();
     public string Category { get => _category; set => SetProperty(ref _category, value ?? string.Empty); }
     public string TargetPath
     {

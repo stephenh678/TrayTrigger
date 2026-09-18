@@ -344,8 +344,13 @@ public class GameCardViewModel : ViewModelBase
             !ProcessLauncherService.IsNonFileProtocolUrl(game.ExecutablePath) &&
             !File.Exists(game.ExecutablePath);
     }
-    public string PlaytimeDisplay => Game.PlaytimeDisplay;
-    public string ListPlaytimeDisplay => string.IsNullOrWhiteSpace(Game.PlaytimeDisplay) ? "0 min played" : Game.PlaytimeDisplay;
+    /// <summary>
+    /// Blank until there is playtime to show. A card already says "Never played" (or when it was
+    /// last played) beside this, and "0 min played" next to "Never played" said the same thing twice.
+    /// </summary>
+    public string PlaytimeDisplay => Game.CumulativePlaytimeMinutes > 0 ? Game.PlaytimeDisplay : string.Empty;
+    /// <summary>The list view's Playtime column: a dash rather than a blank cell.</summary>
+    public string ListPlaytimeDisplay => Game.CumulativePlaytimeMinutes > 0 ? Game.PlaytimeDisplay : "—";
     public string LastPlayedDisplay => Game.LastPlayedDisplay;
 
     public BitmapImage? IconImage
@@ -533,7 +538,7 @@ public class GameCardViewModel : ViewModelBase
             string? targetPath = Game.ExecutablePath;
             if (File.Exists(targetPath))
             {
-                using var proc = Process.Start("explorer.exe", $"/select,\"{targetPath}\"");
+                using var proc = Process.Start(SystemExecutables.Explorer, $"/select,\"{targetPath}\"");
             }
             else if (Directory.Exists(Game.WorkingDirectory))
             {
@@ -549,7 +554,7 @@ public class GameCardViewModel : ViewModelBase
                 }
                 else
                 {
-                    using var proc = Process.Start("explorer.exe", $"\"{folder}\"");
+                    using var proc = Process.Start(SystemExecutables.Explorer, $"\"{folder}\"");
                 }
             }
         }

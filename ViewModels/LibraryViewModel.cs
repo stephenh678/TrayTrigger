@@ -336,7 +336,8 @@ public class LibraryViewModel : ViewModelBase
         RebuildCategories();
         UpdateHotkeys();
         ApplySort();
-        StatusMessage = "Ready";
+        // Nothing to report: the status line stays empty rather than saying "Ready".
+        StatusMessage = string.Empty;
         OnPropertyChanged(nameof(TotalGameCount));
         OnPropertyChanged(nameof(TotalGameCountDisplay));
         NotifyLibraryUpdated();

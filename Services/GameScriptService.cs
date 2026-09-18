@@ -127,7 +127,7 @@ public class GameScriptService
     }
 
     private readonly Lock _lock = new();
-    private readonly Dictionary<string, GameEntry> _pendingPostExit = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (GameEntry Game, Func<DateTime?>? StartedAtUtc)> _pendingPostExit = new(StringComparer.Ordinal);
     private readonly Func<bool> _isFeatureEnabled;
     private readonly Func<ScriptDefaults?> _defaults;
 
@@ -248,12 +248,16 @@ public class GameScriptService
     /// signal begins (direct .exe launch, Steam session, or client launch tracked by install
     /// directory), never for fire-and-forget protocol launches.
     /// </summary>
-    public void TrackPostExit(GameEntry game)
+    /// <param name="startedAtUtc">
+    /// When the game itself started, or null while it hasn't yet. Read at shutdown so the script is
+    /// told how long the game had been played, as it would be on a normal exit.
+    /// </param>
+    public void TrackPostExit(GameEntry game, Func<DateTime?>? startedAtUtc = null)
     {
         if (ResolvePostExit(game, _defaults()) == null) return;
         lock (_lock)
         {
-            _pendingPostExit[game.Id] = game;
+            _pendingPostExit[game.Id] = (game, startedAtUtc);
         }
         LoggingService.Verbose("GameScript", $"Tracking post-exit script for '{game.Name}' in case of early shutdown.");
     }
@@ -324,17 +328,27 @@ public class GameScriptService
     /// </summary>
     public void RunPendingPostExitScriptsOnShutdown()
     {
-        List<GameEntry> pending;
+        List<(GameEntry Game, Func<DateTime?>? StartedAtUtc)> pending;
         lock (_lock)
         {
-            pending = new List<GameEntry>(_pendingPostExit.Values);
+            pending = new List<(GameEntry, Func<DateTime?>?)>(_pendingPostExit.Values);
             _pendingPostExit.Clear();
         }
 
-        foreach (var game in pending)
+        foreach (var (game, startedAtUtc) in pending)
         {
+            long playedMinutes = 0;
+            try
+            {
+                if (startedAtUtc?.Invoke() is DateTime started)
+                {
+                    playedMinutes = (long)Math.Max(0, Math.Round((DateTime.UtcNow - started).TotalMinutes));
+                }
+            }
+            catch { }
+
             LoggingService.Info("GameScript", $"Running post-exit script for '{game.Name}' on application exit.");
-            RunPostExit(game, playedMinutes: 0);
+            RunPostExit(game, playedMinutes);
         }
     }
 
@@ -552,10 +566,18 @@ public class GameScriptService
                 // are replaced in the free-text arguments so they can't terminate a quoted span.
                 // cmd also expands %NAME% before it parses quotes, so a game called "%TEMP%" would
                 // reach the script as the temp folder - the display name has its percent signs
-                // stripped (the exact value is still in TRAYTRIGGER_GAME_NAME).
-                psi.FileName = "cmd.exe";
+                // stripped (the exact value is still in TRAYTRIGGER_GAME_NAME). The same goes for the
+                // executable path and ID, which games.json can set to anything. The script's own path
+                // can't be altered without pointing at a different file, so one with a percent sign
+                // is refused - as ToolCatalog.ValidateTarget does for script tools.
+                if (path.Contains('%'))
+                {
+                    LoggingService.Warn("GameScript", $"Batch script path contains a percent sign, which cmd.exe would expand; not running it: {path}");
+                    return null;
+                }
+                psi.FileName = SystemExecutables.CommandPrompt;
                 psi.Arguments = "/d /s /c \"" + string.Join(' ',
-                    new[] { path, phase, SanitizeForCmdLine(game.Name), game.ExecutablePath, game.Id, playtimeArg }.Select(a => "\"" + a.Replace('"', '\'') + "\""));
+                    new[] { path, phase, SanitizeForCmdLine(game.Name), SanitizeForCmdLine(game.ExecutablePath), SanitizeForCmdLine(game.Id), playtimeArg }.Select(a => "\"" + a.Replace('"', '\'') + "\""));
                 // The game's own script arguments go in raw: a batch author writes cmd syntax and
                 // expects cmd to parse it (%~6, quoted spans, even redirections). Their quoting is
                 // their responsibility - the help page says an unbalanced quote will break parsing.
@@ -567,7 +589,7 @@ public class GameScriptService
                 break;
 
             case ".ps1":
-                psi.FileName = "powershell.exe";
+                psi.FileName = SystemExecutables.WindowsPowerShell;
                 psi.ArgumentList.Add("-NoProfile");
                 psi.ArgumentList.Add("-ExecutionPolicy");
                 psi.ArgumentList.Add("Bypass");
@@ -596,7 +618,10 @@ public class GameScriptService
         if (ext is not (".bat" or ".cmd"))
         {
             psi.ArgumentList.Add(phase);
-            psi.ArgumentList.Add(game.Name);
+            // "powershell -File script.ps1 -Foo" binds -Foo as a parameter name, not as a value, so
+            // a game called "-Foo" would fail the script's parameter binding. The exact name is
+            // still in TRAYTRIGGER_GAME_NAME.
+            psi.ArgumentList.Add(ext == ".ps1" ? SanitizeForPowerShellFile(game.Name) : game.Name);
             psi.ArgumentList.Add(game.ExecutablePath);
             psi.ArgumentList.Add(game.Id);
             psi.ArgumentList.Add(playtimeArg);
@@ -626,6 +651,9 @@ public class GameScriptService
 
     /// <summary>Strips the one character cmd.exe expands before quote parsing ('%').</summary>
     internal static string SanitizeForCmdLine(string value) => value.Replace("%", string.Empty);
+
+    /// <summary>Strips leading dashes (ASCII and the en/em/horizontal-bar dashes PowerShell also reads as one).</summary>
+    internal static string SanitizeForPowerShellFile(string value) => value.TrimStart('-', '–', '—', '―');
 
     /// <summary>
     /// Splits a game's free-text script arguments into argv tokens using the same rules Windows

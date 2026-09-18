@@ -291,7 +291,7 @@ public sealed class ToolsViewModel : ViewModelBase
     {
         try
         {
-            using var _ = Process.Start(new ProcessStartInfo("explorer.exe", "shell:AppsFolder") { UseShellExecute = true });
+            using var _ = Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, "shell:AppsFolder") { UseShellExecute = true });
         }
         catch (Exception ex)
         {
@@ -751,13 +751,13 @@ public sealed class ToolsViewModel : ViewModelBase
         {
             if (File.Exists(card.TargetPath))
             {
-                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{card.TargetPath}\"") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"/select,\"{card.TargetPath}\"") { UseShellExecute = true });
                 return;
             }
             string? folder = Path.GetDirectoryName(card.TargetPath);
             if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
             {
-                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(SystemExecutables.Explorer, $"\"{folder}\"") { UseShellExecute = true });
                 return;
             }
             StatusMessage = $"The folder for \"{card.Name}\" no longer exists.";

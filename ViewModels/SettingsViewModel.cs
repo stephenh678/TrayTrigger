@@ -1961,7 +1961,7 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             _storageService.EnsureDirectories();
-            Process.Start("explorer.exe", _storageService.BaseDirectory);
+            Process.Start(SystemExecutables.Explorer, _storageService.BaseDirectory);
         }
         catch (Exception ex)
         {
@@ -1974,7 +1974,7 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             _storageService.EnsureDirectories();
-            Process.Start("explorer.exe", _storageService.LocalCacheDirectory);
+            Process.Start(SystemExecutables.Explorer, _storageService.LocalCacheDirectory);
         }
         catch (Exception ex)
         {
@@ -1999,7 +1999,7 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             string dir = Path.GetDirectoryName(LoggingService.LogFilePath) ?? _storageService.BaseDirectory;
-            Process.Start("explorer.exe", dir);
+            Process.Start(SystemExecutables.Explorer, dir);
         }
         catch (Exception ex)
         {

@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TrayTrigger: launch control for PC games on Windows</title>
-<meta name="description" content="Launch automation and per-game Windows tuning for PC gamers. Launchers that close themselves, launch arguments, performance profiles, pre-launch and post-exit scripts. Everything reverts when the game exits. Free, open source, no telemetry.">
+<meta name="description" content="Launch PC games from your Windows system tray. Automate your gaming routine with optional per-game profiles and before-and-after scripts. Free and open source.">
 <link rel="icon" href="assets/app_icon.png">
 <link rel="canonical" href="https://stephenh678.github.io/TrayTrigger/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="TrayTrigger: Launch. Automate. Play.">
-<meta property="og:description" content="Launch automation and per-game Windows tuning for PC gamers. Everything reverts when the game exits. Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net. Lives in your tray.">
+<meta property="og:description" content="Your games. Your settings. One tray menu. Launch PC games, automate your routine, and restore per-game profile settings on exit. Free for Windows.">
 <meta property="og:image" content="https://stephenh678.github.io/TrayTrigger/assets/social-preview.png">
 <meta property="og:image:width" content="1536">
 <meta property="og:image:height" content="1024">
@@ -164,18 +164,59 @@
   footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; }
   footer .spacer { flex: 1; }
   .download-band { text-align: center; padding: 72px 0; background: radial-gradient(600px 300px at 50% 100%, rgba(30, 95, 192, .3), transparent 70%); }
+  section, [id] { scroll-margin-top: 80px; }
+  .hero h1 { font-size: clamp(34px, 5vw, 58px); margin-bottom: 20px; }
+  .hero .card { max-width: 760px; }
+  figure { margin: 0; }
+  figcaption { padding: 16px 20px; color: var(--muted); font-size: 14px; text-align: left; }
+  figcaption strong { display: block; color: var(--text); margin-bottom: 4px; }
+  .note { color: var(--muted); margin-top: 22px; font-size: 14px; }
+  .feedback-actions { justify-content: flex-start; }
+  .facts, .dim { color: #a1aec2; }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid #9bcfff; outline-offset: 5px; }
+  .skip-link { position: fixed; top: -100px; left: 16px; z-index: 200; padding: 12px; background: var(--panel); }
+  .skip-link:focus { top: 8px; }
+  .image-button { display: block; width: 100%; border: 0; padding: 0; background: transparent; cursor: zoom-in; }
+  dialog.lightbox { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; border: 0; }
+  dialog.lightbox[open] { display: flex; }
+  .lightbox-close { position: absolute; right: 20px; top: 16px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: white; cursor: pointer; }
+  .lightbox img { max-height: calc(100dvh - 100px); }
+  @media (max-width: 640px) { nav .wrap { gap: 10px; padding: 0 16px; } nav .links { gap: 12px; font-size: 12px; } nav .brand { font-size: 14px; } nav .brand img { width: 22px; height: 22px; } .hero { padding-top: 48px; } section { padding: 48px 0; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+  .hero-showcase { display: grid; grid-template-columns: 1.55fr 1fr; align-items: center; gap: 24px; margin-top: 44px; text-align: left; }
+  .hero-showcase .card { width: 100%; max-width: none; margin: 0; background: #10192b; }
+  .hero-showcase .tray-card { border-color: rgba(99,179,255,.5); box-shadow: 0 0 50px rgba(47,143,255,.13), 0 24px 70px rgba(0,0,0,.5); }
+  .capture-label { display: flex; align-items: center; gap: 8px; padding: 14px 18px; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #b8d9ff; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #63b3ff; box-shadow: 0 0 12px #2f8fff; }
+  /* The Edit Game captures are cropped to the app window in the files themselves; the frame shows the whole image. */
+  .capture { position: relative; width: 100%; overflow: hidden; background: #1d1d26; }
+  .crop-profile { aspect-ratio: 1389 / 1059; }
+  .crop-scripts { aspect-ratio: 1384 / 1061; }
+  .capture img { position: absolute; max-width: none; height: auto; border: 0; border-radius: 0; }
+  .crop-profile img { width: 100%; left: 0; top: 0; }
+  .crop-scripts img { width: 100%; left: 0; top: 0; }
+  #walkthrough .grid { align-items: start; }
+  #walkthrough .shot { background: linear-gradient(145deg, #142340, #0e1729); }
+  .lightbox-content { width: min(1100px, 92vw); }
+  .lightbox-content .capture { margin: auto; border-radius: 10px; }
+  .lightbox-content .crop-profile { max-width: calc((100dvh - 110px) * 1389 / 1059); }
+  .lightbox-content .crop-scripts { max-width: calc((100dvh - 110px) * 1384 / 1061); }
+  .lightbox-content .capture img { max-height: none; }
+  .lightbox-content > img { margin: auto; }
+  @media (max-width: 760px) { .hero-showcase { grid-template-columns: 1fr; gap: 20px; } .hero-showcase .tray-card { max-width: 420px; justify-self: center; } }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 
 <nav>
   <div class="wrap">
     <a class="brand" href="#top"><img src="assets/app_icon.png" alt=""><span>Tray<span class="accent">Trigger</span></span></a>
     <div class="links">
-      <a href="#session">How it works</a>
+      <a href="#quick-start">Get started</a>
       <a href="#library" class="hide-sm">Library</a>
       <a href="#tweaks" class="hide-sm">Tweaks</a>
-      <a href="#compare" class="hide-sm">Why TrayTrigger</a>
+      <a href="#feedback" class="hide-sm">Give feedback</a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/stephenh678/TrayTrigger/wiki" class="hide-sm">Wiki</a>
       <a href="https://github.com/stephenh678/TrayTrigger">GitHub</a>
@@ -186,16 +227,17 @@
 <header class="hero" id="top">
   <div class="wrap">
     <img class="icon" src="assets/app_icon.png" alt="TrayTrigger icon">
-    <h1>Tray<span class="accent">Trigger</span></h1>
+    <p class="kicker">TrayTrigger for Windows</p>
+    <h1>Your games. Your settings.<br><span class="accent">One tray menu.</span></h1>
     <div class="tag">Launch. Automate. <span class="accent">Play.</span></div>
     <p class="lead">
-      Launch automation and per-game Windows tuning for PC gamers. Launchers that close themselves, launch arguments, performance profiles, and your own pre-launch and post-exit scripts.
-      <strong>Everything reverts when the game exits.</strong>
+      Launch games from your Windows system tray and automate your before-and-after routine.
+      Apply optional per-game settings that <strong>restore when you finish.</strong>
     </p>
     <div class="cta">
       <a class="btn primary" id="dl-setup" href="https://github.com/stephenh678/TrayTrigger/releases/latest">⬇ Download for Windows <small id="dl-ver"></small></a>
       <a class="btn" id="dl-zip" href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
-      <a class="btn" href="https://github.com/stephenh678/TrayTrigger">View on GitHub</a>
+      <a class="btn" href="#walkthrough">See how it works</a>
     </div>
     <div class="facts"><span>Windows 10 / 11</span><span>Free</span><span>Open source (MIT)</span><span>No account</span><span>No telemetry</span></div>
 
@@ -211,21 +253,47 @@
     </div>
     <p class="dim" style="font-size:14px">Scans all seven, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></p>
 
-    <div class="card"><img src="assets/social-preview.png" alt="TrayTrigger: Launch. Automate. Play. The games library on a monitor, ringed by the Steam, Epic, GOG, Battle.net, EA, Xbox, and Ubisoft logos"></div>
+    <div class="hero-showcase">
+      <figure class="card library-card"><div class="capture-label"><span class="status-dot"></span> YOUR LIBRARY, TOGETHER</div><img src="assets/library-current.png" width="1382" height="1052" alt="TrayTrigger library with favorites, launcher badges, and Scan for Games"><figcaption>Find your favorites across launchers.</figcaption></figure>
+      <figure class="card tray-card"><div class="capture-label"><span class="status-dot"></span> ONE TRAY MENU AWAY</div><img src="assets/tray-menu.png" width="704" height="819" alt="TrayTrigger tray menu with Recent, Favorites, and an expanded Action category"><figcaption>Pick a favorite. Browse a category. Play.</figcaption></figure>
+    </div>
   </div>
 </header>
+
+<main id="main">
+<section id="quick-start">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">Start with one game</div><h2>From download to play in three steps</h2><p>Start with the launcher. Add profiles and automation when you want them.</p></div>
+    <div class="grid grid-3">
+      <div class="tile"><div class="step">01 · Download</div><h3>Choose your setup</h3><p>Get the <a href="#download">Windows installer or portable ZIP</a>. Windows 10/11, 64-bit. No separate .NET install needed.</p></div>
+      <div class="tile"><div class="step">02 · Scan</div><h3>Find your games</h3><p>Open <strong>Scan for Games</strong> in the library. Add an executable or shortcut for games the scan does not find.</p></div>
+      <div class="tile"><div class="step">03 · Launch</div><h3>Play from the tray</h3><p>Right-click the TrayTrigger icon in the Windows system tray and choose a game. Leave its profile <strong>Off</strong> to launch without per-game tweaks.</p></div>
+    </div>
+    <p class="note">First download? <a href="#download-trust">Read about signing and verifying your download.</a></p>
+  </div>
+</section>
+<section id="walkthrough">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">Inside TrayTrigger</div><h2>A quick look at your next session</h2><p>Explore these application screenshots. Select any image to see it full size.</p></div>
+    <div class="grid grid-3">
+      <figure class="shot"><img loading="lazy" src="assets/tray-menu.png" alt="Tray menu showing Recent, Favorites, and games in the Action category"><figcaption><strong>1. Your next game, one tray menu away.</strong> Launch a favorite, return to a recent game, or browse your categories.</figcaption></figure>
+      <figure class="shot"><div class="capture crop-profile"><img loading="lazy" src="assets/profile-current.png" alt="Per-game settings with Optimized selected, default CPU cores, and a Ctrl+Shift+End launch hotkey"></div><figcaption><strong>2. Give each game its own setup.</strong> Choose a profile and launch hotkey. Profile settings restore when the game exits.</figcaption></figure>
+      <figure class="shot"><div class="capture crop-scripts"><img loading="lazy" src="assets/scripts-current.png" alt="Pre-launch and post-exit scripts configured with the Quiet Mode example and discord.exe argument"></div><figcaption><strong>3. Automate the before and after.</strong> This setup uses the Quiet Mode example for both script phases, with Discord as the target.</figcaption></figure>
+    </div>
+  </div>
+</section>
 
 <section id="session">
   <div class="wrap">
     <div class="section-head">
       <h2>From launch to exit, handled</h2>
-      <p>Pick a game from the tray. TrayTrigger launches it through its own launcher, with Windows tuned for it and your scripts run first, and puts everything back the moment it exits.</p>
+      <p>Pick a game from the tray. TrayTrigger uses its launcher and the options you selected. Profiles and scripts are optional, so you choose how much to automate.</p>
     </div>
     <div class="grid grid-4">
-      <div class="tile"><div class="step">1 · Before launch</div><p>Snapshots your current settings. Applies the game's <strong>Performance Profile</strong>: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your <strong>pre-launch script</strong>.</p></div>
+      <div class="tile"><div class="step">1 · Before launch</div><p>If enabled, records and applies the game's <strong>Performance Profile</strong>. Runs your <strong>pre-launch script</strong> if you have configured one.</p></div>
       <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears.</p></div>
       <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past.</p></div>
-      <div class="tile"><div class="step">4 · On exit</div><p>Restores every setting to <strong>exactly what it found</strong>. Runs your <strong>post-exit script</strong>. Closes the launcher if you told it to. Crash-safe: a snapshot survives a crash and is restored on next start.</p></div>
+      <div class="tile"><div class="step">4 · On exit</div><p>Restores <strong>per-game profile settings</strong> to their previous state. Runs your configured post-exit script and closes the launcher if selected. After a crash, the saved profile state is restored on next start.</p></div>
     </div>
   </div>
 </section>
@@ -238,15 +306,15 @@
       <div>
         <div class="kicker">Your Library</div>
         <h2>Every game in one library</h2>
-        <p class="muted">A dark, Fluent-style interface: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon. The launcher part, so the session part has something to run.</p>
+        <p class="muted">Find the game you want without remembering which store it came from. Browse cover art, filter your library, and keep favorites within reach.</p>
         <ul>
           <li><strong>Seven launchers, one scan.</strong> Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net games arrive with their real titles and launch through their own client. Drop any exe, shortcut, or folder for the rest.</li>
-          <li><strong>Artwork and info.</strong> Steam metadata and poster art, SteamGridDB box art and RAWG details where Steam has none, each behind your own free key.</li>
+          <li><strong>Artwork and info.</strong> Steam metadata and poster art, with optional SteamGridDB artwork and RAWG details using your own API keys.</li>
           <li><strong>Three views</strong>: poster grid, large icons, detailed list. Filter by launcher, profile, or state; group by category; edit a whole selection at once, with undo.</li>
           <li><strong>The tray menu.</strong> Now Playing, Recent, Favorites, and every category one right-click away, with game icons, a compact layout, and a per-game launch hotkey recorded from the keys you press.</li>
         </ul>
       </div>
-      <div class="shot"><img src="assets/library-grid.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
+      <div class="shot"><img src="assets/library-current.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
     </div>
 
     <div class="pillar">
@@ -283,7 +351,7 @@
           <li>Every profile change is recorded and reverted on exit. Set it per game, or in bulk from the library.</li>
         </ul>
       </div>
-      <div class="shot"><img src="assets/system-profiles.png" alt="Performance Profiles: the Optimized tier's tweaks with ENABLED and OPT-IN badges"></div>
+      <figure class="shot"><div class="capture crop-profile"><img loading="lazy" src="assets/profile-current.png" alt="Edit Game with the Optimized profile selected and default CPU cores"></div><figcaption><strong>Your settings, per game.</strong> This example pairs the Optimized profile with a dedicated launch hotkey.</figcaption></figure>
     </div>
 
     <div class="pillar" id="scripts">
@@ -293,13 +361,12 @@
         <ul>
           <li>Five real-world examples ship with it: <strong>pause Wallpaper Engine</strong>, <strong>Quiet Mode</strong> (close Discord and friends, reopen after), <strong>Companion Apps</strong>, <strong>OBS replay buffer</strong>, <strong>Save Backup</strong>.</li>
           <li>Per-game <strong>Script Arguments</strong>, a <strong>Test Run</strong> button with captured output, timeouts, and cancel-the-launch-on-failure.</li>
-          <li>Scripts run as you, never elevated unless you choose it. Read them before you attach them; that's the whole security model.</li>
+          <li>Scripts run as you, never elevated unless you choose it. Review scripts before enabling them. Their effects depend on the script; configure a matching post-exit action when cleanup is needed.</li>
           <li>Community scripts live in the <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts</a> catalog, reviewed by pull request.</li>
         </ul>
-        <pre>:: close-discord.bat  (pre-launch)
-taskkill /IM Discord.exe /F >nul 2>&1</pre>
+
       </div>
-      <div class="shot"><img src="assets/edit-scripts.png" alt="Edit Game: the Pre-Launch and Post-Exit Scripts card with Test Run buttons"></div>
+      <figure class="shot"><div class="capture crop-scripts"><img loading="lazy" src="assets/scripts-current.png" alt="Quiet Mode script configured for pre-launch and post-exit with discord.exe as its argument"></div><figcaption><strong>A routine you can make your own.</strong> Configure the before-and-after actions, test them, and choose whether launch waits for the script.</figcaption></figure>
     </div>
   </div>
 </section>
@@ -311,14 +378,13 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
       <div>
         <div class="kicker">Performance Tweaks</div>
         <h2>Windows, ready for play</h2>
-        <p class="muted">20 system-wide settings, separate from per-game profiles. Each one shows Windows' <strong>real current state</strong> before you touch it, and each reverts to the exact state TrayTrigger found, not a hard-coded default. Every tweak has a wiki page that explains the trade-off honestly, because most aren't a guaranteed win for every game.</p>
+        <p class="muted">Optional Windows settings for display, input, scheduling, and background activity. These are separate from per-game profiles: they stay applied until you revert them.</p>
         <ul>
-          <li><strong>Display &amp; Input.</strong> Mouse acceleration · Sticky, Filter, and Toggle Keys shortcuts · Optimizations for Windowed Games · Variable Refresh Rate for windowed games · Auto HDR · Hardware-Accelerated GPU Scheduling · Fullscreen optimizations · Multiplane Overlay</li>
-          <li><strong>CPU &amp; Scheduling Priority.</strong> Windows Game Mode · System Timer Resolution · Foreground Priority Boost · Windows Visual Effects · "Ultimate Plan" power plan</li>
-          <li><strong>Network &amp; Background Activity.</strong> MMCSS network throttling · Nagle's Algorithm · Delivery Optimization · Windows Update driver exclusion · Game Bar captures · Xbox Game Bar overlay · Diagnostic telemetry sweeps</li>
-          <li><strong>Security (status only).</strong> Core Isolation / Memory Integrity: shown and linked to Windows Security, never counted as an "optimization".</li>
-          <li><strong>Apply Performance Preset</strong> turns on every recommended tweak with at most one UAC prompt. <strong>Reset Defaults</strong> reverts only what TrayTrigger changed. A System Restore point can be created before either. Full list: <a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">How Performance Tweaks work</a>.</li>
+          <li><strong>See what changes.</strong> Review the current Windows state and the explanation for each setting.</li>
+          <li><strong>Choose what fits.</strong> Results depend on your PC and game; performance improvements are not guaranteed.</li>
+          <li><strong>Revert when you want.</strong> Undo settings individually or use Reset Defaults to restore the state TrayTrigger recorded. Bulk changes can create a System Restore point.</li>
         </ul>
+        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">Explore the tweaks, trade-offs, and restore behavior →</a></p>
       </div>
       <div class="shot"><img src="assets/system-tweaks.png" alt="Performance Tweaks page: recommended optimizations active, each with its real Windows state and a Revert to Default button"></div>
     </div>
@@ -328,8 +394,8 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
 <section id="compare">
   <div class="wrap">
     <div class="section-head">
-      <h2>Why not just Steam?</h2>
-      <p>Steam launches Steam games. It doesn't change your power plan for one game and put it back after, pause your wallpaper, start your replay buffer, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam. It isn't a replacement for any store or launcher; it's the layer under them.</p>
+      <h2>Keep your launchers. Simplify your routine.</h2>
+<p>Your games still launch through their own clients. TrayTrigger gives you a shared tray menu and optional steps around each session: apply a profile, run your scripts, and close the launcher afterward when configured.</p>
     </div>
   </div>
 </section>
@@ -337,15 +403,22 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
 <section id="faq">
   <div class="wrap">
     <div class="section-head"><h2>FAQ</h2></div>
-    <details open><summary>Is it safe? What does it touch?</summary><p>Only what you explicitly turn on. Every tweak records the state it found and restores exactly that, including after a crash. Bulk changes can create a System Restore point first. Scripts are off until you enable them and choose one, and they run as you. See <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">SECURITY.md</a> for the full breakdown.</p></details>
+    <details open><summary>Is it safe? What does it touch?</summary><p>You choose which profiles, system tweaks, and scripts to enable. Per-game profile settings restore on exit; system-wide tweaks stay applied until you revert them. Scripts run as you unless you choose elevation, and their changes require their own cleanup. Bulk system changes can create a System Restore point first. See <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">SECURITY.md</a> for the full breakdown.</p></details>
     <details><summary>Does it need administrator access?</summary><p>Not to run. A few tweaks write machine-wide settings and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.</p></details>
     <details><summary>Does it phone home?</summary><p>No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), and GitHub Releases (update checks, which you can turn off).</p></details>
-    <details><summary>Can changes be reverted?</summary><p>Yes, all of them, automatically. Per-game profiles revert on exit. System tweaks revert with Reset Defaults or one at a time. A crash mid-session is restored on next start.</p></details>
-    <details><summary>Is the download signed?</summary><p>Releases are built by GitHub Actions and published with a SHA-256 checksum file. Verify a download with <code>Get-FileHash</code> in PowerShell and compare it to SHA256SUMS.txt on the release page. See the <a href="https://github.com/stephenh678/TrayTrigger#code-signing">code signing section</a> for the current signing status.</p></details>
+    <details><summary>Can changes be reverted?</summary><p>Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Reset Defaults. Custom scripts are not automatically undone; use a post-exit script for any cleanup they need.</p></details>
+    <details id="download-trust"><summary>Is the download signed?</summary><p>No. Releases are not code-signed, so Windows SmartScreen may warn the first time you run the installer. Releases are built by GitHub Actions from the public source and published with a SHA-256 checksum file. Verify a download with <code>Get-FileHash</code> in PowerShell and compare it to SHA256SUMS.txt on the release page, then choose More info and Run anyway. See the <a href="https://github.com/stephenh678/TrayTrigger#code-signing">code signing section</a> for details.</p></details>
     <details><summary>Where do I ask a question or report a game that scanned wrong?</summary><p>Questions go to <a href="https://github.com/stephenh678/TrayTrigger/discussions/5">Discussions</a>. Wrong art, name, or launcher goes on the <a href="https://github.com/stephenh678/TrayTrigger/issues/9">scan tracking issue</a>, one comment per game. Bugs get an <a href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">issue</a>.</p></details>
   </div>
 </section>
 
+<section id="feedback">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">Help shape TrayTrigger</div><h2>Tell me how your first game went</h2><p>Did the scan find your games? Did your first launch work? What would you like to automate next?</p></div>
+    <div class="cta feedback-actions"><a class="btn primary" href="https://github.com/stephenh678/TrayTrigger/discussions">Give feedback</a><a class="btn" href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">Report a bug</a></div>
+    <p class="muted">For a launch problem, include the game, launcher, Windows version, and TrayTrigger version. Review any screenshots or logs for personal information before posting.</p>
+  </div>
+</section>
 <section class="download-band" id="download">
   <div class="wrap">
     <h2>Ready to play?</h2>
@@ -355,10 +428,11 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
       <a class="btn" id="dl-zip-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
     </div>
     <p class="dim" style="font-size:14px;margin-top:14px">Update checks are built in and can be turned off. <a href="https://github.com/stephenh678/TrayTrigger/releases">All releases</a></p>
-    <p class="dim" style="font-size:14px;margin-top:6px">Free code signing provided by <a href="https://signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a>.</p>
+    <p class="dim" style="font-size:14px;margin-top:6px">Releases are not code-signed. <a href="https://github.com/stephenh678/TrayTrigger#verifying-a-download">Verify your download</a> against the release's SHA256SUMS.txt.</p>
   </div>
 </section>
 
+</main>
 <footer>
   <div class="wrap">
     <span>© <span id="year"></span> <a href="https://github.com/stephenh678">stephenh678</a> · MIT License</span>
@@ -371,8 +445,14 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
   </div>
 </footer>
 
-<div class="lightbox" id="lightbox" role="dialog" aria-label="Enlarged screenshot"><img alt=""></div>
+<dialog class="lightbox" id="lightbox" aria-label="Enlarged screenshot"><button class="lightbox-close" type="button" autofocus>Close ×</button><div class="lightbox-content"></div></dialog>
 <script>
+  const revealLinkedAnswer = () => {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target && target.tagName === 'DETAILS') target.open = true;
+  };
+  window.addEventListener('hashchange', revealLinkedAnswer);
+  revealLinkedAnswer();
   document.getElementById('year').textContent = new Date().getFullYear();
   fetch('https://api.github.com/repos/stephenh678/TrayTrigger/releases/latest')
     .then(r => r.ok ? r.json() : null)
@@ -389,19 +469,26 @@ taskkill /IM Discord.exe /F >nul 2>&1</pre>
     })
     .catch(() => {});
 
-  // Screenshots open full size in an overlay; click anywhere or press Esc to close.
+  // Native dialog provides keyboard dismissal, focus containment and restoration.
   const lightbox = document.getElementById('lightbox');
-  const lightboxImg = lightbox.querySelector('img');
+  const lightboxContent = lightbox.querySelector('.lightbox-content');
   for (const img of document.querySelectorAll('.shot img, header .card img')) {
-    img.addEventListener('click', () => {
-      lightboxImg.src = img.src;
-      lightboxImg.alt = img.alt;
-      lightbox.classList.add('open');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'image-button';
+    button.setAttribute('aria-label', 'Enlarge screenshot: ' + img.alt);
+    const frame = img.parentElement.classList.contains('capture') ? img.parentElement : img;
+    frame.replaceWith(button);
+    button.append(frame);
+    button.addEventListener('click', () => {
+      const enlarged = frame.cloneNode(true);
+      (enlarged.tagName === 'IMG' ? enlarged : enlarged.querySelector('img')).loading = 'eager';
+      lightboxContent.replaceChildren(enlarged);
+      lightbox.showModal();
     });
   }
-  const closeLightbox = () => { lightbox.classList.remove('open'); lightboxImg.src = ''; };
-  lightbox.addEventListener('click', closeLightbox);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+  lightbox.querySelector('button').addEventListener('click', () => lightbox.close());
+  lightbox.addEventListener('click', e => { if (e.target === lightbox) lightbox.close(); });
 </script>
 </body>
 </html>

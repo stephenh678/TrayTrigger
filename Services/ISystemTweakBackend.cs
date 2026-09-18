@@ -136,12 +136,14 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
     /// </summary>
     public bool AddDefenderExclusion(string exePath)
     {
-        string path = EscapeForPowerShellSingleQuoted(exePath);
-        return RunElevatedPowerShell($"if (@((Get-MpPreference).ExclusionPath) -contains '{path}') {{ exit 3 }}; Add-MpPreference -ExclusionPath '{path}'");
+        string path = ElevatedPowerShell.QuoteLiteral(exePath);
+        // -ErrorAction Stop: Add-MpPreference reports most failures as non-terminating errors, which
+        // would otherwise leave exit code 0 and record an exclusion that was never added.
+        return RunElevatedPowerShell($"if (@((Get-MpPreference).ExclusionPath) -contains {path}) {{ exit 3 }}; Add-MpPreference -ExclusionPath {path} -ErrorAction Stop");
     }
 
     public bool RemoveDefenderExclusion(string exePath) =>
-        RunElevatedPowerShell($"Remove-MpPreference -ExclusionPath '{EscapeForPowerShellSingleQuoted(exePath)}'");
+        RunElevatedPowerShell($"Remove-MpPreference -ExclusionPath {ElevatedPowerShell.QuoteLiteral(exePath)} -ErrorAction Stop");
 
     public void SetProcessPriority(Process process, ProcessPriorityClass priority) => process.PriorityClass = priority;
 
@@ -197,48 +199,12 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
 
     public bool SetDefaultPlaybackMuted(bool muted) => AudioEndpointService.SetDefaultRenderMuted(muted);
 
-    private static string EscapeForPowerShellSingleQuoted(string value) => value.Replace("'", "''");
-
     /// <summary>
     /// Modern Windows (Tamper Protection) blocks direct registry writes to Defender's exclusion
     /// list, so exclusions go through the supported Add-/Remove-MpPreference cmdlets, elevated via
-    /// UAC when TrayTrigger itself isn't. The command text is built only from single-quote-escaped
-    /// paths, never raw data.
+    /// UAC when TrayTrigger itself isn't. Paths reach the command only through
+    /// <see cref="ElevatedPowerShell.QuoteLiteral"/>, never raw.
     /// </summary>
-    private static bool RunElevatedPowerShell(string script)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                CreateNoWindow = true
-            };
-            psi.ArgumentList.Add("-NoProfile");
-            psi.ArgumentList.Add("-NonInteractive");
-            psi.ArgumentList.Add("-Command");
-            psi.ArgumentList.Add(script);
-
-            if (SystemTweaksService.IsElevated)
-            {
-                psi.UseShellExecute = false;
-            }
-            else
-            {
-                psi.UseShellExecute = true;
-                psi.Verb = "runas";
-            }
-
-            using var proc = Process.Start(psi);
-            if (proc == null) return false;
-
-            proc.WaitForExit(120000);
-            return proc.HasExited && proc.ExitCode == 0;
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("PerformanceProfile", $"Elevated PowerShell command failed: {ex.Message}");
-            return false;
-        }
-    }
+    private static bool RunElevatedPowerShell(string script) =>
+        ElevatedPowerShell.Run(script, TimeSpan.FromMinutes(2), "PerformanceProfile");
 }

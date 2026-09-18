@@ -6,7 +6,7 @@
         xmlns:services="clr-namespace:TrayTrigger.Services"
         xmlns:views="clr-namespace:TrayTrigger.Views"
         mc:Ignorable="d"
-        Title="Edit Game Configuration"
+        Title="Edit Game"
         Height="675" Width="820"
         MinHeight="600" MinWidth="760"
         WindowStartupLocation="CenterOwner"
@@ -27,7 +27,7 @@
         <!-- HEADER                                                         -->
         <!-- ============================================================== -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12" VerticalAlignment="Center">
-            <TextBlock Text="Edit Game Configuration" FontSize="18" FontWeight="SemiBold" 
+            <TextBlock Text="{Binding HeadingText}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" 
                        Foreground="{StaticResource BrushTextPrimary}"/>
             <TextBlock Text="Artwork, title and store link, how the game launches, its performance profile, and its scripts"
                        FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
@@ -402,8 +402,8 @@
                             <ComboBox ItemsSource="{Binding PerformanceProfileOptions}"
                                       SelectedItem="{Binding PerformanceProfile}"
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Applied when this game launches and reverted when it exits. Off: nothing changes. Optimized: full-clock power plan and high-performance GPU preference. Aggressive: Optimized plus MMCSS scheduling, Above Normal priority, and a 0.5 ms timer. Which tweaks each tier includes is set under System &gt; Performance Profiles."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock Text="Applied when this game launches and put back when it exits."
+                                       FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,4"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work" Margin="0,0,0,12"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
 
@@ -413,7 +413,7 @@
                             <ComboBox ItemsSource="{Binding CpuAffinityOptions}"
                                       SelectedValue="{Binding CpuAffinity}" SelectedValuePath="Value" DisplayMemberPath="Label"
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CpuAffinityHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="{Binding CpuAffinityHint}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                        TextWrapping="Wrap" Margin="0,0,0,4"/>
                             <Button Style="{StaticResource HelpLinkButton}"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>

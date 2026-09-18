@@ -383,6 +383,7 @@ public partial class App : Application
             {
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
+                _launcherService?.RecordPlaytimeOnShutdown();
                 FinalizePendingRemovalOnShutdown();
                 SaveSettingsOnShutdown("App.SessionEnding");
                 // WPF answers the session-end query by calling Shutdown(), which closes this window
@@ -637,14 +638,31 @@ public partial class App : Application
                     menu.Items.Add(new Separator());
                 }
 
+                // The Favorites section's games, worked out before Recent so that Recent can leave
+                // them out: a favorite you played yesterday was listed twice, one row apart.
+                var favoriteGames = _mainViewModel.Settings.ShowFavoritesInTray && _mainViewModel.Settings.MaxFavoritesInTray > 0
+                    ? ApplySortOption(
+                        games.Where(g => g.Game.IsFavorite),
+                        _mainViewModel.Settings.FavoritesTraySortOption)
+                        .Take(_mainViewModel.Settings.MaxFavoritesInTray)
+                        .ToList()
+                    : [];
+
                 // 1. Persistent "Recent" section directly in root menu
-                if (_mainViewModel.Settings.ShowRecentInTray && _mainViewModel.Settings.MaxRecentInTray > 0)
+                bool anyGamePlayed = games.Any(g => g.Game.LastPlayed.HasValue);
+                var recentIds = TrayMenuSections.SelectRecent(
+                    games.Select(g => (g.Id, g.Game.LastPlayed)),
+                    favoriteGames.Select(g => g.Id),
+                    _mainViewModel.Settings.MaxRecentInTray);
+                // Shown when it has rows, or when nothing has been played yet (the placeholder says
+                // so). Left out when every recent game is already listed under Favorites.
+                bool showRecent = _mainViewModel.Settings.ShowRecentInTray && _mainViewModel.Settings.MaxRecentInTray > 0
+                    && (recentIds.Count > 0 || !anyGamePlayed);
+                if (showRecent)
                 {
+                    var recentSet = new HashSet<string>(recentIds, StringComparer.Ordinal);
                     var recentGames = ApplySortOption(
-                        games
-                            .Where(g => g.Game.LastPlayed.HasValue)
-                            .OrderByDescending(g => g.Game.LastPlayed!.Value)
-                            .Take(_mainViewModel.Settings.MaxRecentInTray),
+                        games.Where(g => recentSet.Contains(g.Id)),
                         _mainViewModel.Settings.RecentTraySortOption)
                         .ToList();
 
@@ -676,31 +694,21 @@ public partial class App : Application
                 // 1b. Persistent "Favorites" section directly in root menu. Unlike Recent, an
                 //     empty Favorites section is simply omitted - the user knows how to star a
                 //     game, and "(No favorites yet)" only made the menu longer.
-                bool favoritesSectionShown = false;
-                if (_mainViewModel.Settings.ShowFavoritesInTray && _mainViewModel.Settings.MaxFavoritesInTray > 0)
+                bool favoritesSectionShown = favoriteGames.Count > 0;
+                if (favoritesSectionShown)
                 {
-                    var favoriteGames = ApplySortOption(
-                        games.Where(g => g.Game.IsFavorite),
-                        _mainViewModel.Settings.FavoritesTraySortOption)
-                        .Take(_mainViewModel.Settings.MaxFavoritesInTray)
-                        .ToList();
-
-                    if (favoriteGames.Count > 0)
+                    menu.Items.Add(CreateSectionHeader(LibraryConstants.FavoritesCategory));
+                    foreach (var card in favoriteGames)
                     {
-                        favoritesSectionShown = true;
-                        menu.Items.Add(CreateSectionHeader(LibraryConstants.FavoritesCategory));
-                        foreach (var card in favoriteGames)
-                        {
-                            menu.Items.Add(CreateGameMenuItem(card));
-                        }
-                        menu.Items.Add(new Separator());
+                        menu.Items.Add(CreateGameMenuItem(card));
                     }
+                    menu.Items.Add(new Separator());
                 }
 
                 // The main list gets its own "All Games" / "Categories" header whenever any
                 // section precedes it, so it never runs straight on from Recent or Favorites.
                 bool mainListNeedsHeader = activeSessions.Count > 0
-                    || (_mainViewModel.Settings.ShowRecentInTray && _mainViewModel.Settings.MaxRecentInTray > 0)
+                    || showRecent
                     || favoritesSectionShown;
 
                 // 2. Sorting helper, reused per-section with each section's own sort option
@@ -897,16 +905,7 @@ public partial class App : Application
         var source = card.IconImage ?? GetLauncherLogo(card.Game);
         if (source != null)
         {
-            var img = new Image
-            {
-                Source = source,
-                Width = TrayIconSize,
-                Height = TrayIconSize,
-                Stretch = Stretch.Uniform,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-            item.Icon = img;
+            item.Icon = CreateTrayIconTile(source);
         }
         else
         {
@@ -932,16 +931,7 @@ public partial class App : Application
 
         if (card.IconImage != null)
         {
-            var img = new Image
-            {
-                Source = card.IconImage,
-                Width = TrayIconSize,
-                Height = TrayIconSize,
-                Stretch = Stretch.Uniform,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-            item.Icon = img;
+            item.Icon = CreateTrayIconTile(card.IconImage);
         }
         else
         {
@@ -952,6 +942,50 @@ public partial class App : Application
     }
 
     // ------------------------------------------------------------------ tray menu helpers
+
+    /// <summary>
+    /// Every game and tool icon in the menu as the same thing: a rounded square of one size. Icons
+    /// arrive as full-bleed box art, round logos on transparency and ordinary exe icons, and side by
+    /// side they read as three different kinds of row. Art fills the tile and is clipped to its
+    /// corners; a transparent logo sits on the tile's faint backing, so it occupies the same shape.
+    /// </summary>
+    private FrameworkElement CreateTrayIconTile(ImageSource source)
+    {
+        double size = TrayIconSize;
+        double radius = TrayCompact ? 3 : 4;
+
+        var image = new Image
+        {
+            Source = source,
+            Width = size,
+            Height = size,
+            Stretch = Stretch.UniformToFill,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+
+        return new Border
+        {
+            Width = size,
+            Height = size,
+            CornerRadius = new CornerRadius(radius),
+            Background = TrayIconTileBrush,
+            Clip = new RectangleGeometry(new Rect(0, 0, size, size), radius, radius),
+            VerticalAlignment = VerticalAlignment.Center,
+            SnapsToDevicePixels = true,
+            Child = image
+        };
+    }
+
+    private static readonly Brush TrayIconTileBrush = CreateFrozenBrush(Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF));
+
+    private static Brush CreateFrozenBrush(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
 
     private bool TrayCompact => _mainViewModel?.Settings.CompactTrayMenu == true;
 
@@ -1177,6 +1211,7 @@ public partial class App : Application
         {
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
+            _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();
 
             SaveSettingsOnShutdown("App.ExitApplication");
