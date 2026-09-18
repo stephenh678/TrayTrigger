@@ -627,21 +627,9 @@
 
                 <!-- 1. Header -->
                 <DockPanel Grid.Row="0" Margin="0,0,0,14">
-                    <!-- Left: Title & Subtitle matching Settings & System -->
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Games Library" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
-                                   FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
-                        <!-- Live: games, favorites, playing. Replaced a fixed line listing the supported
-                             launchers, and the game count that used to sit at the right of this header. -->
-                        <TextBlock Text="{Binding LibrarySummary, Mode=OneWay}"
-                                   FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
-                                   FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </DockPanel>
-
-                <!-- 2. Category Tabs & Action Buttons -->
-                <DockPanel Grid.Row="1" Margin="0,0,0,16">
-                    <!-- Right: Action Buttons (+ Add Game, Add Folder, Scan for Games). MDL2 glyphs
+                    <!-- Right: Action Buttons (+ Add Game, Add Folder, Scan for Games), beside the title
+                         rather than on the tabs row below, where they left this side of the header
+                         empty. MDL2 glyphs
                          instead of emoji so they match the rest of the app on every Windows build.
                          "Refresh Posters" moved to Settings > Library & Art: a rare maintenance
                          action that was taking primary toolbar space. -->
@@ -666,10 +654,39 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- Left: Segmented Category Tabs -->
+                    <!-- Left: Title & Subtitle matching Settings & System -->
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Games Library" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
+                                   FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
+                        <!-- Live: games, favorites, playing. Replaced a fixed line listing the supported
+                             launchers, and the game count that used to sit at the right of this header. -->
+                        <TextBlock Text="{Binding LibrarySummary, Mode=OneWay}"
+                                   FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                                   FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- 2 + 3. Toolbar. Top line: category tabs at the left; sort, filter and view mode at the
+                     right. Bottom line: search, full width. The tabs used to have a row to themselves
+                     with the add buttons, which left its right half empty once those moved up beside
+                     the title. -->
+                <Grid Grid.Row="2" Margin="0,0,0,14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="190"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Segmented Category Tabs -->
                     <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="6" Padding="3" Margin="0,0,16,0"
-                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                            HorizontalAlignment="Left" VerticalAlignment="Center"
+                            Grid.Row="0" Grid.Column="0">
                         <ScrollViewer x:Name="CategoryScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Focusable="False"
                                       PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
                             <ItemsControl ItemsSource="{Binding CategoryTabs}">
@@ -698,19 +715,9 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </Border>
-                </DockPanel>
 
-                <!-- 3. Search, Sort & View Mode Bar -->
-                <Grid Grid.Row="2" Margin="0,0,0,14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="190"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBox x:Name="LibrarySearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ModernTextBox}" Margin="0,0,10,0"
+                    <TextBox x:Name="LibrarySearchTextBox" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ModernTextBox}" Margin="0,12,0,0"
                              Tag="Search games by title, category, or path..."/>
 
                     <ComboBox Grid.Column="1"
