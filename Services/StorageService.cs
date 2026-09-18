@@ -214,6 +214,7 @@ public class StorageService : IProfileSnapshotStore
                     var games = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListGameEntry);
                     if (games != null)
                     {
+                        RepairGameIds(games);
                         RemapLegacyPaths(games);
                         StripStoreSymbolsFromNames(games);
                         LoggingService.Verbose("Storage", $"Loaded {games.Count} game(s) from '{_gamesFilePath}'.");
@@ -238,6 +239,7 @@ public class StorageService : IProfileSnapshotStore
                     var bakGames = JsonSerializer.Deserialize(bakJson, AppJsonContext.Default.ListGameEntry);
                     if (bakGames != null)
                     {
+                        RepairGameIds(bakGames);
                         RemapLegacyPaths(bakGames);
                         StripStoreSymbolsFromNames(bakGames);
                         LoggingService.Info("Storage", $"Recovered {bakGames.Count} game(s) from '{_gamesBakFilePath}'.");
@@ -262,6 +264,29 @@ public class StorageService : IProfileSnapshotStore
                 GamesLoadWarning += " Your library could not be recovered and was reset to empty.";
             }
             return new List<GameEntry>();
+        }
+    }
+
+    /// <summary>
+    /// games.json is user-editable, and an entry's Id names its cached icon and cover files and keys
+    /// its session, hotkey and post-exit tracking. An Id that isn't usable as a file name as it stands
+    /// (blank, a path separator, "..") or that repeats an earlier entry's gets a fresh one, as
+    /// <see cref="SanitizeTools"/> does for tools. Null entries are dropped.
+    /// </summary>
+    internal static void RepairGameIds(List<GameEntry> games)
+    {
+        games.RemoveAll(g => g == null);
+
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var game in games)
+        {
+            if (!GameDataCleanup.IsSafeKey(game.Id) || game.Id.Length > 64 || !ids.Add(game.Id))
+            {
+                string replacement = Guid.NewGuid().ToString("N");
+                LoggingService.Warn("Storage", $"Game '{game.Name}' had an unusable or repeated Id ('{game.Id}'); assigned {replacement}.");
+                game.Id = replacement;
+                ids.Add(replacement);
+            }
         }
     }
 

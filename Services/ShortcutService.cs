@@ -133,6 +133,27 @@ public class ShortcutService
         return resolution;
     }
 
+    /// <summary>
+    /// A dropped .url or .lnk is untrusted, and its icon location is opened as a file during import.
+    /// One pointing at a network share ("\\host\share\i.ico") or a web address would make Windows
+    /// sign in to that server with the user's credentials, so only a local path is used; anything
+    /// else falls back to the shortcut or its target.
+    /// </summary>
+    internal static bool IsLocalIconLocation(string? iconLocation)
+    {
+        if (string.IsNullOrWhiteSpace(iconLocation)) return false;
+
+        string expanded = Environment.ExpandEnvironmentVariables(iconLocation.Trim().Trim('"'));
+        if (expanded.Contains("://", StringComparison.Ordinal)) return false;
+        if (expanded.StartsWith(@"\\", StringComparison.Ordinal) || expanded.StartsWith("//", StringComparison.Ordinal))
+        {
+            // "\\?\C:\..." is a local extended-length path; "\\?\UNC\..." is a share.
+            return expanded.StartsWith(@"\\?\", StringComparison.Ordinal) &&
+                   !expanded.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase);
+        }
+        return true;
+    }
+
     private ShortcutResolution ResolveUrlShortcut(string urlPath, string cleanName)
     {
         string targetUrl = string.Empty;
@@ -184,7 +205,7 @@ public class ShortcutService
             TargetPath: targetUrl,
             Arguments: string.Empty,
             WorkingDirectory: string.Empty,
-            IconLocation: string.IsNullOrEmpty(iconFile) ? urlPath : iconFile,
+            IconLocation: IsLocalIconLocation(iconFile) ? iconFile : urlPath,
             IconIndex: iconIndex,
             IsSteamUrl: isSteam,
             SteamAppId: steamAppId
@@ -248,7 +269,7 @@ public class ShortcutService
                 }
             }
 
-            string finalIcon = !string.IsNullOrEmpty(iconLocation) ? iconLocation :
+            string finalIcon = IsLocalIconLocation(iconLocation) ? iconLocation :
                                (!string.IsNullOrEmpty(targetPath) ? targetPath : lnkPath);
 
             return new ShortcutResolution(

@@ -27,6 +27,9 @@ public partial class SteamMetadataService
         EnableMultipleHttp2Connections = true
     })
     {
+        // Everything these calls fetch is buffered in memory. JSON is kilobytes and a poster a few
+        // megabytes, so a response past this is a broken or hostile server, not a bigger image.
+        MaxResponseContentBufferSize = MetadataHttpLimits.MaxResponseBytes,
         Timeout = Timeout.InfiniteTimeSpan
     };
 
@@ -563,6 +566,9 @@ public partial class SteamMetadataService
 
     public async Task<string?> DownloadAndCachePosterAsync(string appId, string? fallbackUrl = null, string? steamGridDbApiKey = null, bool forceRefresh = false, CancellationToken ct = default)
     {
+        // The App ID becomes a file name and part of a URL; games.json is user-editable.
+        if (!UrlProtocolHelper.IsValidSteamAppId(appId)) return null;
+
         try
         {
             string localPath = Path.Combine(CoversDirectory, $"{appId}.jpg");
@@ -640,6 +646,8 @@ public partial class SteamMetadataService
     {
         if (string.IsNullOrWhiteSpace(gameId) || string.IsNullOrWhiteSpace(gameName) || string.IsNullOrWhiteSpace(steamGridDbApiKey))
             return null;
+        // The ID becomes a file name under Covers, so it must not be able to walk out of it.
+        if (!GameDataCleanup.IsSafeKey(gameId)) return null;
 
         try
         {
