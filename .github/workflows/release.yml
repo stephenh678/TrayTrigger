@@ -71,7 +71,10 @@ jobs:
           dotnet publish TrayTrigger.csproj -c Release -r win-x64 --self-contained -o publish/bin /p:Version=${{ env.VERSION }}
 
       # ---------------------------------------------------------------------------------------
-      # Code signing (SignPath Foundation). Two stages, because Inno Setup can't unpack an
+      # Code signing (SignPath Foundation). DORMANT: the project's application was declined in
+      # September 2026, so SIGNPATH_API_TOKEN is not set, every step below is skipped, and
+      # releases are unsigned (the README and site say so). Kept so a later re-application, or
+      # another signing service, only needs the secret and variables. Two stages, because Inno Setup can't unpack an
       # installer to sign what's inside it: sign TrayTrigger.exe, build the installer around
       # the signed exe, then sign the installer. Every signing step is skipped when the
       # SIGNPATH_API_TOKEN secret is absent, so the workflow keeps producing unsigned releases
@@ -232,8 +235,6 @@ jobs:
           }
           $sections += ""
           $sections += "**Install:** download ``TrayTrigger-v$env:VERSION-Setup.exe`` below (or the portable ``.zip``). Both are self-contained; no .NET install needed. Verify against ``SHA256SUMS.txt``."
-          $sections += ""
-          $sections += "Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org)."
           $sections += ""
           $sections += $compareLine
 

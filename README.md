@@ -239,7 +239,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 ```powershell
 Get-FileHash .\TrayTrigger-v1.4.4-Setup.exe -Algorithm SHA256
 ```
-Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Signed releases (see [Code signing](#code-signing)) also show a valid publisher in the file's Properties → Digital Signatures tab.
+Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
 
 ### Requirements
 - Windows 10 (version 1809+) or Windows 11, 64-bit
@@ -312,16 +312,11 @@ If you find a security issue, please see [SECURITY.md](SECURITY.md) for how to r
 
 ## Code signing
 
-> **Status:** code signing is being set up and current releases are **not yet signed**. Until then, verify downloads against `SHA256SUMS.txt` as described under [Updates](#updates). This section describes the process that will apply once signing is live.
+> **Status:** releases are **not code-signed**. Verify a download against `SHA256SUMS.txt` as described under [Verifying a download](#verifying-a-download).
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+Because the installer has no publisher certificate, Windows SmartScreen may show "Windows protected your PC" the first time you run it. Check the file's hash first, then choose **More info** > **Run anyway**. The portable ZIP is the same program without an installer.
 
-**Code signing policy.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners and signed through SignPath's GitHub integration; nothing is built or signed on a developer machine. Signed artifacts are `TrayTrigger.exe` (also inside the portable `.zip`) and `TrayTrigger-v*-Setup.exe`. The artifact configurations are kept in [`.signpath/artifact-configurations/`](.signpath/artifact-configurations/).
-
-**Team roles.**
-- Author (commits without external review): [@stephenh678](https://github.com/stephenh678)
-- Reviewer (reviews and merges third-party pull requests): [@stephenh678](https://github.com/stephenh678)
-- Approver (approves each signing request): [@stephenh678](https://github.com/stephenh678)
+**How releases are built.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners; nothing is built on a developer machine. Each release publishes `TrayTrigger-v*-Setup.exe`, the portable `.zip`, and a `SHA256SUMS.txt` covering both. The in-app updater refuses an installer that doesn't match it.
 
 **Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), RAWG (game info for non-Steam titles, only if you enter your own API key), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
 

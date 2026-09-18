@@ -407,7 +407,7 @@
     <details><summary>Does it need administrator access?</summary><p>Not to run. A few tweaks write machine-wide settings and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.</p></details>
     <details><summary>Does it phone home?</summary><p>No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), and GitHub Releases (update checks, which you can turn off).</p></details>
     <details><summary>Can changes be reverted?</summary><p>Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Reset Defaults. Custom scripts are not automatically undone; use a post-exit script for any cleanup they need.</p></details>
-    <details id="download-trust"><summary>Is the download signed?</summary><p>Code signing is being set up; the current project documentation lists releases as unsigned. Check the linked signing status for updates. Releases are built by GitHub Actions and published with a SHA-256 checksum file. Verify a download with <code>Get-FileHash</code> in PowerShell and compare it to SHA256SUMS.txt on the release page. See the <a href="https://github.com/stephenh678/TrayTrigger#code-signing">code signing section</a> for the current signing status.</p></details>
+    <details id="download-trust"><summary>Is the download signed?</summary><p>No. Releases are not code-signed, so Windows SmartScreen may warn the first time you run the installer. Releases are built by GitHub Actions from the public source and published with a SHA-256 checksum file. Verify a download with <code>Get-FileHash</code> in PowerShell and compare it to SHA256SUMS.txt on the release page, then choose More info and Run anyway. See the <a href="https://github.com/stephenh678/TrayTrigger#code-signing">code signing section</a> for details.</p></details>
     <details><summary>Where do I ask a question or report a game that scanned wrong?</summary><p>Questions go to <a href="https://github.com/stephenh678/TrayTrigger/discussions/5">Discussions</a>. Wrong art, name, or launcher goes on the <a href="https://github.com/stephenh678/TrayTrigger/issues/9">scan tracking issue</a>, one comment per game. Bugs get an <a href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">issue</a>.</p></details>
   </div>
 </section>
@@ -428,7 +428,7 @@
       <a class="btn" id="dl-zip-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
     </div>
     <p class="dim" style="font-size:14px;margin-top:14px">Update checks are built in and can be turned off. <a href="https://github.com/stephenh678/TrayTrigger/releases">All releases</a></p>
-    <p class="dim" style="font-size:14px;margin-top:6px">Code signing is being set up with <a href="https://signpath.io">SignPath.io</a> and <a href="https://signpath.org">SignPath Foundation</a>. <a href="https://github.com/stephenh678/TrayTrigger#code-signing">Check current signing status</a>.</p>
+    <p class="dim" style="font-size:14px;margin-top:6px">Releases are not code-signed. <a href="https://github.com/stephenh678/TrayTrigger#verifying-a-download">Verify your download</a> against the release's SHA256SUMS.txt.</p>
   </div>
 </section>
 
