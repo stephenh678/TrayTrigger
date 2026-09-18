@@ -180,8 +180,6 @@ public class ToolLauncherService
         return startInfo;
     }
 
-    private static readonly string CommandPromptPath = Path.Combine(Environment.SystemDirectory, "cmd.exe");
-    private static readonly string WindowsPowerShellPath = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
 
     /// <summary>
     /// A script tool, run by its interpreter from the Windows folder by full path - never by file
@@ -219,7 +217,7 @@ public class ToolLauncherService
 
         if (string.Equals(Path.GetExtension(path), ".ps1", StringComparison.OrdinalIgnoreCase))
         {
-            startInfo.FileName = WindowsPowerShellPath;
+            startInfo.FileName = SystemExecutables.WindowsPowerShell;
             startInfo.ArgumentList.Add("-NoProfile");
             startInfo.ArgumentList.Add("-ExecutionPolicy");
             startInfo.ArgumentList.Add("Bypass");
@@ -239,7 +237,7 @@ public class ToolLauncherService
         {
             // /s strips only the outer quotes, so the quoted script path survives. A path can't hold a
             // quote, and ValidateTarget refuses a % sign, which cmd would expand before reading quotes.
-            startInfo.FileName = CommandPromptPath;
+            startInfo.FileName = SystemExecutables.CommandPrompt;
             startInfo.Arguments = "/d /s /c \"\"" + path + "\"" + (arguments.Length > 0 ? " " + arguments : string.Empty) + "\"";
         }
         return startInfo;

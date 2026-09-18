@@ -150,7 +150,7 @@ public class ScriptLibraryService
 
         try
         {
-            Process.Start(new ProcessStartInfo("notepad.exe", $"\"{p}\"") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(SystemExecutables.Notepad, $"\"{p}\"") { UseShellExecute = true });
         }
         catch (Exception ex)
         {
@@ -164,7 +164,7 @@ public class ScriptLibraryService
         EnsureInstalled();
         try
         {
-            Process.Start("explorer.exe", ScriptsDirectory);
+            Process.Start(SystemExecutables.Explorer, ScriptsDirectory);
         }
         catch (Exception ex)
         {
@@ -176,7 +176,7 @@ public class ScriptLibraryService
     {
         try
         {
-            Process.Start("explorer.exe", $"/select,\"{path}\"");
+            Process.Start(SystemExecutables.Explorer, $"/select,\"{path}\"");
         }
         catch (Exception ex)
         {

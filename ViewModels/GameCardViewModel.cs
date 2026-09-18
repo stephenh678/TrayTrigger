@@ -533,7 +533,7 @@ public class GameCardViewModel : ViewModelBase
             string? targetPath = Game.ExecutablePath;
             if (File.Exists(targetPath))
             {
-                using var proc = Process.Start("explorer.exe", $"/select,\"{targetPath}\"");
+                using var proc = Process.Start(SystemExecutables.Explorer, $"/select,\"{targetPath}\"");
             }
             else if (Directory.Exists(Game.WorkingDirectory))
             {
@@ -549,7 +549,7 @@ public class GameCardViewModel : ViewModelBase
                 }
                 else
                 {
-                    using var proc = Process.Start("explorer.exe", $"\"{folder}\"");
+                    using var proc = Process.Start(SystemExecutables.Explorer, $"\"{folder}\"");
                 }
             }
         }

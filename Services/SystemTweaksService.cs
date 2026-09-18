@@ -92,7 +92,7 @@ public partial class SystemTweaksService
         {
             PostMessage(HWND_BROADCAST, WM_SETTINGCHANGE, UIntPtr.Zero, IntPtr.Zero);
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
     }
 
     public static bool IsElevated
@@ -490,45 +490,10 @@ public partial class SystemTweaksService
     /// </summary>
     public static bool CreateSystemRestorePoint(string description)
     {
-        try
-        {
-            string safeDescription = description.Replace("'", "''");
-            string psCommand = $"try {{ Checkpoint-Computer -Description '{safeDescription}' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop }} catch {{ exit 1 }}";
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{psCommand}\"",
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-
-            if (IsElevated)
-            {
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-            }
-            else
-            {
-                psi.UseShellExecute = true;
-                psi.Verb = "runas";
-            }
-
-            using var proc = Process.Start(psi);
-            if (proc == null) return false;
-
-            // Snapshot creation can take several seconds - give it a generous timeout, matching
-            // the elevated-write pattern used elsewhere in this service.
-            proc.WaitForExit(60000);
-            if (!proc.HasExited) return false;
-            return proc.ExitCode == 0;
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("SystemTweaksService", $"CreateSystemRestorePoint failed: {ex.Message}");
-            return false;
-        }
+        // Snapshot creation can take several seconds - a generous timeout, matching the
+        // elevated-write pattern used elsewhere in this service.
+        string psCommand = $"try {{ Checkpoint-Computer -Description {ElevatedPowerShell.QuoteLiteral(description)} -RestorePointType MODIFY_SETTINGS -ErrorAction Stop }} catch {{ exit 1 }}";
+        return ElevatedPowerShell.Run(psCommand, TimeSpan.FromSeconds(60), "SystemTweaksService");
     }
 
     // =========================================================================
@@ -790,7 +755,7 @@ public partial class SystemTweaksService
                 return speed == "0" && t1 == "0" && t2 == "0";
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -812,7 +777,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(GraphicsDriversKey);
             return key?.GetValue("HwSchMode") is int i && i == 2;
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -840,7 +805,7 @@ public partial class SystemTweaksService
                 return behavior is int b && b == 2 && honor is int h && h == 1;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -860,7 +825,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         // Fallback: query via powercfg /getactivescheme directly
         try
@@ -871,7 +836,7 @@ public partial class SystemTweaksService
                 return true;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         return false;
     }
@@ -892,7 +857,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         try
         {
@@ -908,7 +873,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         return "Balanced";
     }
@@ -924,7 +889,7 @@ public partial class SystemTweaksService
                 return val == null || (val is int i && i != 0);
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return true;
     }
 
@@ -942,7 +907,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 1;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -955,7 +920,7 @@ public partial class SystemTweaksService
         {
             return !GetMinimizeAnimationEnabled() && !GetDropShadowEnabled();
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -998,7 +963,7 @@ public partial class SystemTweaksService
                 if (val is int i) return (uint)i == 0xFFFFFFFF || i == -1;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1030,7 +995,7 @@ public partial class SystemTweaksService
             }
             return true;
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1043,13 +1008,13 @@ public partial class SystemTweaksService
             using var policy = Registry.LocalMachine.OpenSubKey(DeliveryOptPolicyKey);
             if (policy?.GetValue("DODownloadMode") is int p && (p == 0 || p == 99 || p == 100)) return true;
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         try
         {
             using var config = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config");
             if (config?.GetValue("DODownloadMode") is int c && (c == 0 || c == 99 || c == 100)) return true;
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1064,7 +1029,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 0;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1079,7 +1044,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 0;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1097,7 +1062,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 0;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1134,7 +1099,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity");
             return key?.GetValue("Enabled") is int i && i == 1;
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1316,7 +1281,7 @@ public partial class SystemTweaksService
                 return true;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1332,7 +1297,7 @@ public partial class SystemTweaksService
                 return true;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1371,7 +1336,7 @@ public partial class SystemTweaksService
                 return activeGuid.Trim('{', '}');
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         try
         {
@@ -1382,7 +1347,7 @@ public partial class SystemTweaksService
                 return match.Groups[1].Value;
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         return null;
     }
@@ -1408,7 +1373,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         // 2. Fallback check: parse powercfg /list
         try
@@ -1426,7 +1391,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
 
         return guids.ToList();
     }
@@ -1685,7 +1650,7 @@ public partial class SystemTweaksService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "powercfg.exe",
+                FileName = SystemExecutables.Powercfg,
                 Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
@@ -1716,7 +1681,7 @@ public partial class SystemTweaksService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "powercfg.exe",
+                FileName = SystemExecutables.Powercfg,
                 Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,
@@ -1875,7 +1840,7 @@ public partial class SystemTweaksService
             }
             return true;
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -1897,7 +1862,7 @@ public partial class SystemTweaksService
             }
             return true;
         }
-        catch { }
+        catch (Exception ex) { LogSwallowed(ex); }
         return false;
     }
 
@@ -2000,6 +1965,14 @@ public partial class SystemTweaksService
         return RunElevatedRegImport(entries);
     }
 
+    /// <summary>
+    /// For the registry readers and writers above that answer "false" on any failure: the caller
+    /// only needs the verdict, but a diagnostic log should still say why (access denied, a value
+    /// of the wrong kind) rather than nothing at all.
+    /// </summary>
+    private static void LogSwallowed(Exception ex, [System.Runtime.CompilerServices.CallerMemberName] string member = "") =>
+        LoggingService.Verbose("SystemTweaksService", $"{member}: {ex.GetType().Name}: {ex.Message}");
+
     /// <summary>One line of a generated .reg file - see <see cref="BuildRegFileContent"/>.</summary>
     internal readonly record struct RegFileEntry(string SubKey, string ValueName, object? Value, RegistryValueKind Kind, bool Delete);
 
@@ -2078,9 +2051,24 @@ public partial class SystemTweaksService
             // reg.exe expects UTF-16 LE with a BOM for "Version 5.00" files; Encoding.Unicode emits one.
             File.WriteAllText(tempFile, content, System.Text.Encoding.Unicode);
 
+            // The file sits in the user's temp folder and is read by an elevated reg.exe only after
+            // the UAC prompt is answered - seconds in which any process running as the user could
+            // rewrite it and have its own HKLM values imported. This handle shares read access only,
+            // so until reg.exe is done nothing can write to, replace or delete the file; reading it
+            // back through the same handle covers the moment between the write above and the open.
+            using var guard = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using (var reader = new StreamReader(guard, System.Text.Encoding.Unicode, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
+            {
+                if (!string.Equals(reader.ReadToEnd(), content, StringComparison.Ordinal))
+                {
+                    LoggingService.Error("SystemTweaksService", "Elevated registry import refused: the temporary .reg file changed after it was written.");
+                    return false;
+                }
+            }
+
             var psi = new ProcessStartInfo
             {
-                FileName = "reg.exe",
+                FileName = SystemExecutables.Reg,
                 Verb = "runas",
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Hidden

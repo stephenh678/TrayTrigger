@@ -114,6 +114,32 @@ public class UpdateService
             new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
     }
 
+    public const string DefaultRepository = "stephenh678/TrayTrigger";
+
+    /// <summary>
+    /// The "owner/name" to check, or <see cref="DefaultRepository"/> when the setting is blank or
+    /// isn't that shape. settings.json is user-editable and the value is interpolated into the
+    /// API URL, so anything else ("../..", a query string, a full URL) never reaches it.
+    /// </summary>
+    internal static string NormalizeRepository(string? repository)
+    {
+        if (string.IsNullOrWhiteSpace(repository)) return DefaultRepository;
+
+        string trimmed = repository.Trim();
+        string[] parts = trimmed.Split('/');
+        if (parts.Length == 2 && IsRepositorySegment(parts[0]) && IsRepositorySegment(parts[1]))
+        {
+            return trimmed;
+        }
+
+        LoggingService.Warn("UpdateService", $"Ignoring malformed update repository '{trimmed}'; using {DefaultRepository}.");
+        return DefaultRepository;
+
+        static bool IsRepositorySegment(string s) =>
+            s.Length is > 0 and <= 100 && s != "." && s != ".." &&
+            s.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
+    }
+
     /// <summary>
     /// Picks the newest installable release from a list, honouring SemVer pre-release ordering.
     /// Drafts and releases with unparsable tags are ignored; pre-releases are ignored unless
@@ -149,7 +175,7 @@ public class UpdateService
     /// </summary>
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(string? repository, bool includePrerelease = false)
     {
-        string targetRepo = string.IsNullOrWhiteSpace(repository) ? "stephenh678/TrayTrigger" : repository.Trim();
+        string targetRepo = NormalizeRepository(repository);
         includePrerelease = ShouldIncludePrerelease(includePrerelease, CurrentSemVer);
 
         try
@@ -311,6 +337,7 @@ public class UpdateService
         }
 
         LoggingService.Info("UpdateService", $"Verified {asset.Name} (SHA-256 {actualHash}).");
+        lock (VerifiedDownloads) { VerifiedDownloads[downloaded] = actualHash; }
 
         string? signatureProblem = CheckInstallerSignature(downloaded);
         if (signatureProblem != null)
@@ -359,8 +386,28 @@ public class UpdateService
             return "The downloaded installer's digital signature is not valid.";
         }
 
+        // A shared signing certificate (SignPath Foundation signs many open-source projects under
+        // one subject) means "same signer" alone would accept another project's installer. The
+        // version resource is inside the signed image, so with the signature verified above its
+        // product name can be trusted; setup.iss sets it to the app name.
+        string? product = GetProductName(installerPath);
+        if (!string.Equals(product, ExpectedInstallerProductName, StringComparison.OrdinalIgnoreCase))
+        {
+            LoggingService.Error("UpdateService", $"Installer product name '{product}' is not '{ExpectedInstallerProductName}'.");
+            return "The downloaded installer is signed, but it is not a TrayTrigger installer.";
+        }
+
         LoggingService.Info("UpdateService", $"Installer signature verified: {actualSubject}");
         return null;
+    }
+
+    /// <summary>VersionInfoProductName in setup.iss.</summary>
+    internal const string ExpectedInstallerProductName = "TrayTrigger";
+
+    private static string? GetProductName(string path)
+    {
+        try { return FileVersionInfo.GetVersionInfo(path).ProductName?.Trim(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
     }
 
     /// <summary>
@@ -471,6 +518,14 @@ public class UpdateService
     /// Where <see cref="DownloadAssetAsync"/> puts installers. The installer's uninstaller
     /// deletes the same folder (see setup.iss RemoveDownloadedInstallers).
     /// </summary>
+    /// <summary>Installer path to the SHA-256 it was verified against, for the re-check at launch.</summary>
+    private static readonly Dictionary<string, string> VerifiedDownloads = new(StringComparer.OrdinalIgnoreCase);
+
+    internal static string? GetVerifiedSha256(string installerPath)
+    {
+        lock (VerifiedDownloads) { return VerifiedDownloads.GetValueOrDefault(installerPath); }
+    }
+
     public static string DownloadFolder => Path.Combine(Path.GetTempPath(), "TrayTriggerUpdates");
 
     /// <summary>
@@ -517,11 +572,30 @@ public class UpdateService
     /// <summary>
     /// Launches the downloaded installer and gracefully exits TrayTrigger so files can be updated.
     /// </summary>
-    public static void LaunchInstallerAndExit(string installerPath)
+    /// <param name="verifiedSha256">
+    /// The hash <see cref="DownloadAssetAsync"/> verified, from <see cref="GetVerifiedSha256"/>.
+    /// </param>
+    public static void LaunchInstallerAndExit(string installerPath, string? verifiedSha256 = null)
     {
+        verifiedSha256 ??= GetVerifiedSha256(installerPath);
+
         if (!File.Exists(installerPath))
         {
             throw new FileNotFoundException("Installer executable was not found.", installerPath);
+        }
+
+        // The file has sat in the user's temp folder since it was verified, for as long as the
+        // dialog was open. Check it again, and hold it open (sharing read access only, so it can
+        // still be executed but not rewritten or replaced) until the installer process exists.
+        using var guard = new FileStream(installerPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (verifiedSha256 != null)
+        {
+            string actual = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(guard)).ToLowerInvariant();
+            if (!string.Equals(actual, verifiedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                LoggingService.Error("UpdateService", $"Installer changed after verification: expected {verifiedSha256}, got {actual}.");
+                throw new UpdateVerificationException("The downloaded installer changed after it was verified.");
+            }
         }
 
         LoggingService.Info("UpdateService", $"Launching installer: {installerPath} {InstallerUpdateArguments}");

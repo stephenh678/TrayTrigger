@@ -821,7 +821,7 @@ public partial class ProcessLauncherService
 
         // Registered up front (not on the Running flip) so a TrayTrigger exit during Steam's
         // own startup still runs the post-exit script on shutdown.
-        _scriptService.TrackPostExit(game);
+        _scriptService.TrackPostExit(game, () => session.GameStarted ? session.StartedAtUtc : null);
 
         Poller? poller = null;
         poller = new Poller(SteamSessionPollInterval, () =>
@@ -1047,7 +1047,7 @@ public partial class ProcessLauncherService
         {
             _performanceProfileService.OnGameProcessStarted(game, process);
             CpuTopologyService.ApplyAffinity(process, game);
-            _scriptService.TrackPostExit(game);
+            _scriptService.TrackPostExit(game, () => session.GameStarted ? session.StartedAtUtc : null);
 
             // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited on a
             // thread-pool thread almost immediately for a process that already exited.

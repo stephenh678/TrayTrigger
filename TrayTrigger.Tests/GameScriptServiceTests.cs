@@ -7,6 +7,9 @@ namespace TrayTrigger.Tests;
 
 public class GameScriptServiceTests : IDisposable
 {
+    private static readonly string CmdPath = Path.Combine(Environment.SystemDirectory, "cmd.exe");
+    private static readonly string PowerShellPath = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
+
     private readonly string _dir;
     private readonly GameEntry _game = new()
     {
@@ -48,7 +51,7 @@ public class GameScriptServiceTests : IDisposable
         string path = MakeScript(fileName);
         var psi = GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
 
-        Assert.Equal("cmd.exe", psi.FileName);
+        Assert.Equal(CmdPath, psi.FileName);
         // Every argument force-quoted and wrapped for /s - see BuildStartInfo's cmd.exe comment.
         // Argument 5 (playtime) is an empty quoted slot on pre-launch so %5 is stable across phases.
         Assert.Equal($"/d /s /c \"\"{path}\" \"prelaunch\" \"Test Game\" \"C:\\Games\\Test\\game.exe\" \"abc123\" \"\"\"", psi.Arguments);
@@ -77,7 +80,7 @@ public class GameScriptServiceTests : IDisposable
         string path = MakeScript("pre.ps1");
         var psi = GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
 
-        Assert.Equal("powershell.exe", psi.FileName);
+        Assert.Equal(PowerShellPath, psi.FileName);
         Assert.Equal(
             new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", path, "prelaunch", "Test Game", @"C:\Games\Test\game.exe", "abc123", "" },
             psi.ArgumentList);
@@ -156,7 +159,7 @@ public class GameScriptServiceTests : IDisposable
         Assert.Equal("runas", psi.Verb);
         Assert.False(psi.CreateNoWindow); // not honoured by ShellExecute; WindowStyle is used instead
         Assert.Equal(ProcessWindowStyle.Hidden, psi.WindowStyle);
-        Assert.Equal("cmd.exe", psi.FileName);
+        Assert.Equal(CmdPath, psi.FileName);
         Assert.Contains("\"prelaunch\"", psi.Arguments);
         Assert.Contains("\"Test Game\"", psi.Arguments);
     }
@@ -598,5 +601,40 @@ public class GameScriptServiceTests : IDisposable
         svc.RunPendingPostExitScriptsOnShutdown();
         Thread.Sleep(300);
         Assert.False(File.Exists(markerA));
+    }
+
+    [Fact]
+    public void BatchScripts_StripPercentSigns_FromEveryGameSuppliedArgument()
+    {
+        string path = MakeScript("pct.bat");
+        var game = new GameEntry { Id = "%USERNAME%", Name = "100% Orange", ExecutablePath = @"C:\Games\%TEMP%\game.exe" };
+        var psi = GameScriptService.BuildStartInfo(path, game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+
+        Assert.DoesNotContain('%', psi.Arguments);
+        // The exact values are still available to the script through the environment.
+        Assert.Equal(@"C:\Games\%TEMP%\game.exe", psi.Environment["TRAYTRIGGER_GAME_EXE"]);
+    }
+
+    [Fact]
+    public void BatchScripts_AreRefused_WhenTheirOwnPathHasAPercentSign()
+    {
+        string folder = Path.Combine(_dir, "%TEMP%");
+        Directory.CreateDirectory(folder);
+        string path = Path.Combine(folder, "pre.bat");
+        File.WriteAllText(path, "rem test");
+
+        Assert.Null(GameScriptService.BuildStartInfo(path, _game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null));
+    }
+
+    [Fact]
+    public void PowerShellScripts_DoNotReceiveAGameName_ThatLooksLikeAParameter()
+    {
+        string path = MakeScript("dash.ps1");
+        var game = new GameEntry { Id = "d", Name = "-Command calc", ExecutablePath = @"C:\Games\d.exe" };
+        var psi = GameScriptService.BuildStartInfo(path, game, GameScriptService.PhasePreLaunch, hidden: true, elevated: false, playedMinutes: null)!;
+
+        Assert.Contains("Command calc", psi.ArgumentList);
+        Assert.DoesNotContain("-Command calc", psi.ArgumentList);
+        Assert.Equal("-Command calc", psi.Environment["TRAYTRIGGER_GAME_NAME"]);
     }
 }
