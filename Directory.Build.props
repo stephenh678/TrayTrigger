@@ -1,0 +1,12 @@
+<Project>
+
+  <!-- Applies to TrayTrigger, TrayTrigger.Tests and tools\IconGen. The build was warning-free when
+       this was added; keeping it that way means a new nullable or obsolete-API warning fails the
+       build (and CI) instead of scrolling past. -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+</Project>
