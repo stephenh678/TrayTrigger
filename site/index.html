@@ -188,19 +188,19 @@
   .hero-showcase .tray-card { border-color: rgba(99,179,255,.5); box-shadow: 0 0 50px rgba(47,143,255,.13), 0 24px 70px rgba(0,0,0,.5); }
   .capture-label { display: flex; align-items: center; gap: 8px; padding: 14px 18px; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #b8d9ff; }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #63b3ff; box-shadow: 0 0 12px #2f8fff; }
-  /* Frame the supplied desktop captures around the application dialog; original pixels are unchanged. */
+  /* The Edit Game captures are cropped to the app window in the files themselves; the frame shows the whole image. */
   .capture { position: relative; width: 100%; overflow: hidden; background: #1d1d26; }
-  .crop-profile { aspect-ratio: 647 / 472; }
-  .crop-scripts { aspect-ratio: 760 / 568; }
+  .crop-profile { aspect-ratio: 1389 / 1059; }
+  .crop-scripts { aspect-ratio: 1384 / 1061; }
   .capture img { position: absolute; max-width: none; height: auto; border: 0; border-radius: 0; }
-  .crop-profile img { width: 316.54%; left: -109.12%; top: -37.08%; }
-  .crop-scripts img { width: 269.47%; left: -83.95%; top: -21.83%; }
+  .crop-profile img { width: 100%; left: 0; top: 0; }
+  .crop-scripts img { width: 100%; left: 0; top: 0; }
   #walkthrough .grid { align-items: start; }
   #walkthrough .shot { background: linear-gradient(145deg, #142340, #0e1729); }
   .lightbox-content { width: min(1100px, 92vw); }
   .lightbox-content .capture { margin: auto; border-radius: 10px; }
-  .lightbox-content .crop-profile { max-width: calc((100dvh - 110px) * 647 / 472); }
-  .lightbox-content .crop-scripts { max-width: calc((100dvh - 110px) * 760 / 568); }
+  .lightbox-content .crop-profile { max-width: calc((100dvh - 110px) * 1389 / 1059); }
+  .lightbox-content .crop-scripts { max-width: calc((100dvh - 110px) * 1384 / 1061); }
   .lightbox-content .capture img { max-height: none; }
   .lightbox-content > img { margin: auto; }
   @media (max-width: 760px) { .hero-showcase { grid-template-columns: 1fr; gap: 20px; } .hero-showcase .tray-card { max-width: 420px; justify-self: center; } }
