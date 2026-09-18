@@ -97,7 +97,9 @@ Every script works as-is; nothing here is required. If one script should behave 
 
 > Environment variables are not set when running as Administrator, because Windows cannot pass a custom environment through a UAC launch. Elevated scripts should read the arguments instead; the game ID and playtime are passed as arguments 4 and 5 for exactly this reason.
 
-> For .bat/.cmd scripts, percent signs are removed from the game name argument (%2) because cmd.exe would otherwise expand something like "%TEMP%" before your script sees it. The exact name is always available in TRAYTRIGGER_GAME_NAME.
+> For .bat/.cmd scripts, percent signs are removed from the game name, executable path and game ID arguments (%2, %3, %4) because cmd.exe would otherwise expand something like "%TEMP%" before your script sees it. The exact values are always available in TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_EXE and TRAYTRIGGER_GAME_ID. A .bat or .cmd script whose own path contains a % sign isn't run, for the same reason.
+
+> For .ps1 scripts, leading dashes are removed from the game name argument, because PowerShell would read "-Name" as a parameter rather than a value. The exact name is in TRAYTRIGGER_GAME_NAME.
 
 > Batch gotcha: never put the playtime argument directly before a redirect. cmd reads `echo %~5> log.txt` as a handle redirect when playtime is a single digit and writes nothing. Add a space or brackets: `echo [%~5] > log.txt`.
 

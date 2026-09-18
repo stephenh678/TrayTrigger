@@ -8,6 +8,12 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.4.5
+
+- **Safer elevated actions** — the Defender exclusion, System Restore point and "needs administrator" tweaks now start Windows' own tools by their full path, lock the temporary registry file until Windows has read it, and handle folders with a curly apostrophe in the name (Assassin’s Creed), which used to make the Defender exclusion fail.
+- **Stricter update checks** — the downloaded installer must be a TrayTrigger installer as well as carry the same signature, a revoked certificate is refused, and the file is checked again at the moment it is started.
+- **Game scripts** — batch scripts no longer have a percent sign in the game's path expanded by Windows, a game whose name starts with a dash no longer breaks a PowerShell script, and a post-exit script run because TrayTrigger is closing is told the real playtime instead of 0.
+
 ## 1.4.4
 
 - **Tools, for the programs you use alongside games** — a new optional Tools page for things like DLSS Swapper, Vortex or MSI Afterburner. Turn it on in Settings > General (it's off by default), then drop a program or its shortcut on the page. Tools get their own categories, favorites, batch editing (select several to change their category, favorite or Run as administrator at once), sort order, three views (large icons, small icons, list), hotkeys and the same launch popup as games, with none of the game features: nothing is scanned or looked up, and no profile, scripts or playtime. "Run as administrator" is a checkbox that lets Windows ask for permission as usual, and a shortcut's own setting comes across. An optional Tools submenu in the tray menu has its own sort order, under Settings > Tray Menu. Microsoft Store apps like Xbox work too: click Browse Apps next to Add Tool and drag the app onto the page. Scripts (.bat, .cmd, .ps1) can be tools as well, with an option to run them with no window.
