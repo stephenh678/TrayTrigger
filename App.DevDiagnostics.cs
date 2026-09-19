@@ -1182,6 +1182,26 @@ public partial class App
                 return;
             }
 
+            // --screenshot-settings-undo <out.png>: the Settings undo toast (UX-11) over the Library &
+            // Art tab, as after removing a scan location. Nothing is removed: the toast is offered
+            // with a no-op undo.
+            if ((e.Args[i].Equals("--screenshot-settings-undo", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-settings-undo", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.Library;
+                _mainViewModel.CurrentSection = NavSection.Settings;
+                typeof(SettingsViewModel).GetMethod("OfferUndo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(_mainViewModel.SettingsVM, new object[] { @"Removed scan location D:\Games", new Action(() => { }) });
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-help <topicId> <out.png>: renders the HelpDialog for one topic.
             if ((e.Args[i].Equals("--screenshot-help", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-help", StringComparison.OrdinalIgnoreCase)) &&

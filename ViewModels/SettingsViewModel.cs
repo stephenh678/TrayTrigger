@@ -420,10 +420,20 @@ public class SettingsViewModel : ViewModelBase
 
     private void RemoveScanLocation(ScanLocationRowViewModel row)
     {
-        _settings.ScanLocations.RemoveAll(l => l.Id == row.Model.Id);
+        int index = _settings.ScanLocations.FindIndex(l => l.Id == row.Model.Id);
+        if (index < 0) return;
+        var removed = _settings.ScanLocations[index];
+        _settings.ScanLocations.RemoveAt(index);
         AutoSaveSettings();
         RebuildScanLocationRows();
         LoggingService.Info("Settings", $"Removed scan location: '{row.Path}'.");
+        OfferUndo($"Removed scan location {row.Path}", () =>
+        {
+            _settings.ScanLocations.Insert(Math.Min(index, _settings.ScanLocations.Count), removed);
+            AutoSaveSettings();
+            RebuildScanLocationRows();
+            LoggingService.Info("Settings", $"Undid removal of scan location '{removed.Path}'.");
+        });
     }
 
     private void RefreshSteamScanLocations()
@@ -468,10 +478,74 @@ public class SettingsViewModel : ViewModelBase
 
     private void RemoveIgnoredGamePath(IgnoredGamePathRowViewModel row)
     {
-        _settings.IgnoredGamePaths.RemoveAll(p => p.Id == row.Model.Id);
+        int index = _settings.IgnoredGamePaths.FindIndex(p => p.Id == row.Model.Id);
+        if (index < 0) return;
+        var removed = _settings.IgnoredGamePaths[index];
+        _settings.IgnoredGamePaths.RemoveAt(index);
         AutoSaveSettings();
         RebuildIgnoredGamePathRows();
+        OfferUndo($"No longer ignoring {removed.Name}", () =>
+        {
+            _settings.IgnoredGamePaths.Insert(Math.Min(index, _settings.IgnoredGamePaths.Count), removed);
+            AutoSaveSettings();
+            RebuildIgnoredGamePathRows();
+            LoggingService.Info("Settings", $"Undid removal of ignored entry '{removed.Name}'.");
+        });
     }
+
+    // --- Undo for Settings removals (UX-11) ---
+    // Removing a scan location, an ignored game or an ignored folder is saved at once, as before,
+    // and the same kind of toast as the Library's offers to put it back for 10 seconds (paused
+    // while hovered or focused). There is nothing to finalize: the removal is already on disk,
+    // so exiting or a second removal simply ends the chance to undo the first.
+
+    private readonly UndoTimer _undoTimer = new();
+    private Action? _pendingUndo;
+    private bool _isUndoToastVisible;
+    private string _undoToastMessage = string.Empty;
+
+    public bool IsUndoToastVisible
+    {
+        get => _isUndoToastVisible;
+        private set => SetProperty(ref _isUndoToastVisible, value);
+    }
+
+    public string UndoToastMessage
+    {
+        get => _undoToastMessage;
+        private set => SetProperty(ref _undoToastMessage, value);
+    }
+
+    private ICommand? _undoRemovalCommand;
+    private ICommand? _dismissUndoToastCommand;
+    public ICommand UndoRemovalCommand => _undoRemovalCommand ??= new RelayCommand(UndoRemoval);
+    public ICommand DismissUndoToastCommand => _dismissUndoToastCommand ??= new RelayCommand(EndUndoWindow);
+
+    private void OfferUndo(string message, Action undo)
+    {
+        _pendingUndo = undo;
+        UndoToastMessage = message;
+        IsUndoToastVisible = true;
+        _undoTimer.Start(EndUndoWindow);
+    }
+
+    public void UndoRemoval()
+    {
+        var undo = _pendingUndo;
+        EndUndoWindow();
+        undo?.Invoke();
+        if (undo != null) StatusMessage = "Put back.";
+    }
+
+    private void EndUndoWindow()
+    {
+        _undoTimer.Stop();
+        _pendingUndo = null;
+        IsUndoToastVisible = false;
+    }
+
+    /// <summary>The pointer is over the undo toast, or it has keyboard focus: hold the window open.</summary>
+    public void SetUndoToastHeld(bool held) => _undoTimer.Hold(held);
 
     /// <summary>
     /// The one kind of ignore that is added by hand: a whole folder the scanner must not look

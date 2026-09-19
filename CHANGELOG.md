@@ -19,6 +19,7 @@ stable version they lead to.
 - **A selection bar** — select games with Ctrl+click, Shift+click or Ctrl+A and a bar appears over the bottom of the library: how many are selected, Add to Favorites, Change Category, Hide, More (the full right-click menu) and Clear. Tools get the same bar when two or more are selected. Right-click still works as before.
 - **Clearer tweak wording** — "Reset Defaults" is now **Restore Previous Settings**, and each tweak's "Revert to Default" is **Restore Previous**, because they put back what your PC had before TrayTrigger changed it, which isn't always the Windows default. The restore-point tag reads "Restore point before changes: On/Off", and after a preset or a restore the status line says whether a restore point was actually made. Edit Game now lists, under the profile box, exactly what the chosen profile will change for that game.
 - **A shorter welcome** — the first-run screen is now one sentence and three points: how to add games, how to launch them, and what the default performance profile does. Its second button says what it does: "Skip for now" instead of "Get Started".
+- **More time to undo** — removing a game can now be undone for 10 seconds instead of 6, and the countdown stops while your pointer is on the Undo toast or it has keyboard focus. Removing a scan location, an ignored game or an ignored folder in Settings can now be undone the same way.
 
 ## 1.4.5
 

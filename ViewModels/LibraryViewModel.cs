@@ -80,9 +80,10 @@ public class LibraryViewModel : ViewModelBase
     private bool _isUndoToastVisible = false;
     private string _undoToastMessage = string.Empty;
     /// <summary>The games taken out by the most recent Remove (one, or a Select-mode batch) with
-    /// their former positions, kept for the 6-second undo window. See <see cref="RemoveGames"/>.</summary>
+    /// their former positions, kept for the undo window. See <see cref="RemoveGames"/>.</summary>
     private readonly List<(GameEntry Game, int Index)> _lastRemoved = new();
-    private DispatcherTimer? _undoToastTimer;
+    /// <summary>The undo window: 10 seconds, paused while the toast is hovered or focused.</summary>
+    private readonly UndoTimer _undoTimer = new();
 
     // Launch toast state
     private bool _isLaunchToastVisible = false;
@@ -1529,7 +1530,7 @@ public class LibraryViewModel : ViewModelBase
     /// <summary>
     /// Takes the given cards out of the library as one undoable step (the single-game Remove and
     /// Select mode's batch Remove both land here). The caller has already confirmed. The games'
-    /// cached files and fetched details are only deleted once the 6-second undo window ends - see
+    /// cached files and fetched details are only deleted once the undo window ends - see
     /// <see cref="FinalizePendingRemoval"/>.
     /// </summary>
     private void RemoveGames(List<GameCardViewModel> cards)
@@ -1557,19 +1558,17 @@ public class LibraryViewModel : ViewModelBase
         UpdateHotkeys();
 
         string what = cards.Count == 1 ? $"\"{cards[0].Name}\"" : $"{cards.Count} games";
-        LoggingService.Info("Library", $"Removed {what} from library (undoable for 6s).");
+        LoggingService.Info("Library", $"Removed {what} from library (undoable for {UndoCountdown.DefaultWindow.TotalSeconds:0}s).");
 
         UndoToastMessage = $"Removed {what}";
         IsUndoToastVisible = true;
 
-        _undoToastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-        _undoToastTimer.Tick += (s, e) =>
+        _undoTimer.Start(() =>
         {
             // The undo window has expired - the removal is now final.
             LoggingService.Verbose("Library", $"Undo window expired for {what} - deleting cached data.");
             FinalizePendingRemoval();
-        };
-        _undoToastTimer.Start();
+        });
 
         StatusMessage = $"Removed {what}";
         NotifyGameCountChanged();
@@ -1583,7 +1582,7 @@ public class LibraryViewModel : ViewModelBase
     /// </summary>
     public void FinalizePendingRemoval()
     {
-        _undoToastTimer?.Stop();
+        _undoTimer.Stop();
         IsUndoToastVisible = false;
         if (_lastRemoved.Count == 0) return;
 
@@ -1702,9 +1701,12 @@ public class LibraryViewModel : ViewModelBase
         _ => LauncherPlatform.Ubisoft
     };
 
+    /// <summary>The pointer is over the undo toast, or it has keyboard focus: hold the window open.</summary>
+    public void SetUndoToastHeld(bool held) => _undoTimer.Hold(held);
+
     public void UndoDelete()
     {
-        _undoToastTimer?.Stop();
+        _undoTimer.Stop();
         IsUndoToastVisible = false;
 
         if (_lastRemoved.Count == 0) return;

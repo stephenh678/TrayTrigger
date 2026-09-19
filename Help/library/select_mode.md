@@ -19,7 +19,7 @@ You can act on several games in one step: add or remove favorites, hide or unhid
 - CPU Cores pins the selection to performance cores, or puts it back on all cores. It only appears on a hybrid CPU, the kind with separate performance and efficiency cores, because pinning does nothing on any other kind.
 - Launch Options covers Run as Administrator and Close Launcher After Game Exits for the whole selection. Both are also on the single-game menu, in a submenu with the same name.
 - Refresh Poster & Metadata re-fetches each selected game from the Steam store one after another, with progress in the status bar. Games without a Steam App ID are searched by name, as the single-game refresh does.
-- Remove asks for one confirmation for the whole selection. It is undoable for six seconds from the toast at the bottom, the same as removing a single game, and never touches installed files. Pressing the Delete key with games selected does the same thing.
+- Remove asks for one confirmation for the whole selection. It is undoable for ten seconds from the toast at the bottom, the same as removing a single game (the time stops while the pointer is over the toast or it has keyboard focus), and never touches installed files. Pressing the Delete key with games selected does the same thing.
 - Right-clicking a card that is not selected drops the selection and opens the usual single-game menu for that card. With only one card selected the usual menu opens too.
 
 ## Clearing

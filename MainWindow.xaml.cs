@@ -700,6 +700,23 @@ public partial class MainWindow : Window
         _viewModel.ClearSelection();
     }
 
+    /// <summary>
+    /// An undo toast is held while the pointer is over it or keyboard focus is inside it, and its
+    /// 10-second window pauses. The Library's toast belongs to the library, the Settings one to
+    /// Settings, told apart by the toast's data context.
+    /// </summary>
+    private void OnUndoToastHoldChanged(object sender, RoutedEventArgs e) => UpdateUndoToastHold(sender);
+
+    private void OnUndoToastFocusChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateUndoToastHold(sender);
+
+    private void UpdateUndoToastHold(object sender)
+    {
+        if (sender is not FrameworkElement toast) return;
+        bool held = toast.IsMouseOver || toast.IsKeyboardFocusWithin;
+        if (toast.DataContext is SettingsViewModel settings) settings.SetUndoToastHeld(held);
+        else _viewModel.Library.SetUndoToastHeld(held);
+    }
+
     /// <summary>The selection bar's More: the batch right-click menu, opened above the bar.</summary>
     private void SelectionBarMore_Click(object sender, RoutedEventArgs e)
     {
