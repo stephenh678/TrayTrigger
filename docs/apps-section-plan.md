@@ -90,14 +90,14 @@ separate model that borrows the Library's shared styles and dialogs is the small
 ## Tools page
 
 - `NavSection.Tools`; sidebar button between Library and System, visible only while enabled.
-- `Views/ToolsView.xaml` + `ViewModels/ToolsViewModel.cs`, built like `SystemView`, so
-  `MainWindow.xaml` does not grow.
+- `Views/ToolsView.xaml` + `ViewModels/ToolsViewModel.cs`, built like `SystemView`: every page
+  is its own control, so `MainWindow.xaml` does not grow.
 - **Follows the Library's look:** reuse the shared styles already in `App.xaml`
   (`SegmentedTabButton`, `CardHoverCircleButton`, `MenuSectionHeaderStyle`, menu item styles), the
   `SearchBox` control and the existing dialogs (`QuickInputDialog` for rename and category,
-  `ModernDialog` for confirmations). Card container and hover styles that currently live in
-  `MainWindow.xaml` resources (`PosterCardContainerStyle` and its zoom storyboards) move to shared
-  resources so tool cards match. That move changes nothing for games.
+  `ModernDialog` for confirmations). Card container and hover styles that live in
+  `Views/LibraryView.xaml` resources (`PosterCardContainerStyle` and its zoom storyboards) move to
+  shared resources so tool cards match. That move changes nothing for games.
 - **Toolbar:** search box, sort dropdown (A to Z, Z to A, Favorites first), view switcher, Add Tool.
 - **Category tabs:** All, Favorites, then each tool category A to Z, same tab strip as the Library.
   A category tab disappears when its last tool leaves it. Selected tab remembered across restarts.

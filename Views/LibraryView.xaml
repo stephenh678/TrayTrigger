@@ -1646,7 +1646,12 @@
                                                    </Border>
 
                                                    <!-- Title & Badges -->
-                                                   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                   <!-- Title and badges. A DockPanel, not a StackPanel: a horizontal StackPanel measures
+                                                        its children at their full width, so at a narrow window the title was cut
+                                                        mid-word and the badge beside it sliced in half. Docked, each is measured in
+                                                        what is left, so the title trims with an ellipsis instead. Same layout otherwise -
+                                                        DockPanel docks to the left by default. -->
+                                                   <DockPanel Grid.Column="1" LastChildFill="False" VerticalAlignment="Center">
                                                        <Button Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0"
         AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                                                        <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
@@ -1821,7 +1826,7 @@
                                                            <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
                                                                       Foreground="#B8B8CC" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
-                                                   </StackPanel>
+                                                   </DockPanel>
 
                                                    <!-- Category Pill -->
                                                    <Border Grid.Column="2" Background="#1D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"

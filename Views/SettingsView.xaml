@@ -116,20 +116,29 @@
                 <TextBlock Text="Application Settings" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                 <TextBlock Text="Startup and updates, launcher integrations and artwork, the tray menu, launch scripts and tweak safety, and diagnostics"
-                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" 
                            FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
             </StackPanel>
         </DockPanel>
 
         <!-- Category Segmented Tabs -->
-        <Grid Grid.Row="1" Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+        <!-- A DockPanel, not two Grid columns: the search box is docked first, so it keeps its
+             width, and the strip gets what is left. At any normal width the strip hugs its tabs
+             and the box sits beside it, exactly as before; only when the six tabs no longer fit
+             (a 720px window) does the strip start scrolling behind its edge chevrons. -->
+        <DockPanel Grid.Row="1" Margin="0,0,0,16" HorizontalAlignment="Left" KeyboardNavigation.TabNavigation="Local">
+        <!-- Card search (Views/CardSearch, Views/SearchBox), on every tab: it searches the selected
+             tab and the text stays as you switch tabs (SettingsViewModel.SettingsSearchText). -->
+        <!-- Docked first so it keeps its width, but still second in the tab order, as it
+             reads on screen. -->
+        <views:SearchBox x:Name="SettingsSearchBox" DockPanel.Dock="Right" HorizontalAlignment="Left" Margin="12,0,0,0"
+                         KeyboardNavigation.TabIndex="1"
+                         Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
+        <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                 BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
+                KeyboardNavigation.TabIndex="0" KeyboardNavigation.TabNavigation="Local"
                 views:ScrollToTop.Target="{Binding ElementName=SettingsScroll}">
+            <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}">
             <StackPanel Orientation="Horizontal">
                 <Button Content="All" Command="{Binding SelectAllTabCommand}"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}"/>
@@ -144,12 +153,9 @@
                 <Button Content="Diagnostics &amp; Storage" Command="{Binding SelectDiagnosticsTabCommand}" Margin="2,0,0,0"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsDiagnosticsTab}"/>
             </StackPanel>
+            </ScrollViewer>
         </Border>
-        <!-- Card search (Views/CardSearch, Views/SearchBox), on every tab: it searches the selected
-             tab and the text stays as you switch tabs (SettingsViewModel.SettingsSearchText). -->
-        <views:SearchBox x:Name="SettingsSearchBox" Grid.Column="1" HorizontalAlignment="Left" Margin="12,0,0,0"
-                         Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
-        </Grid>
+        </DockPanel>
 
         <!-- Settings Cards ScrollViewer -->
         <ScrollViewer x:Name="SettingsScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14"
