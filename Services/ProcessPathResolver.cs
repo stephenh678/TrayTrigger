@@ -125,17 +125,38 @@ public static partial class ProcessPathResolver
     public static List<ProcessUnderDirectory> FindProcessesUnderDirectory(string normalizedDir, bool includeHelpers = false)
     {
         var results = new List<ProcessUnderDirectory>();
+
+        // Everything found here may be closed or killed (Close Game, Force Close), so a folder
+        // that holds Windows' own processes is never searched. A game pointed at System32 once
+        // had Force Close kill csrss.exe and the like - a CRITICAL_PROCESS_DIED blue screen when
+        // TrayTrigger ran as administrator.
+        if (IsUnsafeProcessFolder(normalizedDir, out string why))
+        {
+            WarnUnsafeFolderOnce(normalizedDir, why);
+            return results;
+        }
+
         Process[] all;
         try { all = Process.GetProcesses(); }
         catch { return results; }
+
+        int ownPid = Environment.ProcessId;
+        int ownSession;
+        try { using var self = Process.GetCurrentProcess(); ownSession = self.SessionId; }
+        catch { ownSession = -1; }
 
         foreach (var proc in all)
         {
             try
             {
+                // Only the signed-in user's own processes: never TrayTrigger, never another
+                // session's (session 0 is Windows' services), never one Windows marks critical.
+                if (proc.Id == ownPid || proc.Id <= 4) continue;
+                if (ownSession < 0 || proc.SessionId != ownSession) continue;
                 string? path = GetProcessPath(proc.Id);
                 if (path == null || !path.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase)) continue;
                 if (!includeHelpers && IsKnownHelperProcess(path)) continue;
+                if (IsCriticalProcess(proc.Id)) continue;
 
                 bool hasWindow = false;
                 DateTime start = DateTime.MinValue;
@@ -157,6 +178,104 @@ public static partial class ProcessPathResolver
             .OrderByDescending(r => r.HasMainWindow)
             .ThenByDescending(r => r.StartTime)
             .ToList();
+    }
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool IsProcessCritical(IntPtr hProcess, [MarshalAs(UnmanagedType.Bool)] out bool critical);
+
+    /// <summary>True when Windows marks the process critical (killing it stops the machine), or when
+    /// it can't be asked - a process that can't be opened is not one to act on either.</summary>
+    private static bool IsCriticalProcess(int pid)
+    {
+        IntPtr handle = IntPtr.Zero;
+        try
+        {
+            handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, (uint)pid);
+            if (handle == IntPtr.Zero) return true;
+            return !IsProcessCritical(handle, out bool critical) || critical;
+        }
+        catch
+        {
+            return true;
+        }
+        finally
+        {
+            if (handle != IntPtr.Zero) CloseHandle(handle);
+        }
+    }
+
+    /// <summary>
+    /// A folder whose processes TrayTrigger must never look for, close or kill as a game's: the
+    /// Windows folder and anything under it, a drive root, and the top of Program Files,
+    /// ProgramData, Users, a user's profile and its AppData folders. Games live in folders below
+    /// these, never in them. <paramref name="reason"/> says which, for the log.
+    /// </summary>
+    public static bool IsUnsafeProcessFolder(string? dir, out string reason)
+    {
+        reason = string.Empty;
+        if (string.IsNullOrWhiteSpace(dir))
+        {
+            reason = "no folder";
+            return true;
+        }
+
+        string normalized;
+        try { normalized = NormalizeDirectory(Path.GetFullPath(dir)); }
+        catch
+        {
+            reason = "not a valid folder";
+            return true;
+        }
+
+        string? root = Path.GetPathRoot(normalized);
+        if (root == null || string.Equals(NormalizeDirectory(root), normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "a drive root";
+            return true;
+        }
+
+        string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (!string.IsNullOrEmpty(windows) && normalized.StartsWith(NormalizeDirectory(windows), StringComparison.OrdinalIgnoreCase))
+        {
+            reason = "the Windows folder";
+            return true;
+        }
+
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var exact = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFilesX86),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            profile,
+            string.IsNullOrEmpty(profile) ? string.Empty : Path.GetDirectoryName(profile.TrimEnd('\\')) ?? string.Empty,
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        };
+        foreach (string folder in exact)
+        {
+            if (!string.IsNullOrEmpty(folder) && string.Equals(NormalizeDirectory(folder), normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                reason = "a system or profile folder";
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static readonly HashSet<string> _warnedUnsafeFolders = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Logs a refused folder once per run, not on every two-second poll.</summary>
+    private static void WarnUnsafeFolderOnce(string dir, string why)
+    {
+        lock (_warnedUnsafeFolders)
+        {
+            if (!_warnedUnsafeFolders.Add(dir)) return;
+        }
+        LoggingService.Warn("ProcessPathResolver", $"Not looking for a game's processes in '{dir}': it is {why}, where Windows' own processes run.");
     }
 
     /// <summary>Best candidate under the directory as a live <see cref="Process"/>, or null.</summary>

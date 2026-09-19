@@ -27,4 +27,48 @@ public class ProcessPathResolverTests
     {
         Assert.False(ProcessPathResolver.IsKnownHelperProcess(path));
     }
+
+    // Force Close kills what it finds under a game's folder. Pointed at System32 it killed
+    // Windows' own processes (a CRITICAL_PROCESS_DIED blue screen when running as administrator).
+    [Theory]
+    [InlineData(@"C:\")]
+    [InlineData(@"D:\")]
+    [InlineData(@"C:\Windows")]
+    [InlineData(@"C:\Windows\System32\")]
+    [InlineData(@"C:\WINDOWS\SysWOW64")]
+    [InlineData(@"C:\Program Files")]
+    [InlineData(@"C:\Program Files (x86)\")]
+    [InlineData(@"C:\ProgramData")]
+    [InlineData(@"C:\Users")]
+    [InlineData("")]
+    public void IsUnsafeProcessFolder_RefusesWindowsRootsAndSystemFolders(string dir)
+    {
+        Assert.True(ProcessPathResolver.IsUnsafeProcessFolder(dir, out string reason));
+        Assert.NotEmpty(reason);
+    }
+
+    [Fact]
+    public void IsUnsafeProcessFolder_RefusesTheProfileAndAppDataRoots()
+    {
+        Assert.True(ProcessPathResolver.IsUnsafeProcessFolder(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), out _));
+        Assert.True(ProcessPathResolver.IsUnsafeProcessFolder(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), out _));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Games\Hades")]
+    [InlineData(@"C:\Program Files (x86)\Steam\steamapps\common\Hades\")]
+    [InlineData(@"C:\Program Files\Epic Games\Fortnite")]
+    [InlineData(@"D:\SteamLibrary\steamapps\common\Cyberpunk 2077")]
+    [InlineData(@"C:\XboxGames\Starfield\Content")]
+    public void IsUnsafeProcessFolder_AllowsGameFolders(string dir)
+    {
+        Assert.False(ProcessPathResolver.IsUnsafeProcessFolder(dir, out _));
+    }
+
+    [Fact]
+    public void FindProcessesUnderDirectory_FindsNothingInSystem32()
+    {
+        string system32 = ProcessPathResolver.NormalizeDirectory(Environment.GetFolderPath(Environment.SpecialFolder.System));
+        Assert.Empty(ProcessPathResolver.FindProcessesUnderDirectory(system32, includeHelpers: true));
+    }
 }
