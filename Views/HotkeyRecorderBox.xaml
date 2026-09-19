@@ -30,7 +30,7 @@
         </Border>
         <!-- Shown here unless the host sets ShowInlineMessage="False" and places its own TextBlock
              bound to Message / MessageBrush / HasMessage - a 160 px box wraps a sentence badly. -->
-        <TextBlock x:Name="InlineMessage" FontSize="10.5" Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+        <TextBlock x:Name="InlineMessage" FontSize="11" Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed"
                    Foreground="{StaticResource BrushDanger}"/>
     </StackPanel>
 </UserControl>

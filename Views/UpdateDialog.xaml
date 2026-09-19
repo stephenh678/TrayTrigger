@@ -55,10 +55,10 @@
                         </Border>
 
                         <Border x:Name="LatestBadge" Background="#1C2E3D" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="LATEST" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
+                            <TextBlock Text="LATEST" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
                         </Border>
                         <Border x:Name="PrereleaseBadge" Background="#3D2E1C" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                            <TextBlock Text="PRE-RELEASE" FontSize="8.5" FontWeight="Bold" Foreground="#E5A94B"/>
+                            <TextBlock Text="PRE-RELEASE" FontSize="9" FontWeight="Bold" Foreground="#E5A94B"/>
                         </Border>
                     </StackPanel>
 
@@ -73,7 +73,7 @@
             <Border Grid.Row="1" Background="#141419" BorderBrush="{StaticResource BrushBorderDark}" 
                     BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="RELEASE NOTES" FontSize="9.5" FontWeight="SemiBold" 
+                    <TextBlock Text="RELEASE NOTES" FontSize="11" FontWeight="SemiBold" 
                                Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,6"/>
                     <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <TextBlock x:Name="ReleaseNotesText" 

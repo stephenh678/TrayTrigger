@@ -8,6 +8,10 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.5.0
+
+- **Easier-to-read text** — grey hints and labels are brighter, and no ordinary text is smaller than 11 px any more. Only the small status tags (PLAYING, MISSING, platform tags and the like) stay compact.
+
 ## 1.4.5
 
 - **Safer elevated actions** — the Defender exclusion, System Restore point and "needs administrator" tweaks now start Windows' own tools by their full path, lock the temporary registry file until Windows has read it, and handle folders with a curly apostrophe in the name (Assassin’s Creed), which used to make the Defender exclusion fail.

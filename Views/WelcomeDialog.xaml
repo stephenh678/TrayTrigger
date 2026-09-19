@@ -35,7 +35,7 @@
                        RenderOptions.BitmapScalingMode="HighQuality"/>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="GETTING STARTED" FontSize="10" FontWeight="Bold"
+                    <TextBlock Text="GETTING STARTED" FontSize="11" FontWeight="Bold"
                                Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,3"/>
                     <!-- The wordmark: "Trigger" in the logo's blue. Runs on one line, so no space creeps in. -->
                     <TextBlock FontSize="15" FontWeight="SemiBold"

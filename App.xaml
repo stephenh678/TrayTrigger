@@ -40,7 +40,8 @@
         <Color x:Key="ColorBrand">#2F8FFF</Color>
         <Color x:Key="ColorTextPrimary">#FFFFFF</Color>
         <Color x:Key="ColorTextSecondary">#9E9EAA</Color>
-        <Color x:Key="ColorTextMuted">#6E6E7A</Color>
+        <!-- 5.0:1 on cards (#1C1C23), 5.5:1 on the window background: WCAG AA for small text. -->
+        <Color x:Key="ColorTextMuted">#8A8A96</Color>
 
         <!-- Brushes -->
         <SolidColorBrush x:Key="BrushBgDark" Color="{StaticResource ColorBgDark}"/>
@@ -933,7 +934,7 @@
             <Setter Property="Cursor" Value="Arrow"/>
             <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Template">
                 <Setter.Value>

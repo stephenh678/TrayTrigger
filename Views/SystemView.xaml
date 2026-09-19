@@ -56,7 +56,7 @@
                         </StackPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding UnavailableReason}" FontSize="10.5" Foreground="#E8B84E"
+                        <TextBlock Text="{Binding UnavailableReason}" FontSize="11" Foreground="#E8B84E"
                                    Margin="0,3,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding ShowUnavailableReason, Converter={StaticResource BoolToVis}}"/>
                         <!-- The "why" and trade-offs live in Help/tweaks/<id>.md, opened here. -->
@@ -106,7 +106,7 @@
                         </StackPanel>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding Note}" FontSize="10.5" Foreground="#E8B84E"
+                        <TextBlock Text="{Binding Note}" FontSize="11" Foreground="#E8B84E"
                                    Margin="0,3,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
                         <Button Style="{StaticResource HelpLinkButton}" Margin="0,4,0,0"
@@ -486,7 +486,7 @@
                                             VerticalAlignment="Center" DockPanel.Dock="Right"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
                                     <TextBlock Text="System-wide, always on until you reset them. Documented Windows settings only - no registry cleaners."
-                                               Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                               Foreground="#CCA84E" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </Border>
                         </StackPanel>

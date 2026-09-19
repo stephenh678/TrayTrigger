@@ -139,7 +139,7 @@
                                    Foreground="{StaticResource BrushTextPrimary}" TextAlignment="Center"
                                    TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Center" Margin="0,3,0,0">
-                            <TextBlock Text="MISSING" FontSize="8.5" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
+                            <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
                         </Border>
                     </StackPanel>
                 </Grid>
@@ -168,7 +168,7 @@
                         <TextBlock Text="{Binding Name}" FontSize="12.5" FontFamily="{StaticResource AppFont}"
                                    Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Left" Margin="0,2,0,0">
-                            <TextBlock Text="MISSING" FontSize="8.5" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
+                            <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
                         </Border>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -216,7 +216,7 @@
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                         <Border Style="{StaticResource ToolMissingBadge}" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="MISSING" FontSize="8.5" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
+                            <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
                         </Border>
                     </StackPanel>
 
@@ -368,13 +368,13 @@
                         <ColumnDefinition Width="3*"/>
                         <ColumnDefinition Width="120"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
                 </Grid>
             </Border>

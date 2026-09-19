@@ -71,7 +71,7 @@
                                 </Border>
                                 <Button Content="Change Icon..." Command="{Binding ChangeIconCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,8,0,0" Padding="8,4" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding IconNote}" FontSize="10" Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="{Binding IconNote}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                            TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
 
@@ -86,7 +86,7 @@
                                           IsEditable="True"
                                           Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
                                 <TextBlock Text="Tool categories are separate from game categories. Leave it blank for Uncategorized."
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                                 <CheckBox Content="Favorite" IsChecked="{Binding IsFavorite}" Style="{StaticResource ModernCheckBox}"/>
                             </StackPanel>
@@ -107,7 +107,7 @@
                             <TextBox Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,0,4"/>
                             <TextBlock Text="Windows starts it the way its Start menu entry does. If it's already open, most apps come to the front; ones that allow several windows open another. Store apps can't run as administrator."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                         </StackPanel>
 
                         <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
@@ -135,7 +135,7 @@
                                     Style="{StaticResource ModernOutlineButton}"/>
                         </Grid>
                         <TextBlock Text="Blank uses the program's own folder."
-                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
+                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
                         </StackPanel>
 
                         <TextBlock Text="Launch Arguments (optional)" FontSize="11.5"
@@ -147,13 +147,13 @@
                             <CheckBox Content="Run as Administrator" IsChecked="{Binding RunAsAdmin}"
                                       Style="{StaticResource ModernCheckBox}"/>
                             <TextBlock Text="Windows asks for permission with its own prompt each time. Programs that always need admin get that prompt even with this off. Declining it just leaves the tool closed."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
 
                             <StackPanel Visibility="{Binding IsScript, Converter={StaticResource BoolToVis}}">
                                 <CheckBox Content="Hide Window" IsChecked="{Binding HideWindow}"
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log (not when it also runs as administrator). A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -164,12 +164,12 @@
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
                                     <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                             <TextBlock Text="{Binding Message, ElementName=ToolHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ToolHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=ToolHotkeyBox, Converter={StaticResource BoolToVis}}"
-                                       FontSize="10.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                       FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

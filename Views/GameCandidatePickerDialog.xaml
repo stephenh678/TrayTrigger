@@ -83,7 +83,7 @@
                                 <Border Background="#1C2E3D" CornerRadius="4" Padding="5,1.5" Margin="0,3,0,0"
                                         HorizontalAlignment="Right"
                                         Visibility="{Binding IsRecommendedVisibility}">
-                                    <TextBlock Text="RECOMMENDED" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
+                                    <TextBlock Text="RECOMMENDED" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
                                 </Border>
                             </StackPanel>
 

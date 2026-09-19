@@ -255,7 +255,7 @@
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
                                TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding DisplayPath}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                    <TextBlock Text="{Binding DisplayPath}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
                 </StackPanel>
 
@@ -811,7 +811,7 @@
                                                 <DataTemplate DataType="{x:Type vm:LibraryFilterGroup}">
                                                     <StackPanel Margin="0,0,0,10"
                                                                 Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
-                                                        <TextBlock Text="{Binding Title}" FontSize="10.5" FontWeight="Bold"
+                                                        <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="Bold"
                                                                    Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,4"/>
                                                         <ItemsControl ItemsSource="{Binding Options}">
                                                             <ItemsControl.ItemTemplate>
@@ -1162,11 +1162,11 @@
                                                                     <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="10.5" 
+                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11" 
                                                                            Foreground="{StaticResource BrushTextSecondary}" 
                                                                            FontFamily="{StaticResource AppFont}"
                                                                            TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10" 
+                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11" 
                                                                            Foreground="{StaticResource BrushTextMuted}" 
                                                                            HorizontalAlignment="Right"
                                                                            TextAlignment="Right"
@@ -1213,7 +1213,7 @@
                                                                        Foreground="{StaticResource BrushTextSecondary}" 
                                                                        FontFamily="{StaticResource AppFont}"
                                                                        TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10.5" 
+                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11" 
                                                                        Foreground="{StaticResource BrushTextMuted}" 
                                                                        HorizontalAlignment="Right"
                                                                        TextAlignment="Right"
@@ -1380,7 +1380,7 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock Text="{Binding Category}" FontSize="10"
+                                                            <TextBlock Text="{Binding Category}" FontSize="11"
                                                                        Foreground="{StaticResource BrushTextSecondary}"
                                                                        FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                         </Border>
@@ -1639,11 +1639,11 @@
                                                                     <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="10.5"
+                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11"
                                                                            Foreground="{StaticResource BrushTextSecondary}"
                                                                            FontFamily="{StaticResource AppFont}"
                                                                            TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10"
+                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11"
                                                                            Foreground="{StaticResource BrushTextMuted}"
                                                                            HorizontalAlignment="Right"
                                                                            TextAlignment="Right"
@@ -1690,7 +1690,7 @@
                                                                        Foreground="{StaticResource BrushTextSecondary}"
                                                                        FontFamily="{StaticResource AppFont}"
                                                                        TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10.5"
+                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11"
                                                                        Foreground="{StaticResource BrushTextMuted}"
                                                                        HorizontalAlignment="Right"
                                                                        TextAlignment="Right"
@@ -1857,7 +1857,7 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock Text="{Binding Category}" FontSize="10"
+                                                            <TextBlock Text="{Binding Category}" FontSize="11"
                                                                        Foreground="{StaticResource BrushTextSecondary}"
                                                                        FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                         </Border>
@@ -2247,11 +2247,11 @@
 
                                                 <!-- Playtime / Category Subtext -->
                                                 <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
-                                                    <TextBlock Text="{Binding Category}" FontSize="9.5"
+                                                    <TextBlock Text="{Binding Category}" FontSize="11"
                                                                Foreground="{StaticResource BrushTextMuted}"
                                                                FontFamily="{StaticResource AppFont}"
                                                                TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text=" &#x2022; HIDDEN" FontSize="9.5" FontWeight="Bold"
+                                                    <TextBlock Text=" &#x2022; HIDDEN" FontSize="11" FontWeight="Bold"
                                                                Foreground="#B8B8CC" FontFamily="{StaticResource AppFont}"
                                                                Visibility="{Binding IsHidden, Converter={StaticResource BoolToVis}}"/>
                                                 </StackPanel>
@@ -2346,15 +2346,15 @@
                                     <ColumnDefinition Width="125"/> <!-- Last Played -->
                                     <ColumnDefinition Width="90"/>  <!-- Actions -->
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}" 
                                            HorizontalAlignment="Right" Margin="0,0,6,0"/>
                             </Grid>
@@ -2439,7 +2439,7 @@
                                                            VerticalAlignment="Center"/>
                                                 <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                     <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                    <TextBlock Text="&#9654; PLAYING" FontSize="8.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                    <TextBlock Text="&#9654; PLAYING" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
                                                 </Border>
                                                 <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1" 
                                                         CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2601,7 +2601,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock Text="HIDDEN" FontSize="8.5" FontWeight="Bold"
+                                                    <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
                                                                Foreground="#B8B8CC" FontFamily="{StaticResource AppFont}"/>
                                                 </Border>
                                             </StackPanel>
@@ -2859,7 +2859,7 @@
                                                   IsEnabled="{Binding CanConfigureMinimized}" 
                                                   Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                         <TextBlock Text="When enabled, runs tray-only with no window opened on system boot."
-                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="10.5"
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                    Margin="24,2,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
 
@@ -2901,7 +2901,7 @@
                                             <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
                                                        VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
                                             <TextBlock Text="Tip: You can also drag the TrayTrigger icon from the taskbar ^ overflow chevron directly onto your taskbar to pin it permanently."
-                                                       Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                       Foreground="#CCA84E" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                         </DockPanel>
                                     </Border>
 
@@ -2930,7 +2930,7 @@
                                                   IsEnabled="{Binding ShowLaunchPopup}"
                                                   Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                         <TextBlock Text="Off: only while TrayTrigger is hidden, or when &quot;Minimize to system tray when launching a game&quot; is about to hide it. On: every launch from the open window uses the popup, in place of the notice inside the window. A launch error still opens a dialog while the window is in front."
-                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="10.5"
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                    Margin="24,2,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
 
@@ -3629,7 +3629,7 @@
 
                                         <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
                                                 Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="11" Foreground="#FFD27F" TextWrapping="Wrap"/>
                                         </Border>
 
                                         <CheckBox Content="Wait for the default pre-launch script to finish before starting the game"
@@ -3638,7 +3638,7 @@
                                         <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
                                             <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                            <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                                        TextWrapping="Wrap" VerticalAlignment="Center"/>
                                         </DockPanel>
                                         <CheckBox Content="Cancel the launch if the default pre-launch script fails (non-zero exit code, timeout, or won't start)"
@@ -3729,11 +3729,11 @@
                                             </Grid.ColumnDefinitions>
 
                                             <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                                                <TextBlock Text="Active Debug Log File" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
+                                                <TextBlock Text="Active Debug Log File" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
                                                 <TextBlock Text="{Binding LogFilePathDisplay}" FontSize="11.5" FontFamily="{StaticResource AppFont}" 
                                                            Foreground="{StaticResource BrushAccentHover}" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding LogFileSizeDisplay, StringFormat='Current File Size: {0}'}" 
-                                                           FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
+                                                           FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -3769,7 +3769,7 @@
                                             <TextBlock Text="{Binding StorageDirectoryDisplay}" Foreground="{StaticResource BrushAccentHover}" 
                                                        FontSize="11" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
                                             <TextBlock Text="Contains games.json, settings.json, and atomic .bak recovery backups." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="10.5" TextWrapping="Wrap"/>
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
 
@@ -3785,7 +3785,7 @@
                                             <TextBlock Text="{Binding CacheDirectoryDisplay}" Foreground="{StaticResource BrushAccentHover}" 
                                                        FontSize="11" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
                                             <TextBlock Text="Contains extracted game icons (.png) and downloaded poster artwork (.jpg)." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="10.5" TextWrapping="Wrap"/>
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
                                 </StackPanel>
@@ -3986,28 +3986,28 @@
 
                                     <Border Grid.Column="0" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="0,0,6,0">
                                         <StackPanel>
-                                            <TextBlock Text="WINDOWS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="WINDOWS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding OsDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Grid.Column="1" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
                                         <StackPanel>
-                                            <TextBlock Text="RUNTIME" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="RUNTIME" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding RuntimeDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Grid.Column="2" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
                                         <StackPanel>
-                                            <TextBlock Text="LIBRARY" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="LIBRARY" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding TotalGameCountDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Grid.Column="3" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="6,0,0,0">
                                         <StackPanel>
-                                            <TextBlock Text="DATA FOLDER" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="DATA FOLDER" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding SettingsVM.StorageDirectoryDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
@@ -4355,7 +4355,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Margin="0,0,0,8">
-                                                    <TextBlock Text="{Binding Label}" FontSize="10.5" FontWeight="Bold"
+                                                    <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="Bold"
                                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                                                     <ItemsControl ItemsSource="{Binding Topics}">
                                                         <ItemsControl.ItemsPanel>

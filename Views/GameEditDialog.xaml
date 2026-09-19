@@ -54,7 +54,7 @@
                         <DockPanel Margin="0,0,0,8">
                             <TextBlock Text="POSTER ARTWORK" FontSize="11" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextSecondary}" DockPanel.Dock="Left"/>
-                            <TextBlock Text="2:3 Ratio" FontSize="10" Foreground="{StaticResource BrushTextMuted}" 
+                            <TextBlock Text="2:3 Ratio" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
                                        DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </DockPanel>
 
@@ -83,7 +83,7 @@
                                                    Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Opacity="0.5" Margin="0,0,0,8"/>
                                         <TextBlock Text="NO POSTER" FontSize="11" FontWeight="SemiBold" 
                                                    Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="600 × 900" FontSize="9.5" Foreground="{StaticResource BrushTextMuted}" 
+                                        <TextBlock Text="600 × 900" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
                                                    HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
@@ -162,7 +162,7 @@
                         <DockPanel Grid.Row="0" Margin="0,0,0,6">
                             <TextBlock Text="GAME ICON" FontSize="11" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextSecondary}" DockPanel.Dock="Left"/>
-                            <TextBlock Text="Tray &amp; list" FontSize="10" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="Tray &amp; list" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                        DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </DockPanel>
 
@@ -208,7 +208,7 @@
                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                                     <Button Command="{Binding LookUpCommand}"
                                             Style="{StaticResource ModernGhostButton}"
-                                            Padding="8,2" FontSize="10.5"
+                                            Padding="8,2" FontSize="11"
                                             ToolTip="Find this game online and fill in its title, poster, and genre (Steam, or SteamGridDB art for non-Steam games).">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -234,7 +234,7 @@
                                       IsChecked="{Binding IsHidden}"
                                       Style="{StaticResource ModernCheckBox}"/>
                             <TextBlock Text="Removed from the library grid and tray menu, but kept on record - Scan for Games and Add Folder will still recognize it and won't suggest it again. Unhide it anytime from the Library's &quot;Hidden&quot; filter tab or this game's right-click menu."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
 
                             <!-- Steam App ID Search & Linking -->
                             <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
@@ -242,11 +242,11 @@
                                     <DockPanel Margin="0,0,0,4">
                                         <TextBlock Text="Steam App ID (Metadata &amp; Poster Sync)" FontSize="11.5" FontWeight="SemiBold"
                                                    Foreground="{StaticResource BrushAccentHover}" DockPanel.Dock="Left"/>
-                                        <TextBlock Text="Keeps local launch target" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                        <TextBlock Text="Keeps local launch target" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                                    DockPanel.Dock="Right" HorizontalAlignment="Right"/>
                                     </DockPanel>
                                     <TextBlock Text="Enrich this game with high-res vertical box art, Steam reviews, specs, and news. Linking an App ID does not require Steam to run."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -268,7 +268,7 @@
                                                   IsChecked="{Binding ForceSteamOverlayTag}"
                                                   Style="{StaticResource ModernCheckBox}"/>
                                         <TextBlock Text="Replaces the Local Games badge on the library card with the Steam logo, even though the game launches from its executable."
-                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -304,12 +304,12 @@
                                         <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
                                                   Style="{StaticResource ModernCheckBox}"/>
                                         <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable below as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
-                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     </StackPanel>
                                     <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
                                               Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"/>
                                     <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. For Steam, also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears. Off by default - leave it off if you keep the client open for downloads or chat."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                 </StackPanel>
                             </Border>
 
@@ -322,7 +322,7 @@
                                           IsChecked="{Binding IsSteamGame}"
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Only for a game installed in your Steam library - keeps Steam's overlay, cloud saves, and playtime. Leave it off for a standalone game that merely shares a Steam listing."
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                             </StackPanel>
 
                             <!-- Executable Path -->
@@ -356,7 +356,7 @@
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}"/>
-                            <TextBlock Text="{Binding ArgumentsHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="{Binding ArgumentsHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                        TextWrapping="Wrap" Margin="0,4,0,10"/>
 
                             <!-- Run as Administrator lives here with the arguments: both apply only when
@@ -379,12 +379,12 @@
                                                              ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
-                                        <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none." FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none." FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </DockPanel>
                                 <TextBlock Text="{Binding Message, ElementName=LaunchHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=LaunchHotkeyBox}"
                                            Visibility="{Binding HasMessage, ElementName=LaunchHotkeyBox, Converter={StaticResource BoolToVis}}"
-                                           FontSize="10.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                           FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -428,7 +428,7 @@
                         <DockPanel LastChildFill="True">
                             <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
-                            <TextBlock FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
+                            <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
                                 <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}"/>
                                 <Run Text=" are hidden. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
                             </TextBlock>
@@ -444,7 +444,7 @@
                             <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Run your own .bat, .cmd, .ps1, .exe, or .com before this game starts and after it exits. Hide this card under Settings › Launch &amp; Performance."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Pre-launch script -->
                             <TextBlock Text="Pre-Launch Script (runs just before the game starts)" FontSize="11.5"
@@ -501,7 +501,7 @@
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPostExitScriptCommand}"/>
                             </StackPanel>
                             <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft / Xbox / Battle.net games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Script arguments: free text appended after the five positional
                                  arguments, so one generic script can be parameterised per game. -->
@@ -510,12 +510,12 @@
                             <TextBox Text="{Binding ScriptArguments, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}" IsEnabled="{Binding HasAnyScript}" Margin="0,0,0,4"/>
                             <TextBlock Text="Added after the built-in arguments (phase, name, exe, game ID, playtime), so they start at %6 in a batch file or $args[5] in PowerShell. Quote a value that contains spaces."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10"
                                     Visibility="{Binding ShowScriptsDisabledNotice, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Scripts are turned off in Settings › Launch &amp; Performance (Enable scripts), so these will NOT run until that switch is back on."
-                                           FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                                           FontSize="11" Foreground="#FFD27F" TextWrapping="Wrap"/>
                             </Border>
 
                             <!-- Options stay greyed out until a script path is set, so an empty
@@ -526,7 +526,7 @@
                             <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasPreLaunchScript}">
                                 <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding PreLaunchTimeoutHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="{Binding PreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                            TextWrapping="Wrap" VerticalAlignment="Center"/>
                             </DockPanel>
                             <CheckBox Content="Cancel the launch if the pre-launch script fails (non-zero exit code, timeout, or won't start)"
@@ -547,7 +547,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Default scripts from Settings" FontSize="11.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding DefaultScriptsSummary}" FontSize="10.5"
+                                    <TextBlock Text="{Binding DefaultScriptsSummary}" FontSize="11"
                                                Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                                     <CheckBox Content="Don't run the default scripts for this game"
                                               IsChecked="{Binding SkipDefaultScripts}"
@@ -556,7 +556,7 @@
                             </Border>
 
                             <TextBlock Text="Any script works as-is. Optionally, your script can read the game name and phase it was called for."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                             <!-- Same pair of links, in the same place, as the scripts card in Settings. -->
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
