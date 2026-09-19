@@ -12,6 +12,7 @@ stable version they lead to.
 
 - **Easier-to-read text** — grey hints and labels are brighter, and no ordinary text is smaller than 11 px any more. Only the small status tags (PLAYING, MISSING, platform tags and the like) stay compact.
 - **Dark tooltips** — tooltips match the rest of the app instead of the bright Windows box, and long ones wrap. The view buttons, the OPT-IN, RESTART and ADMIN tags on System & Performance, and End Session and Force Close Game now explain themselves on hover.
+- **Esc and Enter work in every dialog** — Esc cancels and Enter confirms in Edit Game, Scan for Games, Add Folder and the launcher prompt too. In Edit Game and Edit Tool, Esc asks before throwing away changes you haven't saved, and the hotkey box still records Esc and Enter while it's listening.
 
 ## 1.4.5
 

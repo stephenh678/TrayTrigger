@@ -130,7 +130,7 @@
                 <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource ModernGhostButton}" Margin="0,0,8,0"/>
                 <!-- "Add", not "Install": this adds library entries, it installs nothing. -->
-                <Button Content="{Binding ImportButtonLabel}" Command="{Binding ImportCommand}"
+                <Button Content="{Binding ImportButtonLabel}" Command="{Binding ImportCommand}" IsDefault="True"
                         Style="{StaticResource ModernAccentButton}"/>
             </StackPanel>
         </DockPanel>

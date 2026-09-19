@@ -169,7 +169,28 @@ public class GameEditViewModel : ViewModelBase
 
         UpdateIconPreview();
         UpdateCoverPreview();
+        _initialEditState = EditState();
     }
+
+    private readonly string _initialEditState;
+
+    /// <summary>
+    /// True once any field Save writes back differs from what the dialog opened with. Esc asks
+    /// before throwing such edits away; with nothing changed it closes at once.
+    /// </summary>
+    public bool HasUnsavedChanges => !string.Equals(EditState(), _initialEditState, StringComparison.Ordinal);
+
+    /// <summary>Every value Save copies onto the game, joined into one comparable string.</summary>
+    private string EditState() => string.Join("", new object?[]
+    {
+        Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
+        IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
+        PerformanceProfile, CpuAffinity,
+        PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
+        RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
+        AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
+        CustomIconPath, CustomCoverPath, _fetchedCoverPath,
+    });
 
     public string Name
     {

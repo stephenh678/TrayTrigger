@@ -51,7 +51,22 @@ public sealed class ToolEditViewModel : ViewModelBase
         ChangeIconCommand = new RelayCommand(PickIcon);
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke(false));
+        _initialEditState = EditState();
     }
+
+    private readonly string _initialEditState;
+
+    /// <summary>
+    /// True once any field Save writes back differs from what the dialog opened with. Esc asks
+    /// before throwing such edits away; with nothing changed it closes at once.
+    /// </summary>
+    public bool HasUnsavedChanges => !string.Equals(EditState(), _initialEditState, StringComparison.Ordinal);
+
+    /// <summary>Every value Save copies onto the tool, joined into one comparable string.</summary>
+    private string EditState() => string.Join("", new object?[]
+    {
+        Name, Category, TargetPath, Arguments, WorkingDirectory, Hotkey, RunAsAdmin, HideWindow, IsFavorite, _pendingIconSource,
+    });
 
     public event Action<bool>? RequestClose;
 

@@ -606,9 +606,9 @@
 
             <!-- Action Buttons -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancel" Command="{Binding CancelCommand}" 
+                <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource ModernGhostButton}" MinWidth="85" Margin="0,0,8,0"/>
-                <Button Content="Save Changes" Command="{Binding SaveCommand}" 
+                <Button Content="Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
                         Style="{StaticResource ModernAccentButton}" MinWidth="110"/>
             </StackPanel>
         </Grid>

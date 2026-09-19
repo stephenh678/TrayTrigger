@@ -1865,6 +1865,13 @@ public partial class App
                 return;
             }
 
+            // --test-dialog-keys <out.txt>: Esc and Enter in each dialog (App.DialogKeyTests.cs).
+            if (e.Args[i].Equals("--test-dialog-keys", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunDialogKeyTests(e.Args[i + 1]);
+                return;
+            }
+
             if (e.Args[i].Equals("--test-dialog-cloak", StringComparison.OrdinalIgnoreCase))
             {
                 // Regression guard for the 1.4.1-beta.2 bug: FileDialogCloak polled for a
