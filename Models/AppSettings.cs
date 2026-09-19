@@ -50,7 +50,7 @@ public class AppSettings
     public double? MainWindowHeight { get; set; }
     public bool MainWindowMaximized { get; set; } = false;
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
-    /// <summary>Opens the tray menu at the pointer from anywhere, search box ready. Blank means none.
+    /// <summary>Opens the tray menu by the tray icon from anywhere, search box ready. Blank means none.
     /// A settings file from before it existed gets the default.</summary>
     public string TrayMenuHotkey { get; set; } = "Ctrl+Alt+T";
     public string LastCategoryFilter { get; set; } = LibraryConstants.AllCategory;

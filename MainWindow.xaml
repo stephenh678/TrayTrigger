@@ -3056,7 +3056,7 @@
                                     <TextBlock Text="{Binding Message, ElementName=TrayMenuHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=TrayMenuHotkeyBox}"
                                                Visibility="{Binding HasMessage, ElementName=TrayMenuHotkeyBox, Converter={StaticResource BoolToVis}}"
                                                FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                                    <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu at the mouse pointer, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
+                                    <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu by the tray icon, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
 
                                     <!-- Tools: the optional Tools page. Its tray option is under Tray Menu. -->
@@ -4350,7 +4350,7 @@
                                                         <TextBlock Text="{Binding SettingsVM.TrayMenuHotkey}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
                                                     </Border>
                                                 </StackPanel>
-                                                <TextBlock Text="Open the tray menu at the mouse pointer from anywhere in Windows, ready to search (change it in Settings > General)"
+                                                <TextBlock Text="Open the tray menu by the tray icon from anywhere in Windows, ready to search (change it in Settings > General)"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 

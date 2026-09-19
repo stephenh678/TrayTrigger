@@ -4,7 +4,6 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -179,39 +178,6 @@ public partial class App
 
         // Closing always clears the query, so the next open starts from the normal menu.
         menu.Closed += (_, _) => box.Clear();
-    }
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    /// <summary>
-    /// The open-tray-menu hotkey (default Ctrl+Alt+T): the same menu the tray icon's right-click
-    /// opens, at the mouse pointer, with the search box focused by its Opened handler. Pressed
-    /// again while it is open, it closes it.
-    /// </summary>
-    private void OnTrayMenuHotkeyTriggered()
-    {
-        if (_isShuttingDown || _trayIcon?.ContextMenu is not { } menu) return;
-        if (menu.IsOpen)
-        {
-            menu.IsOpen = false;
-            return;
-        }
-
-        menu.PlacementTarget = null;
-        menu.Placement = PlacementMode.MousePoint;
-        menu.IsOpen = true;
-
-        // A popup opened by a background app doesn't get the keyboard, so typing would go to
-        // whatever was in front. Receiving the hotkey lets TrayTrigger take the foreground, which is
-        // what the tray icon's own right-click does too. Activating the popup's window moves WPF's
-        // keyboard focus out of the menu, which closes it; a popup keeps its window for a moment
-        // after closing, so opening it again at once reuses the window that now has the foreground.
-        if (PresentationSource.FromVisual(menu) is System.Windows.Interop.HwndSource source)
-        {
-            SetForegroundWindow(source.Handle);
-            if (!menu.IsOpen) menu.IsOpen = true;
-        }
     }
 
     /// <summary>After the tray menu closes: the rebuild it deferred, if any.</summary>

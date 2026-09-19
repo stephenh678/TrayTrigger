@@ -113,6 +113,18 @@ public partial class App
         steps.Enqueue(() =>
         {
             Check("the tray menu hotkey opens the menu", menu.IsOpen);
+            if (TryGetTrayAnchor(out var anchor))
+            {
+                var topLeft = menu.PointToScreen(new Point(0, 0));
+                var bottomRight = menu.PointToScreen(new Point(menu.ActualWidth, menu.ActualHeight));
+                // Touching the icon on one side (within a few pixels), overlapping it along that side.
+                bool touches = Math.Abs(bottomRight.Y - anchor.Top) <= 4 || Math.Abs(topLeft.Y - anchor.Bottom) <= 4
+                    || Math.Abs(bottomRight.X - anchor.Left) <= 4 || Math.Abs(topLeft.X - anchor.Right) <= 4;
+                bool overlaps = (topLeft.X <= anchor.Right && bottomRight.X >= anchor.Left) || (topLeft.Y <= anchor.Bottom && bottomRight.Y >= anchor.Top);
+                Check("the menu opens against the tray icon", touches && overlaps,
+                    $"icon {anchor.Left},{anchor.Top}-{anchor.Right},{anchor.Bottom}; menu {topLeft.X:0},{topLeft.Y:0}-{bottomRight.X:0},{bottomRight.Y:0}; {menu.Placement}");
+            }
+            else Check("the tray icon's position is known", false);
             Check("box has keyboard focus when the menu opens", box.IsKeyboardFocused,
                 $"focused: {Keyboard.FocusedElement?.GetType().Name}");
             menu.Placement = PlacementMode.AbsolutePoint;
