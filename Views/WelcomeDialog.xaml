@@ -45,14 +45,12 @@
 
             <Border Grid.Row="1" Height="1" Background="{StaticResource BrushBorderDark}" Margin="0,0,0,12"/>
 
-            <!-- Body -->
+            <!-- Body: one sentence, then three things. Box art sources and the help index are left
+                 to the empty library and Settings, which already point at them. -->
             <StackPanel Grid.Row="2" Margin="0,0,0,16">
-                <TextBlock FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                           Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"
-                           Text="TrayTrigger is a tray-first game launcher for your Steam, GOG, EA, Epic, Ubisoft, Xbox (PC Game Pass), and Battle.net libraries - quick access from the system tray, plus reversible performance tweaks applied automatically while you play."/>
-
-                <TextBlock Text="A few things to know" FontSize="11" FontWeight="Bold"
-                           Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,6"/>
+                <TextBlock FontSize="13" LineHeight="19" TextWrapping="Wrap"
+                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,12"
+                           Text="Add your installed games, then launch them from the tray."/>
 
                 <Grid Margin="6,0,0,5">
                     <Grid.ColumnDefinitions>
@@ -63,7 +61,7 @@
                                Margin="0,0,8,0" VerticalAlignment="Top"/>
                     <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
                                Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Scan for Games pulls in what's already installed - you'll pick which of your launchers to include the first time you use it."/>
+                               Text="Scan for Games finds what Steam, GOG, EA, Epic, Ubisoft, Xbox and Battle.net have installed, or drag a game's exe, shortcut or folder onto this window."/>
                 </Grid>
 
                 <Grid Margin="6,0,0,5">
@@ -75,55 +73,7 @@
                                Margin="0,0,8,0" VerticalAlignment="Top"/>
                     <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
                                Foreground="{StaticResource BrushTextSecondary}"
-                               Text="You can also just drag and drop a game's exe, shortcut, or install folder onto this window to add it instantly."/>
-                </Grid>
-
-                <Grid Margin="6,0,0,5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
-                               Margin="0,0,8,0" VerticalAlignment="Top"/>
-                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Tidying up a big library? Ctrl+click a few games, then right-click one of them to favorite, hide, re-categorize, or remove them all at once."/>
-                </Grid>
-
-                <Grid Margin="6,0,0,5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
-                               Margin="0,0,8,0" VerticalAlignment="Top"/>
-                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Performance Profiles apply power and GPU tweaks automatically per game - nothing to configure unless you want to."/>
-                </Grid>
-
-                <Grid Margin="6,0,0,5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
-                               Margin="0,0,8,0" VerticalAlignment="Top"/>
-                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextSecondary}"
-                               Text="The tray icon keeps your library and hotkeys one click away, even with the window closed."/>
-                </Grid>
-
-                <Grid Margin="6,0,0,5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
-                               Margin="0,0,8,0" VerticalAlignment="Top"/>
-                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Missing box art or game info? Settings &gt; Library &amp; Art can add poster art from SteamGridDB.com and details for non-Steam games from RAWG.io, each with your own free API key."/>
+                               Text="Launch from the tray icon or a hotkey, even with this window closed."/>
                 </Grid>
 
                 <Grid Margin="6,0,0,0">
@@ -135,7 +85,7 @@
                                Margin="0,0,8,0" VerticalAlignment="Top"/>
                     <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
                                Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Every setting with a trade-off has a Learn more link, and About &gt; Support lists every help topic in one place."/>
+                               Text="Games you add get the low-risk Optimized performance profile while they run, put back when they exit. Choose Off or Aggressive for any game in Edit Game."/>
                 </Grid>
             </StackPanel>
 
@@ -143,8 +93,8 @@
             <DockPanel Grid.Row="3" LastChildFill="False">
                 <Button Content="Scan for Games" Style="{StaticResource ModernAccentButton}" Padding="16,6"
                         DockPanel.Dock="Right" IsDefault="True" Click="OnScanClick"/>
-                <Button Content="Get Started" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
-                        DockPanel.Dock="Right" IsCancel="True" Click="OnGetStartedClick"/>
+                <Button Content="Skip for now" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
+                        DockPanel.Dock="Right" IsCancel="True" Click="OnSkipClick"/>
             </DockPanel>
         </Grid>
     </Border>
