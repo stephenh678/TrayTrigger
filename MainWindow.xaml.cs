@@ -454,7 +454,7 @@ public partial class MainWindow : Window
     /// <summary>The search box of the page on screen, when that page has one.</summary>
     private SearchBox? CurrentPageSearchBox => _viewModel.CurrentSection switch
     {
-        NavSection.Settings => SettingsSearchBox,
+        NavSection.Settings => SettingsPage.PageSearchBox,
         NavSection.About => AboutPage.PageSearchBox,
         NavSection.System => SystemPage.PageSearchBox,
         _ => null,
@@ -818,23 +818,5 @@ public partial class MainWindow : Window
         {
             _ = _viewModel.UpdateGameSteamAppIdAsync(card, dialog.ResultValue);
         }
-    }
-
-    /// <summary>Blocks non-digit keystrokes on tray "max items" TextBoxes (e.g. MaxRecentInTray).</summary>
-    private void NumericTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
-    {
-        // ASCII only: char.IsDigit also passes Arabic-Indic and other Unicode digits, which the
-        // int binding then rejects with a validation error instead of the keystroke being blocked.
-        e.Handled = !e.Text.All(char.IsAsciiDigit);
-    }
-
-    /// <summary>Blocks pasting non-numeric text into tray "max items" TextBoxes.</summary>
-    private void NumericTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
-    {
-        if (e.DataObject.GetDataPresent(typeof(string)) && e.DataObject.GetData(typeof(string)) is string text && text.All(char.IsAsciiDigit))
-        {
-            return;
-        }
-        e.CancelCommand();
     }
 }
