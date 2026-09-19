@@ -6,8 +6,8 @@
         mc:Ignorable="d"
         Title="Choose Game Executable"
         Height="460" Width="520"
+        MinHeight="460" MinWidth="520"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{StaticResource BrushDialogBg}"
         Foreground="{StaticResource BrushTextPrimary}">

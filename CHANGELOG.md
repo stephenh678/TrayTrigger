@@ -22,6 +22,7 @@ stable version they lead to.
 - **More time to undo** — removing a game can now be undone for 10 seconds instead of 6, and the countdown stops while your pointer is on the Undo toast or it has keyboard focus. Removing a scan location, an ignored game or an ignored folder in Settings can now be undone the same way.
 - **Respects "Animation effects"** — with Windows' Animation effects turned off (Settings > Accessibility > Visual effects), game posters no longer grow on hover and the launch card by the tray appears and disappears without fading. Progress indicators still move.
 - **Keyboard shortcuts on dialog buttons** — hold Alt in a dialog to see them: Alt+S saves in Edit Game and Edit Tool, Alt+C cancels, and the pickers' main buttons have one too.
+- **Resizable pickers** — the "Choose Game Executable" and "Change match" windows can be resized like Scan for Games, so long lists and paths have room.
 
 ## 1.4.5
 
