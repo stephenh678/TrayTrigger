@@ -6,6 +6,7 @@
              xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
              xmlns:views="clr-namespace:TrayTrigger.Views"
              xmlns:services="clr-namespace:TrayTrigger.Services"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:models="clr-namespace:TrayTrigger.Models"
              mc:Ignorable="d"
              d:DesignHeight="900" d:DesignWidth="1100">
@@ -13,7 +14,7 @@
     <UserControl.Resources>
         <!-- Batch context menu: shown instead of the game menu when the right-clicked card is one
              of two or more selected cards (Ctrl/Shift+click, Ctrl+A). Its DataContext is set to
-             the MainViewModel by MainWindow.OnCardContextMenuOpening; every item applies to the
+             the MainViewModel by LibraryView.OnCardContextMenuOpening; every item applies to the
              whole selection through LibraryViewModel's batch commands. -->
         <ContextMenu x:Key="GameBatchContextMenu">
             <!-- Shared items keep the same order, check marks, and grouping as the single-game
@@ -256,6 +257,28 @@
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Panel.ZIndex" Value="1"/>
                 </Trigger>
+            </Style.Triggers>
+        </Style>
+        <!-- ==================================================================== -->
+        <!-- POSTER CARD SIZES                                                    -->
+        <!-- The Poster Grid and Extra Large views share one card template; these -->
+        <!-- are the only things that differ between them. The clip geometries    -->
+        <!-- are the card minus its 1px border, for the poster's rounded corners. -->
+        <!-- ==================================================================== -->
+        <sys:Double x:Key="PosterCardWidth">184</sys:Double>
+        <sys:Double x:Key="PosterCardHeight">276</sys:Double>
+        <sys:Double x:Key="PosterCardWidthExtraLarge">240</sys:Double>
+        <sys:Double x:Key="PosterCardHeightExtraLarge">360</sys:Double>
+        <RectangleGeometry x:Key="PosterCardClip" Rect="0,0,182,274" RadiusX="7" RadiusY="7"/>
+        <RectangleGeometry x:Key="PosterCardClipExtraLarge" Rect="0,0,238,358" RadiusX="7" RadiusY="7"/>
+
+        <!-- The poster's rounded-corner clip, following the card size. -->
+        <Style x:Key="PosterArtClip" TargetType="Border">
+            <Setter Property="Clip" Value="{StaticResource PosterCardClip}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding DataContext.SettingsVM.IsExtraLargeView, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                    <Setter Property="Clip" Value="{StaticResource PosterCardClipExtraLarge}"/>
+                </DataTrigger>
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
@@ -695,15 +718,22 @@
                                <Grid>
 
                                    <!-- ============================================================== -->
-                                   <!-- VIEW 1: POSTER CARDS GRID VIEW                                 -->
+                                   <!-- VIEW 1: POSTER CARDS, NORMAL AND EXTRA LARGE                   -->
+                                   <!-- One template for both: the card's size and its poster clip come -->
+                                   <!-- from the PosterCard* resources, and the Extra Large view swaps  -->
+                                   <!-- them for the larger pair. Compact Icons and the Details List    -->
+                                   <!-- are different designs and stay separate.                        -->
                                    <!-- ============================================================== -->
                                    <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
                                        <ItemsControl.Style>
                                            <Style TargetType="ItemsControl">
-                                               <Setter Property="Visibility" Value="Visible"/>
+                                               <Setter Property="Visibility" Value="Collapsed"/>
                                                <Style.Triggers>
-                                                   <DataTrigger Binding="{Binding SettingsVM.IsGridView}" Value="False">
-                                                       <Setter Property="Visibility" Value="Collapsed"/>
+                                                   <DataTrigger Binding="{Binding SettingsVM.IsGridView}" Value="True">
+                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                   </DataTrigger>
+                                                   <DataTrigger Binding="{Binding SettingsVM.IsExtraLargeView}" Value="True">
+                                                       <Setter Property="Visibility" Value="Visible"/>
                                                    </DataTrigger>
                                                </Style.Triggers>
                                            </Style>
@@ -725,12 +755,28 @@
                                                        Background="{StaticResource BrushSurfaceDark}" 
                                                        BorderBrush="{StaticResource BrushBorderDark}" 
                                                        BorderThickness="1"
-                                                       Width="184" Height="276" Margin="7"
+                                                       Margin="7"
                                                        RenderTransformOrigin="0.5,0.5"
                                                        Cursor="Hand" Focusable="True"
                                                        AutomationProperties.Name="{Binding Name}"
                                                        ContextMenu="{StaticResource GameItemContextMenu}"
                                                        ContextMenuOpening="OnCardContextMenuOpening">
+
+                                                   <Border.Style>
+                                                       <Style TargetType="Border">
+                                                           <Setter Property="Width" Value="{StaticResource PosterCardWidth}"/>
+                                                           <Setter Property="Height" Value="{StaticResource PosterCardHeight}"/>
+                                                           <Style.Triggers>
+                                                               <!-- The Extra Large view: the same card, bigger. Badge, text and button
+                                                                    sizes stay as they are - only the card and its poster grow, as
+                                                                    Windows Explorer's own "Extra Large Icons" view does. -->
+                                                               <DataTrigger Binding="{Binding DataContext.SettingsVM.IsExtraLargeView, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                                                   <Setter Property="Width" Value="{StaticResource PosterCardWidthExtraLarge}"/>
+                                                                   <Setter Property="Height" Value="{StaticResource PosterCardHeightExtraLarge}"/>
+                                                               </DataTrigger>
+                                                           </Style.Triggers>
+                                                       </Style>
+                                                   </Border.Style>
 
                                                    <!-- Target of the hover zoom - see PosterCardZoomIn. Declared
                                                         per card (not a shared resource) so each card animates on
@@ -754,10 +800,7 @@
                                                        <!-- 1. Full Bleed Poster View (Active when ShowPosterArt = True) -->
                                                        <Grid x:Name="PosterArtView" Visibility="Collapsed">
                                                            <!-- Ambient Blurred Background Fill (Fills entire card with game colors, zero black voids) -->
-                                                           <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                               <Border.Clip>
-                                                                   <RectangleGeometry Rect="0,0,182,274" RadiusX="7" RadiusY="7"/>
-                                                               </Border.Clip>
+                                                           <Border CornerRadius="7" Style="{StaticResource PosterArtClip}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                                                <Grid>
                                                                    <Image Source="{Binding CoverImage}" Stretch="UniformToFill"
                                                                           Opacity="0.45"
@@ -767,10 +810,7 @@
                                                            </Border>
 
                                                            <!-- Crisp Artwork Layer (Fits cleanly without cropping letters, logos, or characters) -->
-                                                           <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                               <Border.Clip>
-                                                                   <RectangleGeometry Rect="0,0,182,274" RadiusX="7" RadiusY="7"/>
-                                                               </Border.Clip>
+                                                           <Border CornerRadius="7" Style="{StaticResource PosterArtClip}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                                                <Image Source="{Binding CoverImage}" Stretch="Uniform"
                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -1095,491 +1135,6 @@
                                                        <!-- 4. Hover Play Button Overlay. Not focusable: it shows only while the
                                                             card is hovered or focused, so Tab onto it hid it and dropped focus
                                                             back on the card - a trap. Ctrl+Enter on the card launches. -->
-                                                       <Button Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
-                                                               Width="46" Height="46"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                           <Button.Style>
-                                                               <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">
-                                                                   <Setter Property="Visibility" Value="Collapsed"/>
-                                                                   <Style.Triggers>
-                                                                       <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
-                                                                           <Setter Property="Visibility" Value="Visible"/>
-                                                                       </DataTrigger>
-                                                                       <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=CardBorder}" Value="True">
-                                                                           <Setter Property="Visibility" Value="Visible"/>
-                                                                       </DataTrigger>
-                                                                       <!-- Hidden while games are multi-selected: Play is a single-game action. -->
-                                                                       <DataTrigger Binding="{Binding DataContext.HasSelection, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                       </DataTrigger>
-                                                                   </Style.Triggers>
-                                                               </Style>
-                                                           </Button.Style>
-                                                       </Button>
-
-                                                   </Grid>
-                                               </Border>
-
-                                               <DataTemplate.Triggers>
-                                                   <DataTrigger Binding="{Binding ShowPosterArt}" Value="True">
-                                                       <Setter TargetName="PosterArtView" Property="Visibility" Value="Visible"/>
-                                                       <Setter TargetName="IconFallbackView" Property="Visibility" Value="Collapsed"/>
-                                                   </DataTrigger>
-                                                   <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="Opacity" Value="0.65"/>
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="#805030"/>
-                                                   </DataTrigger>
-                                                   <Trigger Property="IsMouseOver" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                   </Trigger>
-                                                   <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
-                                                        (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
-                                                        the zoom-out is the idle trigger's job below. Only while Windows' Animation
-                                                        effects are on (Views/Motion.cs); off, the card lights up but doesn't grow. -->
-                                                   <MultiDataTrigger>
-                                                       <MultiDataTrigger.Conditions>
-                                                           <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True"/>
-                                                           <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
-                                                       </MultiDataTrigger.Conditions>
-                                                       <MultiDataTrigger.EnterActions>
-                                                           <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
-                                                       </MultiDataTrigger.EnterActions>
-                                                   </MultiDataTrigger>
-                                                   <!-- The right-click menu takes the mouse, so IsMouseOver drops the moment it opens.
-                                                        Keep the card lit while its menu is up, so it's clear which game is being changed. -->
-                                                   <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                   </DataTrigger>
-                                                   <!-- The zoom-out follows the idle state (not hovered, no menu open) rather than the
-                                                        mouse leaving: an IsMouseOver ExitAction would zoom the card out the moment its
-                                                        menu opened and took the mouse. -->
-                                                   <MultiDataTrigger>
-                                                       <MultiDataTrigger.Conditions>
-                                                           <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="False"/>
-                                                           <Condition Binding="{Binding IsContextMenuOpen}" Value="False"/>
-                                                           <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
-                                                       </MultiDataTrigger.Conditions>
-                                                       <MultiDataTrigger.EnterActions>
-                                                           <BeginStoryboard Storyboard="{StaticResource PosterCardZoomOut}"/>
-                                                       </MultiDataTrigger.EnterActions>
-                                                       <MultiDataTrigger.ExitActions>
-                                                           <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
-                                                       </MultiDataTrigger.ExitActions>
-                                                   </MultiDataTrigger>
-                                                   <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=CardBorder}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                       <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
-                                                   </DataTrigger>
-                                                   <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                       <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
-                                                   </DataTrigger>
-                                               </DataTemplate.Triggers>
-                                           </DataTemplate>
-                                       </ItemsControl.ItemTemplate>
-                                   </ItemsControl>
-
-                                   <!-- ============================================================== -->
-                                   <!-- VIEW: EXTRA LARGE POSTER GRID                                  -->
-                                   <!-- Identical to VIEW 1 above, just bigger cards - see that view's  -->
-                                   <!-- comments for what each part does. Badge/text/button sizes stay  -->
-                                   <!-- the same as the normal grid (only the poster area itself grows), -->
-                                   <!-- same as e.g. Windows Explorer's own "Extra Large Icons" view.    -->
-                                   <!-- ============================================================== -->
-                                   <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
-                                       <ItemsControl.Style>
-                                           <Style TargetType="ItemsControl">
-                                               <Setter Property="Visibility" Value="Visible"/>
-                                               <Style.Triggers>
-                                                   <DataTrigger Binding="{Binding SettingsVM.IsExtraLargeView}" Value="False">
-                                                       <Setter Property="Visibility" Value="Collapsed"/>
-                                                   </DataTrigger>
-                                               </Style.Triggers>
-                                           </Style>
-                                       </ItemsControl.Style>
-
-                                       <ItemsControl.ItemContainerStyle>
-                                           <StaticResource ResourceKey="PosterCardContainerStyle"/>
-                                       </ItemsControl.ItemContainerStyle>
-
-                                       <ItemsControl.ItemsPanel>
-                                           <ItemsPanelTemplate>
-                                               <WrapPanel Orientation="Horizontal"/>
-                                           </ItemsPanelTemplate>
-                                       </ItemsControl.ItemsPanel>
-
-                                       <ItemsControl.ItemTemplate>
-                                           <DataTemplate DataType="{x:Type vm:GameCardViewModel}">
-                                               <Border x:Name="CardBorder" CornerRadius="8"
-                                                       Background="{StaticResource BrushSurfaceDark}"
-                                                       BorderBrush="{StaticResource BrushBorderDark}"
-                                                       BorderThickness="1"
-                                                       Width="240" Height="360" Margin="7"
-                                                       RenderTransformOrigin="0.5,0.5"
-                                                       Cursor="Hand" Focusable="True"
-                                                       AutomationProperties.Name="{Binding Name}"
-                                                       ContextMenu="{StaticResource GameItemContextMenu}"
-                                                       ContextMenuOpening="OnCardContextMenuOpening">
-
-                                                   <!-- See the normal grid above. -->
-                                                   <Border.RenderTransform>
-                                                       <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                                   </Border.RenderTransform>
-
-                                                   <!-- Cards are focusable so Tab reaches them: Enter opens Details
-                                                        (same as click), Ctrl+Enter launches; the focus ring and the
-                                                        Play button appear on keyboard focus as well as hover. -->
-                                                   <Border.InputBindings>
-                                                       <MouseBinding Gesture="LeftClick" Command="{Binding PrimaryClickCommand}"/>
-                                                       <MouseBinding Gesture="Ctrl+LeftClick" Command="{Binding ToggleSelectCommand}"/>
-                                                       <MouseBinding Gesture="Shift+LeftClick" Command="{Binding RangeSelectCommand}"/>
-                                                       <KeyBinding Key="Enter" Command="{Binding ViewDetailsCommand}"/>
-                                                       <KeyBinding Key="Enter" Modifiers="Ctrl" Command="{Binding LaunchCommand}"/>
-                                                   </Border.InputBindings>
-
-                                                   <Grid>
-                                                       <!-- 1. Full Bleed Poster View (Active when ShowPosterArt = True) -->
-                                                       <Grid x:Name="PosterArtView" Visibility="Collapsed">
-                                                           <!-- Ambient Blurred Background Fill (Fills entire card with game colors, zero black voids) -->
-                                                           <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                               <Border.Clip>
-                                                                   <RectangleGeometry Rect="0,0,238,358" RadiusX="7" RadiusY="7"/>
-                                                               </Border.Clip>
-                                                               <Grid>
-                                                                   <Image Source="{Binding CoverImage}" Stretch="UniformToFill"
-                                                                          Opacity="0.45"
-                                                                          RenderOptions.BitmapScalingMode="LowQuality"/>
-                                                                   <Border Background="#550D0D12"/>
-                                                               </Grid>
-                                                           </Border>
-
-                                                           <!-- Crisp Artwork Layer (Fits cleanly without cropping letters, logos, or characters) -->
-                                                           <Border CornerRadius="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                               <Border.Clip>
-                                                                   <RectangleGeometry Rect="0,0,238,358" RadiusX="7" RadiusY="7"/>
-                                                               </Border.Clip>
-                                                               <Image Source="{Binding CoverImage}" Stretch="Uniform"
-                                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                      RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                           </Border>
-
-                                                           <!-- Top Dark Vignette for badge readability -->
-                                                           <Border VerticalAlignment="Top" Height="48" CornerRadius="7,7,0,0">
-                                                               <Border.Background>
-                                                                   <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                       <GradientStop Color="#990D0D12" Offset="0.0"/>
-                                                                       <GradientStop Color="#000D0D12" Offset="1.0"/>
-                                                                   </LinearGradientBrush>
-                                                               </Border.Background>
-                                                           </Border>
-
-                                                           <!-- Bottom Gradient Overlay with Game Title & Playtime -->
-                                                           <Border VerticalAlignment="Bottom" CornerRadius="0,0,7,7">
-                                                               <Border.Background>
-                                                                   <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                       <GradientStop Color="#00111114" Offset="0.0"/>
-                                                                       <GradientStop Color="#88111114" Offset="0.25"/>
-                                                                       <GradientStop Color="#E6111114" Offset="0.65"/>
-                                                                       <GradientStop Color="#F8111114" Offset="1.0"/>
-                                                                   </LinearGradientBrush>
-                                                               </Border.Background>
-                                                               <StackPanel Margin="11,18,11,9">
-                                                                   <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
-                                                                              Foreground="{StaticResource BrushTextPrimary}"
-                                                                              FontFamily="{StaticResource AppFont}"
-                                                                              TextTrimming="CharacterEllipsis"/>
-                                                                   <Grid Margin="0,3,0,0">
-                                                                       <Grid.ColumnDefinitions>
-                                                                           <ColumnDefinition Width="Auto" MaxWidth="80"/>
-                                                                           <ColumnDefinition Width="*"/>
-                                                                       </Grid.ColumnDefinitions>
-                                                                       <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11"
-                                                                                  Foreground="{StaticResource BrushTextSecondary}"
-                                                                                  FontFamily="{StaticResource AppFont}"
-                                                                                  TextTrimming="CharacterEllipsis"/>
-                                                                       <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11"
-                                                                                  Foreground="{StaticResource BrushTextMuted}"
-                                                                                  HorizontalAlignment="Right"
-                                                                                  TextAlignment="Right"
-                                                                                  TextTrimming="CharacterEllipsis"
-                                                                                  Margin="4,0,0,0"
-                                                                                  FontFamily="{StaticResource AppFont}"/>
-                                                                   </Grid>
-                                                               </StackPanel>
-                                                           </Border>
-                                                       </Grid>
-
-                                                       <!-- 2. Standard Icon Fallback View (Active when ShowPosterArt = False) -->
-                                                       <Grid x:Name="IconFallbackView" Margin="12">
-                                                           <Grid.RowDefinitions>
-                                                               <RowDefinition Height="Auto"/>
-                                                               <RowDefinition Height="*"/>
-                                                               <RowDefinition Height="Auto"/>
-                                                           </Grid.RowDefinitions>
-
-                                                           <!-- Center Icon & Name -->
-                                                           <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,4">
-                                                               <Border CornerRadius="8" Width="64" Height="64" Margin="0,0,0,12"
-                                                                       Background="#222228" HorizontalAlignment="Center">
-                                                                   <Image Source="{Binding IconImage}" Width="56" Height="56"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"
-                                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                               </Border>
-
-                                                               <TextBlock Text="{Binding Name}" FontSize="13"
-                                                                          Foreground="{StaticResource BrushTextPrimary}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"
-                                                                          TextAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                                          MaxWidth="160" HorizontalAlignment="Center"/>
-                                                           </StackPanel>
-
-                                                           <!-- Footer Playtime -->
-                                                           <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
-                                                               <Grid>
-                                                                   <Grid.ColumnDefinitions>
-                                                                       <ColumnDefinition Width="Auto" MaxWidth="80"/>
-                                                                       <ColumnDefinition Width="*"/>
-                                                                   </Grid.ColumnDefinitions>
-                                                                   <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11"
-                                                                              Foreground="{StaticResource BrushTextSecondary}"
-                                                                              FontFamily="{StaticResource AppFont}"
-                                                                              TextTrimming="CharacterEllipsis"/>
-                                                                   <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11"
-                                                                              Foreground="{StaticResource BrushTextMuted}"
-                                                                              HorizontalAlignment="Right"
-                                                                              TextAlignment="Right"
-                                                                              TextTrimming="CharacterEllipsis"
-                                                                              Margin="4,0,0,0"
-                                                                              FontFamily="{StaticResource AppFont}"/>
-                                                               </Grid>
-                                                           </StackPanel>
-                                                       </Grid>
-
-                                                       <!-- 3. Top Badges (Category, Steam Overlay, Missing, Hotkey) -->
-                                                       <DockPanel VerticalAlignment="Top" Margin="10,10,10,0" LastChildFill="False">
-                                                           <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" DockPanel.Dock="Left">
-                                                               <!-- Steam Game Indicator Badge Overlay - leftmost, no extra box since
-                                                                    the icon already includes its own colored background. -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- GOG Game Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsGogGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- EA Game Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsEaGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- Epic Games Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsEpicGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- Ubisoft Connect Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsUbisoftGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- Xbox / PC Game Pass Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- Battle.net Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsBattleNetGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- Local Games Indicator Badge Overlay - shown for a game added via plain
-                                                                    exe/shortcut/folder scan rather than any supported launcher. -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsLocalGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/local_games.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
-
-                                                               <!-- Category Pill (Hidden if category is Steam to prevent duplicate badges).
-                                                                    Always preceded by exactly one visible platform/local badge above, so
-                                                                    its left margin is unconditional. -->
-                                                               <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
-                                                                       CornerRadius="4" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Visible"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding ShowCategoryBadge}" Value="False">
-                                                                                   <Setter Property="Visibility" Value="Collapsed"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <TextBlock Text="{Binding Category}" FontSize="11"
-                                                                              Foreground="{StaticResource BrushTextSecondary}"
-                                                                              FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
-                                                               </Border>
-
-                                                               <!-- Hidden Pill -->
-                                                               <Border Background="#2A2A3A" BorderBrush="#33FFFFFF" BorderThickness="1"
-                                                                       CornerRadius="4" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsHidden}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
-                                                                              Foreground="#B8B8CC"
-                                                                              FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
-                                                               </Border>
-                                                           </StackPanel>
-
-                                                           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                                                               <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
-                                                                   <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                                   <TextBlock Text="&#9654; PLAYING" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
-                                                               </Border>
-                                                               <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1"
-                                                                       CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <TextBlock Text="MISSING" FontSize="9.5" FontWeight="SemiBold"
-                                                                              Foreground="#FFA040" FontFamily="{StaticResource AppFont}"/>
-                                                               </Border>
-
-                                                               <!-- Favorite Star - outermost corner -->
-                                                               <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
-        AutomationProperties.Name="{Binding FavoriteMenuLabel}">
-                                                                   <Button.Style>
-                                                                       <Style TargetType="Button" BasedOn="{StaticResource FavoriteToggleButton}">
-                                                                           <Setter Property="Width" Value="19"/>
-                                                                           <Setter Property="Height" Value="19"/>
-                                                                           <Setter Property="FontSize" Value="13"/>
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsFavorite}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                               <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Button.Style>
-                                                               </Button>
-                                                           </StackPanel>
-                                                       </DockPanel>
-
-                                                       <!-- 4. Hover Play Button Overlay -->
                                                        <Button Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
                                                                Width="46" Height="46"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
