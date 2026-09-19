@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
@@ -20,12 +21,13 @@ public partial class GameEditDialog : Window
         double minConfidence = SteamSearchService.DefaultMinConfidence,
         bool scriptsEnabled = false,
         ScriptDefaults? scriptDefaults = null,
-        ScriptLibraryService? scriptLibrary = null)
+        ScriptLibraryService? scriptLibrary = null,
+        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null)
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
-        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary);
+        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary, profileTweaks);
         DataContext = _viewModel;
 
         Owner = WindowHelper.ActiveOwner();

@@ -28,6 +28,7 @@ public enum GameEditSection
 public class GameEditViewModel : ViewModelBase
 {
     private readonly IconExtractorService _iconExtractorService;
+    private readonly Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? _profileTweaks;
     private readonly string? _steamGridDbApiKey;
     private readonly double _minConfidence;
     /// <summary>One for every edit dialog: the service keeps no per-instance state, and its
@@ -98,7 +99,8 @@ public class GameEditViewModel : ViewModelBase
         double minConfidence = SteamSearchService.DefaultMinConfidence,
         bool scriptsEnabled = false,
         ScriptDefaults? scriptDefaults = null,
-        ScriptLibraryService? scriptLibrary = null)
+        ScriptLibraryService? scriptLibrary = null,
+        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null)
     {
         SourceGame = game;
         _scriptDefaults = scriptDefaults;
@@ -117,6 +119,7 @@ public class GameEditViewModel : ViewModelBase
         _iconExtractorService = iconExtractorService;
         _steamGridDbApiKey = steamGridDbApiKey;
         _minConfidence = minConfidence;
+        _profileTweaks = profileTweaks;
         IsNewGame = isNewGame;
 
         _name = game.Name;
@@ -259,8 +262,35 @@ public class GameEditViewModel : ViewModelBase
     public PerformanceProfileMode PerformanceProfile
     {
         get => _performanceProfile;
-        set { _performanceProfile = value; OnPropertyChanged(); }
+        set
+        {
+            _performanceProfile = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ProfileSummaryLines));
+        }
     }
+
+    /// <summary>
+    /// Under the profile box: what the chosen tier will do for this game, one line per tweak,
+    /// read from the same toggles the System page's Performance Profiles tab edits. A tweak that
+    /// asks for administrator permission says so. Empty (and hidden) when the dialog was opened
+    /// without the System page's toggles.
+    /// </summary>
+    public IReadOnlyList<string> ProfileSummaryLines
+    {
+        get
+        {
+            if (_profileTweaks == null) return Array.Empty<string>();
+            if (PerformanceProfile == PerformanceProfileMode.Off)
+                return new[] { "Off: nothing is changed when this game runs." };
+            var tweaks = _profileTweaks(PerformanceProfile);
+            if (tweaks.Count == 0)
+                return new[] { $"Every {PerformanceProfile} tweak is switched off on the System page, so nothing is changed." };
+            return tweaks.Select(t => t.RequiresAdmin ? $"{t.Name} (asks for administrator permission)" : t.Name).ToList();
+        }
+    }
+
+    public bool HasProfileSummary => _profileTweaks != null;
 
     public IReadOnlyList<PerformanceProfileMode> PerformanceProfileOptions { get; } =
         new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };

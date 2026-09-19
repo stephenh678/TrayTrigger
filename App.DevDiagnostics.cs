@@ -1162,9 +1162,12 @@ public partial class App
                 var sampleGame = source == null
                     ? new GameEntry { Name = "DOOM Eternal", Category = "Action", ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe" }
                     : new GameEntry { Name = source.Name, Category = source.Category, ExecutablePath = source.ExecutablePath, WorkingDirectory = source.WorkingDirectory, Arguments = source.Arguments, IconPath = source.IconPath, CoverImagePath = source.CoverImagePath, SteamAppId = source.SteamAppId, IsSteamGame = source.IsSteamGame };
-                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true,
+                    profileTweaks: _mainViewModel.SystemVM.EnabledTweaksFor);
                 var editVm = (GameEditViewModel)dlg.DataContext;
                 if (invalid) editVm.SteamAppId = "not-a-number";
+                // The Performance tab shows the tier summary; Aggressive lists the most.
+                if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
                 editVm.SelectedSection = section;
                 dlg.Show();
                 dlg.UpdateLayout();

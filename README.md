@@ -208,7 +208,7 @@ Windows set up for games, and an eye on the hardware running them.
 
 System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a Core Isolation status readout, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
-<!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Reset Defaults) -->
+<!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Restore Previous Settings) -->
 
 See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Reset Defaults**. Bulk changes can create a System Restore point.
 
@@ -271,7 +271,7 @@ Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the 
 No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), and GitHub Releases (update checks, which you can turn off).
 
 **Can changes be reverted?**
-Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Reset Defaults. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.
+Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Restore Previous Settings. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.
 
 ---
 

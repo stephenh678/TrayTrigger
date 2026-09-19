@@ -436,6 +436,19 @@
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
                             <TextBlock Text="Applied when this game launches and put back when it exits."
                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <!-- What the chosen tier does for this game (UX-07), from the System page's
+                                 Performance Profiles toggles: enabled tweaks only, one per line. -->
+                            <ItemsControl ItemsSource="{Binding ProfileSummaryLines}" Margin="0,0,0,6"
+                                          AutomationProperties.Name="What this profile changes"
+                                          Visibility="{Binding HasProfileSummary, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,1,0,0">
+                                            <Run Text="&#x2022; " Foreground="{StaticResource BrushTextMuted}"/><Run Text="{Binding Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work" Margin="0,0,0,12"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
 

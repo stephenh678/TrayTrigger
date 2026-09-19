@@ -473,7 +473,7 @@
                                     <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
                                             IsEnabled="{Binding CanRunBulkAction}"
                                             Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
-                                    <Button Content="Reset Defaults" Command="{Binding ResetDefaultsCommand}"
+                                    <Button Content="Restore Previous Settings" Command="{Binding ResetDefaultsCommand}"
                                             IsEnabled="{Binding CanRunBulkAction}"
                                             Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,5"/>
                                     <Button Content="Refresh" Command="{Binding RefreshTweaksCommand}"
@@ -496,7 +496,7 @@
                                                     </Border>
                                                 </ControlTemplate>
                                             </Button.Template>
-                                            <TextBlock Text="{Binding RestorePointBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
+                                            <TextBlock Text="{Binding RestorePointBadgeText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF"/>
                                         </Button>
                                     </StackPanel>
                                     <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12"
@@ -505,7 +505,7 @@
                             </DockPanel>
 
                             <!-- No badge legend here on purpose: the badges (OPTIMAL, OPT-IN, RESTART, ADMIN,
-                                 RESTORE POINT) are defined in the "How tweaks work" help topic this links to. -->
+                                 restore point) are defined in the "How tweaks work" help topic this links to. -->
                             <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
                                 <!-- The link is docked before the note, so the note wraps in what's left
                                      instead of pushing the link off the edge. -->
@@ -644,7 +644,7 @@
         <!-- Card search found nothing. -->
         <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SystemCardsPanel}"/>
 
-        <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Reset Defaults runs) -->
+        <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Restore Previous Settings runs) -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
                 Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
                 CornerRadius="8" Padding="16,10" Panel.ZIndex="100">

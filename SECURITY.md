@@ -32,7 +32,7 @@ TrayTrigger does **not** run elevated by default. Some individual tweaks write t
 
 Yes. Every tweak TrayTrigger applies — whether a global tweak from Settings or a per-game performance profile — records the prior state before changing anything and restores that exact prior state automatically (on toggle-off, or the moment a game with a session profile exits). If TrayTrigger or your PC crashes mid-session, the next launch detects the incomplete session and restores your pre-game state.
 
-You can also enable **"Create a System Restore point before applying tweaks"** in Settings (on by default) as an additional safety net before any bulk Apply Preset or Reset Defaults.
+You can also enable **"Create a System Restore point before applying tweaks"** in Settings (on by default) as an additional safety net before any bulk Apply Preset or Restore Previous Settings.
 
 ## Microsoft Defender exclusion
 

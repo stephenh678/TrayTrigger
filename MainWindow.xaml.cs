@@ -594,7 +594,8 @@ public partial class MainWindow : Window
             minConfidence: _viewModel.Settings.OnlineMatchConfidenceThreshold,
             scriptsEnabled: _viewModel.Settings.EnableGameScripts,
             scriptDefaults: _viewModel.Settings.ScriptDefaults,
-            scriptLibrary: new ScriptLibraryService(_viewModel.StorageService.BaseDirectory));
+            scriptLibrary: new ScriptLibraryService(_viewModel.StorageService.BaseDirectory),
+            profileTweaks: _viewModel.SystemVM.EnabledTweaksFor);
         editDialog.Owner = this;
         if (editDialog.ShowDialog() == true)
         {

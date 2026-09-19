@@ -7,6 +7,7 @@ A Performance Profile is a set of system changes that apply only while a specifi
 - Optimized applies the low-risk set: the full-clock power plan and the high-performance GPU preference. Enable HDR and Do Not Disturb are available under Optimized but stay off until you turn them on.
 - Aggressive applies everything in Optimized plus MMCSS scheduling changes, Above Normal process priority, and a 0.5 ms timer resolution request. The Defender exclusion is available under Aggressive but stays off until you turn it on.
 - The toggles on this page control which tweaks each tier includes. Changing one affects every game assigned to that tier.
+- Edit Game lists, under its Performance Profile box, exactly what the chosen tier will change for that game: the tweaks switched on here, one per line, with the ones that ask for administrator permission marked.
 - Separately from the tier, each game can be pinned to performance cores on a hybrid CPU (Edit Game, CPU Cores). See the CPU Cores topic.
 
 ## What the badges mean

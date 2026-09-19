@@ -3720,7 +3720,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Performance Tweak Safety" FontSize="13.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Applies to Apply Performance Preset and Reset Defaults on the System &amp; Performance page."
+                                    <TextBlock Text="Applies to Apply Performance Preset and Restore Previous Settings on the System &amp; Performance page."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                                     <CheckBox Content="Create a System Restore Point before applying a preset or reset"
@@ -4170,7 +4170,7 @@
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Verified, Reversible Windows Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Preset and Reset Defaults can take a System Restore Point first."
+                                            <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Preset and Restore Previous Settings can take a System Restore Point first."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
