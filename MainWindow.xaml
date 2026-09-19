@@ -3049,6 +3049,16 @@
                                     <TextBlock Text="Press this key combination anywhere in Windows to show or hide the TrayTrigger window (default: Ctrl+Alt+G). Click the box and press the keys: Ctrl, Alt or Shift plus a key, or a function key on its own."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
 
+                                    <TextBlock Text="Open Tray Menu Hotkey" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                                    <views:HotkeyRecorderBox AutomationProperties.Name="Open Tray Menu Hotkey" x:Name="TrayMenuHotkeyBox" Hotkey="{Binding TrayMenuHotkey}" OwnerId="{x:Static services:HotkeyManager.TrayMenuOwnerId}"
+                                                             ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="{Binding Message, ElementName=TrayMenuHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=TrayMenuHotkeyBox}"
+                                               Visibility="{Binding HasMessage, ElementName=TrayMenuHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu at the mouse pointer, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+
                                     <!-- Tools: the optional Tools page. Its tray option is under Tray Menu. -->
                                     <TextBlock Text="Tools" FontSize="12.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
@@ -4330,6 +4340,17 @@
                                                     </Border>
                                                 </StackPanel>
                                                 <TextBlock Text="Show or hide the TrayTrigger window from anywhere in Windows (change it in Settings > General)"
+                                                           Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                            </DockPanel>
+
+                                            <!-- Row 1b: Tray menu hotkey - the configured value -->
+                                            <DockPanel Margin="0,0,0,9">
+                                                <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                                    <Border Background="{StaticResource BrushKeyCapBackground}" BorderBrush="{StaticResource BrushKeyCapBorder}" BorderThickness="1" CornerRadius="4" Padding="7,2">
+                                                        <TextBlock Text="{Binding SettingsVM.TrayMenuHotkey}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="Open the tray menu at the mouse pointer from anywhere in Windows, ready to search (change it in Settings > General)"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 

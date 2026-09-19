@@ -52,6 +52,14 @@ public class TraySearchTests
     public void ResultsAreCapped() => Assert.Equal(2, Names("a", max: 2).Count);
 
     [Fact]
+    public void TrayMenuHotkey_DefaultsToCtrlAltT_IncludingForASettingsFileWithoutIt()
+    {
+        Assert.Equal("Ctrl+Alt+T", new AppSettings().TrayMenuHotkey);
+        var older = JsonSerializer.Deserialize<AppSettings>("{\"GlobalManageHotkey\": \"Ctrl+Alt+G\"}");
+        Assert.Equal("Ctrl+Alt+T", older!.TrayMenuHotkey);
+    }
+
+    [Fact]
     public void SearchBox_IsOnByDefault_IncludingForASettingsFileFromBefore150()
     {
         Assert.True(new AppSettings().ShowTraySearch);

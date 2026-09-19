@@ -344,6 +344,7 @@ public partial class App : Application
 
         // Global Hotkey Trigger
         _hotkeyManager.ManageHotkeyTriggered += OnManageHotkeyTriggered;
+        _hotkeyManager.TrayMenuHotkeyTriggered += OnTrayMenuHotkeyTriggered;
 
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;

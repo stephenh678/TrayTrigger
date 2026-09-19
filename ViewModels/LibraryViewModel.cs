@@ -1821,7 +1821,7 @@ public class LibraryViewModel : ViewModelBase
             RefreshHotkeys();
             return;
         }
-        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings);
+        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings, trayMenuHotkeyStr: _settings.TrayMenuHotkey);
     }
 
     public void OnGameUpdatedFromLauncher(GameEntry game)

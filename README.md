@@ -129,7 +129,7 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 - **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, the Xbox app, or Battle.net shut down once the session ends, so they don't stay resident with their overlays and background processes.
 - **Launchers stay minimized** (on by default): Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game shows.
 - **Launch popup** by the tray clock for hotkey and tray launches: the game, what it's waiting on, and the reason if a launch fails, without opening the window.
-- **Global hotkey** to open the library, and per-game hotkeys to launch.
+- **Global hotkeys** to open the library (Ctrl+Alt+G) and the tray menu (Ctrl+Alt+T), both changeable in Settings, and per-game hotkeys to launch.
 - **One-click launch from the tray menu**: Recent, Favorites, and Categories, no window to open.
 
 ### Tools

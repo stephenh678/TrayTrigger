@@ -23,7 +23,7 @@ namespace TrayTrigger;
 ///
 /// --test-tray-search &lt;out.txt&gt;: opens the real tray ContextMenu on screen (not from the tray
 /// icon, which a test cannot click), types into the box through WPF's text input, and checks
-/// what the roadmap's spike asks: the box holds focus, letters reach it rather than the menu,
+/// what the roadmap's spike asks - opened through the open-tray-menu hotkey's handler: the box holds focus, letters reach it rather than the menu,
 /// Space is typed rather than activating a row, the menu stays open, Enter picks the first match
 /// (its launch is swapped for a recorder, so no game starts), Esc clears then closes.
 /// </summary>
@@ -102,18 +102,23 @@ public partial class App
         var firstGame = _mainViewModel.Games.Where(g => !g.Game.IsHidden).OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
         string query = firstGame == null ? "a" : firstGame.Name[..Math.Min(3, firstGame.Name.Length)].ToLowerInvariant();
 
-        menu.Placement = PlacementMode.AbsolutePoint;
-        menu.HorizontalOffset = 200;
-        menu.VerticalOffset = 200;
         int ownRowsBefore = menu.Items.Count;
-        menu.IsOpen = true;
+        // Opened the way the open-tray-menu hotkey opens it (the key itself is global to Windows).
+        OnTrayMenuHotkeyTriggered();
 
         void Type(string text) =>
             TextCompositionManager.StartComposition(new TextComposition(InputManager.Current, Keyboard.FocusedElement ?? box, text));
 
         var steps = new Queue<Action>();
-        steps.Enqueue(() => Check("box has keyboard focus when the menu opens", box.IsKeyboardFocused,
-            $"focused: {Keyboard.FocusedElement?.GetType().Name}"));
+        steps.Enqueue(() =>
+        {
+            Check("the tray menu hotkey opens the menu", menu.IsOpen);
+            Check("box has keyboard focus when the menu opens", box.IsKeyboardFocused,
+                $"focused: {Keyboard.FocusedElement?.GetType().Name}");
+            menu.Placement = PlacementMode.AbsolutePoint;
+            menu.HorizontalOffset = 200;
+            menu.VerticalOffset = 200;
+        });
         steps.Enqueue(() => Type(query));
         steps.Enqueue(() =>
         {
@@ -199,6 +204,14 @@ public partial class App
         steps.Enqueue(() =>
         {
             Check("the deferred rebuild runs once the menu closes", !ReferenceEquals(_trayIcon.ContextMenu, menu));
+            OnTrayMenuHotkeyTriggered();
+        });
+        steps.Enqueue(() =>
+        {
+            bool opened = _trayIcon.ContextMenu.IsOpen;
+            OnTrayMenuHotkeyTriggered();
+            Check("pressing the tray menu hotkey again closes the menu", opened && !_trayIcon.ContextMenu.IsOpen,
+                $"opened: {opened}, open after second press: {_trayIcon.ContextMenu.IsOpen}");
         });
 
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };

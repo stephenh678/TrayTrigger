@@ -1809,6 +1809,21 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public string TrayMenuHotkey
+    {
+        get => _settings.TrayMenuHotkey;
+        set
+        {
+            if (_settings.TrayMenuHotkey != value)
+            {
+                _settings.TrayMenuHotkey = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onHotkeySettingChanged?.Invoke();
+            }
+        }
+    }
+
     // --- Performance Tweaks ---
 
     public bool CreateRestorePointBeforeTweaks
@@ -2030,6 +2045,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(IncludePrereleaseUpdates));
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
+        OnPropertyChanged(nameof(TrayMenuHotkey));
         OnPropertyChanged(nameof(EnableGameScripts));
         OnPropertyChanged(nameof(EnableTools));
         OnPropertyChanged(nameof(ShowToolsInTray));

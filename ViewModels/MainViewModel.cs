@@ -912,7 +912,8 @@ public class MainViewModel : ViewModelBase
         var failed = _hotkeyManager.RegisterHotkeys(
             _settings.GlobalManageHotkey,
             toolsOn ? Library.HotkeyBindings.Concat(Tools.HotkeyBindings) : Library.HotkeyBindings,
-            reserved: toolsOn ? null : Tools.HotkeyBindings);
+            reserved: toolsOn ? null : Tools.HotkeyBindings,
+            trayMenuHotkeyStr: _settings.TrayMenuHotkey);
 
         var failedTools = failed.Where(b => b.Kind == HotkeyOwnerKind.Tool).ToList();
         string? warning = failedTools.Count switch
