@@ -36,7 +36,9 @@ public class AppSettings
     /// </summary>
     public bool KeepLaunchersMinimized { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
-    public bool IsSidebarExpanded { get; set; } = false;
+    /// <summary>Expanded on a new install, so the page names are visible from the start (UX-14i).
+    /// Every settings.json since 1.0.0 stores this value, so existing users keep theirs.</summary>
+    public bool IsSidebarExpanded { get; set; } = true;
     /// <summary>
     /// Last main-window placement (WPF device-independent units), captured while the window is
     /// in its Normal state and restored on the next launch. Null until the window has been shown
