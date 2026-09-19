@@ -1,6 +1,6 @@
 # TrayTrigger UX/UI Roadmap (Final, Curated)
 
-> **Status:** Approved by the owner on 2026-09-19 for release 1.5.0. Every owner decision is recorded in Section 7 and already applied to the items below. Approved work: UX-01 to UX-07 and UX-09 to UX-16. `UX-08` is withdrawn.
+> **Status:** Approved by the owner on 2026-09-19. **Release version: 1.4.6, not 1.5.0** (owner decision, 2026-09-19, after beta.1 shipped). Beta 1 shipped as `v1.4.6-beta.1` on 2026-09-19; the next beta is **1.4.6-beta.2**. There is no 1.5.0 beta. Every owner decision is recorded in Section 7 and already applied to the items below. Approved work: UX-01 to UX-07 and UX-09 to UX-16. `UX-08` is withdrawn.
 > **Date:** 2026-09-19. **Baseline:** v1.4.5, branch `prerelease`.
 > **Source:** Curated from the three reviews in `UX-UI-roadmap.md` (Gemini, Claude, OpenAI/Codex), checked against the code, `CHANGELOG.md`, `git log`, and `review-notes/1.3.7-ui-overview-review.md`.
 > **Audience:** The owner, and the model that implements the work (for example Opus 5). Each work item is written to be picked up without reading the source reviews.
@@ -68,12 +68,12 @@ These rules decided what made the list. Apply the same rules to any new idea.
 | UX-15 | Edit Game: "All" plus section tabs, matching Settings and System | P2 | M | Gemini, Codex, owner | UX-03 |
 | UX-16 | Optional search box in the existing tray right-click menu (**Verify first**) | P2 | M | Owner, replacing Gemini's flyout | none |
 
-**Release plan (owner decision):** everything ships in one release, **1.5.0**, through two betas.
+**Release plan (owner decision):** everything ships in one release, **1.4.6**, through two betas. (First planned as 1.5.0; renamed to 1.4.6 by the owner when beta.1 was published.)
 
 | Beta | Theme | Items | Why grouped |
 | :--- | :--- | :--- | :--- |
-| **1.5.0-beta.1** | Everything the user can see | UX-01 to UX-07, UX-10, UX-11, UX-12, UX-15, UX-16, and all of UX-14 | Visible, low-risk changes. Testers can judge them by looking. They also land before the refactor, so the refactor moves finished XAML. |
-| **1.5.0-beta.2** | Under the hood | UX-09, then UX-13 | Structural changes whose success criterion is "nothing looks different". They need a beta of their own so a regression is easy to attribute. |
+| **1.4.6-beta.1** (shipped 2026-09-19) | Everything the user can see | UX-01 to UX-07, UX-10, UX-11, UX-12, UX-15, UX-16, and all of UX-14 | Visible, low-risk changes. Testers can judge them by looking. They also land before the refactor, so the refactor moves finished XAML. |
+| **1.4.6-beta.2** (next) | Under the hood | UX-09, then UX-13 | Structural changes whose success criterion is "nothing looks different". They need a beta of their own so a regression is easy to attribute. |
 
 Within beta.1, do UX-01 to UX-05 first, then UX-15 (it depends on UX-03), then the rest. Do UX-16 last: it starts with a spike, and if the spike fails it drops out without holding up the beta. If beta.2 feedback finds a regression, fix it in a release candidate, not a third beta.
 
@@ -332,8 +332,9 @@ Kept so the analysis is not lost. Do not implement unless the owner reopens `D-0
 | 5 | Tray quick-launch flyout | Do not implement. Instead, add an optional search box to the existing tray right-click menu, switchable in Settings. | `R-19`, `UX-16` |
 | 5a | Tray search default | On, for existing users and new installs. | `UX-16` |
 | 6 | Edit Game tabs | Adopt, as "All" plus section tabs, matching Settings and System. | `UX-15`, `R-06` |
-| 6a | `UX-09` after the withdrawal of `UX-08` | Keep both parts in 1.5.0: extract the three views, and share one card template. | `UX-09`, beta.2 |
-| 7 | Release grouping | One release, 1.5.0, in two betas: visible changes, then structural changes. | Section 3 |
+| 6a | `UX-09` after the withdrawal of `UX-08` | Keep both parts in 1.4.6: extract the three views, and share one card template. | `UX-09`, beta.2 |
+| 7 | Release grouping | One release, 1.4.6, in two betas: visible changes, then structural changes. | Section 3 |
+| 7a | Release version | 1.4.6, not 1.5.0. Beta 1 shipped as `v1.4.6-beta.1`; the next is `v1.4.6-beta.2`. | Section 3 |
 
 ### Still open
 

@@ -1,0 +1,1208 @@
+<UserControl x:Class="TrayTrigger.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
+             xmlns:views="clr-namespace:TrayTrigger.Views"
+             xmlns:services="clr-namespace:TrayTrigger.Services"
+             mc:Ignorable="d"
+             d:DesignHeight="900" d:DesignWidth="1100">
+
+    <UserControl.Resources>
+        <!-- Settings > Game Scanner: one row in the editable Scan Locations list -->
+        <DataTemplate x:Key="ScanLocationRowTemplate" DataType="{x:Type vm:ScanLocationRowViewModel}">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
+                          Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
+
+                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+
+                <Button Grid.Column="2" Content="Remove"
+                        Command="{Binding DataContext.RemoveScanLocationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        CommandParameter="{Binding}" Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="11.5"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Settings > Launcher Integrations: one auto-detected Steam library folder under the
+             Steam toggle. Only a checkbox - these rows are owned by the Steam sync, not the user,
+             so there's no Remove (it would just come back on the next sync). -->
+        <DataTemplate x:Key="SteamLibraryRowTemplate" DataType="{x:Type vm:ScanLocationRowViewModel}">
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
+                          Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
+
+                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Settings > Game Scanner: one row in the Ignored Games list -->
+        <DataTemplate x:Key="IgnoredGamePathRowTemplate" DataType="{x:Type vm:IgnoredGamePathRowViewModel}">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding DisplayPath}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                               TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="Remove"
+                        Command="{Binding DataContext.RemoveIgnoredGamePathCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        CommandParameter="{Binding}" Style="{StaticResource ModernGhostButton}" Padding="8,3" FontSize="11.5"
+                        VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="Auto"/> <!-- Category Segmented Tabs -->
+                <RowDefinition Height="*"/>    <!-- Settings ScrollViewer -->
+                <RowDefinition Height="Auto"/> <!-- Status line -->
+            </Grid.RowDefinitions>
+
+        <!-- Undo toast for removed scan locations and ignored games / folders (UX-11): the
+             Library's toast, floated over the bottom of the settings list. -->
+        <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Panel.ZIndex="100"
+                Background="{StaticResource BrushFloatingBar}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                CornerRadius="8" Padding="16,10"
+                Visibility="{Binding IsUndoToastVisible, Converter={StaticResource BoolToVis}}"
+                MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
+                IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center"
+                           Foreground="{StaticResource BrushAccent}"/>
+                <TextBlock Text="{Binding UndoToastMessage}" Foreground="{StaticResource BrushTextPrimary}" MaxWidth="420"
+                           TextTrimming="CharacterEllipsis" FontSize="13" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button Content="UNDO" Command="{Binding UndoRemovalCommand}"
+                        Style="{StaticResource ModernAccentButton}" Padding="12,4" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="11" Command="{Binding DismissUndoToastCommand}"
+                        Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center"
+                        AutomationProperties.Name="Dismiss"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Header -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"
+                           Foreground="#4EC9B0" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBlock Text="Saved in real time" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" 
+                           FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Application Settings" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
+                           FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
+                <TextBlock Text="Startup and updates, launcher integrations and artwork, the tray menu, launch scripts and tweak safety, and diagnostics"
+                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" 
+                           FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Category Segmented Tabs -->
+        <!-- A DockPanel, not two Grid columns: the search box is docked first, so it keeps its
+             width, and the strip gets what is left. At any normal width the strip hugs its tabs
+             and the box sits beside it, exactly as before; only when the six tabs no longer fit
+             (a 720px window) does the strip start scrolling behind its edge chevrons. -->
+        <DockPanel Grid.Row="1" Margin="0,0,0,16" HorizontalAlignment="Left" KeyboardNavigation.TabNavigation="Local">
+        <!-- Card search (Views/CardSearch, Views/SearchBox), on every tab: it searches the selected
+             tab and the text stays as you switch tabs (SettingsViewModel.SettingsSearchText). -->
+        <!-- Docked first so it keeps its width, but still second in the tab order, as it
+             reads on screen. -->
+        <views:SearchBox x:Name="SettingsSearchBox" DockPanel.Dock="Right" HorizontalAlignment="Left" Margin="12,0,0,0"
+                         KeyboardNavigation.TabIndex="1"
+                         Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
+        <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
+                KeyboardNavigation.TabIndex="0" KeyboardNavigation.TabNavigation="Local"
+                views:ScrollToTop.Target="{Binding ElementName=SettingsScroll}">
+            <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="All" Command="{Binding SelectAllTabCommand}"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}"/>
+                <Button Content="General" Command="{Binding SelectGeneralTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsGeneralTab}"/>
+                <Button Content="Library &amp; Art" Command="{Binding SelectLibraryTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLibraryTab}"/>
+                <Button Content="Tray Menu" Command="{Binding SelectTrayMenuTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsTrayMenuTab}"/>
+                <Button Content="Launch &amp; Performance" Command="{Binding SelectPerformanceTweaksTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsPerformanceTweaksTab}"/>
+                <Button Content="Diagnostics &amp; Storage" Command="{Binding SelectDiagnosticsTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsDiagnosticsTab}"/>
+            </StackPanel>
+            </ScrollViewer>
+        </Border>
+        </DockPanel>
+
+        <!-- Settings Cards ScrollViewer -->
+        <ScrollViewer x:Name="SettingsScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14"
+                      views:ScrollToTop.ResetOn="{Binding SelectedTab}">
+            <StackPanel x:Name="SettingsCardsPanel" HorizontalAlignment="Stretch" Margin="0,0,12,0"
+                        views:CardSearch.Query="{Binding SettingsSearchText}"
+                        views:CardSearch.Scope="{Binding SelectedTab}">
+
+                <!-- ============================================== -->
+                <!-- CATEGORY 1: GENERAL                            -->
+                <!-- ============================================== -->
+                <StackPanel Visibility="{Binding ShowGeneralSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All Settings view) -->
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="GENERAL" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 1.1 Window & Tray Icon: everything about the window and the icon, in the order you
+                         meet them - startup, what happens at launch, the icon itself, how you reach the
+                         window (left-click, hotkey). The menu's contents are the Tray Menu category. -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Window &amp; Tray Icon" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+
+                            <CheckBox Content="Start with Windows" IsChecked="{Binding StartWithWindows}" 
+                                      Style="{StaticResource ModernCheckBox}" FontSize="13"/>
+                            <TextBlock Text="Launches TrayTrigger automatically when you log in to Windows." 
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                       Margin="24,3,0,0" TextWrapping="Wrap"/>
+
+                            <!-- Nested Sub-Toggle: Start Minimized -->
+                            <StackPanel Margin="24,8,0,10">
+                                <CheckBox Content="Start minimized to tray" 
+                                          IsChecked="{Binding StartMinimizedToTray}" 
+                                          IsEnabled="{Binding CanConfigureMinimized}" 
+                                          Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                <TextBlock Text="When enabled, runs tray-only with no window opened on system boot."
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                           Margin="24,2,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <CheckBox Content="Minimize to system tray when launching a game"
+                                      IsChecked="{Binding MinimizeOnGameLaunch}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Automatically hides the TrayTrigger window to the system tray whenever a game starts so it never covers your game."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                            <!-- Sits with the option above: both keep windows off the game while it starts. -->
+                            <CheckBox Content="Keep game launchers minimized when launching a game"
+                                      IsChecked="{Binding KeepLaunchersMinimized}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game opens. The EA app, Ubisoft Connect, Xbox and Battle.net are left as they are."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                            <DockPanel LastChildFill="False">
+                                <CheckBox Content="Always show icon in tray (prevent collapsing into overflow)" 
+                                          IsChecked="{Binding AlwaysShowTrayIcon}" 
+                                          Style="{StaticResource ModernCheckBox}" FontSize="12.5" 
+                                          VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                <Button Content="Taskbar Settings..." Command="{Binding OpenTaskbarSettingsCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right" 
+                                        VerticalAlignment="Center" Padding="10,5"/>
+                            </DockPanel>
+                            <TextBlock Text="Asks Windows to keep the TrayTrigger icon on the taskbar instead of in the hidden overflow. Windows 11 only; Windows decides, and the tip below is the one method it always honours."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,6" TextWrapping="Wrap"/>
+                            <!-- What Windows actually did with the request - a request it dropped used to look
+                                 exactly like one it honoured. -->
+                            <TextBlock Text="{Binding TrayPromotionStatus}" Foreground="{StaticResource BrushAccentHover}" FontSize="11"
+                                       Margin="24,0,0,6" TextWrapping="Wrap"
+                                       Visibility="{Binding HasTrayPromotionStatus, Converter={StaticResource BoolToVis}}"/>
+
+                            <Border Background="#1A1A22" CornerRadius="6" Padding="8" Margin="24,4,0,0">
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
+                                               VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
+                                    <TextBlock Text="Tip: You can also drag the TrayTrigger icon from the taskbar ^ overflow chevron directly onto your taskbar to pin it permanently."
+                                               Foreground="#CCA84E" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- How you reach the window: the icon's left-click, and the global hotkey. -->
+                            <CheckBox Content="Left-click on the tray icon opens the game menu"
+                                      IsChecked="{Binding TrayLeftClickOpensMenu}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,12,0,0"/>
+                            <TextBlock Text="Off: left-click shows or hides the window and right-click opens the menu. On: both clicks open the menu. Double-click always opens the window."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                            <!-- The icon's launch popup: what a launch from a game hotkey or the tray menu shows
+                                 while the window is out of sight. A launch from the open window uses it only when
+                                 the window is about to hide (minimize on launch) or with the every-launch option. -->
+                            <CheckBox Content="Show a launch popup by the tray icon"
+                                      IsChecked="{Binding ShowLaunchPopup}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="{Binding LaunchPopupDescription}"
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,0" TextWrapping="Wrap"/>
+
+                            <!-- Nested sub-toggle: the popup for launches from the open window too. -->
+                            <StackPanel Margin="24,8,0,12">
+                                <CheckBox Content="{Binding LaunchPopupEveryLaunchLabel}"
+                                          IsChecked="{Binding ShowLaunchPopupOnEveryLaunch}"
+                                          IsEnabled="{Binding ShowLaunchPopup}"
+                                          Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                <TextBlock Text="Off: only while TrayTrigger is hidden, or when &quot;Minimize to system tray when launching a game&quot; is about to hide it. On: every launch from the open window uses the popup, in place of the notice inside the window. A launch error still opens a dialog while the window is in front."
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                           Margin="24,2,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <TextBlock Text="Show / Hide Window Hotkey" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                            <!-- Recorded from real key presses; a combo another game or another app holds is
+                                 refused with the reason instead of being saved and silently failing to register. -->
+                            <views:HotkeyRecorderBox AutomationProperties.Name="Show / Hide Window Hotkey" x:Name="ManageHotkeyBox" Hotkey="{Binding GlobalManageHotkey}" OwnerId="{x:Static services:HotkeyManager.ManageOwnerId}"
+                                                     ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding Message, ElementName=ManageHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ManageHotkeyBox}"
+                                       Visibility="{Binding HasMessage, ElementName=ManageHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                       FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <TextBlock Text="Press this key combination anywhere in Windows to show or hide the TrayTrigger window (default: Ctrl+Alt+G). Click the box and press the keys: Ctrl, Alt or Shift plus a key, or a function key on its own."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+
+                            <TextBlock Text="Open Tray Menu Hotkey" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                            <views:HotkeyRecorderBox AutomationProperties.Name="Open Tray Menu Hotkey" x:Name="TrayMenuHotkeyBox" Hotkey="{Binding TrayMenuHotkey}" OwnerId="{x:Static services:HotkeyManager.TrayMenuOwnerId}"
+                                                     ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding Message, ElementName=TrayMenuHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=TrayMenuHotkeyBox}"
+                                       Visibility="{Binding HasMessage, ElementName=TrayMenuHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                       FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu by the tray icon, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+
+                            <!-- Tools: the optional Tools page. Its tray option is under Tray Menu. -->
+                            <TextBlock Text="Tools" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                            <CheckBox Content="Enable Tools" IsChecked="{Binding EnableTools}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Adds a Tools page to the sidebar for the programs you use alongside games, like DLSS Swapper, Vortex or MSI Afterburner. Drop a program or its shortcut to add it, sort tools into their own categories, star favorites and give them hotkeys. Turning it off hides the page and keeps your tools for next time."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,0" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" Margin="24,4,0,0" HorizontalAlignment="Left"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/overview"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 1.2 Updates & GitHub Releases -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                <TextBlock Text="Updates" FontSize="13.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                <Button Content="Check for Updates Now" Command="{Binding CheckUpdatesInSettingsCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
+                                        VerticalAlignment="Center" Padding="10,4"/>
+                            </DockPanel>
+
+                            <CheckBox Content="Automatically check for updates on startup"
+                                      IsChecked="{Binding AutoCheckForUpdates}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Checks GitHub Releases when TrayTrigger starts and notifies you when an update is available."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox Content="Receive pre-release (beta) updates"
+                                      IsChecked="{Binding IncludePrereleaseUpdates}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Also offer beta builds. New features first, but they may be less stable."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,2" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="About the beta channel" Margin="24,0,0,10"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
+
+                            <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBox AutomationProperties.Name="GitHub repository" Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource ModernTextBox}" Width="240" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                            <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: stephenh678/TrayTrigger)."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+
+                            <TextBlock Text="{Binding UpdateStatusText}" FontSize="11.5" Foreground="{StaticResource BrushAccentHover}"
+                                       Margin="0,8,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="Text" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+
+                <!-- ============================================== -->
+                <!-- CATEGORY 2: LIBRARY & ART                      -->
+                <!-- ============================================== -->
+                <StackPanel Visibility="{Binding ShowLibrarySection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All Settings view) -->
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="LIBRARY &amp; ART" FontSize="11.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2.1 Launcher Integrations -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Launcher Integrations" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Each toggle controls whether Scan for Games looks for that launcher's installed games. Turning one off never removes or changes games already in your library."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How the Game Scanner works" Margin="0,0,0,10"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
+
+                            <DockPanel LastChildFill="False">
+                                <CheckBox AutomationProperties.Name="Enable Steam Library Integration" IsChecked="{Binding SteamIntegrationEnabled}"
+                                          Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                          VerticalAlignment="Center" DockPanel.Dock="Left">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Enable Steam Library Integration" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </CheckBox>
+                            </DockPanel>
+                            <TextBlock Text="Found via Steam's own library manifests, with official artwork from Steam's cache. Untick a library folder below to skip it."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                            <!-- Steam's library folders live here, under the toggle that owns them, rather than
+                                 in the manual Scan Locations list below. Untick one to skip that library. -->
+                            <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="6" Padding="10,8" Margin="24,0,0,10"
+                                    Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,6">
+                                        <TextBlock Text="Steam Libraries" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                        <Button Content="Refresh" Command="{Binding RefreshSteamScanLocationsCommand}"
+                                                Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="11"/>
+                                    </DockPanel>
+
+                                    <TextBlock Text="No Steam libraries detected. Click Refresh after installing Steam."
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"
+                                               Visibility="{Binding HasNoSteamLibraryLocations, Converter={StaticResource BoolToVis}}"/>
+
+                                    <ItemsControl ItemsSource="{Binding SteamLibraryLocations}" ItemTemplate="{StaticResource SteamLibraryRowTemplate}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <CheckBox AutomationProperties.Name="Enable GOG Library Integration" IsChecked="{Binding GogIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable GOG Library Integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via GOG Galaxy's own install records. No scan location needed."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable EA Library Integration" IsChecked="{Binding EaIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable EA Library Integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via the EA app's install manifests. Limitation: only games in EA's default folders (EA Games / Origin Games) are found - a custom install location is not."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable Epic Games Library Integration" IsChecked="{Binding EpicIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable Epic Games Library Integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via the Epic Games Launcher's own install records. No scan location needed."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable Ubisoft Connect Library Integration" IsChecked="{Binding UbisoftIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable Ubisoft Connect Library Integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via Ubisoft Connect's install records, any location. Limitation: Ubisoft records no title or exe, so both are read from the install folder - occasionally wrong for a game with several executables."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable Xbox / PC Game Pass Library Integration" IsChecked="{Binding XboxIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable Xbox / PC Game Pass Library Integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via Windows' own Gaming Services records, so every game installed through the Xbox app is covered, on any drive. Games launch through Windows like the Xbox app does - no direct-exe option. Limitation: only modern (GDK) titles are detected; a few older Microsoft Store games that never moved to the current format are not."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox AutomationProperties.Name="Enable Battle.net Library Integration" IsChecked="{Binding BattleNetIntegrationEnabled}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="13"
+                                      Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Enable Battle.net Library Integration" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="Found via Blizzard's install records, on any drive. Games launch through Battle.net - no direct-exe option, because Battle.net signs the game in. If Battle.net is closed it's started for you. Limitation: right after Battle.net's own cache is cleared, a newly installed game's launch code can't be read until Battle.net has been opened once."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,2" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2.2 Scan for Games: when it runs, the button that runs it now, the extra folders
+                         it searches, and what it must skip. Everything scanning-related in one card. -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <DockPanel LastChildFill="False" Margin="0,0,0,4">
+                                <TextBlock Text="Scan for Games" FontSize="13.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                <Button Content="Scan for Games Now" Command="{Binding OpenScanForGamesCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
+                                        VerticalAlignment="Center" Padding="10,4"/>
+                            </DockPanel>
+                            <TextBlock Text="Finds installed games through the launchers above and in any extra folders you add here, and lets you keep the scanner out of what it should skip."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How scanning works" Margin="0,0,0,10"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
+
+                            <CheckBox Content="Automatically scan for new games on startup"
+                                      IsChecked="{Binding AutoScanForGamesOnStartup}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens, covering the launchers above and your Scan Locations - only interrupts you with the New Games Found picker if it actually finds something new."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                            <!-- Scan Locations manager (manual folders only - Steam's own libraries are listed
+                                 under the Steam integration toggle above) -->
+                            <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="6" Padding="12,10">
+                                <StackPanel>
+                                    <TextBlock Text="Scan Locations" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="No folders yet. Add one such as D:\Games to have Scan for Games look through its subfolders."
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                               Visibility="{Binding HasNoScanLocations, Converter={StaticResource BoolToVis}}"/>
+
+                                    <ItemsControl ItemsSource="{Binding ScanLocations}" ItemTemplate="{StaticResource ScanLocationRowTemplate}" Margin="0,0,0,4"/>
+
+                                    <Button Content="+ Add a Scan Location" Command="{Binding AddScanLocationCommand}"
+                                            Style="{StaticResource ModernOutlineButton}" HorizontalAlignment="Left" Padding="10,5" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Ignored Games manager -->
+                            <!-- Always shown: the card header promises this list, and hiding it while empty left
+                                 the reader looking for a section that was not there. -->
+                            <Border Background="#16161B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                                    CornerRadius="6" Padding="12,10" Margin="0,10,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Ignored Games" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Never suggested by Add Folder or Scan for Games. Remove one to let it be detected again."
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                    <ItemsControl ItemsSource="{Binding IgnoredGamePaths}" ItemTemplate="{StaticResource IgnoredGamePathRowTemplate}"/>
+                                    <TextBlock Text="Nothing ignored yet. Use Ignore on a Scan for Games result to keep that game out of future scans, or ignore a whole folder below."
+                                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"
+                                               Visibility="{Binding HasNoIgnoredGamePaths, Converter={StaticResource BoolToVis}}"/>
+                                    <!-- Folders are the one ignore added by hand: a Utilities or Mods folder under a scan
+                                         location is skipped whole, however its contents change. -->
+                                    <Button Content="+ Ignore a Folder" Command="{Binding AddIgnoredFolderCommand}"
+                                            Style="{StaticResource ModernOutlineButton}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                            ToolTip="Folder scans skip this folder and everything under it. Use it for a tools, mods or emulator folder inside a scan location."/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2.3 Game Titles & Metadata Detection -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Game Titles &amp; Metadata Detection" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="How game titles and categories are determined when importing files or scanning folders, where game info comes from, and how long it is kept."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Where game info comes from"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
+                            </StackPanel>
+
+                            <CheckBox Content="Search official game titles online (Steam store)"
+                                      IsChecked="{Binding SearchOfficialTitleOnline}" 
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Looks up the official title and Steam App ID instead of using the file name."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                       Margin="24,3,0,8" TextWrapping="Wrap"/>
+
+                            <DockPanel Margin="24,0,0,10" LastChildFill="False" IsEnabled="{Binding SearchOfficialTitleOnline}">
+                                <TextBlock Text="Matching sensitivity:" Foreground="{StaticResource BrushTextSecondary}" 
+                                           FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox AutomationProperties.Name="Matching sensitivity" ItemsSource="{Binding ConfidenceThresholdOptions}" 
+                                          SelectedItem="{Binding OnlineMatchSensitivity, Mode=TwoWay}" 
+                                          Style="{StaticResource ModernComboBox}" Width="190" HorizontalAlignment="Left"/>
+                            </DockPanel>
+
+                            <CheckBox Content="Automatically categorize games from store genres"
+                                      IsChecked="{Binding AutoCategorizeFromSteam}" 
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized. Uses Steam's genre when the game is on Steam, otherwise RAWG's if RAWG is enabled."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
+
+                            <!-- RAWG: the second metadata source, for games Steam doesn't list. Developer,
+                                 publisher, synopsis and genre, shown via the source toggle in Game Details. -->
+                            <CheckBox Content="Use RAWG for non-Steam game info (optional)"
+                                      IsChecked="{Binding UseRawgMetadata}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Developer, publisher, release date, synopsis, and genre for games that aren't on Steam (Game Pass, Epic exclusives, Roblox, and so on). Needs a free RAWG API key; shown via a source toggle in each game's details window."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,8" TextWrapping="Wrap"/>
+                            <Grid Margin="24,0,0,12" IsEnabled="{Binding UseRawgMetadata}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox AutomationProperties.Name="RAWG API key" Grid.Column="0" Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+                                         Tag="Paste your RAWG API key here..."/>
+                                <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenRawgSiteCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                            </Grid>
+
+                            <!-- Freshness of the cached Steam / RAWG details behind Game Details. The window
+                                 always opens from the disk cache; this decides when it re-fetches behind it.
+                                 Same row style as "Library view mode". The ComboBox is declared first so the
+                                 DockPanel reserves its width before the wrapping description is measured. -->
+                            <DockPanel Margin="0,0,0,8" LastChildFill="False">
+                                <ComboBox AutomationProperties.Name="Refresh game info" ItemsSource="{Binding MetadataRefreshOptions}"
+                                          SelectedItem="{Binding MetadataRefreshOption, Mode=TwoWay}"
+                                          Style="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Right"
+                                          DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="Refresh game info:" Foreground="{StaticResource BrushTextPrimary}" FontSize="12.5"/>
+                                    <TextBlock Text="Game Details opens from a copy saved on disk and shows when it was last updated. This is how old that copy may get before it's refreshed in the background; Refresh in the details window always fetches fresh info."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <Button Content="Clear Cached Game Info" Command="{Binding ClearMetadataCacheCommand}"
+                                    Style="{StaticResource ModernOutlineButton}" Padding="10,5"
+                                    HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                            <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters are kept."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="0,4,0,2" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 2.4 Library View & Artwork. Layout and art only: RAWG is a text-metadata source,
+                         so it lives with Steam's metadata options in 2.3. -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Library View &amp; Artwork" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="How the library is laid out, and where poster art comes from."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How artwork is found" Margin="0,0,0,12"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/artwork"/>
+
+                            <DockPanel Margin="0,0,0,12" LastChildFill="False">
+                                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="Library view mode:" Foreground="{StaticResource BrushTextPrimary}" FontSize="12.5"/>
+                                    <TextBlock Text="The same setting as the view buttons above the library; it is remembered between sessions." Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ComboBox AutomationProperties.Name="Library view mode" ItemsSource="{Binding ViewModeOptions}" 
+                                          SelectedItem="{Binding LibraryViewMode, Mode=TwoWay}" 
+                                          Style="{StaticResource ModernComboBox}" Width="140" HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Center"/>
+                            </DockPanel>
+
+                            <CheckBox Content="Display vertical poster art on game cards (Steam 600×900)"
+                                      IsChecked="{Binding UseVerticalPosterArt}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Shows official high-resolution vertical box artwork on library game cards instead of square icons when available."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Refresh All Game Posters" Command="{Binding RefreshAllPostersCommand}"
+                                        IsEnabled="{Binding CanRefreshAllPosters}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="10,5"
+                                        HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding PosterRefreshStatus}" Foreground="{StaticResource BrushAccentHover}"
+                                           FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,4"/>
+                            </StackPanel>
+                            <TextBlock Text="Re-checks every game for better art, including ones that already have a cover."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="0,4,0,12" TextWrapping="Wrap"/>
+
+                            <CheckBox Content="Use SteamGridDB for fallback poster art (optional)"
+                                      IsChecked="{Binding UseSteamGridDbArt}" 
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Community box art for games Steam has no poster for yet. Needs a free API key."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                       Margin="24,3,0,8" TextWrapping="Wrap"/>
+
+                            <Grid Margin="24,0,0,0" IsEnabled="{Binding UseSteamGridDbArt}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox AutomationProperties.Name="SteamGridDB API key" Grid.Column="0" Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" 
+                                         Tag="Paste your SteamGridDB API key here..."/>
+                                <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                            </Grid>
+
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ============================================== -->
+                <!-- CATEGORY 3: TRAY MENU                          -->
+                <!-- ============================================== -->
+                <StackPanel Visibility="{Binding ShowTrayMenuSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All Settings view) -->
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="TRAY MENU" FontSize="11.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 3.1 Tray Menu: what it lists, then how it looks. The icon itself (left-click, always show) is under General. -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Tray Menu" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How the tray menu works" Margin="0,0,0,8"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="traymenu/overview"/>
+
+                            <TextBlock Text="What it lists" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                            <CheckBox Content="Show a search box at the top of the tray menu"
+                                      IsChecked="{Binding ShowTraySearch}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Type to find a game (or tool) by name or category; Enter launches the first match and Esc clears the box."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                            <CheckBox Content="Include 'Recent' category in tray menu"
+                                      IsChecked="{Binding ShowRecentInTray}" 
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Adds a 'Recent' section at the top of the tray menu with your last-played games, whether category grouping is on or not."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                       Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                            <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
+                                <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}"
+                                           FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox AutomationProperties.Name="Max recent games to show" Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
+                                         Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
+                                         PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                         DataObject.Pasting="NumericTextBox_Pasting"/>
+                            </DockPanel>
+
+                            <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
+                                <TextBlock Text="Recent sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                           FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox AutomationProperties.Name="Recent sort order" ItemsSource="{Binding TraySortOptions}"
+                                          SelectedItem="{Binding RecentTraySortOption, Mode=TwoWay}"
+                                          Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
+                            </DockPanel>
+
+                            <CheckBox Content="Include 'Favorites' category in tray menu"
+                                      IsChecked="{Binding ShowFavoritesInTray}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Adds a 'Favorites' section near the top of the tray menu with your starred games, whether category grouping is on or not. Hidden while you have no favorites."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                            <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
+                                <TextBlock Text="Max favorites to show:" Foreground="{StaticResource BrushTextSecondary}"
+                                           FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox AutomationProperties.Name="Max favorites to show" Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
+                                         Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
+                                         PreviewTextInput="NumericTextBox_PreviewTextInput"
+                                         DataObject.Pasting="NumericTextBox_Pasting"/>
+                            </DockPanel>
+
+                            <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
+                                <TextBlock Text="Favorites sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                           FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox AutomationProperties.Name="Favorites sort order" ItemsSource="{Binding TraySortOptions}"
+                                          SelectedItem="{Binding FavoritesTraySortOption, Mode=TwoWay}"
+                                          Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
+                            </DockPanel>
+
+                            <!-- Tools in the tray: shown only while Tools is on (Settings > General). -->
+                            <StackPanel Visibility="{Binding EnableTools, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Show Tools in tray menu"
+                                          IsChecked="{Binding ShowToolsInTray}"
+                                          Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                <TextBlock Text="Adds a 'Tools' submenu after your games, with every tool in one list."
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                           Margin="24,3,0,6" TextWrapping="Wrap"/>
+
+                                <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowToolsInTray}">
+                                    <TextBlock Text="Tools sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <ComboBox AutomationProperties.Name="Tools sort order" ItemsSource="{Binding ToolsSortOptions}"
+                                              SelectedItem="{Binding ToolsTraySortOption, Mode=TwoWay}"
+                                              Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
+                                </DockPanel>
+                            </StackPanel>
+
+                            <CheckBox Content="Group tray context menu by category"
+                                      IsChecked="{Binding GroupTrayMenuByCategory}" 
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="When enabled, games are shown under category submenus in the right-click tray menu. When disabled, shows a flat list sorted by your preference." 
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <DockPanel Margin="24,0,0,12" LastChildFill="False">
+                                <TextBlock Text="Tray menu sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                           FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox AutomationProperties.Name="Tray menu sort order" ItemsSource="{Binding TraySortOptions}"
+                                          SelectedItem="{Binding TrayMenuSortOption, Mode=TwoWay}"
+                                          Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
+                            </DockPanel>
+
+                            <TextBlock Text="How it looks" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,4,0,6"/>
+                            <CheckBox Content="Show game icons in the tray menu"
+                                      IsChecked="{Binding ShowTrayMenuIcons}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Each game's icon beside its name, or its launcher's logo when it has no icon. Off gives a text-only menu."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox Content="Compact tray menu"
+                                      IsChecked="{Binding CompactTrayMenu}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Tighter rows and smaller icons, so a long library fits without scrolling."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,10" TextWrapping="Wrap"/>
+
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ============================================== -->
+                <!-- CATEGORY 4: LAUNCH & PERFORMANCE               -->
+                <!-- ============================================== -->
+                <StackPanel Visibility="{Binding ShowPerformanceTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All Settings view) -->
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="LAUNCH &amp; PERFORMANCE" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 4.0 Per-game launch scripts (off by default; gates the Edit Game card).
+                         Lives here, with the other launch-time behaviour, rather than under General. -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="Game Launch Scripts" FontSize="13.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="ADVANCED" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="Run your own script or program before a game starts and after it exits - close Discord, switch audio, set an RGB profile."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox Content="Enable scripts (per-game and default)"
+                                      IsChecked="{Binding EnableGameScripts}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="The master switch. While off, no script runs for any game - not a game's own, not the defaults below - and the Scripts card stays out of Edit Game. Turning it on also installs the templates and examples in the scripts folder. Games that already have a script keep their settings either way."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,2" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Margin="24,0,0,2">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
+                                        ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Browse community scripts"
+                                        Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="{x:Static services:HelpCommands.ScriptCatalogUrl}"
+                                        ToolTip="Opens the TrayTrigger-Scripts catalog on GitHub in your browser. Scripts there are reviewed before listing; read one before you attach it."/>
+                            </StackPanel>
+
+                            <!-- Default scripts: run for every game that has no script of its own for that phase. -->
+                            <StackPanel Margin="0,12,0,0" IsEnabled="{Binding EnableGameScripts}">
+                                <TextBlock Text="Default scripts for every game" FontSize="12.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                                <TextBlock Text="Needs Enable scripts above. Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;. Each game's Script Arguments are passed to the defaults too."
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                                <CheckBox Content="Run the default scripts"
+                                          IsChecked="{Binding DefaultScriptsEnabled}"
+                                          Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,0,0,2"/>
+                                <TextBlock Text="Off by default. Nothing below runs until this is ticked. Untick it later to pause the defaults without clearing them."
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="24,0,0,10" TextWrapping="Wrap"/>
+
+                                <StackPanel IsEnabled="{Binding DefaultScriptsEnabled}">
+                                <TextBlock Text="Default pre-launch script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox AutomationProperties.Name="Default pre-launch script path" Grid.Column="0" Text="{Binding DefaultPreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                    <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPreLaunchScriptCommand}"
+                                            Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                            ToolTip="Run this script now with placeholder game values (hidden, not elevated, 30 s limit) and show its exit code and output"/>
+                                    <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPreLaunchScriptCommand}"
+                                            Style="{StaticResource ModernOutlineButton}"/>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Margin="0,-4,0,8">
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPreLaunchScriptCommand}"
+                                            ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                    <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPreLaunchScriptCommand}"/>
+                                </StackPanel>
+                                <CheckBox Content="Use the same script for pre-launch and post-exit"
+                                          IsChecked="{Binding DefaultUseSameScriptForBoth}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"
+                                          ToolTip="For a script that handles both phases in one file, like the bundled examples"/>
+
+                                <TextBlock Text="Default post-exit script" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox AutomationProperties.Name="Default post-exit script path" Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                             IsEnabled="{Binding CanEditDefaultPostExitScript}"
+                                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                    <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPostExitScriptCommand}"
+                                            Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                                            ToolTip="Run this script now as a post-exit run with placeholder game values and playtime 0 (hidden, not elevated, 30 s limit)"/>
+                                    <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseDefaultPostExitScriptCommand}"
+                                            IsEnabled="{Binding CanEditDefaultPostExitScript}"
+                                            Style="{StaticResource ModernOutlineButton}"/>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Margin="0,-4,0,8">
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPostExitScriptCommand}"
+                                            IsEnabled="{Binding CanEditDefaultPostExitScript}"
+                                            ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                    <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPostExitScriptCommand}"/>
+                                </StackPanel>
+
+                                <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
+                                        Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="11" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                                </Border>
+
+                                <CheckBox Content="Wait for the default pre-launch script to finish before starting the game"
+                                          IsChecked="{Binding DefaultWaitForPreLaunchScript}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
+                                    <TextBox AutomationProperties.Name="Default pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
+                                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <CheckBox Content="Cancel the launch if the default pre-launch script fails (non-zero exit code, timeout, or won't start)"
+                                          IsChecked="{Binding DefaultAbortLaunchOnScriptFailure}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                <CheckBox Content="Run default scripts hidden (no console window)"
+                                          IsChecked="{Binding DefaultRunScriptsHidden}" IsEnabled="{Binding HasAnyDefaultScript}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                <CheckBox Content="Run default scripts as Administrator (UAC prompt on every launch)"
+                                          IsChecked="{Binding DefaultRunScriptsAsAdmin}" IsEnabled="{Binding HasAnyDefaultScript}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="0,0,0,2"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 4.1 Preset & Reset Options -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Performance Tweak Safety" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Applies to Apply Performance Preset and Restore Previous Settings on the System &amp; Performance page."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox Content="Create a System Restore Point before applying a preset or reset"
+                                      IsChecked="{Binding CreateRestorePointBeforeTweaks}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="A Windows rollback point in case a bulk change causes problems. Recommended on."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,2" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="About restore points" Margin="24,0,0,2"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/restore_point"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ============================================== -->
+                <!-- CATEGORY 5: DIAGNOSTICS & STORAGE              -->
+                <!-- ============================================== -->
+                <StackPanel Visibility="{Binding ShowDiagnosticsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                    <!-- Section Header (shown in All Settings view) -->
+                    <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="DIAGNOSTICS &amp; STORAGE" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 5.1 Troubleshooting & Diagnostics -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Diagnostic Logging &amp; Traces" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Configure diagnostic logging to catch errors and trace execution while troubleshooting issues." 
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                            <CheckBox Content="Enable Verbose Logging" 
+                                      IsChecked="{Binding VerboseLoggingEnabled}" 
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Adds detailed traces (launch parameters, scoring, registry checks) to the log. Turn on when reproducing a problem."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,2" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="Reading the log &amp; reporting a problem" Margin="24,0,0,12"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/logs"/>
+
+                            <!-- Active Debug Log Info Box -->
+                            <Border Background="#16161B" CornerRadius="6" BorderBrush="#252530" BorderThickness="1" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="Active Debug Log File" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="{Binding LogFilePathDisplay}" FontSize="11.5" FontFamily="{StaticResource AppFont}" 
+                                                   Foreground="{StaticResource BrushAccentHover}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding LogFileSizeDisplay, StringFormat='Current File Size: {0}'}" 
+                                                   FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="Open Log" Command="{Binding OpenLogFileCommand}" 
+                                                Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,5"/>
+                                        <Button Content="Clear Log" Command="{Binding ClearLogCommand}" 
+                                                Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,5"/>
+                                        <Button Content="Open Folder" Command="{Binding OpenLogFolderCommand}" 
+                                                Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 5.2 Storage & Asset Caches -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Data Storage &amp; Asset Cache" FontSize="13.5" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Local application databases, configurations, and downloaded artwork caches." 
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                            <!-- Roaming: Database & Settings -->
+                            <DockPanel LastChildFill="True" Margin="0,0,0,10">
+                                <Button DockPanel.Dock="Right" Content="Open Data Folder" Command="{Binding OpenStorageFolderCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="10,5"/>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="User Data &amp; Settings (%AppData%)" FontSize="12" FontWeight="SemiBold" 
+                                               Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding StorageDirectoryDisplay}" Foreground="{StaticResource BrushAccentHover}" 
+                                               FontSize="11" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
+                                    <TextBlock Text="Contains games.json, settings.json, and atomic .bak recovery backups." 
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <Separator Background="#252530" Margin="0,2,0,10"/>
+
+                            <!-- Local: Artwork & Media Caches -->
+                            <DockPanel LastChildFill="True">
+                                <Button DockPanel.Dock="Right" Content="Open Cache Folder" Command="{Binding OpenCacheFolderCommand}" 
+                                        Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="10,5"/>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="Artwork &amp; Icons Cache (%LocalAppData%)" FontSize="12" FontWeight="SemiBold" 
+                                               Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding CacheDirectoryDisplay}" Foreground="{StaticResource BrushAccentHover}" 
+                                               FontSize="11" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
+                                    <TextBlock Text="Contains extracted game icons (.png) and downloaded poster artwork (.jpg)." 
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 5.3 Reset Settings to Defaults -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                            Padding="14,12" Margin="0,0,0,10">
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Content="Restore Defaults" Command="{Binding ResetSettingsCommand}" 
+                                    Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="12,6"/>
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Reset Settings to Defaults" FontSize="13.5" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushTextPrimary}"/>
+                                <TextBlock Text="Restores startup, tray menu, game detection, and display preferences to the recommended defaults. Your game library and custom artwork are preserved."
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Card search found nothing. -->
+        <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SettingsCardsPanel}" Title="No settings match"/>
+
+        <!-- Settings status line. SettingsViewModel.StatusMessage was previously bound
+             nowhere (the Library status bar is collapsed while Settings is shown), so
+             "Settings saved", "Added scan location", and the integration-toggle messages
+             were all invisible. -->
+        <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" FontSize="12"
+                   Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
+                   TextWrapping="Wrap" Margin="0,0,0,2">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding StatusMessage}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding StatusMessage}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+    </Grid>
+</UserControl>

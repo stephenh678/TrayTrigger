@@ -43,7 +43,10 @@ Open a [Feature Request](https://github.com/stephenh678/TrayTrigger/issues/new?t
 
 - `Models/` — data models and settings
 - `Services/` — core app logic (game scanning, Steam/SteamGridDB integration, tweaks, performance profiles, updates)
-- `ViewModels/` / `Views/` — WPF UI
+- `ViewModels/` / `Views/` — WPF UI. Each page is its own `UserControl` in `Views/`
+  (`LibraryView`, `SettingsView`, `SystemView`, `ToolsView`, `AboutView`); `MainWindow.xaml` holds
+  the sidebar, shows one page at a time and owns what spans them (drag-and-drop, global keys, the
+  launch toast)
 - `Help/` — in-app "Learn more" content, embedded as resources
 - `TrayTrigger.Tests/` — unit tests
 - `docs/` — developer-facing playbooks not tied to any single file (e.g. [adding a new game-platform integration](docs/adding-a-platform-integration.md))

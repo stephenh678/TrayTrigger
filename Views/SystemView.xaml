@@ -496,14 +496,15 @@
                                             Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                                 </StackPanel>
                                 <StackPanel VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Performance Optimization Status" FontSize="13.5" FontWeight="SemiBold"
+                                    <DockPanel LastChildFill="False">
+                                        <TextBlock Text="Performance Optimization Status" FontSize="13.5" FontWeight="SemiBold" DockPanel.Dock="Left"
+                                                   TextTrimming="CharacterEllipsis"
                                                    Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                                         <!-- The badge is a link: it opens the setting it reports instead of only
                                              pointing at it in a tooltip. -->
                                         <Button AutomationProperties.Name="{Binding RestorePointBadgeText, StringFormat='{}{0}. Opens the setting in Settings'}" Command="{Binding DataContext.OpenPerformanceSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 Background="{Binding RestorePointBadgeColor}" BorderThickness="0" Padding="6,1.5" Margin="8,0,0,0"
-                                                VerticalAlignment="Center" Cursor="Hand">
+                                                DockPanel.Dock="Left" VerticalAlignment="Center" Cursor="Hand">
                                             <Button.Template>
                                                 <ControlTemplate TargetType="Button">
                                                     <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
@@ -513,8 +514,8 @@
                                             </Button.Template>
                                             <TextBlock Text="{Binding RestorePointBadgeText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF"/>
                                         </Button>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12"
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12" TextTrimming="CharacterEllipsis"
                                                Foreground="{StaticResource BrushAccentHover}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>

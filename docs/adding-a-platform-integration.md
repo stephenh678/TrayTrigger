@@ -301,12 +301,12 @@ catches the rest.
 |---|---|
 | Discovery record + scanner | `Services/<Platform>ScannerService.cs` (`Discovered<Platform>Game`, `ScanInstalledGames(existingIds)`) |
 | Entry fields | `Models/GameEntry.cs` (`Is<Platform>Game`, ID), `Models/LauncherPlatform.cs`, `Models/IgnoredGamePath.cs` |
-| Settings | `Models/AppSettings.cs` (`<Platform>IntegrationEnabled`; honor `KeepLaunchersMinimized` in the launch with the client's own start-quietly switch, if it has one and the launch doesn't need the client's window), `ViewModels/SettingsViewModel.cs`, toggle + gap text in `MainWindow.xaml` |
+| Settings | `Models/AppSettings.cs` (`<Platform>IntegrationEnabled`; honor `KeepLaunchersMinimized` in the launch with the client's own start-quietly switch, if it has one and the launch doesn't need the client's window), `ViewModels/SettingsViewModel.cs`, toggle + gap text in `Views/SettingsView.xaml` |
 | Routing + launch | `LaunchRoute` values, a `LaunchClientAvailability` field, the `Resolve` branch, `LaunchGame` switch case, `LauncherClientCloser` list |
 | Import | `ImportCoordinator`: scan branch, `Import<Platform>GamesAsync`, `Ignore<Platform>Game`, `PlatformImportBuckets`, `PlatformKey`; `MainViewModel` forwarding; `App.xaml.cs` construction |
 | Manual import | `PlatformLookupService` (`PlatformMatch.For<Platform>` + lookup) |
 | Scan dialog | `ScanForGamesViewModel` (constructor lists, ignore callbacks, `SourceLogoUri`), `ScanForGamesDialog.xaml.cs`, `MainWindow.xaml.cs` (`OnRequestScanResultsPicker`) |
-| Library UI | Platform badge in all three views (`MainWindow.xaml`), `GameCardViewModel`, `LibraryFilterViewModel`, `GameEditViewModel` |
+| Library UI | Platform badge in all three views (`Views/LibraryView.xaml`), `GameCardViewModel`, `LibraryFilterViewModel`, `GameEditViewModel` |
 | Detection + logos | `Views/LauncherDetectionDialog.xaml.cs` (`DetectedLauncher`), `FolderBatchImportViewModel` logo switch, `Assets/LauncherLogos/` |
 | Category | `LibraryConstants.<Platform>Category` + its `PlatformCategories` entry |
 | ⚠ Ignored-games list label | `IgnoredGamePathRowViewModel.DisplayPath` |
