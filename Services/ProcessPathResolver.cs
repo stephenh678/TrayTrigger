@@ -208,8 +208,10 @@ public static partial class ProcessPathResolver
     /// <summary>
     /// A folder whose processes TrayTrigger must never look for, close or kill as a game's: the
     /// Windows folder and anything under it, a drive root, and the top of Program Files,
-    /// ProgramData, Users, a user's profile and its AppData folders. Games live in folders below
-    /// these, never in them. <paramref name="reason"/> says which, for the log.
+    /// ProgramData, Users, a user's profile, its AppData folders, and the Desktop, Documents,
+    /// Downloads and Public folders. The match below is by prefix, so a game sitting directly in
+    /// Downloads would otherwise make Force Close end everything run from anywhere in Downloads.
+    /// <paramref name="reason"/> says which, for the log.
     /// </summary>
     public static bool IsUnsafeProcessFolder(string? dir, out string reason)
     {
@@ -235,15 +237,27 @@ public static partial class ProcessPathResolver
             return true;
         }
 
-        string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-        if (!string.IsNullOrEmpty(windows) && normalized.StartsWith(NormalizeDirectory(windows), StringComparison.OrdinalIgnoreCase))
+        if (WindowsFolder.Length > 0 && normalized.StartsWith(WindowsFolder, StringComparison.OrdinalIgnoreCase))
         {
             reason = "the Windows folder";
             return true;
         }
 
+        if (UnsafeExactFolders.Value.Contains(normalized))
+        {
+            reason = "a system or profile folder";
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>The folders refused as a game's own (not their subfolders), normalized. They don't
+    /// change while TrayTrigger runs, and the check sits on the launcher's two-second polls.</summary>
+    private static readonly Lazy<HashSet<string>> UnsafeExactFolders = new(() =>
+    {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var exact = new[]
+        string publicDocuments = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+        var folders = new[]
         {
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
@@ -254,17 +268,21 @@ public static partial class ProcessPathResolver
             string.IsNullOrEmpty(profile) ? string.Empty : Path.GetDirectoryName(profile.TrimEnd('\\')) ?? string.Empty,
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            string.IsNullOrEmpty(profile) ? string.Empty : Path.Combine(profile, "Downloads"),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+            publicDocuments,
+            string.IsNullOrEmpty(publicDocuments) ? string.Empty : Path.GetDirectoryName(publicDocuments.TrimEnd('\\')) ?? string.Empty,
         };
-        foreach (string folder in exact)
-        {
-            if (!string.IsNullOrEmpty(folder) && string.Equals(NormalizeDirectory(folder), normalized, StringComparison.OrdinalIgnoreCase))
-            {
-                reason = "a system or profile folder";
-                return true;
-            }
-        }
-        return false;
-    }
+        return new HashSet<string>(
+            folders.Where(f => !string.IsNullOrEmpty(f)).Select(NormalizeDirectory),
+            StringComparer.OrdinalIgnoreCase);
+    });
+
+    private static readonly string WindowsFolder = Environment.GetFolderPath(Environment.SpecialFolder.Windows) is { Length: > 0 } windows
+        ? NormalizeDirectory(windows)
+        : string.Empty;
 
     private static readonly HashSet<string> _warnedUnsafeFolders = new(StringComparer.OrdinalIgnoreCase);
 

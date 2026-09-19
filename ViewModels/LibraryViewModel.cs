@@ -482,34 +482,24 @@ public class LibraryViewModel : ViewModelBase
 
     /// <summary>"Force Close Game" from a card's menu or Game Details: confirms, kills the game, then
     /// ends the session. Off the UI thread, as above.</summary>
-    private void ForceCloseGame(GameCardViewModel card) => EndGameSession(card, forceClose: true);
-
-    private void EndGameSession(GameCardViewModel card, bool forceClose)
+    private void ForceCloseGame(GameCardViewModel card)
     {
-        if (forceClose)
-        {
-            bool confirmed = ModernDialog.Confirm(
-                WindowHelper.ActiveOwner(),
-                "Force Close Game",
-                $"Force close \"{card.Name}\"?",
-                "The game process will be killed immediately. Anything not saved in the game will be lost. TrayTrigger then restores the Performance Profile and runs the post-exit script.",
-                confirmText: "Force Close",
-                cancelText: "Cancel");
-            if (!confirmed) return;
-        }
+        bool confirmed = ModernDialog.Confirm(
+            WindowHelper.ActiveOwner(),
+            "Force Close Game",
+            $"Force close \"{card.Name}\"?",
+            "The game process will be killed immediately. Anything not saved in the game will be lost. TrayTrigger then restores the Performance Profile and runs the post-exit script.",
+            confirmText: "Force Close",
+            cancelText: "Cancel");
+        if (!confirmed) return;
 
-        StatusMessage = forceClose ? $"Force closing {card.Name}..." : $"Ending session for {card.Name}...";
+        StatusMessage = $"Force closing {card.Name}...";
         string gameId = card.Game.Id;
         string name = card.Name;
         _ = Task.Run(() =>
         {
-            bool ended = _launcherService.EndSessionNow(gameId, forceClose);
-            RunOnUiThread(() =>
-            {
-                StatusMessage = ended
-                    ? (forceClose ? $"Force closed {name}; tweaks restored." : $"Session for {name} ended; tweaks restored.")
-                    : $"{name} has no active session.";
-            });
+            bool ended = _launcherService.EndSessionNow(gameId, forceCloseGame: true);
+            RunOnUiThread(() => StatusMessage = ended ? $"Force closed {name}; tweaks restored." : $"{name} has no active session.");
         });
     }
 

@@ -578,10 +578,10 @@
                  over whichever section is visible. Offset above the undo toast's anchor point so
                  the two don't overlap if both happen to be visible at once. -->
             <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,70"
-                    Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                    Background="{StaticResource BrushFloatingBar}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
                     CornerRadius="8" Padding="16,10" Panel.ZIndex="100">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
                 </Border.Effect>
                 <Border.Style>
                     <Style TargetType="Border">
@@ -2744,12 +2744,12 @@
                     <!-- Floating Non-Blocking Undo Toast. The 10-second window pauses while the
                          pointer is over it or it has keyboard focus (OnUndoToastHoldChanged). -->
                     <Border HorizontalAlignment="Center" Margin="0,8,0,0"
-                            Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                            Background="{StaticResource BrushFloatingBar}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
                             CornerRadius="8" Padding="16,10"
                             MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
-                            IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged">
+                            IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
                         </Border.Effect>
                         <Border.Style>
                             <Style TargetType="Border">
@@ -2840,13 +2840,13 @@
                 <!-- Undo toast for removed scan locations and ignored games / folders (UX-11): the
                      Library's toast, floated over the bottom of the settings list. -->
                 <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Panel.ZIndex="100"
-                        Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                        Background="{StaticResource BrushFloatingBar}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
                         CornerRadius="8" Padding="16,10"
                         Visibility="{Binding IsUndoToastVisible, Converter={StaticResource BoolToVis}}"
                         MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
-                        IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged">
+                        IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
                     <Border.Effect>
-                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
                     </Border.Effect>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center"

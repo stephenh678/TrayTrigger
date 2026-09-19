@@ -981,6 +981,11 @@
         <SolidColorBrush x:Key="BrushPillBorder" Color="#252530"/>
         <SolidColorBrush x:Key="BrushSpecStatic" Color="#4EC9B0"/>
         <SolidColorBrush x:Key="BrushLivePillBackground" Color="#132232"/>
+        <!-- Floating bars over a page: the selection bar and the undo toasts. -->
+        <SolidColorBrush x:Key="BrushFloatingBar" Color="#24242E"/>
+        <Color x:Key="ColorFloatingShadow">#000000</Color>
+        <!-- Edit Game's tab strip, the same surface as the Library's category strip. -->
+        <SolidColorBrush x:Key="BrushTabStripBackground" Color="#181820"/>
         <!-- Key caps in Help > About's keyboard table. -->
         <SolidColorBrush x:Key="BrushKeyCapBackground" Color="#252532"/>
         <SolidColorBrush x:Key="BrushKeyCapBorder" Color="#353545"/>

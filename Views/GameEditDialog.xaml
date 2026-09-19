@@ -195,7 +195,7 @@
             <!-- All + one tab per card, as in Settings and System. Every card stays loaded and only
                  its visibility follows the tab, so edits, validation and bindings survive a switch.
                  Ctrl+Tab / Ctrl+Shift+Tab move between tabs (GameEditDialog.xaml.cs). -->
-            <Border DockPanel.Dock="Top" Margin="14,0,4,10" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+            <Border DockPanel.Dock="Top" Margin="14,0,4,10" Background="{StaticResource BrushTabStripBackground}" BorderBrush="{StaticResource BrushBorderDark}"
                     BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
                     views:ScrollToTop.Target="{Binding ElementName=EditScroll}">
                 <StackPanel Orientation="Horizontal">

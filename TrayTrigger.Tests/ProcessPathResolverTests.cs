@@ -48,6 +48,17 @@ public class ProcessPathResolverTests
     }
 
     [Fact]
+    public void IsUnsafeProcessFolder_RefusesDesktopDocumentsAndDownloads()
+    {
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        Assert.True(ProcessPathResolver.IsUnsafeProcessFolder(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), out _));
+        Assert.True(ProcessPathResolver.IsUnsafeProcessFolder(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), out _));
+        Assert.True(ProcessPathResolver.IsUnsafeProcessFolder(System.IO.Path.Combine(profile, "Downloads"), out _));
+        // A game in its own folder under Downloads is fine.
+        Assert.False(ProcessPathResolver.IsUnsafeProcessFolder(System.IO.Path.Combine(profile, "Downloads", "SomeGame"), out _));
+    }
+
+    [Fact]
     public void IsUnsafeProcessFolder_RefusesTheProfileAndAppDataRoots()
     {
         Assert.True(ProcessPathResolver.IsUnsafeProcessFolder(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), out _));

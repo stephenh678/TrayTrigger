@@ -703,7 +703,9 @@ public partial class MainWindow : Window
     /// <summary>
     /// An undo toast is held while the pointer is over it or keyboard focus is inside it, and its
     /// 10-second window pauses. The Library's toast belongs to the library, the Settings one to
-    /// Settings, told apart by the toast's data context.
+    /// Settings, told apart by the toast's data context. Also re-read when the toast shows or hides:
+    /// a hidden toast can keep keyboard focus (Undo pressed with Enter), which must not leave the
+    /// next toast's window paused.
     /// </summary>
     private void OnUndoToastHoldChanged(object sender, RoutedEventArgs e) => UpdateUndoToastHold(sender);
 
@@ -712,7 +714,7 @@ public partial class MainWindow : Window
     private void UpdateUndoToastHold(object sender)
     {
         if (sender is not FrameworkElement toast) return;
-        bool held = toast.IsMouseOver || toast.IsKeyboardFocusWithin;
+        bool held = toast.IsVisible && (toast.IsMouseOver || toast.IsKeyboardFocusWithin);
         if (toast.DataContext is SettingsViewModel settings) settings.SetUndoToastHeld(held);
         else _viewModel.Library.SetUndoToastHeld(held);
     }

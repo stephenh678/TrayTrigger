@@ -106,8 +106,10 @@ public partial class HotkeyManager : IDisposable
     }
 
     /// <summary>
-    /// Replaces every registration with the window hotkey, the tray-menu hotkey and <paramref name="bindings"/>. Games are
-    /// registered before tools (see <see cref="HotkeyBinding.InRegistrationOrder"/>), so when a game
+    /// Replaces every registration with the window hotkey, <paramref name="bindings"/> and the
+    /// tray-menu hotkey, in that order. The tray-menu hotkey goes last and gives way: it arrived in
+    /// 1.5.0 with Ctrl+Alt+T as its default, which must not take the combo from a game or tool that
+    /// already had it. Games are registered before tools (see <see cref="HotkeyBinding.InRegistrationOrder"/>), so when a game
     /// and a tool share a combo the game keeps it and the tool's is logged as not registered.
     /// <paramref name="reserved"/> (tool hotkeys while Tools is off) are not registered with Windows,
     /// but count as taken for <see cref="CheckAvailability"/>, so a game can't claim one meanwhile.
@@ -118,7 +120,7 @@ public partial class HotkeyManager : IDisposable
         var failed = new List<HotkeyBinding>();
         try
         {
-            RegisterCore(globalManageHotkeyStr, trayMenuHotkeyStr, bindings, failed);
+            RegisterCore(globalManageHotkeyStr, bindings, failed);
         }
         finally
         {
@@ -132,16 +134,28 @@ public partial class HotkeyManager : IDisposable
                     }
                 }
             }
+            _isTrayMenuHotkeyRegistered = RegisterTrayMenuHotkey(trayMenuHotkeyStr);
         }
         return failed;
     }
 
-    private void RegisterCore(string globalManageHotkeyStr, string? trayMenuHotkeyStr, IEnumerable<HotkeyBinding> bindings, List<HotkeyBinding> failed)
+    /// <summary>The tray-menu hotkey, unless a game or tool (registered or reserved) already holds it.</summary>
+    private bool RegisterTrayMenuHotkey(string? hotkeyStr)
+    {
+        if (!string.IsNullOrWhiteSpace(hotkeyStr) && ParseHotkey(hotkeyStr, out uint mod, out uint vk)
+            && _owners.TryGetValue((mod, vk), out var holder))
+        {
+            LoggingService.Warn("HotkeyManager", $"The open tray menu hotkey '{hotkeyStr}' is not registered: {holder.OwnerName} already uses it. Choose another in Settings > General.");
+            return false;
+        }
+        return RegisterAppHotkey(TRAY_MENU_HOTKEY_ID, hotkeyStr, TrayMenuOwnerId, "the open tray menu hotkey");
+    }
+
+    private void RegisterCore(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, List<HotkeyBinding> failed)
     {
         UnregisterAll();
 
         _isManageHotkeyRegistered = RegisterAppHotkey(MANAGE_WINDOW_HOTKEY_ID, globalManageHotkeyStr, ManageOwnerId, "the show/hide window hotkey");
-        _isTrayMenuHotkeyRegistered = RegisterAppHotkey(TRAY_MENU_HOTKEY_ID, trayMenuHotkeyStr, TrayMenuOwnerId, "the open tray menu hotkey");
 
         // Register per-game, then per-tool, launch hotkeys
         int nextGameId = GAME_HOTKEY_BASE_ID;
@@ -178,7 +192,7 @@ public partial class HotkeyManager : IDisposable
         }
 
         string tools = toolCount > 0 ? $", {toolCount} tool hotkey(s)" : string.Empty;
-        LoggingService.Info("HotkeyManager", $"Hotkey registration complete: window={(_isManageHotkeyRegistered ? "on" : "off")}, tray menu={(_isTrayMenuHotkeyRegistered ? "on" : "off")}, {gameCount} game hotkey(s){tools} active.");
+        LoggingService.Info("HotkeyManager", $"Hotkey registration complete: window={(_isManageHotkeyRegistered ? "on" : "off")}, {gameCount} game hotkey(s){tools} active.");
     }
 
     /// <summary>Registers one of TrayTrigger's own hotkeys (not a game's or tool's). Blank means none.</summary>

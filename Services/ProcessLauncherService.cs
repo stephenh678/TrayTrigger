@@ -427,11 +427,28 @@ public partial class ProcessLauncherService
     {
         try
         {
-            if (!KillAll(CollectSessionProcesses(session)) && session.Process != null)
+            if (KillAll(CollectSessionProcesses(session))) return;
+
+            var held = session.Process;
+            if (held == null) return;
+
+            // Our own Process object opens the game afresh, and a game started "as administrator"
+            // refuses that to a TrayTrigger that isn't elevated. The handle from its launch was
+            // granted full rights, so use it for this one attempt.
+            try
             {
-                // The game refused (access denied, say): the install folder may still work.
-                KillAll(CollectSessionProcesses(session, skipHandle: true));
+                if (!held.HasExited)
+                {
+                    held.Kill(entireProcessTree: true);
+                    LoggingService.Info("Launcher", $"Force-closed '{session.Game.Name}' through its launch handle.");
+                }
+                return;
             }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Launcher", $"Could not kill '{session.Game.Name}' through its launch handle: {ex.Message}; trying by install folder.");
+            }
+            KillAll(CollectSessionProcesses(session, skipHandle: true));
         }
         catch (Exception ex)
         {
