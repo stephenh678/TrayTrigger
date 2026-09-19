@@ -1489,13 +1489,20 @@
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
-                                                     (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
-                                                     the zoom-out is the idle trigger's job below. -->
-                                                <Trigger.EnterActions>
-                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
-                                                </Trigger.EnterActions>
                                             </Trigger>
+                                            <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
+                                                 (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
+                                                 the zoom-out is the idle trigger's job below. Only while Windows' Animation
+                                                 effects are on (Views/Motion.cs); off, the card lights up but doesn't grow. -->
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
+                                                </MultiDataTrigger.EnterActions>
+                                            </MultiDataTrigger>
                                             <!-- The right-click menu takes the mouse, so IsMouseOver drops the moment it opens.
                                                  Keep the card lit while its menu is up, so it's clear which game is being changed. -->
                                             <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
@@ -1508,6 +1515,7 @@
                                                 <MultiDataTrigger.Conditions>
                                                     <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="False"/>
                                                     <Condition Binding="{Binding IsContextMenuOpen}" Value="False"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
                                                 </MultiDataTrigger.Conditions>
                                                 <MultiDataTrigger.EnterActions>
                                                     <BeginStoryboard Storyboard="{StaticResource PosterCardZoomOut}"/>
@@ -1966,13 +1974,20 @@
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
-                                                     (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
-                                                     the zoom-out is the idle trigger's job below. -->
-                                                <Trigger.EnterActions>
-                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
-                                                </Trigger.EnterActions>
                                             </Trigger>
+                                            <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
+                                                 (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
+                                                 the zoom-out is the idle trigger's job below. Only while Windows' Animation
+                                                 effects are on (Views/Motion.cs); off, the card lights up but doesn't grow. -->
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
+                                                </MultiDataTrigger.EnterActions>
+                                            </MultiDataTrigger>
                                             <!-- The right-click menu takes the mouse, so IsMouseOver drops the moment it opens.
                                                  Keep the card lit while its menu is up, so it's clear which game is being changed. -->
                                             <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
@@ -1985,6 +2000,7 @@
                                                 <MultiDataTrigger.Conditions>
                                                     <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="False"/>
                                                     <Condition Binding="{Binding IsContextMenuOpen}" Value="False"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
                                                 </MultiDataTrigger.Conditions>
                                                 <MultiDataTrigger.EnterActions>
                                                     <BeginStoryboard Storyboard="{StaticResource PosterCardZoomOut}"/>

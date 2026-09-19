@@ -91,6 +91,12 @@ public partial class App
     private void ProcessDevArguments(StartupEventArgs e)
     {
         AttachConsole(ATTACH_PARENT_PROCESS);
+        // TRAYTRIGGER_MOTION=off: behave as if Windows' Animation effects were off (Views/Motion.cs),
+        // for checking the reduced-motion paths without changing the system setting.
+        if (string.Equals(Environment.GetEnvironmentVariable("TRAYTRIGGER_MOTION"), "off", StringComparison.OrdinalIgnoreCase))
+        {
+            Views.Motion.IsEnabled = false;
+        }
         for (int i = 0; i < e.Args.Length; i++)
         {
             string arg = e.Args[i];
@@ -1581,6 +1587,48 @@ public partial class App
                 LoggingService.Info("StartupReconcileTest", $"[TEST_STARTUP_RECONCILE_PASSED] Run key and setting agree ({registry})");
                 Console.WriteLine($"[TEST_STARTUP_RECONCILE_PASSED] Run key and setting agree ({registry})");
                 ExitApplication();
+                return;
+            }
+
+            // --test-hover-zoom: puts the real pointer on the first poster card (nothing else first)
+            // and reports how far the hover trigger scaled it. With Windows' Animation effects off
+            // (or TRAYTRIGGER_MOTION=off) it must stay at 1.000. The pointer is put back after.
+            if (e.Args[i].Equals("--test-hover-zoom", StringComparison.OrdinalIgnoreCase))
+            {
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = "Poster Grid";
+                _mainWindow.Show();
+                _mainWindow.Activate();
+                _mainWindow.Topmost = true;
+                var hoverWorker = new System.Threading.Thread(() =>
+                {
+                    GetCursorPos(out POINT restore);
+                    string outcome;
+                    try
+                    {
+                        System.Threading.Thread.Sleep(900);
+                        var card = Dispatcher.Invoke(() => FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible))
+                                   ?? throw new Exception("No visible poster card.");
+                        var mid = Dispatcher.Invoke(() => card.PointToScreen(new Point(card.ActualWidth / 2, card.ActualHeight / 2)));
+                        SetCursorPos((int)mid.X - 3, (int)mid.Y);
+                        System.Threading.Thread.Sleep(60);
+                        SetCursorPos((int)mid.X, (int)mid.Y);
+                        double peak = 1.0;
+                        for (int t = 0; t < 40; t++)
+                        {
+                            System.Threading.Thread.Sleep(25);
+                            peak = Math.Max(peak, Dispatcher.Invoke(() => ScaleOf(card).ScaleX));
+                        }
+                        bool hovered = Dispatcher.Invoke(() => card.IsMouseOver);
+                        outcome = $"[TEST_HOVER_ZOOM] motion={Views.Motion.IsEnabled} hovered={hovered} peakScale={peak:F3}";
+                    }
+                    catch (Exception ex) { outcome = "[TEST_HOVER_ZOOM_FAILED] " + ex.Message; }
+                    finally { SetCursorPos(restore.X, restore.Y); }
+                    LoggingService.Info("HoverZoomTest", outcome);
+                    Dispatcher.Invoke(ExitApplication);
+                }) { IsBackground = true };
+                hoverWorker.Start();
                 return;
             }
 

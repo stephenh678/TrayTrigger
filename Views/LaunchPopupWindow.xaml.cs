@@ -80,13 +80,23 @@ public partial class LaunchPopupWindow : Window
         _hiding = false;
         if (!IsVisible) Show();
         PositionNearTray();
-        BeginAnimation(OpacityProperty, new DoubleAnimation(1, TimeSpan.FromMilliseconds(140)));
+        // With Windows' Animation effects off the card simply appears (Views/Motion.cs).
+        BeginAnimation(OpacityProperty, Motion.IsEnabled ? new DoubleAnimation(1, TimeSpan.FromMilliseconds(140)) : null);
+        if (!Motion.IsEnabled) Opacity = 1;
     }
 
     public void FadeOutAndHide()
     {
         if (!IsVisible || _hiding) return;
         _hiding = true;
+        if (!Motion.IsEnabled)
+        {
+            BeginAnimation(OpacityProperty, null);
+            Opacity = 0;
+            Hide();
+            StopProgress();
+            return;
+        }
         var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(160));
         fade.Completed += (_, _) =>
         {
