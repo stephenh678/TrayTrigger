@@ -1070,6 +1070,28 @@
             </Setter>
         </Style>
 
+        <!-- The tray menu's search box (UX-16): no chrome of its own, so the row looks like any
+             other tray row; the caret and the placeholder behind it say it takes typing. -->
+        <Style x:Key="TraySearchBox" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="SelectionBrush" Value="{StaticResource BrushAccent}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Default MenuItem hover color; a specific ContextMenu instance can override this in
              its own Resources to get a differently-tinted hover without affecting other menus. -->
         <SolidColorBrush x:Key="MenuItemHoverBrush" Color="#282838"/>

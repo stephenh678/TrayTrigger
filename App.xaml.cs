@@ -592,6 +592,14 @@ public partial class App : Application
 
         Dispatcher.Invoke(() =>
         {
+            // Replacing the menu while it is open closes it, and would throw away a search in
+            // progress (UX-16). Build the new one once this one closes instead.
+            if (_trayIcon.ContextMenu is { IsOpen: true })
+            {
+                _trayMenuRebuildPending = true;
+                return;
+            }
+
             var menu = new ContextMenu();
 
             var games = _mainViewModel.Games.Where(g => !g.Game.IsHidden).ToList();
@@ -834,6 +842,8 @@ public partial class App : Application
                 }
             }
 
+            // Where the navigation block starts: the search box leaves everything from here on alone.
+            int navStart = menu.Items.Count;
             menu.Items.Add(new Separator());
 
             // Navigation & exit items. A tray-first launcher should reach its two most common
@@ -851,6 +861,14 @@ public partial class App : Application
             var exitBrush = (Brush)FindResource("BrushDanger");
             var exitItem = CreateNavMenuItem("Exit TrayTrigger", "\uE7E8", ExitApplication, exitBrush, exitBrush);
             menu.Items.Add(exitItem);
+
+            // The optional search row at the very top (UX-16); with the setting off the menu is
+            // exactly as before. Nothing to search in an empty library.
+            if (_mainViewModel.Settings.ShowTraySearch && games.Count > 0)
+            {
+                AttachTraySearch(menu, navStart, games);
+            }
+            menu.Closed += OnTrayMenuClosed;
 
             _trayIcon.ContextMenu = menu;
 

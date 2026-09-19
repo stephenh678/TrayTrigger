@@ -2048,6 +2048,9 @@ public partial class App
                 return;
             }
 
+            // --screenshot-tray-search / --test-tray-search (App.TraySearchDiagnostics.cs).
+            if (TryHandleTraySearchDevArgs(e, i)) return;
+
             // --test-automation-names <out.txt>: controls a screen reader can't name (App.AutomationNameAudit.cs).
             if (e.Args[i].Equals("--test-automation-names", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

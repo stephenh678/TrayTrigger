@@ -2,6 +2,14 @@
 
 Right-clicking the TrayTrigger tray icon opens a menu built fresh from your library each time, using these preferences to decide what shows and in what order. Left-clicking the icon shows or hides the window, unless you turn on "Left-click on the tray icon opens the game menu", in which case both clicks open the menu. Double-clicking always opens the window. Pointing at the icon shows what is playing, or, when nothing is, the hotkey that shows or hides the window.
 
+## Search
+
+- With "Show a search box at the top of the tray menu" on (Settings > Tray Menu, on by default), the first row of the menu is a search box. The menu opens with the cursor already in it.
+- Type part of a game's name or category and the menu shows only the matches, up to ten games, followed by up to five tools when Tools are in the menu. Best matches come first: names that start with what you typed, then names that contain it, then category matches.
+- Enter launches the top match. Down moves into the results, so the arrow keys and Enter pick any of them. Esc clears the box; a second Esc closes the menu.
+- Clearing the box, or closing the menu, brings the normal menu back. Pairs well with "Left-click on the tray icon opens the game menu": click, type three letters, press Enter.
+- Turn the option off for the menu exactly as it was before.
+
 ## Icons and size
 
 - Each game shows its own icon. A game with no icon shows its launcher's logo instead (Steam, GOG, Battle.net and so on); only a local game with no icon gets the generic controller.

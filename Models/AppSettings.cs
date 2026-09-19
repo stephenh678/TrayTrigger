@@ -119,6 +119,11 @@ public class AppSettings
     public bool EnableTools { get; set; } = false;
     /// <summary>A "Tools" submenu in the tray menu, after the games. Off by default; only applies while <see cref="EnableTools"/> is on.</summary>
     public bool ShowToolsInTray { get; set; } = false;
+    /// <summary>A search box as the first row of the tray menu (UX-16): type to filter games (and
+    /// tools, when they are in the menu) by name or category; Enter launches the first match. On by
+    /// default for new installs and existing users alike: a settings.json from before 1.5.0 has no
+    /// value for it, so it takes this initializer.</summary>
+    public bool ShowTraySearch { get; set; } = true;
     /// <summary>Order of the tray's Tools submenu. One of <see cref="Services.ToolCatalog.SortOptions"/>.</summary>
     public string ToolsTraySortOption { get; set; } = ToolCatalog.SortAlphabetical;
     /// <summary>Order of the Tools page, separate from the tray's. View state, like <see cref="LastSortOption"/>.</summary>

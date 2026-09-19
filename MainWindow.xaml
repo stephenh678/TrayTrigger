@@ -3506,6 +3506,13 @@
 
                                     <TextBlock Text="What it lists" FontSize="12.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                                    <CheckBox Content="Show a search box at the top of the tray menu"
+                                              IsChecked="{Binding ShowTraySearch}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Type to find a game (or tool) by name or category; Enter launches the first match and Esc clears the box."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,6" TextWrapping="Wrap"/>
+
                                     <CheckBox Content="Include 'Recent' category in tray menu"
                                               IsChecked="{Binding ShowRecentInTray}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
@@ -4346,7 +4353,7 @@
                                                     </Border>
                                                     <TextBlock Text=" Tray Icon" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="Quick-launch menu: Now Playing, Recent, Favorites, all games (grouped or flat), Scan for Games, Settings, Exit"
+                                                <TextBlock Text="Quick-launch menu: a search box (type, then Enter launches the top match), Now Playing, Recent, Favorites, all games (grouped or flat), Scan for Games, Settings, Exit"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 

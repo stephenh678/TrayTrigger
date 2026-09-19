@@ -29,6 +29,7 @@ stable version they lead to.
 - **No scrollbar under the category tabs** — when there are more categories than fit, the tab strip now fades at the edge with an arrow you can click, instead of showing a scrollbar. The mouse wheel still scrolls it.
 - **End Session and Force Close in Game Details** — while a game is playing, its details window has End Session and Force Close beside Launch Game, the same as its right-click menu.
 - **Sidebar open on a fresh install** — new installs start with the sidebar expanded, so the page names are visible from the first run. If you already use TrayTrigger, your sidebar stays the way you left it.
+- **Search from the tray** — the tray menu now opens with a search box at the top: type a few letters of a game's name or category and the menu narrows to the matches; Enter launches the top one, Esc clears the box. It works with grouped or flat menus, compact or normal, and finds tools too when they are in the menu. Don't want it? Turn off "Show a search box at the top of the tray menu" in Settings > Tray Menu.
 
 ## 1.4.5
 

@@ -781,6 +781,21 @@ public class SettingsViewModel : ViewModelBase
 
     // --- System Tray Context Menu Preferences ---
 
+    public bool ShowTraySearch
+    {
+        get => _settings.ShowTraySearch;
+        set
+        {
+            if (_settings.ShowTraySearch != value)
+            {
+                _settings.ShowTraySearch = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onTrayMenuSettingChanged?.Invoke();
+            }
+        }
+    }
+
     public bool ShowTrayMenuIcons
     {
         get => _settings.ShowTrayMenuIcons;
