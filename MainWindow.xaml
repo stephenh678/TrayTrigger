@@ -216,7 +216,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
                           Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
 
                 <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
@@ -238,7 +238,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
                           Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
 
                 <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}"
@@ -654,19 +654,19 @@
                          "Refresh Posters" moved to Settings > Library & Art: a rare maintenance
                          action that was taking primary toolbar space. -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
+                        <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Game" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
+                        <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}">
+                        <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
@@ -688,7 +688,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Command="{Binding SelectCommand}"
+                                        <Button AutomationProperties.Name="{Binding DisplayName}" Command="{Binding SelectCommand}"
                                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
                                                 Margin="0,0,2,0">
                                             <StackPanel Orientation="Horizontal">
@@ -717,11 +717,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox x:Name="LibrarySearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox AutomationProperties.Name="Search games" x:Name="LibrarySearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              Style="{StaticResource ModernTextBox}" Margin="0,0,10,0"
                              Tag="Search games by title, category, or path..."/>
 
-                    <ComboBox Grid.Column="1"
+                    <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
                               ItemsSource="{Binding SortOptions}"
                               SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                               Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
@@ -922,19 +922,19 @@
                                        FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
+                                <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding AddGameCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
+                                <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="Add Game" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}">
+                                <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
@@ -1453,7 +1453,7 @@
                                                 <!-- 4. Hover Play Button Overlay. Not focusable: it shows only while the
                                                      card is hovered or focused, so Tab onto it hid it and dropped focus
                                                      back on the card - a trap. Ctrl+Enter on the card launches. -->
-                                                <Button Command="{Binding LaunchCommand}" Focusable="False"
+                                                <Button Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
                                                         Width="46" Height="46"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Button.Style>
@@ -1930,7 +1930,7 @@
                                                 </DockPanel>
 
                                                 <!-- 4. Hover Play Button Overlay -->
-                                                <Button Command="{Binding LaunchCommand}" Focusable="False"
+                                                <Button Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
                                                         Width="46" Height="46"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Button.Style>
@@ -2261,7 +2261,7 @@
                                                 </StackPanel>
 
                                                 <!-- Hover Play Button Overlay -->
-                                                <Button Grid.Row="1" Command="{Binding LaunchCommand}" Focusable="False"
+                                                <Button Grid.Row="1" Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
                                                         Width="34" Height="34"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Button.Style>
@@ -2942,7 +2942,7 @@
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
                                     <!-- Recorded from real key presses; a combo another game or another app holds is
                                          refused with the reason instead of being saved and silently failing to register. -->
-                                    <views:HotkeyRecorderBox x:Name="ManageHotkeyBox" Hotkey="{Binding GlobalManageHotkey}" OwnerId="{x:Static services:HotkeyManager.ManageOwnerId}"
+                                    <views:HotkeyRecorderBox AutomationProperties.Name="Show / Hide Window Hotkey" x:Name="ManageHotkeyBox" Hotkey="{Binding GlobalManageHotkey}" OwnerId="{x:Static services:HotkeyManager.ManageOwnerId}"
                                                              ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
                                     <TextBlock Text="{Binding Message, ElementName=ManageHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ManageHotkeyBox}"
                                                Visibility="{Binding HasMessage, ElementName=ManageHotkeyBox, Converter={StaticResource BoolToVis}}"
@@ -2993,7 +2993,7 @@
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
 
                                     <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox AutomationProperties.Name="GitHub repository" Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource ModernTextBox}" Width="240" HorizontalAlignment="Left" Margin="0,0,0,4"/>
                                     <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: stephenh678/TrayTrigger)."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
@@ -3053,7 +3053,7 @@
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
 
                                     <DockPanel LastChildFill="False">
-                                        <CheckBox IsChecked="{Binding SteamIntegrationEnabled}"
+                                        <CheckBox AutomationProperties.Name="Enable Steam Library Integration" IsChecked="{Binding SteamIntegrationEnabled}"
                                                   Style="{StaticResource ModernCheckBox}" FontSize="13"
                                                   VerticalAlignment="Center" DockPanel.Dock="Left">
                                             <StackPanel Orientation="Horizontal">
@@ -3086,7 +3086,7 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <CheckBox IsChecked="{Binding GogIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable GOG Library Integration" IsChecked="{Binding GogIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3097,7 +3097,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding EaIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable EA Library Integration" IsChecked="{Binding EaIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3108,7 +3108,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding EpicIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Epic Games Library Integration" IsChecked="{Binding EpicIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3119,7 +3119,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding UbisoftIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Ubisoft Connect Library Integration" IsChecked="{Binding UbisoftIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3130,7 +3130,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding XboxIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Xbox / PC Game Pass Library Integration" IsChecked="{Binding XboxIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3141,7 +3141,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding BattleNetIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Battle.net Library Integration" IsChecked="{Binding BattleNetIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3249,7 +3249,7 @@
                                     <DockPanel Margin="24,0,0,10" LastChildFill="False" IsEnabled="{Binding SearchOfficialTitleOnline}">
                                         <TextBlock Text="Matching sensitivity:" Foreground="{StaticResource BrushTextSecondary}" 
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding ConfidenceThresholdOptions}" 
+                                        <ComboBox AutomationProperties.Name="Matching sensitivity" ItemsSource="{Binding ConfidenceThresholdOptions}" 
                                                   SelectedItem="{Binding OnlineMatchSensitivity, Mode=TwoWay}" 
                                                   Style="{StaticResource ModernComboBox}" Width="190" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3274,7 +3274,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox AutomationProperties.Name="RAWG API key" Grid.Column="0" Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
                                                  Tag="Paste your RAWG API key here..."/>
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenRawgSiteCommand}"
@@ -3286,7 +3286,7 @@
                                          Same row style as "Library view mode". The ComboBox is declared first so the
                                          DockPanel reserves its width before the wrapping description is measured. -->
                                     <DockPanel Margin="0,0,0,8" LastChildFill="False">
-                                        <ComboBox ItemsSource="{Binding MetadataRefreshOptions}"
+                                        <ComboBox AutomationProperties.Name="Refresh game info" ItemsSource="{Binding MetadataRefreshOptions}"
                                                   SelectedItem="{Binding MetadataRefreshOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Right"
                                                   DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"/>
@@ -3324,7 +3324,7 @@
                                             <TextBlock Text="Library view mode:" Foreground="{StaticResource BrushTextPrimary}" FontSize="12.5"/>
                                             <TextBlock Text="The same setting as the view buttons above the library; it is remembered between sessions." Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0"/>
                                         </StackPanel>
-                                        <ComboBox ItemsSource="{Binding ViewModeOptions}" 
+                                        <ComboBox AutomationProperties.Name="Library view mode" ItemsSource="{Binding ViewModeOptions}" 
                                                   SelectedItem="{Binding LibraryViewMode, Mode=TwoWay}" 
                                                   Style="{StaticResource ModernComboBox}" Width="140" HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Center"/>
                                     </DockPanel>
@@ -3360,7 +3360,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}" 
+                                        <TextBox AutomationProperties.Name="SteamGridDB API key" Grid.Column="0" Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}" 
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" 
                                                  Tag="Paste your SteamGridDB API key here..."/>
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}"
@@ -3417,7 +3417,7 @@
                                     <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
                                         <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBox Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
+                                        <TextBox AutomationProperties.Name="Max recent games to show" Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
                                                  Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
                                                  PreviewTextInput="NumericTextBox_PreviewTextInput"
                                                  DataObject.Pasting="NumericTextBox_Pasting"/>
@@ -3426,7 +3426,7 @@
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
                                         <TextBlock Text="Recent sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                        <ComboBox AutomationProperties.Name="Recent sort order" ItemsSource="{Binding TraySortOptions}"
                                                   SelectedItem="{Binding RecentTraySortOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3441,7 +3441,7 @@
                                     <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
                                         <TextBlock Text="Max favorites to show:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBox Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
+                                        <TextBox AutomationProperties.Name="Max favorites to show" Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
                                                  Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
                                                  PreviewTextInput="NumericTextBox_PreviewTextInput"
                                                  DataObject.Pasting="NumericTextBox_Pasting"/>
@@ -3450,7 +3450,7 @@
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
                                         <TextBlock Text="Favorites sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                        <ComboBox AutomationProperties.Name="Favorites sort order" ItemsSource="{Binding TraySortOptions}"
                                                   SelectedItem="{Binding FavoritesTraySortOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3467,7 +3467,7 @@
                                         <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowToolsInTray}">
                                             <TextBlock Text="Tools sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                        FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <ComboBox ItemsSource="{Binding ToolsSortOptions}"
+                                            <ComboBox AutomationProperties.Name="Tools sort order" ItemsSource="{Binding ToolsSortOptions}"
                                                       SelectedItem="{Binding ToolsTraySortOption, Mode=TwoWay}"
                                                       Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                         </DockPanel>
@@ -3483,7 +3483,7 @@
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False">
                                         <TextBlock Text="Tray menu sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                        <ComboBox AutomationProperties.Name="Tray menu sort order" ItemsSource="{Binding TraySortOptions}"
                                                   SelectedItem="{Binding TrayMenuSortOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3587,7 +3587,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBox Grid.Column="0" Text="{Binding DefaultPreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox AutomationProperties.Name="Default pre-launch script path" Grid.Column="0" Text="{Binding DefaultPreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                             <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPreLaunchScriptCommand}"
                                                     Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
@@ -3613,7 +3613,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBox Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox AutomationProperties.Name="Default post-exit script path" Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                                      IsEnabled="{Binding CanEditDefaultPostExitScript}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                             <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPostExitScriptCommand}"
@@ -3640,7 +3640,7 @@
                                                   IsChecked="{Binding DefaultWaitForPreLaunchScript}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
                                                   Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                                         <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
-                                            <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
+                                            <TextBox AutomationProperties.Name="Default pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                                        TextWrapping="Wrap" VerticalAlignment="Center"/>
@@ -4409,7 +4409,7 @@
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                     Padding="14,12" Margin="0,0,0,10">
                                 <DockPanel LastChildFill="True">
-                                    <Button DockPanel.Dock="Right"
+                                    <Button AutomationProperties.Name="Open Diagnostics &amp; Storage" DockPanel.Dock="Right"
                                             Command="{Binding OpenDiagnosticsSettingsCommand}"
                                             Style="{StaticResource ModernAccentButton}"
                                             VerticalAlignment="Center" Padding="12,5">

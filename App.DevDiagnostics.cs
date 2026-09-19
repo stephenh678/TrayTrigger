@@ -1936,6 +1936,13 @@ public partial class App
                 return;
             }
 
+            // --test-automation-names <out.txt>: controls a screen reader can't name (App.AutomationNameAudit.cs).
+            if (e.Args[i].Equals("--test-automation-names", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunAutomationNameAudit(e.Args[i + 1]);
+                return;
+            }
+
             // --test-dialog-keys <out.txt>: Esc and Enter in each dialog (App.DialogKeyTests.cs).
             if (e.Args[i].Equals("--test-dialog-keys", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {

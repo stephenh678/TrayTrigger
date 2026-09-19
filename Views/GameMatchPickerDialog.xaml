@@ -34,7 +34,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="SearchTextBox" Grid.Column="0" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+            <TextBox AutomationProperties.Name="Search by title" x:Name="SearchTextBox" Grid.Column="0" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
                      Tag="Search by title..." KeyDown="SearchTextBox_KeyDown"/>
             <Button x:Name="SearchButton" Grid.Column="1" Content="Search" Click="SearchButton_Click"
                     Style="{StaticResource ModernOutlineButton}" Padding="14,5" MinWidth="80"/>

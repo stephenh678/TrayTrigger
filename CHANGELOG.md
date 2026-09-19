@@ -14,6 +14,7 @@ stable version they lead to.
 - **Dark tooltips** — tooltips match the rest of the app instead of the bright Windows box, and long ones wrap. The view buttons, the OPT-IN, RESTART and ADMIN tags on System & Performance, and End Session and Force Close Game now explain themselves on hover.
 - **Esc and Enter work in every dialog** — Esc cancels and Enter confirms in Edit Game, Scan for Games, Add Folder and the launcher prompt too. In Edit Game and Edit Tool, Esc asks before throwing away changes you haven't saved, and the hotkey box still records Esc and Enter while it's listening.
 - **You can see where the keyboard is** — pressing Tab now puts a blue ring on every button, tab, sidebar entry, drop-down and list row it reaches (a mouse click still shows no ring). Tab and the arrow keys no longer get stuck on the first poster card, and the arrows move between cards by row and column.
+- **Better with a screen reader** — every icon button, text box and drop-down now has a name Narrator can read ("Add Game", "Launch arguments", "Play Cyberpunk 2077"), and each System & Performance tweak reads as one line, such as "Optimize: Windows Game Mode, standard, needs a restart".
 
 ## 1.4.5
 

@@ -39,7 +39,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Grid.Column="0" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" 
+            <TextBox AutomationProperties.Name="Filter results" Grid.Column="0" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" 
                      Style="{StaticResource ModernTextBox}" Margin="0,0,12,0"
                      Tag="Search detected games..."/>
 

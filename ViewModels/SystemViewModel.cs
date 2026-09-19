@@ -94,6 +94,7 @@ public class SystemTweakViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StatusBadgeText));
                 OnPropertyChanged(nameof(StatusBadgeColor));
                 OnPropertyChanged(nameof(ActionButtonText));
+                OnPropertyChanged(nameof(AccessibleStatus));
             }
         }
     }
@@ -121,6 +122,22 @@ public class SystemTweakViewModel : ViewModelBase
         : !IsAvailable ? "#4A4A55"
         : IsOptimal ? "#238636" : "#6E6E7A";
     public string ActionButtonText => IsBusy ? "Working..." : IsOptimal ? "Revert to Default" : "Optimize";
+
+    /// <summary>
+    /// The row as a screen reader should hear it: "Windows Game Mode, optimal, needs a restart".
+    /// The name, the status badge and the OPT-IN / RESTART / ADMIN tags are separate text
+    /// elements on screen; the row's buttons carry this so each one says what it acts on.
+    /// </summary>
+    public string AccessibleStatus => ComposeAccessibleStatus(Name, StatusBadgeText, IsOptIn, RequiresReboot, RequiresAdmin);
+
+    internal static string ComposeAccessibleStatus(string name, string badge, bool isOptIn, bool requiresReboot, bool requiresAdmin)
+    {
+        var parts = new List<string> { name, badge == "N/A" ? "not available" : badge.ToLowerInvariant() };
+        if (isOptIn) parts.Add("opt-in");
+        if (requiresReboot) parts.Add("needs a restart");
+        if (requiresAdmin) parts.Add("asks for administrator permission");
+        return string.Join(", ", parts);
+    }
 
     public ICommand ToggleCommand { get; }
     public ICommand CustomActionCommand { get; }
@@ -264,6 +281,9 @@ public class ProfileTweakToggleViewModel : ViewModelBase
     public string StatusBadgeColor => IsEnabled ? "#238636" : "#6E6E7A";
     public string ActionButtonText => IsEnabled ? "Disable" : "Enable";
 
+    /// <summary>The row for a screen reader: "Set power plan, enabled, asks for administrator permission".</summary>
+    public string AccessibleStatus => SystemTweakViewModel.ComposeAccessibleStatus(Name, StatusBadgeText, IsOptIn, requiresReboot: false, RequiresAdmin);
+
     public ICommand ToggleCommand { get; }
 
     public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, string helpTopicId, Func<bool> getter, Action<bool> setter, bool isOptIn = false, bool requiresAdmin = false, string note = "")
@@ -302,6 +322,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
         OnPropertyChanged(nameof(StatusBadgeText));
         OnPropertyChanged(nameof(StatusBadgeColor));
         OnPropertyChanged(nameof(ActionButtonText));
+        OnPropertyChanged(nameof(AccessibleStatus));
     }
 }
 

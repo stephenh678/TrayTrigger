@@ -77,11 +77,11 @@
 
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="Name" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox AutomationProperties.Name="Tool name" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
 
                                 <TextBlock Text="Category" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                <ComboBox ItemsSource="{Binding ExistingCategories}"
+                                <ComboBox AutomationProperties.Name="Category" ItemsSource="{Binding ExistingCategories}"
                                           Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
@@ -104,7 +104,7 @@
                         <!-- A Store app has no program, folder or elevation to edit: it starts by its app ID, like its Start menu tile. -->
                         <StackPanel Visibility="{Binding IsStoreApp, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Store App" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
+                            <TextBox AutomationProperties.Name="App ID" Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,0,4"/>
                             <TextBlock Text="Windows starts it the way its Start menu entry does. If it's already open, most apps come to the front; ones that allow several windows open another. Store apps can't run as administrator."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
@@ -117,9 +117,9 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox AutomationProperties.Name="Program path" Grid.Column="0" Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseTargetCommand}"
+                            <Button AutomationProperties.Name="Browse for the program" Grid.Column="1" Content="Browse..." Command="{Binding BrowseTargetCommand}"
                                     Style="{StaticResource ModernOutlineButton}"/>
                         </Grid>
 
@@ -129,9 +129,9 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox AutomationProperties.Name="Working directory" Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}"
+                            <Button AutomationProperties.Name="Browse for the working directory" Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}"
                                     Style="{StaticResource ModernOutlineButton}"/>
                         </Grid>
                         <TextBlock Text="Blank uses the program's own folder."
@@ -140,7 +140,7 @@
 
                         <TextBlock Text="Launch Arguments (optional)" FontSize="11.5"
                                    Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox AutomationProperties.Name="Arguments" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
                         <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
@@ -159,7 +159,7 @@
 
                         <StackPanel>
                             <DockPanel>
-                                <views:HotkeyRecorderBox x:Name="ToolHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding OwnerId}"
+                                <views:HotkeyRecorderBox AutomationProperties.Name="Hotkey" x:Name="ToolHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding OwnerId}"
                                                          ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>

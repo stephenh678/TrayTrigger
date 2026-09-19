@@ -36,7 +36,7 @@
             <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="11"
                        Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4"/>
 
-            <TextBox x:Name="OutputBox" Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+            <TextBox AutomationProperties.Name="Script output" x:Name="OutputBox" Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
                      FontFamily="Consolas" FontSize="11.5"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                      Background="{StaticResource BrushSurfaceDark}" Foreground="{StaticResource BrushTextPrimary}"

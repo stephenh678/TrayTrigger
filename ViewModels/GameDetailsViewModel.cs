@@ -149,9 +149,13 @@ public class GameDetailsViewModel : ViewModelBase
             {
                 Game.IsFavorite = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(FavoriteButtonLabel));
             }
         }
     }
+
+    /// <summary>The star button's accessible name, worded like the card menu's item.</summary>
+    public string FavoriteButtonLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
 
     public ICommand ToggleFavoriteCommand { get; }
 

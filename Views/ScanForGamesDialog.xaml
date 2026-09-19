@@ -36,7 +36,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Grid.Column="0" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox AutomationProperties.Name="Filter results" Grid.Column="0" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                      Style="{StaticResource ModernTextBox}" Margin="0,0,12,0"
                      Tag="Search found games..."/>
 
@@ -84,7 +84,7 @@
                     <DataTemplate DataType="{x:Type vm:ScannedGameItemViewModel}">
                         <DockPanel LastChildFill="True">
                             <!-- Checkbox -->
-                            <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,12,0"
+                            <CheckBox AutomationProperties.Name="{Binding Name, StringFormat='Add {0}'}" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,12,0"
                                       Style="{StaticResource ModernCheckBox}" DockPanel.Dock="Left"/>
 
                             <!-- Game Icon -->

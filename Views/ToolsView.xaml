@@ -260,14 +260,14 @@
         <!-- 2. Category Tabs & Add Tool -->
         <DockPanel Grid.Row="1" Margin="0,0,0,16">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                         ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
+                <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Add Tool" VerticalAlignment="Center"/>
@@ -287,7 +287,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Command="{Binding SelectCommand}"
+                                <Button AutomationProperties.Name="{Binding DisplayName}" Command="{Binding SelectCommand}"
                                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
                                         Margin="0,0,2,0">
                                     <StackPanel Orientation="Horizontal">
@@ -312,11 +312,11 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox x:Name="ToolsSearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox AutomationProperties.Name="Search tools" x:Name="ToolsSearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      Style="{StaticResource ModernTextBox}" Margin="0,0,10,0"
                      Tag="Search tools by name, category, or path..."/>
 
-            <ComboBox Grid.Column="1"
+            <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
                       ItemsSource="{Binding SortOptions}"
                       SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                       Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
@@ -438,14 +438,14 @@
                                FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                        <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                                 ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
+                        <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Tool" VerticalAlignment="Center"/>
