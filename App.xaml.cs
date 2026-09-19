@@ -295,6 +295,10 @@ public partial class App : Application
 
         // Initialize ViewModel & MainWindow
         Log("Initializing ViewModel...");
+        // Counts real sessions only, for the status bar's hotkey hint (UX-14e); saved with the
+        // rest of the settings on exit.
+        if (!isScreenshot) startupSettings.SessionsStarted++;
+
         _mainViewModel = new MainViewModel(
             _storageService,
             startupSettings,
@@ -477,6 +481,11 @@ public partial class App : Application
 
             UpdateTrayContextMenu();
             UpdateTrayToolTip();
+            // The tooltip names the window hotkey, so it follows a change to it in Settings.
+            _mainViewModel.SettingsVM.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(SettingsViewModel.GlobalManageHotkey)) UpdateTrayToolTip();
+            };
             if (!_trayIcon.IsCreated)
             {
                 _trayIcon.ForceCreate();
@@ -511,7 +520,7 @@ public partial class App : Application
             try
             {
                 var sessions = _launcherService?.GetActiveSessions() ?? [];
-                _trayIcon.ToolTipText = BuildTrayToolTipText(sessions, DateTime.Now);
+                _trayIcon.ToolTipText = BuildTrayToolTipText(sessions, DateTime.Now, _mainViewModel?.Settings.GlobalManageHotkey);
 
                 // The timer exists only to age the elapsed time, so it runs only while something is
                 // actually playing (a session still starting has no elapsed time to age yet).
@@ -541,13 +550,16 @@ public partial class App : Application
     /// what brings <see cref="UpdateTrayToolTip"/> back once it is, and without that subscription
     /// this text is painted once at dispatch and never replaced.
     /// </summary>
-    internal static string BuildTrayToolTipText(IReadOnlyList<ActiveGameSession> sessions, DateTime now)
+    internal static string BuildTrayToolTipText(IReadOnlyList<ActiveGameSession> sessions, DateTime now, string? windowHotkey = null)
     {
         string text;
 
         if (sessions.Count == 0)
         {
-            text = DefaultTrayToolTip;
+            // The window hotkey lives here once the status bar stops mentioning it (UX-14e).
+            text = string.IsNullOrWhiteSpace(windowHotkey)
+                ? DefaultTrayToolTip
+                : $"{DefaultTrayToolTip}\n{windowHotkey} shows or hides the window";
         }
         else if (sessions.Count == 1)
         {

@@ -132,6 +132,10 @@ public class AppSettings
     /// <summary>Gates the one-time "Welcome to TrayTrigger" dialog to the first time the main
     /// window is actually shown on a fresh install - see MainWindow.MaybeShowWelcomePrompt.</summary>
     public bool HasSeenWelcomePrompt { get; set; } = false;
+    /// <summary>How many times TrayTrigger has started (capture and test runs aside). The Library
+    /// status bar's "Hotkey: ... to show or hide this window" hint retires after the first five;
+    /// from then on the hotkey is in the tray icon's tooltip.</summary>
+    public int SessionsStarted { get; set; } = 0;
     /// <summary>Gates the one-time 1.4.0 reminder that SteamGridDB poster art and RAWG game info
     /// are available - see MainWindow.MaybeShowMetadataSourcesReminder.</summary>
     public bool HasSeenMetadataSourcesReminder { get; set; } = false;

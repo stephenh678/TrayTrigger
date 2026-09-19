@@ -1,6 +1,6 @@
 # How the tray menu works
 
-Right-clicking the TrayTrigger tray icon opens a menu built fresh from your library each time, using these preferences to decide what shows and in what order. Left-clicking the icon shows or hides the window, unless you turn on "Left-click on the tray icon opens the game menu", in which case both clicks open the menu. Double-clicking always opens the window.
+Right-clicking the TrayTrigger tray icon opens a menu built fresh from your library each time, using these preferences to decide what shows and in what order. Left-clicking the icon shows or hides the window, unless you turn on "Left-click on the tray icon opens the game menu", in which case both clicks open the menu. Double-clicking always opens the window. Pointing at the icon shows what is playing, or, when nothing is, the hotkey that shows or hides the window.
 
 ## Icons and size
 

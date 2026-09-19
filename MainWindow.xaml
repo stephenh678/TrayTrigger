@@ -2785,7 +2785,9 @@
                      when the row runs out of room, never the hotkey or the selection hint. -->
                 <DockPanel Grid.Row="4" Margin="0,14,0,0" LastChildFill="True">
                     <!-- Bound to the configurable hotkey, not hard-coded to Ctrl+Alt+G. -->
+                    <!-- Only for the first five sessions (UX-14e); after that the tray tooltip says it. -->
                     <TextBlock DockPanel.Dock="Right" Text="{Binding SettingsVM.GlobalManageHotkey, StringFormat='Hotkey: {0} to show or hide this window'}" FontSize="11"
+                               Visibility="{Binding SettingsVM.ShowHotkeyHint, Converter={StaticResource BoolToVis}}"
                                Foreground="{StaticResource BrushTextMuted}" Margin="14,0,0,0"
                                FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                     <!-- Multi-select hint: only while two or more cards are selected. -->

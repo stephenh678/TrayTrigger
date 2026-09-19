@@ -1771,6 +1771,13 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Sessions the status-bar hotkey hint is shown for, counting this one.</summary>
+    public const int HotkeyHintSessions = 5;
+
+    /// <summary>The Library status bar's hotkey reminder: only for the first few sessions, and only
+    /// when a window hotkey is set. After that the tray tooltip carries it.</summary>
+    public bool ShowHotkeyHint => _settings.SessionsStarted <= HotkeyHintSessions && !string.IsNullOrWhiteSpace(GlobalManageHotkey);
+
     public string GlobalManageHotkey
     {
         get => _settings.GlobalManageHotkey;
@@ -1779,6 +1786,7 @@ public class SettingsViewModel : ViewModelBase
             if (_settings.GlobalManageHotkey != value)
             {
                 _settings.GlobalManageHotkey = value;
+                OnPropertyChanged(nameof(ShowHotkeyHint));
                 OnPropertyChanged();
                 AutoSaveSettings();
                 _onHotkeySettingChanged?.Invoke();
