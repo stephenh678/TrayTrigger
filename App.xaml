@@ -811,6 +811,41 @@
             </Setter>
         </Style>
 
+        <!-- Tooltips: dark, like the context menus, instead of the stock light Windows box. Many
+             are full sentences, so they wrap at MaxWidth. The TextBlock style inside the
+             presenter reaches the TextBlock WPF generates for a plain string tooltip, and leaves
+             any tooltip with its own content alone. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="{StaticResource BrushSurfaceActive}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushBorderLight}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="MaxWidth" Value="320"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                MaxWidth="{TemplateBinding MaxWidth}">
+                            <ContentPresenter>
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Default MenuItem hover color; a specific ContextMenu instance can override this in
              its own Resources to get a differently-tinted hover without affecting other menus. -->
         <SolidColorBrush x:Key="MenuItemHoverBrush" Color="#282838"/>

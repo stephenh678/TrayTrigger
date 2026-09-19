@@ -88,7 +88,8 @@
             <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
                 <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="End Session (restore tweaks)" Command="{Binding EndSessionCommand}">
+            <MenuItem Header="End Session (restore tweaks)" Command="{Binding EndSessionCommand}"
+                      ToolTip="Restores the profile and runs the post-exit script now, without touching the game. For a session that looks stuck.">
                 <MenuItem.Icon><TextBlock Text="&#xE7A7;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
@@ -101,7 +102,8 @@
                     </Style>
                 </MenuItem.Style>
             </MenuItem>
-            <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}">
+            <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}"
+                      ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
                 <MenuItem.Icon><TextBlock Text="&#xE711;" Style="{StaticResource MenuGlyphIcon}" Foreground="{StaticResource BrushDanger}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
@@ -848,28 +850,28 @@
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Extra Large"
                                     Width="32" Height="30" Padding="0" Cursor="Hand"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsExtraLargeView}"
- AutomationProperties.Name="Extra Large posters view">
+ AutomationProperties.Name="Extra Large posters view" ToolTip="Extra large posters">
                                 <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsGridView}"
- AutomationProperties.Name="Poster grid view">
+ AutomationProperties.Name="Poster grid view" ToolTip="Poster grid">
                                 <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Compact Icons"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsIconsView}"
- AutomationProperties.Name="Compact icons view">
+ AutomationProperties.Name="Compact icons view" ToolTip="Compact icons">
                                 <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Details List"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsListView}"
- AutomationProperties.Name="Details list view">
+ AutomationProperties.Name="Details list view" ToolTip="Details list">
                                 <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>

@@ -618,8 +618,10 @@ public partial class App : Application
                         sessionItem.Command = null;
 
                         string gameId = session.GameId;
-                        sessionItem.Items.Add(CreateNavMenuItem("End Session (restore tweaks)", "", () =>
-                            Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: false))));
+                        var endSession = CreateNavMenuItem("End Session (restore tweaks)", "", () =>
+                            Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: false)));
+                        endSession.ToolTip = "Restores the profile and runs the post-exit script now, without touching the game. For a session that looks stuck.";
+                        sessionItem.Items.Add(endSession);
                         var forceClose = CreateNavMenuItem("Force Close Game", "", () =>
                         {
                             if (card != null)
@@ -631,6 +633,7 @@ public partial class App : Application
                                 Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: true));
                             }
                         }, iconBrush: (Brush)FindResource("BrushDanger"));
+                        forceClose.ToolTip = "Kills the game's process, then ends the session. Anything unsaved in the game is lost.";
                         forceClose.IsEnabled = session.CanForceClose;
                         sessionItem.Items.Add(forceClose);
                         menu.Items.Add(sessionItem);

@@ -39,15 +39,18 @@
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
                             </Border>
                             <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Has a real trade-off, so it stays off until you turn it on yourself.">
                                 <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
                             </Border>
                             <Border Background="#3D2F14" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Windows only picks up the new value after a restart.">
                                 <TextBlock Text="⟳ RESTART" FontSize="9" FontWeight="Bold" Foreground="#E8B84E"/>
                             </Border>
                             <Border Background="#2B2340" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Writes a machine-wide value, so Windows asks for administrator permission.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="#B9A6F0" VerticalAlignment="Center" Margin="0,0,3,0"/>
                                     <TextBlock Text="ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0" VerticalAlignment="Center"/>
@@ -93,11 +96,13 @@
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
                             </Border>
                             <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Has a real trade-off, so it stays off until you turn it on yourself.">
                                 <TextBlock Text="OPT-IN" FontSize="9" FontWeight="Bold" Foreground="#B8B8CC"/>
                             </Border>
                             <Border Background="#2B2340" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Writes a machine-wide value, so Windows asks for administrator permission.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xEA18;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="#B9A6F0" VerticalAlignment="Center" Margin="0,0,3,0"/>
                                     <TextBlock Text="ADMIN" FontSize="9" FontWeight="Bold" Foreground="#B9A6F0" VerticalAlignment="Center"/>

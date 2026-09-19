@@ -437,6 +437,55 @@ public partial class App
                 return;
             }
 
+            // --screenshot-tooltip <Library|Tools|System|Settings|About> <text> <out.png>: a real screen
+            // grab of the page with the tooltip of the first element whose tooltip contains <text>
+            // open beside it. Tooltips are popups, so they never render into a RenderTargetBitmap.
+            if ((e.Args[i].Equals("--screenshot-tooltip", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-tooltip", StringComparison.OrdinalIgnoreCase)) &&
+                i + 3 < e.Args.Length)
+            {
+                var section = Enum.Parse<NavSection>(e.Args[i + 1], ignoreCase: true);
+                string needle = e.Args[i + 2];
+                string targetPng = e.Args[i + 3];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = section;
+                _mainWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+                _mainWindow.Left = 0;
+                _mainWindow.Top = 0;
+                _mainWindow.Width = 960;
+                _mainWindow.Height = 700;
+                _mainWindow.Show();
+                WindowThemeService.WhenContentRendered(_mainWindow, () =>
+                {
+                    var open = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+                    open.Tick += (s, args) =>
+                    {
+                        open.Stop();
+                        var target = FindVisualChild<FrameworkElement>(_mainWindow, fe => fe.IsVisible && fe.ToolTip is string t && t.Contains(needle, StringComparison.OrdinalIgnoreCase));
+                        if (target == null)
+                        {
+                            _logger($"[screenshot-tooltip] No visible element has a tooltip containing '{needle}'.");
+                            ExitApplication();
+                            return;
+                        }
+                        target.BringIntoView();
+                        _mainWindow.UpdateLayout();
+                        var tip = new ToolTip { Content = target.ToolTip, PlacementTarget = target, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom, IsOpen = true };
+                        var grab = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                        grab.Tick += (s2, args2) =>
+                        {
+                            grab.Stop();
+                            CaptureScreen(_mainWindow, targetPng);
+                            tip.IsOpen = false;
+                            ExitApplication();
+                        };
+                        grab.Start();
+                    };
+                    open.Start();
+                });
+                return;
+            }
+
             // --screenshot-batch-menu <out.png>: a real screen grab (popups don't render into a
             // RenderTargetBitmap) of the poster grid with two cards selected and the batch
             // context menu open over the second one.

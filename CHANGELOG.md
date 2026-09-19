@@ -11,6 +11,7 @@ stable version they lead to.
 ## 1.5.0
 
 - **Easier-to-read text** — grey hints and labels are brighter, and no ordinary text is smaller than 11 px any more. Only the small status tags (PLAYING, MISSING, platform tags and the like) stay compact.
+- **Dark tooltips** — tooltips match the rest of the app instead of the bright Windows box, and long ones wrap. The view buttons, the OPT-IN, RESTART and ADMIN tags on System & Performance, and End Session and Force Close Game now explain themselves on hover.
 
 ## 1.4.5
 
