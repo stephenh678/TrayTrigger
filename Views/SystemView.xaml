@@ -264,8 +264,8 @@
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding PrimaryGpu.VramGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB VRAM'}" FontSize="11" FontWeight="SemiBold" Foreground="#4EC9B0"/>
+                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecStaticPill}">
+                                    <TextBlock Text="{Binding PrimaryGpu.VramGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB VRAM'}"/>
                                 </Border>
                                 <TextBlock Text="Graphics Card (GPU)" FontSize="13.5" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
@@ -284,8 +284,8 @@
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding PrimaryDisplay.RefreshRateHz, Mode=OneWay, StringFormat='{}{0} Hz'}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecStaticPill}">
+                                    <TextBlock Text="{Binding PrimaryDisplay.RefreshRateHz, Mode=OneWay, StringFormat='{}{0} Hz'}"/>
                                 </Border>
                                 <TextBlock Text="Displays &amp; Refresh Rate" FontSize="13.5" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
@@ -306,8 +306,9 @@
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding Cpu.CurrentUsagePercent, Mode=OneWay, StringFormat='Load: {0}%'}" 
-                                           FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecLivePill}">
+                                    <TextBlock Text="{Binding Cpu.CurrentUsagePercent, Mode=OneWay, StringFormat='Load: {0}%'}"/>
+                                </Border>
                                 <TextBlock Text="Processor (CPU)" FontSize="13.5" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             </DockPanel>
@@ -328,8 +329,9 @@
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding Ram.UsagePercent, Mode=OneWay, StringFormat='Used: {0}%'}" 
-                                           FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecLivePill}">
+                                    <TextBlock Text="{Binding Ram.UsagePercent, Mode=OneWay, StringFormat='Used: {0}%'}"/>
+                                </Border>
                                 <TextBlock Text="System Memory (RAM)" FontSize="13.5" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             </DockPanel>
@@ -364,10 +366,10 @@
                                                     <Run Text="{Binding TotalGigabytes, Mode=OneWay, StringFormat=' of {0:0.#} GB'}"/>
                                                 </TextBlock>
                                                 <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}" DockPanel.Dock="Left"/>
-                                                <Border Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="5,1" Margin="6,0,0,0"
+                                                <Border Style="{StaticResource SpecStaticPill}" Padding="5,1" Margin="6,0,0,0"
                                                         HorizontalAlignment="Left" DockPanel.Dock="Left"
                                                         Visibility="{Binding HasMediaTypeInfo, Converter={StaticResource BoolToVis}}">
-                                                    <TextBlock Text="{Binding MediaTypeDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="#4EC9B0"/>
+                                                    <TextBlock Text="{Binding MediaTypeDisplay}" FontSize="10"/>
                                                 </Border>
                                             </DockPanel>
                                             <ProgressBar Value="{Binding UsagePercent, Mode=OneWay}" Maximum="100" Height="6"
@@ -383,8 +385,8 @@
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Border DockPanel.Dock="Right" Background="#16161B" BorderBrush="#252530" BorderThickness="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Network.PingDisplay, Mode=OneWay, StringFormat='Ping: {0}'}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecLivePill}">
+                                    <TextBlock Text="{Binding Network.PingDisplay, Mode=OneWay, StringFormat='Ping: {0}'}"/>
                                 </Border>
                                 <TextBlock Text="Network &amp; Latency" FontSize="13.5" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>

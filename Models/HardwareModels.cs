@@ -13,8 +13,8 @@ public class CpuHardwareInfo
     public int CurrentUsagePercent { get; set; }
     public string ClockSpeedDisplay =>
         CurrentClockSpeedGhz > 0
-            ? $"{CurrentClockSpeedGhz:0.00} GHz Current, {MaxClockSpeedGhz:0.0} GHz Max"
-            : $"{MaxClockSpeedGhz:0.0} GHz Max Clock";
+            ? $"{CurrentClockSpeedGhz:0.00} GHz Current, {MaxClockSpeedGhz:0.00} GHz Max"
+            : $"{MaxClockSpeedGhz:0.00} GHz Max Clock";
 }
 
 public class GpuHardwareInfo

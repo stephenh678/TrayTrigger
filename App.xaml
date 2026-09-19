@@ -973,6 +973,30 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
+        <!-- System & Performance value pills (UX-14c). Static facts about the hardware (VRAM,
+             refresh rate, drive type) are neutral with teal text; live readings that change while
+             you watch (CPU load, RAM used, ping) are blue-tinted, so the two never look alike. -->
+        <SolidColorBrush x:Key="BrushPillBackground" Color="#16161B"/>
+        <SolidColorBrush x:Key="BrushPillBorder" Color="#252530"/>
+        <SolidColorBrush x:Key="BrushSpecStatic" Color="#4EC9B0"/>
+        <SolidColorBrush x:Key="BrushLivePillBackground" Color="#132232"/>
+        <Style x:Key="SpecStaticPill" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BrushPillBackground}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushPillBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextElement.Foreground" Value="{StaticResource BrushSpecStatic}"/>
+            <Setter Property="TextElement.FontSize" Value="11"/>
+            <Setter Property="TextElement.FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="SpecLivePill" TargetType="Border" BasedOn="{StaticResource SpecStaticPill}">
+            <Setter Property="Background" Value="{StaticResource BrushLivePillBackground}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushBorderAccent}"/>
+            <Setter Property="TextElement.Foreground" Value="{StaticResource BrushAccentHover}"/>
+        </Style>
+
         <!-- Default MenuItem hover color; a specific ContextMenu instance can override this in
              its own Resources to get a differently-tinted hover without affecting other menus. -->
         <SolidColorBrush x:Key="MenuItemHoverBrush" Color="#282838"/>

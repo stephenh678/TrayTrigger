@@ -23,6 +23,7 @@ stable version they lead to.
 - **Respects "Animation effects"** — with Windows' Animation effects turned off (Settings > Accessibility > Visual effects), game posters no longer grow on hover and the launch card by the tray appears and disappears without fading. Progress indicators still move.
 - **Keyboard shortcuts on dialog buttons** — hold Alt in a dialog to see them: Alt+S saves in Edit Game and Edit Tool, Alt+C cancels, and the pickers' main buttons have one too.
 - **Resizable pickers** — the "Choose Game Executable" and "Change match" windows can be resized like Scan for Games, so long lists and paths have room.
+- **Tidier hardware cards** — on System & Performance, fixed facts (VRAM, refresh rate, drive type) and live readings (CPU load, RAM used, ping) each have their own consistent tag, and the CPU's current and maximum clock use the same number of decimals.
 
 ## 1.4.5
 
