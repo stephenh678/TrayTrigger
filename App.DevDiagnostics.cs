@@ -2335,7 +2335,9 @@ public partial class App
 
                 var metaService = new SteamMetadataService();
                 var searchService = new SteamSearchService();
-                var vm = new GameDetailsViewModel(game, metaService, searchService);
+                // "--screenshot-details <out.png> playing": as while the game runs (End Session, Force Close).
+                bool detailsPlaying = e.Args.Any(a => a.Equals("playing", StringComparison.OrdinalIgnoreCase));
+                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying);
 
                 var sampleDetails = new SteamAppDetails
                 {

@@ -12,7 +12,7 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 
 - While a game is tracked (its Performance Profile applied, a post-exit script pending) a Now Playing section appears at the very top with the game and how long it has been running.
 - Each entry opens a small submenu: End Session (restore tweaks) puts the profile back and runs the post-exit script without touching the game; Force Close Game kills the game's process first. Anything unsaved in the game is lost on a force close.
-- The same two actions are on the game's right-click menu in the library while it shows the PLAYING badge.
+- The same two actions are on the game's right-click menu in the library, and in its Game Details, while it shows the PLAYING badge.
 
 ## Recent and Favorites
 

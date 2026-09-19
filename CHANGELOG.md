@@ -27,6 +27,7 @@ stable version they lead to.
 - **Nearly full drives stand out** — a drive more than 90% full now shows its bar in the warning colour on System & Performance.
 - **Quieter status bar** — the "Hotkey: … to show or hide this window" reminder at the bottom of the library now shows for your first five sessions only. After that, point at the tray icon: its tooltip names the hotkey.
 - **No scrollbar under the category tabs** — when there are more categories than fit, the tab strip now fades at the edge with an arrow you can click, instead of showing a scrollbar. The mouse wheel still scrolls it.
+- **End Session and Force Close in Game Details** — while a game is playing, its details window has End Session and Force Close beside Launch Game, the same as its right-click menu.
 
 ## 1.4.5
 

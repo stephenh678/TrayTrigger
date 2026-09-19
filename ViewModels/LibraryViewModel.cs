@@ -911,6 +911,8 @@ public class LibraryViewModel : ViewModelBase
         bool requestedLaunch = false;
         bool requestedEdit = false;
         bool requestedDelete = false;
+        bool requestedEndSession = false;
+        bool requestedForceClose = false;
 
         var vm = new GameDetailsViewModel(
             card.Game,
@@ -925,7 +927,10 @@ public class LibraryViewModel : ViewModelBase
             saveGame: _ => SaveLibrary(),
             autoCategorize: _settings.AutoCategorizeFromSteam,
             fetchPosterByName: (game, preferredName, replace) => TryFetchGridArtByNameAsync(game, preferredName, replace),
-            refreshInterval: _settings.MetadataRefreshInterval);
+            refreshInterval: _settings.MetadataRefreshInterval,
+            isPlaying: card.IsPlaying,
+            endSessionAction: _ => requestedEndSession = true,
+            forceCloseAction: _ => requestedForceClose = true);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
@@ -943,6 +948,14 @@ public class LibraryViewModel : ViewModelBase
         else if (requestedDelete)
         {
             DeleteGame(card);
+        }
+        else if (requestedEndSession)
+        {
+            card.EndSessionCommand.Execute(null);
+        }
+        else if (requestedForceClose)
+        {
+            card.ForceCloseCommand.Execute(null);
         }
 
         card.RefreshProperties();

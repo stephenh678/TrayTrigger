@@ -222,12 +222,32 @@
                     <!-- Primary & Constructive Actions (Left Aligned). MDL2 glyphs rather than
                          emoji so the buttons match the rest of the app on every Windows build. -->
                     <WrapPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                        <Button AutomationProperties.Name="Play" Command="{Binding LaunchGameCommand}"
+                        <Button AutomationProperties.Name="Launch Game" Command="{Binding LaunchGameCommand}"
                                 Style="{StaticResource ModernAccentButton}" Padding="16,7" Margin="0,0,10,6"
                                 FontWeight="SemiBold" FontSize="12.5">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Launch Game" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <!-- While the game is playing: the card menu's two session actions (UX-14h). -->
+                        <Button AutomationProperties.Name="End Session (restore tweaks)" Command="{Binding EndSessionCommand}"
+                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="12"
+                                ToolTip="Restores the profile and runs the post-exit script now, without touching the game. For a session that looks stuck.">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7A7;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="End Session" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button AutomationProperties.Name="Force Close Game" Command="{Binding ForceCloseCommand}"
+                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="12"
+                                Foreground="{StaticResource BrushDanger}"
+                                ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Force Close" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button AutomationProperties.Name="Open the Steam store page" Command="{Binding OpenStorePageCommand}"
