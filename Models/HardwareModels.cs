@@ -71,6 +71,8 @@ public class DriveStorageInfo
     public double FreeGigabytes { get; set; }
     public double UsedGigabytes => Math.Max(0, TotalGigabytes - FreeGigabytes);
     public int UsagePercent => TotalGigabytes > 0 ? (int)Math.Round((UsedGigabytes / TotalGigabytes) * 100) : 0;
+    /// <summary>Above 90% used: the drive's bar turns the warning colour (UX-14d).</summary>
+    public bool IsNearlyFull => TotalGigabytes > 0 && UsedGigabytes / TotalGigabytes > 0.9;
     public string DisplayName => string.IsNullOrWhiteSpace(VolumeLabel)
         ? $"Local Disk ({DriveLetter})"
         : $"{VolumeLabel} ({DriveLetter})";

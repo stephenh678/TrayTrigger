@@ -24,6 +24,7 @@ stable version they lead to.
 - **Keyboard shortcuts on dialog buttons** — hold Alt in a dialog to see them: Alt+S saves in Edit Game and Edit Tool, Alt+C cancels, and the pickers' main buttons have one too.
 - **Resizable pickers** — the "Choose Game Executable" and "Change match" windows can be resized like Scan for Games, so long lists and paths have room.
 - **Tidier hardware cards** — on System & Performance, fixed facts (VRAM, refresh rate, drive type) and live readings (CPU load, RAM used, ping) each have their own consistent tag, and the CPU's current and maximum clock use the same number of decimals.
+- **Nearly full drives stand out** — a drive more than 90% full now shows its bar in the warning colour on System & Performance.
 
 ## 1.4.5
 

@@ -19,3 +19,17 @@ public class ClockSpeedDisplayTests
         Assert.Equal("3.60 GHz Max Clock", cpu.ClockSpeedDisplay);
     }
 }
+
+/// <summary>UX-14d: a drive over 90% full is flagged for the warning colour.</summary>
+public class DriveNearlyFullTests
+{
+    [Theory]
+    [InlineData(1000, 900, false)]
+    [InlineData(1000, 901, true)]
+    [InlineData(0, 0, false)]
+    public void NearlyFull_IsOverNinetyPercent(double total, double used, bool expected)
+    {
+        var drive = new DriveStorageInfo { TotalGigabytes = total, FreeGigabytes = total - used };
+        Assert.Equal(expected, drive.IsNearlyFull);
+    }
+}
