@@ -124,7 +124,7 @@ public class AppSettings
     public bool ShowToolsInTray { get; set; } = false;
     /// <summary>A search box as the first row of the tray menu (UX-16): type to filter games (and
     /// tools, when they are in the menu) by name or category; Enter launches the first match. On by
-    /// default for new installs and existing users alike: a settings.json from before 1.5.0 has no
+    /// default for new installs and existing users alike: a settings.json from before 1.4.6 has no
     /// value for it, so it takes this initializer.</summary>
     public bool ShowTraySearch { get; set; } = true;
     /// <summary>Order of the tray's Tools submenu. One of <see cref="Services.ToolCatalog.SortOptions"/>.</summary>

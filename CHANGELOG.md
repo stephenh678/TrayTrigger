@@ -8,7 +8,7 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
-## 1.5.0
+## 1.4.6
 
 - **Force Close can no longer touch Windows itself** — when TrayTrigger can't close a game through the process it started, it looks for the game's processes in its install folder. It now never looks in the Windows folder, a drive root, or the top of Program Files, ProgramData or your user folder, and never touches another session's processes or one Windows marks critical. A game whose folder resolved to System32 could otherwise have Force Close end Windows' own processes, which stops the PC with a CRITICAL_PROCESS_DIED blue screen when TrayTrigger runs as administrator.
 - **Close Game instead of End Session** — the End Session action left the game running and only put the tweaks back, which read as if it closed the game. It's now **Close Game**, in the game's right-click menu, Game Details and the tray's Now Playing menu: it asks the game to quit the way its own close button does, and the tweaks are restored once it has. A game that won't close (one asking whether to save, say) is left open and TrayTrigger tells you; Force Close is still there for that.

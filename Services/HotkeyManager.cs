@@ -108,7 +108,7 @@ public partial class HotkeyManager : IDisposable
     /// <summary>
     /// Replaces every registration with the window hotkey, <paramref name="bindings"/> and the
     /// tray-menu hotkey, in that order. The tray-menu hotkey goes last and gives way: it arrived in
-    /// 1.5.0 with Ctrl+Alt+T as its default, which must not take the combo from a game or tool that
+    /// 1.4.6 with Ctrl+Alt+T as its default, which must not take the combo from a game or tool that
     /// already had it. Games are registered before tools (see <see cref="HotkeyBinding.InRegistrationOrder"/>), so when a game
     /// and a tool share a combo the game keeps it and the tool's is logged as not registered.
     /// <paramref name="reserved"/> (tool hotkeys while Tools is off) are not registered with Windows,

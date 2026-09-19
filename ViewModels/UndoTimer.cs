@@ -10,7 +10,7 @@ namespace TrayTrigger.ViewModels;
 /// </summary>
 public sealed class UndoCountdown
 {
-    /// <summary>How long a removal stays undoable. Was a fixed 6 seconds before 1.5.0.</summary>
+    /// <summary>How long a removal stays undoable. Was a fixed 6 seconds before 1.4.6.</summary>
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(10);
 
     private TimeSpan _remaining;
