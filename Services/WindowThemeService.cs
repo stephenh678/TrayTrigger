@@ -151,6 +151,57 @@ public static partial class WindowThemeService
         }
     }
 
+    /// <summary>
+    /// Shows a window that was hidden (not closed) with the same flicker suppression as its first
+    /// show. A hidden WPF window stops rendering, so on Show() DWM composites its stale or empty
+    /// surface - a white box - until WPF paints again. <see cref="PrepareForFirstShow"/> only
+    /// covers the very first show; the main window hides to the tray and comes back through here.
+    /// Cloaks, shows, waits for a frame to be rendered and presented, then uncloaks and runs
+    /// <paramref name="afterShown"/>. Falls back to a plain Show() if the window has no HWND yet
+    /// (the first-show path handles that) or is already visible.
+    /// </summary>
+    public static void ShowCloaked(Window window, Action? afterShown = null)
+    {
+        if (window == null) return;
+
+        bool firstShowPending = _firstShow.TryGetValue(window, out var first) && !first.Rendered;
+        if (window.IsVisible || firstShowPending || new WindowInteropHelper(window).Handle == IntPtr.Zero)
+        {
+            if (!window.IsVisible) window.Show();
+            if (afterShown != null) WhenContentRendered(window, afterShown);
+            return;
+        }
+
+        bool cloaked = SetCloak(window, true);
+        window.Show();
+        if (!cloaked)
+        {
+            afterShown?.Invoke();
+            return;
+        }
+
+        bool done = false;
+        DispatcherTimer? fallback = null;
+        void Reveal()
+        {
+            if (done) return;
+            done = true;
+            fallback?.Stop();
+            WaitForRenderThread(window);
+            try { DwmFlush(); } catch { /* best effort */ }
+            SetCloak(window, false);
+            try { afterShown?.Invoke(); }
+            catch (Exception ex) { LoggingService.Warn("WindowThemeService", $"Post-show action failed: {ex.Message}"); }
+        }
+
+        // Show() queues a render at Render priority; a Loaded-priority callback runs after it.
+        window.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, Reveal);
+        // Never leave the window invisible if the dispatcher is somehow starved.
+        fallback = new DispatcherTimer(DispatcherPriority.Normal, window.Dispatcher) { Interval = TimeSpan.FromMilliseconds(500) };
+        fallback.Tick += (s, e) => Reveal();
+        fallback.Start();
+    }
+
     // WPF has no public "wait until the render thread has presented" API, but its internal
     // MediaContext.CompleteRender() does exactly that (it sync-flushes the composition
     // channel). Resolved once via reflection; if a future WPF build removes it we simply

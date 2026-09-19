@@ -1164,16 +1164,12 @@ public partial class App : Application
                 _mainWindow.WindowState = WindowState.Normal;
             }
 
-            if (!_mainWindow.IsVisible)
-            {
-                _mainWindow.Show();
-            }
-
-            // On the very first show the window is cloaked until its first frame renders;
-            // defer the activation dance until then so it doesn't compete with the first
-            // paint. On subsequent shows this runs immediately.
+            // The window is cloaked until a painted frame is on screen - on the first show by
+            // PrepareForFirstShow, and when it comes back from the tray (it hides rather than
+            // closes) by ShowCloaked, so neither shows a white box. The activation dance waits
+            // until then so it doesn't compete with the paint.
             var window = _mainWindow;
-            WindowThemeService.WhenContentRendered(window, () =>
+            WindowThemeService.ShowCloaked(window, () =>
             {
                 if (_isShuttingDown || !window.IsVisible) return;
                 window.Activate();
