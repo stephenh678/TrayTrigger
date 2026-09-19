@@ -2050,6 +2050,7 @@ public partial class App
 
             // --screenshot-tray-search / --test-tray-search (App.TraySearchDiagnostics.cs).
             if (TryHandleTraySearchDevArgs(e, i)) return;
+            if (TryHandleCloseGameDevArgs(e, i)) return;
 
             // --test-automation-names <out.txt>: controls a screen reader can't name (App.AutomationNameAudit.cs).
             if (e.Args[i].Equals("--test-automation-names", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
@@ -2325,6 +2326,8 @@ public partial class App
                  e.Args[i].Equals("-screenshot-details", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
             {
+                // A capture only: nothing it touches is written back to settings.json.
+                _skipSettingsSaveOnExit = true;
                 string targetPng = e.Args[i + 1];
                 var game = new GameEntry
                 {
@@ -2338,7 +2341,7 @@ public partial class App
 
                 var metaService = new SteamMetadataService();
                 var searchService = new SteamSearchService();
-                // "--screenshot-details <out.png> playing": as while the game runs (End Session, Force Close).
+                // "--screenshot-details <out.png> playing": as while the game runs (Close Game, Force Close).
                 bool detailsPlaying = e.Args.Any(a => a.Equals("playing", StringComparison.OrdinalIgnoreCase));
                 var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying);
 

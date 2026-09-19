@@ -22,7 +22,7 @@ public class GameDetailsViewModel : ViewModelBase
     private readonly Action<GameEntry>? _launchAction;
     private readonly Action<GameEntry>? _editAction;
     private readonly Action<GameEntry>? _deleteAction;
-    private readonly Action<GameEntry>? _endSessionAction;
+    private readonly Action<GameEntry>? _closeGameAction;
     private readonly Action<GameEntry>? _forceCloseAction;
 
     private readonly RawgService _rawgService = new();
@@ -519,11 +519,11 @@ public class GameDetailsViewModel : ViewModelBase
 
     /// <summary>
     /// A session is being tracked for this game (the card's PLAYING badge) as the dialog opens.
-    /// Shows End Session and Force Close beside Launch Game, the same two actions as the card's
+    /// Shows Close Game and Force Close beside Launch Game, the same two actions as the card's
     /// right-click menu (UX-14h, open since the 1.3.7 review as GD-4).
     /// </summary>
     public bool IsPlaying { get; }
-    public ICommand EndSessionCommand { get; }
+    public ICommand CloseGameCommand { get; }
     public ICommand ForceCloseCommand { get; }
     public ICommand OpenStorePageCommand { get; }
     public ICommand OpenNewsUrlCommand { get; }
@@ -557,11 +557,11 @@ public class GameDetailsViewModel : ViewModelBase
         Func<GameEntry, string?, bool, Task>? fetchPosterByName = null,
         MetadataRefreshInterval refreshInterval = MetadataRefreshInterval.Every3Days,
         bool isPlaying = false,
-        Action<GameEntry>? endSessionAction = null,
+        Action<GameEntry>? closeGameAction = null,
         Action<GameEntry>? forceCloseAction = null)
     {
         IsPlaying = isPlaying;
-        _endSessionAction = endSessionAction;
+        _closeGameAction = closeGameAction;
         _forceCloseAction = forceCloseAction;
         _autoCategorize = autoCategorize;
         _refreshInterval = refreshInterval;
@@ -595,7 +595,7 @@ public class GameDetailsViewModel : ViewModelBase
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
         EditGameCommand = new RelayCommand(ExecuteEdit);
         DeleteGameCommand = new RelayCommand(ExecuteDelete);
-        EndSessionCommand = new RelayCommand(() => { RequestClose?.Invoke(); _endSessionAction?.Invoke(Game); }, () => IsPlaying);
+        CloseGameCommand = new RelayCommand(() => { RequestClose?.Invoke(); _closeGameAction?.Invoke(Game); }, () => IsPlaying);
         ForceCloseCommand = new RelayCommand(() => { RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));

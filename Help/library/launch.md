@@ -34,7 +34,7 @@ Working Directory and Launch Arguments sit under **Advanced launch options**, a 
 Two jobs:
 
 1. The folder the game is started in, for a direct launch. Blank means the executable's own folder, which is right for almost every game.
-2. **The folder TrayTrigger watches** to know the game is running. Client launches (GOG, EA, Epic, Ubisoft, Battle.net) and prelauncher stubs hand off to a process TrayTrigger never started, so it finds the game by looking for a process running from inside this folder. End Session's Force Close uses the same folder to know what to kill. If a game "never appears" after launching and its profile rolls back after three minutes, this folder is usually the wrong one.
+2. **The folder TrayTrigger watches** to know the game is running. Client launches (GOG, EA, Epic, Ubisoft, Battle.net) and prelauncher stubs hand off to a process TrayTrigger never started, so it finds the game by looking for a process running from inside this folder. Close Game and Force Close use the same folder to know what to close or kill when TrayTrigger holds no handle to the game itself; a folder where Windows' own programs run (the Windows folder, a drive root, the top of Program Files) is never used. If a game "never appears" after launching and its profile rolls back after three minutes, this folder is usually the wrong one.
 
 Steam games are tracked through Steam's own running flag instead, and Battle.net games through the folder Battle.net currently records for them, so a game moved with Battle.net's "Move install" is still found.
 

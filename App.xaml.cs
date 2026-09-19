@@ -639,10 +639,10 @@ public partial class App : Application
                         sessionItem.Command = null;
 
                         string gameId = session.GameId;
-                        var endSession = CreateNavMenuItem("End Session (restore tweaks)", "", () =>
-                            Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: false)));
-                        endSession.ToolTip = "Restores the profile and runs the post-exit script now, without touching the game. For a session that looks stuck.";
-                        sessionItem.Items.Add(endSession);
+                        string gameName = session.Game.Name;
+                        var closeGame = CreateNavMenuItem("Close Game", "", () => CloseGameFromTray(gameId, gameName));
+                        closeGame.ToolTip = "Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.";
+                        sessionItem.Items.Add(closeGame);
                         var forceClose = CreateNavMenuItem("Force Close Game", "", () =>
                         {
                             if (card != null)
@@ -1212,6 +1212,22 @@ public partial class App : Application
     {
         _mainViewModel.CurrentSection = NavSection.Library;
         ToggleMainWindow();
+    }
+
+    /// <summary>
+    /// Close Game from the tray's Now Playing submenu. Off the UI thread, since it waits for the
+    /// game to quit; the window may be hidden, so a game that didn't close says so in a notification.
+    /// </summary>
+    private void CloseGameFromTray(string gameId, string gameName)
+    {
+        Task.Run(() =>
+        {
+            var result = _launcherService.CloseGameNow(gameId);
+            if (result is ProcessLauncherService.CloseGameResult.StillRunning or ProcessLauncherService.CloseGameResult.CouldNotAsk)
+            {
+                Dispatcher.BeginInvoke(() => _trayIcon?.ShowNotification("TrayTrigger", LibraryViewModel.DescribeCloseGame(result, gameName)));
+            }
+        });
     }
 
     public void ToggleMainWindow()

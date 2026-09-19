@@ -423,8 +423,8 @@ public class LibraryViewModel : ViewModelBase
             onToggleHidden: ToggleHidden,
             getUseVerticalPosterArt: () => _getUseVerticalPosterArt(),
             deferHeavyInit: deferHeavyInit,
-            onEndSession: card => EndGameSession(card, forceClose: false),
-            onForceClose: card => EndGameSession(card, forceClose: true),
+            onCloseGame: CloseGame,
+            onForceClose: ForceCloseGame,
             onPrimaryClick: OnCardPrimaryClick,
             onToggleSelect: OnCardToggleSelect,
             onRangeSelect: OnCardRangeSelect,
@@ -454,9 +454,36 @@ public class LibraryViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// "End Session" / "Force Close Game" from a card's menu. Both run off the UI thread since
-    /// restoring a profile can involve an elevated Defender cmdlet.
+    /// "Close Game" from a card's menu or Game Details: asks the game to quit as its own close
+    /// button would, and the session ends when it does. Off the UI thread, since it waits for the
+    /// game and restoring a profile can involve an elevated Defender cmdlet.
     /// </summary>
+    private void CloseGame(GameCardViewModel card)
+    {
+        StatusMessage = $"Closing {card.Name}...";
+        string gameId = card.Game.Id;
+        string name = card.Name;
+        _ = Task.Run(() =>
+        {
+            var result = _launcherService.CloseGameNow(gameId);
+            RunOnUiThread(() => StatusMessage = DescribeCloseGame(result, name));
+        });
+    }
+
+    /// <summary>What Close Game did, for the status bar and the tray's notification.</summary>
+    internal static string DescribeCloseGame(ProcessLauncherService.CloseGameResult result, string name) => result switch
+    {
+        ProcessLauncherService.CloseGameResult.Closed => $"Closed {name}; tweaks restored.",
+        ProcessLauncherService.CloseGameResult.EndedBeforeStart => $"{name} hadn't started, so its session ended; tweaks restored.",
+        ProcessLauncherService.CloseGameResult.StillRunning => $"{name} is still open - it may be asking to save or confirm. Close it there, or use Force Close. Tweaks are restored when it exits.",
+        ProcessLauncherService.CloseGameResult.CouldNotAsk => $"Couldn't ask {name} to close. Close it yourself, or use Force Close. Tweaks are restored when it exits.",
+        _ => $"{name} has no active session.",
+    };
+
+    /// <summary>"Force Close Game" from a card's menu or Game Details: confirms, kills the game, then
+    /// ends the session. Off the UI thread, as above.</summary>
+    private void ForceCloseGame(GameCardViewModel card) => EndGameSession(card, forceClose: true);
+
     private void EndGameSession(GameCardViewModel card, bool forceClose)
     {
         if (forceClose)
@@ -911,7 +938,7 @@ public class LibraryViewModel : ViewModelBase
         bool requestedLaunch = false;
         bool requestedEdit = false;
         bool requestedDelete = false;
-        bool requestedEndSession = false;
+        bool requestedCloseGame = false;
         bool requestedForceClose = false;
 
         var vm = new GameDetailsViewModel(
@@ -929,7 +956,7 @@ public class LibraryViewModel : ViewModelBase
             fetchPosterByName: (game, preferredName, replace) => TryFetchGridArtByNameAsync(game, preferredName, replace),
             refreshInterval: _settings.MetadataRefreshInterval,
             isPlaying: card.IsPlaying,
-            endSessionAction: _ => requestedEndSession = true,
+            closeGameAction: _ => requestedCloseGame = true,
             forceCloseAction: _ => requestedForceClose = true);
 
         var dlg = new Views.GameDetailsDialog(vm);
@@ -949,9 +976,9 @@ public class LibraryViewModel : ViewModelBase
         {
             DeleteGame(card);
         }
-        else if (requestedEndSession)
+        else if (requestedCloseGame)
         {
-            card.EndSessionCommand.Execute(null);
+            card.CloseGameCommand.Execute(null);
         }
         else if (requestedForceClose)
         {

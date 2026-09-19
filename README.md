@@ -160,7 +160,7 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 - **Session-scoped**: tweaks apply on launch (through any supported launcher or a direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
 - **Crash-safe**: the snapshot lives on disk. If TrayTrigger or your PC crashes mid-session, the next start restores your pre-game state. A normal shutdown restores the power plan, HDR, and GPU preference immediately.
 - **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
-- **End Session / Force Close** in the game's right-click menu if a launcher ever stalls. A game that never appears is rolled back automatically after three minutes.
+- **Close Game / Force Close** in the game's right-click menu, Game Details and the tray: quit the game and get your tweaks back, or kill it if it won't close. A game that never appears is rolled back automatically after three minutes.
 
 ### Pre-Launch and Post-Exit Scripts
 

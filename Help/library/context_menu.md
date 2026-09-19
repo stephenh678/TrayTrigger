@@ -6,7 +6,7 @@ Right-clicking a game card opens its menu. Right-clicking one of two or more sel
 
 The menu is grouped, and the groups are the same in the single-game and batch menus so that what you learn in one applies to the other.
 
-1. **Doing something now** - Play, Game Details, and, while the game is running, End Session and Force Close Game.
+1. **Doing something now** - Play, Game Details, and, while the game is running, Close Game and Force Close Game.
 2. **Marking it** - Add to Favorites, Hide, Open Containing Folder, and Locate Executable if the file is missing.
 3. **Quick settings** - Performance Profile, CPU Cores, and Launch Options, each a cascading submenu.
 4. **Editing it** - Edit Game Properties, Rename, the Change submenu, and Refresh Poster & Metadata.

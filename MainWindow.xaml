@@ -88,9 +88,9 @@
             <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
                 <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="End Session (restore tweaks)" Command="{Binding EndSessionCommand}"
-                      ToolTip="Restores the profile and runs the post-exit script now, without touching the game. For a session that looks stuck.">
-                <MenuItem.Icon><TextBlock Text="&#xE7A7;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+            <MenuItem Header="Close Game" Command="{Binding CloseGameCommand}"
+                      ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
+                <MenuItem.Icon><TextBlock Text="&#xE7E8;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -4216,7 +4216,7 @@
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Launcher Control" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam minimized so only the game appears. A second launch brings the running game forward instead of starting a duplicate; End Session and Force Close are one click away while it runs."
+                                            <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam minimized so only the game appears. A second launch brings the running game forward instead of starting a duplicate; Close Game and Force Close are one click away while it runs."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
@@ -4414,7 +4414,7 @@
                                                     </Border>
                                                     <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="Play, Details, Favorite, Hide, End Session / Force Close while playing, edit shortcuts, Steam links, Remove"
+                                                <TextBlock Text="Play, Details, Favorite, Hide, Close Game / Force Close while playing, edit shortcuts, Steam links, Remove"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 

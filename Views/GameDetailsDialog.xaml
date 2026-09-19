@@ -231,13 +231,13 @@
                             </StackPanel>
                         </Button>
                         <!-- While the game is playing: the card menu's two session actions (UX-14h). -->
-                        <Button AutomationProperties.Name="End Session (restore tweaks)" Command="{Binding EndSessionCommand}"
+                        <Button AutomationProperties.Name="Close Game" Command="{Binding CloseGameCommand}"
                                 Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="12"
-                                ToolTip="Restores the profile and runs the post-exit script now, without touching the game. For a session that looks stuck.">
+                                ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE7A7;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="End Session" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#xE7E8;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Close Game" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button AutomationProperties.Name="Force Close Game" Command="{Binding ForceCloseCommand}"
