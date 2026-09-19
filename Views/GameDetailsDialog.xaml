@@ -491,7 +491,7 @@
         <DockPanel Grid.Row="3">
             <TextBlock Text="{Binding Game.ExecutablePath}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" 
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="580"/>
-            <Button Content="Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}" 
+            <Button Content="_Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}" 
                     Padding="18,6" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
         </DockPanel>
     </Grid>

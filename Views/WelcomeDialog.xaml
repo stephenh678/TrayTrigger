@@ -91,9 +91,9 @@
 
             <!-- Footer -->
             <DockPanel Grid.Row="3" LastChildFill="False">
-                <Button Content="Scan for Games" Style="{StaticResource ModernAccentButton}" Padding="16,6"
+                <Button Content="_Scan for Games" Style="{StaticResource ModernAccentButton}" Padding="16,6"
                         DockPanel.Dock="Right" IsDefault="True" Click="OnScanClick"/>
-                <Button Content="Skip for now" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
+                <Button Content="S_kip for now" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
                         DockPanel.Dock="Right" IsCancel="True" Click="OnSkipClick"/>
             </DockPanel>
         </Grid>

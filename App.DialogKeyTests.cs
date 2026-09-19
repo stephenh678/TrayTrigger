@@ -30,7 +30,7 @@ public partial class App
         _skipSettingsSaveOnExit = true;
         static T Find<T>(Window w, Func<T, bool>? match = null) where T : DependencyObject =>
             FindVisualChild<T>(w, match ?? (_ => true)) ?? throw new Exception($"No {typeof(T).Name} in {w.GetType().Name}");
-        static Button ButtonNamed(Window w, string content) => Find<Button>(w, b => b.Content as string == content);
+        static Button ButtonNamed(Window w, string content) => Find<Button>(w, b => (b.Content as string)?.Replace("_", "") == content);
 
         GameEntry SampleGame() => new() { Name = "Key Test Game", Category = "Action" };
         var categories = new[] { "Action", "RPG" };

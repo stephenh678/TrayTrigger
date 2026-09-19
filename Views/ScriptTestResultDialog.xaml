@@ -44,7 +44,7 @@
                      Margin="0,0,0,16"/>
 
             <DockPanel Grid.Row="5">
-                <Button DockPanel.Dock="Right" Content="Close" Click="CloseButton_Click" IsDefault="True" IsCancel="True"
+                <Button DockPanel.Dock="Right" Content="_Close" Click="CloseButton_Click" IsDefault="True" IsCancel="True"
                         Style="{StaticResource ModernAccentButton}" MinWidth="90" Margin="10,0,0,0"/>
                 <Button DockPanel.Dock="Right" Content="Copy Output" Click="CopyButton_Click"
                         Style="{StaticResource ModernGhostButton}" MinWidth="90"/>

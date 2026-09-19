@@ -101,9 +101,9 @@
 
         <!-- Buttons -->
         <DockPanel Grid.Row="2">
-            <Button DockPanel.Dock="Right" Content="Add Selected Game" Click="AddButton_Click" IsDefault="True" 
+            <Button DockPanel.Dock="Right" Content="_Add Selected Game" Click="AddButton_Click" IsDefault="True" 
                     Style="{StaticResource ModernAccentButton}" MinWidth="130" Margin="10,0,0,0"/>
-            <Button DockPanel.Dock="Right" Content="Cancel" Click="CancelButton_Click" IsCancel="True" 
+            <Button DockPanel.Dock="Right" Content="_Cancel" Click="CancelButton_Click" IsCancel="True" 
                     Style="{StaticResource ModernGhostButton}" MinWidth="80"/>
         </DockPanel>
     </Grid>

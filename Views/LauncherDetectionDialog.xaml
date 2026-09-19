@@ -116,9 +116,9 @@
         <!-- Footer -->
         <DockPanel Grid.Row="3">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Skip" Click="SkipButton_Click" IsCancel="True"
+                <Button Content="_Skip" Click="SkipButton_Click" IsCancel="True"
                         Style="{StaticResource ModernGhostButton}" Margin="0,0,8,0"/>
-                <Button Content="Enable Selected" Click="EnableButton_Click" IsDefault="True"
+                <Button Content="_Enable Selected" Click="EnableButton_Click" IsDefault="True"
                         Style="{StaticResource ModernAccentButton}"/>
             </StackPanel>
         </DockPanel>

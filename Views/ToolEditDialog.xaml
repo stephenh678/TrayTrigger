@@ -179,9 +179,9 @@
         <!-- FOOTER -->
         <DockPanel Grid.Row="3" LastChildFill="True">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True"
+                <Button Content="_Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0" MinWidth="90"/>
-                <Button Content="Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
+                <Button Content="_Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
                         Style="{StaticResource ModernAccentButton}" MinWidth="120"/>
             </StackPanel>
             <TextBlock Text="{Binding ValidationMessage}" Foreground="{StaticResource BrushDanger}" FontSize="11.5"

@@ -49,7 +49,9 @@ public partial class App
                 var peer = UIElementAutomationPeer.CreatePeerForElement(element);
                 string name = peer?.GetName() ?? string.Empty;
                 bool glyphOnly = name.Length > 0 && name.All(c => c >= '\uE000' && c <= '\uF8FF' || char.IsWhiteSpace(c));
-                if (string.IsNullOrWhiteSpace(name) || glyphOnly)
+                // An access-key marker left in the name ("_Save") is read out as "underscore save".
+                bool accessMarker = name.Contains('_');
+                if (string.IsNullOrWhiteSpace(name) || glyphOnly || accessMarker)
                 {
                     string hint = string.Join(" ", Descendants(element).OfType<TextBlock>().Select(t => t.Text).Where(t => !string.IsNullOrWhiteSpace(t) && !t.All(c => c >= '' && c <= '')));
                     missing.Add($"  - {element.GetType().Name} \"{hint}\"");

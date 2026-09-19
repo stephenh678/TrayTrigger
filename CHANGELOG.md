@@ -21,6 +21,7 @@ stable version they lead to.
 - **A shorter welcome** — the first-run screen is now one sentence and three points: how to add games, how to launch them, and what the default performance profile does. Its second button says what it does: "Skip for now" instead of "Get Started".
 - **More time to undo** — removing a game can now be undone for 10 seconds instead of 6, and the countdown stops while your pointer is on the Undo toast or it has keyboard focus. Removing a scan location, an ignored game or an ignored folder in Settings can now be undone the same way.
 - **Respects "Animation effects"** — with Windows' Animation effects turned off (Settings > Accessibility > Visual effects), game posters no longer grow on hover and the launch card by the tray appears and disappears without fading. Progress indicators still move.
+- **Keyboard shortcuts on dialog buttons** — hold Alt in a dialog to see them: Alt+S saves in Edit Game and Edit Tool, Alt+C cancels, and the pickers' main buttons have one too.
 
 ## 1.4.5
 
