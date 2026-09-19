@@ -678,7 +678,7 @@
                     <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="6" Padding="3" Margin="0,0,16,0"
                             HorizontalAlignment="Left" VerticalAlignment="Center">
-                        <ScrollViewer x:Name="CategoryScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Focusable="False"
+                        <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource EdgeChevronScrollViewer}"
                                       PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
                             <ItemsControl ItemsSource="{Binding CategoryTabs}">
                                 <ItemsControl.ItemsPanel>

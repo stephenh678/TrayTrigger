@@ -7,6 +7,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <converters:TabBackgroundConverter x:Key="TabBackgroundConverter"/>
         <converters:TabForegroundConverter x:Key="TabForegroundConverter"/>
+        <converters:ScrollEdgeConverter x:Key="ScrollEdgeConverter"/>
 
         <!-- Colors -->
         <Color x:Key="ColorBgDark">#121214</Color>
@@ -995,6 +996,78 @@
             <Setter Property="Background" Value="{StaticResource BrushLivePillBackground}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BrushBorderAccent}"/>
             <Setter Property="TextElement.Foreground" Value="{StaticResource BrushAccentHover}"/>
+        </Style>
+
+        <!-- A horizontal strip that scrolls without a scrollbar (UX-14f): the Library and Tools
+             category tabs. When tabs run past an edge, that edge fades out and shows a chevron;
+             pressing it (or holding it) scrolls that way. Keyboard users reach every tab with Tab,
+             which scrolls it into view, so the chevrons are not tab stops. The fade matches the
+             strip's #181820 background. -->
+        <LinearGradientBrush x:Key="BrushTabStripFadeLeft" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#FF181820" Offset="0.45"/>
+            <GradientStop Color="#00181820" Offset="1"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="BrushTabStripFadeRight" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#00181820" Offset="0"/>
+            <GradientStop Color="#FF181820" Offset="0.55"/>
+        </LinearGradientBrush>
+        <Style x:Key="EdgeChevronButton" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Interval" Value="40"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="{TemplateBinding Background}">
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                       Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"
+                                       HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="4,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="EdgeChevronScrollViewer" TargetType="ScrollViewer">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <ScrollContentPresenter CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                            <RepeatButton Style="{StaticResource EdgeChevronButton}" HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                                          Content="&#xE76B;" Background="{StaticResource BrushTabStripFadeLeft}"
+                                          Command="{x:Static ScrollBar.LineLeftCommand}" AutomationProperties.Name="Scroll tabs left">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollEdgeConverter}" ConverterParameter="Left">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                            </RepeatButton>
+                            <RepeatButton Style="{StaticResource EdgeChevronButton}" HorizontalAlignment="Right" HorizontalContentAlignment="Right"
+                                          Content="&#xE76C;" Background="{StaticResource BrushTabStripFadeRight}"
+                                          Command="{x:Static ScrollBar.LineRightCommand}" AutomationProperties.Name="Scroll tabs right">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollEdgeConverter}" ConverterParameter="Right">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                            </RepeatButton>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Default MenuItem hover color; a specific ContextMenu instance can override this in
