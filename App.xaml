@@ -70,8 +70,50 @@
         <FontFamily x:Key="AppFont">Segoe UI</FontFamily>
         <FontFamily x:Key="IconFont">Segoe MDL2 Assets, Segoe Fluent Icons</FontFamily>
 
+        <!-- Keyboard focus: a 1 px accent ring drawn only when focus arrives by keyboard (Tab,
+             arrows), never on a mouse click. WPF's own dotted rectangle is black and vanished on
+             the dark surfaces, so buttons, tabs, the sidebar and list rows showed no focus at all. -->
+        <Style x:Key="KeyboardFocusRing">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border Margin="-2" CornerRadius="7" BorderThickness="1" SnapsToDevicePixels="True"
+                                BorderBrush="{StaticResource BrushAccentHover}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="KeyboardFocusRingRound">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border Margin="-2" CornerRadius="100" BorderThickness="1" SnapsToDevicePixels="True"
+                                BorderBrush="{StaticResource BrushAccentHover}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- A Details List or Tools list row: hugs the row's own border, inside the item's spacing. -->
+        <Style x:Key="ListRowFocusRing">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border Margin="0,2,0,3" CornerRadius="6" BorderThickness="1" SnapsToDevicePixels="True"
+                                BorderBrush="{StaticResource BrushAccentHover}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A bare ItemsControl only hosts items (tab strips, card grids, tweak lists), yet WPF makes
+             it a tab stop of its own that shows nothing when focused. Its items stay reachable. -->
+        <Style TargetType="ItemsControl">
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+
         <!-- Modern Danger Button -->
         <Style x:Key="ModernDangerButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -106,6 +148,7 @@
 
         <!-- Modern Accent Button -->
         <Style x:Key="ModernAccentButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -139,6 +182,7 @@
 
         <!-- Circular Play Button (dark fill by default, accent blue on hover) -->
         <Style x:Key="CirclePlayButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="FontSize" Value="17"/>
@@ -162,6 +206,7 @@
 
         <!-- Modern Outline Button -->
         <Style x:Key="ModernOutlineButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -200,6 +245,7 @@
 
         <!-- Modern Ghost Button -->
         <Style x:Key="ModernGhostButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -277,6 +323,7 @@
              RelativeSource TemplatedParent is unreliable in WPF; a converter works with the
              actual runtime values directly, sidestepping that entirely. -->
         <Style x:Key="SegmentedTabButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -311,6 +358,7 @@
 
         <!-- Modern Sidebar Navigation Button -->
         <Style x:Key="SidebarNavButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
@@ -350,6 +398,7 @@
 
         <!-- Card Hover Quick Action Circle Buttons -->
         <Style x:Key="CardHoverCircleButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Width" Value="28"/>
@@ -386,6 +435,7 @@
         </Style>
 
         <Style x:Key="CardHoverDeleteButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Width" Value="28"/>
@@ -423,6 +473,7 @@
 
         <!-- Favorite Star Toggle (Game Cards, List Rows, Details Dialog) -->
         <Style x:Key="FavoriteToggleButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="Width" Value="22"/>
             <Setter Property="Height" Value="22"/>
             <Setter Property="FontSize" Value="15"/>
@@ -529,6 +580,7 @@
 
         <!-- Modern Dark ComboBox -->
         <Style x:Key="ModernComboBox" TargetType="ComboBox">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>

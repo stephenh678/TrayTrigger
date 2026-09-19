@@ -437,6 +437,77 @@ public partial class App
                 return;
             }
 
+            // --screenshot-focus <Library|Tools|System|Settings|About> <tabs> <out-prefix>: presses Tab
+            // <tabs> times through the real input pipeline and captures the window after each
+            // press as <out-prefix>-NN.png, with the focused element's type and name in the log.
+            // For checking that every stop shows a focus indicator.
+            if ((e.Args[i].Equals("--screenshot-focus", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-focus", StringComparison.OrdinalIgnoreCase)) &&
+                i + 3 < e.Args.Length)
+            {
+                var section = Enum.Parse<NavSection>(e.Args[i + 1], ignoreCase: true);
+                // A count ("24") means that many Tabs; otherwise a list such as "Tab*22,Right,Down".
+                var keys = new List<System.Windows.Input.Key>();
+                foreach (string token in e.Args[i + 2].Split(',', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string[] parts = token.Split('*');
+                    int repeat = parts.Length > 1 ? int.Parse(parts[1]) : 1;
+                    var key = int.TryParse(parts[0], out int n) ? System.Windows.Input.Key.Tab : Enum.Parse<System.Windows.Input.Key>(parts[0], ignoreCase: true);
+                    if (int.TryParse(parts[0], out n)) repeat = n;
+                    keys.AddRange(Enumerable.Repeat(key, repeat));
+                }
+                int tabs = keys.Count;
+                string prefix = e.Args[i + 3];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = section;
+                _mainWindow.Show();
+                _mainWindow.WindowState = WindowState.Normal;
+                _mainWindow.Width = 960;
+                _mainWindow.Height = 700;
+                WindowThemeService.WhenContentRendered(_mainWindow, () =>
+                {
+                    // Keys sent through ProcessInput don't make the keyboard the "most recent input
+                    // device", so WPF would suppress every FocusVisualStyle. Force it the way the
+                    // Windows "always show focus rectangles" setting does.
+                    typeof(System.Windows.Input.KeyboardNavigation)
+                        .GetProperty("AlwaysShowFocusVisual", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                        ?.SetValue(null, true);
+                    int pressed = 0;
+                    var focusLog = new System.Text.StringBuilder();
+                    var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+                    step.Tick += (s, args) =>
+                    {
+                        if (pressed > 0)
+                        {
+                            var focused = System.Windows.Input.Keyboard.FocusedElement as FrameworkElement;
+                            string what = focused == null ? "(nothing)" : $"{focused.GetType().Name} '{System.Windows.Automation.AutomationProperties.GetName(focused)}' {(focused as ContentControl)?.Content as string}";
+                            focusLog.AppendLine($"{pressed:00} {keys[pressed - 1]}: {what}");
+                            // Not CaptureVisualBitmap: that focuses the window, which would move focus.
+                            var content = (FrameworkElement)_mainWindow.Content;
+                            var dpi = VisualTreeHelper.GetDpi(content);
+                            var rtb = new RenderTargetBitmap((int)(content.ActualWidth * dpi.DpiScaleX), (int)(content.ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+                            rtb.Render(_mainWindow);
+                            var encoder = new PngBitmapEncoder();
+                            encoder.Frames.Add(BitmapFrame.Create(rtb));
+                            using var file = File.Create($"{prefix}-{pressed:00}.png");
+                            encoder.Save(file);
+                        }
+                        if (pressed >= tabs)
+                        {
+                            step.Stop();
+                            File.WriteAllText($"{prefix}-focus.txt", focusLog.ToString());
+                            ExitApplication();
+                            return;
+                        }
+                        pressed++;
+                        _mainWindow.Activate();
+                        SendTestKey(keys[pressed - 1]);
+                    };
+                    step.Start();
+                });
+                return;
+            }
+
             // --screenshot-tooltip <Library|Tools|System|Settings|About> <text> <out.png>: a real screen
             // grab of the page with the tooltip of the first element whose tooltip contains <text>
             // open beside it. Tooltips are popups, so they never render into a RenderTargetBitmap.
