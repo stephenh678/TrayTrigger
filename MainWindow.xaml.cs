@@ -455,7 +455,7 @@ public partial class MainWindow : Window
     private SearchBox? CurrentPageSearchBox => _viewModel.CurrentSection switch
     {
         NavSection.Settings => SettingsSearchBox,
-        NavSection.About => AboutSearchBox,
+        NavSection.About => AboutPage.PageSearchBox,
         NavSection.System => SystemPage.PageSearchBox,
         _ => null,
     };
