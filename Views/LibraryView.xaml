@@ -307,7 +307,7 @@
                                <TextBlock Text="Games Library" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
                                           FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                                <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, and local folders"
-                                          FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                                          FontSize="12" Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
                                           FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
                            </StackPanel>
                        </DockPanel>
