@@ -48,7 +48,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 - Ctrl+click or Shift+click tools to select several, or press Ctrl+A to select every tool on the page.
 - Click anywhere that isn't a tool, or press Esc, to clear the selection. Changing the search or the category tab clears it too, so a tool you can no longer see is never changed by mistake.
-- Right-click any selected tool for the batch menu: add or remove them from Favorites, change their category, or turn Run as Administrator on or off for all of them.
+- With two or more tools selected, a selection bar appears over the bottom of the list with Favorites, Change Category, More and Clear. Right-click any selected tool, or click More, for the batch menu: add or remove them from Favorites, change their category, or turn Run as Administrator on or off for all of them.
 - Remove from Tools (or the Delete key) removes every selected tool after one confirmation.
 - The favorite and Run as Administrator items add or tick all of them, unless every selected tool already has it, in which case they remove or untick it for all.
 

@@ -7,10 +7,11 @@ You can act on several games in one step: add or remove favorites, hide or unhid
 - Ctrl+click a game card to add it to the selection, or to take it back out.
 - Shift+click selects every card between the last one you clicked and this one.
 - Ctrl+A anywhere in the library (outside the search box) selects every visible game.
-- Selected cards get a blue border, and the status bar shows how many are selected. This works the same in every view: posters, extra-large posters, compact icons, and the details list.
+- Selected cards get a blue border, and a selection bar appears over the bottom of the library with the count and the common actions. This works the same in every view: posters, extra-large posters, compact icons, and the details list.
 
 ## Acting on the selection
 
+- The selection bar has Add to (or Remove from) Favorites, Change Category, and Hide (or Unhide) as buttons, More for everything else, and Clear to drop the selection. Tab reaches it like any other button. More opens the same menu as a right-click.
 - Right-click any selected card. When two or more are selected, the menu shows only the actions that work on a group: Add to or Remove from Favorites, Hide or Unhide, Change Category, Performance Profile, CPU Cores, Launch Options, Refresh Poster & Metadata, and Remove from Library. Play is hidden on the cards while a selection exists, because playing is a single-game action.
 - Add to Favorites turns into Remove from Favorites when every selected game is already a favorite. Hide turns into Unhide the same way, for example on the Hidden tab. Run as Administrator and Close Launcher After Game Exits work the same way: a mixed selection turns every game on, and only a selection where all of them are already on turns them off. The label always says which way the next click goes.
 - Change Category prompts once and applies the category to all selected games. The box is pre-filled only when they already share one.

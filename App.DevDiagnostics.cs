@@ -698,6 +698,13 @@ public partial class App
                 _mainViewModel.CurrentSection = NavSection.Tools;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
+                // "select" as the view argument's neighbour: two tools selected, for the selection bar.
+                if (e.Args.Any(a => a.Equals("select", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var list = _mainWindow.ToolsPage.ToolsList;
+                    foreach (var item in list.Items.Cast<object>().Take(2)) list.SelectedItems.Add(item);
+                    _mainWindow.UpdateLayout();
+                }
                 CaptureVisual(_mainWindow, 960, 700, targetPng);
                 ExitApplication();
                 return;

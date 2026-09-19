@@ -686,6 +686,7 @@ public partial class MainWindow : Window
             if (_viewModel.Tools.SelectedTools.Count == 0) return;
             if (IsWithin(source, static fe => fe.DataContext is ToolCardViewModel)) return;
             if (IsWithin(source, static fe => fe is System.Windows.Controls.TextBox or System.Windows.Controls.Primitives.ScrollBar)) return;
+            if (IsWithin(source, static fe => fe.Name == "ToolsSelectionBar")) return;
             ToolsPage.ClearSelection();
             return;
         }
@@ -693,7 +694,19 @@ public partial class MainWindow : Window
         if (!_viewModel.HasSelection) return;
         if (IsWithin(source, static fe => fe.DataContext is GameCardViewModel)) return;
         if (IsWithin(source, static fe => fe is System.Windows.Controls.TextBox)) return;
+        // The selection bar acts on the selection, so a press on it must not drop it.
+        if (IsWithin(source, static fe => fe.Name == "SelectionBar")) return;
         _viewModel.ClearSelection();
+    }
+
+    /// <summary>The selection bar's More: the batch right-click menu, opened above the bar.</summary>
+    private void SelectionBarMore_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = (System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu");
+        menu.DataContext = _viewModel;
+        menu.PlacementTarget = (UIElement)sender;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+        menu.IsOpen = true;
     }
 
     private static bool IsWithin(DependencyObject? node, Func<FrameworkElement, bool> predicate)
@@ -742,6 +755,8 @@ public partial class MainWindow : Window
         var menu = (System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu");
         menu.DataContext = _viewModel;
         menu.PlacementTarget = element;
+        // The selection bar's More opens the same menu above itself; a right-click opens it here.
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
         menu.IsOpen = true;
     }
 

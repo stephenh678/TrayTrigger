@@ -131,6 +131,19 @@ public partial class ToolsView : UserControl
         e.Handled = true;
     }
 
+    /// <summary>The selection bar's More: the batch right-click menu, opened above the bar.</summary>
+    private void OnSelectionBarMore(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } viewModel) return;
+        var menu = (ContextMenu)Resources["ToolBatchContextMenu"];
+        menu.DataContext = viewModel;
+        menu.PlacementTarget = (UIElement)sender;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+        menu.IsOpen = true;
+    }
+
+    private void OnSelectionBarClear(object sender, RoutedEventArgs e) => ClearSelection();
+
     /// <summary>Ctrl+F focuses the search. Tunnelling, as in the Library, so no focused control can take it first.</summary>
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {

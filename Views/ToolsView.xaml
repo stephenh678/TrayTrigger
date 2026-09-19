@@ -425,6 +425,47 @@
                 </ListBox.Style>
             </ListBox>
 
+            <!-- Selection bar (UX-06), as in the Library: floats over the bottom of the list, so the
+                 list never moves, while two or more tools are selected (one is just a click). Tools
+                 have no Hide. Named for MainWindow's click-away, which must not drop the selection. -->
+            <Border x:Name="ToolsSelectionBar" Grid.Row="1" Style="{StaticResource SelectionBarStyle}"
+                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18" Panel.ZIndex="100"
+                    Visibility="{Binding HasMultipleSelection, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding SelectionSummary}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,12,0"
+                               Foreground="{StaticResource BrushTextPrimary}"/>
+                    <Button Command="{Binding BatchFavoriteCommand}" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="{Binding BatchFavoriteLabel}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE734;" Style="{StaticResource SelectionBarGlyph}"/>
+                            <TextBlock Text="{Binding BatchFavoriteLabel}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding BatchChangeCategoryCommand}" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="Change Category">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8EC;" Style="{StaticResource SelectionBarGlyph}"/>
+                            <TextBlock Text="Change Category..."/>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnSelectionBarMore" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="More batch actions" ToolTip="Every batch action, as in the right-click menu">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="More"/>
+                            <TextBlock Text="&#xE70D;" Style="{StaticResource SelectionBarGlyph}" Margin="6,1,0,0"/>
+                        </StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Fill="{StaticResource BrushBorderLight}" Margin="6,4"/>
+                    <Button Click="OnSelectionBarClear" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="Clear selection" ToolTip="Clear selection (Esc)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE711;" Style="{StaticResource SelectionBarGlyph}"/>
+                            <TextBlock Text="Clear"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
             <!-- Empty: no tools yet. The whole page is the drop target. -->
             <Border Grid.Row="1" Margin="0,20,0,20" CornerRadius="10"
                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1.5" Background="#161619"

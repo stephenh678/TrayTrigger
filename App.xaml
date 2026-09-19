@@ -945,6 +945,34 @@
             </Setter>
         </Style>
 
+        <!-- The floating selection bar over the Library and Tools grids (UX-06), and its
+             compact buttons: icon plus label, ghost until hovered. -->
+        <Style x:Key="SelectionBarStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BrushSurfaceActive}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="TextElement.FontSize" Value="12"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SelectionBarButton" TargetType="Button" BasedOn="{StaticResource ModernGhostButton}">
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="Margin" Value="2,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SelectionBarGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,1,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
         <!-- Default MenuItem hover color; a specific ContextMenu instance can override this in
              its own Resources to get a differently-tinted hover without affecting other menus. -->
         <SolidColorBrush x:Key="MenuItemHoverBrush" Color="#282838"/>

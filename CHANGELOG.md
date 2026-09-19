@@ -16,6 +16,7 @@ stable version they lead to.
 - **You can see where the keyboard is** — pressing Tab now puts a blue ring on every button, tab, sidebar entry, drop-down and list row it reaches (a mouse click still shows no ring). Tab and the arrow keys no longer get stuck on the first poster card, and the arrows move between cards by row and column.
 - **Better with a screen reader** — every icon button, text box and drop-down now has a name Narrator can read ("Add Game", "Launch arguments", "Play Cyberpunk 2077"), and each System & Performance tweak reads as one line, such as "Optimize: Windows Game Mode, standard, needs a restart".
 - **Edit Game has tabs** — All, Identity & Library, Launch, Performance and Scripts, like Settings and System. It still opens on All, looking as it did; the other tabs show one card each, keep your unsaved edits when you switch, and Ctrl+Tab moves between them. If Save refuses a value on a card you can't see, the dialog switches to it and puts the cursor in the field. Working Directory and Launch Arguments now sit under "Advanced launch options", which opens by itself when either has a value, and the scripts card is simply called Scripts.
+- **A selection bar** — select games with Ctrl+click, Shift+click or Ctrl+A and a bar appears over the bottom of the library: how many are selected, Add to Favorites, Change Category, Hide, More (the full right-click menu) and Clear. Tools get the same bar when two or more are selected. Right-click still works as before.
 
 ## 1.4.5
 

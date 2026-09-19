@@ -2673,10 +2673,62 @@
                         </ListBox>
                     </Grid>
 
+                    <!-- Floating bars over the bottom of the grid: the selection bar, then the undo
+                         toast. They float so the grid never moves when one appears, and they stack so
+                         both can show at once. -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18" Panel.ZIndex="100">
+
+                    <!-- Selection bar (UX-06): says a selection exists and offers what the batch
+                         menu does. The menu stays the fast path; More opens it. Named so the
+                         window's click-away (Window_PreviewMouseDown) leaves the selection alone. -->
+                    <Border x:Name="SelectionBar" Style="{StaticResource SelectionBarStyle}"
+                            Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding SelectionSummary}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,12,0"
+                                       Foreground="{StaticResource BrushTextPrimary}"/>
+                            <Button Command="{Binding BatchFavoriteCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="{Binding BatchFavoriteLabel}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE734;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="{Binding BatchFavoriteLabel}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding BatchChangeCategoryCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="Change Category">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8EC;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="Change Category..."/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding BatchHideCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="{Binding BatchHideLabel}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xED1A;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="{Binding BatchHideLabel}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="SelectionBarMore_Click" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="More batch actions" ToolTip="Every batch action, as in the right-click menu">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="More"/>
+                                    <TextBlock Text="&#xE70D;" Style="{StaticResource SelectionBarGlyph}" Margin="6,1,0,0"/>
+                                </StackPanel>
+                            </Button>
+                            <Rectangle Width="1" Fill="{StaticResource BrushBorderLight}" Margin="6,4"/>
+                            <Button Command="{Binding ClearSelectionCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="Clear selection" ToolTip="Clear selection (Esc)">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE711;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="Clear"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Floating Non-Blocking Undo Toast -->
-                    <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
+                    <Border HorizontalAlignment="Center" Margin="0,8,0,0"
                             Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
-                            CornerRadius="8" Padding="16,10" Panel.ZIndex="100">
+                            CornerRadius="8" Padding="16,10">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
                         </Border.Effect>
@@ -2702,6 +2754,8 @@
  AutomationProperties.Name="Dismiss"/>
                         </StackPanel>
                     </Border>
+
+                    </StackPanel>
 
                     <!-- The floating launch/import toast used to sit here; it now lives at the top of
                          the MAIN CONTENT AREA grid so it also renders over Settings/System/About. -->
@@ -4275,7 +4329,7 @@
                                                     </Border>
                                                     <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="Select several games (Shift+click for a range), then right-click one of them for the batch menu: Favorite, Hide, Change Category, Performance Profile, Refresh, or Remove them together. Delete removes the selection; Esc or a click on empty space clears it"
+                                                <TextBlock Text="Select several games (Shift+click for a range), then use the selection bar at the bottom, or right-click one of them for the batch menu: Favorite, Hide, Change Category, Performance Profile, Refresh, or Remove them together. Delete removes the selection; Esc or a click on empty space clears it"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 
