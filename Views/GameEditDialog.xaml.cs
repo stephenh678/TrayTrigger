@@ -35,13 +35,43 @@ public partial class GameEditDialog : Window
         // while it is recording, a combo box closing its drop-down - never gets here.
         KeyDown += (s, e) =>
         {
-            if (e.Key != Key.Escape || e.Handled || !_viewModel.HasUnsavedChanges) return;
+            if (e.Handled) return;
+
+            // Ctrl+Tab / Ctrl+Shift+Tab step through the tabs, as in a browser. Also bubbling, so a
+            // recording hotkey box still gets the combination.
+            if (e.Key == Key.Tab && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                _viewModel.MoveSection(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1);
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key != Key.Escape || !_viewModel.HasUnsavedChanges) return;
             e.Handled = true;
             if (ModernDialog.Confirm(this, "Discard Changes", "Discard your changes?",
                     "Nothing you changed here has been saved.", "Discard", "Keep Editing"))
             {
                 _viewModel.CancelCommand.Execute(null);
             }
+        };
+
+        // Save refused a value: the view model has already switched to a tab that shows it, so
+        // scroll the field into view and put the cursor in it. The message is in the footer.
+        _viewModel.ValidationFailed += field =>
+        {
+            var box = field switch
+            {
+                GameEditViewModel.EditField.SteamAppId => SteamAppIdBox,
+                GameEditViewModel.EditField.PreLaunchScript => PreLaunchScriptBox,
+                GameEditViewModel.EditField.PostExitScript => PostExitScriptBox,
+                _ => PreLaunchTimeoutBox,
+            };
+            Dispatcher.BeginInvoke(() =>
+            {
+                box.BringIntoView();
+                box.Focus();
+                box.SelectAll();
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
         };
 
         Loaded += (s, e) =>

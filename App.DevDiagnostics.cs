@@ -1138,6 +1138,40 @@ public partial class App
                 return;
             }
 
+            // --screenshot-edit-tab <All|Identity|Launch|Performance|Scripts> <out.png> [invalid]: Edit Game
+            // (scripts on) on one tab. With "invalid", a bad Steam App ID is typed on the Identity
+            // tab, the dialog is switched to the given tab and Save is pressed, so the capture shows
+            // where a refused value lands.
+            if ((e.Args[i].Equals("--screenshot-edit-tab", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-edit-tab", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                var section = Enum.Parse<GameEditSection>(e.Args[i + 1], ignoreCase: true);
+                string targetPng = e.Args[i + 2];
+                bool invalid = i + 3 < e.Args.Length && e.Args[i + 3].Equals("invalid", StringComparison.OrdinalIgnoreCase);
+                _skipSettingsSaveOnExit = true;
+                // A copy, so pressing Save for the "invalid" capture can never touch the library.
+                var source = _mainViewModel.Games.FirstOrDefault()?.Game;
+                var sampleGame = source == null
+                    ? new GameEntry { Name = "DOOM Eternal", Category = "Action", ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe" }
+                    : new GameEntry { Name = source.Name, Category = source.Category, ExecutablePath = source.ExecutablePath, WorkingDirectory = source.WorkingDirectory, Arguments = source.Arguments, IconPath = source.IconPath, CoverImagePath = source.CoverImagePath, SteamAppId = source.SteamAppId, IsSteamGame = source.IsSteamGame };
+                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                var editVm = (GameEditViewModel)dlg.DataContext;
+                if (invalid) editVm.SteamAppId = "not-a-number";
+                editVm.SelectedSection = section;
+                dlg.Show();
+                dlg.UpdateLayout();
+                if (invalid)
+                {
+                    editVm.SaveCommand.Execute(null);
+                    Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    dlg.UpdateLayout();
+                }
+                CaptureVisual(dlg, 820, 675, targetPng);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-help <topicId> <out.png>: renders the HelpDialog for one topic.
             if ((e.Args[i].Equals("--screenshot-help", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-help", StringComparison.OrdinalIgnoreCase)) &&

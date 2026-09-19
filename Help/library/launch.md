@@ -2,6 +2,8 @@
 
 Edit Game's Launch card has two parts: the route at the top (which client, if any, starts the game), then how the executable is run (from where, with what, and as whom). This is what each field does and, just as important, when it is ignored.
 
+Edit Game opens on its All tab, with every card in one scrolling column. The Launch tab shows this card on its own; Ctrl+Tab and Ctrl+Shift+Tab move between tabs, and nothing you type is lost when you switch.
+
 ## Which route a game takes
 
 TrayTrigger decides how to start a game from what the entry is, not from the path alone:
@@ -22,6 +24,10 @@ Shown at the top of the card for a platform game; a Local game has none.
 ## Executable / Shortcut Target
 
 The file or link to run for a Local game, and the file the icon comes from for every game. For a platform game, editing it changes nothing about the launch unless you also turn on "launch this executable directly" (above). If the file goes missing the card shows a MISSING badge and the right-click menu offers Locate Executable.
+
+## Advanced launch options
+
+Working Directory and Launch Arguments sit under **Advanced launch options**, a fold-out in the Launch card. It opens by itself when either field has a value, so nothing set on a game is hidden.
 
 ## Working Directory
 

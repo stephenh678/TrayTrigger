@@ -190,13 +190,36 @@
                 </DockPanel>
             </Border>
 
-            <!-- RIGHT COLUMN: CONFIGURATION CARDS (SCROLLABLE) -->
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0">
+            <!-- RIGHT COLUMN: TABS, THEN THE CONFIGURATION CARDS (SCROLLABLE) -->
+            <DockPanel Grid.Column="1">
+            <!-- All + one tab per card, as in Settings and System. Every card stays loaded and only
+                 its visibility follows the tab, so edits, validation and bindings survive a switch.
+                 Ctrl+Tab / Ctrl+Shift+Tab move between tabs (GameEditDialog.xaml.cs). -->
+            <Border DockPanel.Dock="Top" Margin="14,0,4,10" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                    BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
+                    views:ScrollToTop.Target="{Binding ElementName=EditScroll}">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="All" Command="{Binding SelectSectionCommand}" CommandParameter="All"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllSection}"/>
+                    <Button Content="Identity &amp; Library" Command="{Binding SelectSectionCommand}" CommandParameter="Identity" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsIdentitySection}"/>
+                    <Button Content="Launch" Command="{Binding SelectSectionCommand}" CommandParameter="Launch" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLaunchSection}"/>
+                    <Button Content="Performance" Command="{Binding SelectSectionCommand}" CommandParameter="Performance" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsPerformanceSection}"/>
+                    <Button Content="Scripts" Command="{Binding SelectSectionCommand}" CommandParameter="Scripts" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsScriptsSection}"
+                            Visibility="{Binding ShowScriptsCard, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+            </Border>
+            <ScrollViewer x:Name="EditScroll" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0"
+                          views:ScrollToTop.ResetOn="{Binding SelectedSection}">
                 <StackPanel>
 
                     <!-- CARD 1: IDENTITY & LIBRARY (title, category, hidden, store link) -->
-                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowIdentityCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Identity &amp; Library" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
@@ -252,7 +275,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox AutomationProperties.Name="Steam App ID" Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox x:Name="SteamAppIdBox" AutomationProperties.Name="Steam App ID" Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                         <Button Grid.Column="1" Content="Fetch by ID" Command="{Binding FetchBySteamIdCommand}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="12,4"/>
@@ -275,9 +298,10 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- CARD 2: LAUNCH (route first, then target, folder, arguments, admin, hotkey) -->
-                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                    <!-- CARD 2: LAUNCH (route first, then target, advanced options, admin, hotkey) -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowLaunchCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Launch" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
@@ -338,26 +362,33 @@
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
 
-                            <!-- Working Directory -->
-                            <TextBlock Text="Working Directory" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox AutomationProperties.Name="Working directory" Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" 
-                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button AutomationProperties.Name="Browse for the working directory" Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}" 
-                                        Style="{StaticResource ModernOutlineButton}"/>
-                            </Grid>
+                            <!-- Working folder and arguments are rarely needed, so they sit in an expander
+                                 that starts open whenever either one has a value (UX-14g). -->
+                            <Expander Header="Advanced launch options" Style="{StaticResource DisclosureExpander}"
+                                      IsExpanded="{Binding ShowAdvancedLaunchOptions}" Margin="0,0,0,10">
+                                <StackPanel Margin="0,8,0,0">
+                                    <!-- Working Directory -->
+                                    <TextBlock Text="Working Directory" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox AutomationProperties.Name="Working directory" Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                        <Button AutomationProperties.Name="Browse for the working directory" Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}" 
+                                                Style="{StaticResource ModernOutlineButton}"/>
+                                    </Grid>
 
-                            <!-- Launch Arguments -->
-                            <TextBlock Text="Launch Arguments (optional command-line parameters)" FontSize="11.5"
-                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <TextBox AutomationProperties.Name="Launch arguments" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ModernTextBox}"/>
-                            <TextBlock Text="{Binding ArgumentsHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
-                                       TextWrapping="Wrap" Margin="0,4,0,10"/>
+                                    <!-- Launch Arguments -->
+                                    <TextBlock Text="Launch Arguments (optional command-line parameters)" FontSize="11.5"
+                                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <TextBox AutomationProperties.Name="Launch arguments" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}"/>
+                                    <TextBlock Text="{Binding ArgumentsHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                               TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Expander>
 
                             <!-- Run as Administrator lives here with the arguments: both apply only when
                                  TrayTrigger starts the exe itself, and are ignored when a client launches
@@ -392,7 +423,8 @@
                     <!-- CARD 3: PERFORMANCE (session-scoped tweaks) - its own card so the profile
                          is explained where it is chosen instead of only on the System page. -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowPerformanceCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Performance" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
@@ -424,7 +456,7 @@
                          omitting the card, so the feature is discoverable from here. -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
-                            Visibility="{Binding ShowScriptsStub, Converter={StaticResource BoolToVis}}">
+                            Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
                         <DockPanel LastChildFill="True">
                             <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
@@ -439,9 +471,9 @@
                          Performance, or always shown for a game that already has a script) -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
-                            Visibility="{Binding ShowScriptsCard, Converter={StaticResource BoolToVis}}">
+                            Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="12.5" FontWeight="SemiBold"
+                            <TextBlock Text="Scripts" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Run your own .bat, .cmd, .ps1, .exe, or .com before this game starts and after it exits. Hide this card under Settings › Launch &amp; Performance."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
@@ -455,7 +487,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox AutomationProperties.Name="Pre-launch script path" Grid.Column="0" Text="{Binding PreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox x:Name="PreLaunchScriptBox" AutomationProperties.Name="Pre-launch script path" Grid.Column="0" Text="{Binding PreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                 <Button AutomationProperties.Name="Test the pre-launch script" Grid.Column="1" Content="Test" Command="{Binding TestPreLaunchScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
@@ -483,7 +515,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox AutomationProperties.Name="Post-exit script path" Grid.Column="0" Text="{Binding PostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox x:Name="PostExitScriptBox" AutomationProperties.Name="Post-exit script path" Grid.Column="0" Text="{Binding PostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                          IsEnabled="{Binding CanEditPostExitScript}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                 <Button AutomationProperties.Name="Test the post-exit script" Grid.Column="1" Content="Test" Command="{Binding TestPostExitScriptCommand}"
@@ -524,7 +556,7 @@
                                       IsChecked="{Binding WaitForPreLaunchScript}" IsEnabled="{Binding HasPreLaunchScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                             <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasPreLaunchScript}">
-                                <TextBox AutomationProperties.Name="Pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox x:Name="PreLaunchTimeoutBox" AutomationProperties.Name="Pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding PreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                            TextWrapping="Wrap" VerticalAlignment="Center"/>
@@ -574,6 +606,7 @@
 
                 </StackPanel>
             </ScrollViewer>
+            </DockPanel>
         </Grid>
 
         <!-- ============================================================== -->
