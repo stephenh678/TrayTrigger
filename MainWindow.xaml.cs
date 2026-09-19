@@ -24,14 +24,6 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = _viewModel;
 
-        // Not settable from XAML - it's a delegate, not a value.
-        LibraryFilterPopup.CustomPopupPlacementCallback = PlaceLibraryFilterPopup;
-
-        // Both card menus are shared resources; the card they were opened on is remembered in
-        // OnCardContextMenuOpening and its highlight cleared here when the menu goes away.
-        ((System.Windows.Controls.ContextMenu)FindResource("GameItemContextMenu")).Closed += OnCardContextMenuClosed;
-        ((System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu")).Closed += OnCardContextMenuClosed;
-
         try
         {
             var iconUri = new Uri("pack://application:,,,/TrayTrigger;component/Assets/app_icon.ico", UriKind.RelativeOrAbsolute);
@@ -335,67 +327,6 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Right-aligns the filter flyout under its button. The panel's width varies with its content
-    /// (MinWidth 270, MaxWidth 300, and the Launcher group's labels decide where in between it
-    /// lands), so a fixed HorizontalOffset can only ever be correct at one of those widths -
-    /// the previous -236 drifted visibly off the button as soon as a long launcher name widened
-    /// the panel. Measuring at placement time is correct at every width.
-    /// </summary>
-    private static CustomPopupPlacement[] PlaceLibraryFilterPopup(Size popupSize, Size targetSize, Point offset) =>
-    [
-        new CustomPopupPlacement(new Point(targetSize.Width - popupSize.Width, targetSize.Height + 4), PopupPrimaryAxis.Horizontal)
-    ];
-
-    /// <summary>
-    /// Moves focus into the flyout so its tick boxes are reachable by keyboard. A Popup does not
-    /// take focus on its own, which left the whole panel unusable without a mouse.
-    /// </summary>
-    private void LibraryFilterPopup_Opened(object? sender, EventArgs e)
-    {
-        if (LibraryFilterPopup.Child is FrameworkElement child)
-        {
-            child.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
-        }
-    }
-
-    /// <summary>
-    /// Escape closes the flyout and puts focus back on the button that opened it, per the ARIA
-    /// authoring practices - without the second half, focus is left orphaned on a panel that is
-    /// no longer on screen.
-    /// </summary>
-    private void LibraryFilterPopup_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Escape) return;
-        _viewModel.Library.Filter.IsOpen = false;
-        LibraryFilterButton.Focus();
-        e.Handled = true;
-    }
-
-    /// <summary>
-    /// Clear leaves the flyout open, but the button hides itself once nothing is ticked, and a
-    /// hidden button can't keep keyboard focus. Click runs ahead of the Command that clears, so
-    /// focus moves once that has happened: onto the first option, which is now the first
-    /// focusable element in the panel.
-    /// </summary>
-    private void LibraryFilterClear_Click(object sender, RoutedEventArgs e)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (LibraryFilterPopup.IsOpen && LibraryFilterPopup.Child is FrameworkElement child)
-            {
-                child.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
-            }
-        }), System.Windows.Threading.DispatcherPriority.Input);
-    }
-
-    /// <summary>
-    /// Closes the flyout before the help window opens over it. Click runs ahead of the button's
-    /// Command, which is what actually shows the topic.
-    /// </summary>
-    private void LibraryFilterHelp_Click(object sender, RoutedEventArgs e) =>
-        _viewModel.Library.Filter.IsOpen = false;
-
-    /// <summary>
     /// Library shortcuts documented in the About page's Quick Reference: Ctrl+F jumps focus
     /// to the search box, Escape clears an active search filter. Settings, About and System get the
     /// same pair for their card search - Ctrl+F here, Escape in <see cref="Window_KeyDown"/>; everything
@@ -415,12 +346,11 @@ public partial class MainWindow : Window
         if (_viewModel.CurrentSection != NavSection.Library) return;
         // Escape inside the open filter flyout is the flyout's (LibraryFilterPopup_PreviewKeyDown);
         // this tunnelling handler runs first and would spend it on the selection or the search.
-        if (e.Key == Key.Escape && LibraryFilterPopup.IsOpen) return;
+        if (e.Key == Key.Escape && LibraryPage.IsFilterFlyoutOpen) return;
 
         if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
         {
-            LibrarySearchTextBox.Focus();
-            LibrarySearchTextBox.SelectAll();
+            LibraryPage.FocusSearchBox();
             e.Handled = true;
         }
         else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control &&
@@ -475,6 +405,12 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>The library page's drop zone hands its drag back to the window that owns the drop.</summary>
+    internal void HandleDragOverFromPage(DragEventArgs e) => Window_DragOver(this, e);
+
+    /// <summary>The library page's drop zone hands its drop back to the window that owns it.</summary>
+    internal void HandleDropFromPage(DragEventArgs e) => Window_Drop(this, e);
+
     private void Window_DragOver(object sender, DragEventArgs e)
     {
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -519,50 +455,6 @@ public partial class MainWindow : Window
                     System.Windows.Threading.DispatcherPriority.Background);
             }
         }
-    }
-
-    private void DropZone_DragOver(object sender, DragEventArgs e)
-    {
-        Window_DragOver(sender, e);
-    }
-
-    private void DropZone_DragEnter(object sender, DragEventArgs e)
-    {
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            DropZoneBorder.BorderBrush = (Brush)FindResource("BrushAccent");
-            DropZoneBorder.Background = new SolidColorBrush(Color.FromArgb(50, 0, 122, 204));
-        }
-    }
-
-    private void DropZone_DragLeave(object sender, DragEventArgs e)
-    {
-        DropZoneBorder.BorderBrush = (Brush)FindResource("BrushBorderDark");
-        DropZoneBorder.Background = new SolidColorBrush(Color.FromRgb(22, 22, 25));
-    }
-
-    private void DropZone_Drop(object sender, DragEventArgs e)
-    {
-        DropZone_DragLeave(sender, e);
-        Window_Drop(sender, e);
-
-        // Drop is a bubbling routed event. Without this, the same drop continues bubbling
-        // past this element up to the Window's own separate Drop="Window_Drop" handler,
-        // running HandleFileDrop a second time for the one physical drop (which is what
-        // produced the "processed the folder twice" symptom).
-        e.Handled = true;
-    }
-
-    /// <summary>
-    /// The category strip only scrolls horizontally (vertical is disabled), but a mouse wheel
-    /// by default only ever raises vertical scroll requests - so without this, hovering the
-    /// category tabs and scrolling does nothing. Redirects the wheel delta to a horizontal scroll.
-    /// </summary>
-    private void CategoryScrollViewer_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-    {
-        var scrollViewer = (System.Windows.Controls.ScrollViewer)sender;
-        scrollViewer.ScrollToHorizontalOffset(scrollViewer.HorizontalOffset - e.Delta);
-        e.Handled = true;
     }
 
     private void OnRequestScanResultsPicker(List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<GameCandidate> folderCandidates)
@@ -700,35 +592,6 @@ public partial class MainWindow : Window
         _viewModel.ClearSelection();
     }
 
-    /// <summary>
-    /// An undo toast is held while the pointer is over it or keyboard focus is inside it, and its
-    /// 10-second window pauses. The Library's toast belongs to the library, the Settings one to
-    /// Settings, told apart by the toast's data context. Also re-read when the toast shows or hides:
-    /// a hidden toast can keep keyboard focus (Undo pressed with Enter), which must not leave the
-    /// next toast's window paused.
-    /// </summary>
-    private void OnUndoToastHoldChanged(object sender, RoutedEventArgs e) => UpdateUndoToastHold(sender);
-
-    private void OnUndoToastFocusChanged(object sender, DependencyPropertyChangedEventArgs e) => UpdateUndoToastHold(sender);
-
-    private void UpdateUndoToastHold(object sender)
-    {
-        if (sender is not FrameworkElement toast) return;
-        bool held = toast.IsVisible && (toast.IsMouseOver || toast.IsKeyboardFocusWithin);
-        if (toast.DataContext is SettingsViewModel settings) settings.SetUndoToastHeld(held);
-        else _viewModel.Library.SetUndoToastHeld(held);
-    }
-
-    /// <summary>The selection bar's More: the batch right-click menu, opened above the bar.</summary>
-    private void SelectionBarMore_Click(object sender, RoutedEventArgs e)
-    {
-        var menu = (System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu");
-        menu.DataContext = _viewModel;
-        menu.PlacementTarget = (UIElement)sender;
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
-        menu.IsOpen = true;
-    }
-
     private static bool IsWithin(DependencyObject? node, Func<FrameworkElement, bool> predicate)
     {
         while (node != null)
@@ -739,55 +602,6 @@ public partial class MainWindow : Window
                 : LogicalTreeHelper.GetParent(node);
         }
         return false;
-    }
-
-    /// <summary>
-    /// Explorer-style right-click on a card: if the card is one of two or more selected cards,
-    /// open the batch menu for the whole selection instead of the single-game menu; if it is
-    /// not selected, the selection is dropped first and the normal menu opens for that card.
-    /// </summary>
-    private void OnCardContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
-    {
-        if (sender is not FrameworkElement element || element.DataContext is not GameCardViewModel card) return;
-
-        // A previous card is cleared first in case a menu closed without raising Closed.
-        if (_contextMenuCard != null) _contextMenuCard.IsContextMenuOpen = false;
-        _contextMenuCard = null;
-
-        bool batch = card.IsSelected && _viewModel.SelectedCount >= 2;
-        if (!batch)
-        {
-            // Keep the card lit while its menu is open (see GameCardViewModel.IsContextMenuOpen).
-            // Not for the batch menu: the selection outline already marks every game it applies
-            // to, and zooming the one under the cursor would read as if the menu were about it alone.
-            _contextMenuCard = card;
-            card.IsContextMenuOpen = true;
-        }
-
-        if (!card.IsSelected)
-        {
-            _viewModel.ClearSelection();
-            return;
-        }
-        if (!batch) return;
-
-        e.Handled = true;
-        var menu = (System.Windows.Controls.ContextMenu)FindResource("GameBatchContextMenu");
-        menu.DataContext = _viewModel;
-        menu.PlacementTarget = element;
-        // The selection bar's More opens the same menu above itself; a right-click opens it here.
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-        menu.IsOpen = true;
-    }
-
-    /// <summary>The card whose right-click menu is open, if any - see <see cref="OnCardContextMenuOpening"/>.</summary>
-    private GameCardViewModel? _contextMenuCard;
-
-    private void OnCardContextMenuClosed(object sender, RoutedEventArgs e)
-    {
-        if (_contextMenuCard == null) return;
-        _contextMenuCard.IsContextMenuOpen = false;
-        _contextMenuCard = null;
     }
 
     private void OnRequestBatchCategory(List<GameCardViewModel> cards)

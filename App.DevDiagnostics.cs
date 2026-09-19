@@ -591,7 +591,7 @@ public partial class App
                     {
                         open.Stop();
                         var target = FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && ReferenceEquals(b.DataContext, selected.LastOrDefault()));
-                        var menu = (ContextMenu)_mainWindow.FindResource("GameBatchContextMenu");
+                        var menu = (ContextMenu)_mainWindow.LibraryPage.FindResource("GameBatchContextMenu");
                         menu.DataContext = _mainViewModel;
                         menu.PlacementTarget = target ?? (UIElement)_mainWindow;
                         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Center;
@@ -1689,8 +1689,8 @@ public partial class App
                         // so the compiler proves nothing - a wrong name throws on first hover.
                         // Begin() resolves names against the element's own namescope, exactly as
                         // the trigger's BeginStoryboard does.
-                        var zoomIn = Dispatcher.Invoke(() => (System.Windows.Media.Animation.Storyboard)_mainWindow.FindResource("PosterCardZoomIn"));
-                        var zoomOut = Dispatcher.Invoke(() => (System.Windows.Media.Animation.Storyboard)_mainWindow.FindResource("PosterCardZoomOut"));
+                        var zoomIn = Dispatcher.Invoke(() => (System.Windows.Media.Animation.Storyboard)_mainWindow.LibraryPage.FindResource("PosterCardZoomIn"));
+                        var zoomOut = Dispatcher.Invoke(() => (System.Windows.Media.Animation.Storyboard)_mainWindow.LibraryPage.FindResource("PosterCardZoomOut"));
 
                         Dispatcher.Invoke(() => zoomIn.Begin(card, isControllable: true));
                         double peak = 1.0;
@@ -1937,17 +1937,17 @@ public partial class App
                         // button's content Grid. Nothing above proves it rendered, or that the
                         // number in it is the count rather than, say, an unresolved binding.
                         string badge = Dispatcher.Invoke(() =>
-                            !_mainWindow.LibraryFilterBadge.IsVisible
+                            !_mainWindow.LibraryPage.LibraryFilterBadge.IsVisible
                                 ? "<hidden>"
-                                : (_mainWindow.LibraryFilterBadge.Child as TextBlock)?.Text ?? "<no text>");
+                                : (_mainWindow.LibraryPage.LibraryFilterBadge.Child as TextBlock)?.Text ?? "<no text>");
                         if (badge != "1") throw new Exception($"The count badge did not render '1' for one active filter. Saw: '{badge}'.");
 
                         // The badge overlays the button's top-right corner, so it has to be square
                         // in that corner and it must not eat the clicks underneath it.
                         var badgeGeometry = Dispatcher.Invoke(() =>
                         {
-                            var b = _mainWindow.LibraryFilterBadge;
-                            var btn = _mainWindow.LibraryFilterButton;
+                            var b = _mainWindow.LibraryPage.LibraryFilterBadge;
+                            var btn = _mainWindow.LibraryPage.LibraryFilterButton;
                             var badgeTopRight = b.PointToScreen(new Point(b.ActualWidth, 0));
                             var buttonTopRight = btn.PointToScreen(new Point(btn.ActualWidth, 0));
                             var glyph = FindVisualChildren<TextBlock>(btn).FirstOrDefault();
@@ -1974,7 +1974,7 @@ public partial class App
                             var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(_mainWindow, p => p.IsOpen);
                             if (popup?.Child is not FrameworkElement panel) return double.NaN;
                             double panelRight = panel.PointToScreen(new Point(panel.ActualWidth, 0)).X;
-                            double buttonRight = _mainWindow.LibraryFilterButton.PointToScreen(new Point(_mainWindow.LibraryFilterButton.ActualWidth, 0)).X;
+                            double buttonRight = _mainWindow.LibraryPage.LibraryFilterButton.PointToScreen(new Point(_mainWindow.LibraryPage.LibraryFilterButton.ActualWidth, 0)).X;
                             return Math.Abs(panelRight - buttonRight);
                         });
                         if (double.IsNaN(drift)) throw new Exception("Could not measure the flyout - it was not open when placement was checked.");
@@ -1999,7 +1999,7 @@ public partial class App
                         if (Dispatcher.Invoke(() => steamBox.IsChecked == true)) throw new Exception("Clear emptied the filter but left the tick box checked on screen.");
                         if (Dispatcher.Invoke(() => filter.IsOpen)) throw new Exception("Clear left the flyout open - the Clear button hides itself at zero, so it vanishes under the pointer.");
 
-                        if (Dispatcher.Invoke(() => _mainWindow.LibraryFilterBadge.IsVisible))
+                        if (Dispatcher.Invoke(() => _mainWindow.LibraryPage.LibraryFilterBadge.IsVisible))
                             throw new Exception("The badge survived Clear - it should disappear at zero, not show a 0.");
 
                         outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} option rows rendered; ticking Steam went {before} -> {after} games, badge read 1, flyout right-aligned within {drift:0.#}px, Clear restored {cleared} and closed the flyout; screenshot {shot}";
@@ -2476,7 +2476,7 @@ public partial class App
                     sampleCard = _mainViewModel.CreateCardViewModel(sample);
                 }
 
-                var realMenu = (ContextMenu)_mainWindow.FindResource("GameItemContextMenu");
+                var realMenu = (ContextMenu)_mainWindow.LibraryPage.FindResource("GameItemContextMenu");
                 var panel = new StackPanel { DataContext = sampleCard };
                 var menuItems = realMenu.Items.OfType<UIElement>().ToList();
                 realMenu.Items.Clear();
@@ -3242,7 +3242,7 @@ public partial class App
     /// </summary>
     private List<string> OpenMenuAndReadHeaders(string resourceKey, object dataContext)
     {
-        var menu = (ContextMenu)_mainWindow!.FindResource(resourceKey);
+        var menu = (ContextMenu)_mainWindow!.LibraryPage.FindResource(resourceKey);
         menu.PlacementTarget = _mainWindow;
         menu.DataContext = dataContext;
         menu.IsOpen = true;
