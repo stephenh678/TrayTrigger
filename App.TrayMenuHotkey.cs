@@ -10,7 +10,7 @@ namespace TrayTrigger;
 
 /// <summary>
 /// The open-tray-menu hotkey (default Ctrl+Alt+T): the same menu the tray icon's right-click
-/// opens, placed against the tray icon as a right-click would place it, with the search box
+/// opens, placed as a right-click on the tray icon places it, with the search box
 /// focused by its Opened handler. Pressed again while the menu is open, it closes it.
 /// </summary>
 public partial class App
@@ -32,19 +32,6 @@ public partial class App
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindow(string className, string? windowName);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string className, string? windowName);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out NativeRect rect);
-    [DllImport("user32.dll")] private static extern IntPtr MonitorFromRect(ref NativeRect rect, uint flags);
-    [DllImport("user32.dll")] private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MonitorInfo
-    {
-        public uint cbSize;
-        public NativeRect rcMonitor;
-        public NativeRect rcWork;
-        public uint dwFlags;
-    }
-
-    private const uint MONITOR_DEFAULTTONEAREST = 2;
 
     private void OnTrayMenuHotkeyTriggered()
     {
@@ -55,7 +42,10 @@ public partial class App
             return;
         }
 
-        PlaceAgainstTrayIcon(menu);
+        // The menu is shared with the tray icon's right-click, so whatever placement this sets is
+        // put back when it closes; the right-click must keep opening where it always has.
+        var saved = (menu.Placement, menu.PlacementTarget, menu.PlacementRectangle, menu.HorizontalOffset, menu.VerticalOffset, menu.CustomPopupPlacementCallback);
+        PlaceAsIfRightClicked(menu);
         menu.IsOpen = true;
 
         // A popup opened by a background app doesn't get the keyboard, so typing would go to
@@ -68,42 +58,45 @@ public partial class App
             SetForegroundWindow(source.Handle);
             if (!menu.IsOpen) menu.IsOpen = true;
         }
+
+        void Restore(object? sender, RoutedEventArgs e)
+        {
+            menu.Closed -= Restore;
+            (menu.Placement, menu.PlacementTarget, menu.PlacementRectangle, menu.HorizontalOffset, menu.VerticalOffset, menu.CustomPopupPlacementCallback) = saved;
+        }
+        menu.Closed += Restore;
     }
 
     /// <summary>
-    /// Anchors the menu to the tray icon: above it with the taskbar at the bottom (below, left or
-    /// right of it for a taskbar on the other edges), so it opens where a right-click opens it rather
-    /// than wherever the pointer happens to be. An icon kept in the overflow area has no spot of
-    /// its own, so the menu anchors to the notification area by the clock instead.
+    /// Places the menu where a right-click on the tray icon puts it: a right-click opens it at the
+    /// pointer, which is over the icon, so this opens it with a corner at the icon's centre, trying
+    /// the corners in the order a pointer placement does (below-right, below-left, above-right,
+    /// above-left) and taking the first that fits - above the taskbar, for a taskbar at the bottom. An icon kept in the overflow area
+    /// has no spot of its own, so the notification area by the clock stands in; if neither can be
+    /// found, the menu opens at the pointer.
     /// </summary>
-    private void PlaceAgainstTrayIcon(ContextMenu menu)
+    private void PlaceAsIfRightClicked(ContextMenu menu)
     {
-        menu.PlacementTarget = null;
-        menu.HorizontalOffset = 0;
-        menu.VerticalOffset = 0;
-
         if (!TryGetTrayAnchor(out NativeRect anchor))
         {
             menu.Placement = PlacementMode.MousePoint;
             return;
         }
 
-        var info = new MonitorInfo { cbSize = (uint)Marshal.SizeOf<MonitorInfo>() };
-        GetMonitorInfo(MonitorFromRect(ref anchor, MONITOR_DEFAULTTONEAREST), ref info);
-        var work = info.rcWork;
-
-        // The taskbar is on the edge the anchor sits outside the work area on.
-        menu.Placement =
-            anchor.Top >= work.Bottom ? PlacementMode.Top :
-            anchor.Bottom <= work.Top ? PlacementMode.Bottom :
-            anchor.Left >= work.Right ? PlacementMode.Left :
-            anchor.Right <= work.Left ? PlacementMode.Right :
-            PlacementMode.Top;
-
         // Without a PlacementTarget, WPF takes the rectangle in physical screen pixels, the same
         // units the shell reports the icon in (measured by --test-tray-search at 125 %).
-        menu.PlacementRectangle = new Rect(anchor.Left, anchor.Top,
-            Math.Max(1, anchor.Right - anchor.Left), Math.Max(1, anchor.Bottom - anchor.Top));
+        menu.PlacementTarget = null;
+        menu.HorizontalOffset = 0;
+        menu.VerticalOffset = 0;
+        menu.PlacementRectangle = new Rect((anchor.Left + anchor.Right) / 2.0, (anchor.Top + anchor.Bottom) / 2.0, 0, 0);
+        menu.Placement = PlacementMode.Custom;
+        menu.CustomPopupPlacementCallback = (popupSize, _, _) =>
+        [
+            new CustomPopupPlacement(new Point(0, 0), PopupPrimaryAxis.Horizontal),
+            new CustomPopupPlacement(new Point(-popupSize.Width, 0), PopupPrimaryAxis.Horizontal),
+            new CustomPopupPlacement(new Point(0, -popupSize.Height), PopupPrimaryAxis.Horizontal),
+            new CustomPopupPlacement(new Point(-popupSize.Width, -popupSize.Height), PopupPrimaryAxis.Horizontal),
+        ];
     }
 
     private bool TryGetTrayAnchor(out NativeRect anchor)

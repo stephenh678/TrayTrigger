@@ -115,14 +115,14 @@ public partial class App
             Check("the tray menu hotkey opens the menu", menu.IsOpen);
             if (TryGetTrayAnchor(out var anchor))
             {
+                // Where a right-click on the icon would put it: a corner of the menu at the icon's centre.
+                double cx = (anchor.Left + anchor.Right) / 2.0, cy = (anchor.Top + anchor.Bottom) / 2.0;
                 var topLeft = menu.PointToScreen(new Point(0, 0));
                 var bottomRight = menu.PointToScreen(new Point(menu.ActualWidth, menu.ActualHeight));
-                // Touching the icon on one side (within a few pixels), overlapping it along that side.
-                bool touches = Math.Abs(bottomRight.Y - anchor.Top) <= 4 || Math.Abs(topLeft.Y - anchor.Bottom) <= 4
-                    || Math.Abs(bottomRight.X - anchor.Left) <= 4 || Math.Abs(topLeft.X - anchor.Right) <= 4;
-                bool overlaps = (topLeft.X <= anchor.Right && bottomRight.X >= anchor.Left) || (topLeft.Y <= anchor.Bottom && bottomRight.Y >= anchor.Top);
-                Check("the menu opens against the tray icon", touches && overlaps,
-                    $"icon {anchor.Left},{anchor.Top}-{anchor.Right},{anchor.Bottom}; menu {topLeft.X:0},{topLeft.Y:0}-{bottomRight.X:0},{bottomRight.Y:0}; {menu.Placement}");
+                bool cornerAtIcon = (Math.Abs(topLeft.Y - cy) <= 2 || Math.Abs(bottomRight.Y - cy) <= 2)
+                    && topLeft.X - 2 <= cx && cx <= bottomRight.X + 2;
+                Check("the menu opens where a right-click on the icon opens it", cornerAtIcon,
+                    $"icon centre {cx:0},{cy:0}; menu {topLeft.X:0},{topLeft.Y:0}-{bottomRight.X:0},{bottomRight.Y:0}");
             }
             else Check("the tray icon's position is known", false);
             Check("box has keyboard focus when the menu opens", box.IsKeyboardFocused,
@@ -156,6 +156,9 @@ public partial class App
             Keyboard.Focus(box);
         });
         string? launched = null;
+        string hotkeyPlacementBefore = "";
+        static string DescribePlacement(ContextMenu m) =>
+            $"{m.Placement}, target {m.PlacementTarget?.GetType().Name ?? "none"}, rect {m.PlacementRectangle}, offset {m.HorizontalOffset},{m.VerticalOffset}";
         steps.Enqueue(() =>
         {
             // Swap the result rows' launch for a recorder, then press Enter in the box.
@@ -216,14 +219,23 @@ public partial class App
         steps.Enqueue(() =>
         {
             Check("the deferred rebuild runs once the menu closes", !ReferenceEquals(_trayIcon.ContextMenu, menu));
+            menu = _trayIcon.ContextMenu;
+            hotkeyPlacementBefore = DescribePlacement(menu);
             OnTrayMenuHotkeyTriggered();
         });
         steps.Enqueue(() =>
         {
-            bool opened = _trayIcon.ContextMenu.IsOpen;
+            bool opened = menu.IsOpen;
             OnTrayMenuHotkeyTriggered();
-            Check("pressing the tray menu hotkey again closes the menu", opened && !_trayIcon.ContextMenu.IsOpen,
-                $"opened: {opened}, open after second press: {_trayIcon.ContextMenu.IsOpen}");
+            Check("pressing the tray menu hotkey again closes the menu", opened && !menu.IsOpen,
+                $"opened: {opened}, open after second press: {menu.IsOpen}");
+        });
+        steps.Enqueue(() =>
+        {
+            // The right-click shares the menu, so the hotkey's placement must not outlive it.
+            string after = DescribePlacement(menu);
+            Check("closing puts the right-click's placement back", after == hotkeyPlacementBefore,
+                $"before: {hotkeyPlacementBefore}; after: {after}");
         });
 
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
