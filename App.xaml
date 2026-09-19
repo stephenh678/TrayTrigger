@@ -7,6 +7,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <converters:TabBackgroundConverter x:Key="TabBackgroundConverter"/>
         <converters:TabForegroundConverter x:Key="TabForegroundConverter"/>
+        <converters:ScrollEdgeConverter x:Key="ScrollEdgeConverter"/>
 
         <!-- Colors -->
         <Color x:Key="ColorBgDark">#121214</Color>
@@ -40,7 +41,8 @@
         <Color x:Key="ColorBrand">#2F8FFF</Color>
         <Color x:Key="ColorTextPrimary">#FFFFFF</Color>
         <Color x:Key="ColorTextSecondary">#9E9EAA</Color>
-        <Color x:Key="ColorTextMuted">#6E6E7A</Color>
+        <!-- 5.0:1 on cards (#1C1C23), 5.5:1 on the window background: WCAG AA for small text. -->
+        <Color x:Key="ColorTextMuted">#8A8A96</Color>
 
         <!-- Brushes -->
         <SolidColorBrush x:Key="BrushBgDark" Color="{StaticResource ColorBgDark}"/>
@@ -69,8 +71,50 @@
         <FontFamily x:Key="AppFont">Segoe UI</FontFamily>
         <FontFamily x:Key="IconFont">Segoe MDL2 Assets, Segoe Fluent Icons</FontFamily>
 
+        <!-- Keyboard focus: a 1 px accent ring drawn only when focus arrives by keyboard (Tab,
+             arrows), never on a mouse click. WPF's own dotted rectangle is black and vanished on
+             the dark surfaces, so buttons, tabs, the sidebar and list rows showed no focus at all. -->
+        <Style x:Key="KeyboardFocusRing">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border Margin="-2" CornerRadius="7" BorderThickness="1" SnapsToDevicePixels="True"
+                                BorderBrush="{StaticResource BrushAccentHover}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="KeyboardFocusRingRound">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border Margin="-2" CornerRadius="100" BorderThickness="1" SnapsToDevicePixels="True"
+                                BorderBrush="{StaticResource BrushAccentHover}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- A Details List or Tools list row: hugs the row's own border, inside the item's spacing. -->
+        <Style x:Key="ListRowFocusRing">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border Margin="0,2,0,3" CornerRadius="6" BorderThickness="1" SnapsToDevicePixels="True"
+                                BorderBrush="{StaticResource BrushAccentHover}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A bare ItemsControl only hosts items (tab strips, card grids, tweak lists), yet WPF makes
+             it a tab stop of its own that shows nothing when focused. Its items stay reachable. -->
+        <Style TargetType="ItemsControl">
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+
         <!-- Modern Danger Button -->
         <Style x:Key="ModernDangerButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -84,7 +128,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -105,6 +149,7 @@
 
         <!-- Modern Accent Button -->
         <Style x:Key="ModernAccentButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -118,7 +163,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -138,6 +183,7 @@
 
         <!-- Circular Play Button (dark fill by default, accent blue on hover) -->
         <Style x:Key="CirclePlayButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="FontSize" Value="17"/>
@@ -161,6 +207,7 @@
 
         <!-- Modern Outline Button -->
         <Style x:Key="ModernOutlineButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -178,7 +225,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 CornerRadius="5" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -199,6 +246,7 @@
 
         <!-- Modern Ghost Button -->
         <Style x:Key="ModernGhostButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Normal"/>
@@ -212,7 +260,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -276,6 +324,7 @@
              RelativeSource TemplatedParent is unreliable in WPF; a converter works with the
              actual runtime values directly, sidestepping that entirely. -->
         <Style x:Key="SegmentedTabButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -301,7 +350,7 @@
                                     <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="IsMouseOver"/>
                                 </MultiBinding>
                             </Border.Background>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -310,6 +359,7 @@
 
         <!-- Modern Sidebar Navigation Button -->
         <Style x:Key="SidebarNavButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
@@ -349,6 +399,7 @@
 
         <!-- Card Hover Quick Action Circle Buttons -->
         <Style x:Key="CardHoverCircleButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Width" Value="28"/>
@@ -367,7 +418,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 CornerRadius="14">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -385,6 +436,7 @@
         </Style>
 
         <Style x:Key="CardHoverDeleteButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Width" Value="28"/>
@@ -403,7 +455,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 CornerRadius="14">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -422,6 +474,7 @@
 
         <!-- Favorite Star Toggle (Game Cards, List Rows, Details Dialog) -->
         <Style x:Key="FavoriteToggleButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="Width" Value="22"/>
             <Setter Property="Height" Value="22"/>
             <Setter Property="FontSize" Value="15"/>
@@ -528,6 +581,7 @@
 
         <!-- Modern Dark ComboBox -->
         <Style x:Key="ModernComboBox" TargetType="ComboBox">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
@@ -810,6 +864,242 @@
             </Setter>
         </Style>
 
+        <!-- Tooltips: dark, like the context menus, instead of the stock light Windows box. Many
+             are full sentences, so they wrap at MaxWidth. The TextBlock style inside the
+             presenter reaches the TextBlock WPF generates for a plain string tooltip, and leaves
+             any tooltip with its own content alone. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="{StaticResource BrushSurfaceActive}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushBorderLight}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="MaxWidth" Value="320"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                MaxWidth="{TemplateBinding MaxWidth}">
+                            <ContentPresenter>
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A plain disclosure: chevron and label on one line, content below when open. Used for
+             Edit Game's "Advanced launch options". The header is a ToggleButton, so it takes Tab,
+             Space and the keyboard focus ring like any button. -->
+        <Style x:Key="DisclosureExpander" TargetType="Expander">
+            <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Expander">
+                        <DockPanel>
+                            <ToggleButton x:Name="HeaderToggle" DockPanel.Dock="Top" HorizontalAlignment="Left"
+                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                          AutomationProperties.Name="{TemplateBinding Header}"
+                                          FocusVisualStyle="{StaticResource KeyboardFocusRing}" Cursor="Hand"
+                                          Foreground="{TemplateBinding Foreground}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                                            <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                                       VerticalAlignment="Center" Margin="0,1,6,0" Foreground="{TemplateBinding Foreground}"/>
+                                            <ContentPresenter VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Chevron" Property="Text" Value="&#xE70D;"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                            </ToggleButton>
+                            <ContentPresenter x:Name="Body" Visibility="Collapsed"/>
+                        </DockPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="Body" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The floating selection bar over the Library and Tools grids (UX-06), and its
+             compact buttons: icon plus label, ghost until hovered. -->
+        <Style x:Key="SelectionBarStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BrushSurfaceActive}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="TextElement.FontSize" Value="12"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SelectionBarButton" TargetType="Button" BasedOn="{StaticResource ModernGhostButton}">
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="Margin" Value="2,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SelectionBarGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,1,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- System & Performance value pills (UX-14c). Static facts about the hardware (VRAM,
+             refresh rate, drive type) are neutral with teal text; live readings that change while
+             you watch (CPU load, RAM used, ping) are blue-tinted, so the two never look alike. -->
+        <SolidColorBrush x:Key="BrushPillBackground" Color="#16161B"/>
+        <SolidColorBrush x:Key="BrushPillBorder" Color="#252530"/>
+        <SolidColorBrush x:Key="BrushSpecStatic" Color="#4EC9B0"/>
+        <SolidColorBrush x:Key="BrushLivePillBackground" Color="#132232"/>
+        <!-- Floating bars over a page: the selection bar and the undo toasts. -->
+        <SolidColorBrush x:Key="BrushFloatingBar" Color="#24242E"/>
+        <Color x:Key="ColorFloatingShadow">#000000</Color>
+        <!-- Edit Game's tab strip, the same surface as the Library's category strip. -->
+        <SolidColorBrush x:Key="BrushTabStripBackground" Color="#181820"/>
+        <!-- Key caps in Help > About's keyboard table. -->
+        <SolidColorBrush x:Key="BrushKeyCapBackground" Color="#252532"/>
+        <SolidColorBrush x:Key="BrushKeyCapBorder" Color="#353545"/>
+        <Style x:Key="SpecStaticPill" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BrushPillBackground}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushPillBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextElement.Foreground" Value="{StaticResource BrushSpecStatic}"/>
+            <Setter Property="TextElement.FontSize" Value="11"/>
+            <Setter Property="TextElement.FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="SpecLivePill" TargetType="Border" BasedOn="{StaticResource SpecStaticPill}">
+            <Setter Property="Background" Value="{StaticResource BrushLivePillBackground}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushBorderAccent}"/>
+            <Setter Property="TextElement.Foreground" Value="{StaticResource BrushAccentHover}"/>
+        </Style>
+
+        <!-- A horizontal strip that scrolls without a scrollbar (UX-14f): the Library and Tools
+             category tabs. When tabs run past an edge, that edge fades out and shows a chevron;
+             pressing it (or holding it) scrolls that way. Keyboard users reach every tab with Tab,
+             which scrolls it into view, so the chevrons are not tab stops. The fade matches the
+             strip's #181820 background. -->
+        <LinearGradientBrush x:Key="BrushTabStripFadeLeft" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#FF181820" Offset="0.45"/>
+            <GradientStop Color="#00181820" Offset="1"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="BrushTabStripFadeRight" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#00181820" Offset="0"/>
+            <GradientStop Color="#FF181820" Offset="0.55"/>
+        </LinearGradientBrush>
+        <Style x:Key="EdgeChevronButton" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Interval" Value="40"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="{TemplateBinding Background}">
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                       Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"
+                                       HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="4,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="EdgeChevronScrollViewer" TargetType="ScrollViewer">
+            <Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <ScrollContentPresenter CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                            <RepeatButton Style="{StaticResource EdgeChevronButton}" HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                                          Content="&#xE76B;" Background="{StaticResource BrushTabStripFadeLeft}"
+                                          Command="{x:Static ScrollBar.LineLeftCommand}" AutomationProperties.Name="Scroll tabs left">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollEdgeConverter}" ConverterParameter="Left">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                            </RepeatButton>
+                            <RepeatButton Style="{StaticResource EdgeChevronButton}" HorizontalAlignment="Right" HorizontalContentAlignment="Right"
+                                          Content="&#xE76C;" Background="{StaticResource BrushTabStripFadeRight}"
+                                          Command="{x:Static ScrollBar.LineRightCommand}" AutomationProperties.Name="Scroll tabs right">
+                                <RepeatButton.Visibility>
+                                    <MultiBinding Converter="{StaticResource ScrollEdgeConverter}" ConverterParameter="Right">
+                                        <Binding Path="HorizontalOffset" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                        <Binding Path="ScrollableWidth" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    </MultiBinding>
+                                </RepeatButton.Visibility>
+                            </RepeatButton>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The tray menu's search box (UX-16): no chrome of its own, so the row looks like any
+             other tray row; the caret and the placeholder behind it say it takes typing. -->
+        <Style x:Key="TraySearchBox" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="SelectionBrush" Value="{StaticResource BrushAccent}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Default MenuItem hover color; a specific ContextMenu instance can override this in
              its own Resources to get a differently-tinted hover without affecting other menus. -->
         <SolidColorBrush x:Key="MenuItemHoverBrush" Color="#282838"/>
@@ -933,7 +1223,7 @@
             <Setter Property="Cursor" Value="Arrow"/>
             <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Template">
                 <Setter.Value>

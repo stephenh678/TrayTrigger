@@ -27,7 +27,7 @@ public partial class WelcomeDialog : Window
     /// this dialog closes (see MainWindow.MaybeShowWelcomePrompt).</summary>
     public bool ScanRequested { get; private set; }
 
-    private void OnGetStartedClick(object sender, RoutedEventArgs e) => Close();
+    private void OnSkipClick(object sender, RoutedEventArgs e) => Close();
 
     private void OnScanClick(object sender, RoutedEventArgs e)
     {

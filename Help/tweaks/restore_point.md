@@ -6,7 +6,7 @@ A System Restore point is a Windows snapshot of system files, drivers, and the r
 
 ## When TrayTrigger creates one
 
-- Before Apply Performance Preset and before Reset Defaults, if the option is on in Settings under Performance Tweaks.
+- Before Apply Performance Preset and before Restore Previous Settings, if the option is on in Settings under Performance Tweaks. The status line says afterwards whether one was created.
 - Not before individual tweak toggles. Those change one value each and can be reverted from the same button.
 - Not for Performance Profiles, which restore themselves when the game exits.
 

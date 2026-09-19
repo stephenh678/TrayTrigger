@@ -88,8 +88,9 @@
             <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
                 <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="End Session (restore tweaks)" Command="{Binding EndSessionCommand}">
-                <MenuItem.Icon><TextBlock Text="&#xE7A7;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+            <MenuItem Header="Close Game" Command="{Binding CloseGameCommand}"
+                      ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
+                <MenuItem.Icon><TextBlock Text="&#xE7E8;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -101,7 +102,8 @@
                     </Style>
                 </MenuItem.Style>
             </MenuItem>
-            <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}">
+            <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}"
+                      ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
                 <MenuItem.Icon><TextBlock Text="&#xE711;" Style="{StaticResource MenuGlyphIcon}" Foreground="{StaticResource BrushDanger}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
@@ -214,7 +216,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
                           Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
 
                 <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
@@ -236,7 +238,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
                           Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
 
                 <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}"
@@ -255,7 +257,7 @@
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"
                                TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding DisplayPath}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                    <TextBlock Text="{Binding DisplayPath}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
                 </StackPanel>
 
@@ -576,10 +578,10 @@
                  over whichever section is visible. Offset above the undo toast's anchor point so
                  the two don't overlap if both happen to be visible at once. -->
             <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,70"
-                    Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                    Background="{StaticResource BrushFloatingBar}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
                     CornerRadius="8" Padding="16,10" Panel.ZIndex="100">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
                 </Border.Effect>
                 <Border.Style>
                     <Style TargetType="Border">
@@ -652,19 +654,19 @@
                          "Refresh Posters" moved to Settings > Library & Art: a rare maintenance
                          action that was taking primary toolbar space. -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
+                        <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Game" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
+                        <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}">
+                        <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
@@ -676,7 +678,7 @@
                     <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="6" Padding="3" Margin="0,0,16,0"
                             HorizontalAlignment="Left" VerticalAlignment="Center">
-                        <ScrollViewer x:Name="CategoryScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Focusable="False"
+                        <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource EdgeChevronScrollViewer}"
                                       PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
                             <ItemsControl ItemsSource="{Binding CategoryTabs}">
                                 <ItemsControl.ItemsPanel>
@@ -686,7 +688,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Command="{Binding SelectCommand}"
+                                        <Button AutomationProperties.Name="{Binding DisplayName}" Command="{Binding SelectCommand}"
                                                 Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
                                                 Margin="0,0,2,0">
                                             <StackPanel Orientation="Horizontal">
@@ -715,11 +717,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox x:Name="LibrarySearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox AutomationProperties.Name="Search games" x:Name="LibrarySearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              Style="{StaticResource ModernTextBox}" Margin="0,0,10,0"
                              Tag="Search games by title, category, or path..."/>
 
-                    <ComboBox Grid.Column="1"
+                    <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
                               ItemsSource="{Binding SortOptions}"
                               SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                               Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
@@ -811,7 +813,7 @@
                                                 <DataTemplate DataType="{x:Type vm:LibraryFilterGroup}">
                                                     <StackPanel Margin="0,0,0,10"
                                                                 Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
-                                                        <TextBlock Text="{Binding Title}" FontSize="10.5" FontWeight="Bold"
+                                                        <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="Bold"
                                                                    Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,4"/>
                                                         <ItemsControl ItemsSource="{Binding Options}">
                                                             <ItemsControl.ItemTemplate>
@@ -848,28 +850,28 @@
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Extra Large"
                                     Width="32" Height="30" Padding="0" Cursor="Hand"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsExtraLargeView}"
- AutomationProperties.Name="Extra Large posters view">
+ AutomationProperties.Name="Extra Large posters view" ToolTip="Extra large posters">
                                 <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsGridView}"
- AutomationProperties.Name="Poster grid view">
+ AutomationProperties.Name="Poster grid view" ToolTip="Poster grid">
                                 <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Compact Icons"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsIconsView}"
- AutomationProperties.Name="Compact icons view">
+ AutomationProperties.Name="Compact icons view" ToolTip="Compact icons">
                                 <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                             <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Details List"
                                     Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                     Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsListView}"
- AutomationProperties.Name="Details list view">
+ AutomationProperties.Name="Details list view" ToolTip="Details list">
                                 <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                            Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
@@ -920,19 +922,19 @@
                                        FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                        FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
+                                <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding AddGameCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
+                                <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="Add Game" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}">
+                                <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
@@ -1053,7 +1055,7 @@
                             <!-- ============================================================== -->
                             <!-- VIEW 1: POSTER CARDS GRID VIEW                                 -->
                             <!-- ============================================================== -->
-                            <ItemsControl ItemsSource="{Binding FilteredGames}">
+                            <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
                                 <ItemsControl.Style>
                                     <Style TargetType="ItemsControl">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -1162,11 +1164,11 @@
                                                                     <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="10.5" 
+                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11" 
                                                                            Foreground="{StaticResource BrushTextSecondary}" 
                                                                            FontFamily="{StaticResource AppFont}"
                                                                            TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10" 
+                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11" 
                                                                            Foreground="{StaticResource BrushTextMuted}" 
                                                                            HorizontalAlignment="Right"
                                                                            TextAlignment="Right"
@@ -1213,7 +1215,7 @@
                                                                        Foreground="{StaticResource BrushTextSecondary}" 
                                                                        FontFamily="{StaticResource AppFont}"
                                                                        TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10.5" 
+                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11" 
                                                                        Foreground="{StaticResource BrushTextMuted}" 
                                                                        HorizontalAlignment="Right"
                                                                        TextAlignment="Right"
@@ -1380,7 +1382,7 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock Text="{Binding Category}" FontSize="10"
+                                                            <TextBlock Text="{Binding Category}" FontSize="11"
                                                                        Foreground="{StaticResource BrushTextSecondary}"
                                                                        FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                         </Border>
@@ -1448,8 +1450,10 @@
                                                     </StackPanel>
                                                 </DockPanel>
 
-                                                <!-- 4. Hover Play Button Overlay -->
-                                                <Button Command="{Binding LaunchCommand}"
+                                                <!-- 4. Hover Play Button Overlay. Not focusable: it shows only while the
+                                                     card is hovered or focused, so Tab onto it hid it and dropped focus
+                                                     back on the card - a trap. Ctrl+Enter on the card launches. -->
+                                                <Button Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
                                                         Width="46" Height="46"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Button.Style>
@@ -1485,13 +1489,20 @@
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
-                                                     (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
-                                                     the zoom-out is the idle trigger's job below. -->
-                                                <Trigger.EnterActions>
-                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
-                                                </Trigger.EnterActions>
                                             </Trigger>
+                                            <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
+                                                 (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
+                                                 the zoom-out is the idle trigger's job below. Only while Windows' Animation
+                                                 effects are on (Views/Motion.cs); off, the card lights up but doesn't grow. -->
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
+                                                </MultiDataTrigger.EnterActions>
+                                            </MultiDataTrigger>
                                             <!-- The right-click menu takes the mouse, so IsMouseOver drops the moment it opens.
                                                  Keep the card lit while its menu is up, so it's clear which game is being changed. -->
                                             <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
@@ -1504,6 +1515,7 @@
                                                 <MultiDataTrigger.Conditions>
                                                     <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="False"/>
                                                     <Condition Binding="{Binding IsContextMenuOpen}" Value="False"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
                                                 </MultiDataTrigger.Conditions>
                                                 <MultiDataTrigger.EnterActions>
                                                     <BeginStoryboard Storyboard="{StaticResource PosterCardZoomOut}"/>
@@ -1532,7 +1544,7 @@
                             <!-- the same as the normal grid (only the poster area itself grows), -->
                             <!-- same as e.g. Windows Explorer's own "Extra Large Icons" view.    -->
                             <!-- ============================================================== -->
-                            <ItemsControl ItemsSource="{Binding FilteredGames}">
+                            <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
                                 <ItemsControl.Style>
                                     <Style TargetType="ItemsControl">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -1639,11 +1651,11 @@
                                                                     <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="10.5"
+                                                                <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11"
                                                                            Foreground="{StaticResource BrushTextSecondary}"
                                                                            FontFamily="{StaticResource AppFont}"
                                                                            TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10"
+                                                                <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11"
                                                                            Foreground="{StaticResource BrushTextMuted}"
                                                                            HorizontalAlignment="Right"
                                                                            TextAlignment="Right"
@@ -1690,7 +1702,7 @@
                                                                        Foreground="{StaticResource BrushTextSecondary}"
                                                                        FontFamily="{StaticResource AppFont}"
                                                                        TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="10.5"
+                                                            <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11"
                                                                        Foreground="{StaticResource BrushTextMuted}"
                                                                        HorizontalAlignment="Right"
                                                                        TextAlignment="Right"
@@ -1857,7 +1869,7 @@
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBlock Text="{Binding Category}" FontSize="10"
+                                                            <TextBlock Text="{Binding Category}" FontSize="11"
                                                                        Foreground="{StaticResource BrushTextSecondary}"
                                                                        FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                         </Border>
@@ -1926,7 +1938,7 @@
                                                 </DockPanel>
 
                                                 <!-- 4. Hover Play Button Overlay -->
-                                                <Button Command="{Binding LaunchCommand}"
+                                                <Button Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
                                                         Width="46" Height="46"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Button.Style>
@@ -1962,13 +1974,20 @@
                                             </DataTrigger>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
-                                                     (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
-                                                     the zoom-out is the idle trigger's job below. -->
-                                                <Trigger.EnterActions>
-                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
-                                                </Trigger.EnterActions>
                                             </Trigger>
+                                            <!-- Zoom-in on hover lives here so a card created under a resting cursor still zooms
+                                                 (a trigger's ExitActions never fire for a state it starts in). No ExitActions:
+                                                 the zoom-out is the idle trigger's job below. Only while Windows' Animation
+                                                 effects are on (Views/Motion.cs); off, the card lights up but doesn't grow. -->
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.EnterActions>
+                                                    <BeginStoryboard Storyboard="{StaticResource PosterCardZoomIn}"/>
+                                                </MultiDataTrigger.EnterActions>
+                                            </MultiDataTrigger>
                                             <!-- The right-click menu takes the mouse, so IsMouseOver drops the moment it opens.
                                                  Keep the card lit while its menu is up, so it's clear which game is being changed. -->
                                             <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
@@ -1981,6 +2000,7 @@
                                                 <MultiDataTrigger.Conditions>
                                                     <Condition Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="False"/>
                                                     <Condition Binding="{Binding IsContextMenuOpen}" Value="False"/>
+                                                    <Condition Binding="{Binding Path=(views:Motion.IsEnabled)}" Value="True"/>
                                                 </MultiDataTrigger.Conditions>
                                                 <MultiDataTrigger.EnterActions>
                                                     <BeginStoryboard Storyboard="{StaticResource PosterCardZoomOut}"/>
@@ -2005,7 +2025,7 @@
                             <!-- ============================================================== -->
                             <!-- VIEW 2: COMPACT ICONS VIEW                                     -->
                             <!-- ============================================================== -->
-                            <ItemsControl ItemsSource="{Binding FilteredGames}">
+                            <ItemsControl ItemsSource="{Binding FilteredGames}" Focusable="False">
                                 <ItemsControl.Style>
                                     <Style TargetType="ItemsControl">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -2247,17 +2267,17 @@
 
                                                 <!-- Playtime / Category Subtext -->
                                                 <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
-                                                    <TextBlock Text="{Binding Category}" FontSize="9.5"
+                                                    <TextBlock Text="{Binding Category}" FontSize="11"
                                                                Foreground="{StaticResource BrushTextMuted}"
                                                                FontFamily="{StaticResource AppFont}"
                                                                TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text=" &#x2022; HIDDEN" FontSize="9.5" FontWeight="Bold"
+                                                    <TextBlock Text=" &#x2022; HIDDEN" FontSize="11" FontWeight="Bold"
                                                                Foreground="#B8B8CC" FontFamily="{StaticResource AppFont}"
                                                                Visibility="{Binding IsHidden, Converter={StaticResource BoolToVis}}"/>
                                                 </StackPanel>
 
                                                 <!-- Hover Play Button Overlay -->
-                                                <Button Grid.Row="1" Command="{Binding LaunchCommand}"
+                                                <Button Grid.Row="1" Command="{Binding LaunchCommand}" Focusable="False" AutomationProperties.Name="{Binding Name, StringFormat='Play {0}'}"
                                                         Width="34" Height="34"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Button.Style>
@@ -2346,15 +2366,15 @@
                                     <ColumnDefinition Width="125"/> <!-- Last Played -->
                                     <ColumnDefinition Width="90"/>  <!-- Actions -->
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="10.5" FontWeight="SemiBold" 
+                                <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="11" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}" 
                                            HorizontalAlignment="Right" Margin="0,0,6,0"/>
                             </Grid>
@@ -2385,7 +2405,7 @@
                                     <Setter Property="BorderThickness" Value="0"/>
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                    <Setter Property="FocusVisualStyle" Value="{StaticResource ListRowFocusRing}"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="ListBoxItem">
@@ -2439,7 +2459,7 @@
                                                            VerticalAlignment="Center"/>
                                                 <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                     <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                    <TextBlock Text="&#9654; PLAYING" FontSize="8.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                    <TextBlock Text="&#9654; PLAYING" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
                                                 </Border>
                                                 <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1" 
                                                         CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2601,7 +2621,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock Text="HIDDEN" FontSize="8.5" FontWeight="Bold"
+                                                    <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
                                                                Foreground="#B8B8CC" FontFamily="{StaticResource AppFont}"/>
                                                 </Border>
                                             </StackPanel>
@@ -2669,12 +2689,67 @@
                         </ListBox>
                     </Grid>
 
-                    <!-- Floating Non-Blocking Undo Toast -->
-                    <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
-                            Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
-                            CornerRadius="8" Padding="16,10" Panel.ZIndex="100">
+                    <!-- Floating bars over the bottom of the grid: the selection bar, then the undo
+                         toast. They float so the grid never moves when one appears, and they stack so
+                         both can show at once. -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18" Panel.ZIndex="100">
+
+                    <!-- Selection bar (UX-06): says a selection exists and offers what the batch
+                         menu does. The menu stays the fast path; More opens it. Named so the
+                         window's click-away (Window_PreviewMouseDown) leaves the selection alone. -->
+                    <Border x:Name="SelectionBar" Style="{StaticResource SelectionBarStyle}"
+                            Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding SelectionSummary}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,12,0"
+                                       Foreground="{StaticResource BrushTextPrimary}"/>
+                            <Button Command="{Binding BatchFavoriteCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="{Binding BatchFavoriteLabel}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE734;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="{Binding BatchFavoriteLabel}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding BatchChangeCategoryCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="Change Category">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8EC;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="Change Category..."/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding BatchHideCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="{Binding BatchHideLabel}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xED1A;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="{Binding BatchHideLabel}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="SelectionBarMore_Click" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="More batch actions" ToolTip="Every batch action, as in the right-click menu">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="More"/>
+                                    <TextBlock Text="&#xE70D;" Style="{StaticResource SelectionBarGlyph}" Margin="6,1,0,0"/>
+                                </StackPanel>
+                            </Button>
+                            <Rectangle Width="1" Fill="{StaticResource BrushBorderLight}" Margin="6,4"/>
+                            <Button Command="{Binding ClearSelectionCommand}" Style="{StaticResource SelectionBarButton}"
+                                    AutomationProperties.Name="Clear selection" ToolTip="Clear selection (Esc)">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE711;" Style="{StaticResource SelectionBarGlyph}"/>
+                                    <TextBlock Text="Clear"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Floating Non-Blocking Undo Toast. The 10-second window pauses while the
+                         pointer is over it or it has keyboard focus (OnUndoToastHoldChanged). -->
+                    <Border HorizontalAlignment="Center" Margin="0,8,0,0"
+                            Background="{StaticResource BrushFloatingBar}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                            CornerRadius="8" Padding="16,10"
+                            MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
+                            IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
                         </Border.Effect>
                         <Border.Style>
                             <Style TargetType="Border">
@@ -2699,6 +2774,8 @@
                         </StackPanel>
                     </Border>
 
+                    </StackPanel>
+
                     <!-- The floating launch/import toast used to sit here; it now lives at the top of
                          the MAIN CONTENT AREA grid so it also renders over Settings/System/About. -->
                 </Grid>
@@ -2708,7 +2785,9 @@
                      when the row runs out of room, never the hotkey or the selection hint. -->
                 <DockPanel Grid.Row="4" Margin="0,14,0,0" LastChildFill="True">
                     <!-- Bound to the configurable hotkey, not hard-coded to Ctrl+Alt+G. -->
+                    <!-- Only for the first five sessions (UX-14e); after that the tray tooltip says it. -->
                     <TextBlock DockPanel.Dock="Right" Text="{Binding SettingsVM.GlobalManageHotkey, StringFormat='Hotkey: {0} to show or hide this window'}" FontSize="11"
+                               Visibility="{Binding SettingsVM.ShowHotkeyHint, Converter={StaticResource BoolToVis}}"
                                Foreground="{StaticResource BrushTextMuted}" Margin="14,0,0,0"
                                FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                     <!-- Multi-select hint: only while two or more cards are selected. -->
@@ -2758,10 +2837,34 @@
                         <RowDefinition Height="Auto"/> <!-- Status line -->
                     </Grid.RowDefinitions>
 
+                <!-- Undo toast for removed scan locations and ignored games / folders (UX-11): the
+                     Library's toast, floated over the bottom of the settings list. -->
+                <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Panel.ZIndex="100"
+                        Background="{StaticResource BrushFloatingBar}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                        CornerRadius="8" Padding="16,10"
+                        Visibility="{Binding IsUndoToastVisible, Converter={StaticResource BoolToVis}}"
+                        MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
+                        IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
+                    </Border.Effect>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center"
+                                   Foreground="{StaticResource BrushAccent}"/>
+                        <TextBlock Text="{Binding UndoToastMessage}" Foreground="{StaticResource BrushTextPrimary}" MaxWidth="420"
+                                   TextTrimming="CharacterEllipsis" FontSize="13" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <Button Content="UNDO" Command="{Binding UndoRemovalCommand}"
+                                Style="{StaticResource ModernAccentButton}" Padding="12,4" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="11" Command="{Binding DismissUndoToastCommand}"
+                                Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center"
+                                AutomationProperties.Name="Dismiss"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Header -->
                 <DockPanel Grid.Row="0" Margin="0,0,0,14">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" 
+                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"
                                    Foreground="#4EC9B0" VerticalAlignment="Center" Margin="0,0,5,0"/>
                         <TextBlock Text="Saved in real time" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" 
                                    FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
@@ -2859,7 +2962,7 @@
                                                   IsEnabled="{Binding CanConfigureMinimized}" 
                                                   Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                         <TextBlock Text="When enabled, runs tray-only with no window opened on system boot."
-                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="10.5"
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                    Margin="24,2,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
 
@@ -2901,7 +3004,7 @@
                                             <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
                                                        VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
                                             <TextBlock Text="Tip: You can also drag the TrayTrigger icon from the taskbar ^ overflow chevron directly onto your taskbar to pin it permanently."
-                                                       Foreground="#CCA84E" FontSize="10.5" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                       Foreground="#CCA84E" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                         </DockPanel>
                                     </Border>
 
@@ -2930,7 +3033,7 @@
                                                   IsEnabled="{Binding ShowLaunchPopup}"
                                                   Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                                         <TextBlock Text="Off: only while TrayTrigger is hidden, or when &quot;Minimize to system tray when launching a game&quot; is about to hide it. On: every launch from the open window uses the popup, in place of the notice inside the window. A launch error still opens a dialog while the window is in front."
-                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="10.5"
+                                                   Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                    Margin="24,2,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
 
@@ -2938,12 +3041,22 @@
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
                                     <!-- Recorded from real key presses; a combo another game or another app holds is
                                          refused with the reason instead of being saved and silently failing to register. -->
-                                    <views:HotkeyRecorderBox x:Name="ManageHotkeyBox" Hotkey="{Binding GlobalManageHotkey}" OwnerId="{x:Static services:HotkeyManager.ManageOwnerId}"
+                                    <views:HotkeyRecorderBox AutomationProperties.Name="Show / Hide Window Hotkey" x:Name="ManageHotkeyBox" Hotkey="{Binding GlobalManageHotkey}" OwnerId="{x:Static services:HotkeyManager.ManageOwnerId}"
                                                              ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
                                     <TextBlock Text="{Binding Message, ElementName=ManageHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ManageHotkeyBox}"
                                                Visibility="{Binding HasMessage, ElementName=ManageHotkeyBox, Converter={StaticResource BoolToVis}}"
                                                FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
                                     <TextBlock Text="Press this key combination anywhere in Windows to show or hide the TrayTrigger window (default: Ctrl+Alt+G). Click the box and press the keys: Ctrl, Alt or Shift plus a key, or a function key on its own."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Open Tray Menu Hotkey" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                                    <views:HotkeyRecorderBox AutomationProperties.Name="Open Tray Menu Hotkey" x:Name="TrayMenuHotkeyBox" Hotkey="{Binding TrayMenuHotkey}" OwnerId="{x:Static services:HotkeyManager.TrayMenuOwnerId}"
+                                                             ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="{Binding Message, ElementName=TrayMenuHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=TrayMenuHotkeyBox}"
+                                               Visibility="{Binding HasMessage, ElementName=TrayMenuHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                               FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu by the tray icon, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
 
                                     <!-- Tools: the optional Tools page. Its tray option is under Tray Menu. -->
@@ -2989,7 +3102,7 @@
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
 
                                     <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox AutomationProperties.Name="GitHub repository" Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource ModernTextBox}" Width="240" HorizontalAlignment="Left" Margin="0,0,0,4"/>
                                     <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: stephenh678/TrayTrigger)."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
@@ -3049,7 +3162,7 @@
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
 
                                     <DockPanel LastChildFill="False">
-                                        <CheckBox IsChecked="{Binding SteamIntegrationEnabled}"
+                                        <CheckBox AutomationProperties.Name="Enable Steam Library Integration" IsChecked="{Binding SteamIntegrationEnabled}"
                                                   Style="{StaticResource ModernCheckBox}" FontSize="13"
                                                   VerticalAlignment="Center" DockPanel.Dock="Left">
                                             <StackPanel Orientation="Horizontal">
@@ -3082,7 +3195,7 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <CheckBox IsChecked="{Binding GogIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable GOG Library Integration" IsChecked="{Binding GogIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3093,7 +3206,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding EaIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable EA Library Integration" IsChecked="{Binding EaIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3104,7 +3217,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding EpicIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Epic Games Library Integration" IsChecked="{Binding EpicIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3115,7 +3228,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding UbisoftIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Ubisoft Connect Library Integration" IsChecked="{Binding UbisoftIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3126,7 +3239,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding XboxIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Xbox / PC Game Pass Library Integration" IsChecked="{Binding XboxIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3137,7 +3250,7 @@
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                                Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                                    <CheckBox IsChecked="{Binding BattleNetIntegrationEnabled}"
+                                    <CheckBox AutomationProperties.Name="Enable Battle.net Library Integration" IsChecked="{Binding BattleNetIntegrationEnabled}"
                                               Style="{StaticResource ModernCheckBox}" FontSize="13"
                                               Margin="0,0,0,4">
                                         <StackPanel Orientation="Horizontal">
@@ -3245,7 +3358,7 @@
                                     <DockPanel Margin="24,0,0,10" LastChildFill="False" IsEnabled="{Binding SearchOfficialTitleOnline}">
                                         <TextBlock Text="Matching sensitivity:" Foreground="{StaticResource BrushTextSecondary}" 
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding ConfidenceThresholdOptions}" 
+                                        <ComboBox AutomationProperties.Name="Matching sensitivity" ItemsSource="{Binding ConfidenceThresholdOptions}" 
                                                   SelectedItem="{Binding OnlineMatchSensitivity, Mode=TwoWay}" 
                                                   Style="{StaticResource ModernComboBox}" Width="190" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3270,7 +3383,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox AutomationProperties.Name="RAWG API key" Grid.Column="0" Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
                                                  Tag="Paste your RAWG API key here..."/>
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenRawgSiteCommand}"
@@ -3282,7 +3395,7 @@
                                          Same row style as "Library view mode". The ComboBox is declared first so the
                                          DockPanel reserves its width before the wrapping description is measured. -->
                                     <DockPanel Margin="0,0,0,8" LastChildFill="False">
-                                        <ComboBox ItemsSource="{Binding MetadataRefreshOptions}"
+                                        <ComboBox AutomationProperties.Name="Refresh game info" ItemsSource="{Binding MetadataRefreshOptions}"
                                                   SelectedItem="{Binding MetadataRefreshOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Right"
                                                   DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"/>
@@ -3320,7 +3433,7 @@
                                             <TextBlock Text="Library view mode:" Foreground="{StaticResource BrushTextPrimary}" FontSize="12.5"/>
                                             <TextBlock Text="The same setting as the view buttons above the library; it is remembered between sessions." Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0"/>
                                         </StackPanel>
-                                        <ComboBox ItemsSource="{Binding ViewModeOptions}" 
+                                        <ComboBox AutomationProperties.Name="Library view mode" ItemsSource="{Binding ViewModeOptions}" 
                                                   SelectedItem="{Binding LibraryViewMode, Mode=TwoWay}" 
                                                   Style="{StaticResource ModernComboBox}" Width="140" HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Center"/>
                                     </DockPanel>
@@ -3356,7 +3469,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}" 
+                                        <TextBox AutomationProperties.Name="SteamGridDB API key" Grid.Column="0" Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}" 
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" 
                                                  Tag="Paste your SteamGridDB API key here..."/>
                                         <Button Grid.Column="1" Content="Get API Key..." Command="{Binding OpenSteamGridDbSiteCommand}"
@@ -3403,6 +3516,13 @@
 
                                     <TextBlock Text="What it lists" FontSize="12.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                                    <CheckBox Content="Show a search box at the top of the tray menu"
+                                              IsChecked="{Binding ShowTraySearch}"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                                    <TextBlock Text="Type to find a game (or tool) by name or category; Enter launches the first match and Esc clears the box."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                               Margin="24,3,0,6" TextWrapping="Wrap"/>
+
                                     <CheckBox Content="Include 'Recent' category in tray menu"
                                               IsChecked="{Binding ShowRecentInTray}" 
                                               Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
@@ -3413,7 +3533,7 @@
                                     <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
                                         <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBox Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
+                                        <TextBox AutomationProperties.Name="Max recent games to show" Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
                                                  Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
                                                  PreviewTextInput="NumericTextBox_PreviewTextInput"
                                                  DataObject.Pasting="NumericTextBox_Pasting"/>
@@ -3422,7 +3542,7 @@
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
                                         <TextBlock Text="Recent sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                        <ComboBox AutomationProperties.Name="Recent sort order" ItemsSource="{Binding TraySortOptions}"
                                                   SelectedItem="{Binding RecentTraySortOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3437,7 +3557,7 @@
                                     <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
                                         <TextBlock Text="Max favorites to show:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBox Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
+                                        <TextBox AutomationProperties.Name="Max favorites to show" Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
                                                  Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
                                                  PreviewTextInput="NumericTextBox_PreviewTextInput"
                                                  DataObject.Pasting="NumericTextBox_Pasting"/>
@@ -3446,7 +3566,7 @@
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
                                         <TextBlock Text="Favorites sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                        <ComboBox AutomationProperties.Name="Favorites sort order" ItemsSource="{Binding TraySortOptions}"
                                                   SelectedItem="{Binding FavoritesTraySortOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3463,7 +3583,7 @@
                                         <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowToolsInTray}">
                                             <TextBlock Text="Tools sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                        FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <ComboBox ItemsSource="{Binding ToolsSortOptions}"
+                                            <ComboBox AutomationProperties.Name="Tools sort order" ItemsSource="{Binding ToolsSortOptions}"
                                                       SelectedItem="{Binding ToolsTraySortOption, Mode=TwoWay}"
                                                       Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                         </DockPanel>
@@ -3479,7 +3599,7 @@
                                     <DockPanel Margin="24,0,0,12" LastChildFill="False">
                                         <TextBlock Text="Tray menu sort order:" Foreground="{StaticResource BrushTextSecondary}"
                                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox ItemsSource="{Binding TraySortOptions}"
+                                        <ComboBox AutomationProperties.Name="Tray menu sort order" ItemsSource="{Binding TraySortOptions}"
                                                   SelectedItem="{Binding TrayMenuSortOption, Mode=TwoWay}"
                                                   Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                                     </DockPanel>
@@ -3583,7 +3703,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBox Grid.Column="0" Text="{Binding DefaultPreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox AutomationProperties.Name="Default pre-launch script path" Grid.Column="0" Text="{Binding DefaultPreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                             <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPreLaunchScriptCommand}"
                                                     Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
@@ -3609,7 +3729,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBox Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox AutomationProperties.Name="Default post-exit script path" Grid.Column="0" Text="{Binding DefaultPostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                                      IsEnabled="{Binding CanEditDefaultPostExitScript}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                             <Button Grid.Column="1" Content="Test" Command="{Binding TestDefaultPostExitScriptCommand}"
@@ -3629,16 +3749,16 @@
 
                                         <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,8"
                                                 Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="11" Foreground="#FFD27F" TextWrapping="Wrap"/>
                                         </Border>
 
                                         <CheckBox Content="Wait for the default pre-launch script to finish before starting the game"
                                                   IsChecked="{Binding DefaultWaitForPreLaunchScript}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
                                                   Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                                         <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
-                                            <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
+                                            <TextBox AutomationProperties.Name="Default pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
                                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                            <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                                        TextWrapping="Wrap" VerticalAlignment="Center"/>
                                         </DockPanel>
                                         <CheckBox Content="Cancel the launch if the default pre-launch script fails (non-zero exit code, timeout, or won't start)"
@@ -3662,7 +3782,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Performance Tweak Safety" FontSize="13.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="Applies to Apply Performance Preset and Reset Defaults on the System &amp; Performance page."
+                                    <TextBlock Text="Applies to Apply Performance Preset and Restore Previous Settings on the System &amp; Performance page."
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                                     <CheckBox Content="Create a System Restore Point before applying a preset or reset"
@@ -3729,11 +3849,11 @@
                                             </Grid.ColumnDefinitions>
 
                                             <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                                                <TextBlock Text="Active Debug Log File" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
+                                                <TextBlock Text="Active Debug Log File" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
                                                 <TextBlock Text="{Binding LogFilePathDisplay}" FontSize="11.5" FontFamily="{StaticResource AppFont}" 
                                                            Foreground="{StaticResource BrushAccentHover}" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding LogFileSizeDisplay, StringFormat='Current File Size: {0}'}" 
-                                                           FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
+                                                           FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -3769,7 +3889,7 @@
                                             <TextBlock Text="{Binding StorageDirectoryDisplay}" Foreground="{StaticResource BrushAccentHover}" 
                                                        FontSize="11" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
                                             <TextBlock Text="Contains games.json, settings.json, and atomic .bak recovery backups." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="10.5" TextWrapping="Wrap"/>
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
 
@@ -3785,7 +3905,7 @@
                                             <TextBlock Text="{Binding CacheDirectoryDisplay}" Foreground="{StaticResource BrushAccentHover}" 
                                                        FontSize="11" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
                                             <TextBlock Text="Contains extracted game icons (.png) and downloaded poster artwork (.jpg)." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="10.5" TextWrapping="Wrap"/>
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
                                 </StackPanel>
@@ -3986,28 +4106,28 @@
 
                                     <Border Grid.Column="0" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="0,0,6,0">
                                         <StackPanel>
-                                            <TextBlock Text="WINDOWS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="WINDOWS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding OsDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Grid.Column="1" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
                                         <StackPanel>
-                                            <TextBlock Text="RUNTIME" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="RUNTIME" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding RuntimeDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Grid.Column="2" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
                                         <StackPanel>
-                                            <TextBlock Text="LIBRARY" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="LIBRARY" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding TotalGameCountDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Grid.Column="3" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="6,0,0,0">
                                         <StackPanel>
-                                            <TextBlock Text="DATA FOLDER" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="DATA FOLDER" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                             <TextBlock Text="{Binding SettingsVM.StorageDirectoryDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
@@ -4096,7 +4216,7 @@
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Launcher Control" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam minimized so only the game appears. A second launch brings the running game forward instead of starting a duplicate; End Session and Force Close are one click away while it runs."
+                                            <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam minimized so only the game appears. A second launch brings the running game forward instead of starting a duplicate; Close Game and Force Close are one click away while it runs."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
@@ -4112,7 +4232,7 @@
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Verified, Reversible Windows Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Preset and Reset Defaults can take a System Restore Point first."
+                                            <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Preset and Restore Previous Settings can take a System Restore Point first."
                                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </DockPanel>
@@ -4223,6 +4343,17 @@
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 
+                                            <!-- Row 1b: Tray menu hotkey - the configured value -->
+                                            <DockPanel Margin="0,0,0,9">
+                                                <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                                    <Border Background="{StaticResource BrushKeyCapBackground}" BorderBrush="{StaticResource BrushKeyCapBorder}" BorderThickness="1" CornerRadius="4" Padding="7,2">
+                                                        <TextBlock Text="{Binding SettingsVM.TrayMenuHotkey}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="Open the tray menu by the tray icon from anywhere in Windows, ready to search (change it in Settings > General)"
+                                                           Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                            </DockPanel>
+
                                             <!-- Row 2: Tray Left-Click -->
                                             <DockPanel Margin="0,0,0,9">
                                                 <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
@@ -4243,7 +4374,7 @@
                                                     </Border>
                                                     <TextBlock Text=" Tray Icon" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="Quick-launch menu: Now Playing, Recent, Favorites, all games (grouped or flat), Scan for Games, Settings, Exit"
+                                                <TextBlock Text="Quick-launch menu: a search box (type, then Enter launches the top match), Now Playing, Recent, Favorites, all games (grouped or flat), Scan for Games, Settings, Exit"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 
@@ -4271,7 +4402,7 @@
                                                     </Border>
                                                     <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="Select several games (Shift+click for a range), then right-click one of them for the batch menu: Favorite, Hide, Change Category, Performance Profile, Refresh, or Remove them together. Delete removes the selection; Esc or a click on empty space clears it"
+                                                <TextBlock Text="Select several games (Shift+click for a range), then use the selection bar at the bottom, or right-click one of them for the batch menu: Favorite, Hide, Change Category, Performance Profile, Refresh, or Remove them together. Delete removes the selection; Esc or a click on empty space clears it"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 
@@ -4283,7 +4414,7 @@
                                                     </Border>
                                                     <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <TextBlock Text="Play, Details, Favorite, Hide, End Session / Force Close while playing, edit shortcuts, Steam links, Remove"
+                                                <TextBlock Text="Play, Details, Favorite, Hide, Close Game / Force Close while playing, edit shortcuts, Steam links, Remove"
                                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                             </DockPanel>
 
@@ -4355,7 +4486,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Margin="0,0,0,8">
-                                                    <TextBlock Text="{Binding Label}" FontSize="10.5" FontWeight="Bold"
+                                                    <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="Bold"
                                                                Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                                                     <ItemsControl ItemsSource="{Binding Topics}">
                                                         <ItemsControl.ItemsPanel>
@@ -4405,7 +4536,7 @@
                                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                                     Padding="14,12" Margin="0,0,0,10">
                                 <DockPanel LastChildFill="True">
-                                    <Button DockPanel.Dock="Right"
+                                    <Button AutomationProperties.Name="Open Diagnostics &amp; Storage" DockPanel.Dock="Right"
                                             Command="{Binding OpenDiagnosticsSettingsCommand}"
                                             Style="{StaticResource ModernAccentButton}"
                                             VerticalAlignment="Center" Padding="12,5">

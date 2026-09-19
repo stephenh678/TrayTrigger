@@ -91,6 +91,12 @@ public partial class App
     private void ProcessDevArguments(StartupEventArgs e)
     {
         AttachConsole(ATTACH_PARENT_PROCESS);
+        // TRAYTRIGGER_MOTION=off: behave as if Windows' Animation effects were off (Views/Motion.cs),
+        // for checking the reduced-motion paths without changing the system setting.
+        if (string.Equals(Environment.GetEnvironmentVariable("TRAYTRIGGER_MOTION"), "off", StringComparison.OrdinalIgnoreCase))
+        {
+            Views.Motion.IsEnabled = false;
+        }
         for (int i = 0; i < e.Args.Length; i++)
         {
             string arg = e.Args[i];
@@ -437,6 +443,126 @@ public partial class App
                 return;
             }
 
+            // --screenshot-focus <Library|Tools|System|Settings|About> <tabs> <out-prefix>: presses Tab
+            // <tabs> times through the real input pipeline and captures the window after each
+            // press as <out-prefix>-NN.png, with the focused element's type and name in the log.
+            // For checking that every stop shows a focus indicator.
+            if ((e.Args[i].Equals("--screenshot-focus", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-focus", StringComparison.OrdinalIgnoreCase)) &&
+                i + 3 < e.Args.Length)
+            {
+                var section = Enum.Parse<NavSection>(e.Args[i + 1], ignoreCase: true);
+                // A count ("24") means that many Tabs; otherwise a list such as "Tab*22,Right,Down".
+                var keys = new List<System.Windows.Input.Key>();
+                foreach (string token in e.Args[i + 2].Split(',', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string[] parts = token.Split('*');
+                    int repeat = parts.Length > 1 ? int.Parse(parts[1]) : 1;
+                    var key = int.TryParse(parts[0], out int n) ? System.Windows.Input.Key.Tab : Enum.Parse<System.Windows.Input.Key>(parts[0], ignoreCase: true);
+                    if (int.TryParse(parts[0], out n)) repeat = n;
+                    keys.AddRange(Enumerable.Repeat(key, repeat));
+                }
+                int tabs = keys.Count;
+                string prefix = e.Args[i + 3];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = section;
+                _mainWindow.Show();
+                _mainWindow.WindowState = WindowState.Normal;
+                _mainWindow.Width = 960;
+                _mainWindow.Height = 700;
+                WindowThemeService.WhenContentRendered(_mainWindow, () =>
+                {
+                    // Keys sent through ProcessInput don't make the keyboard the "most recent input
+                    // device", so WPF would suppress every FocusVisualStyle. Force it the way the
+                    // Windows "always show focus rectangles" setting does.
+                    typeof(System.Windows.Input.KeyboardNavigation)
+                        .GetProperty("AlwaysShowFocusVisual", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                        ?.SetValue(null, true);
+                    int pressed = 0;
+                    var focusLog = new System.Text.StringBuilder();
+                    var step = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+                    step.Tick += (s, args) =>
+                    {
+                        if (pressed > 0)
+                        {
+                            var focused = System.Windows.Input.Keyboard.FocusedElement as FrameworkElement;
+                            string what = focused == null ? "(nothing)" : $"{focused.GetType().Name} '{System.Windows.Automation.AutomationProperties.GetName(focused)}' {(focused as ContentControl)?.Content as string}";
+                            focusLog.AppendLine($"{pressed:00} {keys[pressed - 1]}: {what}");
+                            // Not CaptureVisualBitmap: that focuses the window, which would move focus.
+                            var content = (FrameworkElement)_mainWindow.Content;
+                            var dpi = VisualTreeHelper.GetDpi(content);
+                            var rtb = new RenderTargetBitmap((int)(content.ActualWidth * dpi.DpiScaleX), (int)(content.ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+                            rtb.Render(_mainWindow);
+                            var encoder = new PngBitmapEncoder();
+                            encoder.Frames.Add(BitmapFrame.Create(rtb));
+                            using var file = File.Create($"{prefix}-{pressed:00}.png");
+                            encoder.Save(file);
+                        }
+                        if (pressed >= tabs)
+                        {
+                            step.Stop();
+                            File.WriteAllText($"{prefix}-focus.txt", focusLog.ToString());
+                            ExitApplication();
+                            return;
+                        }
+                        pressed++;
+                        _mainWindow.Activate();
+                        SendTestKey(keys[pressed - 1]);
+                    };
+                    step.Start();
+                });
+                return;
+            }
+
+            // --screenshot-tooltip <Library|Tools|System|Settings|About> <text> <out.png>: a real screen
+            // grab of the page with the tooltip of the first element whose tooltip contains <text>
+            // open beside it. Tooltips are popups, so they never render into a RenderTargetBitmap.
+            if ((e.Args[i].Equals("--screenshot-tooltip", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-tooltip", StringComparison.OrdinalIgnoreCase)) &&
+                i + 3 < e.Args.Length)
+            {
+                var section = Enum.Parse<NavSection>(e.Args[i + 1], ignoreCase: true);
+                string needle = e.Args[i + 2];
+                string targetPng = e.Args[i + 3];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = section;
+                _mainWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+                _mainWindow.Left = 0;
+                _mainWindow.Top = 0;
+                _mainWindow.Width = 960;
+                _mainWindow.Height = 700;
+                _mainWindow.Show();
+                WindowThemeService.WhenContentRendered(_mainWindow, () =>
+                {
+                    var open = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+                    open.Tick += (s, args) =>
+                    {
+                        open.Stop();
+                        var target = FindVisualChild<FrameworkElement>(_mainWindow, fe => fe.IsVisible && fe.ToolTip is string t && t.Contains(needle, StringComparison.OrdinalIgnoreCase));
+                        if (target == null)
+                        {
+                            _logger($"[screenshot-tooltip] No visible element has a tooltip containing '{needle}'.");
+                            ExitApplication();
+                            return;
+                        }
+                        target.BringIntoView();
+                        _mainWindow.UpdateLayout();
+                        var tip = new ToolTip { Content = target.ToolTip, PlacementTarget = target, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom, IsOpen = true };
+                        var grab = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                        grab.Tick += (s2, args2) =>
+                        {
+                            grab.Stop();
+                            CaptureScreen(_mainWindow, targetPng);
+                            tip.IsOpen = false;
+                            ExitApplication();
+                        };
+                        grab.Start();
+                    };
+                    open.Start();
+                });
+                return;
+            }
+
             // --screenshot-batch-menu <out.png>: a real screen grab (popups don't render into a
             // RenderTargetBitmap) of the poster grid with two cards selected and the batch
             // context menu open over the second one.
@@ -578,6 +704,13 @@ public partial class App
                 _mainViewModel.CurrentSection = NavSection.Tools;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
+                // "select" as the view argument's neighbour: two tools selected, for the selection bar.
+                if (e.Args.Any(a => a.Equals("select", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var list = _mainWindow.ToolsPage.ToolsList;
+                    foreach (var item in list.Items.Cast<object>().Take(2)) list.SelectedItems.Add(item);
+                    _mainWindow.UpdateLayout();
+                }
                 CaptureVisual(_mainWindow, 960, 700, targetPng);
                 ExitApplication();
                 return;
@@ -1018,6 +1151,63 @@ public partial class App
                 return;
             }
 
+            // --screenshot-edit-tab <All|Identity|Launch|Performance|Scripts> <out.png> [invalid]: Edit Game
+            // (scripts on) on one tab. With "invalid", a bad Steam App ID is typed on the Identity
+            // tab, the dialog is switched to the given tab and Save is pressed, so the capture shows
+            // where a refused value lands.
+            if ((e.Args[i].Equals("--screenshot-edit-tab", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-edit-tab", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                var section = Enum.Parse<GameEditSection>(e.Args[i + 1], ignoreCase: true);
+                string targetPng = e.Args[i + 2];
+                bool invalid = i + 3 < e.Args.Length && e.Args[i + 3].Equals("invalid", StringComparison.OrdinalIgnoreCase);
+                _skipSettingsSaveOnExit = true;
+                // A copy, so pressing Save for the "invalid" capture can never touch the library.
+                var source = _mainViewModel.Games.FirstOrDefault()?.Game;
+                var sampleGame = source == null
+                    ? new GameEntry { Name = "DOOM Eternal", Category = "Action", ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe" }
+                    : new GameEntry { Name = source.Name, Category = source.Category, ExecutablePath = source.ExecutablePath, WorkingDirectory = source.WorkingDirectory, Arguments = source.Arguments, IconPath = source.IconPath, CoverImagePath = source.CoverImagePath, SteamAppId = source.SteamAppId, IsSteamGame = source.IsSteamGame };
+                var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true,
+                    profileTweaks: _mainViewModel.SystemVM.EnabledTweaksFor);
+                var editVm = (GameEditViewModel)dlg.DataContext;
+                if (invalid) editVm.SteamAppId = "not-a-number";
+                // The Performance tab shows the tier summary; Aggressive lists the most.
+                if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
+                editVm.SelectedSection = section;
+                dlg.Show();
+                dlg.UpdateLayout();
+                if (invalid)
+                {
+                    editVm.SaveCommand.Execute(null);
+                    Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    dlg.UpdateLayout();
+                }
+                CaptureVisual(dlg, 820, 675, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-settings-undo <out.png>: the Settings undo toast (UX-11) over the Library &
+            // Art tab, as after removing a scan location. Nothing is removed: the toast is offered
+            // with a no-op undo.
+            if ((e.Args[i].Equals("--screenshot-settings-undo", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-settings-undo", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.Library;
+                _mainViewModel.CurrentSection = NavSection.Settings;
+                typeof(SettingsViewModel).GetMethod("OfferUndo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .Invoke(_mainViewModel.SettingsVM, new object[] { @"Removed scan location D:\Games", new Action(() => { }) });
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-help <topicId> <out.png>: renders the HelpDialog for one topic.
             if ((e.Args[i].Equals("--screenshot-help", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-help", StringComparison.OrdinalIgnoreCase)) &&
@@ -1397,6 +1587,48 @@ public partial class App
                 LoggingService.Info("StartupReconcileTest", $"[TEST_STARTUP_RECONCILE_PASSED] Run key and setting agree ({registry})");
                 Console.WriteLine($"[TEST_STARTUP_RECONCILE_PASSED] Run key and setting agree ({registry})");
                 ExitApplication();
+                return;
+            }
+
+            // --test-hover-zoom: puts the real pointer on the first poster card (nothing else first)
+            // and reports how far the hover trigger scaled it. With Windows' Animation effects off
+            // (or TRAYTRIGGER_MOTION=off) it must stay at 1.000. The pointer is put back after.
+            if (e.Args[i].Equals("--test-hover-zoom", StringComparison.OrdinalIgnoreCase))
+            {
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = "Poster Grid";
+                _mainWindow.Show();
+                _mainWindow.Activate();
+                _mainWindow.Topmost = true;
+                var hoverWorker = new System.Threading.Thread(() =>
+                {
+                    GetCursorPos(out POINT restore);
+                    string outcome;
+                    try
+                    {
+                        System.Threading.Thread.Sleep(900);
+                        var card = Dispatcher.Invoke(() => FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible))
+                                   ?? throw new Exception("No visible poster card.");
+                        var mid = Dispatcher.Invoke(() => card.PointToScreen(new Point(card.ActualWidth / 2, card.ActualHeight / 2)));
+                        SetCursorPos((int)mid.X - 3, (int)mid.Y);
+                        System.Threading.Thread.Sleep(60);
+                        SetCursorPos((int)mid.X, (int)mid.Y);
+                        double peak = 1.0;
+                        for (int t = 0; t < 40; t++)
+                        {
+                            System.Threading.Thread.Sleep(25);
+                            peak = Math.Max(peak, Dispatcher.Invoke(() => ScaleOf(card).ScaleX));
+                        }
+                        bool hovered = Dispatcher.Invoke(() => card.IsMouseOver);
+                        outcome = $"[TEST_HOVER_ZOOM] motion={Views.Motion.IsEnabled} hovered={hovered} peakScale={peak:F3}";
+                    }
+                    catch (Exception ex) { outcome = "[TEST_HOVER_ZOOM_FAILED] " + ex.Message; }
+                    finally { SetCursorPos(restore.X, restore.Y); }
+                    LoggingService.Info("HoverZoomTest", outcome);
+                    Dispatcher.Invoke(ExitApplication);
+                }) { IsBackground = true };
+                hoverWorker.Start();
                 return;
             }
 
@@ -1816,6 +2048,24 @@ public partial class App
                 return;
             }
 
+            // --screenshot-tray-search / --test-tray-search (App.TraySearchDiagnostics.cs).
+            if (TryHandleTraySearchDevArgs(e, i)) return;
+            if (TryHandleCloseGameDevArgs(e, i)) return;
+
+            // --test-automation-names <out.txt>: controls a screen reader can't name (App.AutomationNameAudit.cs).
+            if (e.Args[i].Equals("--test-automation-names", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunAutomationNameAudit(e.Args[i + 1]);
+                return;
+            }
+
+            // --test-dialog-keys <out.txt>: Esc and Enter in each dialog (App.DialogKeyTests.cs).
+            if (e.Args[i].Equals("--test-dialog-keys", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunDialogKeyTests(e.Args[i + 1]);
+                return;
+            }
+
             if (e.Args[i].Equals("--test-dialog-cloak", StringComparison.OrdinalIgnoreCase))
             {
                 // Regression guard for the 1.4.1-beta.2 bug: FileDialogCloak polled for a
@@ -2076,6 +2326,8 @@ public partial class App
                  e.Args[i].Equals("-screenshot-details", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
             {
+                // A capture only: nothing it touches is written back to settings.json.
+                _skipSettingsSaveOnExit = true;
                 string targetPng = e.Args[i + 1];
                 var game = new GameEntry
                 {
@@ -2089,7 +2341,9 @@ public partial class App
 
                 var metaService = new SteamMetadataService();
                 var searchService = new SteamSearchService();
-                var vm = new GameDetailsViewModel(game, metaService, searchService);
+                // "--screenshot-details <out.png> playing": as while the game runs (Close Game, Force Close).
+                bool detailsPlaying = e.Args.Any(a => a.Equals("playing", StringComparison.OrdinalIgnoreCase));
+                var vm = new GameDetailsViewModel(game, metaService, searchService, isPlaying: detailsPlaying);
 
                 var sampleDetails = new SteamAppDetails
                 {

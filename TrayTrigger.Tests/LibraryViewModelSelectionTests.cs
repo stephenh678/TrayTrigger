@@ -129,6 +129,49 @@ public class LibraryViewModelSelectionTests : IDisposable
         Assert.False(library.HasSelection);
     });
 
+    /// <summary>
+    /// The selection bar (UX-06) acts on exactly the selection. A search that narrows the view
+    /// clears it, so a game that scrolled out of the filter can never be changed unseen; a new
+    /// selection made under the search is all the batch action touches.
+    /// </summary>
+    [Fact]
+    public void BatchAfterSearch_TouchesOnlyTheNewSelection() => Sta(() =>
+    {
+        var library = CreateLibrary("Alpha", "Bravo", "Charlie");
+        Card(library, "Alpha").ToggleSelectCommand.Execute(null);
+        Card(library, "Charlie").ToggleSelectCommand.Execute(null);
+
+        library.SearchText = "Bravo";
+        Assert.False(library.HasSelection);
+
+        Card(library, "Bravo").ToggleSelectCommand.Execute(null);
+        library.BatchFavoriteCommand.Execute(null);
+
+        Assert.True(Card(library, "Bravo").Game.IsFavorite);
+        Assert.False(Card(library, "Alpha").Game.IsFavorite);
+        Assert.False(Card(library, "Charlie").Game.IsFavorite);
+    });
+
+    [Fact]
+    public void CategoryTabChange_ClearsSelection() => Sta(() =>
+    {
+        var library = CreateLibrary("Alpha", "Bravo");
+        Card(library, "Alpha").ToggleSelectCommand.Execute(null);
+        Assert.True(library.HasSelection);
+
+        library.SelectedCategory = LibraryConstants.FavoritesCategory;
+        Assert.False(library.HasSelection);
+    });
+
+    [Fact]
+    public void ClearSelectionCommand_EmptiesTheSelection() => Sta(() =>
+    {
+        var library = CreateLibrary("Alpha", "Bravo");
+        library.SelectAllVisible();
+        library.ClearSelectionCommand.Execute(null);
+        Assert.Equal(0, library.SelectedCount);
+    });
+
     [Fact]
     public void PlainClick_ClearsSelection() => Sta(() =>
     {

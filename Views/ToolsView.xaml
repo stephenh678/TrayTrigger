@@ -139,7 +139,7 @@
                                    Foreground="{StaticResource BrushTextPrimary}" TextAlignment="Center"
                                    TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Center" Margin="0,3,0,0">
-                            <TextBlock Text="MISSING" FontSize="8.5" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
+                            <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
                         </Border>
                     </StackPanel>
                 </Grid>
@@ -168,7 +168,7 @@
                         <TextBlock Text="{Binding Name}" FontSize="12.5" FontFamily="{StaticResource AppFont}"
                                    Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Left" Margin="0,2,0,0">
-                            <TextBlock Text="MISSING" FontSize="8.5" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
+                            <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
                         </Border>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -216,7 +216,7 @@
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                         <Border Style="{StaticResource ToolMissingBadge}" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="MISSING" FontSize="8.5" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
+                            <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold" Foreground="#FFB074" FontFamily="{StaticResource AppFont}"/>
                         </Border>
                     </StackPanel>
 
@@ -260,14 +260,14 @@
         <!-- 2. Category Tabs & Add Tool -->
         <DockPanel Grid.Row="1" Margin="0,0,0,16">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                         ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
+                <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Add Tool" VerticalAlignment="Center"/>
@@ -278,7 +278,7 @@
             <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
                     BorderThickness="1" CornerRadius="6" Padding="3" Margin="0,0,16,0"
                     HorizontalAlignment="Left" VerticalAlignment="Center">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Focusable="False">
+                <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}">
                     <ItemsControl ItemsSource="{Binding CategoryTabs}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -287,7 +287,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Command="{Binding SelectCommand}"
+                                <Button AutomationProperties.Name="{Binding DisplayName}" Command="{Binding SelectCommand}"
                                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSelected}"
                                         Margin="0,0,2,0">
                                     <StackPanel Orientation="Horizontal">
@@ -312,11 +312,11 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox x:Name="ToolsSearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox AutomationProperties.Name="Search tools" x:Name="ToolsSearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      Style="{StaticResource ModernTextBox}" Margin="0,0,10,0"
                      Tag="Search tools by name, category, or path..."/>
 
-            <ComboBox Grid.Column="1"
+            <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
                       ItemsSource="{Binding SortOptions}"
                       SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}"
                       Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"/>
@@ -368,13 +368,13 @@
                         <ColumnDefinition Width="3*"/>
                         <ColumnDefinition Width="120"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="10.5" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="11" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
                 </Grid>
             </Border>
@@ -393,7 +393,7 @@
                         <Setter Property="BorderThickness" Value="0"/>
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
@@ -425,6 +425,47 @@
                 </ListBox.Style>
             </ListBox>
 
+            <!-- Selection bar (UX-06), as in the Library: floats over the bottom of the list, so the
+                 list never moves, while two or more tools are selected (one is just a click). Tools
+                 have no Hide. Named for MainWindow's click-away, which must not drop the selection. -->
+            <Border x:Name="ToolsSelectionBar" Grid.Row="1" Style="{StaticResource SelectionBarStyle}"
+                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18" Panel.ZIndex="100"
+                    Visibility="{Binding HasMultipleSelection, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding SelectionSummary}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,12,0"
+                               Foreground="{StaticResource BrushTextPrimary}"/>
+                    <Button Command="{Binding BatchFavoriteCommand}" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="{Binding BatchFavoriteLabel}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE734;" Style="{StaticResource SelectionBarGlyph}"/>
+                            <TextBlock Text="{Binding BatchFavoriteLabel}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding BatchChangeCategoryCommand}" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="Change Category">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8EC;" Style="{StaticResource SelectionBarGlyph}"/>
+                            <TextBlock Text="Change Category..."/>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnSelectionBarMore" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="More batch actions" ToolTip="Every batch action, as in the right-click menu">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="More"/>
+                            <TextBlock Text="&#xE70D;" Style="{StaticResource SelectionBarGlyph}" Margin="6,1,0,0"/>
+                        </StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Fill="{StaticResource BrushBorderLight}" Margin="6,4"/>
+                    <Button Click="OnSelectionBarClear" Style="{StaticResource SelectionBarButton}"
+                            AutomationProperties.Name="Clear selection" ToolTip="Clear selection (Esc)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE711;" Style="{StaticResource SelectionBarGlyph}"/>
+                            <TextBlock Text="Clear"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
             <!-- Empty: no tools yet. The whole page is the drop target. -->
             <Border Grid.Row="1" Margin="0,20,0,20" CornerRadius="10"
                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1.5" Background="#161619"
@@ -438,14 +479,14 @@
                                FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
+                        <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                                 ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Browse Apps" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
+                        <Button AutomationProperties.Name="Add Tool" Command="{Binding AddToolCommand}" Style="{StaticResource ModernAccentButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Add Tool" VerticalAlignment="Center"/>

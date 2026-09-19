@@ -13,6 +13,7 @@ public partial class HotkeyManager : IDisposable
     private const int WM_HOTKEY = 0x0312;
     private const int MANAGE_WINDOW_HOTKEY_ID = 1;
     private const int PROBE_HOTKEY_ID = 2;
+    private const int TRAY_MENU_HOTKEY_ID = 3;
     private const int GAME_HOTKEY_BASE_ID = 1000;
     private const int TOOL_HOTKEY_BASE_ID = 5000;
 
@@ -26,6 +27,8 @@ public partial class HotkeyManager : IDisposable
 
     /// <summary>The owner id the show/hide window hotkey is registered under; games and tools use their entry's id.</summary>
     public const string ManageOwnerId = "__manage__";
+    /// <summary>The owner id the open-tray-menu hotkey is registered under.</summary>
+    public const string TrayMenuOwnerId = "__traymenu__";
 
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -41,8 +44,11 @@ public partial class HotkeyManager : IDisposable
     /// <summary>Every combo currently held, by (modifiers, virtual key) -> who holds it. What the recorder checks against.</summary>
     private readonly Dictionary<(uint Mod, uint Vk), (string OwnerId, string OwnerName)> _owners = new();
     private bool _isManageHotkeyRegistered;
+    private bool _isTrayMenuHotkeyRegistered;
 
     public event Action? ManageHotkeyTriggered;
+    /// <summary>The open-tray-menu hotkey was pressed.</summary>
+    public event Action? TrayMenuHotkeyTriggered;
     public event Action<string>? GameHotkeyTriggered;
     /// <summary>A tool's hotkey was pressed; carries the tool's id.</summary>
     public event Action<string>? ToolHotkeyTriggered;
@@ -76,6 +82,12 @@ public partial class HotkeyManager : IDisposable
                 ManageHotkeyTriggered?.Invoke();
                 handled = true;
             }
+            else if (id == TRAY_MENU_HOTKEY_ID)
+            {
+                LoggingService.Info("HotkeyManager", "Open-tray-menu hotkey triggered.");
+                TrayMenuHotkeyTriggered?.Invoke();
+                handled = true;
+            }
             else if (_registeredHotkeys.TryGetValue(id, out HotkeyBinding? binding))
             {
                 LoggingService.Info("HotkeyManager", $"Hotkey triggered for {KindLabel(binding.Kind)} id '{binding.OwnerId}'.");
@@ -94,14 +106,16 @@ public partial class HotkeyManager : IDisposable
     }
 
     /// <summary>
-    /// Replaces every registration with the window hotkey plus <paramref name="bindings"/>. Games are
-    /// registered before tools (see <see cref="HotkeyBinding.InRegistrationOrder"/>), so when a game
+    /// Replaces every registration with the window hotkey, <paramref name="bindings"/> and the
+    /// tray-menu hotkey, in that order. The tray-menu hotkey goes last and gives way: it arrived in
+    /// 1.4.6 with Ctrl+Alt+T as its default, which must not take the combo from a game or tool that
+    /// already had it. Games are registered before tools (see <see cref="HotkeyBinding.InRegistrationOrder"/>), so when a game
     /// and a tool share a combo the game keeps it and the tool's is logged as not registered.
     /// <paramref name="reserved"/> (tool hotkeys while Tools is off) are not registered with Windows,
     /// but count as taken for <see cref="CheckAvailability"/>, so a game can't claim one meanwhile.
     /// Returns the launch bindings that could not be registered.
     /// </summary>
-    public IReadOnlyList<HotkeyBinding> RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, IEnumerable<HotkeyBinding>? reserved = null)
+    public IReadOnlyList<HotkeyBinding> RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, IEnumerable<HotkeyBinding>? reserved = null, string? trayMenuHotkeyStr = null)
     {
         var failed = new List<HotkeyBinding>();
         try
@@ -120,32 +134,28 @@ public partial class HotkeyManager : IDisposable
                     }
                 }
             }
+            _isTrayMenuHotkeyRegistered = RegisterTrayMenuHotkey(trayMenuHotkeyStr);
         }
         return failed;
+    }
+
+    /// <summary>The tray-menu hotkey, unless a game or tool (registered or reserved) already holds it.</summary>
+    private bool RegisterTrayMenuHotkey(string? hotkeyStr)
+    {
+        if (!string.IsNullOrWhiteSpace(hotkeyStr) && ParseHotkey(hotkeyStr, out uint mod, out uint vk)
+            && _owners.TryGetValue((mod, vk), out var holder))
+        {
+            LoggingService.Warn("HotkeyManager", $"The open tray menu hotkey '{hotkeyStr}' is not registered: {holder.OwnerName} already uses it. Choose another in Settings > General.");
+            return false;
+        }
+        return RegisterAppHotkey(TRAY_MENU_HOTKEY_ID, hotkeyStr, TrayMenuOwnerId, "the open tray menu hotkey");
     }
 
     private void RegisterCore(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, List<HotkeyBinding> failed)
     {
         UnregisterAll();
 
-        // Register Global Manage Window Hotkey
-        if (!string.IsNullOrWhiteSpace(globalManageHotkeyStr) && ParseHotkey(globalManageHotkeyStr, out uint mod, out uint vk))
-        {
-            if (RegisterHotKey(_hwndSource.Handle, MANAGE_WINDOW_HOTKEY_ID, mod | MOD_NOREPEAT, vk))
-            {
-                _isManageHotkeyRegistered = true;
-                _owners[(mod, vk)] = (ManageOwnerId, "the show/hide window hotkey");
-                LoggingService.Verbose("HotkeyManager", $"Registered global manage-window hotkey: {globalManageHotkeyStr}");
-            }
-            else
-            {
-                LoggingService.Warn("HotkeyManager", $"Failed to register global hotkey '{globalManageHotkeyStr}': {DescribeLastError()}");
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(globalManageHotkeyStr))
-        {
-            LoggingService.Warn("HotkeyManager", $"Global hotkey '{globalManageHotkeyStr}' failed to parse - not registered.");
-        }
+        _isManageHotkeyRegistered = RegisterAppHotkey(MANAGE_WINDOW_HOTKEY_ID, globalManageHotkeyStr, ManageOwnerId, "the show/hide window hotkey");
 
         // Register per-game, then per-tool, launch hotkeys
         int nextGameId = GAME_HOTKEY_BASE_ID;
@@ -182,7 +192,26 @@ public partial class HotkeyManager : IDisposable
         }
 
         string tools = toolCount > 0 ? $", {toolCount} tool hotkey(s)" : string.Empty;
-        LoggingService.Info("HotkeyManager", $"Hotkey registration complete: global={(_isManageHotkeyRegistered ? "on" : "off")}, {gameCount} game hotkey(s){tools} active.");
+        LoggingService.Info("HotkeyManager", $"Hotkey registration complete: window={(_isManageHotkeyRegistered ? "on" : "off")}, {gameCount} game hotkey(s){tools} active.");
+    }
+
+    /// <summary>Registers one of TrayTrigger's own hotkeys (not a game's or tool's). Blank means none.</summary>
+    private bool RegisterAppHotkey(int id, string? hotkeyStr, string ownerId, string ownerName)
+    {
+        if (string.IsNullOrWhiteSpace(hotkeyStr)) return false;
+        if (!ParseHotkey(hotkeyStr, out uint mod, out uint vk))
+        {
+            LoggingService.Warn("HotkeyManager", $"Hotkey '{hotkeyStr}' for {ownerName} failed to parse - not registered.");
+            return false;
+        }
+        if (!RegisterHotKey(_hwndSource.Handle, id, mod | MOD_NOREPEAT, vk))
+        {
+            LoggingService.Warn("HotkeyManager", $"Failed to register {ownerName} '{hotkeyStr}': {DescribeLastError(mod, vk)}");
+            return false;
+        }
+        _owners[(mod, vk)] = (ownerId, ownerName);
+        LoggingService.Verbose("HotkeyManager", $"Registered {ownerName}: {hotkeyStr}");
+        return true;
     }
 
     private static string KindLabel(HotkeyOwnerKind kind) => kind == HotkeyOwnerKind.Tool ? "tool" : "game";
@@ -212,6 +241,11 @@ public partial class HotkeyManager : IDisposable
         {
             UnregisterHotKey(_hwndSource.Handle, MANAGE_WINDOW_HOTKEY_ID);
             _isManageHotkeyRegistered = false;
+        }
+        if (_isTrayMenuHotkeyRegistered)
+        {
+            UnregisterHotKey(_hwndSource.Handle, TRAY_MENU_HOTKEY_ID);
+            _isTrayMenuHotkeyRegistered = false;
         }
 
         int unregisteredCount = _registeredHotkeys.Count;
@@ -249,9 +283,12 @@ public partial class HotkeyManager : IDisposable
         if (_owners.TryGetValue((mod, vk), out var owner))
         {
             if (string.Equals(owner.OwnerId, ownerId, StringComparison.Ordinal)) return true;
-            reason = owner.OwnerId == ManageOwnerId
-                ? "Already used to show and hide the TrayTrigger window."
-                : $"Already used to launch {owner.OwnerName}.";
+            reason = owner.OwnerId switch
+            {
+                ManageOwnerId => "Already used to show and hide the TrayTrigger window.",
+                TrayMenuOwnerId => "Already used to open the tray menu.",
+                _ => $"Already used to launch {owner.OwnerName}.",
+            };
             return false;
         }
 

@@ -250,7 +250,7 @@ public class MainViewModel : ViewModelBase
         Library.IsLibraryVisible = () => CurrentSection == NavSection.Library;
 
         // The tweaks service records what it found on the machine before applying a tweak (prior
-        // power plan, prior visual-effects state) into settings so "Revert to Default" is exact.
+        // power plan, prior visual-effects state) into settings so "Restore Previous" is exact.
         _systemTweaksService = new SystemTweaksService(() => _settings, () => _storageService.SaveSettings(_settings, source: "SystemTweaksService.TweakApplied"));
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
 
@@ -482,7 +482,7 @@ public class MainViewModel : ViewModelBase
     public ICommand SelectLibraryCommand { get; }
     public ICommand SelectSettingsCommand { get; }
     public ICommand OpenDiagnosticsSettingsCommand { get; }
-    /// <summary>System page's RESTORE POINT badge -> Settings > Launch &amp; Performance.</summary>
+    /// <summary>System page's restore-point badge -> Settings > Launch &amp; Performance.</summary>
     public ICommand OpenPerformanceSettingsCommand { get; }
     /// <summary>Settings › Library &amp; Art, where the SteamGridDB and RAWG keys are entered.</summary>
     public ICommand OpenLibrarySettingsCommand { get; }
@@ -912,7 +912,8 @@ public class MainViewModel : ViewModelBase
         var failed = _hotkeyManager.RegisterHotkeys(
             _settings.GlobalManageHotkey,
             toolsOn ? Library.HotkeyBindings.Concat(Tools.HotkeyBindings) : Library.HotkeyBindings,
-            reserved: toolsOn ? null : Tools.HotkeyBindings);
+            reserved: toolsOn ? null : Tools.HotkeyBindings,
+            trayMenuHotkeyStr: _settings.TrayMenuHotkey);
 
         var failedTools = failed.Where(b => b.Kind == HotkeyOwnerKind.Tool).ToList();
         string? warning = failedTools.Count switch

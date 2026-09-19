@@ -1,6 +1,14 @@
 # How the tray menu works
 
-Right-clicking the TrayTrigger tray icon opens a menu built fresh from your library each time, using these preferences to decide what shows and in what order. Left-clicking the icon shows or hides the window, unless you turn on "Left-click on the tray icon opens the game menu", in which case both clicks open the menu. Double-clicking always opens the window.
+Right-clicking the TrayTrigger tray icon opens a menu built fresh from your library each time, using these preferences to decide what shows and in what order. Left-clicking the icon shows or hides the window, unless you turn on "Left-click on the tray icon opens the game menu", in which case both clicks open the menu. Double-clicking always opens the window. Ctrl+Alt+T opens the same menu by the tray icon from anywhere, with the search box ready; change or clear it under Settings > General > Open Tray Menu Hotkey. Pointing at the icon shows what is playing, or, when nothing is, the hotkey that shows or hides the window.
+
+## Search
+
+- With "Show a search box at the top of the tray menu" on (Settings > Tray Menu, on by default), the first row of the menu is a search box. The menu opens with the cursor already in it.
+- Type part of a game's name or category and the menu shows only the matches, up to ten games, followed by up to five tools when Tools are in the menu. Best matches come first: names that start with what you typed, then names that contain it, then category matches.
+- Enter launches the top match. Down moves into the results, so the arrow keys and Enter pick any of them. Esc clears the box; a second Esc closes the menu.
+- Clearing the box, or closing the menu, brings the normal menu back. Pairs well with "Left-click on the tray icon opens the game menu": click, type three letters, press Enter.
+- Turn the option off for the menu exactly as it was before.
 
 ## Icons and size
 
@@ -11,8 +19,8 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 ## Now Playing
 
 - While a game is tracked (its Performance Profile applied, a post-exit script pending) a Now Playing section appears at the very top with the game and how long it has been running.
-- Each entry opens a small submenu: End Session (restore tweaks) puts the profile back and runs the post-exit script without touching the game; Force Close Game kills the game's process first. Anything unsaved in the game is lost on a force close.
-- The same two actions are on the game's right-click menu in the library while it shows the PLAYING badge.
+- Each entry opens a small submenu: Close Game asks the game to quit, and the profile is put back and the post-exit script runs once it has; Force Close Game kills the game's process instead. Anything unsaved in the game is lost on a force close.
+- The same two actions are on the game's right-click menu in the library, and in its Game Details, while it shows the PLAYING badge.
 
 ## Recent and Favorites
 

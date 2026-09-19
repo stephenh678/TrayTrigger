@@ -129,7 +129,7 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 - **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, the Xbox app, or Battle.net shut down once the session ends, so they don't stay resident with their overlays and background processes.
 - **Launchers stay minimized** (on by default): Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game shows.
 - **Launch popup** by the tray clock for hotkey and tray launches: the game, what it's waiting on, and the reason if a launch fails, without opening the window.
-- **Global hotkey** to open the library, and per-game hotkeys to launch.
+- **Global hotkeys** to open the library (Ctrl+Alt+G) and the tray menu (Ctrl+Alt+T), both changeable in Settings, and per-game hotkeys to launch.
 - **One-click launch from the tray menu**: Recent, Favorites, and Categories, no window to open.
 
 ### Tools
@@ -160,7 +160,7 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 - **Session-scoped**: tweaks apply on launch (through any supported launcher or a direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
 - **Crash-safe**: the snapshot lives on disk. If TrayTrigger or your PC crashes mid-session, the next start restores your pre-game state. A normal shutdown restores the power plan, HDR, and GPU preference immediately.
 - **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
-- **End Session / Force Close** in the game's right-click menu if a launcher ever stalls. A game that never appears is rolled back automatically after three minutes.
+- **Close Game / Force Close** in the game's right-click menu, Game Details and the tray: quit the game and get your tweaks back, or kill it if it won't close. A game that never appears is rolled back automatically after three minutes.
 
 ### Pre-Launch and Post-Exit Scripts
 
@@ -208,7 +208,7 @@ Windows set up for games, and an eye on the hardware running them.
 
 System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a Core Isolation status readout, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
-<!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Reset Defaults) -->
+<!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Restore Previous Settings) -->
 
 See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Reset Defaults**. Bulk changes can create a System Restore point.
 
@@ -271,7 +271,7 @@ Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the 
 No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), and GitHub Releases (update checks, which you can turn off).
 
 **Can changes be reverted?**
-Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Reset Defaults. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.
+Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Restore Previous Settings. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.
 
 ---
 

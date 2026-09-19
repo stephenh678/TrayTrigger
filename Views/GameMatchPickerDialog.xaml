@@ -6,8 +6,8 @@
         mc:Ignorable="d"
         Title="Change Match"
         Height="480" Width="540"
+        MinHeight="480" MinWidth="540"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{StaticResource BrushDialogBg}"
         Foreground="{StaticResource BrushTextPrimary}"
@@ -34,7 +34,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="SearchTextBox" Grid.Column="0" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+            <TextBox AutomationProperties.Name="Search by title" x:Name="SearchTextBox" Grid.Column="0" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
                      Tag="Search by title..." KeyDown="SearchTextBox_KeyDown"/>
             <Button x:Name="SearchButton" Grid.Column="1" Content="Search" Click="SearchButton_Click"
                     Style="{StaticResource ModernOutlineButton}" Padding="14,5" MinWidth="80"/>
@@ -83,7 +83,7 @@
                             <DockPanel LastChildFill="True">
                                 <Border DockPanel.Dock="Right" Background="#1C2E3D" CornerRadius="4" Padding="5,1.5" Margin="10,0,0,0"
                                         VerticalAlignment="Center" Visibility="{Binding CurrentVisibility}">
-                                    <TextBlock Text="CURRENT" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
+                                    <TextBlock Text="CURRENT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Hit.Name}" FontSize="13.5" FontWeight="SemiBold"
@@ -104,15 +104,15 @@
         </Border>
 
         <!-- Attribution (RAWG's terms need an active link wherever their data shows; Steam needs none) -->
-        <TextBlock x:Name="AttributionTextBlock" Grid.Row="3" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" Visibility="Collapsed">
+        <TextBlock x:Name="AttributionTextBlock" Grid.Row="3" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" Visibility="Collapsed">
             <Hyperlink x:Name="AttributionLink" Click="AttributionLink_Click" Foreground="{StaticResource BrushTextSecondary}"><Run x:Name="AttributionRun"/></Hyperlink>
         </TextBlock>
 
         <!-- Buttons -->
         <DockPanel Grid.Row="4">
-            <Button x:Name="UseButton" DockPanel.Dock="Right" Content="Use Selected" Click="UseButton_Click" IsDefault="True" IsEnabled="False"
+            <Button x:Name="UseButton" DockPanel.Dock="Right" Content="_Use Selected" Click="UseButton_Click" IsDefault="True" IsEnabled="False"
                     Style="{StaticResource ModernAccentButton}" MinWidth="120" Margin="10,0,0,0"/>
-            <Button DockPanel.Dock="Right" Content="Cancel" Click="CancelButton_Click" IsCancel="True"
+            <Button DockPanel.Dock="Right" Content="_Cancel" Click="CancelButton_Click" IsCancel="True"
                     Style="{StaticResource ModernGhostButton}" MinWidth="80"/>
         </DockPanel>
     </Grid>

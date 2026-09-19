@@ -22,6 +22,8 @@ public class GameDetailsViewModel : ViewModelBase
     private readonly Action<GameEntry>? _launchAction;
     private readonly Action<GameEntry>? _editAction;
     private readonly Action<GameEntry>? _deleteAction;
+    private readonly Action<GameEntry>? _closeGameAction;
+    private readonly Action<GameEntry>? _forceCloseAction;
 
     private readonly RawgService _rawgService = new();
     private readonly string? _rawgApiKey;
@@ -149,9 +151,13 @@ public class GameDetailsViewModel : ViewModelBase
             {
                 Game.IsFavorite = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(FavoriteButtonLabel));
             }
         }
     }
+
+    /// <summary>The star button's accessible name, worded like the card menu's item.</summary>
+    public string FavoriteButtonLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
 
     public ICommand ToggleFavoriteCommand { get; }
 
@@ -510,6 +516,15 @@ public class GameDetailsViewModel : ViewModelBase
     public ICommand LaunchGameCommand { get; }
     public ICommand EditGameCommand { get; }
     public ICommand DeleteGameCommand { get; }
+
+    /// <summary>
+    /// A session is being tracked for this game (the card's PLAYING badge) as the dialog opens.
+    /// Shows Close Game and Force Close beside Launch Game, the same two actions as the card's
+    /// right-click menu (UX-14h, open since the 1.3.7 review as GD-4).
+    /// </summary>
+    public bool IsPlaying { get; }
+    public ICommand CloseGameCommand { get; }
+    public ICommand ForceCloseCommand { get; }
     public ICommand OpenStorePageCommand { get; }
     public ICommand OpenNewsUrlCommand { get; }
     public ICommand OpenNewsHubCommand { get; }
@@ -540,8 +555,14 @@ public class GameDetailsViewModel : ViewModelBase
         Action<GameEntry>? saveGame = null,
         bool autoCategorize = false,
         Func<GameEntry, string?, bool, Task>? fetchPosterByName = null,
-        MetadataRefreshInterval refreshInterval = MetadataRefreshInterval.Every3Days)
+        MetadataRefreshInterval refreshInterval = MetadataRefreshInterval.Every3Days,
+        bool isPlaying = false,
+        Action<GameEntry>? closeGameAction = null,
+        Action<GameEntry>? forceCloseAction = null)
     {
+        IsPlaying = isPlaying;
+        _closeGameAction = closeGameAction;
+        _forceCloseAction = forceCloseAction;
         _autoCategorize = autoCategorize;
         _refreshInterval = refreshInterval;
         _fetchPosterByName = fetchPosterByName;
@@ -574,6 +595,8 @@ public class GameDetailsViewModel : ViewModelBase
         LaunchGameCommand = new RelayCommand(ExecuteLaunch);
         EditGameCommand = new RelayCommand(ExecuteEdit);
         DeleteGameCommand = new RelayCommand(ExecuteDelete);
+        CloseGameCommand = new RelayCommand(() => { RequestClose?.Invoke(); _closeGameAction?.Invoke(Game); }, () => IsPlaying);
+        ForceCloseCommand = new RelayCommand(() => { RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
         OpenNewsHubCommand = new RelayCommand(() => ExecuteOpenUrl(NewsHubUrl), () => HasNewsHub);

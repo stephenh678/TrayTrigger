@@ -94,6 +94,7 @@ public class SystemTweakViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StatusBadgeText));
                 OnPropertyChanged(nameof(StatusBadgeColor));
                 OnPropertyChanged(nameof(ActionButtonText));
+                OnPropertyChanged(nameof(AccessibleStatus));
             }
         }
     }
@@ -120,7 +121,25 @@ public class SystemTweakViewModel : ViewModelBase
     public string StatusBadgeColor => IsInformational ? "#2F5F8F"
         : !IsAvailable ? "#4A4A55"
         : IsOptimal ? "#238636" : "#6E6E7A";
-    public string ActionButtonText => IsBusy ? "Working..." : IsOptimal ? "Revert to Default" : "Optimize";
+    // "Restore Previous", not "Revert to Default": it puts back the value TrayTrigger found before
+    // it changed it, which is not always the Windows default (Help/tweaks/overview.md).
+    public string ActionButtonText => IsBusy ? "Working..." : IsOptimal ? "Restore Previous" : "Optimize";
+
+    /// <summary>
+    /// The row as a screen reader should hear it: "Windows Game Mode, optimal, needs a restart".
+    /// The name, the status badge and the OPT-IN / RESTART / ADMIN tags are separate text
+    /// elements on screen; the row's buttons carry this so each one says what it acts on.
+    /// </summary>
+    public string AccessibleStatus => ComposeAccessibleStatus(Name, StatusBadgeText, IsOptIn, RequiresReboot, RequiresAdmin);
+
+    internal static string ComposeAccessibleStatus(string name, string badge, bool isOptIn, bool requiresReboot, bool requiresAdmin)
+    {
+        var parts = new List<string> { name, badge == "N/A" ? "not available" : badge.ToLowerInvariant() };
+        if (isOptIn) parts.Add("opt-in");
+        if (requiresReboot) parts.Add("needs a restart");
+        if (requiresAdmin) parts.Add("asks for administrator permission");
+        return string.Join(", ", parts);
+    }
 
     public ICommand ToggleCommand { get; }
     public ICommand CustomActionCommand { get; }
@@ -264,6 +283,9 @@ public class ProfileTweakToggleViewModel : ViewModelBase
     public string StatusBadgeColor => IsEnabled ? "#238636" : "#6E6E7A";
     public string ActionButtonText => IsEnabled ? "Disable" : "Enable";
 
+    /// <summary>The row for a screen reader: "Set power plan, enabled, asks for administrator permission".</summary>
+    public string AccessibleStatus => SystemTweakViewModel.ComposeAccessibleStatus(Name, StatusBadgeText, IsOptIn, requiresReboot: false, RequiresAdmin);
+
     public ICommand ToggleCommand { get; }
 
     public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, string helpTopicId, Func<bool> getter, Action<bool> setter, bool isOptIn = false, bool requiresAdmin = false, string note = "")
@@ -302,6 +324,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
         OnPropertyChanged(nameof(StatusBadgeText));
         OnPropertyChanged(nameof(StatusBadgeColor));
         OnPropertyChanged(nameof(ActionButtonText));
+        OnPropertyChanged(nameof(AccessibleStatus));
     }
 }
 
@@ -457,7 +480,9 @@ public class SystemViewModel : ViewModelBase
         $"{OptimalTweakCount} / {TotalTweakCount} Recommended Optimizations Active" + (OptInActiveCount > 0 ? $"  ·  {OptInActiveCount} opt-in on" : "");
 
     // Restore Point Protection status - read-only here; configured in Settings > Performance Tweaks.
-    public string RestorePointBadgeText => _settings.CreateRestorePointBeforeTweaks ? "RESTORE POINT: ON" : "RESTORE POINT: OFF";
+    // A preference, not a result: whether a restore point is attempted before a preset or restore.
+    // What actually happened is reported in the status line afterwards (see RestorePointNote).
+    public string RestorePointBadgeText => _settings.CreateRestorePointBeforeTweaks ? "Restore point before changes: On" : "Restore point before changes: Off";
     public string RestorePointBadgeColor => _settings.CreateRestorePointBeforeTweaks ? "#238636" : "#6E6E7A";
 
     // Game-Level Performance Profiles: per-game Optimized/Aggressive tweak sets (see
@@ -468,6 +493,24 @@ public class SystemViewModel : ViewModelBase
     // when a new profile tweak ships.
     public ObservableCollection<ProfileTweakToggleViewModel> OptimizedProfileTweaks { get; }
     public ObservableCollection<ProfileTweakToggleViewModel> AggressiveProfileTweaks { get; }
+
+    /// <summary>
+    /// The profile tweaks a tier will apply, in page order: Optimized's enabled toggles, and for
+    /// Aggressive those plus its own. Off applies none. An opt-in that is switched off is simply
+    /// not enabled, so it is left out. Edit Game lists these under its profile box.
+    /// </summary>
+    public IReadOnlyList<ProfileTweakToggleViewModel> EnabledTweaksFor(PerformanceProfileMode mode) =>
+        EnabledTweaksFor(mode, OptimizedProfileTweaks, AggressiveProfileTweaks);
+
+    internal static IReadOnlyList<ProfileTweakToggleViewModel> EnabledTweaksFor(
+        PerformanceProfileMode mode,
+        IEnumerable<ProfileTweakToggleViewModel> optimized,
+        IEnumerable<ProfileTweakToggleViewModel> aggressive) => mode switch
+    {
+        PerformanceProfileMode.Optimized => optimized.Where(t => t.IsEnabled).ToList(),
+        PerformanceProfileMode.Aggressive => optimized.Concat(aggressive).Where(t => t.IsEnabled).ToList(),
+        _ => Array.Empty<ProfileTweakToggleViewModel>(),
+    };
 
     private ObservableCollection<ProfileTweakToggleViewModel> BuildOptimizedProfileToggles(OptimizedProfileTweakConfig config)
     {
@@ -556,7 +599,7 @@ public class SystemViewModel : ViewModelBase
         };
     }
 
-    // Busy state for the Apply Preset / Reset Defaults bulk actions. These can take anywhere
+    // Busy state for the Apply Preset / Restore Previous Settings bulk actions. These can take anywhere
     // from a couple seconds to well over a minute (elevated UAC prompts, powercfg, a restore
     // point snapshot), so the actual work runs off the UI thread and this drives a floating
     // toast + disables the action buttons for the duration instead of the window looking frozen.
@@ -834,13 +877,13 @@ public class SystemViewModel : ViewModelBase
         IsApplyingTweaks = true;
         try
         {
-            await TryCreateRestorePointAsync("TrayTrigger: Before Performance Preset");
+            var restorePoint = await TryCreateRestorePointAsync("TrayTrigger: Before Performance Preset");
 
             BusyToastMessage = "Applying recommended performance optimizations...";
             StatusMessage = BusyToastMessage;
             await Task.Run(() => _tweaksService.ApplyRecommendedPerformancePreset());
 
-            await RefreshAllTweaksAsync("Recommended Performance Preset applied.");
+            await RefreshAllTweaksAsync(BulkActionStatus("Recommended Performance Preset applied.", restorePoint));
         }
         finally
         {
@@ -862,7 +905,7 @@ public class SystemViewModel : ViewModelBase
             return;
         }
         if (!ConfirmBulkAction(
-            "Reset Defaults",
+            "Restore Previous Settings",
             "This will restore the following settings to what they were before TrayTrigger changed them:",
             applied.Select(t => t.Name).ToList()))
         {
@@ -874,13 +917,13 @@ public class SystemViewModel : ViewModelBase
         IsApplyingTweaks = true;
         try
         {
-            await TryCreateRestorePointAsync("TrayTrigger: Before Reset to Defaults");
+            var restorePoint = await TryCreateRestorePointAsync("TrayTrigger: Before Restore Previous Settings");
 
-            BusyToastMessage = "Resetting optimizations to their prior values...";
+            BusyToastMessage = "Restoring previous settings...";
             StatusMessage = BusyToastMessage;
             await Task.Run(() => _tweaksService.ResetToDefaults(ids));
 
-            await RefreshAllTweaksAsync("Reset applied optimizations.");
+            await RefreshAllTweaksAsync(BulkActionStatus("Previous settings restored.", restorePoint));
         }
         finally
         {
@@ -890,9 +933,12 @@ public class SystemViewModel : ViewModelBase
         PromptRestartForBulkAction(before);
     }
 
-    private async Task TryCreateRestorePointAsync(string description)
+    /// <summary>What happened to the restore point a preset or restore asked for.</summary>
+    public enum RestorePointOutcome { Skipped, Created, Failed }
+
+    private async Task<RestorePointOutcome> TryCreateRestorePointAsync(string description)
     {
-        if (!_settings.CreateRestorePointBeforeTweaks) return;
+        if (!_settings.CreateRestorePointBeforeTweaks) return RestorePointOutcome.Skipped;
 
         BusyToastMessage = "Creating a System Restore Point before applying changes...";
         StatusMessage = BusyToastMessage;
@@ -902,8 +948,20 @@ public class SystemViewModel : ViewModelBase
             LoggingService.Warn("SystemViewModel", "Could not create a System Restore Point (System Restore may be disabled, throttled by Windows to one per 24h, or elevation was cancelled). Continuing anyway.");
             BusyToastMessage = "Could not create a restore point - continuing...";
             StatusMessage = "Could not create a restore point (may be disabled or already created recently). Continuing...";
+            return RestorePointOutcome.Failed;
         }
+        return RestorePointOutcome.Created;
     }
+
+    /// <summary>The status line after a preset or restore: what was done, then the restore point's fate.</summary>
+    internal static string BulkActionStatus(string done, RestorePointOutcome restorePoint) => $"{done} {RestorePointNote(restorePoint)}";
+
+    internal static string RestorePointNote(RestorePointOutcome outcome) => outcome switch
+    {
+        RestorePointOutcome.Created => "A restore point was created first.",
+        RestorePointOutcome.Failed => "No restore point was created: Windows refused it (System Restore may be off, or one was made in the last 24 hours).",
+        _ => "No restore point was made: that option is off in Settings.",
+    };
 
     private static bool ConfirmBulkAction(string title, string message, List<string> changingTweakNames)
     {

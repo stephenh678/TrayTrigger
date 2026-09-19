@@ -36,7 +36,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBox Grid.Column="0" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox AutomationProperties.Name="Filter results" Grid.Column="0" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                      Style="{StaticResource ModernTextBox}" Margin="0,0,12,0"
                      Tag="Search found games..."/>
 
@@ -84,7 +84,7 @@
                     <DataTemplate DataType="{x:Type vm:ScannedGameItemViewModel}">
                         <DockPanel LastChildFill="True">
                             <!-- Checkbox -->
-                            <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,12,0"
+                            <CheckBox AutomationProperties.Name="{Binding Name, StringFormat='Add {0}'}" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,12,0"
                                       Style="{StaticResource ModernCheckBox}" DockPanel.Dock="Left"/>
 
                             <!-- Game Icon -->
@@ -103,7 +103,7 @@
 
                             <!-- Ignore -->
                             <Button DockPanel.Dock="Right" Content="Ignore" Command="{Binding IgnoreCommand}"
-                                    Style="{StaticResource ModernGhostButton}" FontSize="10.5" Padding="6,2" Margin="10,0,0,0"
+                                    Style="{StaticResource ModernGhostButton}" FontSize="11" Padding="6,2" Margin="10,0,0,0"
                                     VerticalAlignment="Center"/>
 
                             <!-- Name and Install Path -->
@@ -127,10 +127,10 @@
                        Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
                        VerticalAlignment="Center" DockPanel.Dock="Left"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True"
+                <Button Content="_Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource ModernGhostButton}" Margin="0,0,8,0"/>
                 <!-- "Add", not "Install": this adds library entries, it installs nothing. -->
-                <Button Content="{Binding ImportButtonLabel}" Command="{Binding ImportCommand}"
+                <Button Content="{Binding ImportButtonLabel}" Command="{Binding ImportCommand}" IsDefault="True"
                         Style="{StaticResource ModernAccentButton}"/>
             </StackPanel>
         </DockPanel>

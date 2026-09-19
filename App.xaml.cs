@@ -295,6 +295,10 @@ public partial class App : Application
 
         // Initialize ViewModel & MainWindow
         Log("Initializing ViewModel...");
+        // Counts real sessions only, for the status bar's hotkey hint (UX-14e); saved with the
+        // rest of the settings on exit.
+        if (!isScreenshot) startupSettings.SessionsStarted++;
+
         _mainViewModel = new MainViewModel(
             _storageService,
             startupSettings,
@@ -340,6 +344,7 @@ public partial class App : Application
 
         // Global Hotkey Trigger
         _hotkeyManager.ManageHotkeyTriggered += OnManageHotkeyTriggered;
+        _hotkeyManager.TrayMenuHotkeyTriggered += OnTrayMenuHotkeyTriggered;
 
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;
@@ -477,6 +482,11 @@ public partial class App : Application
 
             UpdateTrayContextMenu();
             UpdateTrayToolTip();
+            // The tooltip names the window hotkey, so it follows a change to it in Settings.
+            _mainViewModel.SettingsVM.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(SettingsViewModel.GlobalManageHotkey)) UpdateTrayToolTip();
+            };
             if (!_trayIcon.IsCreated)
             {
                 _trayIcon.ForceCreate();
@@ -511,7 +521,7 @@ public partial class App : Application
             try
             {
                 var sessions = _launcherService?.GetActiveSessions() ?? [];
-                _trayIcon.ToolTipText = BuildTrayToolTipText(sessions, DateTime.Now);
+                _trayIcon.ToolTipText = BuildTrayToolTipText(sessions, DateTime.Now, _mainViewModel?.Settings.GlobalManageHotkey);
 
                 // The timer exists only to age the elapsed time, so it runs only while something is
                 // actually playing (a session still starting has no elapsed time to age yet).
@@ -541,13 +551,16 @@ public partial class App : Application
     /// what brings <see cref="UpdateTrayToolTip"/> back once it is, and without that subscription
     /// this text is painted once at dispatch and never replaced.
     /// </summary>
-    internal static string BuildTrayToolTipText(IReadOnlyList<ActiveGameSession> sessions, DateTime now)
+    internal static string BuildTrayToolTipText(IReadOnlyList<ActiveGameSession> sessions, DateTime now, string? windowHotkey = null)
     {
         string text;
 
         if (sessions.Count == 0)
         {
-            text = DefaultTrayToolTip;
+            // The window hotkey lives here once the status bar stops mentioning it (UX-14e).
+            text = string.IsNullOrWhiteSpace(windowHotkey)
+                ? DefaultTrayToolTip
+                : $"{DefaultTrayToolTip}\n{windowHotkey} shows or hides the window";
         }
         else if (sessions.Count == 1)
         {
@@ -580,6 +593,14 @@ public partial class App : Application
 
         Dispatcher.Invoke(() =>
         {
+            // Replacing the menu while it is open closes it, and would throw away a search in
+            // progress (UX-16). Build the new one once this one closes instead.
+            if (_trayIcon.ContextMenu is { IsOpen: true })
+            {
+                _trayMenuRebuildPending = true;
+                return;
+            }
+
             var menu = new ContextMenu();
 
             var games = _mainViewModel.Games.Where(g => !g.Game.IsHidden).ToList();
@@ -618,8 +639,10 @@ public partial class App : Application
                         sessionItem.Command = null;
 
                         string gameId = session.GameId;
-                        sessionItem.Items.Add(CreateNavMenuItem("End Session (restore tweaks)", "", () =>
-                            Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: false))));
+                        string gameName = session.Game.Name;
+                        var closeGame = CreateNavMenuItem("Close Game", "", () => CloseGameFromTray(gameId, gameName));
+                        closeGame.ToolTip = "Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.";
+                        sessionItem.Items.Add(closeGame);
                         var forceClose = CreateNavMenuItem("Force Close Game", "", () =>
                         {
                             if (card != null)
@@ -631,6 +654,7 @@ public partial class App : Application
                                 Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: true));
                             }
                         }, iconBrush: (Brush)FindResource("BrushDanger"));
+                        forceClose.ToolTip = "Kills the game's process, then ends the session. Anything unsaved in the game is lost.";
                         forceClose.IsEnabled = session.CanForceClose;
                         sessionItem.Items.Add(forceClose);
                         menu.Items.Add(sessionItem);
@@ -819,6 +843,8 @@ public partial class App : Application
                 }
             }
 
+            // Where the navigation block starts: the search box leaves everything from here on alone.
+            int navStart = menu.Items.Count;
             menu.Items.Add(new Separator());
 
             // Navigation & exit items. A tray-first launcher should reach its two most common
@@ -836,6 +862,14 @@ public partial class App : Application
             var exitBrush = (Brush)FindResource("BrushDanger");
             var exitItem = CreateNavMenuItem("Exit TrayTrigger", "\uE7E8", ExitApplication, exitBrush, exitBrush);
             menu.Items.Add(exitItem);
+
+            // The optional search row at the very top (UX-16); with the setting off the menu is
+            // exactly as before. Nothing to search in an empty library.
+            if (_mainViewModel.Settings.ShowTraySearch && games.Count > 0)
+            {
+                AttachTraySearch(menu, navStart, games);
+            }
+            menu.Closed += OnTrayMenuClosed;
 
             _trayIcon.ContextMenu = menu;
 
@@ -1131,16 +1165,12 @@ public partial class App : Application
                 _mainWindow.WindowState = WindowState.Normal;
             }
 
-            if (!_mainWindow.IsVisible)
-            {
-                _mainWindow.Show();
-            }
-
-            // On the very first show the window is cloaked until its first frame renders;
-            // defer the activation dance until then so it doesn't compete with the first
-            // paint. On subsequent shows this runs immediately.
+            // The window is cloaked until a painted frame is on screen - on the first show by
+            // PrepareForFirstShow, and when it comes back from the tray (it hides rather than
+            // closes) by ShowCloaked, so neither shows a white box. The activation dance waits
+            // until then so it doesn't compete with the paint.
             var window = _mainWindow;
-            WindowThemeService.WhenContentRendered(window, () =>
+            WindowThemeService.ShowCloaked(window, () =>
             {
                 if (_isShuttingDown || !window.IsVisible) return;
                 window.Activate();
@@ -1182,6 +1212,22 @@ public partial class App : Application
     {
         _mainViewModel.CurrentSection = NavSection.Library;
         ToggleMainWindow();
+    }
+
+    /// <summary>
+    /// Close Game from the tray's Now Playing submenu. Off the UI thread, since it waits for the
+    /// game to quit; the window may be hidden, so a game that didn't close says so in a notification.
+    /// </summary>
+    private void CloseGameFromTray(string gameId, string gameName)
+    {
+        Task.Run(() =>
+        {
+            var result = _launcherService.CloseGameNow(gameId);
+            if (result is ProcessLauncherService.CloseGameResult.StillRunning or ProcessLauncherService.CloseGameResult.CouldNotAsk)
+            {
+                Dispatcher.BeginInvoke(() => _trayIcon?.ShowNotification("TrayTrigger", LibraryViewModel.DescribeCloseGame(result, gameName)));
+            }
+        });
     }
 
     public void ToggleMainWindow()

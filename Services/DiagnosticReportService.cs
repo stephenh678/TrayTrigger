@@ -147,6 +147,7 @@ public static class DiagnosticReportService
         sb.AppendLine($"- SteamGridDB: {OnOff(s.UseSteamGridDbArt)}, key {Presence(s.SteamGridDbApiKey)}; RAWG: {OnOff(s.UseRawgMetadata)}, key {Presence(s.RawgApiKey)}");
         sb.AppendLine($"- Restore point before presets: {OnOff(s.CreateRestorePointBeforeTweaks)}; verbose logging: {OnOff(s.VerboseLoggingEnabled)}; beta updates: {OnOff(s.IncludePrereleaseUpdates)}");
         sb.AppendLine($"- Show/hide hotkey: {(string.IsNullOrWhiteSpace(s.GlobalManageHotkey) ? "none" : s.GlobalManageHotkey)}");
+        sb.AppendLine($"- Tray menu hotkey: {(string.IsNullOrWhiteSpace(s.TrayMenuHotkey) ? "none" : s.TrayMenuHotkey)}");
     }
 
     private static void AppendState(StringBuilder sb, Inputs inputs)

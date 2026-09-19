@@ -54,7 +54,7 @@
                         <DockPanel Margin="0,0,0,8">
                             <TextBlock Text="POSTER ARTWORK" FontSize="11" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextSecondary}" DockPanel.Dock="Left"/>
-                            <TextBlock Text="2:3 Ratio" FontSize="10" Foreground="{StaticResource BrushTextMuted}" 
+                            <TextBlock Text="2:3 Ratio" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
                                        DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </DockPanel>
 
@@ -83,7 +83,7 @@
                                                    Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" Opacity="0.5" Margin="0,0,0,8"/>
                                         <TextBlock Text="NO POSTER" FontSize="11" FontWeight="SemiBold" 
                                                    Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="600 × 900" FontSize="9.5" Foreground="{StaticResource BrushTextMuted}" 
+                                        <TextBlock Text="600 × 900" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
                                                    HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
@@ -132,9 +132,9 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="Change..." Command="{Binding BrowseCoverCommand}"
+                            <Button AutomationProperties.Name="Change poster" Grid.Column="0" Content="Change..." Command="{Binding BrowseCoverCommand}"
                                     Style="{StaticResource ModernOutlineButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
-                            <Button Grid.Column="1" Content="Reset" Command="{Binding ResetCoverCommand}"
+                            <Button AutomationProperties.Name="Reset poster" Grid.Column="1" Content="Reset" Command="{Binding ResetCoverCommand}"
                                     Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
                             <Button Grid.Column="2" Command="{Binding RefreshPosterCommand}"
                                     Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"
@@ -162,7 +162,7 @@
                         <DockPanel Grid.Row="0" Margin="0,0,0,6">
                             <TextBlock Text="GAME ICON" FontSize="11" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextSecondary}" DockPanel.Dock="Left"/>
-                            <TextBlock Text="Tray &amp; list" FontSize="10" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="Tray &amp; list" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                        DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         </DockPanel>
 
@@ -181,22 +181,45 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="Change..." Command="{Binding BrowseIconCommand}"
+                            <Button AutomationProperties.Name="Change icon" Grid.Column="0" Content="Change..." Command="{Binding BrowseIconCommand}"
                                     Style="{StaticResource ModernOutlineButton}" Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
-                            <Button Grid.Column="1" Content="Reset" Command="{Binding ResetIconCommand}"
+                            <Button AutomationProperties.Name="Reset icon" Grid.Column="1" Content="Reset" Command="{Binding ResetIconCommand}"
                                     Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"/>
                         </Grid>
                     </Grid>
                 </DockPanel>
             </Border>
 
-            <!-- RIGHT COLUMN: CONFIGURATION CARDS (SCROLLABLE) -->
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0">
+            <!-- RIGHT COLUMN: TABS, THEN THE CONFIGURATION CARDS (SCROLLABLE) -->
+            <DockPanel Grid.Column="1">
+            <!-- All + one tab per card, as in Settings and System. Every card stays loaded and only
+                 its visibility follows the tab, so edits, validation and bindings survive a switch.
+                 Ctrl+Tab / Ctrl+Shift+Tab move between tabs (GameEditDialog.xaml.cs). -->
+            <Border DockPanel.Dock="Top" Margin="14,0,4,10" Background="{StaticResource BrushTabStripBackground}" BorderBrush="{StaticResource BrushBorderDark}"
+                    BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
+                    views:ScrollToTop.Target="{Binding ElementName=EditScroll}">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="All" Command="{Binding SelectSectionCommand}" CommandParameter="All"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllSection}"/>
+                    <Button Content="Identity &amp; Library" Command="{Binding SelectSectionCommand}" CommandParameter="Identity" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsIdentitySection}"/>
+                    <Button Content="Launch" Command="{Binding SelectSectionCommand}" CommandParameter="Launch" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLaunchSection}"/>
+                    <Button Content="Performance" Command="{Binding SelectSectionCommand}" CommandParameter="Performance" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsPerformanceSection}"/>
+                    <Button Content="Scripts" Command="{Binding SelectSectionCommand}" CommandParameter="Scripts" Margin="2,0,0,0"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsScriptsSection}"
+                            Visibility="{Binding ShowScriptsCard, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+            </Border>
+            <ScrollViewer x:Name="EditScroll" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0"
+                          views:ScrollToTop.ResetOn="{Binding SelectedSection}">
                 <StackPanel>
 
                     <!-- CARD 1: IDENTITY & LIBRARY (title, category, hidden, store link) -->
-                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowIdentityCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Identity &amp; Library" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
@@ -206,9 +229,9 @@
                                 <TextBlock Text="Game Title" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
                                            VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                                    <Button Command="{Binding LookUpCommand}"
+                                    <Button AutomationProperties.Name="Look up this game online" Command="{Binding LookUpCommand}"
                                             Style="{StaticResource ModernGhostButton}"
-                                            Padding="8,2" FontSize="10.5"
+                                            Padding="8,2" FontSize="11"
                                             ToolTip="Find this game online and fill in its title, poster, and genre (Steam, or SteamGridDB art for non-Steam games).">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -217,13 +240,13 @@
                                     </Button>
                                 </StackPanel>
                             </DockPanel>
-                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                            <TextBox AutomationProperties.Name="Game title" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
 
                             <!-- Category -->
                             <TextBlock Text="Category (choose existing or type a custom tag)" FontSize="11.5" 
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding ExistingCategories}"
+                            <ComboBox AutomationProperties.Name="Category" ItemsSource="{Binding ExistingCategories}"
                                       Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True"
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,10"/>
@@ -234,7 +257,7 @@
                                       IsChecked="{Binding IsHidden}"
                                       Style="{StaticResource ModernCheckBox}"/>
                             <TextBlock Text="Removed from the library grid and tray menu, but kept on record - Scan for Games and Add Folder will still recognize it and won't suggest it again. Unhide it anytime from the Library's &quot;Hidden&quot; filter tab or this game's right-click menu."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
 
                             <!-- Steam App ID Search & Linking -->
                             <Border Background="#131B26" BorderBrush="#1C3852" BorderThickness="1" CornerRadius="6" Padding="10,8">
@@ -242,17 +265,17 @@
                                     <DockPanel Margin="0,0,0,4">
                                         <TextBlock Text="Steam App ID (Metadata &amp; Poster Sync)" FontSize="11.5" FontWeight="SemiBold"
                                                    Foreground="{StaticResource BrushAccentHover}" DockPanel.Dock="Left"/>
-                                        <TextBlock Text="Keeps local launch target" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                        <TextBlock Text="Keeps local launch target" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                                    DockPanel.Dock="Right" HorizontalAlignment="Right"/>
                                     </DockPanel>
                                     <TextBlock Text="Enrich this game with high-res vertical box art, Steam reviews, specs, and news. Linking an App ID does not require Steam to run."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox x:Name="SteamAppIdBox" AutomationProperties.Name="Steam App ID" Grid.Column="0" Text="{Binding SteamAppId, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
                                         <Button Grid.Column="1" Content="Fetch by ID" Command="{Binding FetchBySteamIdCommand}"
                                                 Style="{StaticResource ModernOutlineButton}" Padding="12,4"/>
@@ -268,16 +291,17 @@
                                                   IsChecked="{Binding ForceSteamOverlayTag}"
                                                   Style="{StaticResource ModernCheckBox}"/>
                                         <TextBlock Text="Replaces the Local Games badge on the library card with the Steam logo, even though the game launches from its executable."
-                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
                     </Border>
 
-                    <!-- CARD 2: LAUNCH (route first, then target, folder, arguments, admin, hotkey) -->
-                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}" 
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                    <!-- CARD 2: LAUNCH (route first, then target, advanced options, admin, hotkey) -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowLaunchCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Launch" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
@@ -304,12 +328,12 @@
                                         <CheckBox Content="{Binding LaunchDirectlyLabel}" IsChecked="{Binding LaunchDirectly}"
                                                   Style="{StaticResource ModernCheckBox}"/>
                                         <TextBlock Text="Off: starts through the launcher's client when it's installed (cloud saves, achievements, overlay). On: runs the executable below as-is - needed for an alternate exe such as a DX11 build or a mod launcher, since the client launch ignores the path."
-                                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                     </StackPanel>
                                     <CheckBox Content="Close the launcher after this game exits" IsChecked="{Binding CloseLauncherOnExit}"
                                               Style="{StaticResource ModernCheckBox}" Margin="0,8,0,0"/>
                                     <TextBlock Text="Frees the memory and overlay hosts a client keeps resident after you stop playing. For Steam, also starts the client minimized to the tray when TrayTrigger has to open it, so only the game appears. Off by default - leave it off if you keep the client open for downloads or chat."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                                 </StackPanel>
                             </Border>
 
@@ -322,7 +346,7 @@
                                           IsChecked="{Binding IsSteamGame}"
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Only for a game installed in your Steam library - keeps Steam's overlay, cloud saves, and playtime. Leave it off for a standalone game that merely shares a Steam listing."
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,0"/>
                             </StackPanel>
 
                             <!-- Executable Path -->
@@ -332,32 +356,39 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox AutomationProperties.Name="Executable path" Grid.Column="0" Text="{Binding ExecutablePath, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseExeCommand}" 
+                                <Button AutomationProperties.Name="Browse for the executable" Grid.Column="1" Content="Browse..." Command="{Binding BrowseExeCommand}" 
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
 
-                            <!-- Working Directory -->
-                            <TextBlock Text="Working Directory" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" 
-                                         Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}" 
-                                        Style="{StaticResource ModernOutlineButton}"/>
-                            </Grid>
+                            <!-- Working folder and arguments are rarely needed, so they sit in an expander
+                                 that starts open whenever either one has a value (UX-14g). -->
+                            <Expander Header="Advanced launch options" Style="{StaticResource DisclosureExpander}"
+                                      IsExpanded="{Binding ShowAdvancedLaunchOptions}" Margin="0,0,0,10">
+                                <StackPanel Margin="0,8,0,0">
+                                    <!-- Working Directory -->
+                                    <TextBlock Text="Working Directory" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox AutomationProperties.Name="Working directory" Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
+                                        <Button AutomationProperties.Name="Browse for the working directory" Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}" 
+                                                Style="{StaticResource ModernOutlineButton}"/>
+                                    </Grid>
 
-                            <!-- Launch Arguments -->
-                            <TextBlock Text="Launch Arguments (optional command-line parameters)" FontSize="11.5"
-                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ModernTextBox}"/>
-                            <TextBlock Text="{Binding ArgumentsHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
-                                       TextWrapping="Wrap" Margin="0,4,0,10"/>
+                                    <!-- Launch Arguments -->
+                                    <TextBlock Text="Launch Arguments (optional command-line parameters)" FontSize="11.5"
+                                               Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                    <TextBox AutomationProperties.Name="Launch arguments" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}"/>
+                                    <TextBlock Text="{Binding ArgumentsHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                               TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Expander>
 
                             <!-- Run as Administrator lives here with the arguments: both apply only when
                                  TrayTrigger starts the exe itself, and are ignored when a client launches
@@ -375,16 +406,16 @@
                                     <!-- Recorded from real key presses, and refused on the spot if another game, the
                                          window hotkey, or another app already has the combo. Its message is rendered
                                          below, across the whole row, rather than wrapped under the 160 px box. -->
-                                    <views:HotkeyRecorderBox x:Name="LaunchHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
+                                    <views:HotkeyRecorderBox AutomationProperties.Name="Launch hotkey" x:Name="LaunchHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
                                                              ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
-                                        <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none." FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none." FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </DockPanel>
                                 <TextBlock Text="{Binding Message, ElementName=LaunchHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=LaunchHotkeyBox}"
                                            Visibility="{Binding HasMessage, ElementName=LaunchHotkeyBox, Converter={StaticResource BoolToVis}}"
-                                           FontSize="10.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                           FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -392,30 +423,44 @@
                     <!-- CARD 3: PERFORMANCE (session-scoped tweaks) - its own card so the profile
                          is explained where it is chosen instead of only on the System page. -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding ShowPerformanceCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Performance" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
                             <TextBlock Text="Performance Profile" FontSize="11.5"
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding PerformanceProfileOptions}"
+                            <ComboBox AutomationProperties.Name="Performance profile" ItemsSource="{Binding PerformanceProfileOptions}"
                                       SelectedItem="{Binding PerformanceProfile}"
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
                             <TextBlock Text="Applied when this game launches and put back when it exits."
                                        FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <!-- What the chosen tier does for this game (UX-07), from the System page's
+                                 Performance Profiles toggles: enabled tweaks only, one per line. -->
+                            <ItemsControl ItemsSource="{Binding ProfileSummaryLines}" Margin="0,0,0,6"
+                                          AutomationProperties.Name="What this profile changes"
+                                          Visibility="{Binding HasProfileSummary, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,1,0,0">
+                                            <Run Text="&#x2022; " Foreground="{StaticResource BrushTextMuted}"/><Run Text="{Binding Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work" Margin="0,0,0,12"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
 
                             <!-- CPU affinity (hybrid CPUs) - independent of the profile tier -->
                             <TextBlock Text="CPU Cores (hybrid Intel 12th gen+ / similar)" FontSize="11.5"
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding CpuAffinityOptions}"
+                            <ComboBox AutomationProperties.Name="CPU affinity" ItemsSource="{Binding CpuAffinityOptions}"
                                       SelectedValue="{Binding CpuAffinity}" SelectedValuePath="Value" DisplayMemberPath="Label"
                                       Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
                             <TextBlock Text="{Binding CpuAffinityHint}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
                                        TextWrapping="Wrap" Margin="0,0,0,4"/>
-                            <Button Style="{StaticResource HelpLinkButton}"
+                            <Button AutomationProperties.Name="Learn more about CPU affinity" Style="{StaticResource HelpLinkButton}"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
                         </StackPanel>
                     </Border>
@@ -424,11 +469,11 @@
                          omitting the card, so the feature is discoverable from here. -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
-                            Visibility="{Binding ShowScriptsStub, Converter={StaticResource BoolToVis}}">
+                            Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
                         <DockPanel LastChildFill="True">
                             <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
-                            <TextBlock FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
+                            <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
                                 <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}"/>
                                 <Run Text=" are hidden. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
                             </TextBlock>
@@ -439,12 +484,12 @@
                          Performance, or always shown for a game that already has a script) -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
-                            Visibility="{Binding ShowScriptsCard, Converter={StaticResource BoolToVis}}">
+                            Visibility="{Binding ShowScriptsCardOnTab, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="12.5" FontWeight="SemiBold"
+                            <TextBlock Text="Scripts" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Run your own .bat, .cmd, .ps1, .exe, or .com before this game starts and after it exits. Hide this card under Settings › Launch &amp; Performance."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Pre-launch script -->
                             <TextBlock Text="Pre-Launch Script (runs just before the game starts)" FontSize="11.5"
@@ -455,12 +500,12 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding PreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox x:Name="PreLaunchScriptBox" AutomationProperties.Name="Pre-launch script path" Grid.Column="0" Text="{Binding PreLaunchScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Test" Command="{Binding TestPreLaunchScriptCommand}"
+                                <Button AutomationProperties.Name="Test the pre-launch script" Grid.Column="1" Content="Test" Command="{Binding TestPreLaunchScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                                         ToolTip="Run this script now with the values in this dialog (hidden, not elevated, 30 s limit) and show its exit code and output"/>
-                                <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
+                                <Button AutomationProperties.Name="Browse for a pre-launch script" Grid.Column="2" Content="Browse..." Command="{Binding BrowsePreLaunchScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
                             <StackPanel Orientation="Horizontal" Margin="0,-6,0,8">
@@ -483,13 +528,13 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding PostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox x:Name="PostExitScriptBox" AutomationProperties.Name="Post-exit script path" Grid.Column="0" Text="{Binding PostExitScriptPath, UpdateSourceTrigger=PropertyChanged}"
                                          IsEnabled="{Binding CanEditPostExitScript}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                                <Button Grid.Column="1" Content="Test" Command="{Binding TestPostExitScriptCommand}"
+                                <Button AutomationProperties.Name="Test the post-exit script" Grid.Column="1" Content="Test" Command="{Binding TestPostExitScriptCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                                         ToolTip="Run this script now as a post-exit run with playtime 0 (hidden, not elevated, 30 s limit) and show its exit code and output"/>
-                                <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
+                                <Button AutomationProperties.Name="Browse for a post-exit script" Grid.Column="2" Content="Browse..." Command="{Binding BrowsePostExitScriptCommand}"
                                         IsEnabled="{Binding CanEditPostExitScript}"
                                         Style="{StaticResource ModernOutlineButton}"/>
                             </Grid>
@@ -501,21 +546,21 @@
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPostExitScriptCommand}"/>
                             </StackPanel>
                             <TextBlock Text="Post-exit runs for .exe launches, Steam games, and GOG / EA / Epic / Ubisoft / Xbox / Battle.net games launched through their client. Only a bare launcher link (a dropped .url with no platform ID) has no exit signal and supports pre-launch only."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <!-- Script arguments: free text appended after the five positional
                                  arguments, so one generic script can be parameterised per game. -->
                             <TextBlock Text="Script Arguments (optional, passed to both scripts)" FontSize="11.5"
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding ScriptArguments, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox AutomationProperties.Name="Extra script arguments" Text="{Binding ScriptArguments, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}" IsEnabled="{Binding HasAnyScript}" Margin="0,0,0,4"/>
                             <TextBlock Text="Added after the built-in arguments (phase, name, exe, game ID, playtime), so they start at %6 in a batch file or $args[5] in PowerShell. Quote a value that contains spaces."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10"
                                     Visibility="{Binding ShowScriptsDisabledNotice, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Scripts are turned off in Settings › Launch &amp; Performance (Enable scripts), so these will NOT run until that switch is back on."
-                                           FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                                           FontSize="11" Foreground="#FFD27F" TextWrapping="Wrap"/>
                             </Border>
 
                             <!-- Options stay greyed out until a script path is set, so an empty
@@ -524,9 +569,9 @@
                                       IsChecked="{Binding WaitForPreLaunchScript}" IsEnabled="{Binding HasPreLaunchScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                             <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasPreLaunchScript}">
-                                <TextBox DockPanel.Dock="Left" Width="64" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox x:Name="PreLaunchTimeoutBox" AutomationProperties.Name="Pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding PreLaunchTimeoutHint}" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="{Binding PreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                            TextWrapping="Wrap" VerticalAlignment="Center"/>
                             </DockPanel>
                             <CheckBox Content="Cancel the launch if the pre-launch script fails (non-zero exit code, timeout, or won't start)"
@@ -547,7 +592,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Default scripts from Settings" FontSize="11.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding DefaultScriptsSummary}" FontSize="10.5"
+                                    <TextBlock Text="{Binding DefaultScriptsSummary}" FontSize="11"
                                                Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                                     <CheckBox Content="Don't run the default scripts for this game"
                                               IsChecked="{Binding SkipDefaultScripts}"
@@ -556,7 +601,7 @@
                             </Border>
 
                             <TextBlock Text="Any script works as-is. Optionally, your script can read the game name and phase it was called for."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                             <!-- Same pair of links, in the same place, as the scripts card in Settings. -->
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
@@ -574,6 +619,7 @@
 
                 </StackPanel>
             </ScrollViewer>
+            </DockPanel>
         </Grid>
 
         <!-- ============================================================== -->
@@ -606,9 +652,9 @@
 
             <!-- Action Buttons -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancel" Command="{Binding CancelCommand}" 
+                <Button Content="_Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource ModernGhostButton}" MinWidth="85" Margin="0,0,8,0"/>
-                <Button Content="Save Changes" Command="{Binding SaveCommand}" 
+                <Button Content="_Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
                         Style="{StaticResource ModernAccentButton}" MinWidth="110"/>
             </StackPanel>
         </Grid>

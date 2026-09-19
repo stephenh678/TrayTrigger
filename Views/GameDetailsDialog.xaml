@@ -77,7 +77,7 @@
 
                 <!-- Title & Genre Pill -->
                 <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                    <Button DockPanel.Dock="Left" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
+                    <Button AutomationProperties.Name="{Binding FavoriteButtonLabel}" DockPanel.Dock="Left" Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}"
                             VerticalAlignment="Top" Margin="0,2,10,0"/>
                     <StackPanel>
                         <TextBlock Text="{Binding GameTitle}" FontSize="21" FontWeight="SemiBold"
@@ -162,7 +162,7 @@
                             Visibility="{Binding HasEsrbRating, Converter={StaticResource BoolToVis}}"
                             ToolTip="ESRB age rating">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="ESRB" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="ESRB" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <TextBlock Text="{Binding EsrbRating}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" FontWeight="Medium" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -210,7 +210,7 @@
                 <!-- Action Buttons: Primary & Constructive on Left, Destructive on Far Right -->
                 <DockPanel Grid.Row="4" VerticalAlignment="Bottom" Margin="0,4,0,0" LastChildFill="False">
                     <!-- Destructive Action (Safely Isolated on Far Right) -->
-                    <Button DockPanel.Dock="Right" Command="{Binding DeleteGameCommand}"
+                    <Button AutomationProperties.Name="Remove from library" DockPanel.Dock="Right" Command="{Binding DeleteGameCommand}"
                             Style="{StaticResource ModernOutlineButton}" Foreground="#E06C75" BorderBrush="#66E06C75"
                             Padding="12,7" Margin="0,0,0,6" FontSize="12">
                         <StackPanel Orientation="Horizontal">
@@ -222,7 +222,7 @@
                     <!-- Primary & Constructive Actions (Left Aligned). MDL2 glyphs rather than
                          emoji so the buttons match the rest of the app on every Windows build. -->
                     <WrapPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                        <Button Command="{Binding LaunchGameCommand}"
+                        <Button AutomationProperties.Name="Launch Game" Command="{Binding LaunchGameCommand}"
                                 Style="{StaticResource ModernAccentButton}" Padding="16,7" Margin="0,0,10,6"
                                 FontWeight="SemiBold" FontSize="12.5">
                             <StackPanel Orientation="Horizontal">
@@ -230,7 +230,27 @@
                                 <TextBlock Text="Launch Game" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding OpenStorePageCommand}"
+                        <!-- While the game is playing: the card menu's two session actions (UX-14h). -->
+                        <Button AutomationProperties.Name="Close Game" Command="{Binding CloseGameCommand}"
+                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="12"
+                                ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7E8;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Close Game" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button AutomationProperties.Name="Force Close Game" Command="{Binding ForceCloseCommand}"
+                                Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="12"
+                                Foreground="{StaticResource BrushDanger}"
+                                ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="12" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Force Close" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button AutomationProperties.Name="Open the Steam store page" Command="{Binding OpenStorePageCommand}"
                                 Visibility="{Binding ShowSteamStoreButton, Converter={StaticResource BoolToVis}}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
                                 FontSize="12">
@@ -241,7 +261,7 @@
                         </Button>
                         <!-- The RAWG counterpart of Steam Store while RAWG is showing: the game's
                              rawg.io page, i.e. where the data on screen came from. -->
-                        <Button Command="{Binding OpenRawgPageCommand}"
+                        <Button AutomationProperties.Name="Open the RAWG page" Command="{Binding OpenRawgPageCommand}"
                                 Visibility="{Binding HasRawgPage, Converter={StaticResource BoolToVis}}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
                                 FontSize="12" ToolTip="Open this game's page on rawg.io">
@@ -250,7 +270,7 @@
                                 <TextBlock Text="Open on RAWG" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding EditGameCommand}"
+                        <Button AutomationProperties.Name="Edit game" Command="{Binding EditGameCommand}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
                                 FontSize="12">
                             <StackPanel Orientation="Horizontal">
@@ -292,7 +312,7 @@
                                     AutomationProperties.Name="Show RAWG info"/>
                         </StackPanel>
                     </Border>
-                    <Button DockPanel.Dock="Right" Command="{Binding ChangeMatchCommand}"
+                    <Button AutomationProperties.Name="Change which game this matches" DockPanel.Dock="Right" Command="{Binding ChangeMatchCommand}"
                             Visibility="{Binding CanChangeMatch, Converter={StaticResource BoolToVis}}"
                             Style="{StaticResource ModernGhostButton}" Padding="8,4" FontSize="11.5" VerticalAlignment="Center"
                             Foreground="{StaticResource BrushAccentHover}"
@@ -370,7 +390,7 @@
                         <TextBlock Text="{Binding ShortDescription}" FontSize="13" Foreground="{StaticResource BrushTextPrimary}"
                                    TextWrapping="Wrap" LineHeight="20"/>
                         <!-- Required RAWG attribution: an active link wherever RAWG data is shown. -->
-                        <TextBlock Margin="0,10,0,0" FontSize="10.5" Foreground="{StaticResource BrushTextMuted}"
+                        <TextBlock Margin="0,10,0,0" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                    Visibility="{Binding ShowRawgAttribution, Converter={StaticResource BoolToVis}}">
                             <Hyperlink Command="{Binding OpenRawgPageCommand}" Foreground="{StaticResource BrushTextSecondary}">Data from RAWG</Hyperlink>
                         </TextBlock>
@@ -420,7 +440,7 @@
                     <StackPanel>
                         <DockPanel Margin="0,0,0,10" LastChildFill="True">
                             <!-- Link to the full Steam news hub for this app (all announcements, not just the latest 3) -->
-                            <Button DockPanel.Dock="Right"
+                            <Button AutomationProperties.Name="Open all news" DockPanel.Dock="Right"
                                     Command="{Binding OpenNewsHubCommand}"
                                     Style="{StaticResource ModernGhostButton}"
                                     Padding="0" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0"
@@ -464,7 +484,7 @@
                                                        Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6"/>
 
                                             <!-- Read More Link -->
-                                            <Button Grid.Row="2"
+                                            <Button AutomationProperties.Name="{Binding Title, StringFormat='Read: {0}'}" Grid.Row="2"
                                                     Command="{Binding DataContext.OpenNewsUrlCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding Url}"
                                                     Style="{StaticResource ModernGhostButton}"
@@ -491,7 +511,7 @@
         <DockPanel Grid.Row="3">
             <TextBlock Text="{Binding Game.ExecutablePath}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" 
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="580"/>
-            <Button Content="Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}" 
+            <Button Content="_Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}" 
                     Padding="18,6" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
         </DockPanel>
     </Grid>

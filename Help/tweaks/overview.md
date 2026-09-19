@@ -10,18 +10,18 @@ Every tweak on this page is a documented Windows setting that TrayTrigger reads 
 - ADMIN means the change writes a machine-wide value, so Windows shows a User Account Control prompt.
 - N/A means the tweak cannot do anything on this machine, for example a Windows 11 graphics setting on Windows 10 or HAGS on a GPU without support. The row explains why and its button is disabled.
 - ON or OFF (blue) marks a status-only row such as Core Isolation.
-- RESTORE POINT: ON or OFF, next to the Performance Optimization Status heading, shows whether TrayTrigger creates a System Restore point before a tweak is applied. Green means on. Click the badge to open the setting; it lives in Settings under Performance Tweaks.
+- Restore point before changes: On or Off, next to the Performance Optimization Status heading, shows whether TrayTrigger tries to create a System Restore point before Apply Performance Preset or Restore Previous Settings. Green means on. It is a preference, not a record: the status line says after each run whether a restore point was actually made. Click the badge to open the setting; it lives in Settings under Performance Tweaks.
 
 ## The score
 
 "N / M Recommended Optimizations Active" counts only the recommended set: available, toggleable, not opt-in, not status-only. Opt-in tweaks you have turned on are shown separately. Reaching M / M means the preset has nothing left to do; it does not mean every opt-in tweak should be on.
 
-## Apply Performance Preset and Reset Defaults
+## Apply Performance Preset and Restore Previous Settings
 
 - Apply Performance Preset turns on every recommended tweak that is not already on, in one pass, with at most one administrator prompt.
-- Reset Defaults reverts only the tweaks that are currently applied, putting each back to what TrayTrigger found before it changed it, again with at most one prompt. A power plan or visual-effects state you set yourself is never overwritten.
+- Restore Previous Settings reverts only the tweaks that are currently applied, putting each back to what TrayTrigger found before it changed it, again with at most one prompt. That is not always the Windows default, which is why it is not called Reset Defaults. Restore Previous on a single tweak row does the same for that one tweak. A power plan or visual-effects state you set yourself is never overwritten.
 - A restart is suggested only when a restart-required tweak actually changed in that pass.
-- Both can create a System Restore point first, controlled in Settings under Performance Tweaks. Restore points are the safety net if something on your PC behaves differently afterward.
+- Both can create a System Restore point first, controlled in Settings under Performance Tweaks. The "Restore point before changes: On/Off" tag at the top of the page shows that preference; the status line at the bottom says afterwards whether a restore point was actually created, skipped, or refused by Windows. Restore points are the safety net if something on your PC behaves differently afterward.
 
 ## Permanent tweaks versus Performance Profiles
 

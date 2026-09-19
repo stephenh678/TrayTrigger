@@ -15,9 +15,20 @@ using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
+/// <summary>Edit Game's tabs: All shows every card as before; the others show one card each.</summary>
+public enum GameEditSection
+{
+    All,
+    Identity,
+    Launch,
+    Performance,
+    Scripts
+}
+
 public class GameEditViewModel : ViewModelBase
 {
     private readonly IconExtractorService _iconExtractorService;
+    private readonly Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? _profileTweaks;
     private readonly string? _steamGridDbApiKey;
     private readonly double _minConfidence;
     /// <summary>One for every edit dialog: the service keeps no per-instance state, and its
@@ -88,7 +99,8 @@ public class GameEditViewModel : ViewModelBase
         double minConfidence = SteamSearchService.DefaultMinConfidence,
         bool scriptsEnabled = false,
         ScriptDefaults? scriptDefaults = null,
-        ScriptLibraryService? scriptLibrary = null)
+        ScriptLibraryService? scriptLibrary = null,
+        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null)
     {
         SourceGame = game;
         _scriptDefaults = scriptDefaults;
@@ -107,6 +119,7 @@ public class GameEditViewModel : ViewModelBase
         _iconExtractorService = iconExtractorService;
         _steamGridDbApiKey = steamGridDbApiKey;
         _minConfidence = minConfidence;
+        _profileTweaks = profileTweaks;
         IsNewGame = isNewGame;
 
         _name = game.Name;
@@ -166,10 +179,37 @@ public class GameEditViewModel : ViewModelBase
         RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
+        SelectSectionCommand = new RelayCommand(p =>
+        {
+            if (p is GameEditSection section) SelectedSection = section;
+            else if (p is string name && Enum.TryParse(name, out GameEditSection parsed)) SelectedSection = parsed;
+        });
 
         UpdateIconPreview();
         UpdateCoverPreview();
+        _showAdvancedLaunchOptions = !string.IsNullOrWhiteSpace(_workingDirectory) || !string.IsNullOrWhiteSpace(_arguments);
+        _initialEditState = EditState();
     }
+
+    private readonly string _initialEditState;
+
+    /// <summary>
+    /// True once any field Save writes back differs from what the dialog opened with. Esc asks
+    /// before throwing such edits away; with nothing changed it closes at once.
+    /// </summary>
+    public bool HasUnsavedChanges => !string.Equals(EditState(), _initialEditState, StringComparison.Ordinal);
+
+    /// <summary>Every value Save copies onto the game, joined into one comparable string.</summary>
+    private string EditState() => string.Join("", new object?[]
+    {
+        Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
+        IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
+        PerformanceProfile, CpuAffinity,
+        PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
+        RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
+        AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
+        CustomIconPath, CustomCoverPath, _fetchedCoverPath,
+    });
 
     public string Name
     {
@@ -222,8 +262,35 @@ public class GameEditViewModel : ViewModelBase
     public PerformanceProfileMode PerformanceProfile
     {
         get => _performanceProfile;
-        set { _performanceProfile = value; OnPropertyChanged(); }
+        set
+        {
+            _performanceProfile = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ProfileSummaryLines));
+        }
     }
+
+    /// <summary>
+    /// Under the profile box: what the chosen tier will do for this game, one line per tweak,
+    /// read from the same toggles the System page's Performance Profiles tab edits. A tweak that
+    /// asks for administrator permission says so. Empty (and hidden) when the dialog was opened
+    /// without the System page's toggles.
+    /// </summary>
+    public IReadOnlyList<string> ProfileSummaryLines
+    {
+        get
+        {
+            if (_profileTweaks == null) return Array.Empty<string>();
+            if (PerformanceProfile == PerformanceProfileMode.Off)
+                return new[] { "Off: nothing is changed when this game runs." };
+            var tweaks = _profileTweaks(PerformanceProfile);
+            if (tweaks.Count == 0)
+                return new[] { $"Every {PerformanceProfile} tweak is switched off on the System page, so nothing is changed." };
+            return tweaks.Select(t => t.RequiresAdmin ? $"{t.Name} (asks for administrator permission)" : t.Name).ToList();
+        }
+    }
+
+    public bool HasProfileSummary => _profileTweaks != null;
 
     public IReadOnlyList<PerformanceProfileMode> PerformanceProfileOptions { get; } =
         new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };
@@ -267,6 +334,98 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>The one-line "scripts are hidden" stub shown in place of the scripts card, so
     /// the feature stays discoverable from Edit Game while the Settings switch is off.</summary>
     public bool ShowScriptsStub => !ShowScriptsCard;
+
+    // --- Tabs (All + one per card, the same pattern as Settings and System) ---
+
+    private GameEditSection _selectedSection = GameEditSection.All;
+
+    /// <summary>
+    /// The tab on show. Every card stays in the visual tree and only its visibility follows this,
+    /// so bindings, validation state and unsaved edits live on across tab switches.
+    /// </summary>
+    public GameEditSection SelectedSection
+    {
+        get => _selectedSection;
+        set
+        {
+            // The Scripts tab exists only while the scripts card does.
+            if (value == GameEditSection.Scripts && !ShowScriptsCard) value = GameEditSection.All;
+            if (SetProperty(ref _selectedSection, value))
+            {
+                OnPropertyChanged(nameof(IsAllSection));
+                OnPropertyChanged(nameof(IsIdentitySection));
+                OnPropertyChanged(nameof(IsLaunchSection));
+                OnPropertyChanged(nameof(IsPerformanceSection));
+                OnPropertyChanged(nameof(IsScriptsSection));
+                OnPropertyChanged(nameof(ShowIdentityCard));
+                OnPropertyChanged(nameof(ShowLaunchCard));
+                OnPropertyChanged(nameof(ShowPerformanceCard));
+                OnPropertyChanged(nameof(ShowScriptsCardOnTab));
+                OnPropertyChanged(nameof(ShowScriptsStubOnTab));
+            }
+        }
+    }
+
+    public bool IsAllSection => SelectedSection == GameEditSection.All;
+    public bool IsIdentitySection => SelectedSection == GameEditSection.Identity;
+    public bool IsLaunchSection => SelectedSection == GameEditSection.Launch;
+    public bool IsPerformanceSection => SelectedSection == GameEditSection.Performance;
+    public bool IsScriptsSection => SelectedSection == GameEditSection.Scripts;
+
+    public bool ShowIdentityCard => IsAllSection || IsIdentitySection;
+    public bool ShowLaunchCard => IsAllSection || IsLaunchSection;
+    public bool ShowPerformanceCard => IsAllSection || IsPerformanceSection;
+    public bool ShowScriptsCardOnTab => ShowScriptsCard && (IsAllSection || IsScriptsSection);
+    /// <summary>The "scripts are hidden" stub has no tab of its own; it shows on All, as it always did.</summary>
+    public bool ShowScriptsStubOnTab => ShowScriptsStub && IsAllSection;
+
+    public ICommand SelectSectionCommand { get; }
+
+    private bool _showAdvancedLaunchOptions;
+    /// <summary>
+    /// The "Advanced launch options" expander (working folder, arguments). Starts open when either
+    /// already has a value, so nothing set on a game is tucked out of sight.
+    /// </summary>
+    public bool ShowAdvancedLaunchOptions
+    {
+        get => _showAdvancedLaunchOptions;
+        set => SetProperty(ref _showAdvancedLaunchOptions, value);
+    }
+
+    /// <summary>The tabs in strip order, without Scripts while its card is hidden.</summary>
+    public IReadOnlyList<GameEditSection> AvailableSections => ShowScriptsCard
+        ? new[] { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Scripts }
+        : new[] { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance };
+
+    /// <summary>Ctrl+Tab and Ctrl+Shift+Tab: the next or previous tab, wrapping at the ends.</summary>
+    public void MoveSection(int step)
+    {
+        var sections = AvailableSections;
+        int index = Math.Max(0, sections.ToList().IndexOf(SelectedSection));
+        SelectedSection = sections[((index + step) % sections.Count + sections.Count) % sections.Count];
+    }
+
+    /// <summary>The fields Save can reject, so the dialog can bring the right one into view.</summary>
+    public enum EditField { SteamAppId, PreLaunchScript, PostExitScript, PreLaunchTimeout }
+
+    /// <summary>Raised when Save refuses a value. The tab has already been switched to show it.</summary>
+    public event Action<EditField>? ValidationFailed;
+
+    internal static GameEditSection SectionOf(EditField field) => field == EditField.SteamAppId
+        ? GameEditSection.Identity
+        : GameEditSection.Scripts;
+
+    /// <summary>
+    /// Puts the refused field on screen: the tab you are on if it already shows it (All shows
+    /// everything), otherwise the tab that holds it. Then tells the dialog which field it was.
+    /// </summary>
+    private void RejectField(EditField field, string message)
+    {
+        StatusMessage = message;
+        var section = SectionOf(field);
+        if (!IsAllSection && SelectedSection != section) SelectedSection = section;
+        ValidationFailed?.Invoke(field);
+    }
 
     public string PreLaunchScriptPath
     {
@@ -1196,18 +1355,23 @@ public class GameEditViewModel : ViewModelBase
 
         // Scripts are validated at save time rather than silently skipped at launch, so a typo
         // or an unsupported file type is caught while the user is still looking at the field.
-        string? scriptProblem = ValidateScriptPath(PreLaunchScriptPath, "Pre-launch")
-                             ?? ValidateScriptPath(PostExitScriptPath, "Post-exit");
-        if (scriptProblem != null)
+        string? preLaunchProblem = ValidateScriptPath(PreLaunchScriptPath, "Pre-launch");
+        if (preLaunchProblem != null)
         {
-            StatusMessage = scriptProblem;
+            RejectField(EditField.PreLaunchScript, preLaunchProblem);
+            return;
+        }
+        string? postExitProblem = ValidateScriptPath(PostExitScriptPath, "Post-exit");
+        if (postExitProblem != null)
+        {
+            RejectField(EditField.PostExitScript, postExitProblem);
             return;
         }
 
         string trimmedAppId = SteamAppId?.Trim() ?? string.Empty;
         if (trimmedAppId.Length > 0 && !UrlProtocolHelper.IsValidSteamAppId(trimmedAppId))
         {
-            StatusMessage = "Steam App ID must be numeric (e.g. 1245620), or leave it blank.";
+            RejectField(EditField.SteamAppId, "Steam App ID must be numeric (e.g. 1245620), or leave it blank.");
             return;
         }
 
@@ -1218,7 +1382,7 @@ public class GameEditViewModel : ViewModelBase
                 || timeoutSeconds < GameScriptService.MinPreLaunchTimeoutSeconds
                 || timeoutSeconds > GameScriptService.MaxPreLaunchTimeoutSeconds)
             {
-                StatusMessage = $"Pre-launch script timeout must be a whole number of seconds between {GameScriptService.MinPreLaunchTimeoutSeconds} and {GameScriptService.MaxPreLaunchTimeoutSeconds}.";
+                RejectField(EditField.PreLaunchTimeout, $"Pre-launch script timeout must be a whole number of seconds between {GameScriptService.MinPreLaunchTimeoutSeconds} and {GameScriptService.MaxPreLaunchTimeoutSeconds}.");
                 return;
             }
         }

@@ -30,13 +30,13 @@
 
             <Border x:Name="NoteBorder" Grid.Row="2" Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1"
                     CornerRadius="6" Padding="10,6" Margin="0,0,0,12" Visibility="Collapsed">
-                <TextBlock x:Name="NoteText" FontSize="10.5" Foreground="#FFD27F" TextWrapping="Wrap"/>
+                <TextBlock x:Name="NoteText" FontSize="11" Foreground="#FFD27F" TextWrapping="Wrap"/>
             </Border>
 
-            <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="10.5"
+            <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="11"
                        Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4"/>
 
-            <TextBox x:Name="OutputBox" Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+            <TextBox AutomationProperties.Name="Script output" x:Name="OutputBox" Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
                      FontFamily="Consolas" FontSize="11.5"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                      Background="{StaticResource BrushSurfaceDark}" Foreground="{StaticResource BrushTextPrimary}"
@@ -44,12 +44,12 @@
                      Margin="0,0,0,16"/>
 
             <DockPanel Grid.Row="5">
-                <Button DockPanel.Dock="Right" Content="Close" Click="CloseButton_Click" IsDefault="True" IsCancel="True"
+                <Button DockPanel.Dock="Right" Content="_Close" Click="CloseButton_Click" IsDefault="True" IsCancel="True"
                         Style="{StaticResource ModernAccentButton}" MinWidth="90" Margin="10,0,0,0"/>
                 <Button DockPanel.Dock="Right" Content="Copy Output" Click="CopyButton_Click"
                         Style="{StaticResource ModernGhostButton}" MinWidth="90"/>
                 <TextBlock Text="The full run is also in the TrayTrigger log under GameScript."
-                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"/>
+                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"/>
             </DockPanel>
         </Grid>
     </Border>

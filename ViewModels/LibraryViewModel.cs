@@ -80,9 +80,10 @@ public class LibraryViewModel : ViewModelBase
     private bool _isUndoToastVisible = false;
     private string _undoToastMessage = string.Empty;
     /// <summary>The games taken out by the most recent Remove (one, or a Select-mode batch) with
-    /// their former positions, kept for the 6-second undo window. See <see cref="RemoveGames"/>.</summary>
+    /// their former positions, kept for the undo window. See <see cref="RemoveGames"/>.</summary>
     private readonly List<(GameEntry Game, int Index)> _lastRemoved = new();
-    private DispatcherTimer? _undoToastTimer;
+    /// <summary>The undo window: 10 seconds, paused while the toast is hovered or focused.</summary>
+    private readonly UndoTimer _undoTimer = new();
 
     // Launch toast state
     private bool _isLaunchToastVisible = false;
@@ -422,8 +423,8 @@ public class LibraryViewModel : ViewModelBase
             onToggleHidden: ToggleHidden,
             getUseVerticalPosterArt: () => _getUseVerticalPosterArt(),
             deferHeavyInit: deferHeavyInit,
-            onEndSession: card => EndGameSession(card, forceClose: false),
-            onForceClose: card => EndGameSession(card, forceClose: true),
+            onCloseGame: CloseGame,
+            onForceClose: ForceCloseGame,
             onPrimaryClick: OnCardPrimaryClick,
             onToggleSelect: OnCardToggleSelect,
             onRangeSelect: OnCardRangeSelect,
@@ -453,35 +454,52 @@ public class LibraryViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// "End Session" / "Force Close Game" from a card's menu. Both run off the UI thread since
-    /// restoring a profile can involve an elevated Defender cmdlet.
+    /// "Close Game" from a card's menu or Game Details: asks the game to quit as its own close
+    /// button would, and the session ends when it does. Off the UI thread, since it waits for the
+    /// game and restoring a profile can involve an elevated Defender cmdlet.
     /// </summary>
-    private void EndGameSession(GameCardViewModel card, bool forceClose)
+    private void CloseGame(GameCardViewModel card)
     {
-        if (forceClose)
-        {
-            bool confirmed = ModernDialog.Confirm(
-                WindowHelper.ActiveOwner(),
-                "Force Close Game",
-                $"Force close \"{card.Name}\"?",
-                "The game process will be killed immediately. Anything not saved in the game will be lost. TrayTrigger then restores the Performance Profile and runs the post-exit script.",
-                confirmText: "Force Close",
-                cancelText: "Cancel");
-            if (!confirmed) return;
-        }
-
-        StatusMessage = forceClose ? $"Force closing {card.Name}..." : $"Ending session for {card.Name}...";
+        StatusMessage = $"Closing {card.Name}...";
         string gameId = card.Game.Id;
         string name = card.Name;
         _ = Task.Run(() =>
         {
-            bool ended = _launcherService.EndSessionNow(gameId, forceClose);
-            RunOnUiThread(() =>
-            {
-                StatusMessage = ended
-                    ? (forceClose ? $"Force closed {name}; tweaks restored." : $"Session for {name} ended; tweaks restored.")
-                    : $"{name} has no active session.";
-            });
+            var result = _launcherService.CloseGameNow(gameId);
+            RunOnUiThread(() => StatusMessage = DescribeCloseGame(result, name));
+        });
+    }
+
+    /// <summary>What Close Game did, for the status bar and the tray's notification.</summary>
+    internal static string DescribeCloseGame(ProcessLauncherService.CloseGameResult result, string name) => result switch
+    {
+        ProcessLauncherService.CloseGameResult.Closed => $"Closed {name}; tweaks restored.",
+        ProcessLauncherService.CloseGameResult.EndedBeforeStart => $"{name} hadn't started, so its session ended; tweaks restored.",
+        ProcessLauncherService.CloseGameResult.StillRunning => $"{name} is still open - it may be asking to save or confirm. Close it there, or use Force Close. Tweaks are restored when it exits.",
+        ProcessLauncherService.CloseGameResult.CouldNotAsk => $"Couldn't ask {name} to close. Close it yourself, or use Force Close. Tweaks are restored when it exits.",
+        _ => $"{name} has no active session.",
+    };
+
+    /// <summary>"Force Close Game" from a card's menu or Game Details: confirms, kills the game, then
+    /// ends the session. Off the UI thread, as above.</summary>
+    private void ForceCloseGame(GameCardViewModel card)
+    {
+        bool confirmed = ModernDialog.Confirm(
+            WindowHelper.ActiveOwner(),
+            "Force Close Game",
+            $"Force close \"{card.Name}\"?",
+            "The game process will be killed immediately. Anything not saved in the game will be lost. TrayTrigger then restores the Performance Profile and runs the post-exit script.",
+            confirmText: "Force Close",
+            cancelText: "Cancel");
+        if (!confirmed) return;
+
+        StatusMessage = $"Force closing {card.Name}...";
+        string gameId = card.Game.Id;
+        string name = card.Name;
+        _ = Task.Run(() =>
+        {
+            bool ended = _launcherService.EndSessionNow(gameId, forceCloseGame: true);
+            RunOnUiThread(() => StatusMessage = ended ? $"Force closed {name}; tweaks restored." : $"{name} has no active session.");
         });
     }
 
@@ -910,6 +928,8 @@ public class LibraryViewModel : ViewModelBase
         bool requestedLaunch = false;
         bool requestedEdit = false;
         bool requestedDelete = false;
+        bool requestedCloseGame = false;
+        bool requestedForceClose = false;
 
         var vm = new GameDetailsViewModel(
             card.Game,
@@ -924,7 +944,10 @@ public class LibraryViewModel : ViewModelBase
             saveGame: _ => SaveLibrary(),
             autoCategorize: _settings.AutoCategorizeFromSteam,
             fetchPosterByName: (game, preferredName, replace) => TryFetchGridArtByNameAsync(game, preferredName, replace),
-            refreshInterval: _settings.MetadataRefreshInterval);
+            refreshInterval: _settings.MetadataRefreshInterval,
+            isPlaying: card.IsPlaying,
+            closeGameAction: _ => requestedCloseGame = true,
+            forceCloseAction: _ => requestedForceClose = true);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
@@ -942,6 +965,14 @@ public class LibraryViewModel : ViewModelBase
         else if (requestedDelete)
         {
             DeleteGame(card);
+        }
+        else if (requestedCloseGame)
+        {
+            card.CloseGameCommand.Execute(null);
+        }
+        else if (requestedForceClose)
+        {
+            card.ForceCloseCommand.Execute(null);
         }
 
         card.RefreshProperties();
@@ -1529,7 +1560,7 @@ public class LibraryViewModel : ViewModelBase
     /// <summary>
     /// Takes the given cards out of the library as one undoable step (the single-game Remove and
     /// Select mode's batch Remove both land here). The caller has already confirmed. The games'
-    /// cached files and fetched details are only deleted once the 6-second undo window ends - see
+    /// cached files and fetched details are only deleted once the undo window ends - see
     /// <see cref="FinalizePendingRemoval"/>.
     /// </summary>
     private void RemoveGames(List<GameCardViewModel> cards)
@@ -1557,19 +1588,17 @@ public class LibraryViewModel : ViewModelBase
         UpdateHotkeys();
 
         string what = cards.Count == 1 ? $"\"{cards[0].Name}\"" : $"{cards.Count} games";
-        LoggingService.Info("Library", $"Removed {what} from library (undoable for 6s).");
+        LoggingService.Info("Library", $"Removed {what} from library (undoable for {UndoCountdown.DefaultWindow.TotalSeconds:0}s).");
 
         UndoToastMessage = $"Removed {what}";
         IsUndoToastVisible = true;
 
-        _undoToastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-        _undoToastTimer.Tick += (s, e) =>
+        _undoTimer.Start(() =>
         {
             // The undo window has expired - the removal is now final.
             LoggingService.Verbose("Library", $"Undo window expired for {what} - deleting cached data.");
             FinalizePendingRemoval();
-        };
-        _undoToastTimer.Start();
+        });
 
         StatusMessage = $"Removed {what}";
         NotifyGameCountChanged();
@@ -1583,7 +1612,7 @@ public class LibraryViewModel : ViewModelBase
     /// </summary>
     public void FinalizePendingRemoval()
     {
-        _undoToastTimer?.Stop();
+        _undoTimer.Stop();
         IsUndoToastVisible = false;
         if (_lastRemoved.Count == 0) return;
 
@@ -1702,9 +1731,12 @@ public class LibraryViewModel : ViewModelBase
         _ => LauncherPlatform.Ubisoft
     };
 
+    /// <summary>The pointer is over the undo toast, or it has keyboard focus: hold the window open.</summary>
+    public void SetUndoToastHeld(bool held) => _undoTimer.Hold(held);
+
     public void UndoDelete()
     {
-        _undoToastTimer?.Stop();
+        _undoTimer.Stop();
         IsUndoToastVisible = false;
 
         if (_lastRemoved.Count == 0) return;
@@ -1806,7 +1838,7 @@ public class LibraryViewModel : ViewModelBase
             RefreshHotkeys();
             return;
         }
-        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings);
+        _hotkeyManager.RegisterHotkeys(_settings.GlobalManageHotkey, HotkeyBindings, trayMenuHotkeyStr: _settings.TrayMenuHotkey);
     }
 
     public void OnGameUpdatedFromLauncher(GameEntry game)

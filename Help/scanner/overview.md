@@ -28,7 +28,7 @@ Dropping a game folder or exe onto the Library, or using "Add Folder", also reco
 ## Scan Locations
 
 - Add any folder yourself with "+ Add a Scan Location" - a folder like "D:\Games" that holds many game subfolders. Every scan location is treated as a library root: each of its immediate subfolders is checked for its own game, not just the folder itself.
-- Uncheck a location to skip it on the next scan without removing it, or click Remove to drop it entirely.
+- Uncheck a location to skip it on the next scan without removing it, or click Remove to drop it entirely. A toast at the bottom offers Undo for ten seconds.
 
 ## Running a scan
 
@@ -39,7 +39,7 @@ Dropping a game folder or exe onto the Library, or using "Add Folder", also reco
 
 ## Ignoring a false positive
 
-Folder scanning uses heuristics, so it can occasionally offer something that isn't really a game (a bundled tool, an installer, a benchmark). Click "Ignore" next to a candidate in the New Games Found picker to permanently exclude that exact file from every future scan. Ignored items are listed under "Ignored Games" here, where you can remove one to let it be detected again.
+Folder scanning uses heuristics, so it can occasionally offer something that isn't really a game (a bundled tool, an installer, a benchmark). Click "Ignore" next to a candidate in the New Games Found picker to permanently exclude that exact file from every future scan. Ignored items are listed under "Ignored Games" here, where you can remove one to let it be detected again (Undo on the toast puts it back).
 
 > Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net games can be ignored too, by their own platform ID rather than file path - useful for something registered as a "game" that isn't really one (a soundtrack, an SDK, a demo).
 

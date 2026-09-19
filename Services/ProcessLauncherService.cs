@@ -60,6 +60,9 @@ public sealed class ActiveGameSession
 
     internal Action? CancelTracking;
     internal int Finished;
+    /// <summary>Close Game or Force Close asked the game to quit, so its exit is final: not a
+    /// launcher stub handing off to the real game, however soon after starting it comes.</summary>
+    internal volatile bool CloseRequested;
     internal int GameStartedSignalled;
 }
 
@@ -249,6 +252,9 @@ public partial class ProcessLauncherService
 
         if (forceCloseGame)
         {
+            // Final, like Close Game's: the exit must not be taken for a launcher stub, whose
+            // hand-off would also dispose the handle while Kill is still using it.
+            session.CloseRequested = true;
             TerminateSessionProcesses(session);
         }
 
@@ -256,46 +262,193 @@ public partial class ProcessLauncherService
         return true;
     }
 
+    /// <summary>What <see cref="CloseGameNow"/> managed.</summary>
+    public enum CloseGameResult
+    {
+        /// <summary>Nothing is tracked for the game.</summary>
+        NoSession,
+        /// <summary>The game had not started yet (a launcher still loading or stuck), so there was
+        /// nothing to close: the session ended and the tweaks were restored at once.</summary>
+        EndedBeforeStart,
+        /// <summary>The game quit when asked, and its session ended as after any normal exit.</summary>
+        Closed,
+        /// <summary>Asked, but still running when the wait ran out: often a "save before quitting?"
+        /// prompt. The session stays, and ends when the game does.</summary>
+        StillRunning,
+        /// <summary>No window of the game's would take the request (none found, or the game runs as
+        /// administrator and TrayTrigger doesn't). The session stays.</summary>
+        CouldNotAsk,
+    }
+
+    /// <summary>How long <see cref="CloseGameNow"/> waits for the game to quit after asking.</summary>
+    public static readonly TimeSpan CloseGameWait = TimeSpan.FromSeconds(20);
+
+    /// <summary>
+    /// "Close Game": asks the game to quit the way its own close button does, then lets the
+    /// normal exit path end the session - profile restored, post-exit script, playtime - so it is
+    /// exactly as if the player had quit. Blocks for up to <see cref="CloseGameWait"/>; call off the
+    /// UI thread. A game that hasn't started yet has nothing to close, so its session ends at once.
+    /// </summary>
+    public CloseGameResult CloseGameNow(string gameId)
+    {
+        var session = GetSession(gameId);
+        if (session == null) return CloseGameResult.NoSession;
+
+        if (!session.GameStarted)
+        {
+            FinishSession(session, gameRan: false, "closed by user before the game started");
+            return CloseGameResult.EndedBeforeStart;
+        }
+
+        session.CloseRequested = true;
+        bool asked = false;
+        foreach (var process in CollectSessionProcesses(session))
+        {
+            try
+            {
+                process.Refresh();
+                if (!process.HasExited && process.MainWindowHandle != IntPtr.Zero && process.CloseMainWindow())
+                {
+                    asked = true;
+                    LoggingService.Info("Launcher", $"Asked '{session.Game.Name}' to close (PID {process.Id}).");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Verbose("Launcher", $"Could not ask PID {SafePid(process)} to close: {ex.Message}");
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        if (!asked)
+        {
+            session.CloseRequested = false;
+            LoggingService.Warn("Launcher", $"Close Game: no window of '{session.Game.Name}' took the request.");
+            return CloseGameResult.CouldNotAsk;
+        }
+
+        var deadline = DateTime.UtcNow + CloseGameWait;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (Volatile.Read(ref session.Finished) != 0) return CloseGameResult.Closed;
+            Thread.Sleep(250);
+        }
+        LoggingService.Info("Launcher", $"Close Game: '{session.Game.Name}' was still running after {CloseGameWait.TotalSeconds:0}s.");
+        return CloseGameResult.StillRunning;
+    }
+
+    /// <summary>Kills each process's tree; false when one could not be killed.</summary>
+    private bool KillAll(List<Process> processes)
+    {
+        bool allKilled = true;
+        foreach (var process in processes)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+                LoggingService.Info("Launcher", $"Force-closed PID {process.Id}.");
+            }
+            catch (Exception ex)
+            {
+                allKilled = false;
+                LoggingService.Warn("Launcher", $"Could not kill PID {SafePid(process)}: {ex.GetType().Name}: {ex.Message}");
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+        return allKilled;
+    }
+
+    private static int SafePid(Process process)
+    {
+        try { return process.Id; } catch { return -1; }
+    }
+
+    /// <summary>
+    /// The session's running game processes: the one TrayTrigger holds a handle to, or, when it
+    /// holds none, every non-helper process under the game's install folder (never a Windows or
+    /// system folder - see <see cref="ProcessPathResolver.IsUnsafeProcessFolder"/>). Each is a
+    /// Process object opened here, which the caller disposes.
+    /// </summary>
+    private List<Process> CollectSessionProcesses(ActiveGameSession session, bool skipHandle = false)
+    {
+        var result = new List<Process>();
+        if (session.Process != null && !skipHandle)
+        {
+            try
+            {
+                var held = session.Process;
+                if (!held.HasExited)
+                {
+                    // An object of our own: the session's is disposed by its exit handler the moment
+                    // the game dies, which can be in the middle of Kill walking its process tree.
+                    // Same PID and start time, so not a new process that reused the number.
+                    var own = Process.GetProcessById(held.Id);
+                    if (own.StartTime == held.StartTime)
+                    {
+                        result.Add(own);
+                        return result;
+                    }
+                    own.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Launcher", $"Could not use the handle to '{session.Game.Name}': {ex.Message}; trying by install folder.");
+            }
+        }
+
+        string? installDir = session.Route == LaunchRoute.Steam
+            ? (UrlProtocolHelper.IsValidSteamAppId(session.Game.SteamAppId) ? _steamScannerService.FindInstallDirForAppId(session.Game.SteamAppId!) : null)
+            : ResolveTrackedInstallDir(session.Game);
+        if (string.IsNullOrWhiteSpace(installDir)) return result;
+
+        string normalized = ProcessPathResolver.NormalizeDirectory(installDir);
+        foreach (var candidate in ProcessPathResolver.FindProcessesUnderDirectory(normalized))
+        {
+            try
+            {
+                result.Add(Process.GetProcessById(candidate.Pid));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Verbose("Launcher", $"PID {candidate.Pid} is gone: {ex.Message}");
+            }
+        }
+        return result;
+    }
+
     private void TerminateSessionProcesses(ActiveGameSession session)
     {
         try
         {
-            if (session.Process != null)
-            {
-                try
-                {
-                    if (!session.Process.HasExited)
-                    {
-                        session.Process.Kill(entireProcessTree: true);
-                        LoggingService.Info("Launcher", $"Force-closed '{session.Game.Name}' (PID {session.Process.Id}).");
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.Warn("Launcher", $"Could not kill '{session.Game.Name}' by handle: {ex.Message}; trying by install folder.");
-                }
-            }
+            if (KillAll(CollectSessionProcesses(session))) return;
 
-            string? installDir = session.Route == LaunchRoute.Steam
-                ? (UrlProtocolHelper.IsValidSteamAppId(session.Game.SteamAppId) ? _steamScannerService.FindInstallDirForAppId(session.Game.SteamAppId!) : null)
-                : ResolveTrackedInstallDir(session.Game);
-            if (string.IsNullOrWhiteSpace(installDir)) return;
+            var held = session.Process;
+            if (held == null) return;
 
-            string normalized = ProcessPathResolver.NormalizeDirectory(installDir);
-            foreach (var candidate in ProcessPathResolver.FindProcessesUnderDirectory(normalized))
+            // Our own Process object opens the game afresh, and a game started "as administrator"
+            // refuses that to a TrayTrigger that isn't elevated. The handle from its launch was
+            // granted full rights, so use it for this one attempt.
+            try
             {
-                try
+                if (!held.HasExited)
                 {
-                    using var proc = Process.GetProcessById(candidate.Pid);
-                    proc.Kill(entireProcessTree: true);
-                    LoggingService.Info("Launcher", $"Force-closed '{Path.GetFileName(candidate.Path)}' (PID {candidate.Pid}) for '{session.Game.Name}'.");
+                    held.Kill(entireProcessTree: true);
+                    LoggingService.Info("Launcher", $"Force-closed '{session.Game.Name}' through its launch handle.");
                 }
-                catch (Exception ex)
-                {
-                    LoggingService.Verbose("Launcher", $"Could not kill PID {candidate.Pid}: {ex.Message}");
-                }
+                return;
             }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Launcher", $"Could not kill '{session.Game.Name}' through its launch handle: {ex.Message}; trying by install folder.");
+            }
+            KillAll(CollectSessionProcesses(session, skipHandle: true));
         }
         catch (Exception ex)
         {
@@ -1055,7 +1208,7 @@ public partial class ProcessLauncherService
             if (Interlocked.Exchange(ref exitHandled, 1) != 0) return;
 
             TimeSpan ranFor = DateTime.UtcNow - session.StartedAtUtc;
-            if (allowStubHandoff && ranFor < StubHandoffWindow)
+            if (allowStubHandoff && ranFor < StubHandoffWindow && !session.CloseRequested)
             {
                 string installDir = ResolveInstallDir(game);
                 if (!string.IsNullOrWhiteSpace(installDir))
@@ -1568,7 +1721,7 @@ public partial class ProcessLauncherService
                 StartBattleNetClient(clientPath);
             }
 
-            // Stops early when the user ends the session during the wait (End Session).
+            // Stops early when the user ends the session during the wait (Close Game, Force Close).
             var deadline = DateTime.UtcNow + BattleNetCatalogWait;
             while (!lookup.Found && DateTime.UtcNow < deadline && Volatile.Read(ref session.Finished) == 0)
             {

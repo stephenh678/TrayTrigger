@@ -71,22 +71,22 @@
                                 </Border>
                                 <Button Content="Change Icon..." Command="{Binding ChangeIconCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,8,0,0" Padding="8,4" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding IconNote}" FontSize="10" Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="{Binding IconNote}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                            TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="Name" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox AutomationProperties.Name="Tool name" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
 
                                 <TextBlock Text="Category" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                                <ComboBox ItemsSource="{Binding ExistingCategories}"
+                                <ComboBox AutomationProperties.Name="Category" ItemsSource="{Binding ExistingCategories}"
                                           Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
                                 <TextBlock Text="Tool categories are separate from game categories. Leave it blank for Uncategorized."
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                                 <CheckBox Content="Favorite" IsChecked="{Binding IsFavorite}" Style="{StaticResource ModernCheckBox}"/>
                             </StackPanel>
@@ -104,10 +104,10 @@
                         <!-- A Store app has no program, folder or elevation to edit: it starts by its app ID, like its Start menu tile. -->
                         <StackPanel Visibility="{Binding IsStoreApp, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Store App" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
+                            <TextBox AutomationProperties.Name="App ID" Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,0,4"/>
                             <TextBlock Text="Windows starts it the way its Start menu entry does. If it's already open, most apps come to the front; ones that allow several windows open another. Store apps can't run as administrator."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                         </StackPanel>
 
                         <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
@@ -117,9 +117,9 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox AutomationProperties.Name="Program path" Grid.Column="0" Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseTargetCommand}"
+                            <Button AutomationProperties.Name="Browse for the program" Grid.Column="1" Content="Browse..." Command="{Binding BrowseTargetCommand}"
                                     Style="{StaticResource ModernOutlineButton}"/>
                         </Grid>
 
@@ -129,47 +129,47 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox AutomationProperties.Name="Working directory" Grid.Column="0" Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}"
+                            <Button AutomationProperties.Name="Browse for the working directory" Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkDirCommand}"
                                     Style="{StaticResource ModernOutlineButton}"/>
                         </Grid>
                         <TextBlock Text="Blank uses the program's own folder."
-                                   FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
+                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
                         </StackPanel>
 
                         <TextBlock Text="Launch Arguments (optional)" FontSize="11.5"
                                    Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox AutomationProperties.Name="Arguments" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
 
                         <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
                             <CheckBox Content="Run as Administrator" IsChecked="{Binding RunAsAdmin}"
                                       Style="{StaticResource ModernCheckBox}"/>
                             <TextBlock Text="Windows asks for permission with its own prompt each time. Programs that always need admin get that prompt even with this off. Declining it just leaves the tool closed."
-                                       FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
 
                             <StackPanel Visibility="{Binding IsScript, Converter={StaticResource BoolToVis}}">
                                 <CheckBox Content="Hide Window" IsChecked="{Binding HideWindow}"
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log (not when it also runs as administrator). A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
-                                           FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
                             </StackPanel>
                         </StackPanel>
 
                         <StackPanel>
                             <DockPanel>
-                                <views:HotkeyRecorderBox x:Name="ToolHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding OwnerId}"
+                                <views:HotkeyRecorderBox AutomationProperties.Name="Hotkey" x:Name="ToolHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding OwnerId}"
                                                          ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
                                     <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none."
-                                               FontSize="10.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                             <TextBlock Text="{Binding Message, ElementName=ToolHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ToolHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=ToolHotkeyBox, Converter={StaticResource BoolToVis}}"
-                                       FontSize="10.5" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                       FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -179,9 +179,9 @@
         <!-- FOOTER -->
         <DockPanel Grid.Row="3" LastChildFill="True">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True"
+                <Button Content="_Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0" MinWidth="90"/>
-                <Button Content="Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
+                <Button Content="_Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
                         Style="{StaticResource ModernAccentButton}" MinWidth="120"/>
             </StackPanel>
             <TextBlock Text="{Binding ValidationMessage}" Foreground="{StaticResource BrushDanger}" FontSize="11.5"

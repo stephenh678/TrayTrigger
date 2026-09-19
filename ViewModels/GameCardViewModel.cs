@@ -26,7 +26,7 @@ public class GameCardViewModel : ViewModelBase
     private readonly Action<GameCardViewModel>? _onRefreshMetadata;
     private readonly Action<GameCardViewModel>? _onToggleFavorite;
     private readonly Action<GameCardViewModel>? _onToggleHidden;
-    private readonly Action<GameCardViewModel>? _onEndSession;
+    private readonly Action<GameCardViewModel>? _onCloseGame;
     private readonly Action<GameCardViewModel>? _onForceClose;
     private readonly Action<GameCardViewModel>? _onPrimaryClick;
     private readonly Action<GameCardViewModel>? _onToggleSelect;
@@ -71,7 +71,7 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onToggleHidden = null,
         Func<bool>? getUseVerticalPosterArt = null,
         bool deferHeavyInit = false,
-        Action<GameCardViewModel>? onEndSession = null,
+        Action<GameCardViewModel>? onCloseGame = null,
         Action<GameCardViewModel>? onForceClose = null,
         Action<GameCardViewModel>? onPrimaryClick = null,
         Action<GameCardViewModel>? onToggleSelect = null,
@@ -79,12 +79,12 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onQuickSettingChanged = null)
     {
         _onQuickSettingChanged = onQuickSettingChanged;
-        _onEndSession = onEndSession;
+        _onCloseGame = onCloseGame;
         _onForceClose = onForceClose;
         _onPrimaryClick = onPrimaryClick;
         _onToggleSelect = onToggleSelect;
         _onRangeSelect = onRangeSelect;
-        EndSessionCommand = new RelayCommand(() => _onEndSession?.Invoke(this));
+        CloseGameCommand = new RelayCommand(() => _onCloseGame?.Invoke(this));
         ForceCloseCommand = new RelayCommand(() => _onForceClose?.Invoke(this));
         // A plain left-click: Details normally, toggle-selection while the library is in Select
         // mode (LibraryViewModel decides). Ctrl+click / Shift+click always select, entering
@@ -311,7 +311,7 @@ public class GameCardViewModel : ViewModelBase
     }
 
     /// <summary>True while ProcessLauncherService is tracking a session for this game (profile
-    /// applied / launch in flight / game running). Drives the "PLAYING" badge and the End Session
+    /// applied / launch in flight / game running). Drives the "PLAYING" badge and the Close Game
     /// and Force Close menu items.</summary>
     public bool IsPlaying
     {
@@ -326,7 +326,7 @@ public class GameCardViewModel : ViewModelBase
         }
     }
 
-    public ICommand EndSessionCommand { get; }
+    public ICommand CloseGameCommand { get; }
     public ICommand ForceCloseCommand { get; }
 
     /// <summary>

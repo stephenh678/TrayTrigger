@@ -36,7 +36,9 @@ public class AppSettings
     /// </summary>
     public bool KeepLaunchersMinimized { get; set; } = true;
     public bool VerboseLoggingEnabled { get; set; } = false;
-    public bool IsSidebarExpanded { get; set; } = false;
+    /// <summary>Expanded on a new install, so the page names are visible from the start (UX-14i).
+    /// Every settings.json since 1.0.0 stores this value, so existing users keep theirs.</summary>
+    public bool IsSidebarExpanded { get; set; } = true;
     /// <summary>
     /// Last main-window placement (WPF device-independent units), captured while the window is
     /// in its Normal state and restored on the next launch. Null until the window has been shown
@@ -48,6 +50,9 @@ public class AppSettings
     public double? MainWindowHeight { get; set; }
     public bool MainWindowMaximized { get; set; } = false;
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
+    /// <summary>Opens the tray menu by the tray icon from anywhere, search box ready. Blank means none.
+    /// A settings file from before it existed gets the default.</summary>
+    public string TrayMenuHotkey { get; set; } = "Ctrl+Alt+T";
     public string LastCategoryFilter { get; set; } = LibraryConstants.AllCategory;
     public string LastSortOption { get; set; } = "Alphabetical (A - Z)";
 
@@ -117,6 +122,11 @@ public class AppSettings
     public bool EnableTools { get; set; } = false;
     /// <summary>A "Tools" submenu in the tray menu, after the games. Off by default; only applies while <see cref="EnableTools"/> is on.</summary>
     public bool ShowToolsInTray { get; set; } = false;
+    /// <summary>A search box as the first row of the tray menu (UX-16): type to filter games (and
+    /// tools, when they are in the menu) by name or category; Enter launches the first match. On by
+    /// default for new installs and existing users alike: a settings.json from before 1.4.6 has no
+    /// value for it, so it takes this initializer.</summary>
+    public bool ShowTraySearch { get; set; } = true;
     /// <summary>Order of the tray's Tools submenu. One of <see cref="Services.ToolCatalog.SortOptions"/>.</summary>
     public string ToolsTraySortOption { get; set; } = ToolCatalog.SortAlphabetical;
     /// <summary>Order of the Tools page, separate from the tray's. View state, like <see cref="LastSortOption"/>.</summary>
@@ -132,6 +142,10 @@ public class AppSettings
     /// <summary>Gates the one-time "Welcome to TrayTrigger" dialog to the first time the main
     /// window is actually shown on a fresh install - see MainWindow.MaybeShowWelcomePrompt.</summary>
     public bool HasSeenWelcomePrompt { get; set; } = false;
+    /// <summary>How many times TrayTrigger has started (capture and test runs aside). The Library
+    /// status bar's "Hotkey: ... to show or hide this window" hint retires after the first five;
+    /// from then on the hotkey is in the tray icon's tooltip.</summary>
+    public int SessionsStarted { get; set; } = 0;
     /// <summary>Gates the one-time 1.4.0 reminder that SteamGridDB poster art and RAWG game info
     /// are available - see MainWindow.MaybeShowMetadataSourcesReminder.</summary>
     public bool HasSeenMetadataSourcesReminder { get; set; } = false;

@@ -6,8 +6,8 @@
         mc:Ignorable="d"
         Title="Choose Game Executable"
         Height="460" Width="520"
+        MinHeight="460" MinWidth="520"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{StaticResource BrushDialogBg}"
         Foreground="{StaticResource BrushTextPrimary}">
@@ -83,7 +83,7 @@
                                 <Border Background="#1C2E3D" CornerRadius="4" Padding="5,1.5" Margin="0,3,0,0"
                                         HorizontalAlignment="Right"
                                         Visibility="{Binding IsRecommendedVisibility}">
-                                    <TextBlock Text="RECOMMENDED" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
+                                    <TextBlock Text="RECOMMENDED" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
                                 </Border>
                             </StackPanel>
 
@@ -101,9 +101,9 @@
 
         <!-- Buttons -->
         <DockPanel Grid.Row="2">
-            <Button DockPanel.Dock="Right" Content="Add Selected Game" Click="AddButton_Click" IsDefault="True" 
+            <Button DockPanel.Dock="Right" Content="_Add Selected Game" Click="AddButton_Click" IsDefault="True" 
                     Style="{StaticResource ModernAccentButton}" MinWidth="130" Margin="10,0,0,0"/>
-            <Button DockPanel.Dock="Right" Content="Cancel" Click="CancelButton_Click" IsCancel="True" 
+            <Button DockPanel.Dock="Right" Content="_Cancel" Click="CancelButton_Click" IsCancel="True" 
                     Style="{StaticResource ModernGhostButton}" MinWidth="80"/>
         </DockPanel>
     </Grid>
