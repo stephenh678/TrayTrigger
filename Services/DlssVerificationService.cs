@@ -132,9 +132,9 @@ public static class DlssVerificationService
     public static string Describe(DlssObservation observation) => observation.State switch
     {
         DlssObservationState.RuntimeObserved when observation.FromDriverStore =>
-            $"Observed runtime {observation.Version} from NVIDIA's driver store",
+            $"loaded {observation.Version} from NVIDIA",
         DlssObservationState.RuntimeObserved =>
-            $"Observed runtime {observation.Version} from the game folder",
+            $"loaded {observation.Version} from the game's own files",
         _ => $"Unable to verify - {observation.Note ?? "nothing was readable"}"
     };
 

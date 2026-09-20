@@ -93,15 +93,27 @@ public sealed class DlssCardViewModel : ViewModelBase
     // ---- The one thing the card says --------------------------------------------------------
 
     /// <summary>
-    /// The two versions, in a sentence. The comparison is done here rather than left to the
-    /// reader: the old card printed both numbers and expected them to work it out.
+    /// The two versions, in a sentence, with the comparison already made - the old card printed
+    /// both numbers and left the reader to work it out.
+    ///
+    /// <para>It says "NVIDIA", never "your driver". A novice knows they have an NVIDIA card; they
+    /// do not know the driver carries its own DLSS files, so "your driver has a newer one" reads
+    /// as some third thing rather than as NVIDIA.</para>
     /// </summary>
     public string VersionLine =>
         _content.GameVersion == null ? string.Empty
-        : _content.DriverVersion == null ? $"This game uses DLSS {_content.GameVersion}."
+        : _content.DriverVersion == null ? $"This game has DLSS {_content.GameVersion}."
         : _content.DriverIsNewer
-            ? $"This game uses DLSS {_content.GameVersion}. Your driver has a newer one, {_content.DriverVersion}."
-            : $"This game already uses DLSS {_content.GameVersion}, the same as your driver.";
+            ? $"This game has DLSS {_content.GameVersion}. NVIDIA has a newer one, {_content.DriverVersion}."
+            : $"This game already has DLSS {_content.GameVersion} - the same version NVIDIA has.";
+
+    /// <summary>
+    /// The switch's label, with the version in it, so it says what will happen on its own. A label
+    /// that needs the sentence above it to make sense is a label that will be misread.
+    /// </summary>
+    public string OverrideLabel => _content.DriverVersion == null
+        ? "Force this game to use NVIDIA's DLSS"
+        : $"Force this game to use NVIDIA's {_content.DriverVersion}";
 
     /// <summary>
     /// The switch. On means TrayTrigger has written the override for this game; off means it has
@@ -200,7 +212,7 @@ public sealed class DlssCardViewModel : ViewModelBase
 
             if (!result.Succeeded)
             {
-                Status = result.Error ?? "The driver would not apply the change.";
+                Status = result.Error ?? "NVIDIA would not accept the change.";
                 return;
             }
 
@@ -214,8 +226,8 @@ public sealed class DlssCardViewModel : ViewModelBase
             Status = result.HadWriteBackFailures
                 // The save reported success but the values are not there. Saying it worked would
                 // be the most misleading thing the card could do.
-                ? "The driver accepted the change but did not report it back. It may not have taken effect."
-                : "Switched on. It takes effect next time you play.";
+                ? "NVIDIA accepted the change but did not report it back, so it may not have taken effect."
+                : "On. It takes effect next time you play.";
 
             await ReloadAsync().ConfigureAwait(true);
         }
@@ -248,9 +260,9 @@ public sealed class DlssCardViewModel : ViewModelBase
             _persist?.Invoke();
 
             Status = !result.Succeeded
-                ? result.Error ?? "The driver would not undo the change."
+                ? result.Error ?? "NVIDIA would not undo the change."
                 : result.HadForeignChanges
-                    ? "Put back what TrayTrigger changed. Some settings were left alone because something else has changed them since."
+                    ? "Put back what TrayTrigger changed. Some were left alone because something else has changed them since."
                     : "Put back the way it was.";
 
             await ReloadAsync().ConfigureAwait(true);
@@ -289,6 +301,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsVisible));
         OnPropertyChanged(nameof(VersionLine));
+        OnPropertyChanged(nameof(OverrideLabel));
         OnPropertyChanged(nameof(OverrideEnabled));
         OnPropertyChanged(nameof(CanRestore));
         OnPropertyChanged(nameof(Status));
@@ -331,7 +344,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             DriverIsNewer: newer,
             Details: BuildDetails(result, shipped, observations),
             ExternalOverrideNotice: HasForeignOverride(result, owned)
-                ? "Something else already sets a DLSS override for this game - NVIDIA App, Profile Inspector or similar. Switching this on replaces it; Restore puts it back."
+                ? "Something else already overrides DLSS for this game - NVIDIA App, Profile Inspector or similar. Turning this on replaces it; Restore puts it back."
                 : null);
     }
 

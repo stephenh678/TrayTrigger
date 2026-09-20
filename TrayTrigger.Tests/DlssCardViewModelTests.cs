@@ -308,7 +308,7 @@ public class DlssCardViewModelTests
         var p = DlssCardViewModel.Project(
             Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }), null, observations);
 
-        Assert.Contains(p.Details, d => d.Contains("310.9.0") && d.Contains("driver store"));
+        Assert.Contains(p.Details, d => d.Contains("310.9.0") && d.Contains("from NVIDIA"));
     }
 
     [Fact]

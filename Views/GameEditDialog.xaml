@@ -429,7 +429,7 @@
                             Visibility="{Binding Dlss.IsVisible, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
-                                <TextBlock Text="DLSS Override" FontSize="12.5" FontWeight="SemiBold"
+                                <TextBlock Text="NVIDIA DLSS Override" FontSize="12.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                                 <!-- Only offered once there is something of TrayTrigger's to undo. -->
                                 <Button Content="Restore" HorizontalAlignment="Right"
@@ -442,12 +442,12 @@
                             <TextBlock Text="{Binding Dlss.VersionLine}" FontSize="11.5" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
 
-                            <CheckBox Content="Use the driver&apos;s DLSS for this game"
-                                      AutomationProperties.Name="Use the driver&apos;s DLSS for this game"
+                            <CheckBox Content="{Binding Dlss.OverrideLabel}"
+                                      AutomationProperties.Name="{Binding Dlss.OverrideLabel}"
                                       IsChecked="{Binding Dlss.OverrideEnabled}"
                                       Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
-                            <TextBlock Text="No game files are changed - the driver supplies the newer model."
-                                       FontSize="11" Margin="22,2,0,8" TextWrapping="Wrap"
+                            <TextBlock Text="Nothing inside the game folder is changed."
+                                       FontSize="11" Margin="22,2,0,10" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"/>
 
                             <CheckBox Content="Show the DLSS overlay while this game runs"
@@ -456,7 +456,7 @@
                                       Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
                             <TextBlock FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}">
-                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the DLSS version and preset over the game. Asks for administrator permission."/>
+                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the DLSS version and preset on screen. Asks for administrator permission."/>
                             </TextBlock>
 
                             <!-- Only when true: a conflict, or somebody else&apos;s override. -->

@@ -34,7 +34,7 @@ public class DlssVerificationServiceTests
         Assert.Equal(DlssObservationState.RuntimeObserved, sr.State);
         Assert.Equal("310.9.0", sr.Version);
         Assert.True(sr.FromDriverStore);
-        Assert.Contains("driver store", DlssVerificationService.Describe(sr));
+        Assert.Contains("from NVIDIA", DlssVerificationService.Describe(sr));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class DlssVerificationServiceTests
         Assert.Equal(DlssObservationState.RuntimeObserved, sr.State);
         Assert.False(sr.FromDriverStore);
         string text = DlssVerificationService.Describe(sr);
-        Assert.Contains("from the game folder", text);
+        Assert.Contains("the game's own files", text);
         Assert.DoesNotContain("fail", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("disallow", text, StringComparison.OrdinalIgnoreCase);
     }
