@@ -281,6 +281,61 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <!-- ==================================================================== -->
+        <!-- "THIS GAME ISN'T THERE" BADGE                                        -->
+        <!-- One badge, two readings: orange MISSING for a local exe that is not  -->
+        <!-- on disk (which may only have moved - hence "Locate Executable..."),  -->
+        <!-- and a quieter blue-grey NOT INSTALLED for a launcher game its own    -->
+        <!-- launcher no longer has. Uninstalling a game is an ordinary thing to  -->
+        <!-- do, so it does not get an error colour. Every card layout uses these -->
+        <!-- and sets only its own size, padding and margin locally.              -->
+        <!-- ==================================================================== -->
+        <Style x:Key="UnavailableBadgeBorder" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#E64A1E14"/>
+            <Setter Property="BorderBrush" Value="#E65100"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
+                    <Setter Property="Background" Value="#E6202832"/>
+                    <Setter Property="BorderBrush" Value="#5A6B80"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- The game's own art, pushed well back when the game isn't there to play. Dimming the
+             whole card instead would take the badge and the title down with it, and those are
+             exactly what has to stay readable. -->
+        <Style x:Key="UnavailableDimmedArt" TargetType="Image">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                    <Setter Property="Opacity" Value="0.22"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- The same job for full-bleed poster art, which has no single Image to fade: a near-black
+             wash over the artwork layers, under the title and badges. -->
+        <Style x:Key="UnavailablePosterScrim" TargetType="Border" BasedOn="{StaticResource PosterArtClip}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                    <Setter Property="Background" Value="#D60A0A0D"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="UnavailableBadgeText" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#FFA040"/>
+            <Setter Property="Text" Value="{Binding UnavailableLabel}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
+                    <Setter Property="Foreground" Value="#A8BACD"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -816,6 +871,10 @@
                                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
                                                            </Border>
 
+                                                           <!-- Over both artwork layers, under the vignette, title and badges. -->
+                                                           <Border CornerRadius="7" Style="{StaticResource UnavailablePosterScrim}"
+                                                                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
                                                            <!-- Top Dark Vignette for badge readability -->
                                                            <Border VerticalAlignment="Top" Height="48" CornerRadius="7,7,0,0">
                                                                <Border.Background>
@@ -872,9 +931,10 @@
 
                                                            <!-- Center Icon & Name -->
                                                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,4">
-                                                               <Border CornerRadius="8" Width="64" Height="64" Margin="0,0,0,12" 
+                                                               <Border CornerRadius="8" Width="64" Height="64" Margin="0,0,0,12"
                                                                        Background="#222228" HorizontalAlignment="Center">
-                                                                   <Image Source="{Binding IconImage}" Width="56" Height="56" 
+                                                                   <Image Source="{Binding IconImage}" Width="56" Height="56"
+                                                                          Style="{StaticResource UnavailableDimmedArt}"
                                                                           RenderOptions.BitmapScalingMode="HighQuality"
                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                </Border>
@@ -1093,20 +1153,10 @@
                                                                    <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
                                                                    <TextBlock Text="&#9654; PLAYING" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
                                                                </Border>
-                                                               <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1"
+                                                               <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                        CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <TextBlock Text="MISSING" FontSize="9.5" FontWeight="SemiBold"
-                                                                              Foreground="#FFA040" FontFamily="{StaticResource AppFont}"/>
+                                                                   <TextBlock Style="{StaticResource UnavailableBadgeText}"
+                                                                              FontSize="9.5" FontFamily="{StaticResource AppFont}"/>
                                                                </Border>
 
                                                                <!-- Favorite Star - outermost corner -->
@@ -1165,9 +1215,15 @@
                                                        <Setter TargetName="PosterArtView" Property="Visibility" Value="Visible"/>
                                                        <Setter TargetName="IconFallbackView" Property="Visibility" Value="Collapsed"/>
                                                    </DataTrigger>
-                                                   <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="Opacity" Value="0.65"/>
+                                                   <!-- The art is darkened by its own scrim, so the card itself only needs to
+                                                        lose a little - the badge and the title have to stay readable. -->
+                                                   <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                                                       <Setter TargetName="CardBorder" Property="Opacity" Value="0.82"/>
                                                        <Setter TargetName="CardBorder" Property="BorderBrush" Value="#805030"/>
+                                                   </DataTrigger>
+                                                   <!-- After the one above, so a not-installed card takes this border instead. -->
+                                                   <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
+                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="#3E4A59"/>
                                                    </DataTrigger>
                                                    <Trigger Property="IsMouseOver" Value="True">
                                                        <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
@@ -1431,26 +1487,17 @@
                                                                <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
                                                                <TextBlock Text="&#9654; PLAYING" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A"/>
                                                            </Border>
-                                                           <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1"
+                                                           <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                    CornerRadius="3" Padding="4,0" HorizontalAlignment="Right">
-                                                               <Border.Style>
-                                                                   <Style TargetType="Border">
-                                                                       <Setter Property="Visibility" Value="Collapsed"/>
-                                                                       <Style.Triggers>
-                                                                           <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                                               <Setter Property="Visibility" Value="Visible"/>
-                                                                           </DataTrigger>
-                                                                       </Style.Triggers>
-                                                                   </Style>
-                                                               </Border.Style>
-                                                               <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold" Foreground="#FFA040"/>
+                                                               <TextBlock Style="{StaticResource UnavailableBadgeText}" FontSize="9"/>
                                                            </Border>
                                                        </DockPanel>
 
                                                        <!-- Icon -->
                                                        <Border Grid.Row="1" Width="48" Height="48" CornerRadius="6" 
                                                                Background="#222228" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                           <Image Source="{Binding IconImage}" Width="42" Height="42" 
+                                                           <Image Source="{Binding IconImage}" Width="42" Height="42"
+                                                                  Style="{StaticResource UnavailableDimmedArt}"
                                                                   RenderOptions.BitmapScalingMode="HighQuality"
                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                        </Border>
@@ -1500,9 +1547,12 @@
                                                </Border>
 
                                                <DataTemplate.Triggers>
-                                                   <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                       <Setter TargetName="IconCardBorder" Property="Opacity" Value="0.65"/>
+                                                   <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                                                       <Setter TargetName="IconCardBorder" Property="Opacity" Value="0.82"/>
                                                        <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="#805030"/>
+                                                   </DataTrigger>
+                                                   <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
+                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="#3E4A59"/>
                                                    </DataTrigger>
                                                    <Trigger Property="IsMouseOver" Value="True">
                                                        <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
@@ -1640,7 +1690,8 @@
                                                    <!-- Icon -->
                                                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="4" 
                                                            Background="#222228" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                       <Image Source="{Binding IconImage}" Width="24" Height="24" 
+                                                       <Image Source="{Binding IconImage}" Width="24" Height="24"
+                                                              Style="{StaticResource UnavailableDimmedArt}"
                                                               RenderOptions.BitmapScalingMode="HighQuality"
                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                    </Border>
@@ -1663,20 +1714,10 @@
                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
                                                            <TextBlock Text="&#9654; PLAYING" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
-                                                       <Border Background="#E64A1E14" BorderBrush="#E65100" BorderThickness="1" 
+                                                       <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                           <Border.Style>
-                                                               <Style TargetType="Border">
-                                                                   <Setter Property="Visibility" Value="Collapsed"/>
-                                                                   <Style.Triggers>
-                                                                       <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                                           <Setter Property="Visibility" Value="Visible"/>
-                                                                       </DataTrigger>
-                                                                   </Style.Triggers>
-                                                               </Style>
-                                                           </Border.Style>
-                                                           <TextBlock Text="MISSING" FontSize="9" FontWeight="SemiBold"
-                                                                      Foreground="#FFA040" FontFamily="{StaticResource AppFont}"/>
+                                                           <TextBlock Style="{StaticResource UnavailableBadgeText}"
+                                                                      FontSize="9" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
                                                        <Border Background="#1C2E3D" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
@@ -1868,9 +1909,12 @@
                                            </Border>
 
                                            <DataTemplate.Triggers>
-                                               <DataTrigger Binding="{Binding IsMissing}" Value="True">
-                                                   <Setter TargetName="ListRowBorder" Property="Opacity" Value="0.65"/>
+                                               <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
+                                                   <Setter TargetName="ListRowBorder" Property="Opacity" Value="0.82"/>
                                                    <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="#805030"/>
+                                               </DataTrigger>
+                                               <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
+                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="#3E4A59"/>
                                                </DataTrigger>
                                                <Trigger Property="IsMouseOver" Value="True">
                                                    <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>

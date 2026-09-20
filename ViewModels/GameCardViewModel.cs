@@ -39,7 +39,7 @@ public class GameCardViewModel : ViewModelBase
     private bool _isSelected;
     private BitmapImage? _iconImage;
     private BitmapImage? _coverImage;
-    private bool _isMissing;
+    private GameAvailability _availability;
     private bool _isPlaying;
     private string? _loadedIconPath;
     private DateTime? _loadedIconWriteTimeUtc;
@@ -49,7 +49,7 @@ public class GameCardViewModel : ViewModelBase
     // then (ApplyHeavyState) can't replace it with older state.
     private bool _iconLoaded;
     private bool _coverLoaded;
-    private bool _missingChecked;
+    private bool _availabilityChecked;
 
     public GameEntry Game { get; }
 
@@ -178,38 +178,45 @@ public class GameCardViewModel : ViewModelBase
         // large library doesn't decode every icon/cover and stat every exe synchronously here.
         if (!deferHeavyInit)
         {
-            CheckIsMissing();
+            CheckAvailability();
             ReloadIcon();
             ReloadCover();
         }
     }
 
     /// <summary>
-    /// Computes the "missing" flag and decodes both bitmaps without touching any UI-bound
-    /// property - safe to call from a background thread (File.Exists is thread-safe and
-    /// IconExtractorService.LoadBitmapSafely freezes the BitmapImages it returns). Pair with
-    /// <see cref="ApplyHeavyState"/> on the UI thread to actually update the card.
+    /// Works out whether the game is still there and decodes both bitmaps without touching any
+    /// UI-bound property - safe to call from a background thread (File.Exists is thread-safe, the
+    /// install index is read-only once captured, and IconExtractorService.LoadBitmapSafely freezes
+    /// the BitmapImages it returns). Pair with <see cref="ApplyHeavyState"/> on the UI thread to
+    /// actually update the card.
     /// </summary>
-    public (bool IsMissing, BitmapImage? Icon, DateTime? IconWriteTimeUtc, BitmapImage? Cover, DateTime? CoverWriteTimeUtc) ComputeHeavyState()
+    public (GameAvailability Availability, BitmapImage? Icon, DateTime? IconWriteTimeUtc, BitmapImage? Cover, DateTime? CoverWriteTimeUtc) ComputeHeavyState()
     {
-        bool isMissing = ComputeIsMissing(Game);
+        var availability = ComputeAvailability();
         var icon = IconExtractorService.LoadBitmapSafely(Game.IconPath, decodePixelWidth: 64);
         var cover = !string.IsNullOrWhiteSpace(Game.CoverImagePath)
             ? IconExtractorService.LoadBitmapSafely(Game.CoverImagePath, decodePixelWidth: 368)
             : null;
-        return (isMissing, icon, SafeGetLastWriteTimeUtc(Game.IconPath), cover, SafeGetLastWriteTimeUtc(Game.CoverImagePath));
+        return (availability, icon, SafeGetLastWriteTimeUtc(Game.IconPath), cover, SafeGetLastWriteTimeUtc(Game.CoverImagePath));
     }
+
+    /// <summary>
+    /// This entry's availability against the current install snapshot, without touching the card.
+    /// Safe on a background thread; see <see cref="Availability"/> for applying the result.
+    /// </summary>
+    public GameAvailability ComputeAvailability() => InstalledGameIndex.Current.AvailabilityOf(Game);
 
     /// <summary>
     /// Applies a result from <see cref="ComputeHeavyState"/>. Must run on the UI thread. Also
     /// records what was loaded so a later <see cref="ReloadIcon"/>/<see cref="ReloadCover"/> (e.g.
     /// from RefreshProperties during enrichment right after startup) can skip re-decoding.
     /// </summary>
-    public void ApplyHeavyState(bool isMissing, BitmapImage? icon, DateTime? iconWriteTimeUtc, BitmapImage? cover, DateTime? coverWriteTimeUtc)
+    public void ApplyHeavyState(GameAvailability availability, BitmapImage? icon, DateTime? iconWriteTimeUtc, BitmapImage? cover, DateTime? coverWriteTimeUtc)
     {
         // Computed a while ago on another thread. Whatever the card loaded since - a
         // RefreshProperties after startup enrichment downloaded a poster - is newer and stays.
-        if (!_missingChecked) IsMissing = isMissing;
+        if (!_availabilityChecked) Availability = availability;
         if (!_iconLoaded)
         {
             IconImage = icon;
@@ -291,28 +298,74 @@ public class GameCardViewModel : ViewModelBase
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public bool IsHidden => Game.IsHidden;
     public string HideMenuLabel => IsHidden ? "Unhide" : "Hide";
-    public bool IsMissing
+    /// <summary>
+    /// Whether the game is still there to play. Drives the card's dimming and its one marker
+    /// badge; nothing about launching changes, because a launcher that reports a game uninstalled
+    /// is also the place to reinstall it from, and a wrongly-marked card must not become
+    /// unplayable. See <see cref="Services.InstalledGameIndex"/>.
+    /// </summary>
+    public GameAvailability Availability
     {
-        get => _isMissing;
+        get => _availability;
         set
         {
-            if (_isMissing != value)
+            if (_availability == value) return;
+
+            _availability = value;
+            // This marker changes what the user is told when they press Play, so the log says when
+            // it went up or came down, for which game, and on what evidence.
+            LoggingService.Verbose("GameCard", value switch
             {
-                _isMissing = value;
-                // The card's "executable missing" marker changes what Play does, so the log says
-                // when it went up or came down, and for which path.
-                LoggingService.Verbose("GameCard", value
-                    ? $"'{Game.Name}': marked missing, '{Game.ExecutablePath}' is not on disk."
-                    : $"'{Game.Name}': no longer marked missing.");
-                OnPropertyChanged();
-            }
+                GameAvailability.NotInstalled => $"'{Game.Name}': marked not installed - its launcher no longer lists it.",
+                GameAvailability.ExecutableMissing => $"'{Game.Name}': marked missing, '{Game.ExecutablePath}' is not on disk.",
+                _ => $"'{Game.Name}': available again."
+            });
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsMissing));
+            OnPropertyChanged(nameof(IsNotInstalled));
+            OnPropertyChanged(nameof(IsUnavailable));
+            OnPropertyChanged(nameof(IsAvailable));
+            OnPropertyChanged(nameof(UnavailableLabel));
+            OnPropertyChanged(nameof(TrayMenuLabel));
         }
     }
 
-    public void CheckIsMissing()
+    /// <summary>A local game whose executable is not on disk - the one case "Locate Executable..." fixes.</summary>
+    public bool IsMissing => _availability == GameAvailability.ExecutableMissing;
+
+    /// <summary>A launcher game that launcher no longer has installed.</summary>
+    public bool IsNotInstalled => _availability == GameAvailability.NotInstalled;
+
+    /// <summary>Either marker: what dims the card and shows the badge.</summary>
+    public bool IsUnavailable => _availability != GameAvailability.Available;
+
+    /// <summary>Neither marker - the card reads plainly and Play goes straight through.</summary>
+    public bool IsAvailable => _availability == GameAvailability.Available;
+
+    /// <summary>The badge's wording, blank while there is nothing to mark. "Missing" would be wrong
+    /// for a game deliberately uninstalled, and "not installed" would be a guess for a local exe
+    /// that may only have moved.</summary>
+    public string UnavailableLabel => _availability switch
     {
-        IsMissing = ComputeIsMissing(Game);
-        _missingChecked = true;
+        GameAvailability.NotInstalled => "NOT INSTALLED",
+        GameAvailability.ExecutableMissing => "MISSING",
+        _ => string.Empty
+    };
+
+    /// <summary>The tray menu's suffix, which has the room for lower case but not for a poster.</summary>
+    public string TrayMenuLabel => IsUnavailable
+        ? $"{Name}  ({(IsNotInstalled ? "not installed" : "missing")})"
+        : Name;
+
+    public void CheckAvailability()
+    {
+        Availability = ComputeAvailability();
+        // Only a snapshot that actually read a launcher settles the question. The starting index
+        // has read nothing and calls every launcher game Available, so latching on it would both
+        // record a wrong answer and make the startup pass's real one arrive too late to be
+        // applied - which is what happened when enrichment refreshed a card first.
+        _availabilityChecked = !ReferenceEquals(InstalledGameIndex.Current, InstalledGameIndex.Unknown);
     }
 
     /// <summary>True while ProcessLauncherService is tracking a session for this game (profile
@@ -334,21 +387,6 @@ public class GameCardViewModel : ViewModelBase
     public ICommand CloseGameCommand { get; }
     public ICommand ForceCloseCommand { get; }
 
-    /// <summary>
-    /// A non-Steam launcher protocol shortcut (Epic, GOG Galaxy, Ubisoft Connect, etc.) resolves
-    /// to a "scheme://..." URL rather than a file, so File.Exists on it would always be false -
-    /// exempt those the same way IsSteamGame already is.
-    /// </summary>
-    private static bool ComputeIsMissing(GameEntry game)
-    {
-        // An Xbox entry's exe path goes stale on every game update (the package folder is
-        // versioned) and is re-resolved from the AUMID at launch, so it's never "missing" here.
-        // A Battle.net game is started by the client from its uid; the exe is never run.
-        return !game.IsSteamGame && !game.IsXboxGame && !game.IsBattleNetGame &&
-            !string.IsNullOrWhiteSpace(game.ExecutablePath) &&
-            !ProcessLauncherService.IsNonFileProtocolUrl(game.ExecutablePath) &&
-            !File.Exists(game.ExecutablePath);
-    }
     /// <summary>
     /// Blank until there is playtime to show. A card already says "Never played" (or when it was
     /// last played) beside this, and "0 min played" next to "Never played" said the same thing twice.
@@ -504,8 +542,9 @@ public class GameCardViewModel : ViewModelBase
 
     public void RefreshProperties()
     {
-        CheckIsMissing();
+        CheckAvailability();
         OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(TrayMenuLabel));
         OnPropertyChanged(nameof(Category));
         OnPropertyChanged(nameof(Hotkey));
         OnPropertyChanged(nameof(HasHotkey));

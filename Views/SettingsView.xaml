@@ -525,15 +525,15 @@
                                         Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
                                         VerticalAlignment="Center" Padding="10,4"/>
                             </DockPanel>
-                            <TextBlock Text="Finds installed games through the launchers above and in any extra folders you add here, and lets you keep the scanner out of what it should skip."
+                            <TextBlock Text="Finds installed games through the launchers above and in any extra folders you add here, marks the ones in your library that are no longer installed, and lets you keep the scanner out of what it should skip."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How scanning works" Margin="0,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
 
-                            <CheckBox Content="Automatically scan for new games on startup"
+                            <CheckBox Content="Automatically scan on startup"
                                       IsChecked="{Binding AutoScanForGamesOnStartup}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                            <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens, covering the launchers above and your Scan Locations - only interrupts you with the New Games Found picker if it actually finds something new."
+                            <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens, covering the launchers above and your Scan Locations - only interrupts you with the New Games Found picker if it actually finds something new. A game you have uninstalled is greyed out and tagged either way: that check runs at startup whether this is on or not."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,12" TextWrapping="Wrap"/>
 

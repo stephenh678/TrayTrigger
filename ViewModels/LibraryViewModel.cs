@@ -375,22 +375,26 @@ public class LibraryViewModel : ViewModelBase
         var cardsSnapshot = cards?.ToList() ?? Games.ToList();
         HeavyStateLoad = Task.Run(() =>
         {
-            var results = new System.Collections.Generic.List<(GameCardViewModel Card, bool IsMissing, System.Windows.Media.Imaging.BitmapImage? Icon, DateTime? IconWriteTimeUtc, System.Windows.Media.Imaging.BitmapImage? Cover, DateTime? CoverWriteTimeUtc)>();
+            // Once for the whole pass, before any card is asked: three launchers' registries and
+            // manifest folders, not three per game.
+            InstalledGameIndex.Current = InstalledGameIndex.Capture();
+
+            var results = new System.Collections.Generic.List<(GameCardViewModel Card, GameAvailability Availability, System.Windows.Media.Imaging.BitmapImage? Icon, DateTime? IconWriteTimeUtc, System.Windows.Media.Imaging.BitmapImage? Cover, DateTime? CoverWriteTimeUtc)>();
             foreach (var card in cardsSnapshot)
             {
-                var (isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) = card.ComputeHeavyState();
-                results.Add((card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc));
+                var (availability, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) = card.ComputeHeavyState();
+                results.Add((card, availability, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc));
             }
 
             Application.Current?.Dispatcher.Invoke(() =>
             {
-                foreach (var (card, isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) in results)
+                foreach (var (card, availability, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc) in results)
                 {
-                    card.ApplyHeavyState(isMissing, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
+                    card.ApplyHeavyState(availability, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
                 }
 
-                // A saved "Executable missing" tick was applied while every card still read
-                // IsMissing = false, so the filter has to run again now that it's known.
+                // A saved "Executable missing" / "Not installed" tick was applied while every card
+                // still read Available, so the filter has to run again now that it's known.
                 if (Filter.HasActiveFilters)
                 {
                     FilteredGames.Refresh();
@@ -402,6 +406,45 @@ public class LibraryViewModel : ViewModelBase
                 // the tray saw the fallback glyph on every game. Its only subscriber is that rebuild.
                 NotifyLibraryUpdated();
             });
+        });
+    }
+
+    /// <summary>
+    /// Re-reads what each launcher has installed and re-marks every card from it, without touching
+    /// icons or covers. Runs after a scan, which is when a game the user uninstalled since startup
+    /// is most likely to be noticed - the scan is already the moment TrayTrigger goes and looks at
+    /// what is on the PC, and it is what the startup option runs too.
+    /// </summary>
+    internal Task RefreshAvailabilityInBackground()
+    {
+        var cardsSnapshot = Games.ToList();
+        return Task.Run(() =>
+        {
+            // Nobody awaits this, so an exception here would vanish as an unobserved task - and a
+            // tester reporting "the tags never updated after a scan" would leave no evidence.
+            try
+            {
+                InstalledGameIndex.Current = InstalledGameIndex.Capture();
+                var results = cardsSnapshot.Select(card => (Card: card, Availability: card.ComputeAvailability())).ToList();
+
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    foreach (var (card, availability) in results) card.Availability = availability;
+
+                    if (Filter.HasActiveFilters)
+                    {
+                        FilteredGames.Refresh();
+                        OnPropertyChanged(nameof(IsEmptyBecauseOfFilters));
+                    }
+
+                    // The tray menu greys these games out too, so it has to be rebuilt to follow them.
+                    NotifyLibraryUpdated();
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("InstallCheck", $"Re-checking what is installed after a scan failed, so the library's markers are unchanged: {ex.Message}");
+            }
         });
     }
 
@@ -1007,15 +1050,36 @@ public class LibraryViewModel : ViewModelBase
     public void LaunchGame(GameCardViewModel card)
     {
         Window? owner = WindowHelper.ActiveOwner();
-        if (card.IsMissing)
+        if (card.IsUnavailable)
         {
-            // From a hotkey or the tray there's no window for the dialog to sit on.
-            if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), "Its executable wasn't found.", "Locate executable...",
-                    () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
+            // Both markers come from a check made earlier - at startup, or the last scan - so by
+            // now the game may have been reinstalled, or the drive it lives on plugged back in.
+            // Ask again before refusing: a card that is only dimmed must never be one that cannot
+            // be played, and being told to go and find a file that is sitting right there is the
+            // most annoying way to get that wrong.
+            var was = card.Availability;
+            card.Availability = InstalledGameIndex.Recheck(card.Game);
+            if (card.IsAvailable)
             {
-                PromptLocateMissingExecutable(card, owner);
+                LoggingService.Info("GameCard", was == GameAvailability.NotInstalled
+                    ? $"'{card.Name}' was marked not installed, but its launcher has it again - launching."
+                    : $"'{card.Name}' was marked missing, but '{card.Game.ExecutablePath}' is back - launching.");
             }
-            return;
+            else if (card.IsNotInstalled)
+            {
+                ShowNotInstalled(card, owner);
+                return;
+            }
+            else
+            {
+                // From a hotkey or the tray there's no window for the dialog to sit on.
+                if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), "Its executable wasn't found.", "Locate executable...",
+                        () => PromptLocateMissingExecutable(card, WindowHelper.ActiveOwner())) != true)
+                {
+                    PromptLocateMissingExecutable(card, owner);
+                }
+                return;
+            }
         }
 
         // Shown before dispatching, then held for LaunchDispatchDelay via a non-blocking timer
@@ -1036,6 +1100,58 @@ public class LibraryViewModel : ViewModelBase
         };
         launchDelayTimer.Start();
     }
+
+    /// <summary>
+    /// What Play does for a game its launcher no longer has installed. Nothing is removed and
+    /// nothing is offered to remove: reinstalling is the ordinary next step, and the entry is what
+    /// carries this game's playtime, hotkey, scripts and profile through it.
+    /// </summary>
+    private void ShowNotInstalled(GameCardViewModel card, Window? owner)
+    {
+        IsLaunchToastVisible = false;
+        string launcher = LauncherDisplayName(card.Game);
+        string message = $"\"{card.Name}\" isn't installed in {launcher} any more.";
+
+        // Only Steam can be sent to one game's page; the other clients have no such address, so
+        // their popup gets the plain acknowledgement rather than a button that opens a library
+        // the user then has to search by hand.
+        bool canOpenInSteam = card.Game.IsSteamGame && UrlProtocolHelper.IsValidSteamAppId(card.Game.SteamAppId);
+        bool shownInPopup = LaunchPopup?.TryShowFailure(
+            LaunchTarget.ForGame(card.Game),
+            $"It isn't installed in {launcher} any more.",
+            canOpenInSteam ? "Open in Steam" : "Open TrayTrigger",
+            canOpenInSteam ? () => card.OpenInSteamLibraryCommand.Execute(null) : null) == true;
+
+        StatusMessage = message;
+        if (shownInPopup) return;
+
+        // From a hotkey or the tray there may be no window for this to sit on; ModernDialog falls
+        // back to the active owner itself.
+        if (canOpenInSteam)
+        {
+            if (ModernDialog.Confirm(owner, "Game Not Installed", message,
+                    $"Reinstall it in {launcher} and it goes back to normal on the next scan.\n\nOpen it in Steam now?",
+                    "Open in Steam", "Close"))
+            {
+                card.OpenInSteamLibraryCommand.Execute(null);
+            }
+            return;
+        }
+
+        ModernDialog.ShowInfo(owner, "Game Not Installed", message,
+            $"Reinstall it in {launcher} and it goes back to normal on the next scan. Its playtime, hotkey, scripts and performance profile are kept in the meantime.");
+    }
+
+    /// <summary>The launcher to name in front of the user for an entry one of them owns.</summary>
+    private static string LauncherDisplayName(GameEntry game) =>
+        game.IsSteamGame ? "Steam"
+        : game.IsXboxGame ? "the Xbox app"
+        : game.IsBattleNetGame ? "Battle.net"
+        : game.IsGogGame ? "GOG Galaxy"
+        : game.IsEaGame ? "the EA app"
+        : game.IsEpicGame ? "the Epic Games Launcher"
+        : game.IsUbisoftGame ? "Ubisoft Connect"
+        : "its launcher";
 
     private void PromptLocateMissingExecutable(GameCardViewModel card, Window? owner)
     {

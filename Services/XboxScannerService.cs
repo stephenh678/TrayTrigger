@@ -97,6 +97,35 @@ public class XboxScannerService
         }
     }
 
+    /// <summary>
+    /// Every installed game's AUMID, or null when Gaming Services' registry could not be read at
+    /// all. The install check needs those two apart: "this PC has no Xbox games" would mark every
+    /// Xbox entry in the library uninstalled, and on a PC without the Xbox app that is wrong.
+    /// </summary>
+    public HashSet<string>? TryListInstalledAumids()
+    {
+        try
+        {
+            using (var gameConfigKey = Registry.LocalMachine.OpenSubKey(GameConfigKeyPath))
+            {
+                if (gameConfigKey == null)
+                {
+                    LoggingService.Verbose("XboxScanner", $@"No HKLM\{GameConfigKeyPath} key: Gaming Services isn't installed, so nothing can be said about Xbox games here.");
+                    return null;
+                }
+            }
+
+            var aumids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var game in EnumerateInstalledGames()) aumids.Add(game.Aumid);
+            return aumids;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("XboxScanner", $"Error listing installed Xbox games: {ex.Message}");
+            return null;
+        }
+    }
+
     private IEnumerable<DiscoveredXboxGame> EnumerateInstalledGames()
     {
         using var gameConfigKey = Registry.LocalMachine.OpenSubKey(GameConfigKeyPath);

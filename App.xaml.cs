@@ -936,10 +936,18 @@ public partial class App : Application
     {
         var item = new MenuItem
         {
-            Header = card.Name,
+            Header = card.TrayMenuLabel,
             Style = TrayItemStyle,
             Command = new RelayCommand(() => _mainViewModel.LaunchGame(card))
         };
+
+        // Greyed out, never disabled: a disabled row says nothing about why, and the launcher that
+        // reports a game uninstalled is also where it is reinstalled from - pressing it says so and,
+        // for Steam, offers to open it there. A wrongly-marked game stays playable too.
+        if (card.IsUnavailable)
+        {
+            item.Foreground = (Brush)FindResource("BrushTextMuted");
+        }
 
         if (!_mainViewModel.Settings.ShowTrayMenuIcons)
         {
@@ -957,6 +965,12 @@ public partial class App : Application
         else
         {
             item.Icon = CreateTrayGlyph("\uE7FC", (Brush)FindResource("BrushTextMuted"));
+        }
+
+        // The icon carries most of a row's weight, so the label alone going grey barely reads.
+        if (card.IsUnavailable && item.Icon is UIElement icon)
+        {
+            icon.Opacity = 0.4;
         }
 
         return item;
