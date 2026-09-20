@@ -168,10 +168,10 @@ Games ship with whatever DLSS version was current when they were built, and ofte
 
 - **The same setting NVIDIA App calls DLSS Override**, per game, including games NVIDIA App doesn't list. NVIDIA App resets it on those; TrayTrigger puts it back each time it launches the game.
 - **No game files touched**: nothing is downloaded or swapped, so a game update or "verify files" can't undo it, and there is nothing to break. If a game ignores the override it simply uses its own DLSS, as before.
-- **Says what you'll get, then what you got**: the card shows the version inside the game and the one the driver would use (310.1.0 → 310.9.0), and after you've played, the version the game actually loaded and where it came from.
-- **Easy to take back out**: untick it, or **Restore**, and that game's NVIDIA settings return to exactly what they were, leaving alone anything another tool has changed since. **Restore All** on the System page does every game at once. Removing a game puts its override back, and so does uninstalling TrayTrigger.
-- **No administrator rights needed.** The card appears for games that ship DLSS, Steam and other launcher games included, on a PC with an NVIDIA driver.
-- **NVIDIA DLSS Indicator**: an opt-in switch in Settings turns on NVIDIA's own on-screen overlay (DLSS version, preset letter, render resolution) for checking that an override took.
+- **Says what you'll get, then what you got**: the card shows the version inside the game and the one the driver would use (310.1.0 → 310.9.0), and a **Last run** line with the version the game actually loaded the last time you played, and where it came from.
+- **Easy to take back out**: untick it, or **Restore**, and that game's NVIDIA settings return to exactly what they were, leaving alone anything another tool has changed since. **Restore All** in Settings > Launch & Performance does every game at once. Removing a game puts its override back, and so does uninstalling TrayTrigger.
+- **No administrator rights needed.** Steam and other launcher games are included. On a PC with an NVIDIA driver the card is on every game, greyed out for one that ships no DLSS.
+- **NVIDIA DLSS Indicator**: an opt-in switch on the same Settings card turns on NVIDIA's own on-screen overlay (DLSS version, preset letter, render resolution) for checking that an override took.
 
 ### Pre-Launch and Post-Exit Scripts
 
