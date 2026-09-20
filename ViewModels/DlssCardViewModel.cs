@@ -27,6 +27,7 @@ public sealed class DlssCardViewModel : ViewModelBase
 {
     /// <summary>What the card knows after probing. Pure, so the wording is testable without a driver.</summary>
     public sealed record Projection(
+        bool HasDriver,
         bool HasDlss,
         string? GameVersion,
         string? DriverVersion,
@@ -51,7 +52,10 @@ public sealed class DlssCardViewModel : ViewModelBase
     private Task? _load;
 
     private static readonly Projection Empty =
-        new(false, null, null, false);
+        new(false, false, null, null, false);
+
+    private static readonly Projection NoDlss =
+        new(true, false, null, null, false);
 
     /// <param name="records">
     /// The game's live ownership records, mutated in place and handed to <paramref name="persist"/>,
@@ -88,8 +92,14 @@ public sealed class DlssCardViewModel : ViewModelBase
         set { if (SetProperty(ref _isOnTab, value)) OnPropertyChanged(nameof(IsVisible)); }
     }
 
-    /// <summary>Hidden until the probe has run and found a DLSS runtime the game ships.</summary>
-    public bool IsVisible => _hasLoaded && _content.HasDlss && IsOnTab;
+    /// <summary>
+    /// Shown on any machine with an NVIDIA driver. A game that ships no DLSS keeps the card, greyed
+    /// out and saying why, so its absence is never mistaken for a fault.
+    /// </summary>
+    public bool IsVisible => _hasLoaded && _content.HasDriver && IsOnTab;
+
+    /// <summary>False when the game ships no DLSS: there is nothing for an override to replace.</summary>
+    public bool CanEnable => _content.HasDlss;
 
     /// <summary>True while a driver write is in flight.</summary>
     public bool IsBusy { get => _isBusy; private set => SetProperty(ref _isBusy, value); }
@@ -102,7 +112,8 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// to join them.
     /// </summary>
     public string VersionLine =>
-        _content.GameVersion == null ? string.Empty
+        _hasLoaded && _content.HasDriver && !_content.HasDlss ? "No DLSS files found in this game"
+        : _content.GameVersion == null ? string.Empty
         : _content.DriverVersion == null ? _content.GameVersion
         : _content.DriverIsNewer
             ? $"{_content.GameVersion} → {_content.DriverVersion}"
@@ -119,7 +130,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         get => _records.Count > 0 && _inEffect;
         set
         {
-            if (value == OverrideEnabled || IsBusy) return;
+            if (value == OverrideEnabled || IsBusy || (value && !CanEnable)) return;
             _ = value ? ApplyAsync() : RestoreAsync();
         }
     }
@@ -308,6 +319,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private void RaiseAll()
     {
         OnPropertyChanged(nameof(IsVisible));
+        OnPropertyChanged(nameof(CanEnable));
         OnPropertyChanged(nameof(VersionLine));
         OnPropertyChanged(nameof(OverrideEnabled));
         OnPropertyChanged(nameof(CanRestore));
@@ -324,7 +336,8 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         // No NVIDIA driver means nothing here can work, whatever the game ships: the card stays
         // hidden rather than offering a switch that can only fail.
-        if (result.ShippedRuntimes.Count == 0 || !result.DriverAvailable) return Empty;
+        if (!result.DriverAvailable) return Empty;
+        if (result.ShippedRuntimes.Count == 0) return NoDlss;
 
         // One version for the card. Where a game ships its three features at different versions,
         // this shows the oldest: it is the one with the most to gain, and the override lifts all
@@ -346,6 +359,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         bool newer = gameVersion != null && driverVersion != null && Compare(driverVersion, gameVersion) > 0;
 
         return new Projection(
+            HasDriver: true,
             HasDlss: true,
             GameVersion: gameVersion,
             DriverVersion: driverVersion,

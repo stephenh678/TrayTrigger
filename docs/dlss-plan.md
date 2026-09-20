@@ -40,7 +40,7 @@ NVIDIA DLSS Override                                          [ Restore ]
   that same feature*. It is a prediction, not a reading.
 - **Last run** is the reading: what the game actually loaded the last time it ran with the override
   on. Absent until the game has been played.
-- The card is hidden when the game ships no DLSS DLL, and on a PC with no NVIDIA driver.
+- A game that ships no DLSS DLL keeps the card, with the switch greyed out and "No DLSS files found in this game" where the versions would be, so a missing card is never mistaken for a fault. On a PC with no NVIDIA driver the card is hidden.
 
 Two things live on the **System** page, not on the card:
 

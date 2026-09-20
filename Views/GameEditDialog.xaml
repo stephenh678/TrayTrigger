@@ -460,6 +460,7 @@
                                 <CheckBox Grid.Column="0" Content="Enable DLSS Override for this game"
                                           AutomationProperties.Name="Enable DLSS Override for this game"
                                           IsChecked="{Binding Dlss.OverrideEnabled}"
+                                          IsEnabled="{Binding Dlss.CanEnable}"
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"
                                            FontSize="11.5" FontWeight="SemiBold" Margin="12,0,0,0"

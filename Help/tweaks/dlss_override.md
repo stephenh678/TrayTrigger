@@ -13,7 +13,7 @@ It is the same setting NVIDIA App calls DLSS Override. TrayTrigger switches it o
 
 ## Turning it on and off
 
-- Edit Game, Performance tab, **Enable DLSS Override for this game**. The card only appears for games that ship DLSS, on a PC with an NVIDIA driver.
+- Edit Game, Performance tab, **Enable DLSS Override for this game**. The card appears on any PC with an NVIDIA driver; for a game that ships no DLSS the switch is greyed out.
 - The two numbers beside the switch are the version inside the game and the version your driver would use instead.
 - It takes effect the next time you start the game. TrayTrigger checks the setting again each time it launches the game and puts it back if NVIDIA App has reset it.
 - **Restore** on the card, or unticking the switch, returns that game's settings to exactly what they were before. **Restore All** on the System page does the same for every game at once - do that before uninstalling TrayTrigger, because the setting lives in NVIDIA's driver, not in TrayTrigger. Removing a game from the library also puts its override back.

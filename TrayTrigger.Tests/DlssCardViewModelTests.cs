@@ -39,9 +39,17 @@ public class DlssCardViewModelTests
     // ---- What it says ------------------------------------------------------------------------
 
     [Fact]
-    public void NoShippedDlss_HidesTheCardEntirely()
+    public async Task AGameWithNoDlss_KeepsTheCard_GreyedOutAndSayingWhy()
     {
-        Assert.False(DlssCardViewModel.Project(Result()).HasDlss);
+        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), probe: Result());
+        await card.LoadAsync();
+
+        Assert.True(card.IsVisible);
+        Assert.False(card.CanEnable);
+        Assert.Equal("No DLSS files found in this game", card.VersionLine);
+
+        card.OverrideEnabled = true;
+        Assert.False(card.OverrideEnabled);
     }
 
     [Fact]
@@ -320,6 +328,7 @@ public class DlssCardViewModelTests
         var p = DlssCardViewModel.Project(
             Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }) with { DriverAvailable = false });
 
+        Assert.False(p.HasDriver);
         Assert.False(p.HasDlss);
     }
 

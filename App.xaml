@@ -818,6 +818,10 @@
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
