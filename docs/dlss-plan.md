@@ -41,7 +41,7 @@ NVIDIA DLSS Override                                          [ Restore ]
 - **The version pair** is the oldest version the game ships and the newest the driver holds *for
   that same feature*. It is a prediction, not a reading.
 - **Last run** is the reading: what the game actually loaded the last time it ran with the override
-  on. On a line of its own, and "N/A" until the game has been played - always there, so a
+  on. On a line of its own, and "nothing recorded yet" until the game has been played - always there, so a
   missing line is never mistaken for a fault.
 - A game that ships no DLSS DLL keeps the card, with the switch greyed out and "No DLSS files found in this game" where the versions would be, so a missing card is never mistaken for a fault. On a PC with no NVIDIA driver the card is hidden.
 

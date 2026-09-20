@@ -471,7 +471,7 @@
                                        FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"/>
 
-                            <!-- What actually loaded last time, on a line of its own. N/A until the
+                            <!-- What actually loaded last time, on a line of its own. Says so until the
                                  game has been played, which is the only time it can be known; left
                                  out for a game with no DLSS, where there is nothing to load. -->
                             <TextBlock Text="{Binding Dlss.LastRunLine}"

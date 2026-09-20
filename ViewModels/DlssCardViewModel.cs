@@ -148,7 +148,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// What DLSS actually loaded the last time this game ran - the one question the rest of the
     /// card cannot answer, because everything else on it is read off disk before you play.
     ///
-    /// <para>N/A until the game has been played with the override on, and N/A again once a game
+    /// <para>Nothing recorded until the game has been played with the override on, and again once a game
     /// patch changes what it ships, since the observation then describes a setup that no longer
     /// exists. The line is always there, so its absence is never mistaken for a fault. It reports
     /// what was seen and stops: a runtime loaded from the game's own files is a reading, not a
@@ -156,7 +156,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// </summary>
     public string LastRunLine => LastRunReading is { Length: > 0 } reading ? reading : NoLastRun;
 
-    public const string NoLastRun = "Last run: N/A (appears after you play with the override on)";
+    public const string NoLastRun = "Last run: nothing recorded yet. Play the game with the override on.";
 
     private string LastRunReading
     {

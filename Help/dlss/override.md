@@ -20,13 +20,13 @@ It is the same setting NVIDIA App calls DLSS Override. TrayTrigger switches it o
 
 ## Checking that it worked
 
-- The card's **Last run** line reads N/A until you have played with the override on. After that it shows the DLSS version the game actually loaded, and whether it came from NVIDIA or from the game's own files.
+- The card's **Last run** line says nothing is recorded yet until you have played with the override on. After that it shows the DLSS version the game actually loaded, and whether it came from NVIDIA or from the game's own files.
 - For the preset letter and render resolution, tick **Show the NVIDIA DLSS Indicator in games** in Settings > Launch & Performance > NVIDIA DLSS. It draws NVIDIA's own overlay in the game.
 
 ## Trade-offs
 
 - If it does not take, the game simply uses its own DLSS files, as it always did. Nothing else is affected.
-- A few games ignore the override, and games with strict anti-cheat may not let TrayTrigger read what was loaded, so the Last run line stays at N/A for them. The override can still be working.
+- A few games ignore the override, and games with strict anti-cheat may not let TrayTrigger read what was loaded, so the Last run line keeps saying nothing is recorded for them. The override can still be working.
 - Needs a GeForce driver recent enough to support DLSS Override.
 - If NVIDIA App, Profile Inspector or another tool already turns the override on for every game (NVIDIA's "Global" profile), those games use the driver's DLSS whether this switch is on or off. TrayTrigger leaves settings it did not write alone.
 
