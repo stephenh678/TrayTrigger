@@ -30,8 +30,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         bool HasDlss,
         string? GameVersion,
         string? DriverVersion,
-        bool DriverIsNewer,
-        string? ExternalOverrideNotice);
+        bool DriverIsNewer);
 
     private readonly string? _executablePath;
     private readonly string? _installDirectory;
@@ -44,6 +43,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private readonly Func<string, DlssProbeService.ProbeResult> _probe;
 
     private bool _isBusy;
+    private bool _inEffect;
     private bool _hasLoaded;
     private bool _isOnTab = true;
     private string? _status;
@@ -51,7 +51,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private Task? _load;
 
     private static readonly Projection Empty =
-        new(false, null, null, false, null);
+        new(false, null, null, false);
 
     /// <param name="records">
     /// The game's live ownership records, mutated in place and handed to <paramref name="persist"/>,
@@ -109,18 +109,14 @@ public sealed class DlssCardViewModel : ViewModelBase
             : $"{_content.GameVersion} (already current)";
 
     /// <summary>
-    /// The switch. On means TrayTrigger has written the override for this game and is still the
-    /// one managing it; off means it has not, has put it back, or has stood down because something
-    /// else changed the settings. Setting it does the work - there is no separate apply.
-    ///
-    /// <para>A conflicted game reads as off although its records are kept. Were it to read as on,
-    /// the notice's "switch it on again to take them over" could never be done: unticking runs a
-    /// restore that leaves a stranger's values alone, the records stay, and the box ticks itself
-    /// again.</para>
+    /// The switch. On means the driver holds the override exactly as TrayTrigger wrote it - read
+    /// from the driver when the card loads, not remembered. If NVIDIA App or anything else has
+    /// changed a value since, it reads off; switching it on again takes the settings over, and
+    /// Restore hands them back. Setting it does the work - there is no separate apply.
     /// </summary>
     public bool OverrideEnabled
     {
-        get => _records.Count > 0 && _game?.DlssConflicted != true;
+        get => _records.Count > 0 && _inEffect;
         set
         {
             if (value == OverrideEnabled || IsBusy) return;
@@ -136,16 +132,6 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// <summary>The result of the last change. Null until something happens.</summary>
     public string? Status { get => _status; private set => SetProperty(ref _status, value); }
     public bool HasStatus => !string.IsNullOrEmpty(_status);
-
-    /// <summary>
-    /// Something else - NVIDIA App, Profile Inspector - already overrides this game, or has changed
-    /// what TrayTrigger wrote. Only ever set when true.
-    /// </summary>
-    public string? Notice => _game?.DlssConflicted == true
-        ? "Something else changed this game's DLSS settings, so TrayTrigger stopped re-applying them. Switch it on again to take them over, or restore to hand them back."
-        : _content.ExternalOverrideNotice;
-
-    public bool HasNotice => !string.IsNullOrEmpty(Notice);
 
     /// <summary>
     /// What DLSS actually loaded the last time this game ran - the one question the rest of the
@@ -202,13 +188,16 @@ public sealed class DlssCardViewModel : ViewModelBase
             string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath ?? string.Empty, _installDirectory)).ConfigureAwait(true);
             _rendererPath = path;
             var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
-            _content = Project(result, _records);
+            _content = Project(result);
+            var held = _records.ToList();
+            _inEffect = await Task.Run(() => _overrides.IsInEffect(held)).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
             // A card that breaks the dialog would be worse than no card.
             LoggingService.Warn("Dlss", $"DLSS card probe failed: {ex.Message}");
             _content = Empty;
+            _inEffect = false;
         }
         finally
         {
@@ -330,15 +319,10 @@ public sealed class DlssCardViewModel : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// The override just changed, so a conflict and anything observed under the old one describe a
-    /// setup that no longer exists.
-    /// </summary>
+    /// <summary>The override just changed, so what loaded under the old one no longer describes this setup.</summary>
     private void ClearDerivedState()
     {
-        if (_game == null) return;
-        _game.DlssConflicted = false;
-        _game.DlssLastRun = null;
+        if (_game != null) _game.DlssLastRun = null;
     }
 
     private async Task ReloadAsync()
@@ -356,8 +340,6 @@ public sealed class DlssCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanRestore));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasStatus));
-        OnPropertyChanged(nameof(Notice));
-        OnPropertyChanged(nameof(HasNotice));
         OnPropertyChanged(nameof(LastRunLine));
         OnPropertyChanged(nameof(HasLastRun));
     }
@@ -365,9 +347,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     // ---- Projection --------------------------------------------------------------------------
 
     /// <summary>Turns a probe result into what the card says. Pure; exercised directly by tests.</summary>
-    public static Projection Project(
-        DlssProbeService.ProbeResult result,
-        IReadOnlyCollection<DlssSettingRecord>? owned = null)
+    public static Projection Project(DlssProbeService.ProbeResult result)
     {
         // No NVIDIA driver means nothing here can work, whatever the game ships: the card stays
         // hidden rather than offering a switch that can only fail.
@@ -396,31 +376,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             HasDlss: true,
             GameVersion: gameVersion,
             DriverVersion: driverVersion,
-            DriverIsNewer: newer,
-            ExternalOverrideNotice: HasForeignOverride(result, owned)
-                ? "Something else already overrides DLSS for this game - NVIDIA App, Profile Inspector or similar. Turning this on replaces it; Restore puts it back."
-                : null);
-    }
-
-    /// <summary>
-    /// Whether an override is present that TrayTrigger did not write. Without the records the card
-    /// cannot tell its own work from a stranger's, and would accuse itself the moment it applied.
-    /// </summary>
-    private static bool HasForeignOverride(DlssProbeService.ProbeResult result, IReadOnlyCollection<DlssSettingRecord>? owned)
-    {
-        foreach (var s in result.SettingStates)
-        {
-            if (s.Value == null || s.Value.CurrentValue == 0) continue;
-            if (!s.Definition.Name.Contains("Enable DLL Override", StringComparison.Ordinal)) continue;
-
-            bool ours = owned != null && owned.Any(r =>
-                r.SettingId == s.Value.SettingId &&
-                r.WrittenValue == s.Value.CurrentValue &&
-                s.Value.Origin == NvApi.SettingOrigin.ApplicationProfile);
-
-            if (!ours) return true;
-        }
-        return false;
+            DriverIsNewer: newer);
     }
 
     /// <summary>Negative, zero or positive, as string comparison would give the wrong answer.</summary>

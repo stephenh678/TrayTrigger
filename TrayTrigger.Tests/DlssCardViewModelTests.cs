@@ -17,10 +17,8 @@ public class DlssCardViewModelTests
 
     private static DlssProbeService.ProbeResult Result(
         IReadOnlyList<DlssProbeService.ShippedRuntime>? shipped = null,
-        IReadOnlyList<DlssProbeService.SettingState>? settings = null,
         IReadOnlyList<NgxModelStore.StoredRuntime>? driver = null) => new()
         {
-            SettingStates = settings ?? Array.Empty<DlssProbeService.SettingState>(),
             ShippedRuntimes = shipped ?? Array.Empty<DlssProbeService.ShippedRuntime>(),
             DriverRuntimes = driver ?? Array.Empty<NgxModelStore.StoredRuntime>()
         };
@@ -30,12 +28,6 @@ public class DlssCardViewModelTests
 
     private static NgxModelStore.StoredRuntime Store(string feature, string version, uint encoded) =>
         new(feature, version, encoded, "x.bin", 1);
-
-    private static DlssProbeService.SettingState Toggle(string feature, uint value, NvApi.SettingOrigin origin)
-    {
-        var def = DlssProbeService.Settings.First(s => s.Feature == feature && s.Name.Contains("Enable DLL Override"));
-        return new DlssProbeService.SettingState(def, new NvApi.DrsSettingValue(def.Id, def.Name, value, origin, false));
-    }
 
     private static DlssCardViewModel Card(
         FakeDrsBackend driver, List<DlssSettingRecord> records,
@@ -322,43 +314,7 @@ public class DlssCardViewModelTests
         Assert.Contains("Put back", card.Status);
     }
 
-    // ---- Notices -----------------------------------------------------------------------------
-
-    [Fact]
-    public void AnOverrideTrayTriggerDidNotWrite_IsCalledOut()
-    {
-        var p = DlssCardViewModel.Project(Result(
-            shipped: new[] { Ship("Super Resolution", "310.1.0") },
-            settings: new[] { Toggle("Super Resolution", 1, NvApi.SettingOrigin.GlobalProfile) }));
-
-        Assert.NotNull(p.ExternalOverrideNotice);
-        Assert.Contains("Something else", p.ExternalOverrideNotice);
-    }
-
-    [Fact]
-    public void TrayTriggersOwnOverride_IsNotMistakenForAStrangers()
-    {
-        // Without the records the card would accuse itself the moment it switched on.
-        var def = DlssProbeService.Settings.First(s => s.Name.Contains("Enable DLL Override"));
-        var owned = new[] { new DlssSettingRecord { SettingId = def.Id, WrittenValue = 1 } };
-
-        var p = DlssCardViewModel.Project(
-            Result(shipped: new[] { Ship("Super Resolution", "310.1.0") },
-                   settings: new[] { Toggle("Super Resolution", 1, NvApi.SettingOrigin.ApplicationProfile) }),
-            owned);
-
-        Assert.Null(p.ExternalOverrideNotice);
-    }
-
-    [Fact]
-    public void AnOverrideSetToZero_IsNotAnOverride()
-    {
-        var p = DlssCardViewModel.Project(Result(
-            shipped: new[] { Ship("Super Resolution", "310.1.0") },
-            settings: new[] { Toggle("Super Resolution", 0, NvApi.SettingOrigin.ApplicationProfile) }));
-
-        Assert.Null(p.ExternalOverrideNotice);
-    }
+    // ---- What the card shows --------------------------------------------------------------------
 
     [Fact]
     public void WithNoNvidiaDriver_TheCardStaysHidden_WhateverTheGameShips()
@@ -387,8 +343,11 @@ public class DlssCardViewModelTests
         Assert.False(srOnly.DriverIsNewer);
     }
 
-    [Fact]
-    public async Task AConflictedGame_ReadsAsOff_SoItCanBeSwitchedOnAgainToTakeOver()
+    // ---- The switch shows what the driver holds ------------------------------------------------
+
+    private static uint SrPreset => DlssProbeService.Settings.First(d => d.FeatureCode == "SR" && d.Name.Contains("Preset")).Id;
+
+    private static async Task<(DlssCardViewModel Card, FakeDrsBackend Driver, FakeDrsBackend.FakeProfile Profile, GameEntry Game)> SwitchedOn()
     {
         var driver = new FakeDrsBackend();
         var profile = driver.AddProfile("game.exe", "Test Game");
@@ -397,53 +356,67 @@ public class DlssCardViewModelTests
         await card.LoadAsync();
         card.OverrideEnabled = true;
         await WaitForIdle(card);
+        return (card, driver, profile, game);
+    }
 
-        uint preset = DlssProbeService.Settings.First(d => d.FeatureCode == "SR" && d.Name.Contains("Preset")).Id;
-        profile.Settings[preset] = (0x0000000D, false);   // a stranger's value
-        game.DlssConflicted = true;                        // as the launcher marks it
+    /// <summary>The dialog reopened: a new card over the same game and driver.</summary>
+    private static async Task<DlssCardViewModel> Reopened(FakeDrsBackend driver, GameEntry game)
+    {
+        var card = Card(driver, game.DlssSettings, game: game);
+        await card.LoadAsync();
+        return card;
+    }
 
+    [Fact]
+    public async Task ReopeningTheDialog_ShowsTheSwitchOn_WhileTheDriverStillHoldsOurValues()
+    {
+        var (_, driver, _, game) = await SwitchedOn();
+
+        Assert.True((await Reopened(driver, game)).OverrideEnabled);
+    }
+
+    [Fact]
+    public async Task WhenSomethingElseHasChangedASetting_TheSwitchReadsOff_AndCanBeSwitchedOnAgainToTakeOver()
+    {
+        // Read from the driver, not remembered. Were it to read on, unticking would run a restore
+        // that leaves the stranger's value alone, and there would be no way to apply again.
+        var (_, driver, profile, game) = await SwitchedOn();
+        profile.Settings[SrPreset] = (0x0000000D, false);   // NVIDIA App, Profile Inspector...
+
+        var card = await Reopened(driver, game);
         Assert.False(card.OverrideEnabled);
+        Assert.True(card.CanRestore);
 
         card.OverrideEnabled = true;
         await WaitForIdle(card);
 
         Assert.True(card.OverrideEnabled);
-        Assert.False(game.DlssConflicted);
-        // Their value is what undo now gives back.
-        Assert.Equal(0x0000000Du, game.DlssSettings.First(r => r.SettingId == preset).PreviousValue);
+        // Their value is what undo now gives back; ours, where still ours, kept the original capture.
+        Assert.Equal(0x0000000Du, game.DlssSettings.First(r => r.SettingId == SrPreset).PreviousValue);
     }
 
     [Fact]
-    public async Task RestoringAConflictedGame_HandsTheStrangersSettingsBack_AndLeavesNothingHeld()
+    public async Task WhenTheWholeProfileIsGone_TheSwitchReadsOff()
     {
-        var driver = new FakeDrsBackend();
-        var profile = driver.AddProfile("game.exe", "Test Game");
-        var game = new GameEntry();
-        var card = Card(driver, game.DlssSettings, game: game);
-        await card.LoadAsync();
-        card.OverrideEnabled = true;
-        await WaitForIdle(card);
+        var (_, driver, _, game) = await SwitchedOn();
+        driver.Profiles.Remove("game.exe");   // a clean driver install
 
-        uint preset = DlssProbeService.Settings.First(d => d.FeatureCode == "SR" && d.Name.Contains("Preset")).Id;
-        profile.Settings[preset] = (0x0000000D, false);
-        game.DlssConflicted = true;
+        Assert.False((await Reopened(driver, game)).OverrideEnabled);
+    }
+
+    [Fact]
+    public async Task Restore_HandsAStrangersSettingsBack_AndLeavesNothingHeld()
+    {
+        var (_, driver, profile, game) = await SwitchedOn();
+        profile.Settings[SrPreset] = (0x0000000D, false);
+        var card = await Reopened(driver, game);
 
         await ((AsyncRelayCommand)card.RestoreCommand).ExecuteAsync();
 
         Assert.Empty(game.DlssSettings);
         Assert.False(card.OverrideEnabled);
         Assert.False(card.CanRestore);
-        Assert.Equal(0x0000000Du, profile.Settings[preset].Value);
-    }
-
-    [Fact]
-    public void AConflictedGame_ExplainsItselfInsteadOfSilentlyDoingNothing()
-    {
-        var game = new GameEntry { DlssConflicted = true };
-        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), game: game);
-
-        Assert.True(card.HasNotice);
-        Assert.Contains("stopped re-applying", card.Notice);
+        Assert.Equal(0x0000000Du, profile.Settings[SrPreset].Value);
     }
 
     // ---- Loading -----------------------------------------------------------------------------

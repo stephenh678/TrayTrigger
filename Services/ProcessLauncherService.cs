@@ -594,7 +594,7 @@ public partial class ProcessLauncherService
     /// </summary>
     private void ReapplyDlssSettings(GameEntry game)
     {
-        if (game.DlssSettings.Count == 0 || game.DlssConflicted) return;
+        if (game.DlssSettings.Count == 0) return;
 
         try
         {
@@ -602,11 +602,9 @@ public partial class ProcessLauncherService
 
             if (result.HadForeignChanges)
             {
-                // Something else is managing this game's settings. Stop reapplying rather than
-                // fight over them every launch; the card explains it and the user decides.
-                game.DlssConflicted = true;
-                PersistLibrary?.Invoke();
-                LoggingService.Warn("Launcher", $"DLSS settings for '{game.Name}' were changed by something else - TrayTrigger has stopped managing them.");
+                // Something else has set these since. Nothing is written - not this launch, and not
+                // the next, for as long as it stays that way. The card's switch reads off.
+                LoggingService.Info("Launcher", $"DLSS settings for '{game.Name}' were changed by something else; TrayTrigger left them alone.");
             }
             else if (!result.Succeeded)
             {

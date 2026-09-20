@@ -363,6 +363,28 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         return new DlssOperationResult(true, null, details, remaining);
     }
 
+    /// <summary>
+    /// Whether every recorded setting is still exactly as TrayTrigger wrote it - what the card's
+    /// switch shows. Read from the driver rather than remembered: if NVIDIA App or anything else
+    /// has changed a value since, the switch reads off, and switching it on again takes it over.
+    /// False when the driver cannot be read.
+    /// </summary>
+    public bool IsInEffect(IReadOnlyList<DlssSettingRecord> records)
+    {
+        if (records.Count == 0) return false;
+
+        using var session = _backend.OpenSession(out _);
+        if (session == null) return false;
+
+        foreach (var group in records.GroupBy(r => r.ApplicationName, StringComparer.OrdinalIgnoreCase))
+        {
+            var profile = FindProfile(session, group.First(), out _);
+            if (profile == null) return false;
+            if (group.Any(r => !StillOursToUndo(session.GetSetting(profile, r.SettingId, out _), r))) return false;
+        }
+        return true;
+    }
+
     /// <summary>How a <see cref="RestoreAll"/> went: games that had an override, and games where some of it is still there.</summary>
     public sealed record RestoreAllResult(int Games, int Failed);
 
@@ -391,7 +413,6 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
             game.DlssSettings.Clear();
             game.DlssSettings.AddRange(kept);
-            game.DlssConflicted = false;
             game.DlssLastRun = null;
 
             if (kept.Count > 0)

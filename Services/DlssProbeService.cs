@@ -46,9 +46,6 @@ public static class DlssProbeService
     /// <summary>A DLSS-related module observed loaded in a running game.</summary>
     public sealed record LoadedRuntime(string ModuleName, string Path, string? FileVersion, bool FromDriverStore);
 
-    /// <summary>One DLSS setting as the driver reports it for a game. A null value is absent.</summary>
-    public sealed record SettingState(DlssSettingDefinition Definition, NvApi.DrsSettingValue? Value);
-
     /// <summary>What the card is built from.</summary>
     public sealed record ProbeResult
     {
@@ -58,8 +55,6 @@ public static class DlssProbeService
         /// </summary>
         public bool DriverAvailable { get; init; } = true;
 
-        /// <summary>Empty when NVIDIA has no profile for the game.</summary>
-        public IReadOnlyList<SettingState> SettingStates { get; init; } = Array.Empty<SettingState>();
         public IReadOnlyList<ShippedRuntime> ShippedRuntimes { get; init; } = Array.Empty<ShippedRuntime>();
         public IReadOnlyList<NgxModelStore.StoredRuntime> DriverRuntimes { get; init; } = Array.Empty<NgxModelStore.StoredRuntime>();
     }
@@ -68,33 +63,19 @@ public static class DlssProbeService
     public static ProbeResult Probe(string executablePath)
     {
         string? gameDir = SafeDirectoryName(executablePath);
-        var (settingStates, driverAvailable) = ReadSettings(executablePath);
 
         return new ProbeResult
         {
-            DriverAvailable = driverAvailable,
-            SettingStates = settingStates,
+            DriverAvailable = IsDriverAvailable(),
             ShippedRuntimes = gameDir == null ? Array.Empty<ShippedRuntime>() : FindShippedRuntimes(gameDir),
             DriverRuntimes = NgxModelStore.Enumerate()
         };
     }
 
-    private static (List<SettingState> States, bool DriverAvailable) ReadSettings(string executablePath)
+    private static bool IsDriverAvailable()
     {
-        var states = new List<SettingState>();
-
         using var session = NvApi.Session.TryOpen(out _);
-        if (session == null) return (states, false);
-
-        // By full path, as the override itself looks it up; by name for a game that has moved.
-        var profile = session.FindProfileForExecutable(executablePath, out IntPtr handle, out _)
-            ?? session.FindProfileForExecutable(Path.GetFileName(executablePath), out handle, out _);
-        if (profile == null) return (states, true);
-
-        foreach (var def in Settings)
-            states.Add(new SettingState(def, session.GetSetting(handle, def.Id, out _)));
-
-        return (states, true);
+        return session != null;
     }
 
     /// <summary>

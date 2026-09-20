@@ -718,7 +718,7 @@ public class DlssOverrideServiceTests
 
         var first = new GameEntry { Name = "Known" };
         first.DlssSettings.AddRange(service.Apply(TestExe, "Known").Records);
-        var second = new GameEntry { Name = "Unknown", DlssConflicted = true };
+        var second = new GameEntry { Name = "Unknown" };
         second.DlssSettings.AddRange(service.Apply(@"C:\Games\Other\other.exe", "Unknown").Records);
         var untouched = new GameEntry { Name = "Never on" };
 
@@ -728,7 +728,6 @@ public class DlssOverrideServiceTests
         Assert.Equal(0, result.Failed);
         Assert.Empty(first.DlssSettings);
         Assert.Empty(second.DlssSettings);
-        Assert.False(second.DlssConflicted);
         Assert.Equal(0x0000000Bu, known.Settings[SrPreset].Value);
         Assert.False(driver.Profiles.ContainsKey("other.exe"));   // the profile TrayTrigger created
     }
@@ -747,5 +746,29 @@ public class DlssOverrideServiceTests
 
         Assert.Equal(1, result.Failed);
         Assert.Equal(held, game.DlssSettings.Count);
+    }
+
+    // --- Is it in effect? --------------------------------------------------------------------
+
+    [Fact]
+    public void IsInEffect_OnlyWhileEveryRecordedSettingIsStillExactlyAsWritten()
+    {
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+
+        Assert.True(service.IsInEffect(applied.Records));
+
+        profile.Settings[SrPreset] = (0x0000000D, false);
+        Assert.False(service.IsInEffect(applied.Records));
+    }
+
+    [Fact]
+    public void IsInEffect_IsFalseWithNothingRecorded_AndNeverOpensTheDriverToFindOut()
+    {
+        var (service, driver) = NewService();
+
+        Assert.False(service.IsInEffect(Array.Empty<DlssSettingRecord>()));
+        Assert.Equal(0, driver.SessionsOpened);
     }
 }

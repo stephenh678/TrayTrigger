@@ -477,11 +477,6 @@
                                        Foreground="{StaticResource BrushTextSecondary}"
                                        Visibility="{Binding Dlss.HasLastRun, Converter={StaticResource BoolToVis}}"/>
 
-                            <!-- Only when true: a conflict, or somebody else&apos;s override. -->
-                            <TextBlock Text="{Binding Dlss.Notice}" FontSize="11" Margin="0,10,0,0"
-                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
-                                       Visibility="{Binding Dlss.HasNotice, Converter={StaticResource BoolToVis}}"/>
-
                             <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,10,0,0"
                                        AutomationProperties.LiveSetting="Polite"
                                        Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"

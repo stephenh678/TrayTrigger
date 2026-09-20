@@ -103,14 +103,6 @@ public class GameEntry
     public List<DlssSettingRecord> DlssSettings { get; set; } = new();
 
     /// <summary>
-    /// Set when the pre-launch reapply found a DLSS setting that is neither what TrayTrigger wrote
-    /// nor what it captured - so something else is changing this game's settings. TrayTrigger then
-    /// stops reapplying rather than fighting over them, and the card says so. Cleared by applying
-    /// or undoing, which are both the user deciding what they want.
-    /// </summary>
-    public bool DlssConflicted { get; set; }
-
-    /// <summary>
     /// What DLSS actually loaded the last time this game ran with the override on. Persisted
     /// because it can only be learned by playing - unlike versions and settings, which are read
     /// live. Cleared when the override changes; ignored once the game ships a different version.
