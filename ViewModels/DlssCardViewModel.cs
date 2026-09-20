@@ -129,7 +129,7 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     public bool CanRestore => !IsBusy && _records.Count > 0;
 
-    /// <summary>The result of the last change. Null until something happens.</summary>
+    /// <summary>Why the last change did not work. Null otherwise: when it works, the switch says so.</summary>
     public string? Status { get => _status; private set => SetProperty(ref _status, value); }
     public bool HasStatus => !string.IsNullOrEmpty(_status);
 
@@ -231,11 +231,11 @@ public sealed class DlssCardViewModel : ViewModelBase
             ClearDerivedState();
             _persist?.Invoke();
 
+            // Success says nothing: the switch is the status. Only a problem gets a line, because
+            // then the switch drops back to off and something has to say why.
             Status = result.HadWriteBackFailures
-                // The save reported success but the values are not there. Saying it worked would
-                // be the most misleading thing the card could do.
                 ? "NVIDIA accepted the change but did not report it back, so it may not have taken effect."
-                : "DLSS Override is on. It takes effect the next time you start the game.";
+                : null;
 
             await ReloadAsync().ConfigureAwait(true);
         }
@@ -276,11 +276,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             ClearDerivedState();
             _persist?.Invoke();
 
-            Status = !result.Succeeded
-                ? result.Error ?? "NVIDIA would not undo the change."
-                : result.HadForeignChanges
-                    ? "DLSS Override is off. Settings another tool has changed since were left as they are."
-                    : "DLSS Override is off. This game's NVIDIA settings are back to what they were.";
+            Status = result.Succeeded ? null : result.Error ?? "NVIDIA would not undo the change.";
 
             await ReloadAsync().ConfigureAwait(true);
         }

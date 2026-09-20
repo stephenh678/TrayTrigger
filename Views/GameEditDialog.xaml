@@ -477,9 +477,10 @@
                                        Foreground="{StaticResource BrushTextSecondary}"
                                        Visibility="{Binding Dlss.HasLastRun, Converter={StaticResource BoolToVis}}"/>
 
+                            <!-- Only when a change did not work. When it works, the switch says so. -->
                             <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,10,0,0"
                                        AutomationProperties.LiveSetting="Polite"
-                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushWarning}" TextWrapping="Wrap"
                                        Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}}"/>
 
                             <Button AutomationProperties.Name="Learn more about NVIDIA DLSS Override" Style="{StaticResource HelpLinkButton}"

@@ -309,7 +309,7 @@ public class DlssCardViewModelTests
         await ((AsyncRelayCommand)card.RestoreCommand).ExecuteAsync();
 
         Assert.Empty(records);
-        Assert.Contains("DLSS Override is off", card.Status);
+        Assert.False(card.HasStatus);   // it worked, and the switch says so
     }
 
     // ---- What the card shows --------------------------------------------------------------------
