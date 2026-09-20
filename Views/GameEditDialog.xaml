@@ -420,10 +420,13 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- CARD 3b: DLSS OVERRIDE. "DLSS Override" is NVIDIA's own name for this,
-                         so a user who has seen it in NVIDIA App recognises it and anyone else can
-                         search for it. Two versions, one switch; the per-feature breakdown is
-                         behind the expander because it answers a question almost nobody asks. -->
+                    <!-- CARD 3b: DLSS OVERRIDE. "DLSS Override", "DLSS Indicator" and the three
+                         feature names are NVIDIA's own words, kept so a user who has seen them in
+                         NVIDIA App recognises them and anyone else has an exact term to search.
+                         The generic nouns around them - runtime, libraries, HUD - are not, and are
+                         not used. Two versions, one switch, no per-feature breakdown: the override
+                         covers all three features in one write, so a table of them was mechanism
+                         on display. -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
                             BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding Dlss.IsVisible, Converter={StaticResource BoolToVis}}">
@@ -431,32 +434,47 @@
                             <Grid Margin="0,0,0,8">
                                 <TextBlock Text="NVIDIA DLSS Override" FontSize="12.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                <!-- Only offered once there is something of TrayTrigger's to undo. -->
+                                <!-- Always present, disabled by the command when there is nothing
+                                     of TrayTrigger's to undo: a button that appears only after you
+                                     commit hides the way back at the moment you want to see it,
+                                     and reflows the card as you tick. -->
                                 <Button Content="Restore" HorizontalAlignment="Right"
                                         AutomationProperties.Name="Restore the DLSS settings TrayTrigger changed"
                                         Style="{StaticResource ModernOutlineButton}"
-                                        Command="{Binding Dlss.RestoreCommand}"
-                                        Visibility="{Binding Dlss.CanRestore, Converter={StaticResource BoolToVis}}"/>
+                                        Command="{Binding Dlss.RestoreCommand}"/>
                             </Grid>
 
-                            <TextBlock Text="{Binding Dlss.VersionLine}" FontSize="11.5" TextWrapping="Wrap"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+                            <TextBlock FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,10"
+                                       Foreground="{StaticResource BrushTextSecondary}"
+                                       Text="Runs this game on the DLSS files installed with your GeForce driver, instead of the older ones inside the game. Nothing in the game folder changes."/>
 
-                            <CheckBox Content="{Binding Dlss.OverrideLabel}"
-                                      AutomationProperties.Name="{Binding Dlss.OverrideLabel}"
-                                      IsChecked="{Binding Dlss.OverrideEnabled}"
-                                      Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
-                            <TextBlock Text="Nothing inside the game folder is changed."
+                            <!-- The version pair rides the switch's own row, so before and after
+                                 are read together without a sentence to join them. -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Grid.Column="0" Content="{Binding Dlss.OverrideLabel}"
+                                          AutomationProperties.Name="{Binding Dlss.OverrideLabel}"
+                                          IsChecked="{Binding Dlss.OverrideEnabled}"
+                                          Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"
+                                           FontSize="11.5" FontWeight="SemiBold" Margin="12,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource BrushTextPrimary}"/>
+                            </Grid>
+                            <TextBlock Text="Updates DLSS Super Resolution, DLSS Ray Reconstruction and DLSS Frame Generation, whichever of them this game has."
                                        FontSize="11" Margin="22,2,0,10" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"/>
 
-                            <CheckBox Content="Show the DLSS overlay while this game runs"
-                                      AutomationProperties.Name="Show the DLSS overlay while this game runs"
+                            <CheckBox Content="Show the DLSS Indicator while this game runs"
+                                      AutomationProperties.Name="Show the DLSS Indicator while this game runs"
                                       IsChecked="{Binding Dlss.ShowOverlay}"
                                       Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
                             <TextBlock FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}">
-                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the DLSS version and preset on screen. Asks for administrator permission."/>
+                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the DLSS version, preset letter and render resolution on screen. Asks for administrator permission."/>
                             </TextBlock>
 
                             <!-- Only when true: a conflict, or somebody else&apos;s override. -->
@@ -469,17 +487,6 @@
                                        Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
                                        Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}}"/>
 
-                            <Expander Header="Details" Style="{StaticResource DisclosureExpander}" Margin="0,10,0,0"
-                                      Visibility="{Binding Dlss.HasDetails, Converter={StaticResource BoolToVis}}">
-                                <ItemsControl ItemsSource="{Binding Dlss.Details}" Margin="0,4,0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Mode=OneWay}" FontSize="11" TextWrapping="Wrap"
-                                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,1,0,0"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Expander>
                         </StackPanel>
                     </Border>
 

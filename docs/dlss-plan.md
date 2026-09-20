@@ -6,18 +6,30 @@ here, because most of it was learned the expensive way.
 
 ## What it does
 
-A **DLSS** card in Edit Game, on the Performance tab, that puts a game on NVIDIA's current DLSS
-model with one click.
+An **NVIDIA DLSS Override** card in Edit Game, on the Performance tab, that puts a game on NVIDIA's
+current DLSS model with one click.
 
 ```
-DLSS                    [ Undo TrayTrigger changes ]  [ Verify ]  [ Use recommended ]
-  Super Resolution   310.1.0   Observed runtime 310.9.0 from NVIDIA's driver store
-  Ray Reconstruction 310.1.0   Observed runtime 310.9.0 from NVIDIA's driver store
-  Frame Generation   310.1.0   Settings saved
-  Your driver holds DLSS 310.9.0.
-  No game files are changed - the driver supplies the model.
-  [ ] Show DLSS overlay while this game runs
+NVIDIA DLSS Override                                          [ Restore ]
+
+  Runs this game on the DLSS files installed with your GeForce driver,
+  instead of the older ones inside the game. Nothing in the game folder
+  changes.
+
+  [x] Enable DLSS Override for this game            310.1.0 -> 310.9.0
+      Updates DLSS Super Resolution, DLSS Ray Reconstruction and DLSS
+      Frame Generation, whichever of them this game has.
+
+  [ ] Show the DLSS Indicator while this game runs
+      For testing only. Draws the DLSS version, preset letter and render
+      resolution on screen. Asks for administrator permission.
 ```
+
+**The wording rule:** keep the terms NVIDIA itself prints - *DLSS Override*, *DLSS Indicator*,
+*DLSS Preset*, the three feature names, and *GeForce driver* - because they are what a user
+recognises from NVIDIA App and what they can search. Drop the generic nouns that only sound
+official: *runtime*, *libraries*, *HUD*, *model preset*, and *driver* used as a bare noun for two
+different things. Three earlier versions of this card failed on that second list.
 
 It works entirely through the NVIDIA driver's per-game profile database. **No file in any game
 folder is written, ever.** That single decision removes downloads, caches, backups, the NVIDIA

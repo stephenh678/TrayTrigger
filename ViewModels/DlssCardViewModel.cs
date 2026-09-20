@@ -17,8 +17,10 @@ namespace TrayTrigger.ViewModels;
 /// the user with nothing to search for.</para>
 ///
 /// <para>The card says two versions and offers one switch. Everything else it used to show - a row
-/// per feature, a Verify button, what was observed loading - was the mechanism on display rather
-/// than the outcome, and is either gone or behind the details expander.</para>
+/// per feature, a Verify button, a details expander, what was observed loading - was the mechanism
+/// on display rather than the outcome, and is gone. The override covers all three features in one
+/// write, so a per-feature breakdown answered a question nobody was asking; the switch's sub-line
+/// names the three features instead.</para>
 ///
 /// <para>Turning the switch on writes to the driver and saves <i>immediately</i>, not on Save
 /// Changes: the driver change has already happened, so deferring the record would let Cancel
@@ -32,7 +34,6 @@ public sealed class DlssCardViewModel : ViewModelBase
         string? GameVersion,
         string? DriverVersion,
         bool DriverIsNewer,
-        IReadOnlyList<string> Details,
         string? ExternalOverrideNotice);
 
     private readonly string? _executablePath;
@@ -50,7 +51,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private Projection _content = Empty;
     private Task? _load;
 
-    private static readonly Projection Empty = new(false, null, null, false, Array.Empty<string>(), null);
+    private static readonly Projection Empty = new(false, null, null, false, null);
 
     /// <param name="records">
     /// The game's live ownership records, mutated in place and handed to <paramref name="persist"/>,
@@ -93,27 +94,24 @@ public sealed class DlssCardViewModel : ViewModelBase
     // ---- The one thing the card says --------------------------------------------------------
 
     /// <summary>
-    /// The two versions, in a sentence, with the comparison already made - the old card printed
-    /// both numbers and left the reader to work it out.
-    ///
-    /// <para>It says "NVIDIA", never "your driver". A novice knows they have an NVIDIA card; they
-    /// do not know the driver carries its own DLSS files, so "your driver has a newer one" reads
-    /// as some third thing rather than as NVIDIA.</para>
+    /// What the game has now and what it would get, as a pair: <c>310.1.0 -> 310.9.0</c>. It sits
+    /// on the switch's own row, so the before and after are read together and no sentence is needed
+    /// to join them. An earlier card printed the two numbers in prose and left the reader to work
+    /// out which was which.
     /// </summary>
     public string VersionLine =>
         _content.GameVersion == null ? string.Empty
-        : _content.DriverVersion == null ? $"This game has DLSS {_content.GameVersion}."
+        : _content.DriverVersion == null ? _content.GameVersion
         : _content.DriverIsNewer
-            ? $"This game has DLSS {_content.GameVersion}. NVIDIA has a newer one, {_content.DriverVersion}."
-            : $"This game already has DLSS {_content.GameVersion} - the same version NVIDIA has.";
+            ? $"{_content.GameVersion} → {_content.DriverVersion}"
+            : $"{_content.GameVersion} (already current)";
 
     /// <summary>
-    /// The switch's label, with the version in it, so it says what will happen on its own. A label
-    /// that needs the sentence above it to make sense is a label that will be misread.
+    /// NVIDIA App's own wording for this toggle. Anyone who has seen it there recognises it, and
+    /// anyone who has not has an exact term to search. The version pair is beside it rather than
+    /// in it, because the label names the feature and the pair states the effect.
     /// </summary>
-    public string OverrideLabel => _content.DriverVersion == null
-        ? "Force this game to use NVIDIA's DLSS"
-        : $"Force this game to use NVIDIA's {_content.DriverVersion}";
+    public string OverrideLabel => "Enable DLSS Override for this game";
 
     /// <summary>
     /// The switch. On means TrayTrigger has written the override for this game; off means it has
@@ -164,10 +162,6 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     public bool HasNotice => !string.IsNullOrEmpty(Notice);
 
-    /// <summary>The per-feature breakdown, behind the details expander. Empty when nothing to add.</summary>
-    public IReadOnlyList<string> Details => _content.Details;
-    public bool HasDetails => _content.Details.Count > 0;
-
     // ---- Work --------------------------------------------------------------------------------
 
     /// <summary>
@@ -185,7 +179,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             // The renderer, not the launcher: that is the profile an override is written to.
             string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath)).ConfigureAwait(true);
             var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
-            _content = Project(result, _records, _game?.DlssObservations);
+            _content = Project(result, _records);
         }
         catch (Exception ex)
         {
@@ -308,8 +302,6 @@ public sealed class DlssCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasStatus));
         OnPropertyChanged(nameof(Notice));
         OnPropertyChanged(nameof(HasNotice));
-        OnPropertyChanged(nameof(Details));
-        OnPropertyChanged(nameof(HasDetails));
     }
 
     // ---- Projection --------------------------------------------------------------------------
@@ -317,14 +309,13 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// <summary>Turns a probe result into what the card says. Pure; exercised directly by tests.</summary>
     public static Projection Project(
         DlssProbeService.ProbeResult result,
-        IReadOnlyCollection<DlssSettingRecord>? owned = null,
-        IReadOnlyCollection<DlssObservation>? observations = null)
+        IReadOnlyCollection<DlssSettingRecord>? owned = null)
     {
         if (result.ShippedRuntimes.Count == 0) return Empty;
 
-        // One version for the card. Games ship all three features at the same version in practice;
-        // where they differ, the details list spells them out and this shows the oldest, because
-        // that is the one with the most to gain.
+        // One version for the card. Where a game ships its three features at different versions,
+        // this shows the oldest: it is the one with the most to gain, and the override lifts all
+        // three to the same place regardless.
         var shipped = result.ShippedRuntimes
             .GroupBy(s => s.Feature, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First().FileVersion, StringComparer.Ordinal);
@@ -342,34 +333,9 @@ public sealed class DlssCardViewModel : ViewModelBase
             GameVersion: gameVersion,
             DriverVersion: driverVersion,
             DriverIsNewer: newer,
-            Details: BuildDetails(result, shipped, observations),
             ExternalOverrideNotice: HasForeignOverride(result, owned)
                 ? "Something else already overrides DLSS for this game - NVIDIA App, Profile Inspector or similar. Turning this on replaces it; Restore puts it back."
                 : null);
-    }
-
-    /// <summary>
-    /// The per-feature lines, for people who want them. Only what was read: a version per feature,
-    /// and what was seen loading if the game has been played since.
-    /// </summary>
-    private static List<string> BuildDetails(
-        DlssProbeService.ProbeResult result,
-        Dictionary<string, string?> shipped,
-        IReadOnlyCollection<DlssObservation>? observations)
-    {
-        var lines = new List<string>();
-        foreach (var feature in NgxModelStore.Features)
-        {
-            if (!shipped.TryGetValue(feature.Name, out string? version)) continue;
-
-            var seen = observations?.FirstOrDefault(o => o.Feature == feature.Code);
-            bool stillValid = seen != null && !DlssVerificationService.IsInvalidated(seen, version);
-
-            lines.Add(stillValid
-                ? $"{feature.Name}: game has {version ?? "?"} - {DlssVerificationService.Describe(seen!)}"
-                : $"{feature.Name}: game has {version ?? "?"}");
-        }
-        return lines;
     }
 
     /// <summary>

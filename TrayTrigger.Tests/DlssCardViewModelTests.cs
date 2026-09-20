@@ -104,6 +104,40 @@ public class DlssCardViewModelTests
         Assert.Equal("310.1.0", p.GameVersion);
     }
 
+    [Fact]
+    public async Task TheVersionPairReadsAsBeforeAndAfter_NotAsProse()
+    {
+        // The whole point of the pair is that it needs no sentence around it. If this ever grows
+        // words, the card has started explaining itself again.
+        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(),
+            probe: Result(
+                shipped: new[] { Ship("Super Resolution", "310.1.0") },
+                driver: new[] { Store("Super Resolution", "310.9.0", 20318464) }));
+        await card.LoadAsync();
+
+        Assert.Equal("310.1.0 → 310.9.0", card.VersionLine);
+    }
+
+    [Fact]
+    public async Task AGameAlreadyCurrent_SaysSoInsteadOfShowingAnArrowToNowhere()
+    {
+        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(),
+            probe: Result(
+                shipped: new[] { Ship("Super Resolution", "310.9.0") },
+                driver: new[] { Store("Super Resolution", "310.9.0", 20318464) }));
+        await card.LoadAsync();
+
+        Assert.Equal("310.9.0 (already current)", card.VersionLine);
+    }
+
+    [Fact]
+    public void TheSwitchIsLabelledWithNvidiasOwnTerm_SoItCanBeSearchedFor()
+    {
+        // "DLSS Override" is what NVIDIA App calls this. An earlier label invented its own phrase
+        // and left the user with nothing to look up.
+        Assert.Equal("Enable DLSS Override for this game", new DlssCardViewModel(Exe).OverrideLabel);
+    }
+
     // ---- The switch --------------------------------------------------------------------------
 
     [Fact]
@@ -274,63 +308,6 @@ public class DlssCardViewModelTests
         Assert.Contains("stopped re-applying", card.Notice);
     }
 
-    // ---- Details -----------------------------------------------------------------------------
-
-    [Fact]
-    public void DetailsListEachFeatureTheGameShips_AndNothingItDoesNot()
-    {
-        var p = DlssCardViewModel.Project(Result(shipped: new[]
-        {
-            Ship("Super Resolution", "310.1.0"),
-            Ship("Frame Generation", "310.1.0")
-        }));
-
-        Assert.Equal(2, p.Details.Count);
-        Assert.Contains(p.Details, d => d.StartsWith("Super Resolution"));
-        Assert.DoesNotContain(p.Details, d => d.StartsWith("Ray Reconstruction"));
-    }
-
-    [Fact]
-    public void DetailsIncludeWhatWasSeenLoading_WhenTheGameHasBeenPlayed()
-    {
-        var observations = new[]
-        {
-            new DlssObservation
-            {
-                Feature = "SR",
-                State = DlssObservationState.RuntimeObserved,
-                Version = "310.9.0",
-                LoadedFromPath = @"C:\ProgramData\NVIDIA\NGX\models\dlss\versions\20318464\files\x.bin",
-                GameRuntimeVersion = "310.1.0"
-            }
-        };
-
-        var p = DlssCardViewModel.Project(
-            Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }), null, observations);
-
-        Assert.Contains(p.Details, d => d.Contains("310.9.0") && d.Contains("from NVIDIA"));
-    }
-
-    [Fact]
-    public void AnObservationFromBeforeAGamePatch_IsNotShown()
-    {
-        var observations = new[]
-        {
-            new DlssObservation
-            {
-                Feature = "SR",
-                State = DlssObservationState.RuntimeObserved,
-                Version = "310.9.0",
-                GameRuntimeVersion = "309.0.0"   // the game has been patched since
-            }
-        };
-
-        var p = DlssCardViewModel.Project(
-            Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }), null, observations);
-
-        Assert.DoesNotContain(p.Details, d => d.Contains("310.9.0"));
-    }
-
     // ---- Loading -----------------------------------------------------------------------------
 
     [Fact]
@@ -339,7 +316,7 @@ public class DlssCardViewModelTests
         var card = new DlssCardViewModel(Exe);
 
         Assert.False(card.IsVisible);
-        Assert.Empty(card.Details);
+        Assert.Empty(card.VersionLine);
     }
 
     [Fact]
