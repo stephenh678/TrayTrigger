@@ -257,7 +257,12 @@ public class LibraryViewModel : ViewModelBase
     public string UndoToastMessage
     {
         get => _undoToastMessage;
-        set { _undoToastMessage = value; OnPropertyChanged(); }
+        set
+        {
+            if (_undoToastMessage != value) LoggingService.Shown("Undo toast", value);
+            _undoToastMessage = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool IsLaunchToastVisible
@@ -284,7 +289,13 @@ public class LibraryViewModel : ViewModelBase
     public string StatusMessage
     {
         get => _statusMessage;
-        set { _statusMessage = value; OnPropertyChanged(); }
+        set
+        {
+            // Every status line the user is shown, at the one place it is set. See LoggingService.Shown.
+            if (_statusMessage != value) LoggingService.Shown("Status", value);
+            _statusMessage = value;
+            OnPropertyChanged();
+        }
     }
 
     public int TotalGameCount => Games.Count;
@@ -518,8 +529,8 @@ public class LibraryViewModel : ViewModelBase
             if (dispatcher.CheckAccess()) action();
             else dispatcher.Invoke(action);
         }
-        catch (System.Threading.Tasks.TaskCanceledException) { }
-        catch (InvalidOperationException) { }
+        catch (System.Threading.Tasks.TaskCanceledException) { /* the app is shutting down */ }
+        catch (InvalidOperationException) { /* the app is shutting down */ }
     }
 
     // ------------------------------------------------------------------------------------
@@ -1140,6 +1151,7 @@ public class LibraryViewModel : ViewModelBase
 
     private void ShowLaunchToast(string message, string icon = "", int seconds = 3)
     {
+        LoggingService.Shown("Toast", message);
         _launchToastTimer?.Stop();
 
         LaunchToastIcon = icon;
@@ -1421,7 +1433,7 @@ public class LibraryViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("LibraryViewModel", $"Enrichment error for {entry.Name}: {ex.Message}");
+            LoggingService.Warn("Library", $"Enrichment error for {entry.Name}: {ex.Message}");
         }
     }
 
@@ -1462,11 +1474,11 @@ public class LibraryViewModel : ViewModelBase
             if (similarity >= _settings.OnlineMatchConfidenceThreshold)
             {
                 entry.CoverImagePath = art.Value.Path;
-                LoggingService.Info("LibraryViewModel", $"Applied SteamGridDB poster for '{entry.Name}' (searched '{query}', matched '{art.Value.MatchedName}', similarity {similarity:F2}).");
+                LoggingService.Info("Library", $"Applied SteamGridDB poster for '{entry.Name}' (searched '{query}', matched '{art.Value.MatchedName}', similarity {similarity:F2}).");
                 return;
             }
 
-            LoggingService.Verbose("LibraryViewModel", $"Rejected SteamGridDB poster for '{entry.Name}' (searched '{query}'): matched title '{art.Value.MatchedName}' too dissimilar (similarity {similarity:F2} < {_settings.OnlineMatchConfidenceThreshold:F2}).");
+            LoggingService.Verbose("Library", $"Rejected SteamGridDB poster for '{entry.Name}' (searched '{query}'): matched title '{art.Value.MatchedName}' too dissimilar (similarity {similarity:F2} < {_settings.OnlineMatchConfidenceThreshold:F2}).");
         }
     }
 
@@ -1503,13 +1515,13 @@ public class LibraryViewModel : ViewModelBase
         if (entry.RawgId != details.RawgId)
         {
             entry.RawgId = details.RawgId;
-            LoggingService.Info("LibraryViewModel", $"'{entry.Name}' matched RAWG entry '{details.Name}' (id {details.RawgId}).");
+            LoggingService.Info("Library", $"'{entry.Name}' matched RAWG entry '{details.Name}' (id {details.RawgId}).");
         }
 
         if (_settings.AutoCategorizeFromSteam && LibraryConstants.IsEnrichableCategory(entry.Category) && !string.IsNullOrWhiteSpace(details.PrimaryGenre))
         {
             entry.Category = details.PrimaryGenre;
-            LoggingService.Info("LibraryViewModel", $"'{entry.Name}' categorized as '{details.PrimaryGenre}' from RAWG.");
+            LoggingService.Info("Library", $"'{entry.Name}' categorized as '{details.PrimaryGenre}' from RAWG.");
         }
 
         return details.Name;

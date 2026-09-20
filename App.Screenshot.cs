@@ -219,7 +219,7 @@ public partial class App
                     }
                     finally
                     {
-                        try { g.ReleaseHdc(hdc); } catch { }
+                        try { g.ReleaseHdc(hdc); } catch { /* nothing left to release */ }
                     }
 
                     if (printed)

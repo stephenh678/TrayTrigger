@@ -202,7 +202,7 @@ public class SystemTweakViewModel : ViewModelBase
         }
         else
         {
-            LoggingService.Warn("SystemTweakViewModel", $"Toggle '{Name}' ({Id}) to {(targetState ? "Optimal" : "Default")} did not take effect - actual state read back as {(actualState ? "Optimal" : "Default")}.");
+            LoggingService.Warn("System", $"Toggle '{Name}' ({Id}) to {(targetState ? "Optimal" : "Default")} did not take effect - actual state read back as {(actualState ? "Optimal" : "Default")}.");
             _notifyParent(RequiresAdmin
                 ? $"Failed to update '{Name}'. The administrator prompt was cancelled or the change was rejected."
                 : $"Failed to update '{Name}'.");
@@ -217,7 +217,7 @@ public class SystemTweakViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweakViewModel", $"Failed to initiate restart: {ex.Message}");
+            LoggingService.Warn("System", $"Failed to initiate restart: {ex.Message}");
         }
     }
 
@@ -229,9 +229,10 @@ public class SystemTweakViewModel : ViewModelBase
             {
                 using var proc = Process.Start(new ProcessStartInfo("windowsdefender://coreisolation") { UseShellExecute = true });
             }
-            catch
+            catch (Exception ex)
             {
-                try { using var proc = Process.Start(new ProcessStartInfo("ms-settings:privacy") { UseShellExecute = true }); } catch { }
+                LoggingService.Swallowed("System", ex, "opening Core Isolation in Windows Security");
+                try { using var proc = Process.Start(new ProcessStartInfo("ms-settings:privacy") { UseShellExecute = true }); } catch (Exception inner) { LoggingService.Swallowed("System", inner, "opening Windows Settings"); }
             }
         }
         else if (Id == "hags")
@@ -240,7 +241,7 @@ public class SystemTweakViewModel : ViewModelBase
             {
                 using var proc = Process.Start(new ProcessStartInfo("ms-settings:display-advancedgraphics") { UseShellExecute = true });
             }
-            catch { }
+            catch (Exception ex) { LoggingService.Swallowed("System", ex, "opening Windows graphics settings"); }
         }
     }
 
@@ -310,7 +311,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
             if (_getter() != value)
             {
                 _setter(value);
-                LoggingService.Info("SystemViewModel", $"Performance Profile tweak '{Name}' {(value ? "enabled" : "disabled")}.");
+                LoggingService.Info("System", $"Performance Profile tweak '{Name}' {(value ? "enabled" : "disabled")}.");
                 NotifyStateChanged();
             }
         }
@@ -670,6 +671,7 @@ public class SystemViewModel : ViewModelBase
             if (_statusMessage != value)
             {
                 _statusMessage = value;
+                LoggingService.Shown("System status", value);
                 OnPropertyChanged();
             }
         }
@@ -804,7 +806,7 @@ public class SystemViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Error("SystemViewModel", "Error loading specs", ex);
+            LoggingService.Error("System", "Error loading specs", ex);
             StatusMessage = "Failed to refresh hardware specifications.";
         }
         finally
@@ -945,7 +947,7 @@ public class SystemViewModel : ViewModelBase
         bool created = await Task.Run(() => SystemTweaksService.CreateSystemRestorePoint(description));
         if (!created)
         {
-            LoggingService.Warn("SystemViewModel", "Could not create a System Restore Point (System Restore may be disabled, throttled by Windows to one per 24h, or elevation was cancelled). Continuing anyway.");
+            LoggingService.Warn("System", "Could not create a System Restore Point (System Restore may be disabled, throttled by Windows to one per 24h, or elevation was cancelled). Continuing anyway.");
             BusyToastMessage = "Could not create a restore point - continuing...";
             StatusMessage = "Could not create a restore point (may be disabled or already created recently). Continuing...";
             return RestorePointOutcome.Failed;
@@ -1000,7 +1002,7 @@ public class SystemViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemViewModel", $"Could not launch utility '{target}': {ex.Message}");
+            LoggingService.Warn("System", $"Could not launch utility '{target}': {ex.Message}");
         }
     }
 }

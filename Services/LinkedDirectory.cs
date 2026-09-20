@@ -43,8 +43,9 @@ public static class LinkedDirectory
         {
             linkTarget = new DirectoryInfo(path).LinkTarget;
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("LinkedDirectory", ex, "reading the link target");
             return LinkedDirectoryState.Folder;
         }
         if (linkTarget == null) return LinkedDirectoryState.Folder;
@@ -66,8 +67,9 @@ public static class LinkedDirectory
                 string fullPath = Path.GetFullPath(path);
                 target = Path.GetFullPath(linkTarget, Path.GetDirectoryName(fullPath) ?? fullPath);
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.Swallowed("LinkedDirectory", ex, "resolving the link target");
                 return LinkedDirectoryState.Folder;
             }
         }
@@ -89,10 +91,10 @@ public static class LinkedDirectory
             File.GetAttributes(path);
             return false; // Present, just not listable (access denied): not ours to judge.
         }
-        catch (FileNotFoundException) { return true; }
-        catch (DirectoryNotFoundException) { return true; }
-        catch (DriveNotFoundException) { return true; }
+        catch (FileNotFoundException) { /* the target is gone */ return true; }
+        catch (DirectoryNotFoundException) { /* the target is gone */ return true; }
+        catch (DriveNotFoundException) { /* the target's drive is gone */ return true; }
         catch (IOException ex) when (ex.HResult == ErrorNotReady) { return true; } // Removable drive gone.
-        catch { return false; }
+        catch (Exception ex) { LoggingService.Swallowed("LinkedDirectory", ex, "listing the link target"); return false; }
     }
 }

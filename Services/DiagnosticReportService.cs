@@ -386,7 +386,7 @@ public static class DiagnosticReportService
         try { return probe(); }
         catch (Exception ex)
         {
-            LoggingService.Verbose("DiagnosticReport", $"Probe failed: {ex.Message}");
+            LoggingService.Verbose("Diagnostics", $"Probe failed: {ex.Message}");
             return fallback;
         }
     }

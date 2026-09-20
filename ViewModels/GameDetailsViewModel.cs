@@ -451,8 +451,9 @@ public class GameDetailsViewModel : ViewModelBase
             // only ever bound on the UI thread.
             return bmp;
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("GameDetails", ex, "loading a remote image");
             return null;
         }
     }
@@ -701,7 +702,7 @@ public class GameDetailsViewModel : ViewModelBase
 
         Game.RawgId = rawgId;
         _saveGame?.Invoke(Game);
-        LoggingService.Info("GameDetailsViewModel", $"'{Game.Name}' manually matched to RAWG id {rawgId} ('{dialog.SelectedHit.Name}').");
+        LoggingService.Info("GameDetails", $"'{Game.Name}' manually matched to RAWG id {rawgId} ('{dialog.SelectedHit.Name}').");
 
         _rawgDetails = null;
         _rawgAttempted = false;
@@ -738,7 +739,7 @@ public class GameDetailsViewModel : ViewModelBase
         if (appId == Game.SteamAppId)
             return;
 
-        LoggingService.Info("GameDetailsViewModel", $"'{Game.Name}' manually matched to Steam App ID {appId} ('{dialog.SelectedHit.Name}').");
+        LoggingService.Info("GameDetails", $"'{Game.Name}' manually matched to Steam App ID {appId} ('{dialog.SelectedHit.Name}').");
 
         // A previously cached (possibly wrong) result for this id must not be served back.
         SteamMetadataService.InvalidateCache(appId);
@@ -780,13 +781,13 @@ public class GameDetailsViewModel : ViewModelBase
             var match = await _steamSearchService.FindBestMatchAsync(rawgTitle, _minConfidence);
             if (match == null || string.IsNullOrWhiteSpace(match.AppId) || match.SimilarityScore < Math.Max(0.85, _minConfidence))
             {
-                LoggingService.Verbose("GameDetailsViewModel", $"No decisive Steam listing for RAWG title '{rawgTitle}' - Steam side left as is.");
+                LoggingService.Verbose("GameDetails", $"No decisive Steam listing for RAWG title '{rawgTitle}' - Steam side left as is.");
                 return false;
             }
             if (match.AppId == Game.SteamAppId)
                 return false;
 
-            LoggingService.Info("GameDetailsViewModel", $"'{Game.Name}' Steam side re-linked to App ID {match.AppId} ('{match.Name}') from RAWG title '{rawgTitle}' (similarity {match.SimilarityScore:F2}).");
+            LoggingService.Info("GameDetails", $"'{Game.Name}' Steam side re-linked to App ID {match.AppId} ('{match.Name}') from RAWG title '{rawgTitle}' (similarity {match.SimilarityScore:F2}).");
             SteamMetadataService.InvalidateCache(match.AppId);
             Game.SteamAppId = match.AppId;
             _saveGame?.Invoke(Game);
@@ -798,7 +799,7 @@ public class GameDetailsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GameDetailsViewModel", $"Steam resync from RAWG title '{rawgTitle}' failed: {ex.Message}");
+            LoggingService.Warn("GameDetails", $"Steam resync from RAWG title '{rawgTitle}' failed: {ex.Message}");
             return false;
         }
     }
@@ -868,7 +869,7 @@ public class GameDetailsViewModel : ViewModelBase
             if (revalidating && result.Details == null)
             {
                 // Offline / bad key / quota: the cached copy stays on screen, silently.
-                LoggingService.Verbose("GameDetailsViewModel", $"RAWG re-fetch for '{Game.Name}' returned {result.Status}; keeping the cached entry.");
+                LoggingService.Verbose("GameDetails", $"RAWG re-fetch for '{Game.Name}' returned {result.Status}; keeping the cached entry.");
                 return;
             }
 
@@ -925,7 +926,7 @@ public class GameDetailsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GameDetailsViewModel", $"RAWG load failed for '{Game.Name}': {ex.Message}");
+            LoggingService.Warn("GameDetails", $"RAWG load failed for '{Game.Name}': {ex.Message}");
             if (!revalidating)
                 _rawgStatus = RawgLookupStatus.Failed;
         }
@@ -996,11 +997,11 @@ public class GameDetailsViewModel : ViewModelBase
                     if (match.SimilarityScore >= Math.Max(0.85, _minConfidence))
                     {
                         Game.SteamAppId = targetAppId;
-                        LoggingService.Info("GameDetailsViewModel", $"Auto-linked '{Game.Name}' to Steam App ID {targetAppId} (similarity {match.SimilarityScore:F2}).");
+                        LoggingService.Info("GameDetails", $"Auto-linked '{Game.Name}' to Steam App ID {targetAppId} (similarity {match.SimilarityScore:F2}).");
                     }
                     else
                     {
-                        LoggingService.Verbose("GameDetailsViewModel", $"Steam match for '{Game.Name}' (App ID {targetAppId}, similarity {match.SimilarityScore:F2}) below decisive threshold - showing details without persisting the link.");
+                        LoggingService.Verbose("GameDetails", $"Steam match for '{Game.Name}' (App ID {targetAppId}, similarity {match.SimilarityScore:F2}) below decisive threshold - showing details without persisting the link.");
                     }
                 }
             }
@@ -1111,7 +1112,7 @@ public class GameDetailsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GameDetailsViewModel", $"Error loading Steam details for '{Game.Name}': {ex.Message}");
+            LoggingService.Warn("GameDetails", $"Error loading Steam details for '{Game.Name}': {ex.Message}");
             if (loadVersion == _steamLoadVersion && _details == null && _activeSource == MetadataSource.Steam)
             {
                 ErrorMessage = $"Error loading Steam information: {ex.Message}";
@@ -1162,7 +1163,7 @@ public class GameDetailsViewModel : ViewModelBase
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            LoggingService.Warn("GameDetailsViewModel", $"Refused to open URL with unexpected scheme: '{url}'");
+            LoggingService.Warn("GameDetails", $"Refused to open URL with unexpected scheme: '{url}'");
             return;
         }
 
@@ -1176,7 +1177,7 @@ public class GameDetailsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GameDetailsViewModel", $"Failed to open URL '{url}': {ex.Message}");
+            LoggingService.Warn("GameDetails", $"Failed to open URL '{url}': {ex.Message}");
         }
     }
 }

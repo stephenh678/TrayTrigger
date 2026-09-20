@@ -121,6 +121,7 @@ public partial class GameMatchPickerDialog : Window
             }
             catch (OperationCanceledException)
             {
+                // A newer search replaced this one.
                 return;
             }
             catch (Exception ex)

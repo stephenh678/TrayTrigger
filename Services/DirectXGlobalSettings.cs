@@ -62,7 +62,7 @@ public static class DirectXGlobalSettings
             using var key = Registry.CurrentUser.OpenSubKey(KeyPath);
             return key?.GetValue(ValueName) as string;
         }
-        catch { return null; }
+        catch (Exception ex) { LoggingService.Swallowed("DirectXGlobalSettings", ex, "reading the setting"); return null; }
     }
 
     /// <summary>True when the token is present and equals "1".</summary>

@@ -41,7 +41,7 @@ public partial class SteamScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamScannerService", $"Error detecting Steam path: {ex.Message}");
+            LoggingService.Warn("SteamScanner", $"Error detecting Steam path: {ex.Message}");
         }
 
         // Common default path
@@ -82,7 +82,7 @@ public partial class SteamScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamScannerService", $"Error parsing libraryfolders.vdf: {ex.Message}");
+            LoggingService.Warn("SteamScanner", $"Error parsing libraryfolders.vdf: {ex.Message}");
         }
 
         return folders.ToList();
@@ -120,14 +120,14 @@ public partial class SteamScannerService
 
             if (!Directory.Exists(steamappsDir))
             {
-                LoggingService.Verbose("SteamScannerService", $"Skipped library '{folder}': the folder does not exist (a drive not attached?).");
+                LoggingService.Verbose("SteamScanner", $"Skipped library '{folder}': the folder does not exist (a drive not attached?).");
                 continue;
             }
 
             try
             {
                 var manifestFiles = Directory.GetFiles(steamappsDir, "appmanifest_*.acf");
-                LoggingService.Verbose("SteamScannerService", $"'{steamappsDir}': {manifestFiles.Length} app manifest(s).");
+                LoggingService.Verbose("SteamScanner", $"'{steamappsDir}': {manifestFiles.Length} app manifest(s).");
                 foreach (var manifest in manifestFiles)
                 {
                     var game = ParseManifest(manifest, folder, steamPath, existingSet);
@@ -139,7 +139,7 @@ public partial class SteamScannerService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("SteamScannerService", $"Error scanning folder '{folder}': {ex.Message}");
+                LoggingService.Warn("SteamScanner", $"Error scanning folder '{folder}': {ex.Message}");
             }
         }
 
@@ -181,7 +181,7 @@ public partial class SteamScannerService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("SteamScannerService", $"Error enumerating '{steamappsDir}': {ex.Message}");
+                LoggingService.Warn("SteamScanner", $"Error enumerating '{steamappsDir}': {ex.Message}");
                 continue;
             }
 
@@ -254,7 +254,7 @@ public partial class SteamScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamScannerService", $"Error reading manifest header '{manifestPath}': {ex.Message}");
+            LoggingService.Warn("SteamScanner", $"Error reading manifest header '{manifestPath}': {ex.Message}");
             return null;
         }
     }
@@ -268,7 +268,7 @@ public partial class SteamScannerService
             {
                 // Said out loud: a game missing from a scan is otherwise indistinguishable from
                 // one Steam has no manifest for.
-                LoggingService.Verbose("SteamScannerService", $"Skipped '{manifestPath}': it has no appid or no name.");
+                LoggingService.Verbose("SteamScanner", $"Skipped '{manifestPath}': it has no appid or no name.");
                 return null;
             }
             var (appId, name, installdir) = header.Value;
@@ -278,7 +278,7 @@ public partial class SteamScannerService
                 name.StartsWith("Proton ", StringComparison.OrdinalIgnoreCase) ||
                 name.StartsWith("Steam Linux Runtime", StringComparison.OrdinalIgnoreCase))
             {
-                LoggingService.Verbose("SteamScannerService", $"Skipped '{name}' [{appId}]: a Steam runtime, not a game.");
+                LoggingService.Verbose("SteamScanner", $"Skipped '{name}' [{appId}]: a Steam runtime, not a game.");
                 return null;
             }
 
@@ -304,7 +304,7 @@ public partial class SteamScannerService
                                 !Path.GetFileName(f).Contains("redist", StringComparison.OrdinalIgnoreCase) &&
                                 !Path.GetFileName(f).Contains("benchmark", StringComparison.OrdinalIgnoreCase) &&
                                 !Path.GetFileName(f).Contains("directx", StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(f => { try { return new FileInfo(f).Length; } catch { return 0L; } })
+                    .OrderByDescending(f => { try { return new FileInfo(f).Length; } catch { /* an unreadable file sorts as the smallest */ return 0L; } })
                     .ToList();
 
                 bestExe = exes.FirstOrDefault();
@@ -376,7 +376,7 @@ public partial class SteamScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamScannerService", $"Error parsing manifest '{manifestPath}': {ex.Message}");
+            LoggingService.Warn("SteamScanner", $"Error parsing manifest '{manifestPath}': {ex.Message}");
             return null;
         }
     }
@@ -386,11 +386,11 @@ public partial class SteamScannerService
         try
         {
             Process.Start(new ProcessStartInfo($"https://store.steampowered.com/app/{appId}") { UseShellExecute = true });
-            LoggingService.Verbose("SteamScannerService", $"Opened store page for App ID {appId}.");
+            LoggingService.Verbose("SteamScanner", $"Opened store page for App ID {appId}.");
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamScannerService", $"Failed to open store page for App ID {appId}: {ex.Message}");
+            LoggingService.Warn("SteamScanner", $"Failed to open store page for App ID {appId}: {ex.Message}");
         }
     }
 
@@ -399,11 +399,11 @@ public partial class SteamScannerService
         try
         {
             Process.Start(new ProcessStartInfo($"steam://nav/games/details/{appId}") { UseShellExecute = true });
-            LoggingService.Verbose("SteamScannerService", $"Opened Steam library page for App ID {appId}.");
+            LoggingService.Verbose("SteamScanner", $"Opened Steam library page for App ID {appId}.");
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamScannerService", $"Failed to open Steam library for App ID {appId} (is Steam installed?): {ex.Message}");
+            LoggingService.Warn("SteamScanner", $"Failed to open Steam library for App ID {appId} (is Steam installed?): {ex.Message}");
         }
     }
 
@@ -412,11 +412,11 @@ public partial class SteamScannerService
         try
         {
             Process.Start(new ProcessStartInfo($"steam://validate/{appId}") { UseShellExecute = true });
-            LoggingService.Info("SteamScannerService", $"Requested file verification via Steam for App ID {appId}.");
+            LoggingService.Info("SteamScanner", $"Requested file verification via Steam for App ID {appId}.");
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamScannerService", $"Failed to request file verification for App ID {appId} (is Steam installed?): {ex.Message}");
+            LoggingService.Warn("SteamScanner", $"Failed to request file verification for App ID {appId} (is Steam installed?): {ex.Message}");
         }
     }
 }

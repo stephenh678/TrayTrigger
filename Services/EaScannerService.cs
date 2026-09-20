@@ -84,6 +84,7 @@ public partial class EaScannerService
             {
                 // Registered in EA App but not found under a default install root - most likely
                 // installed to a custom location. See the class doc comment.
+                LoggingService.Verbose("EaScanner", $"Skipped '{name}' [{contentId}]: the EA app lists it, but no installerdata.xml for it is under a default install folder (a custom install location?).");
                 continue;
             }
 
@@ -117,7 +118,7 @@ public partial class EaScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("EaScannerService", $"Error reading installed EA games from the registry: {ex.Message}");
+            LoggingService.Warn("EaScanner", $"Error reading installed EA games from the registry: {ex.Message}");
         }
         return results;
     }
@@ -127,7 +128,11 @@ public partial class EaScannerService
         var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var root in DefaultInstallRoots)
         {
-            if (!Directory.Exists(root)) continue;
+            if (!Directory.Exists(root))
+            {
+                LoggingService.Verbose("EaScanner", $"No '{root}': nothing installed under this default folder.");
+                continue;
+            }
 
             IEnumerable<string> gameFolders;
             try
@@ -136,7 +141,7 @@ public partial class EaScannerService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("EaScannerService", $"Error enumerating '{root}': {ex.Message}");
+                LoggingService.Warn("EaScanner", $"Error enumerating '{root}': {ex.Message}");
                 continue;
             }
 
@@ -156,7 +161,7 @@ public partial class EaScannerService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Warn("EaScannerService", $"Error reading '{manifestPath}': {ex.Message}");
+                    LoggingService.Warn("EaScanner", $"Error reading '{manifestPath}': {ex.Message}");
                 }
             }
         }
@@ -196,7 +201,11 @@ public partial class EaScannerService
                 }
             }
 
-            if (exePath == null) return null;
+            if (exePath == null)
+            {
+                LoggingService.Verbose("EaScanner", $"Skipped '{name}' [{contentId}]: none of the executables '{manifestPath}' names is on disk under '{installDir}'.");
+                return null;
+            }
 
             return new DiscoveredEaGame(
                 ContentId: contentId,
@@ -209,7 +218,7 @@ public partial class EaScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("EaScannerService", $"Error parsing EA manifest '{manifestPath}': {ex.Message}");
+            LoggingService.Warn("EaScanner", $"Error parsing EA manifest '{manifestPath}': {ex.Message}");
             return null;
         }
     }

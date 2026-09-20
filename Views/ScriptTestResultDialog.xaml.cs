@@ -66,7 +66,7 @@ public partial class ScriptTestResultDialog : Window
 
     private void CopyButton_Click(object sender, RoutedEventArgs e)
     {
-        try { Clipboard.SetText(OutputBox.Text); } catch { }
+        try { Clipboard.SetText(OutputBox.Text); } catch (Exception ex) { LoggingService.Swallowed("UI", ex, "copying the script output to the clipboard"); }
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)

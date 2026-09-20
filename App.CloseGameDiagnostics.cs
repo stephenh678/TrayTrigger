@@ -79,14 +79,14 @@ public partial class App
                 var result = _launcherService.CloseGameNow(game.Id);
                 Check("Close Game reports the game closed", result == ProcessLauncherService.CloseGameResult.Closed, result.ToString());
                 bool exited;
-                try { exited = Process.GetProcessById(pid).WaitForExit(2000); } catch (ArgumentException) { exited = true; }
+                try { exited = Process.GetProcessById(pid).WaitForExit(2000); } catch (ArgumentException) { /* the process has already exited */ exited = true; }
                 Check("the game's process has exited", exited, $"PID {pid}");
                 Check("the session has ended", !_launcherService.IsSessionActive(game.Id));
 
                 Check("the test game starts again", StartAndWait(out string d2), d2);
                 pid = _launcherService.GetActiveSessions().FirstOrDefault(x => x.GameId == game.Id)?.Process?.Id ?? -1;
                 bool ended = _launcherService.EndSessionNow(game.Id, forceCloseGame: true);
-                try { exited = Process.GetProcessById(pid).WaitForExit(5000); } catch (ArgumentException) { exited = true; }
+                try { exited = Process.GetProcessById(pid).WaitForExit(5000); } catch (ArgumentException) { /* the process has already exited */ exited = true; }
                 Check("Force Close kills the game and ends the session", ended && exited && !_launcherService.IsSessionActive(game.Id), $"PID {pid}");
 
                 Check("Close Game with nothing tracked says so",

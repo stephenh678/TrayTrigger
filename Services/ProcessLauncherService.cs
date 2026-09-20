@@ -260,7 +260,11 @@ public partial class ProcessLauncherService
     public bool EndSessionNow(string gameId, bool forceCloseGame)
     {
         var session = GetSession(gameId);
-        if (session == null) return false;
+        if (session == null)
+        {
+            LoggingService.Verbose("Launcher", $"End session asked for game {gameId}, but no session is being tracked for it.");
+            return false;
+        }
 
         if (forceCloseGame)
         {
@@ -304,7 +308,11 @@ public partial class ProcessLauncherService
     public CloseGameResult CloseGameNow(string gameId)
     {
         var session = GetSession(gameId);
-        if (session == null) return CloseGameResult.NoSession;
+        if (session == null)
+        {
+            LoggingService.Verbose("Launcher", $"Close Game asked for game {gameId}, but no session is being tracked for it.");
+            return CloseGameResult.NoSession;
+        }
 
         if (!session.GameStarted)
         {
@@ -378,7 +386,7 @@ public partial class ProcessLauncherService
 
     private static int SafePid(Process process)
     {
-        try { return process.Id; } catch { return -1; }
+        try { return process.Id; } catch { /* the process has already exited */ return -1; }
     }
 
     /// <summary>
@@ -418,7 +426,11 @@ public partial class ProcessLauncherService
         string? installDir = session.Route == LaunchRoute.Steam
             ? (UrlProtocolHelper.IsValidSteamAppId(session.Game.SteamAppId) ? _steamScannerService.FindInstallDirForAppId(session.Game.SteamAppId!) : null)
             : ResolveTrackedInstallDir(session.Game);
-        if (string.IsNullOrWhiteSpace(installDir)) return result;
+        if (string.IsNullOrWhiteSpace(installDir))
+        {
+            LoggingService.Verbose("Launcher", $"'{session.Game.Name}': no install folder is known, so its processes can only be found through the one that was started.");
+            return result;
+        }
 
         string normalized = ProcessPathResolver.NormalizeDirectory(installDir);
         foreach (var candidate in ProcessPathResolver.FindProcessesUnderDirectory(normalized))
@@ -535,7 +547,7 @@ public partial class ProcessLauncherService
     /// </summary>
     private static string SafeProcessName(Process process)
     {
-        try { return $"{process.ProcessName} (PID {process.Id})"; } catch { return "the game process"; }
+        try { return $"{process.ProcessName} (PID {process.Id})"; } catch { /* the process has already exited */ return "the game process"; }
     }
 
     /// <summary>
@@ -583,7 +595,7 @@ public partial class ProcessLauncherService
             var target = rendererProcess ?? process;
 
             bool exited;
-            try { exited = target.HasExited; } catch { exited = true; }
+            try { exited = target.HasExited; } catch { /* a process that cannot be asked has exited */ exited = true; }
 
             string? note = null;
             var lastRun = exited ? null
@@ -677,7 +689,7 @@ public partial class ProcessLauncherService
     {
         if (Interlocked.Exchange(ref session.Finished, 1) != 0) return;
 
-        try { session.CancelTracking?.Invoke(); } catch { }
+        try { session.CancelTracking?.Invoke(); } catch (Exception ex) { LoggingService.Swallowed("Launcher", ex, "cancelling the session's tracking"); }
 
         lock (_sessionsLock)
         {
@@ -730,7 +742,7 @@ public partial class ProcessLauncherService
             _scriptService.UntrackPostExit(game);
         }
 
-        try { session.Process?.Dispose(); } catch { }
+        try { session.Process?.Dispose(); } catch { /* already disposed */ }
         session.Process = null;
 
         try { SessionEnded?.Invoke(session); } catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionEnded handler failed: {ex.Message}"); }
@@ -758,7 +770,7 @@ public partial class ProcessLauncherService
             if (!session.GameStarted) continue;
             if (Interlocked.Exchange(ref session.Finished, 1) != 0) continue;
 
-            try { session.CancelTracking?.Invoke(); } catch { }
+            try { session.CancelTracking?.Invoke(); } catch (Exception ex) { LoggingService.Swallowed("Launcher", ex, "cancelling the session's tracking"); }
 
             long minutes = (long)Math.Max(0, Math.Round((DateTime.UtcNow - session.StartedAtUtc).TotalMinutes));
             if (minutes <= 0) continue;
@@ -808,7 +820,7 @@ public partial class ProcessLauncherService
             if (again && Volatile.Read(ref _stopped) == 0)
             {
                 try { _timer.Change(_interval, Timeout.InfiniteTimeSpan); }
-                catch (ObjectDisposedException) { }
+                catch (ObjectDisposedException) { /* the poller was disposed between the tick and this re-arm */ }
             }
             else
             {
@@ -870,7 +882,7 @@ public partial class ProcessLauncherService
             if (inFlight != null)
             {
                 IntPtr hWnd = IntPtr.Zero;
-                try { hWnd = inFlight.Process?.MainWindowHandle ?? IntPtr.Zero; } catch { }
+                try { hWnd = inFlight.Process?.MainWindowHandle ?? IntPtr.Zero; } catch { /* the process has already exited */ }
                 if (hWnd != IntPtr.Zero) ActivateWindow(hWnd);
                 LoggingService.Info("Launcher", inFlight.GameStarted
                     ? $"'{game.Name}' is already running (tracked session); activated its window instead of relaunching."
@@ -1028,8 +1040,9 @@ public partial class ProcessLauncherService
             using var key = Registry.CurrentUser.OpenSubKey(SteamRunningKeyRoot + appId);
             return key?.GetValue("Running") is int i && i != 0;
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("Launcher", ex, "asking Steam whether the game is running");
             return false;
         }
     }
@@ -1053,14 +1066,14 @@ public partial class ProcessLauncherService
         {
             var existing = GetSession(game.Id);
             IntPtr hWnd = IntPtr.Zero;
-            try { hWnd = existing?.Process?.MainWindowHandle ?? IntPtr.Zero; } catch { }
+            try { hWnd = existing?.Process?.MainWindowHandle ?? IntPtr.Zero; } catch { /* the process has already exited */ }
             if (hWnd == IntPtr.Zero)
             {
                 string? installDir = _steamScannerService.FindInstallDirForAppId(appId);
                 if (installDir != null)
                 {
                     using var proc = ProcessPathResolver.FindBestProcessUnderDirectory(ProcessPathResolver.NormalizeDirectory(installDir));
-                    try { hWnd = proc?.MainWindowHandle ?? IntPtr.Zero; } catch { }
+                    try { hWnd = proc?.MainWindowHandle ?? IntPtr.Zero; } catch { /* the process has already exited */ }
                 }
             }
             if (hWnd != IntPtr.Zero) ActivateWindow(hWnd);
@@ -1372,7 +1385,7 @@ public partial class ProcessLauncherService
         var game = session.Game;
         session.Process = process;
         DateTime startedAt;
-        try { startedAt = process.StartTime; } catch { startedAt = DateTime.Now; }
+        try { startedAt = process.StartTime; } catch (Exception ex) { LoggingService.Swallowed("Launcher", ex, "reading the game's start time; playtime counts from now"); startedAt = DateTime.Now; }
         MarkGameStarted(session, startedAt);
         StartDlssObservation(session, process);
 
@@ -1389,7 +1402,7 @@ public partial class ProcessLauncherService
                 if (!string.IsNullOrWhiteSpace(installDir))
                 {
                     LoggingService.Info("Launcher", $"'{game.Name}' exited {ranFor.TotalSeconds:0.0}s after starting - treating it as a launcher stub and looking for the real game under '{installDir}'.");
-                    try { process.Dispose(); } catch { }
+                    try { process.Dispose(); } catch { /* already disposed */ }
                     if (ReferenceEquals(session.Process, process)) session.Process = null;
                     TrackInstallDirSession(session, installDir, "direct launch", StubHandoffSearchTimeout, ownsProcessAlready: true);
                     return;
@@ -1477,6 +1490,7 @@ public partial class ProcessLauncherService
             }
             catch (InvalidOperationException)
             {
+                // The process has already exited.
                 exited = true;
             }
 
@@ -1581,7 +1595,7 @@ public partial class ProcessLauncherService
         }
 
         IntPtr hWnd = IntPtr.Zero;
-        try { hWnd = alreadyRunning.MainWindowHandle; } catch { }
+        try { hWnd = alreadyRunning.MainWindowHandle; } catch { /* the process has already exited */ }
         if (hWnd != IntPtr.Zero)
         {
             ActivateWindow(hWnd);
@@ -2136,6 +2150,7 @@ public partial class ProcessLauncherService
             }
             catch
             {
+                // The process has already exited.
                 return;
             }
             if (hWnd == IntPtr.Zero || hWnd == earlyFocusedWindow) return;
@@ -2173,7 +2188,7 @@ public partial class ProcessLauncherService
                         proc = Process.GetProcessById(best.Pid);
                         if (proc.HasExited) { proc.Dispose(); proc = null; }
                     }
-                    catch { proc = null; }
+                    catch { /* the process has already exited */ proc = null; }
 
                     if (proc != null)
                     {

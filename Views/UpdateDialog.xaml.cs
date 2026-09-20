@@ -165,6 +165,7 @@ public partial class UpdateDialog : Window
         }
         catch (OperationCanceledException)
         {
+            // The user cancelled the download.
             ProgressStatusText.Text = "Download cancelled.";
             InstallBtn.IsEnabled = true;
             RemindLaterBtn.IsEnabled = true;

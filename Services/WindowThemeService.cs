@@ -146,7 +146,7 @@ public static partial class WindowThemeService
             try { action(); }
             catch (Exception ex)
             {
-                LoggingService.Warn("WindowThemeService", $"Deferred first-show action failed: {ex.Message}");
+                LoggingService.Warn("WindowTheme", $"Deferred first-show action failed: {ex.Message}");
             }
         }
     }
@@ -191,7 +191,7 @@ public static partial class WindowThemeService
             try { DwmFlush(); } catch { /* best effort */ }
             SetCloak(window, false);
             try { afterShown?.Invoke(); }
-            catch (Exception ex) { LoggingService.Warn("WindowThemeService", $"Post-show action failed: {ex.Message}"); }
+            catch (Exception ex) { LoggingService.Warn("WindowTheme", $"Post-show action failed: {ex.Message}"); }
         }
 
         // Show() queues a render at Render priority; a Loaded-priority callback runs after it.
@@ -231,7 +231,7 @@ public static partial class WindowThemeService
                 if (_mediaContextFrom == null || _completeRender == null)
                 {
                     _renderFlushUnavailable = true;
-                    LoggingService.Warn("WindowThemeService", "MediaContext.CompleteRender not found; first-show uncloak will not wait for the render thread.");
+                    LoggingService.Warn("WindowTheme", "MediaContext.CompleteRender not found; first-show uncloak will not wait for the render thread.");
                     return;
                 }
             }
@@ -245,7 +245,7 @@ public static partial class WindowThemeService
         catch (Exception ex)
         {
             _renderFlushUnavailable = true;
-            LoggingService.Warn("WindowThemeService", $"Render-thread flush failed; disabling: {ex.GetBaseException().Message}");
+            LoggingService.Warn("WindowTheme", $"Render-thread flush failed; disabling: {ex.GetBaseException().Message}");
         }
     }
 
@@ -263,14 +263,14 @@ public static partial class WindowThemeService
             int hr = DwmSetWindowAttribute(handle, DWMWA_CLOAK, in value, sizeof(int));
             if (hr != 0)
             {
-                LoggingService.Verbose("WindowThemeService", $"DWMWA_CLOAK({cloak}) returned 0x{hr:X8}");
+                LoggingService.Verbose("WindowTheme", $"DWMWA_CLOAK({cloak}) returned 0x{hr:X8}");
                 return false;
             }
             return true;
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("WindowThemeService", $"Failed to {(cloak ? "cloak" : "uncloak")} window: {ex.Message}");
+            LoggingService.Warn("WindowTheme", $"Failed to {(cloak ? "cloak" : "uncloak")} window: {ex.Message}");
             return false;
         }
     }
@@ -346,12 +346,12 @@ public static partial class WindowThemeService
             {
                 // Nothing solid to match. DWMWA_USE_IMMERSIVE_DARK_MODE above already gives the
                 // window the standard dark caption, which beats guessing a color.
-                LoggingService.Verbose("WindowThemeService", $"{window.GetType().Name} has no solid background; leaving the caption color to DWM.");
+                LoggingService.Verbose("WindowTheme", $"{window.GetType().Name} has no solid background; leaving the caption color to DWM.");
             }
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("WindowThemeService", $"Failed to set dark title bar: {ex.Message}");
+            LoggingService.Warn("WindowTheme", $"Failed to set dark title bar: {ex.Message}");
         }
     }
 }

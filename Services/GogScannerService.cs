@@ -49,7 +49,7 @@ public class GogScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GogScannerService", $"Error locating GalaxyClient.exe: {ex.Message}");
+            LoggingService.Warn("GogScanner", $"Error locating GalaxyClient.exe: {ex.Message}");
         }
         return null;
     }
@@ -65,6 +65,7 @@ public class GogScannerService
             using var gamesKey = baseKey.OpenSubKey(GamesKeyPath);
             if (gamesKey == null)
             {
+                LoggingService.Verbose("GogScanner", $"No '{GamesKeyPath}' in the registry: GOG Galaxy has installed nothing here.");
                 return results;
             }
 
@@ -79,7 +80,7 @@ public class GogScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GogScannerService", $"Error scanning installed GOG games: {ex.Message}");
+            LoggingService.Warn("GogScanner", $"Error scanning installed GOG games: {ex.Message}");
         }
 
         return results.OrderBy(g => g.Name).ToList();
@@ -100,15 +101,24 @@ public class GogScannerService
             string? dependsOn = gameKey.GetValue("dependsOn") as string;
 
             if (string.IsNullOrWhiteSpace(gameId) || string.IsNullOrWhiteSpace(name))
+            {
+                LoggingService.Verbose("GogScanner", $"Skipped registry entry '{subKeyName}': no gameID or no gameName.");
                 return null;
+            }
 
             // DLC/expansion entries depend on a base game's gameID and have no exe of their own -
             // they're not separately launchable, so they'd otherwise show up as phantom "games".
             if (!string.IsNullOrWhiteSpace(dependsOn))
+            {
+                LoggingService.Verbose("GogScanner", $"Skipped '{name}' [{gameId}]: DLC for {dependsOn}, not a game of its own.");
                 return null;
+            }
 
             if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+            {
+                LoggingService.Verbose("GogScanner", $"Skipped '{name}' [{gameId}]: its executable '{exePath}' is not on disk.");
                 return null;
+            }
 
             // GOG drops a goggame-<id>.ico right in the install dir for the base game - prefer
             // that (same "platform-provided artwork first" pattern as SteamScannerService's icon
@@ -136,7 +146,7 @@ public class GogScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GogScannerService", $"Error parsing GOG game registry key '{subKeyName}': {ex.Message}");
+            LoggingService.Warn("GogScanner", $"Error parsing GOG game registry key '{subKeyName}': {ex.Message}");
             return null;
         }
     }

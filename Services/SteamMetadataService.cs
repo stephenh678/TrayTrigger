@@ -68,14 +68,14 @@ public partial class SteamMetadataService
                     string dest = Path.Combine(CoversDirectory, Path.GetFileName(file));
                     if (!File.Exists(dest))
                     {
-                        try { File.Copy(file, dest, overwrite: false); } catch { }
+                        try { File.Copy(file, dest, overwrite: false); } catch (Exception ex) { LoggingService.Swallowed("SteamMetadata", ex, "carrying a cached file over from the old folder"); }
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamMetadataService", $"Error initializing covers dir: {ex.Message}");
+            LoggingService.Warn("SteamMetadata", $"Error initializing covers dir: {ex.Message}");
         }
     }
 
@@ -181,7 +181,7 @@ public partial class SteamMetadataService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("SteamMetadataService", $"Could not delete Steam cache: {ex.Message}");
+                LoggingService.Warn("SteamMetadata", $"Could not delete Steam cache: {ex.Message}");
             }
         }
     }
@@ -205,7 +205,7 @@ public partial class SteamMetadataService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamMetadataService", $"Steam cache unreadable, starting fresh: {ex.Message}");
+            LoggingService.Warn("SteamMetadata", $"Steam cache unreadable, starting fresh: {ex.Message}");
         }
 
         _cache = new Dictionary<string, SteamAppDetails>(StringComparer.OrdinalIgnoreCase);
@@ -229,7 +229,7 @@ public partial class SteamMetadataService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamMetadataService", $"Could not save Steam cache: {ex.Message}");
+            LoggingService.Warn("SteamMetadata", $"Could not save Steam cache: {ex.Message}");
         }
     }
 
@@ -330,7 +330,7 @@ public partial class SteamMetadataService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("SteamMetadataService", $"Error fetching details for AppId {trimmedId}: {ex.Message}");
+                LoggingService.Warn("SteamMetadata", $"Error fetching details for AppId {trimmedId}: {ex.Message}");
                 return details.Name.Length > 0 ? details : null;
             }
         }
@@ -628,7 +628,7 @@ public partial class SteamMetadataService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamMetadataService", $"Error downloading cover for AppId {appId}: {ex.Message}");
+            LoggingService.Warn("SteamMetadata", $"Error downloading cover for AppId {appId}: {ex.Message}");
         }
 
         return null;
@@ -662,7 +662,7 @@ public partial class SteamMetadataService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamMetadataService", $"Error downloading name-based cover for '{gameName}': {ex.Message}");
+            LoggingService.Warn("SteamMetadata", $"Error downloading name-based cover for '{gameName}': {ex.Message}");
             return null;
         }
     }
@@ -728,6 +728,7 @@ public partial class SteamMetadataService
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
+                    // The file is held by something else: tried again, up to five times.
                     if (attempt == 5) break;
                 }
                 await Task.Delay(100, ct).ConfigureAwait(false);
@@ -740,7 +741,7 @@ public partial class SteamMetadataService
         }
         finally
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* a stray temp file is harmless */ }
         }
     }
 
@@ -759,8 +760,9 @@ public partial class SteamMetadataService
             using var img = System.Drawing.Image.FromStream(ms);
             return img.Width > 0 && img.Height > 0;
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("SteamMetadata", ex, "checking a downloaded image");
             return false;
         }
     }
@@ -787,8 +789,9 @@ public partial class SteamMetadataService
             // with the complete, uncropped source letterboxed on top.
             return ComposeFallbackPoster(src);
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("SteamMetadata", ex, "composing the poster; the plain one is used");
             return inputBytes;
         }
     }

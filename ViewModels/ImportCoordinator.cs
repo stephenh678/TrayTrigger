@@ -1677,18 +1677,18 @@ public class ImportCoordinator : ViewModelBase
                 // left a verbose log with no trace of why: integration off, no library enabled,
                 // Steam not found, or the game filtered out below.
                 if (!_settings.SteamIntegrationEnabled)
-                    LoggingService.Verbose("SteamScan", "Skipped: Steam integration is off.");
+                    LoggingService.Verbose("SteamScanner", "Skipped: Steam integration is off.");
                 else if (steamLocations.Count == 0)
-                    LoggingService.Verbose("SteamScan", $"Skipped: no enabled Steam library among {_settings.ScanLocations.Count(l => l.Source == ScanLocationSource.Steam)} known.");
+                    LoggingService.Verbose("SteamScanner", $"Skipped: no enabled Steam library among {_settings.ScanLocations.Count(l => l.Source == ScanLocationSource.Steam)} known.");
 
                 if (steamLocations.Count > 0)
                 {
                     string? steamPath = _steamScannerService.GetSteamInstallPath();
-                    LoggingService.Verbose("SteamScan", $"Steam at '{steamPath ?? "(not found)"}'; libraries: {string.Join(", ", steamLocations.Select(l => $"'{l.Path}'"))}");
+                    LoggingService.Verbose("SteamScanner", $"Steam at '{steamPath ?? "(not found)"}'; libraries: {string.Join(", ", steamLocations.Select(l => $"'{l.Path}'"))}");
                     // A game in a library that is switched off is never offered, and looks exactly
                     // like a game Steam does not have.
                     foreach (var off in _settings.ScanLocations.Where(l => l.Source == ScanLocationSource.Steam && !l.IsEnabled))
-                        LoggingService.Verbose("SteamScan", $"Not scanned: Steam library '{off.Path}' is switched off in Settings.");
+                        LoggingService.Verbose("SteamScanner", $"Not scanned: Steam library '{off.Path}' is switched off in Settings.");
                     if (!string.IsNullOrEmpty(steamPath))
                     {
                         var found = _steamScannerService.ScanInstalledGames(steamLocations.Select(l => l.Path), steamPath, existingAppIds);
@@ -1698,7 +1698,7 @@ public class ImportCoordinator : ViewModelBase
                                 : ignoredAppIds.Contains(g.AppId) ? "on the ignore list"
                                 : g.ExePath != null && existingExePaths.Contains(g.ExePath) ? $"already in library (exe '{g.ExePath}')"
                                 : "offered";
-                            LoggingService.Verbose("SteamScan", $"'{g.Name}' [{g.AppId}]: {verdict}");
+                            LoggingService.Verbose("SteamScanner", $"'{g.Name}' [{g.AppId}]: {verdict}");
                         }
 
                         // The exe-path fallback mirrors the GOG/EA/Epic/Ubisoft tasks below: a
@@ -1718,53 +1718,35 @@ public class ImportCoordinator : ViewModelBase
             // path is already pinned in its own registry entry - see GogScannerService), so
             // GogIntegrationEnabled alone gates it, the same way SteamIntegrationEnabled gates
             // Steam on top of the separate per-folder ScanLocations toggles above.
-            var gogTask = Task.Run(() => gogEnabled
-                ? _gogScannerService.ScanInstalledGames(existingGogGameIds)
-                    .Where(g => !g.IsAlreadyImported && !ignoredGogGameIds.Contains(g.GameId) &&
-                                (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
-                    .ToList()
-                : new List<DiscoveredGogGame>());
+            var gogTask = Task.Run(() => OfferedBy("GOG", gogEnabled,
+                () => _gogScannerService.ScanInstalledGames(existingGogGameIds),
+                g => g.Name, g => g.GameId, g => g.IsAlreadyImported, g => ignoredGogGameIds.Contains(g.GameId), g => g.ExePath, existingExePaths));
 
             // Same reasoning as GOG above - EA has no scan-location concept either.
-            var eaTask = Task.Run(() => eaEnabled
-                ? _eaScannerService.ScanInstalledGames(existingEaContentIds)
-                    .Where(g => !g.IsAlreadyImported && !ignoredEaContentIds.Contains(g.ContentId) &&
-                                (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
-                    .ToList()
-                : new List<DiscoveredEaGame>());
+            var eaTask = Task.Run(() => OfferedBy("EA", eaEnabled,
+                () => _eaScannerService.ScanInstalledGames(existingEaContentIds),
+                g => g.Name, g => g.ContentId, g => g.IsAlreadyImported, g => ignoredEaContentIds.Contains(g.ContentId), g => g.ExePath, existingExePaths));
 
             // Same reasoning as GOG/EA above - Epic has no scan-location concept either.
-            var epicTask = Task.Run(() => epicEnabled
-                ? _epicScannerService.ScanInstalledGames(existingEpicAppNames)
-                    .Where(g => !g.IsAlreadyImported && !ignoredEpicAppNames.Contains(g.AppName) &&
-                                (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
-                    .ToList()
-                : new List<DiscoveredEpicGame>());
+            var epicTask = Task.Run(() => OfferedBy("Epic", epicEnabled,
+                () => _epicScannerService.ScanInstalledGames(existingEpicAppNames),
+                g => g.Name, g => g.AppName, g => g.IsAlreadyImported, g => ignoredEpicAppNames.Contains(g.AppName), g => g.ExePath, existingExePaths));
 
             // Same reasoning as GOG/EA/Epic above - Ubisoft has no scan-location concept either.
-            var ubisoftTask = Task.Run(() => ubisoftEnabled
-                ? _ubisoftScannerService.ScanInstalledGames(existingUbisoftGameIds)
-                    .Where(g => !g.IsAlreadyImported && !ignoredUbisoftGameIds.Contains(g.GameId) &&
-                                (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
-                    .ToList()
-                : new List<DiscoveredUbisoftGame>());
+            var ubisoftTask = Task.Run(() => OfferedBy("Ubisoft", ubisoftEnabled,
+                () => _ubisoftScannerService.ScanInstalledGames(existingUbisoftGameIds),
+                g => g.Name, g => g.GameId, g => g.IsAlreadyImported, g => ignoredUbisoftGameIds.Contains(g.GameId), g => g.ExePath, existingExePaths));
 
             // Same reasoning again - Xbox games are wherever the Xbox app put them, and Gaming
             // Services' registry knows each one.
-            var xboxTask = Task.Run(() => xboxEnabled
-                ? _xboxScannerService.ScanInstalledGames(existingXboxAumids)
-                    .Where(g => !g.IsAlreadyImported && !ignoredXboxAumids.Contains(g.Aumid) &&
-                                (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
-                    .ToList()
-                : new List<DiscoveredXboxGame>());
+            var xboxTask = Task.Run(() => OfferedBy("Xbox", xboxEnabled,
+                () => _xboxScannerService.ScanInstalledGames(existingXboxAumids),
+                g => g.Name, g => g.Aumid, g => g.IsAlreadyImported, g => ignoredXboxAumids.Contains(g.Aumid), g => g.ExePath, existingExePaths));
 
             // Same again - Blizzard's uninstall entries pin every Battle.net game's folder.
-            var battleNetTask = Task.Run(() => battleNetEnabled
-                ? _battleNetScannerService.ScanInstalledGames(existingBattleNetUids)
-                    .Where(g => !g.IsAlreadyImported && !ignoredBattleNetUids.Contains(g.Uid) &&
-                                (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
-                    .ToList()
-                : new List<DiscoveredBattleNetGame>());
+            var battleNetTask = Task.Run(() => OfferedBy("Battle.net", battleNetEnabled,
+                () => _battleNetScannerService.ScanInstalledGames(existingBattleNetUids),
+                g => g.Name, g => g.Uid, g => g.IsAlreadyImported, g => ignoredBattleNetUids.Contains(g.Uid), g => g.ExePath, existingExePaths));
 
             // "Platform|ID" of every platform-tagged game already in the library, so a folder
             // candidate that resolves to one of them (e.g. a GOG game found under a manual
@@ -1790,7 +1772,11 @@ public class ImportCoordinator : ViewModelBase
                 var index = _platformLookup.CreateIndex();
                 foreach (var loc in folderLocations)
                 {
-                    if (!Directory.Exists(loc.Path)) continue;
+                    if (!Directory.Exists(loc.Path))
+                    {
+                        LoggingService.Verbose("ScanForGames", $"Folders: skipped '{loc.Path}', it does not exist (a drive not attached?).");
+                        continue;
+                    }
 
                     // A scan location's identity is already known (the user configured it as a
                     // game library), so this skips ScanFolderOrLibrary's is-this-a-library
@@ -1799,9 +1785,15 @@ public class ImportCoordinator : ViewModelBase
                     var candidates = FilterIgnored(
                         ResolvePlatforms(_folderScannerService.ScanKnownLibraryLocation(loc.Path, GameNameExtractor.PreferExeForGameName), index),
                         ignoredExePaths, ignoredPlatformKeys);
-                    folderResults.AddRange(candidates.Where(c =>
-                        !existingExePaths.Contains(c.ExePath) &&
-                        (c.Platform == null || !existingPlatformKeys.Contains(PlatformKey(c.Platform)))));
+                    // FilterIgnored has already dropped what is on the ignore list; the scanner
+                    // itself logs every executable it weighed.
+                    foreach (var c in candidates)
+                    {
+                        bool inLibrary = existingExePaths.Contains(c.ExePath) ||
+                                         (c.Platform != null && existingPlatformKeys.Contains(PlatformKey(c.Platform)));
+                        LoggingService.Verbose("ScanForGames", $"Folders: '{c.Name}' ({c.ExePath}): {(inLibrary ? "already in library" : "offered")}");
+                        if (!inLibrary) folderResults.Add(c);
+                    }
                 }
                 return folderResults;
             });
@@ -1843,6 +1835,40 @@ public class ImportCoordinator : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// One launcher's leg of Scan for Games: what it found that is new, with a verbose line for
+    /// the leg and for every game it found saying what became of it. The Steam leg said nothing
+    /// at all once, and a game a scan did not offer left no trace of why - integration off,
+    /// already in the library, on the ignore list - so every leg accounts for itself the same way.
+    /// </summary>
+    private static List<T> OfferedBy<T>(
+        string platform, bool enabled, Func<List<T>> scan,
+        Func<T, string> name, Func<T, string> id, Func<T, bool> alreadyImported, Func<T, bool> ignored, Func<T, string?> exePath,
+        HashSet<string> existingExePaths)
+    {
+        if (!enabled)
+        {
+            LoggingService.Verbose("ScanForGames", $"{platform}: skipped, its integration is off.");
+            return new List<T>();
+        }
+
+        var found = scan();
+        LoggingService.Verbose("ScanForGames", $"{platform}: {found.Count} installed game(s) found.");
+
+        var offered = new List<T>();
+        foreach (var g in found)
+        {
+            string? exe = exePath(g);
+            string verdict = alreadyImported(g) ? "already in library (by its ID)"
+                : ignored(g) ? "on the ignore list"
+                : exe != null && existingExePaths.Contains(exe) ? $"already in library (exe '{exe}')"
+                : "offered";
+            if (verdict == "offered") offered.Add(g);
+            LoggingService.Verbose("ScanForGames", $"{platform}: '{name(g)}' [{id(g)}]: {verdict}");
+        }
+        return offered;
+    }
+
     /// <summary>Drops any candidate whose exe path the user has permanently ignored (see <see cref="IgnoreGamePath"/>).</summary>
     private IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates)
         => FilterIgnored(candidates, BuildIgnoredExePathSet(), BuildIgnoredPlatformKeySet());
@@ -1856,11 +1882,16 @@ public class ImportCoordinator : ViewModelBase
     /// apply when the same game arrives via Add Folder.
     /// </summary>
     private IEnumerable<GameCandidate> FilterIgnored(IEnumerable<GameCandidate> candidates, HashSet<string> ignoredExePaths, HashSet<string> ignoredPlatformKeys)
-        => candidates.Where(c => c.Platform != null
-            ? !ignoredPlatformKeys.Contains(PlatformKey(c.Platform))
-            // The scanner already prunes ignored folders; this catches a candidate that reached
-            // here another way (a folder dropped or added that is itself under an ignored one).
-            : !ignoredExePaths.Contains(c.ExePath) && !IsUnderIgnoredFolder(c.ExePath));
+        => candidates.Where(c =>
+        {
+            bool keep = c.Platform != null
+                ? !ignoredPlatformKeys.Contains(PlatformKey(c.Platform))
+                // The scanner already prunes ignored folders; this catches a candidate that reached
+                // here another way (a folder dropped or added that is itself under an ignored one).
+                : !ignoredExePaths.Contains(c.ExePath) && !IsUnderIgnoredFolder(c.ExePath);
+            if (!keep) LoggingService.Verbose("ScanForGames", $"Folders: '{c.Name}' ({c.ExePath}): on the ignore list");
+            return keep;
+        });
 
     private bool IsUnderIgnoredFolder(string exePath)
     {

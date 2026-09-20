@@ -68,7 +68,7 @@ public class SteamGridDbService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamGridDbService", $"Error fetching grid art for AppId {appId}: {ex.Message}");
+            LoggingService.Warn("SteamGridDb", $"Error fetching grid art for AppId {appId}: {ex.Message}");
             return null;
         }
     }
@@ -105,7 +105,7 @@ public class SteamGridDbService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamGridDbService", $"Error fetching grid art by name '{gameName}': {ex.Message}");
+            LoggingService.Warn("SteamGridDb", $"Error fetching grid art by name '{gameName}': {ex.Message}");
             return null;
         }
     }
@@ -119,7 +119,7 @@ public class SteamGridDbService
         using var response = await HttpClient.SendAsync(request, timeoutCts.Token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            LoggingService.Verbose("SteamGridDbService", $"Autocomplete for '{term}' returned HTTP {(int)response.StatusCode}.");
+            LoggingService.Verbose("SteamGridDb", $"Autocomplete for '{term}' returned HTTP {(int)response.StatusCode}.");
             return (null, null);
         }
 
@@ -140,7 +140,7 @@ public class SteamGridDbService
         using var response = await HttpClient.SendAsync(request, timeoutCts.Token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            LoggingService.Verbose("SteamGridDbService", $"Grid lookup for {logLabel} returned HTTP {(int)response.StatusCode}.");
+            LoggingService.Verbose("SteamGridDb", $"Grid lookup for {logLabel} returned HTTP {(int)response.StatusCode}.");
             return null;
         }
 

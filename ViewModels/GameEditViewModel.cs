@@ -75,6 +75,7 @@ public class GameEditViewModel : ViewModelBase
             if (_statusMessage != value)
             {
                 _statusMessage = value;
+                LoggingService.Shown("Edit Game status", value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasStatusMessage));
             }
@@ -943,7 +944,7 @@ public class GameEditViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GameEditViewModel", $"Failed to extract icon preview from '{path}': {ex.Message}");
+            LoggingService.Warn("GameEdit", $"Failed to extract icon preview from '{path}': {ex.Message}");
             return null;
         }
     }
@@ -1064,7 +1065,7 @@ public class GameEditViewModel : ViewModelBase
         catch (Exception ex)
         {
             StatusMessage = $"Look up failed: {ex.Message}";
-            LoggingService.Warn("GameEditViewModel", $"Look up failed: {ex.Message}");
+            LoggingService.Warn("GameEdit", $"Look up failed: {ex.Message}");
         }
         finally
         {
@@ -1136,7 +1137,7 @@ public class GameEditViewModel : ViewModelBase
         if (!UrlProtocolHelper.IsValidSteamAppId(id))
         {
             StatusMessage = "Please enter a valid numeric Steam App ID.";
-            LoggingService.Warn("GameEditViewModel", $"Invalid Steam AppID '{id}' supplied for manual match.");
+            LoggingService.Warn("GameEdit", $"Invalid Steam AppID '{id}' supplied for manual match.");
             return;
         }
 
@@ -1150,7 +1151,7 @@ public class GameEditViewModel : ViewModelBase
             if (details == null || string.IsNullOrWhiteSpace(details.Name))
             {
                 StatusMessage = $"No Steam store details found for App ID {id}.";
-                LoggingService.Warn("GameEditViewModel", $"No Steam app details found for AppID '{id}'.");
+                LoggingService.Warn("GameEdit", $"No Steam app details found for AppID '{id}'.");
                 return;
             }
 
@@ -1160,7 +1161,7 @@ public class GameEditViewModel : ViewModelBase
         catch (Exception ex)
         {
             StatusMessage = $"Error fetching from Steam: {ex.Message}";
-            LoggingService.Warn("GameEditViewModel", $"Failed to fetch Steam details for AppID '{id}': {ex.Message}");
+            LoggingService.Warn("GameEdit", $"Failed to fetch Steam details for AppID '{id}': {ex.Message}");
         }
         finally
         {
@@ -1181,7 +1182,7 @@ public class GameEditViewModel : ViewModelBase
         if (!UrlProtocolHelper.IsValidSteamAppId(id))
         {
             StatusMessage = "Cannot refresh poster: no valid numeric Steam App ID set.";
-            LoggingService.Warn("GameEditViewModel", "Cannot refresh poster: no valid numeric Steam AppID set for this game.");
+            LoggingService.Warn("GameEdit", "Cannot refresh poster: no valid numeric Steam AppID set for this game.");
             return;
         }
 
@@ -1205,7 +1206,7 @@ public class GameEditViewModel : ViewModelBase
         catch (Exception ex)
         {
             StatusMessage = $"Failed to refresh poster: {ex.Message}";
-            LoggingService.Warn("GameEditViewModel", $"Failed to refresh poster for AppID '{id}': {ex.Message}");
+            LoggingService.Warn("GameEdit", $"Failed to refresh poster for AppID '{id}': {ex.Message}");
         }
         finally
         {
@@ -1490,8 +1491,9 @@ public class GameEditViewModel : ViewModelBase
                 }
                 SourceGame.CoverImagePath = destFile;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.Swallowed("GameEdit", ex, "copying the custom cover into the covers folder; the original path is kept");
                 SourceGame.CoverImagePath = CustomCoverPath;
             }
         }

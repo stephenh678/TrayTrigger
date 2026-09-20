@@ -40,12 +40,12 @@ public static class HdrControlService
     {
         var result = new List<DisplayColorState>();
 
-        LoggingService.Verbose("HdrControlService", $"Reading HDR state via {(s_useHdrState2Api ? "GET_ADVANCED_COLOR_INFO_2 (24H2+)" : "legacy GET_ADVANCED_COLOR_INFO")} API.");
+        LoggingService.Verbose("HdrControl", $"Reading HDR state via {(s_useHdrState2Api ? "GET_ADVANCED_COLOR_INFO_2 (24H2+)" : "legacy GET_ADVANCED_COLOR_INFO")} API.");
 
         int bufferSizesResult = GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, out uint pathCount, out uint modeCount);
         if (bufferSizesResult != ERROR_SUCCESS)
         {
-            LoggingService.Warn("HdrControlService", $"GetDisplayConfigBufferSizes failed (error {bufferSizesResult}); no display states will be reported.");
+            LoggingService.Warn("HdrControl", $"GetDisplayConfigBufferSizes failed (error {bufferSizesResult}); no display states will be reported.");
             return result;
         }
 
@@ -54,7 +54,7 @@ public static class HdrControlService
         int queryResult = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero);
         if (queryResult != ERROR_SUCCESS)
         {
-            LoggingService.Warn("HdrControlService", $"QueryDisplayConfig failed (error {queryResult}); no display states will be reported.");
+            LoggingService.Warn("HdrControl", $"QueryDisplayConfig failed (error {queryResult}); no display states will be reported.");
             return result;
         }
 
@@ -78,7 +78,7 @@ public static class HdrControlService
                 int getInfo2Result = DisplayConfigGetDeviceInfo2(ref colorInfo2);
                 if (getInfo2Result != ERROR_SUCCESS)
                 {
-                    LoggingService.Warn("HdrControlService", $"DisplayConfigGetDeviceInfo (advanced color v2) failed for target {target.id} (error {getInfo2Result}); skipping this display.");
+                    LoggingService.Warn("HdrControl", $"DisplayConfigGetDeviceInfo (advanced color v2) failed for target {target.id} (error {getInfo2Result}); skipping this display.");
                     continue;
                 }
 
@@ -95,7 +95,7 @@ public static class HdrControlService
 
                 // Raw bits in the log so a machine that still refuses HDR can be diagnosed from
                 // its log alone rather than another round trip.
-                LoggingService.Verbose("HdrControlService",
+                LoggingService.Verbose("HdrControl",
                     $"Target {target.id}: hdrSupported={supported2}, advancedColorSupported={(colorInfo2.value & ADVANCED_COLOR_SUPPORTED) != 0}, " +
                     $"limitedByPolicy={(colorInfo2.value & ADVANCED_COLOR_LIMITED_BY_POLICY) != 0}, activeColorMode={colorInfo2.activeColorMode}, value=0x{colorInfo2.value:X}.");
 
@@ -117,7 +117,7 @@ public static class HdrControlService
             int getInfoResult = DisplayConfigGetDeviceInfo(ref colorInfo);
             if (getInfoResult != ERROR_SUCCESS)
             {
-                LoggingService.Warn("HdrControlService", $"DisplayConfigGetDeviceInfo (advanced color) failed for target {target.id} (error {getInfoResult}); skipping this display.");
+                LoggingService.Warn("HdrControl", $"DisplayConfigGetDeviceInfo (advanced color) failed for target {target.id} (error {getInfoResult}); skipping this display.");
                 continue;
             }
 
@@ -149,7 +149,7 @@ public static class HdrControlService
             int hdrStateResult = DisplayConfigSetDeviceInfoHdrState(ref hdrState);
             if (hdrStateResult != ERROR_SUCCESS)
             {
-                LoggingService.Warn("HdrControlService", $"DisplayConfigSetDeviceInfo (HDR state) failed for target {targetId} (error {hdrStateResult}), requested enable={enable}.");
+                LoggingService.Warn("HdrControl", $"DisplayConfigSetDeviceInfo (HDR state) failed for target {targetId} (error {hdrStateResult}), requested enable={enable}.");
             }
             return hdrStateResult == ERROR_SUCCESS;
         }
@@ -169,7 +169,7 @@ public static class HdrControlService
         int setStateResult = DisplayConfigSetDeviceInfo(ref state);
         if (setStateResult != ERROR_SUCCESS)
         {
-            LoggingService.Warn("HdrControlService", $"DisplayConfigSetDeviceInfo (advanced color state) failed for target {targetId} (error {setStateResult}), requested enable={enable}.");
+            LoggingService.Warn("HdrControl", $"DisplayConfigSetDeviceInfo (advanced color state) failed for target {targetId} (error {setStateResult}), requested enable={enable}.");
         }
         return setStateResult == ERROR_SUCCESS;
     }

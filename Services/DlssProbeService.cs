@@ -476,7 +476,7 @@ public static class DlssProbeService
     private static long SafeLength(string path)
     {
         try { return new FileInfo(path).Length; }
-        catch { return 0; }
+        catch { /* an unreadable file sorts as the smallest */ return 0; }
     }
 
     /// <summary>Maps a shipped DLL name to its feature. Exposed for tests.</summary>
@@ -620,12 +620,12 @@ public static class DlssProbeService
     private static string SafeFullPath(string path)
     {
         try { return Path.GetFullPath(path); }
-        catch { return path; }
+        catch { /* an invalid path is compared as written */ return path; }
     }
 
     private static string? SafeDirectoryName(string path)
     {
         try { return Path.GetDirectoryName(path); }
-        catch { return null; }
+        catch { /* an invalid path has no folder */ return null; }
     }
 }

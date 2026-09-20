@@ -213,7 +213,7 @@ public sealed class LaunchPopupHost : ILaunchPopupView
 
     public void Dispose()
     {
-        try { _window?.Close(); } catch { }
+        try { _window?.Close(); } catch { /* already closed */ }
         _window = null;
     }
 }

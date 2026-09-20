@@ -137,7 +137,7 @@ public partial class SystemInfoService
             }
             catch (Exception ex)
             {
-                LoggingService.Error("SystemInfoService", "Error gathering system hardware report", ex);
+                LoggingService.Error("SystemInfo", "Error gathering system hardware report", ex);
             }
             return report;
         });
@@ -199,7 +199,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Could not read CPU registry: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Could not read CPU registry: {ex.Message}");
         }
 
         try
@@ -219,7 +219,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Could not read CPU current clock via WMI: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Could not read CPU current clock via WMI: {ex.Message}");
         }
 
         return cpu;
@@ -356,7 +356,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Failed to read GPU registry: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Failed to read GPU registry: {ex.Message}");
         }
 
         if (list.Count == 0)
@@ -428,7 +428,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Could not read RAM speed via WMI: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Could not read RAM speed via WMI: {ex.Message}");
         }
     }
 
@@ -483,7 +483,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Display query error: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Display query error: {ex.Message}");
         }
 
         if (list.Count == 0)
@@ -527,7 +527,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Failed to read drives: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Failed to read drives: {ex.Message}");
         }
 
         return list;
@@ -605,7 +605,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Could not read drive media types via WMI: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Could not read drive media types via WMI: {ex.Message}");
         }
 
         return result;
@@ -654,7 +654,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Failed to read OS info: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Failed to read OS info: {ex.Message}");
         }
 
         try
@@ -682,7 +682,7 @@ public partial class SystemInfoService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemInfoService", $"Could not read motherboard/BIOS info via WMI: {ex.Message}");
+            LoggingService.Warn("SystemInfo", $"Could not read motherboard/BIOS info via WMI: {ex.Message}");
         }
 
         return info;
@@ -742,7 +742,7 @@ public partial class SystemInfoService
         {
             return GetSystemPowerStatus(out var status) && status.BatteryFlag != 128 && status.BatteryLifePercent <= 100;
         }
-        catch { return false; }
+        catch { /* no answer means no battery */ return false; }
     }
 
     private PowerBatteryInfo GetPowerInfo()
@@ -789,6 +789,7 @@ public partial class SystemInfoService
         }
         catch
         {
+            // No reply is shown as no ping.
             info.PingMs = -1;
         }
 

@@ -12,7 +12,6 @@ public enum LogLevel
     Info,
     Warning,
     Error,
-    Debug,
     Verbose
 }
 
@@ -54,7 +53,7 @@ public static class LoggingService
                 string legacyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TrayTrigger", "debug.log");
                 if (!File.Exists(newPath) && File.Exists(legacyPath))
                 {
-                    try { File.Copy(legacyPath, newPath, overwrite: false); } catch { }
+                    try { File.Copy(legacyPath, newPath, overwrite: false); } catch { /* the old log is a convenience, not a requirement */ }
                 }
 
                 _logFilePath = newPath;
@@ -134,6 +133,7 @@ public static class LoggingService
         }
         catch
         {
+            // The logger cannot log its own failure, and must never take the app down.
             return "unknown";
         }
     }
@@ -168,10 +168,12 @@ public static class LoggingService
         }
         catch (AbandonedMutexException)
         {
+            // The previous holder died mid-write: ownership passes to us.
             return true;
         }
         catch
         {
+            // The logger cannot log its own failure, and must never take the app down.
             return false;
         }
     }
@@ -179,7 +181,7 @@ public static class LoggingService
     private static void ReleaseFileMutex(bool held)
     {
         if (!held) return;
-        try { FileMutex.ReleaseMutex(); } catch { }
+        try { FileMutex.ReleaseMutex(); } catch { /* the logger cannot log its own failure, and must never take the app down */ }
     }
 
     /// <summary>
@@ -255,7 +257,7 @@ public static class LoggingService
                 }
             }
         }
-        catch { }
+        catch { /* the logger cannot log its own failure, and must never take the app down */ }
     }
 
     public static void Info(string category, string message) => Log(LogLevel.Info, category, message);
@@ -271,17 +273,41 @@ public static class LoggingService
         }
     }
 
-    public static void Debug(string category, string message)
+    /// <summary>
+    /// An exception that was caught and deliberately not acted on. Verbose only: these are the
+    /// expected misses - a process that exited between two calls, a registry value that is not
+    /// there, a file another program holds - and a tester's ordinary log should not fill with
+    /// them. But a catch that says nothing at all makes "it failed quietly" indistinguishable from
+    /// "it never ran", which is how a log ends up unable to answer the question it was sent for.
+    /// See CONTRIBUTING.md, Logging.
+    /// </summary>
+    /// <param name="doing">What was being attempted, in a few words, when the name of the calling
+    /// member does not already say it.</param>
+    public static void Swallowed(string category, Exception ex, string? doing = null,
+        [System.Runtime.CompilerServices.CallerMemberName] string member = "")
     {
-        if (_isVerboseEnabled)
-        {
-            Log(LogLevel.Debug, category, message);
-        }
+        if (!_isVerboseEnabled) return;
+        Log(LogLevel.Verbose, category, doing == null
+            ? $"{member}: ignored {ex.GetType().Name}: {ex.Message}"
+            : $"{member}: {doing} - ignored {ex.GetType().Name}: {ex.Message}");
+    }
+
+    /// <summary>
+    /// Something the user was just shown: a status-bar line, a dialog, a toast, the launch popup.
+    /// Verbose only. Without it a log says what TrayTrigger did and never what the person saw -
+    /// "No new games found" five times in five seconds left no trace at all - so every surface
+    /// that puts words in front of the user echoes them here, at the one place it sets them.
+    /// </summary>
+    /// <param name="surface">Where it appeared: "Status", "Dialog", "Toast", "Launch popup".</param>
+    public static void Shown(string surface, string? text)
+    {
+        if (!_isVerboseEnabled || string.IsNullOrWhiteSpace(text)) return;
+        Log(LogLevel.Verbose, "UI", $"{surface}: {text.ReplaceLineEndings(" ")}");
     }
 
     public static void Log(LogLevel level, string category, string message)
     {
-        if ((level == LogLevel.Verbose || level == LogLevel.Debug) && !_isVerboseEnabled)
+        if (level == LogLevel.Verbose && !_isVerboseEnabled)
         {
             return;
         }
@@ -295,8 +321,7 @@ public static class LoggingService
                     LogLevel.Info => "INFO ",
                     LogLevel.Warning => "WARN ",
                     LogLevel.Error => "ERROR",
-                    LogLevel.Verbose => "VERB ",
-                    _ => "DEBUG"
+                    _ => "VERB "
                 };
 
                 string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{tag}] [{category}] {message}\n";
@@ -309,7 +334,7 @@ public static class LoggingService
                 }
             }
         }
-        catch { }
+        catch { /* the logger cannot log its own failure, and must never take the app down */ }
     }
 
     // Must be called while holding LockObj.
@@ -334,7 +359,7 @@ public static class LoggingService
                 }
             }
         }
-        catch { }
+        catch { /* the logger cannot log its own failure, and must never take the app down */ }
     }
 
     public static void ClearLog()
@@ -355,7 +380,7 @@ public static class LoggingService
                 }
             }
         }
-        catch { }
+        catch { /* the logger cannot log its own failure, and must never take the app down */ }
     }
 
     public static string GetLogFileSizeDisplay()
@@ -370,7 +395,7 @@ public static class LoggingService
                 return $"{bytes / (1024.0 * 1024.0):F2} MB";
             }
         }
-        catch { }
+        catch { /* the logger cannot log its own failure, and must never take the app down */ }
         return "0 KB";
     }
 
@@ -381,6 +406,6 @@ public static class LoggingService
             EnsureLogFileExists();
             Process.Start(new ProcessStartInfo(LogFilePath) { UseShellExecute = true });
         }
-        catch { }
+        catch { /* the logger cannot log its own failure, and must never take the app down */ }
     }
 }

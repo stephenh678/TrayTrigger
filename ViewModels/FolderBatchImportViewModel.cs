@@ -78,7 +78,7 @@ public class BatchGameItemViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("FolderBatchImportViewModel", $"Failed to extract icon for '{candidate.ExePath}': {ex.Message}");
+                LoggingService.Warn("FolderBatchImport", $"Failed to extract icon for '{candidate.ExePath}': {ex.Message}");
             }
         });
     }
@@ -296,12 +296,12 @@ public class FolderBatchImportViewModel : ViewModelBase
         if (selectedCandidates.Count > 0)
         {
             bool remember = CanRememberAsScanLocation && CanToggleRememberAsScanLocation && RememberAsScanLocation;
-            LoggingService.Info("FolderBatchImportViewModel", $"Confirmed import of {selectedCandidates.Count}/{Games.Count} game(s) from '{FolderName}' (remember as scan location: {remember}).");
+            LoggingService.Info("FolderBatchImport", $"Confirmed import of {selectedCandidates.Count}/{Games.Count} game(s) from '{FolderName}' (remember as scan location: {remember}).");
             ImportConfirmed?.Invoke(selectedCandidates, remember);
         }
         else
         {
-            LoggingService.Verbose("FolderBatchImportViewModel", $"Import dialog for '{FolderName}' closed with 0 games selected - nothing imported.");
+            LoggingService.Verbose("FolderBatchImport", $"Import dialog for '{FolderName}' closed with 0 games selected - nothing imported.");
         }
         RequestClose?.Invoke();
     }

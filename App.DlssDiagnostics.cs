@@ -250,7 +250,7 @@ public partial class App
             foreach (var p in all.Skip(1)) p.Dispose();
             return best;
         }
-        catch { return null; }
+        catch { /* a diagnostics dump reports what it can */ return null; }
     }
 }
 #endif

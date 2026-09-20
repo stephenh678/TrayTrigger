@@ -109,7 +109,7 @@ public class SettingsViewModel : ViewModelBase
     public string StatusMessage
     {
         get => _statusMessage;
-        set => SetProperty(ref _statusMessage, value);
+        set { if (SetProperty(ref _statusMessage, value)) LoggingService.Shown("Settings status", value); }
     }
 
     public ObservableCollection<string> TraySortOptions { get; } = new()
@@ -307,7 +307,7 @@ public class SettingsViewModel : ViewModelBase
         {
             SteamMetadataService.ClearCache();
             RawgService.ClearCache();
-            LoggingService.Info("SettingsViewModel", "Cleared the cached Steam and RAWG game info.");
+            LoggingService.Info("Settings", "Cleared the cached Steam and RAWG game info.");
             StatusMessage = "Cached game info cleared. Each game fetches fresh details the next time you open it.";
         });
         OpenScanForGamesCommand = new RelayCommand(() => _onRequestOpenScanForGames?.Invoke());
@@ -527,6 +527,7 @@ public class SettingsViewModel : ViewModelBase
     private void OfferUndo(string message, Action undo)
     {
         _pendingUndo = undo;
+        LoggingService.Shown("Settings undo toast", message);
         UndoToastMessage = message;
         IsUndoToastVisible = true;
         _undoTimer.Start(EndUndoWindow);

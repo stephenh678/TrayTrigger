@@ -92,7 +92,7 @@ public partial class SystemTweaksService
         {
             PostMessage(HWND_BROADCAST, WM_SETTINGCHANGE, UIntPtr.Zero, IntPtr.Zero);
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
     }
 
     public static bool IsElevated
@@ -105,8 +105,9 @@ public partial class SystemTweaksService
                 var principal = new WindowsPrincipal(identity);
                 return principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.Swallowed("SystemTweaks", ex, "checking for administrator rights");
                 return false;
             }
         }
@@ -493,7 +494,7 @@ public partial class SystemTweaksService
         // Snapshot creation can take several seconds - a generous timeout, matching the
         // elevated-write pattern used elsewhere in this service.
         string psCommand = $"try {{ Checkpoint-Computer -Description {ElevatedPowerShell.QuoteLiteral(description)} -RestorePointType MODIFY_SETTINGS -ErrorAction Stop }} catch {{ exit 1 }}";
-        return ElevatedPowerShell.Run(psCommand, TimeSpan.FromSeconds(60), "SystemTweaksService");
+        return ElevatedPowerShell.Run(psCommand, TimeSpan.FromSeconds(60), "SystemTweaks");
     }
 
     // =========================================================================
@@ -529,12 +530,12 @@ public partial class SystemTweaksService
                 _ => false
             };
 
-            LoggingService.Info("SystemTweaksService", $"Tweak '{tweakId}' -> {(enableOptimal ? "Optimal" : "Default")}: {(result ? "succeeded" : "failed")}.");
+            LoggingService.Info("SystemTweaks", $"Tweak '{tweakId}' -> {(enableOptimal ? "Optimal" : "Default")}: {(result ? "succeeded" : "failed")}.");
             return result;
         }
         catch (Exception ex)
         {
-            LoggingService.Error("SystemTweaksService", $"Failed to toggle tweak '{tweakId}'", ex);
+            LoggingService.Error("SystemTweaks", $"Failed to toggle tweak '{tweakId}'", ex);
             return false;
         }
     }
@@ -614,7 +615,7 @@ public partial class SystemTweaksService
         if (writes.Count > 0)
         {
             bool ok = SetHklmValuesBatch(writes.ToArray());
-            LoggingService.Info("SystemTweaksService", $"Preset: {writes.Count} HKLM value(s) {(ok ? "written" : "failed - UAC cancelled or reg import error")}.");
+            LoggingService.Info("SystemTweaks", $"Preset: {writes.Count} HKLM value(s) {(ok ? "written" : "failed - UAC cancelled or reg import error")}.");
         }
     }
 
@@ -670,7 +671,7 @@ public partial class SystemTweaksService
         if (entries.Count > 0)
         {
             bool ok = ApplyHklmEntries(entries);
-            LoggingService.Info("SystemTweaksService", $"Reset: {entries.Count} HKLM change(s) {(ok ? "applied" : "failed - UAC cancelled or reg import error")}.");
+            LoggingService.Info("SystemTweaks", $"Reset: {entries.Count} HKLM change(s) {(ok ? "applied" : "failed - UAC cancelled or reg import error")}.");
         }
     }
 
@@ -699,7 +700,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"Could not enumerate TCP interfaces: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"Could not enumerate TCP interfaces: {ex.Message}");
             return new List<string>();
         }
     }
@@ -733,7 +734,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"ResetNagleToDefault failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"ResetNagleToDefault failed: {ex.Message}");
             return false;
         }
     }
@@ -755,7 +756,7 @@ public partial class SystemTweaksService
                 return speed == "0" && t1 == "0" && t2 == "0";
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -777,7 +778,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(GraphicsDriversKey);
             return key?.GetValue("HwSchMode") is int i && i == 2;
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -788,7 +789,7 @@ public partial class SystemTweaksService
     private static bool HasHdrCapableDisplay()
     {
         try { return HdrControlService.GetDisplayStates().Any(s => s.Supported); }
-        catch { return false; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "asking whether a display supports HDR"); return false; }
     }
 
     private static bool CheckFseDisabled()
@@ -805,7 +806,7 @@ public partial class SystemTweaksService
                 return behavior is int b && b == 2 && honor is int h && h == 1;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -825,7 +826,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         // Fallback: query via powercfg /getactivescheme directly
         try
@@ -836,7 +837,7 @@ public partial class SystemTweaksService
                 return true;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         return false;
     }
@@ -857,7 +858,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         try
         {
@@ -873,7 +874,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         return "Balanced";
     }
@@ -889,7 +890,7 @@ public partial class SystemTweaksService
                 return val == null || (val is int i && i != 0);
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return true;
     }
 
@@ -907,7 +908,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 1;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -920,7 +921,7 @@ public partial class SystemTweaksService
         {
             return !GetMinimizeAnimationEnabled() && !GetDropShadowEnabled();
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -963,7 +964,7 @@ public partial class SystemTweaksService
                 if (val is int i) return (uint)i == 0xFFFFFFFF || i == -1;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -995,7 +996,7 @@ public partial class SystemTweaksService
             }
             return true;
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1008,13 +1009,13 @@ public partial class SystemTweaksService
             using var policy = Registry.LocalMachine.OpenSubKey(DeliveryOptPolicyKey);
             if (policy?.GetValue("DODownloadMode") is int p && (p == 0 || p == 99 || p == 100)) return true;
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         try
         {
             using var config = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config");
             if (config?.GetValue("DODownloadMode") is int c && (c == 0 || c == 99 || c == 100)) return true;
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1029,7 +1030,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 0;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1044,7 +1045,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 0;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1062,7 +1063,7 @@ public partial class SystemTweaksService
                 return val is int i && i == 0;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1091,7 +1092,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("SystemTweaksService", $"Win32_DeviceGuard query failed, falling back to registry: {ex.Message}");
+            LoggingService.Verbose("SystemTweaks", $"Win32_DeviceGuard query failed, falling back to registry: {ex.Message}");
         }
 
         try
@@ -1099,7 +1100,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity");
             return key?.GetValue("Enabled") is int i && i == 1;
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1122,7 +1123,7 @@ public partial class SystemTweaksService
         {
             return !HotkeyActive(StickyKeysPath) && !HotkeyActive(FilterKeysPath) && !HotkeyActive(ToggleKeysPath);
         }
-        catch { return false; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the accessibility shortcut keys"); return false; }
 
         static bool HotkeyActive(string path)
         {
@@ -1151,7 +1152,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"SetAccessibilityShortcutsDisabled failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"SetAccessibilityShortcutsDisabled failed: {ex.Message}");
             return false;
         }
     }
@@ -1163,7 +1164,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(DwmKey);
             return key?.GetValue("OverlayTestMode") is int i && i == 5;
         }
-        catch { return false; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the MPO setting"); return false; }
     }
 
     private static bool SetMpoDisabled(bool disable) =>
@@ -1176,7 +1177,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(WindowsUpdatePolicyKey);
             return key?.GetValue("ExcludeWUDriversInQualityUpdate") is int i && i == 1;
         }
-        catch { return false; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the driver-update policy"); return false; }
     }
 
     private static bool SetWuDriversExcluded(bool exclude) =>
@@ -1201,7 +1202,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
             return key?.GetValue("ShowDlssIndicator") is int i ? i : null;
         }
-        catch { return null; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the DLSS indicator setting"); return null; }
     }
 
     /// <summary>The driver creates the NGXCore key; without it there is nothing to draw the indicator.</summary>
@@ -1212,7 +1213,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
             return key != null;
         }
-        catch { return false; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "checking for the NVIDIA registry key"); return false; }
     }
 
     public static bool IsDlssIndicatorOn() => ReadDlssIndicator() == DlssIndicatorRetail;
@@ -1242,7 +1243,7 @@ public partial class SystemTweaksService
             using var key = Registry.LocalMachine.OpenSubKey(PriorityControlKey);
             return key?.GetValue("Win32PrioritySeparation") is int i ? i : null;
         }
-        catch { return null; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading Win32PrioritySeparation"); return null; }
     }
 
     private static bool CheckPrioritySeparationOptimal() => ReadPrioritySeparation() == PrioritySeparationBoost;
@@ -1301,7 +1302,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"SetMouseAcceleration failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"SetMouseAcceleration failed: {ex.Message}");
             return false;
         }
     }
@@ -1331,7 +1332,7 @@ public partial class SystemTweaksService
                 return true;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1347,7 +1348,7 @@ public partial class SystemTweaksService
                 return true;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1358,12 +1359,12 @@ public partial class SystemTweaksService
             using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar", writable: true);
             key?.DeleteValue("AllowAutoGameMode", throwOnMissingValue: false);
             key?.DeleteValue("AutoGameModeEnabled", throwOnMissingValue: false);
-            LoggingService.Info("SystemTweaksService", "Tweak 'game_mode' -> Default: Windows' own setting restored.");
+            LoggingService.Info("SystemTweaks", "Tweak 'game_mode' -> Default: Windows' own setting restored.");
             return true;
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"RestoreGameModeDefault failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"RestoreGameModeDefault failed: {ex.Message}");
             return false;
         }
     }
@@ -1386,7 +1387,7 @@ public partial class SystemTweaksService
                 return activeGuid.Trim('{', '}');
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         try
         {
@@ -1397,7 +1398,7 @@ public partial class SystemTweaksService
                 return match.Groups[1].Value;
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         return null;
     }
@@ -1423,7 +1424,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         // 2. Fallback check: parse powercfg /list
         try
@@ -1441,7 +1442,7 @@ public partial class SystemTweaksService
                 }
             }
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
 
         return guids.ToList();
     }
@@ -1463,7 +1464,7 @@ public partial class SystemTweaksService
             {
                 if (!string.Equals(extraGuid, primaryGuid, StringComparison.OrdinalIgnoreCase))
                 {
-                    LoggingService.Info("SystemTweaksService", $"Deleting duplicate '{UltimatePlanName}' scheme: {extraGuid}");
+                    LoggingService.Info("SystemTweaks", $"Deleting duplicate '{UltimatePlanName}' scheme: {extraGuid}");
                     RunPowercfg($"/delete {extraGuid}");
                 }
             }
@@ -1480,7 +1481,7 @@ public partial class SystemTweaksService
             var match = GuidRegex().Match(output);
             if (!match.Success)
             {
-                LoggingService.Warn("SystemTweaksService", $"Could not parse GUID from powercfg duplicatescheme output: '{output}'");
+                LoggingService.Warn("SystemTweaks", $"Could not parse GUID from powercfg duplicatescheme output: '{output}'");
                 return null;
             }
 
@@ -1490,7 +1491,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"Failed to create '{UltimatePlanName}' power scheme: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"Failed to create '{UltimatePlanName}' power scheme: {ex.Message}");
             return null;
         }
     }
@@ -1514,7 +1515,7 @@ public partial class SystemTweaksService
                 if (!restored && !string.Equals(target, BalancedPlanGuid, StringComparison.OrdinalIgnoreCase))
                 {
                     // The recorded scheme no longer exists (deleted since) - fall back to Balanced.
-                    LoggingService.Warn("SystemTweaksService", $"Prior power scheme {target} could not be activated; falling back to Balanced.");
+                    LoggingService.Warn("SystemTweaks", $"Prior power scheme {target} could not be activated; falling back to Balanced.");
                     RunPowercfg($"/setactive {BalancedPlanGuid}");
                     restored = string.Equals(GetActivePowerSchemeGuid(), BalancedPlanGuid, StringComparison.OrdinalIgnoreCase);
                 }
@@ -1530,7 +1531,7 @@ public partial class SystemTweaksService
             string? schemeGuid = FindExistingUltimatePlanGuid() ?? CreateUltimateTrayTriggerPlan();
             if (string.IsNullOrWhiteSpace(schemeGuid))
             {
-                LoggingService.Warn("SystemTweaksService", "Could not create or locate the 'Ultimate Plan - TrayTrigger' power scheme.");
+                LoggingService.Warn("SystemTweaks", "Could not create or locate the 'Ultimate Plan - TrayTrigger' power scheme.");
                 return false;
             }
 
@@ -1542,7 +1543,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"SetPowerPlan failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"SetPowerPlan failed: {ex.Message}");
             return false;
         }
     }
@@ -1592,20 +1593,20 @@ public partial class SystemTweaksService
             {
                 // Not a failure: this machine has no such knob, so there is nothing the user
                 // could act on and nothing worth warning them about.
-                LoggingService.Info("SystemTweaksService", $"Power setting {name} is not present on this system; skipped.");
+                LoggingService.Info("SystemTweaks", $"Power setting {name} is not present on this system; skipped.");
                 continue;
             }
 
             int? value = ResolveAcceptableValue(domain.Value, desired);
             if (value == null)
             {
-                LoggingService.Info("SystemTweaksService", $"Power setting {name} does not offer {desired} on this system ({domain}); skipped.");
+                LoggingService.Info("SystemTweaks", $"Power setting {name} does not offer {desired} on this system ({domain}); skipped.");
                 continue;
             }
 
             if (value != desired)
             {
-                LoggingService.Info("SystemTweaksService", $"Power setting {name}: {desired} is outside this system's range ({domain}); using {value}.");
+                LoggingService.Info("SystemTweaks", $"Power setting {name}: {desired} is outside this system's range ({domain}); using {value}.");
             }
 
             foreach (var verb in new[] { "/setacvalueindex", "/setdcvalueindex" })
@@ -1615,7 +1616,7 @@ public partial class SystemTweaksService
 
                 // Refused a value the platform said it would take. Record what it advertised so
                 // the next log says which of the two is lying.
-                LoggingService.Warn("SystemTweaksService", $"powercfg {verb} {name}={value} failed, though this system advertises {domain}.");
+                LoggingService.Warn("SystemTweaks", $"powercfg {verb} {name}={value} failed, though this system advertises {domain}.");
                 allOk = false;
             }
         }
@@ -1663,7 +1664,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("SystemTweaksService", $"Could not read the domain of power setting {settingGuid}: {ex.Message}");
+            LoggingService.Verbose("SystemTweaks", $"Could not read the domain of power setting {settingGuid}: {ex.Message}");
             return null;
         }
     }
@@ -1714,13 +1715,13 @@ public partial class SystemTweaksService
             if (!proc.HasExited) return false;
             if (proc.ExitCode != 0 && !string.IsNullOrWhiteSpace(stderr))
             {
-                LoggingService.Verbose("SystemTweaksService", $"powercfg {arguments}: {stderr.Trim()}");
+                LoggingService.Verbose("SystemTweaks", $"powercfg {arguments}: {stderr.Trim()}");
             }
             return proc.ExitCode == 0;
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"powercfg {arguments} failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"powercfg {arguments} failed: {ex.Message}");
             return false;
         }
     }
@@ -1746,7 +1747,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"powercfg {arguments} failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"powercfg {arguments} failed: {ex.Message}");
             return string.Empty;
         }
     }
@@ -1788,7 +1789,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to write VisualFXSetting marker: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"SetVisualFx: failed to write VisualFXSetting marker: {ex.Message}");
             ok = false;
         }
 
@@ -1804,7 +1805,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to set minimize animation: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"SetVisualFx: failed to set minimize animation: {ex.Message}");
             ok = false;
         }
 
@@ -1815,7 +1816,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"SetVisualFx: failed to set drop shadow: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"SetVisualFx: failed to set drop shadow: {ex.Message}");
             ok = false;
         }
 
@@ -1860,7 +1861,7 @@ public partial class SystemTweaksService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SystemTweaksService", $"SetNagleDisabled failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"SetNagleDisabled failed: {ex.Message}");
             return false;
         }
     }
@@ -1890,7 +1891,7 @@ public partial class SystemTweaksService
             }
             return true;
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1912,7 +1913,7 @@ public partial class SystemTweaksService
             }
             return true;
         }
-        catch (Exception ex) { LogSwallowed(ex); }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex); }
         return false;
     }
 
@@ -1953,7 +1954,7 @@ public partial class SystemTweaksService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Warn("SystemTweaksService", $"Direct HKLM write failed for '{subKey}\\{valueName}': {ex.Message}");
+                    LoggingService.Warn("SystemTweaks", $"Direct HKLM write failed for '{subKey}\\{valueName}': {ex.Message}");
                     allOk = false;
                 }
             }
@@ -1998,7 +1999,7 @@ public partial class SystemTweaksService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Warn("SystemTweaksService", $"Direct HKLM delete failed for '{subKey}\\{valueName}': {ex.Message}");
+                    LoggingService.Warn("SystemTweaks", $"Direct HKLM delete failed for '{subKey}\\{valueName}': {ex.Message}");
                     allOk = false;
                 }
             }
@@ -2014,14 +2015,6 @@ public partial class SystemTweaksService
         }
         return RunElevatedRegImport(entries);
     }
-
-    /// <summary>
-    /// For the registry readers and writers above that answer "false" on any failure: the caller
-    /// only needs the verdict, but a diagnostic log should still say why (access denied, a value
-    /// of the wrong kind) rather than nothing at all.
-    /// </summary>
-    private static void LogSwallowed(Exception ex, [System.Runtime.CompilerServices.CallerMemberName] string member = "") =>
-        LoggingService.Verbose("SystemTweaksService", $"{member}: {ex.GetType().Name}: {ex.Message}");
 
     /// <summary>One line of a generated .reg file - see <see cref="BuildRegFileContent"/>.</summary>
     internal readonly record struct RegFileEntry(string SubKey, string ValueName, object? Value, RegistryValueKind Kind, bool Delete);
@@ -2111,7 +2104,7 @@ public partial class SystemTweaksService
             {
                 if (!string.Equals(reader.ReadToEnd(), content, StringComparison.Ordinal))
                 {
-                    LoggingService.Error("SystemTweaksService", "Elevated registry import refused: the temporary .reg file changed after it was written.");
+                    LoggingService.Error("SystemTweaks", "Elevated registry import refused: the temporary .reg file changed after it was written.");
                     return false;
                 }
             }
@@ -2139,14 +2132,14 @@ public partial class SystemTweaksService
         catch (Exception ex)
         {
             // Most commonly the user cancelled the UAC prompt (Win32Exception 1223).
-            LoggingService.Warn("SystemTweaksService", $"Elevated registry import failed: {ex.Message}");
+            LoggingService.Warn("SystemTweaks", $"Elevated registry import failed: {ex.Message}");
             return false;
         }
         finally
         {
             if (tempFile != null)
             {
-                try { File.Delete(tempFile); } catch { }
+                try { File.Delete(tempFile); } catch { /* a stray temp file is harmless */ }
             }
         }
     }

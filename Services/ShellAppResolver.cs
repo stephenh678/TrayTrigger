@@ -195,6 +195,7 @@ public static class ShellAppResolver
         }
         catch (Exception)
         {
+            // An invalid path resolves to nothing.
             return null;
         }
     }

@@ -161,7 +161,11 @@ public sealed class DlssCardViewModel : ViewModelBase
     public bool CanRestore => !IsBusy && _records.Count > 0;
 
     /// <summary>Why the last change did not work. Null otherwise: when it works, the switch says so.</summary>
-    public string? Status { get => _status; private set => SetProperty(ref _status, value); }
+    public string? Status
+    {
+        get => _status;
+        private set { if (SetProperty(ref _status, value)) LoggingService.Shown("DLSS card status", value); }
+    }
     public bool HasStatus => !string.IsNullOrEmpty(_status);
 
     /// <summary>

@@ -52,6 +52,7 @@ public static partial class ProcessPathResolver
         }
         catch
         {
+            // Runs for every process on each two-second poll, and a protected process refusing is the normal case.
             return null;
         }
         finally
@@ -138,12 +139,12 @@ public static partial class ProcessPathResolver
 
         Process[] all;
         try { all = Process.GetProcesses(); }
-        catch { return results; }
+        catch (Exception ex) { LoggingService.Swallowed("ProcessPathResolver", ex, "listing running processes"); return results; }
 
         int ownPid = Environment.ProcessId;
         int ownSession;
         try { using var self = Process.GetCurrentProcess(); ownSession = self.SessionId; }
-        catch { ownSession = -1; }
+        catch (Exception ex) { LoggingService.Swallowed("ProcessPathResolver", ex, "reading this session's id"); ownSession = -1; }
 
         foreach (var proc in all)
         {
@@ -160,8 +161,8 @@ public static partial class ProcessPathResolver
 
                 bool hasWindow = false;
                 DateTime start = DateTime.MinValue;
-                try { hasWindow = proc.MainWindowHandle != IntPtr.Zero; } catch { }
-                try { start = proc.StartTime; } catch { }
+                try { hasWindow = proc.MainWindowHandle != IntPtr.Zero; } catch { /* per process, per poll: it has already exited */ }
+                try { start = proc.StartTime; } catch { /* per process, per poll: it has already exited */ }
                 results.Add(new ProcessUnderDirectory(proc.Id, path, hasWindow, start));
             }
             catch
@@ -197,6 +198,7 @@ public static partial class ProcessPathResolver
         }
         catch
         {
+            // Per process, per poll: one that cannot be asked is treated as critical.
             return true;
         }
         finally
@@ -226,6 +228,7 @@ public static partial class ProcessPathResolver
         try { normalized = NormalizeDirectory(Path.GetFullPath(dir)); }
         catch
         {
+            // The reason goes back to the caller, which logs it.
             reason = "not a valid folder";
             return true;
         }
@@ -328,6 +331,7 @@ public static partial class ProcessPathResolver
         }
         catch
         {
+            // An invalid path is compared as written.
             return string.Equals(path, expectedPath, StringComparison.OrdinalIgnoreCase);
         }
     }

@@ -265,7 +265,7 @@ public partial class SteamSearchService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamSearchService", $"Storesearch error for '{term}': {ex.Message}");
+            LoggingService.Warn("SteamSearch", $"Storesearch error for '{term}': {ex.Message}");
             return null;
         }
     }
@@ -305,7 +305,7 @@ public partial class SteamSearchService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("SteamSearchService", $"Suggest error for '{term}': {ex.Message}");
+            LoggingService.Warn("SteamSearch", $"Suggest error for '{term}': {ex.Message}");
             return null;
         }
     }
@@ -355,7 +355,7 @@ public partial class SteamSearchService
             return bestMatch;
         }
 
-        LoggingService.Info("SteamSearchService", $"Best match for '{query}' was '{bestMatch?.Name}' (AppId: {bestMatch?.AppId}) with score {highestScore:F2} < threshold {minConfidence:F2}. Rejected to prevent incorrect identification.");
+        LoggingService.Info("SteamSearch", $"Best match for '{query}' was '{bestMatch?.Name}' (AppId: {bestMatch?.AppId}) with score {highestScore:F2} < threshold {minConfidence:F2}. Rejected to prevent incorrect identification.");
         return null;
     }
 

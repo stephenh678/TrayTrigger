@@ -72,7 +72,7 @@ public class XboxScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("XboxScannerService", $"Error scanning installed Xbox games: {ex.Message}");
+            LoggingService.Warn("XboxScanner", $"Error scanning installed Xbox games: {ex.Message}");
         }
 
         return results.OrderBy(g => g.Name).ToList();
@@ -92,7 +92,7 @@ public class XboxScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("XboxScannerService", $"Error resolving Xbox game '{aumid}': {ex.Message}");
+            LoggingService.Warn("XboxScanner", $"Error resolving Xbox game '{aumid}': {ex.Message}");
             return null;
         }
     }
@@ -113,7 +113,7 @@ public class XboxScannerService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("XboxScannerService", $"Error parsing Xbox game config '{packageFullName}': {ex.Message}");
+                LoggingService.Warn("XboxScanner", $"Error parsing Xbox game config '{packageFullName}': {ex.Message}");
             }
             if (game != null) yield return game;
         }
@@ -124,7 +124,11 @@ public class XboxScannerService
         // A GameConfig entry with no per-user package registration belongs to another Windows
         // user (or is a leftover from an uninstall) - not launchable from this account.
         string? packageRoot = ReadPackageRoot(repositoryKey, packageFullName);
-        if (packageRoot == null || !Directory.Exists(packageRoot)) return null;
+        if (packageRoot == null || !Directory.Exists(packageRoot))
+        {
+            LoggingService.Verbose("XboxScanner", $"Skipped '{packageFullName}': not registered for this Windows user (another account's game, or left over from an uninstall).");
+            return null;
+        }
 
         // The Xbox app installs to "<drive>:\XboxGames\<Game>\Content" and registers the
         // WindowsApps package folder as a junction to it. When those files go without an uninstall
@@ -134,7 +138,7 @@ public class XboxScannerService
         // target so the install dir matches what the kernel reports for process images.
         if (LinkedDirectory.Resolve(packageRoot, out string installDir) == LinkedDirectoryState.BrokenLink)
         {
-            LoggingService.Verbose("XboxScannerService", $"Skipped '{packageFullName}': its package folder links to a folder or drive that no longer exists.");
+            LoggingService.Verbose("XboxScanner", $"Skipped '{packageFullName}': its package folder links to a folder or drive that no longer exists.");
             return null;
         }
 
@@ -142,7 +146,11 @@ public class XboxScannerService
         if (configKey == null) return null;
 
         string? familyName = ToPackageFamilyName(packageFullName);
-        if (familyName == null) return null;
+        if (familyName == null)
+        {
+            LoggingService.Verbose("XboxScanner", $"Skipped '{packageFullName}': its package name does not have the shape a family name is read from.");
+            return null;
+        }
 
         // ExecutableList\Executable[0]: the game's own exe (relative) and the AppId that,
         // combined with the family name, forms the AUMID shell activation needs.
@@ -158,7 +166,11 @@ public class XboxScannerService
                 exeRelative = exeKey?.GetValue("Name") as string;
             }
         }
-        if (string.IsNullOrWhiteSpace(appId)) return null;
+        if (string.IsNullOrWhiteSpace(appId))
+        {
+            LoggingService.Verbose("XboxScanner", $"Skipped '{packageFullName}': its GameConfig lists no executable to activate.");
+            return null;
+        }
 
         string? name = null;
         string? logoRelative = null;
@@ -223,8 +235,9 @@ public class XboxScannerService
         {
             return Path.GetFullPath(Path.Combine(root, relative.Replace('/', '\\')));
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("XboxScanner", ex, "resolving a game's executable path");
             return null;
         }
     }
@@ -252,8 +265,9 @@ public class XboxScannerService
                 .Select(x => x.Path)
                 .FirstOrDefault();
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("XboxScanner", ex, "looking for a game's executable");
             return null;
         }
 
