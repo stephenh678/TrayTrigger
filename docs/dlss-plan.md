@@ -142,6 +142,53 @@ that it gates preset overrides - was not isolated. Writing `0x10E41DF7` alone mi
 matters only for minimising the recipe, not for whether it works, and can be settled whenever
 convenient by clearing `0x00634291` and restarting.
 
+### Confound found afterwards: the Global profile already had four of the settings
+
+An export of the **Global** profile, taken just after the baseline, shows these were already
+present before the spike began - almost certainly written by RHI, which advertises writing DLSS
+presets directly to NVIDIA driver profiles:
+
+| Setting | Value | Meaning |
+|---|---|---|
+| `0x10E41E01` Enable DLSS-SR override | `1` | The exact setting applied per-game in run 1 |
+| `0x10E41E02` Enable DLSS-RR override | `1` | Never set per-game during the spike |
+| `0x10E41DF3` Override DLSS-SR presets | `0x00FFFFFF` | "Use recommended preset" |
+| `0x10E41DF7` Override DLSS-RR preset | `0x00FFFFFF` | "Use recommended preset" |
+
+**This closes the RR question.** RR was substituted without `0x10E41E02` being set per-game because
+it was already enabled **globally**. Not a hidden coupling between features - just a second layer
+nobody had looked at.
+
+**It also confounds runs 1-5 for SR.** With `Enable DLSS-SR override` already global, SR would have
+been substituted whatever the 007 profile said. Those runs cannot distinguish "the per-game setting
+worked" from "global was doing it".
+
+**What survives.** The per-feature conclusion still holds, because frame generation has **no**
+global entry: FG stayed on the game's own 310.7.128 while its per-game override was off, and
+substituted when it was on. That remains a clean result.
+
+**Run 6 is unaffected and proves something extra.** Global set the RR preset to `0x00FFFFFF`
+("recommended"), which rendered as **Preset F**. Setting Preset E on the *007 profile* changed the
+overlay to **E**. So **a per-game setting overrides a global one** - verified, and not previously
+established.
+
+#### Consequence for the design: there are three layers, not two
+
+The plan's ownership model assumes a setting is either TrayTrigger's or absent. In reality a value
+can come from the **global profile**, the **per-game profile**, or NVIDIA's **predefined default**.
+That has direct consequences:
+
+- **Clearing a per-game override does not mean "no override".** If global has one, the user still
+  gets substitution. "Undo TrayTrigger changes" must say so rather than implying a return to stock.
+- **A per-game write can be a silent no-op.** A user whose global profile already enables SR
+  override gets substitution regardless; TrayTrigger would claim credit for something already
+  happening. Another reason verification reports observations, not causation.
+- **Never touch the global profile.** It is shared by every game and is where other tools write.
+  TrayTrigger writes per-game only, and its ownership record must not treat a global value as a
+  previous value it may restore.
+- **Detect and surface it.** If a global override is active, say so on the card. It changes what
+  the per-game control actually does.
+
 ### The overlay, read on-screen during run 5
 
 Two overlay lines were captured, and both cross-validate the module reads exactly:
@@ -367,7 +414,9 @@ game file modified. What remains untested is the preset half of the recipe, beha
 | **Settings take effect only at process start** | **Verified** | Mid-session changes did nothing; a restart was required |
 | **The override settings are per-feature** | **Verified** | Run 5: FG override off left FG on the game's 310.7.128 while SR and RR came from the store |
 | **A feature the game is not using produces no observation at all** | **Verified** | Runs 1-3 loaded no SR module from either source, because SR was off in-game |
-| **RR is substituted without `0x10E41E02`** | **Observed, unexplained** | Run 5 had only the SR override set. May mean one setting covers both. |
+| **RR is substituted without a per-game `0x10E41E02`** | **Explained** | The Global profile already had `0x10E41E02` = 1, pre-existing, probably from RHI |
+| **A per-game setting overrides a global one** | **Verified** | Run 6: global RR preset `0x00FFFFFF` rendered as F; per-game Preset E rendered as E |
+| **The per-game SR override was what caused SR substitution** | **Confounded** | Global already had `0x10E41E01` = 1, so runs 1-5 cannot attribute SR substitution to the per-game setting |
 | **The overlay reports the active preset letter** | **Verified** | `Render Preset F` read on-screen, run 5 - the justification for layer 4 |
 | **The overlay and module enumeration agree** | **Verified** | FG, RR, Streamline and driver versions matched across both methods in the same session |
 | **NVIDIA's SDK header preset semantics are real driver behaviour** | **Verified** | Header calls preset F "Default model RR2"; the overlay independently reads `DLSS RR2` |
