@@ -111,14 +111,11 @@ public class GameEntry
     public bool DlssConflicted { get; set; }
 
     /// <summary>
-    /// What was actually observed loading, per DLSS feature, the last time this game ran. Persisted
+    /// What DLSS actually loaded the last time this game ran with the override on. Persisted
     /// because it can only be learned by playing - unlike versions and settings, which are read
-    /// live and never cached.
-    ///
-    /// <para>Invalidated when the override changes or the game's own DLSS version changes; a driver
-    /// change only marks it stale. See <see cref="Services.DlssVerificationService"/>.</para>
+    /// live. Cleared when the override changes; ignored once the game ships a different version.
     /// </summary>
-    public List<DlssObservation> DlssObservations { get; set; } = new();
+    public DlssLastRun? DlssLastRun { get; set; }
 
     /// <summary>
     /// Which cores the game's process may run on. Independent of the profile tier: on an Intel

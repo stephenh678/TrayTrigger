@@ -284,7 +284,7 @@ public static class DlssProbeService
             string? product = null;
             try { product = module.FileVersionInfo.ProductName; } catch { /* optional */ }
 
-            bool fromStore = path.Contains(Models.DlssObservation.NgxStoreMarker, StringComparison.OrdinalIgnoreCase);
+            bool fromStore = path.Contains(Models.DlssLastRun.NgxStoreMarker, StringComparison.OrdinalIgnoreCase);
             bool byProduct = product != null &&
                              (product.Contains("DLSS", StringComparison.OrdinalIgnoreCase) ||
                               product.Contains("NGX", StringComparison.OrdinalIgnoreCase) ||
@@ -305,6 +305,72 @@ public static class DlssProbeService
             note = "No DLSS modules loaded. The game may not be using DLSS in its current settings.";
 
         return result;
+    }
+
+    /// <summary>
+    /// Turns the modules seen in a running game into the one thing the card reports. Null when no
+    /// DLSS runtime was among them - not running, not in use yet, or refused by anti-cheat, none of
+    /// which is a result worth recording.
+    ///
+    /// <para>The driver's substituted runtime is a hashed <c>.bin</c>, identical in name across
+    /// all three features and told apart only by the feature folder in its path; the game's own
+    /// copy is a differently named DLL per feature. So the store is matched by directory and the
+    /// game folder by file name. Where both are loaded for a feature the store's wins: NGX can
+    /// have the game's DLL open as well as the one it substituted.</para>
+    /// </summary>
+    public static Models.DlssLastRun? ReadLastRun(IReadOnlyList<LoadedRuntime> modules, string? gameVersion)
+    {
+        var result = new Models.DlssLastRun { GameVersion = gameVersion };
+
+        foreach (var feature in NgxModelStore.Features)
+        {
+            var match = modules
+                .Where(m => m.FromDriverStore
+                    ? m.Path.Contains($@"\models\{feature.StoreFolder}\", StringComparison.OrdinalIgnoreCase)
+                    // nvngx_dlss must not match the dlssd or dlssg prefixes, so compare the stem exactly.
+                    : string.Equals(Path.GetFileNameWithoutExtension(m.Path), feature.DllPrefix, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(m => m.FromDriverStore)
+                .FirstOrDefault();
+            if (match == null) continue;
+
+            // A store runtime's version is its versions\<n> folder: the .bin has no version resource.
+            string? version = match.FromDriverStore ? VersionFromStorePath(match.Path) : match.FileVersion;
+            if (string.IsNullOrEmpty(version)) continue;
+
+            var list = match.FromDriverStore ? result.FromNvidia : result.FromGame;
+            if (!list.Contains(version)) list.Add(version);
+        }
+
+        return result.FromNvidia.Count + result.FromGame.Count == 0 ? null : result;
+    }
+
+    /// <summary>Decodes the NGX store's numeric version directory, or null when the path has none.</summary>
+    internal static string? VersionFromStorePath(string path)
+    {
+        var parts = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            if (!string.Equals(parts[i], "versions", StringComparison.OrdinalIgnoreCase)) continue;
+            if (uint.TryParse(parts[i + 1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out uint encoded))
+                return NgxModelStore.DecodeVersion(encoded);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The oldest version among what a game ships - the one with the most to gain, and the one the
+    /// card shows. Compared numerically: "310.9.0" beats "310.7.128", which a string compare gets
+    /// backwards.
+    /// </summary>
+    public static string? OldestVersion(IEnumerable<ShippedRuntime> shipped) =>
+        shipped.Select(s => s.FileVersion).Where(v => !string.IsNullOrEmpty(v)).OrderBy(VersionKey).FirstOrDefault();
+
+    /// <summary>Unparseable parts sort lowest rather than throwing.</summary>
+    public static (int Major, int Minor, int Patch) VersionKey(string? version)
+    {
+        var parts = (version ?? string.Empty).Split('.');
+        int At(int i) => parts.Length > i && int.TryParse(parts[i], out int n) ? n : 0;
+        return (At(0), At(1), At(2));
     }
 
     private static string? SafeDirectoryName(string path)

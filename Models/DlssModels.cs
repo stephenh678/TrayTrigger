@@ -62,51 +62,24 @@ public class DlssSettingRecord
 }
 
 /// <summary>
-/// What was observed about one DLSS feature, in order of how much it establishes. These are
-/// observations, never causation: a loaded runtime shows what the process has open, not that
-/// TrayTrigger put it there.
+/// What DLSS actually loaded the last time a game ran - the one thing that can only be learned by
+/// playing. A reading, never a verdict: a runtime loaded from the game's own files shows what the
+/// process had open, not that the override failed. Plain setters; it round trips through the
+/// library's JSON.
 /// </summary>
-public enum DlssObservationState
+public class DlssLastRun
 {
-    /// <summary>A DLSS runtime was seen loaded, with its version and the path it came from.</summary>
-    RuntimeObserved,
-    /// <summary>
-    /// Nothing could be read - enumeration refused, the feature not in use, or the game not
-    /// running. Explicitly <b>not</b> the same as "the override failed".
-    /// </summary>
-    UnableToVerify
-}
+    /// <summary>Versions loaded out of the driver's own store - the override at work.</summary>
+    public List<string> FromNvidia { get; set; } = new();
 
-/// <summary>
-/// One feature's verification result, persisted because it can only be learned by playing.
-/// Plain properties with setters - it round trips through the library's JSON.
-/// </summary>
-public class DlssObservation
-{
-    /// <summary>"SR", "RR" or "FG".</summary>
-    public string Feature { get; set; } = string.Empty;
-
-    public DlssObservationState State { get; set; } = DlssObservationState.UnableToVerify;
-
-    /// <summary>The runtime version seen, when one was.</summary>
-    public string? Version { get; set; }
-
-    /// <summary>Where it was loaded from - the driver's NGX store, or the game folder. The proof.</summary>
-    public string? LoadedFromPath { get; set; }
-
-    /// <summary>Why nothing could be read. Only meaningful for <see cref="DlssObservationState.UnableToVerify"/>.</summary>
-    public string? Note { get; set; }
+    /// <summary>Versions loaded from the game's own files.</summary>
+    public List<string> FromGame { get; set; } = new();
 
     /// <summary>
-    /// The version the game itself shipped for this feature when the observation was taken. A game
-    /// patch changes it, and an observation of the old setup is then describing something that no
-    /// longer exists - not stale, wrong. Null for observations taken before this was recorded.
+    /// The oldest DLSS version the game itself shipped at the time. A game patch changes it, and
+    /// the reading then describes a setup that no longer exists.
     /// </summary>
-    public string? GameRuntimeVersion { get; set; }
-
-    /// <summary>True when the runtime came out of the driver's own model store rather than the game.</summary>
-    public bool FromDriverStore =>
-        LoadedFromPath?.Contains(NgxStoreMarker, StringComparison.OrdinalIgnoreCase) == true;
+    public string? GameVersion { get; set; }
 
     /// <summary>The path fragment that identifies the driver's model store.</summary>
     public const string NgxStoreMarker = @"\NVIDIA\NGX\models\";

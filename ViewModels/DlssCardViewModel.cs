@@ -31,7 +31,6 @@ public sealed class DlssCardViewModel : ViewModelBase
         string? GameVersion,
         string? DriverVersion,
         bool DriverIsNewer,
-        IReadOnlyDictionary<string, string?> ShippedByFeature,
         string? ExternalOverrideNotice);
 
     private readonly string? _executablePath;
@@ -52,7 +51,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private Task? _load;
 
     private static readonly Projection Empty =
-        new(false, null, null, false, new Dictionary<string, string?>(StringComparer.Ordinal), null);
+        new(false, null, null, false, null);
 
     /// <param name="records">
     /// The game's live ownership records, mutated in place and handed to <paramref name="persist"/>,
@@ -161,24 +160,21 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         get
         {
-            var seen = (_game?.DlssObservations ?? new List<DlssObservation>())
-                .Where(o => o.State == DlssObservationState.RuntimeObserved && o.Version != null)
-                .Where(o => !DlssVerificationService.IsInvalidated(
-                    o, _content.ShippedByFeature.TryGetValue(o.Feature, out string? v) ? v : null))
-                .ToList();
+            var last = _game?.DlssLastRun;
+            if (last == null) return string.Empty;
 
-            if (seen.Count == 0) return string.Empty;
+            // The game has since shipped a different DLSS version - a patch - so the reading
+            // describes a setup that no longer exists. Unknown-versus-known is not a change.
+            if (!string.IsNullOrEmpty(last.GameVersion) && !string.IsNullOrEmpty(_content.GameVersion) &&
+                !string.Equals(last.GameVersion, _content.GameVersion, StringComparison.Ordinal))
+                return string.Empty;
 
-            string Versions(bool fromNvidia) => string.Join(" and ", seen
-                .Where(o => o.FromDriverStore == fromNvidia)
-                .Select(o => o.Version!)
-                .Distinct(StringComparer.Ordinal));
-
-            string nvidia = Versions(true);
-            string game = Versions(false);
+            string nvidia = string.Join(" and ", last.FromNvidia);
+            string game = string.Join(" and ", last.FromGame);
 
             return (nvidia.Length > 0, game.Length > 0) switch
             {
+                (false, false) => string.Empty,
                 (true, false) => $"Last run: loaded {nvidia} from NVIDIA.",
                 (false, true) => $"Last run: loaded {game} from the game's own files.",
                 _ => $"Last run: loaded {nvidia} from NVIDIA and {game} from the game's own files."
@@ -342,7 +338,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         if (_game == null) return;
         _game.DlssConflicted = false;
-        _game.DlssObservations.Clear();
+        _game.DlssLastRun = null;
     }
 
     private async Task ReloadAsync()
@@ -386,7 +382,7 @@ public sealed class DlssCardViewModel : ViewModelBase
 
         // The driver's version is taken for that same feature. The newest across all three would
         // pair one feature's "before" with another's "after".
-        var oldest = shipped.Where(kv => kv.Value != null).OrderBy(kv => Order(kv.Value)).FirstOrDefault();
+        var oldest = shipped.Where(kv => kv.Value != null).OrderBy(kv => DlssProbeService.VersionKey(kv.Value)).FirstOrDefault();
         string? gameVersion = oldest.Value;
         string? driverVersion = result.DriverRuntimes
             .Where(d => string.Equals(d.Feature, oldest.Key, StringComparison.Ordinal))
@@ -401,13 +397,6 @@ public sealed class DlssCardViewModel : ViewModelBase
             GameVersion: gameVersion,
             DriverVersion: driverVersion,
             DriverIsNewer: newer,
-            // Keyed by feature code, because that is how an observation names itself. Not shown:
-            // it exists so a stored observation can be thrown away once the game ships a different
-            // version for that feature.
-            ShippedByFeature: NgxModelStore.Features.ToDictionary(
-                f => f.Code,
-                f => shipped.TryGetValue(f.Name, out string? v) ? v : null,
-                StringComparer.Ordinal),
             ExternalOverrideNotice: HasForeignOverride(result, owned)
                 ? "Something else already overrides DLSS for this game - NVIDIA App, Profile Inspector or similar. Turning this on replaces it; Restore puts it back."
                 : null);
@@ -434,22 +423,11 @@ public sealed class DlssCardViewModel : ViewModelBase
         return false;
     }
 
-    /// <summary>
-    /// Version strings compared numerically. "310.9.0" beats "310.7.128", which a string compare
-    /// gets backwards. Unparseable parts sort lowest rather than throwing.
-    /// </summary>
-    internal static (int Major, int Minor, int Patch) Order(string? version)
-    {
-        var parts = (version ?? string.Empty).Split('.');
-        int At(int i) => parts.Length > i && int.TryParse(parts[i], out int n) ? n : 0;
-        return (At(0), At(1), At(2));
-    }
-
     /// <summary>Negative, zero or positive, as string comparison would give the wrong answer.</summary>
     internal static int Compare(string? left, string? right)
     {
-        var a = Order(left);
-        var b = Order(right);
+        var a = DlssProbeService.VersionKey(left);
+        var b = DlssProbeService.VersionKey(right);
         if (a.Major != b.Major) return a.Major.CompareTo(b.Major);
         if (a.Minor != b.Minor) return a.Minor.CompareTo(b.Minor);
         return a.Patch.CompareTo(b.Patch);

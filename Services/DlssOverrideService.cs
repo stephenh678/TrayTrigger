@@ -392,7 +392,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
             game.DlssSettings.Clear();
             game.DlssSettings.AddRange(kept);
             game.DlssConflicted = false;
-            game.DlssObservations.Clear();
+            game.DlssLastRun = null;
 
             if (kept.Count > 0)
             {

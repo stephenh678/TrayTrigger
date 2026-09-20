@@ -527,11 +527,11 @@ public partial class ProcessLauncherService
     /// cheat does when it goes looking for a game's memory layout. It is a documented API and
     /// anti-cheat refuses it cleanly rather than punishing it, but the window is still time spent
     /// reading a live game, so it is as short as it can be while covering the usual case. A game
-    /// that has not built its renderer within 90 seconds records "unable to verify", which is an
-    /// honest answer and costs nothing but a missing line on the card.</para>
+    /// that has not built its renderer within 90 seconds records nothing, which costs a missing
+    /// line on the card and no more.</para>
     ///
-    /// <para>Failure is normal and is recorded as such: anti-cheat titles refuse module
-    /// enumeration, which is a finding, not an error.</para>
+    /// <para>Failure is normal: anti-cheat titles refuse module enumeration, and then too there is
+    /// simply nothing to record.</para>
     /// </summary>
     private void StartDlssObservation(ActiveGameSession session, Process process)
     {
@@ -543,8 +543,8 @@ public partial class ProcessLauncherService
         // Beside the renderer the override was written for - the same folder the card reads, and
         // the only one there is for a game launched by link.
         string renderer = game.DlssSettings[0].ExecutablePath;
-        var shipped = DlssProbeService.FindShippedRuntimes(
-            System.IO.Path.GetDirectoryName(DlssProbeService.IsFilePath(renderer) ? renderer : game.ExecutablePath) ?? string.Empty);
+        string? gameVersion = DlssProbeService.OldestVersion(DlssProbeService.FindShippedRuntimes(
+            System.IO.Path.GetDirectoryName(DlssProbeService.IsFilePath(renderer) ? renderer : game.ExecutablePath) ?? string.Empty));
 
         int ticks = 0;
         string key = game.Id;
@@ -556,20 +556,18 @@ public partial class ProcessLauncherService
             bool exited;
             try { exited = process.HasExited; } catch { exited = true; }
 
-            var observations = DlssVerificationService.Observe(exited ? null : process, shipped);
-            bool sawRuntime = observations.Any(o => o.State == DlssObservationState.RuntimeObserved);
+            var lastRun = exited ? null
+                : DlssProbeService.ReadLastRun(DlssProbeService.ScanLoadedModules(process, out _), gameVersion);
 
             // Keep waiting only while there is still a chance of seeing something.
-            if (!sawRuntime && !exited && ticks < DlssObserveMaxTicks) return true;
+            if (lastRun == null && !exited && ticks < DlssObserveMaxTicks) return true;
 
-            // On exit with nothing seen, keep whatever an earlier tick recorded rather than
-            // overwriting a real observation with "the process is gone".
-            if (sawRuntime || game.DlssObservations.Count == 0)
+            // Nothing seen is nothing to record: whatever an earlier run found stays.
+            if (lastRun != null)
             {
-                game.DlssObservations = observations;
+                game.DlssLastRun = lastRun;
                 PersistLibrary?.Invoke();
-                foreach (var o in observations)
-                    LoggingService.Info("Dlss", $"'{game.Name}' {o.Feature}: {DlssVerificationService.Describe(o)}");
+                LoggingService.Info("Dlss", $"'{game.Name}' loaded DLSS {string.Join(", ", lastRun.FromNvidia.Select(v => v + " from NVIDIA").Concat(lastRun.FromGame.Select(v => v + " from the game's own files")))}.");
             }
 
             // Only this poller's own registration: a stub handoff starts a second one under the
