@@ -484,6 +484,11 @@
                                             Style="{StaticResource ModernOutlineButton}"
                                             Command="{Binding Dlss.UndoCommand}"
                                             Visibility="{Binding Dlss.CanUndo, Converter={StaticResource BoolToVis}}"/>
+                                    <Button Content="Verify" Margin="0,0,6,0"
+                                            AutomationProperties.Name="Check what DLSS actually loaded"
+                                            Style="{StaticResource ModernOutlineButton}"
+                                            Command="{Binding Dlss.VerifyCommand}"
+                                            Visibility="{Binding Dlss.CanVerify, Converter={StaticResource BoolToVis}}"/>
                                     <Button Content="Use recommended"
                                             AutomationProperties.Name="Use NVIDIA's recommended DLSS model"
                                             Style="{StaticResource ModernOutlineButton}"

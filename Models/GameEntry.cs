@@ -111,6 +111,16 @@ public class GameEntry
     public bool DlssConflicted { get; set; }
 
     /// <summary>
+    /// What was actually observed loading, per DLSS feature, the last time this game ran. Persisted
+    /// because it can only be learned by playing - unlike versions and settings, which are read
+    /// live and never cached.
+    ///
+    /// <para>Invalidated when the override changes or the game's own DLSS version changes; a driver
+    /// change only marks it stale. See <see cref="Services.DlssVerificationService"/>.</para>
+    /// </summary>
+    public List<DlssObservation> DlssObservations { get; set; } = new();
+
+    /// <summary>
     /// Which cores the game's process may run on. Independent of the profile tier: on an Intel
     /// hybrid CPU (12th gen+) some engines and anti-cheat titles run worse when threads land on
     /// E-cores, and pinning to P-cores is the standard fix. No-op on non-hybrid CPUs.

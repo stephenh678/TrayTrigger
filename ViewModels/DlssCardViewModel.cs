@@ -80,6 +80,7 @@ public sealed class DlssCardViewModel : ViewModelBase
 
         ApplyCommand = new AsyncRelayCommand(ApplyAsync, () => CanApply);
         UndoCommand = new AsyncRelayCommand(UndoAsync, () => CanUndo);
+        VerifyCommand = new AsyncRelayCommand(VerifyAsync, () => CanVerify);
     }
 
     /// <summary>
@@ -107,6 +108,13 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     public ICommand ApplyCommand { get; }
     public ICommand UndoCommand { get; }
+    public ICommand VerifyCommand { get; }
+
+    /// <summary>
+    /// Offered once TrayTrigger has settings of its own to check. It reads the running game, so it
+    /// says so plainly when the game is not running rather than being greyed out with no reason.
+    /// </summary>
+    public bool CanVerify => !IsBusy && _records.Count > 0;
 
     public bool CanApply => !IsBusy && _hasLoaded && _content.HasDlss && !string.IsNullOrWhiteSpace(_executablePath);
 
@@ -153,7 +161,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             // will actually write to.
             string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath)).ConfigureAwait(true);
             var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
-            _content = Project(result, _records);
+            _content = Project(result, _records, _game?.DlssObservations, result.DriverVersion);
         }
         catch (Exception ex)
         {
@@ -189,7 +197,14 @@ public sealed class DlssCardViewModel : ViewModelBase
             // this write, and keeping stale records would undo to the wrong values.
             _records.Clear();
             _records.AddRange(result.Records);
-            if (_game != null) _game.DlssConflicted = false;
+            if (_game != null)
+            {
+                _game.DlssConflicted = false;
+                // The override just changed, so anything observed under the old one describes a
+                // setup that no longer exists. Keeping it would be the card's oldest failure mode:
+                // saying something true about the wrong thing.
+                _game.DlssObservations.Clear();
+            }
             _persist?.Invoke();
 
             Status = DescribeApply(result);
@@ -220,7 +235,11 @@ public sealed class DlssCardViewModel : ViewModelBase
             // settings it could not undo keep theirs, so a later attempt can still try.
             _records.Clear();
             _records.AddRange(result.Records);
-            if (_game != null) _game.DlssConflicted = false;
+            if (_game != null)
+            {
+                _game.DlssConflicted = false;
+                _game.DlssObservations.Clear();
+            }
             _persist?.Invoke();
 
             Status = result.Succeeded
@@ -241,6 +260,66 @@ public sealed class DlssCardViewModel : ViewModelBase
             IsBusy = false;
             RaiseActionState();
         }
+    }
+
+    /// <summary>
+    /// Reads the running game now. The session observer already does this automatically while a
+    /// game runs, so this is for checking on demand - and for saying "play it once" when there is
+    /// nothing to read yet, which is the honest answer rather than an empty result.
+    /// </summary>
+    private async Task VerifyAsync()
+    {
+        if (!CanVerify) return;
+        IsBusy = true;
+        try
+        {
+            string path = _executablePath ?? string.Empty;
+            var observations = await Task.Run(() =>
+            {
+                string renderer = DlssProbeService.ResolveRenderingExecutable(path);
+                using var process = FindRunningProcess(renderer);
+                if (process == null) return null;
+                var probe = DlssProbeService.Probe(renderer, process);
+                return DlssVerificationService.Interpret(probe.LoadedRuntimes, probe.ModuleScanNote, probe.DriverVersion, DateTime.UtcNow);
+            }).ConfigureAwait(true);
+
+            if (observations == null)
+            {
+                Status = "This game is not running. Start it, play for a moment, then check back - "
+                       + "TrayTrigger records what loaded while a game runs.";
+                return;
+            }
+
+            if (_game != null) _game.DlssObservations = observations;
+            _persist?.Invoke();
+            Status = string.Join("  ", observations.Select(o => $"{o.Feature}: {DlssVerificationService.Describe(o)}"));
+            await ReloadAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Dlss", $"Verifying DLSS failed: {ex.Message}", ex);
+            Status = $"Something went wrong: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            RaiseActionState();
+        }
+    }
+
+    /// <summary>The running renderer, or null. Matched on file name, as the driver does.</summary>
+    private static System.Diagnostics.Process? FindRunningProcess(string exePath)
+    {
+        string name = System.IO.Path.GetFileNameWithoutExtension(exePath);
+        if (string.IsNullOrEmpty(name)) return null;
+        try
+        {
+            var all = System.Diagnostics.Process.GetProcessesByName(name);
+            var best = all.FirstOrDefault();
+            foreach (var p in all.Skip(1)) p.Dispose();
+            return best;
+        }
+        catch { return null; }
     }
 
     /// <summary>Re-probes so the rows show the driver's new answer rather than the one before the write.</summary>
@@ -276,6 +355,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(CanApply));
         OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(CanVerify));
         OnPropertyChanged(nameof(IsConflicted));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasStatus));
@@ -288,7 +368,11 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// The game's ownership records. Without them the card cannot tell TrayTrigger's own override
     /// from a stranger's, and would accuse itself the moment it applied one.
     /// </param>
-    public static Projection Project(DlssProbeService.ProbeResult result, IReadOnlyCollection<DlssSettingRecord>? owned = null)
+    public static Projection Project(
+        DlssProbeService.ProbeResult result,
+        IReadOnlyCollection<DlssSettingRecord>? owned = null,
+        IReadOnlyCollection<DlssObservation>? observations = null,
+        string? currentDriverVersion = null)
     {
         if (result.ShippedRuntimes.Count == 0) return Empty;
 
@@ -305,7 +389,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         {
             if (!shipped.TryGetValue(feature, out var ship)) continue;
 
-            var state = DescribeState(result, feature, owned, out bool isExternalOverride);
+            var state = DescribeState(result, feature, owned, observations, currentDriverVersion, out bool isExternalOverride);
             anyExternalOverride |= isExternalOverride;
             rows.Add(new FeatureRow(feature, ship.FileVersion ?? "unknown", state));
         }
@@ -321,7 +405,10 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     private static string DescribeState(
         DlssProbeService.ProbeResult result, string feature,
-        IReadOnlyCollection<DlssSettingRecord>? owned, out bool isExternalOverride)
+        IReadOnlyCollection<DlssSettingRecord>? owned,
+        IReadOnlyCollection<DlssObservation>? observations,
+        string? currentDriverVersion,
+        out bool isExternalOverride)
     {
         isExternalOverride = false;
 
@@ -336,6 +423,27 @@ public sealed class DlssCardViewModel : ViewModelBase
             string.Equals(s.Definition.Feature, feature, StringComparison.Ordinal) &&
             s.Definition.Name.Contains("Enable DLL Override", StringComparison.Ordinal));
 
+        // What was actually seen outranks what is configured - the whole point of verifying.
+        // Only for a feature TrayTrigger is managing: an observation against somebody else's
+        // override would read as though TrayTrigger had produced it.
+        bool managed = owned != null && owned.Count > 0;
+        if (managed)
+        {
+            string? code = DlssVerificationService.Features
+                .FirstOrDefault(f => string.Equals(f.Name, feature, StringComparison.Ordinal)).Code;
+            var seen = code == null ? null : observations?.FirstOrDefault(o => o.Feature == code);
+            string? shippedNow = result.ShippedRuntimes.FirstOrDefault(r => r.Feature == feature)?.FileVersion;
+            if (seen != null && DlssVerificationService.IsInvalidated(seen, shippedNow)) seen = null;
+
+            if (seen != null && seen.State != DlssObservationState.SettingsSaved)
+            {
+                string text = DlssVerificationService.Describe(seen);
+                return DlssVerificationService.IsStale(seen, currentDriverVersion)
+                    ? text + " (before the driver changed)"
+                    : text;
+            }
+        }
+
         if (toggle?.Value == null || toggle.Value.CurrentValue == 0) return "Game default";
 
         // Ours, if a record says we wrote this exact value and the driver still reports it on the
@@ -345,7 +453,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             r.WrittenValue == toggle.Value.CurrentValue &&
             toggle.Value.Origin == NvApi.SettingOrigin.ApplicationProfile);
 
-        if (isOurs) return "Set by TrayTrigger";
+        if (isOurs) return "Settings saved";
 
         isExternalOverride = true;
         return toggle.Value.Origin switch

@@ -1333,9 +1333,9 @@ with no driver interaction at all.
    2026-09-19.** The check runs against a reloaded session, as specified.
 5. ~~Re-apply in the pre-launch step, with the three-way conflict rule.~~ **Done, 2026-09-19**,
    together with resolving the rendering executable.
-6. **Verification: module enumeration, the four reported states, and the `Verify` action.** Do this
-   before shipping, not after - overriding games NVIDIA has not validated is only defensible if the
-   product can tell the user what was actually observed.
+6. ~~**Verification: module enumeration, the four reported states, and the `Verify` action.**~~
+   **Done, 2026-09-20.** `DlssVerificationService`, `GameEntry.DlssObservations`, automatic capture
+   during a session, and the `Verify` button.
 7. NGX logging as a session tweak, *only if* the spike shows logs can be attributed to a session.
 8. The per-game overlay toggle, reusing the layer 7 session-tweak plumbing.
 9. Help topic and CHANGELOG bullet.
@@ -1759,3 +1759,52 @@ to the renderer's. It compared a profile nothing had touched and reported *"ever
 exactly as it started"* - which was true, and meaningless. That is the second time in this feature
 a reporting gap made a real defect invisible; the report now prints both paths and reads the one
 that is written.
+
+## Verification, 2026-09-20
+
+`DlssVerificationService` turns a running game's loaded modules into one observation per feature,
+persisted on `GameEntry.DlssObservations`. The four states are implemented as specified, and the
+wording states the reading and stops - no "as configured", no "this game disallows it".
+
+Two matching rules that are easy to get wrong and are each covered by a test:
+
+- **Store runtimes are matched by folder, game runtimes by file name.** All three substituted
+  runtimes are called `160_E658700.bin`; only `models\dlss\` versus `models\dlssd\` versus
+  `models\dlssg\` separates them. Matching on the name would report the same runtime for all three.
+- **`nvngx_dlss` is a prefix of `nvngx_dlssd` and `nvngx_dlssg`**, so the game-folder match compares
+  the whole stem. A prefix match would report three features from one file.
+
+The version of a store runtime comes from its `versions\<n>` directory, not the file: the hashed
+`.bin` carries no version resource, so reading one off it would give nothing or something
+misleading.
+
+### Observation is polled, not sampled once
+
+A game loads its DLSS runtime when it first builds the renderer - after a launcher, a shader
+compile, a main menu. Looking once at process start would see nothing and record "unable to verify"
+for a game that was about to work perfectly. The session observer polls every 20 seconds, stopping
+at the first runtime seen, when the process exits, or after about five minutes. It only runs for a
+game TrayTrigger has applied to, so it costs nothing for the rest of the library.
+
+On exit with nothing seen it keeps an earlier tick's observation rather than overwriting a real
+reading with "the process is gone".
+
+### Freshness has two different answers
+
+| What changed | Effect | Why |
+|---|---|---|
+| The override (apply or undo) | **Cleared** | The observation describes a setup that no longer exists |
+| The game's own DLSS version (a patch) | **Cleared** | Same, and now detectable because the shipped version is recorded with the observation |
+| The driver | **Kept, marked stale** | What was seen was still seen; it may just not happen again |
+| Nothing recorded (an older observation) | **Kept** | Unknown is not a change; discarding would silently erase what users had |
+
+### What this still cannot do
+
+Layer 2 only. A protected title that refuses module enumeration reports `Unable to verify` with the
+refusal as its reason - honestly, but it is still a gap, and layers 3 and 4 (NGX logs, the overlay)
+are what close it. `PresetObserved` exists in the model and nothing produces it yet, because only
+the overlay can.
+
+**Not yet exercised end to end.** Every rule here is unit-tested against synthetic module readings,
+and the module reader itself was verified against a real game during the spike, but no game has yet
+been launched through TrayTrigger with an override applied and its observation recorded.

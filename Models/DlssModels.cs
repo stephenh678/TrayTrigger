@@ -49,6 +49,87 @@ public class DlssSettingRecord
     public DateTime WrittenUtc { get; set; }
 }
 
+/// <summary>
+/// What was observed about one DLSS feature, in order of how much it establishes. These are
+/// observations, never causation: a loaded runtime shows what the process has open, not that
+/// TrayTrigger put it there. See docs/dlss-plan.md - an earlier draft overclaimed here.
+/// </summary>
+public enum DlssObservationState
+{
+    /// <summary>
+    /// The values are in the profile database and read back correctly. Says nothing about
+    /// behaviour: the game has not been seen using them.
+    /// </summary>
+    SettingsSaved,
+    /// <summary>A DLSS runtime was seen loaded, with its version and the path it came from.</summary>
+    RuntimeObserved,
+    /// <summary>A preset letter was actually read from the on-screen overlay.</summary>
+    PresetObserved,
+    /// <summary>
+    /// Nothing could be read - enumeration refused, the feature not in use, or the game not
+    /// running. Explicitly <b>not</b> the same as "the override failed".
+    /// </summary>
+    UnableToVerify
+}
+
+/// <summary>How an observation was obtained.</summary>
+public enum DlssObservationMethod
+{
+    /// <summary>Read from the driver settings database after writing.</summary>
+    WriteBack,
+    /// <summary>The running process's loaded module list - the primary method.</summary>
+    ModuleEnumeration,
+    /// <summary>NVIDIA's NGX log, for games that refuse module enumeration.</summary>
+    NgxLog,
+    /// <summary>Read off the on-screen indicator.</summary>
+    Overlay
+}
+
+/// <summary>
+/// One feature's verification result, persisted because it can only be learned by playing.
+/// Plain properties with setters - it round trips through the library's JSON.
+/// </summary>
+public class DlssObservation
+{
+    /// <summary>"SR", "RR" or "FG".</summary>
+    public string Feature { get; set; } = string.Empty;
+
+    public DlssObservationState State { get; set; } = DlssObservationState.UnableToVerify;
+
+    /// <summary>The runtime version seen, when one was.</summary>
+    public string? Version { get; set; }
+
+    /// <summary>Where it was loaded from - the driver's NGX store, or the game folder. The proof.</summary>
+    public string? LoadedFromPath { get; set; }
+
+    /// <summary>Only set when a preset letter was actually read, never inferred.</summary>
+    public string? Preset { get; set; }
+
+    public DlssObservationMethod Method { get; set; } = DlssObservationMethod.ModuleEnumeration;
+
+    public DateTime ObservedUtc { get; set; }
+
+    /// <summary>The driver at the time. A driver change makes an observation stale, not wrong.</summary>
+    public string? DriverVersion { get; set; }
+
+    /// <summary>Why nothing could be read. Only meaningful for <see cref="DlssObservationState.UnableToVerify"/>.</summary>
+    public string? Note { get; set; }
+
+    /// <summary>
+    /// The version the game itself shipped for this feature when the observation was taken. A game
+    /// patch changes it, and an observation of the old setup is then describing something that no
+    /// longer exists - not stale, wrong. Null for observations taken before this was recorded.
+    /// </summary>
+    public string? GameRuntimeVersion { get; set; }
+
+    /// <summary>True when the runtime came out of the driver's own model store rather than the game.</summary>
+    public bool FromDriverStore =>
+        LoadedFromPath?.Contains(NgxStoreMarker, StringComparison.OrdinalIgnoreCase) == true;
+
+    /// <summary>The path fragment that identifies the driver's model store.</summary>
+    public const string NgxStoreMarker = @"\NVIDIA\NGX\models\";
+}
+
 /// <summary>What happened to one setting during an apply or undo, for reporting and for tests.</summary>
 public enum DlssSettingOutcome
 {

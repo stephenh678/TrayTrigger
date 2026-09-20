@@ -375,8 +375,11 @@ public partial class App : Application
 
         // "Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon).
         _launcherService.KeepLaunchersMinimized = () => _mainViewModel?.Settings.KeepLaunchersMinimized == true;
-        // The pre-launch DLSS reapply can mark a game conflicted, which must survive a restart.
-        _launcherService.PersistLibrary = () => _mainViewModel?.Library.SaveGamesOnly();
+        // The pre-launch DLSS reapply can mark a game conflicted, and the in-session observer
+        // records what loaded; both must survive a restart. Marshalled to the UI thread because
+        // the observer runs on a timer and saving walks the library collection.
+        _launcherService.PersistLibrary = () =>
+            Dispatcher.Invoke(() => _mainViewModel?.Library.SaveGamesOnly());
 
         // Windows shutdown / sign-out: WPF raises SessionEnding instead of going through the tray
         // Exit path, so without this a running game's Performance Profile (power plan, MMCSS,

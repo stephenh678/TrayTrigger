@@ -506,6 +506,72 @@ public partial class ProcessLauncherService
         return session;
     }
 
+    // Holds each session's DLSS poller until it stops: a Timer nobody references can be collected
+    // mid-loop, the same reason the Battle.net dispatchers are held.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> _dlssObservers = new();
+
+    private static readonly TimeSpan DlssObserveInterval = TimeSpan.FromSeconds(20);
+    private const int DlssObserveMaxTicks = 15;   // ~5 minutes
+
+    /// <summary>
+    /// Records what DLSS actually loaded, while the game is running - the only time it can be
+    /// known. Costs nothing for a game TrayTrigger has never applied to, which is almost all of them.
+    ///
+    /// <para><b>Polled, not sampled once.</b> A game loads its DLSS runtime when it first builds
+    /// the renderer, which can be minutes after the process starts - at a launcher, a shader
+    /// compile, a main menu. Looking once at process start would almost always see nothing and
+    /// record "unable to verify" for a game that was about to work perfectly. It stops at the
+    /// first runtime seen, when the process exits, or after about five minutes.</para>
+    ///
+    /// <para>Failure is normal and is recorded as such: anti-cheat titles refuse module
+    /// enumeration, which is a finding, not an error.</para>
+    /// </summary>
+    private void StartDlssObservation(ActiveGameSession session, Process process)
+    {
+        var game = session.Game;
+        if (game.DlssSettings.Count == 0) return;
+
+        string? driver = null;
+        try
+        {
+            driver = new SystemInfoService().GetGpuInfoList()
+                .FirstOrDefault(g => g.ModelName.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase))?.DriverVersion;
+        }
+        catch (Exception ex) { LoggingService.Verbose("Dlss", $"Driver version unavailable: {ex.Message}"); }
+
+        int ticks = 0;
+        string key = game.Id;
+
+        var poller = new Poller(DlssObserveInterval, () =>
+        {
+            ticks++;
+            bool exited;
+            try { exited = process.HasExited; } catch { exited = true; }
+
+            var observations = DlssVerificationService.Observe(exited ? null : process, driver,
+                DlssProbeService.FindShippedRuntimes(System.IO.Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty));
+            bool sawRuntime = observations.Any(o => o.State == DlssObservationState.RuntimeObserved);
+
+            // Keep waiting only while there is still a chance of seeing something.
+            if (!sawRuntime && !exited && ticks < DlssObserveMaxTicks) return true;
+
+            // On exit with nothing seen, keep whatever an earlier tick recorded rather than
+            // overwriting a real observation with "the process is gone".
+            if (sawRuntime || game.DlssObservations.Count == 0)
+            {
+                game.DlssObservations = observations;
+                PersistLibrary?.Invoke();
+                foreach (var o in observations)
+                    LoggingService.Info("Dlss", $"'{game.Name}' {o.Feature}: {DlssVerificationService.Describe(o)}");
+            }
+
+            _dlssObservers.TryRemove(key, out _);
+            return false;
+        });
+
+        _dlssObservers[key] = poller;
+    }
+
     /// <summary>
     /// Puts the DLSS settings back if something reverted them since they were applied - NVIDIA App
     /// reverts overrides on games it does not list, whenever it starts. Does nothing for a game
@@ -1251,6 +1317,7 @@ public partial class ProcessLauncherService
         DateTime startedAt;
         try { startedAt = process.StartTime; } catch { startedAt = DateTime.Now; }
         MarkGameStarted(session, startedAt);
+        StartDlssObservation(session, process);
 
         int exitHandled = 0;
 
