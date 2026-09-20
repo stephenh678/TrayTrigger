@@ -104,6 +104,64 @@ public partial class App
         running?.Dispose();
     }
 
+    /// <summary>
+    /// <c>--test-dlss-writecheck &lt;exe&gt;</c>: proves the write interop works without changing
+    /// anything. It sets a value in the session, reads it back, then disposes the session
+    /// <b>without calling Save</b> - NVAPI stages writes in memory, so nothing reaches the driver's
+    /// database. This separates "the interop is wrong" from "the driver refused", which a failed
+    /// real apply cannot.
+    /// </summary>
+    private static void RunDlssWriteCheck(string? target)
+    {
+        var o = new StringBuilder();
+        o.AppendLine("=== DLSS WRITE CHECK (nothing is saved) ===");
+        o.AppendLine($"Elevated      : {SystemTweaksService.IsElevated}");
+
+        string? exePath = ResolveProbeTarget(target);
+        if (exePath == null) { Console.Write(o.Append("Pass an executable.\n")); return; }
+
+        string exeName = Path.GetFileName(exePath);
+        o.AppendLine($"Target        : {exeName}");
+
+        using var session = NvApi.Session.TryOpen(out string? error);
+        if (session == null)
+        {
+            Console.Write(o.AppendLine($"Session       : FAILED - {error}"));
+            return;
+        }
+
+        var profile = session.FindProfileForExecutable(exeName, out IntPtr handle, out string? findError);
+        if (profile == null)
+        {
+            o.AppendLine($"Profile       : none ({findError}) - cannot test a write without one.");
+            Console.Write(o);
+            return;
+        }
+        o.AppendLine($"Profile       : {profile.ProfileName}");
+
+        // The SR preset letter: a DLSS setting, so a value here is meaningful rather than random,
+        // and it is one the recipe writes anyway.
+        const uint settingId = 0x10E41DF3;
+        var before = session.GetSetting(handle, settingId, out _);
+        o.AppendLine($"Before        : {(before == null ? "absent" : $"0x{before.CurrentValue:X8} [{before.OriginLabel}]")}");
+
+        const uint probeValue = 0x0000000B;
+        bool set = session.SetSetting(handle, settingId, probeValue, out string? setError);
+        o.AppendLine($"SetSetting    : {(set ? "OK" : $"FAILED - {setError}")}");
+
+        if (set)
+        {
+            var after = session.GetSetting(handle, settingId, out _);
+            bool roundTripped = after != null && after.CurrentValue == probeValue;
+            o.AppendLine($"Read back     : {(after == null ? "absent" : $"0x{after.CurrentValue:X8}")} - {(roundTripped ? "round-tripped" : "DID NOT round-trip")}");
+        }
+
+        o.AppendLine();
+        o.AppendLine("Session disposed without Save: the driver database is untouched.");
+        o.AppendLine("Run --test-dlss afterwards to confirm the value is unchanged on disk.");
+        Console.Write(o);
+    }
+
     private static void PrintProfile(StringBuilder o, DlssProbeService.ProbeResult r)
     {
         o.AppendLine("-- Driver profile --");

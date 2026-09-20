@@ -1034,7 +1034,25 @@ So record, per setting:
 
 **Undo restores the captured previous value, and only when the current value still matches what
 TrayTrigger wrote.** If it does not match, something else changed it: leave it alone and say so.
-Deletion is correct only where the previous state was genuinely absent.
+
+**Correction, 2026-09-19, found while implementing this.** An earlier draft said deletion is
+correct "only where the previous state was genuinely absent". That is too narrow, and following it
+would leave the machine changed. Only a value a user or tool explicitly set on the game's own
+profile should be written back. The other three cases all need deletion:
+
+| Previous origin | Undo | Why |
+|---|---|---|
+| `UserSet` | Write the captured value back | It is a choice TrayTrigger replaced |
+| `Inherited` | **Delete** | The setting was never on this profile. Writing the inherited value onto it pins it there, so it stops following the Global profile - a different machine state that happens to read the same today |
+| `Predefined` | **Delete** | Writing NVIDIA's own number back converts it into a user-set value |
+| `Absent` | **Delete** | Nothing was there |
+
+The `Inherited` row is not hypothetical: it is the development machine, where four DLSS settings
+live on the Global profile. Under the old rule, undoing a game would silently detach it from them.
+
+Matching is also stricter than "same number". A TrayTrigger write shows up as a user-set value on
+the game's own profile, so undo requires the value **and** that origin. The same number arriving
+from the Global profile is somebody else's and is left alone.
 
 The action is therefore labelled **"Undo TrayTrigger changes"**, not "Restore default" - it puts
 back what was there, which is not always a default.
@@ -1303,14 +1321,13 @@ with no driver interaction at all.
 
 1. ~~Detection and read-only display.~~ **Done, 2026-09-19.** `DlssProbeService`, `NgxModelStore`,
    `NvApi`, `--test-dlss`, and the read-only card (`DlssCardViewModel`) on the Performance tab.
-2. NVAPI DRS interop behind `ISystemTweakBackend`, with the fake for tests. No UI.
-   **Read half done**; the write half is untouched, and reads currently bypass the backend
-   interface because there is nothing to fake yet. **Do the interface extraction as part of step 3,
-   not before it** - the ownership record is the first logic that genuinely needs a fake, and
-   retrofitting the seam afterwards means rewriting its tests.
-3. **The ownership record** - capture previous value and origin per setting, write, and undo only
-   when the current value still matches what was written. This is a prerequisite for the button,
-   not a refinement of it.
+2. ~~NVAPI DRS interop behind `ISystemTweakBackend`, with the fake for tests.~~ **Done, 2026-09-19**
+   as `IDrsBackend`/`IDrsSession` + `NvApiDrsBackend` + `FakeDrsBackend`. **Not** on
+   `ISystemTweakBackend`: that interface is the performance-profile surface (power plans, Defender,
+   HDR, timer resolution) and has no shape for a session lifetime. Same pattern, separate seam.
+3. ~~**The ownership record**~~ **Done, 2026-09-19** (`DlssSettingRecord` on `GameEntry`,
+   `DlssOverrideService.Apply`/`Undo`). Capture previous value and origin per setting, write, and
+   undo only while the driver still reports what TrayTrigger wrote.
 4. Apply and undo, wired to the button, with the layer 1 write-back check performed against a
    reloaded DRS session rather than the in-memory one.
 5. Re-apply in the pre-launch step, with the three-way conflict rule.
@@ -1556,3 +1573,38 @@ Two things the build turned up:
   misrepresented the tab from here on. `LoadAsync` now returns the same task on every call and the
   harness pumps the dispatcher until it completes. It also picks a game that ships DLSS, rather
   than whichever happens to sort first.
+
+## The ownership record, 2026-09-19
+
+`Models/DlssModels.cs`, `Services/IDrsBackend.cs`, `Services/DlssOverrideService.cs`, and
+`DlssSettings` on `GameEntry`. Step 3, and with it the write half of step 2.
+
+The rules are above, in Ownership; what implementing them added is the correction recorded there -
+only a `UserSet` value is written back, the other three origins are deleted - and one extra
+condition: undo requires the recorded value **and** that it still sits on the game's own profile as
+user-set. Both come from the same reasoning, that a value which merely reads the same is not the
+same state.
+
+Two further decisions worth keeping:
+
+- **A refused `Save` returns no records.** NVAPI stages writes in memory, so a failed save means
+  nothing happened. Returning the records anyway would leave a game claiming an override the driver
+  never received - the failure mode that is hardest to notice later. This is also the shape the
+  unelevated-write case will take, whenever it is tested.
+- **Skipped and failed settings keep their records.** They still describe values TrayTrigger wrote,
+  and dropping them would lose the only evidence of what it owns. Only settings actually restored
+  or deleted leave the record.
+
+### Verified: the write interop works, and staging is real
+
+`--test-dlss-writecheck` sets a DLSS setting inside a session, reads it back, and disposes the
+session **without calling Save**. On the development machine `0x10E41DF3` round-tripped as
+`0x0000000B` in memory, and a subsequent `--test-dlss` showed it still `0x00FFFFFF [Inherited]` on
+disk.
+
+That separates two failures a real apply would confuse: the interop being wrong, and the driver
+refusing. It also confirms NVAPI's staging model, which is what makes "a refused Save changes
+nothing" true rather than hoped for.
+
+**`NvAPI_DRS_SaveSettings` is still untested**, and so is elevation for writes. Everything up to
+the save is proven.

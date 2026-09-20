@@ -107,7 +107,8 @@ public partial class App
                           // The DLSS probe reads the driver and a process, never the library, so it
                           // must run before the view model exists - a game need not be imported to
                           // be probed.
-                          arg.Equals("--test-dlss", StringComparison.OrdinalIgnoreCase);
+                          arg.Equals("--test-dlss", StringComparison.OrdinalIgnoreCase) ||
+                          arg.Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase);
             bool requiresVm = !isScan && (
                               arg.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
@@ -171,6 +172,15 @@ public partial class App
                 _ = RunXboxDiagnosticAsync(launch, target);
                 return;
             }
+            // --test-dlss-writecheck <exe>: exercises the DRS write interop in memory and never
+            // saves, so it separates "the interop is wrong" from "the driver refused".
+            if (e.Args[i].Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase))
+            {
+                RunDlssWriteCheck(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
+                ExitApplication();
+                return;
+            }
+
             // --test-dlss [exe path | exe name | library title]: read-only DLSS report. The
             // executable is optional - without one it still prints the driver-side half.
             if (e.Args[i].Equals("--test-dlss", StringComparison.OrdinalIgnoreCase))

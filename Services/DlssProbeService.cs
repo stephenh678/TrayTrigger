@@ -25,17 +25,20 @@ public static class DlssProbeService
     /// </summary>
     public static readonly DlssSettingDefinition[] Settings =
     {
-        new(0x10E41E01, "DLSS - Enable DLL Override",           "Super Resolution", "Substitutes the driver's runtime for the game's"),
-        new(0x00634291, "DLSS - Forced Model Preset Profile",   "Super Resolution", "The gate: without it the preset letters may do nothing"),
-        new(0x10E41DF3, "DLSS - Forced Preset Letter",          "Super Resolution", "0x00FFFFFF = use NVIDIA's recommended preset"),
-        new(0x10E41E02, "DLSS-RR - Enable DLL Override",        "Ray Reconstruction", "Substitutes the driver's runtime for the game's"),
-        new(0x10E41DF7, "DLSS-RR - Forced Preset Letter",       "Ray Reconstruction", "0x00FFFFFF = use NVIDIA's recommended preset"),
-        new(0x10E41E03, "DLSS-FG - Enable DLL Override",        "Frame Generation", "Substitutes the driver's runtime for the game's"),
-        new(0x10E41DF1, "DLSS-FG - Forced Preset Letter",       "Frame Generation", "Sentinel is 0x00FFFFFE here, not 0x00FFFFFF")
+        new(0x10E41E01, "DLSS - Enable DLL Override",         "Super Resolution",   "SR", 1,          "Substitutes the driver's runtime for the game's"),
+        new(0x00634291, "DLSS - Forced Model Preset Profile", "Super Resolution",   "SR", 1,          "The gate: without it the preset letters may do nothing"),
+        new(0x10E41DF3, "DLSS - Forced Preset Letter",        "Super Resolution",   "SR", 0x00FFFFFF, "0x00FFFFFF = use NVIDIA's recommended preset"),
+        new(0x10E41E02, "DLSS-RR - Enable DLL Override",      "Ray Reconstruction", "RR", 1,          "Substitutes the driver's runtime for the game's"),
+        new(0x10E41DF7, "DLSS-RR - Forced Preset Letter",     "Ray Reconstruction", "RR", 0x00FFFFFF, "0x00FFFFFF = use NVIDIA's recommended preset"),
+        new(0x10E41E03, "DLSS-FG - Enable DLL Override",      "Frame Generation",   "FG", 1,          "Substitutes the driver's runtime for the game's"),
+        new(0x10E41DF1, "DLSS-FG - Forced Preset Letter",     "Frame Generation",   "FG", 0x00FFFFFE, "Sentinel is 0x00FFFFFE here, not 0x00FFFFFF")
     };
 
-    /// <summary>One DLSS driver setting: what it is and why the plan writes it.</summary>
-    public sealed record DlssSettingDefinition(uint Id, string Name, string Feature, string Purpose);
+    /// <summary>
+    /// One DLSS driver setting: what it is, the short feature code the ownership record stores,
+    /// the value "Use recommended" writes, and why the plan writes it.
+    /// </summary>
+    public sealed record DlssSettingDefinition(uint Id, string Name, string Feature, string FeatureCode, uint RecommendedValue, string Purpose);
 
     /// <summary>NVIDIA's NGX diagnostics key. Only read here; the overlay toggle would write it later.</summary>
     private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";

@@ -9,9 +9,11 @@ namespace TrayTrigger.Services;
 /// "Manage 3D settings" and the per-game profiles NVIDIA App and Profile Inspector write. The DLSS
 /// override settings live there; see docs/dlss-plan.md.
 ///
-/// <para>Deliberately read-only. Writing requires the ownership record described in the plan
-/// (capture previous value <i>and</i> origin, undo only when the current value still matches what
-/// was written), which does not exist yet. Nothing here calls NvAPI_DRS_SaveSettings.</para>
+/// <para>Reads are free of consequence; writes are not. Every write goes through
+/// <see cref="Session.SetSetting"/>/<see cref="Session.DeleteSetting"/> and reaches disk only on
+/// <see cref="Session.Save"/>, and callers are expected to have captured the previous value and
+/// its origin first - see <c>DlssOverrideService</c>, which is the only thing that should call
+/// them.</para>
 ///
 /// <para>NVAPI ships no import library: every entry point is reached through the single exported
 /// <c>nvapi_QueryInterface</c>, keyed by a published 32-bit function id. An id this driver does not
@@ -32,6 +34,11 @@ public static unsafe class NvApi
     private const uint IdDrsGetProfileInfo          = 0x61CD6FD6;
     private const uint IdDrsGetSetting              = 0x73BF8338;
     private const uint IdDrsEnumSettings            = 0xAE3039DA;
+    private const uint IdDrsSetSetting              = 0x577DD202;
+    private const uint IdDrsDeleteProfileSetting    = 0xE4A26362;
+    private const uint IdDrsSaveSettings            = 0xFCBC7E14;
+    private const uint IdDrsCreateProfile           = 0xCC176068;
+    private const uint IdDrsCreateApplication       = 0x4347A9DE;
 
     private const int UnicodeStringMax = 2048;
 
@@ -382,6 +389,93 @@ public static unsafe class NvApi
                     *(uint*)s.PredefinedValue));
             }
             return result;
+        }
+
+        // ---- Writes ------------------------------------------------------------------------
+        // Nothing below reaches disk until Save(). Callers must have captured the previous value
+        // and origin first; this type enforces nothing about that, DlssOverrideService does.
+
+        /// <summary>
+        /// Writes a DWORD setting onto a profile. The setting is created if the profile does not
+        /// have it. In-memory only until <see cref="Save"/>.
+        /// </summary>
+        public bool SetSetting(IntPtr profile, uint settingId, uint value, out string? error)
+        {
+            error = null;
+            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, NvDrsSetting*, int>)Lookup(IdDrsSetSetting);
+            if (fn == null) { error = "NvAPI_DRS_SetSetting not exposed."; return false; }
+
+            var s = new NvDrsSetting
+            {
+                Version = VersionOf<NvDrsSetting>(1),
+                SettingId = settingId,
+                SettingType = 0,       // DWORD
+                SettingLocation = 0    // this profile - the driver overwrites this on read anyway
+            };
+            *(uint*)s.CurrentValue = value;
+
+            int status = fn(_handle, profile, &s);
+            if (status != 0) { error = Describe(status); return false; }
+            return true;
+        }
+
+        /// <summary>
+        /// Removes a setting from a profile, so it falls back to whatever the lower layers say.
+        /// This is the correct undo only where the setting was genuinely absent before - writing an
+        /// explicit zero instead would invent a value the user never had.
+        /// </summary>
+        public bool DeleteSetting(IntPtr profile, uint settingId, out string? error)
+        {
+            error = null;
+            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, uint, int>)Lookup(IdDrsDeleteProfileSetting);
+            if (fn == null) { error = "NvAPI_DRS_DeleteProfileSetting not exposed."; return false; }
+
+            int status = fn(_handle, profile, settingId);
+            if (status != 0) { error = Describe(status); return false; }
+            return true;
+        }
+
+        /// <summary>
+        /// Commits the session to the driver's database. This is the only call here that touches
+        /// disk, and the only one expected to need elevation.
+        /// </summary>
+        public bool Save(out string? error)
+        {
+            error = null;
+            var fn = (delegate* unmanaged[Cdecl]<IntPtr, int>)Lookup(IdDrsSaveSettings);
+            if (fn == null) { error = "NvAPI_DRS_SaveSettings not exposed."; return false; }
+
+            int status = fn(_handle);
+            if (status != 0) { error = Describe(status); return false; }
+            return true;
+        }
+
+        /// <summary>
+        /// Creates a profile holding one executable, for a game NVIDIA has no entry for. Returns
+        /// IntPtr.Zero on failure - a name collision with an existing profile is the usual cause.
+        /// </summary>
+        public IntPtr CreateProfileForExecutable(string profileName, string exeFileName, out string? error)
+        {
+            error = null;
+            var createProfile = (delegate* unmanaged[Cdecl]<IntPtr, NvDrsProfile*, IntPtr*, int>)Lookup(IdDrsCreateProfile);
+            var createApp = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, NvDrsApplicationV4*, int>)Lookup(IdDrsCreateApplication);
+            if (createProfile == null || createApp == null) { error = "DRS profile creation not exposed."; return IntPtr.Zero; }
+
+            var profile = new NvDrsProfile { Version = VersionOf<NvDrsProfile>(1) };
+            WriteFixed(profile.ProfileName, profileName);
+
+            IntPtr handle;
+            int status = createProfile(_handle, &profile, &handle);
+            if (status != 0) { error = $"NvAPI_DRS_CreateProfile: {Describe(status)}"; return IntPtr.Zero; }
+
+            var app = new NvDrsApplicationV4 { Version = VersionOf<NvDrsApplicationV4>(4), IsPredefined = 0 };
+            WriteFixed(app.AppName, exeFileName);
+            WriteFixed(app.UserFriendlyName, exeFileName);
+
+            status = createApp(_handle, handle, &app);
+            if (status != 0) { error = $"NvAPI_DRS_CreateApplication: {Describe(status)}"; return IntPtr.Zero; }
+
+            return handle;
         }
 
         public void Dispose()
