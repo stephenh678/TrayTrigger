@@ -21,8 +21,9 @@ NVIDIA DLSS Override                                          [ Restore ]
       Reconstruction, and Frame Generation.
 
   [ ] Show the DLSS Indicator while this game runs
-      Draws the official on-screen overlay showing active DLSS version,
-      preset letter, and render resolution (requires administrator).
+      For testing only. Draws the official on-screen overlay showing
+      active DLSS version, preset letter, and render resolution
+      (requires administrator).
 ```
 
 **The wording rule:** keep the terms NVIDIA itself prints - *DLSS Override*, *DLSS Indicator*,

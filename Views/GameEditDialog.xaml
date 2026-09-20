@@ -472,9 +472,12 @@
                                       AutomationProperties.Name="Show the DLSS Indicator while this game runs"
                                       IsChecked="{Binding Dlss.ShowOverlay}"
                                       Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
-                            <TextBlock Text="Draws the official on-screen overlay showing active DLSS version, preset letter, and render resolution (requires administrator)."
-                                       FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
-                                       Foreground="{StaticResource BrushTextSecondary}"/>
+                            <!-- "For testing only" is bold because the admin prompt alone does not
+                                 say this is a diagnostic rather than something to leave switched on. -->
+                            <TextBlock FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextSecondary}">
+                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the official on-screen overlay showing active DLSS version, preset letter, and render resolution (requires administrator)."/>
+                            </TextBlock>
 
                             <!-- Only when true: a conflict, or somebody else&apos;s override. -->
                             <TextBlock Text="{Binding Dlss.Notice}" FontSize="11" Margin="0,10,0,0"
