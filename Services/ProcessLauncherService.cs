@@ -538,6 +538,24 @@ public partial class ProcessLauncherService
         try { return $"{process.ProcessName} (PID {process.Id})"; } catch { return "the game process"; }
     }
 
+    /// <summary>
+    /// The running process of the executable the override was written for, or null. The process a
+    /// session tracks can be a launcher - DOOM Eternal's is idTechLauncher - and a launcher never
+    /// loads DLSS. The caller disposes what this returns.
+    /// </summary>
+    private static Process? FindRendererProcess(string rendererPath)
+    {
+        if (!DlssProbeService.IsFilePath(rendererPath)) return null;
+
+        Process? found = null;
+        foreach (var candidate in Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(rendererPath)))
+        {
+            if (found == null) found = candidate;
+            else candidate.Dispose();
+        }
+        return found;
+    }
+
     private void StartDlssObservation(ActiveGameSession session, Process process)
     {
         var game = session.Game;
@@ -558,12 +576,18 @@ public partial class ProcessLauncherService
         self = new Poller(DlssObserveInterval, () =>
         {
             ticks++;
+
+            // The renderer by name first: the tracked process may be a launcher, and may be gone
+            // by now with the game still running.
+            using var rendererProcess = FindRendererProcess(renderer);
+            var target = rendererProcess ?? process;
+
             bool exited;
-            try { exited = process.HasExited; } catch { exited = true; }
+            try { exited = target.HasExited; } catch { exited = true; }
 
             string? note = null;
             var lastRun = exited ? null
-                : DlssProbeService.ReadLastRun(DlssProbeService.ScanLoadedModules(process, out note), gameVersion);
+                : DlssProbeService.ReadLastRun(DlssProbeService.ScanLoadedModules(target, out note), gameVersion);
 
             // Keep waiting only while there is still a chance of seeing something.
             if (lastRun == null && !exited && ticks < DlssObserveMaxTicks) return true;
@@ -579,7 +603,7 @@ public partial class ProcessLauncherService
             {
                 // Once per launch, and only for a game with the override on: it is the one thing
                 // that says why the card has no Last run line.
-                LoggingService.Info("Dlss", $"'{game.Name}': no DLSS runtime seen in {SafeProcessName(process)} after {ticks} look(s){(exited ? " - the process had exited" : "")}. {note}");
+                LoggingService.Info("Dlss", $"'{game.Name}': no DLSS runtime seen in {SafeProcessName(target)} after {ticks} look(s){(exited ? " - the process had exited" : "")}. {note}");
             }
 
             // Only this poller's own registration: a stub handoff starts a second one under the
