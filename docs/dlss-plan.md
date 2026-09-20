@@ -279,6 +279,91 @@ and the overlay independently reads `DLSS RR2`. The header semantics are real dr
 - Whether NGX logs can be attributed to a session.
 - Whether `NvAPI_DRS_SaveSettings` needs elevation.
 
+## The in-app probe, 2026-09-19 - build order step 1, and what it settled
+
+The hand-run PowerShell spike is now replaced by code in the product, so the numbers a user sees
+and the numbers a spike produces come from one implementation:
+
+| File | Role |
+|---|---|
+| `Services/NvApi.cs` | Read-only NVAPI DRS interop. No `SaveSettings`; there is no write path to reach. |
+| `Services/NgxModelStore.cs` | Reads the driver's model store and `nvngx_config.txt`. |
+| `Services/DlssProbeService.cs` | Combines driver, profile, game folder, loaded modules and registry into one result. |
+| `App.DlssDiagnostics.cs` | `--test-dlss [exe]`, DEBUG only, prints the lot. |
+
+Read-only was a deliberate stopping point: the plan makes the ownership record a prerequisite for
+writing (step 3), and shipping a write path before it is the one sequencing mistake the build order
+exists to prevent.
+
+### Settled: the override's target version is knowable before launch
+
+`C:\ProgramData\NVIDIA\NGX\models\nvngx_config.txt` is an INI file mapping NGX app ids to runtime
+versions. The `sl_*_override_0` sections all key on the pseudo-app `app_E658700`, and so do the
+three feature sections:
+
+```
+[dlss]  app_E658700 = 310.9.0
+[dlssg] app_E658700 = 310.9.0
+[dlssd] app_E658700 = 310.9.0
+```
+
+That is the same id as the substituted module observed in run 5 (`160_E658700.bin`), which is what
+ties the file to the override path rather than to some other mapping.
+
+**Consequence for the UI.** An earlier section said TrayTrigger can only report what loaded, never
+promise what will. For the *version* that is now too weak: the driver states its answer in a text
+file before anything launches. The UI may say "this would load 310.9.0" as a read fact. It still
+may not promise a **preset**, which remains observable only at runtime. Verification does not
+become optional - it moves from establishing the version to confirming the driver did not decline.
+
+Version folder names decode as `(major << 16) | (minor << 8) | patch`; 20318464 is 310.9.0, 65644
+is 1.0.108. Confirmed against the versions `nvngx_config.txt` spells out for the same entries, and
+unit-tested.
+
+### Settled: "is this game in NVIDIA's database" is one call
+
+`NvAPI_DRS_FindApplicationByName` returns `NVAPI_EXECUTABLE_NOT_FOUND` (-166) for an executable no
+profile covers. So the unlisted-game case needs no heuristic and no allowlist of our own - the
+driver answers directly. Observed against a made-up executable name on the development machine.
+
+Creating the profile that this case needs is still **untested**: `NvAPI_DRS_CreateProfile` +
+`CreateApplication` are writes, and belong after step 3.
+
+### Settled: origin comes from NVAPI, it does not have to be inferred
+
+`NVDRS_SETTING.settingLocation` reports which layer a value came from - application profile, Global
+profile, base profile, or driver default - and `isCurrentPredefined` separates NVIDIA's own value
+from one a user or tool wrote. The plan's four-state origin model maps onto these two fields
+exactly, so the ownership record can record a fact rather than a guess.
+
+Cyberpunk 2077, unmodified, on the development machine:
+
+```
+0x10E41E01  DLSS - Enable DLL Override          0x00000001  [Inherited (Global profile)]
+0x00634291  DLSS - Forced Model Preset Profile  Absent      (NVAPI_SETTING_NOT_FOUND)
+0x10E41DF3  DLSS - Forced Preset Letter         0x00FFFFFF  [Inherited (Global profile)]
+0x10E41E03  DLSS-FG - Enable DLL Override       Absent      (NVAPI_SETTING_NOT_FOUND)
+```
+
+A game nobody has touched already inherits half the recipe. This is the Global-profile confound
+from the spike, now **detected automatically for any user** rather than found by accident three
+days later - and it is why the probe always reads the Global layer, not just the per-game one.
+
+### Structure layouts are self-checking
+
+NVAPI versions each struct as `sizeof(struct) | (version << 16)`. Rather than hard-code NVIDIA's
+constants, `NvApi.cs` computes them with `sizeof`, so a layout mistake cannot hand the driver a
+plausible-looking version number. The returned setting names and values match the user's exported
+`.nip` profile field for field, which is the evidence the layouts are right.
+
+### Not settled by the probe
+
+- **Elevation.** The probe was run from an elevated shell, so it shows only that reads work *when*
+  elevated. Reads are believed not to need it - DRS load is a read of ProgramData - but this is
+  **untested**. Settle it by launching the built exe from Explorer as the normal user.
+- **Writes.** Nothing above exercises `SaveSettings`, `CreateProfile` or `CreateApplication`.
+- Everything under "Still not established" above stands.
+
 ## Context for a reader outside the project
 
 **TrayTrigger** is a Windows tray-first game launcher and launch-control tool. It scans Steam, GOG,
@@ -435,7 +520,11 @@ NVIDIA's own words.
 | **Driver-path overrides carry no realistic anti-cheat risk** | **Inferred** | No files change, nothing is injected, the loaded module is NVIDIA-signed, it is NVIDIA's own shipped feature on protected titles, and no vendor publishes a warning. Independently agreed by a second reviewer citing zero documented bans - but that is still absence of evidence, not a test. |
 | **The 3.1 floor is about the game's API integration, not the model** | **Inferred** | Fits the observed cutoff; NGX's evaluated-feature exports hold C-ABI compatibility across 2.x/3.x, which would allow a newer runtime to serve an older integration. NVIDIA does not document the reason. |
 | **Writing settings pre-launch defeats NVIDIA App reverting them** | **Inferred** | Reviewer reports NVIDIA App reconciles on its own startup, driver update or library scan, and does not hook process creation. Plausible and matches observed behaviour; untested by either party. |
-| **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated |
+| **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated. DRS *reads* were verified working 2026-09-19, but only from an elevated shell, so they say nothing either way. |
+| **DRS can be read from inside TrayTrigger** | **Verified** | 2026-09-19 probe: profile, per-setting value, origin layer and the Global profile's contents all read back, matching the user's exported `.nip` field for field |
+| **An executable absent from NVIDIA's database is detectable** | **Verified** | `NvAPI_DRS_FindApplicationByName` returns `NVAPI_EXECUTABLE_NOT_FOUND` (-166) |
+| **The version an override will load is readable before launch** | **Verified** | `nvngx_config.txt` maps the override pseudo-app `app_E658700` to an explicit version per feature |
+| **A profile can be created for an unlisted executable** | **Untested** | `CreateProfile`/`CreateApplication` are writes and wait on the ownership record |
 | **Combining DLL override + preset works on a DLSS 2.x game** | **Untested** | Still the highest-value unknown. The 2026-09-19 spike used a 310.7.128 game, so it says nothing about DLSS 2.x. |
 | `0x00634291` = 1 reproduces NVIDIA App's per-GPU/per-mode selection | **Untested** | An earlier draft claimed this was resolved. The XML label "Recommended" is not proof of equivalence. |
 | FG's `0x00FFFFFE` means "latest" rather than "default" | **Disputed** | Profile Inspector labels it "Use recommended preset". One reviewer says NVIDIA defines it as Default and `0x00FFFFFF` as Latest. **Neither sentinel exists in NVIDIA's SDK headers**, whose enum is 0-15. Unresolved until the spike. |
@@ -477,10 +566,16 @@ This constrains the UI and must not be papered over.
 |---|---|---|
 | DLSS version per feature | Yes | `FileVersionInfo` on the game's `nvngx_dlss*.dll` |
 | Whether an override is set, and its value | Yes | `NvAPI_DRS_GetSetting`, which also reports whether the value is user-set or NVIDIA's predefined default |
+| **Which layer a value comes from** | **Yes** | `NVDRS_SETTING.settingLocation`, verified 2026-09-19 - see the probe section |
+| **Whether NVIDIA has any profile for this executable** | **Yes** | `NvAPI_DRS_FindApplicationByName` returns `NVAPI_EXECUTABLE_NOT_FOUND` (-166) |
+| **The version an override would load, before launching** | **Yes** | `nvngx_config.txt` in the driver's model store - see the probe section |
 | **The preset a game actually uses when no override is set** | **No** | Chosen by the game's runtime per quality mode. Nothing on disk records it. |
 
 So an untouched game shows its version and the word `Game default`. **Never display a preset letter
 we cannot verify.** Inventing one would be worse than saying less.
+
+The third and fifth rows are new, and the fifth changes what the UI may promise: the runtime an
+override resolves to is a **fact readable before launch**, not a hope. See below.
 
 ## Driver settings written - the "force latest" recipe
 
@@ -1186,9 +1281,11 @@ with no driver interaction at all.
 
 ## Build order
 
-1. Detection and read-only display. The card shows versions and `Game default`, with no action
-   button. Verifiable on its own and useful for deciding whether the rest is worth it.
+1. ~~Detection and read-only display.~~ **Service layer done, 2026-09-19** (`DlssProbeService`,
+   `NgxModelStore`, `NvApi`, `--test-dlss`). The card itself is not built yet.
 2. NVAPI DRS interop behind `ISystemTweakBackend`, with the fake for tests. No UI.
+   **Read half done**; the write half is untouched, and reads currently bypass the backend
+   interface because there is nothing to fake yet.
 3. **The ownership record** - capture previous value and origin per setting, write, and undo only
    when the current value still matches what was written. This is a prerequisite for the button,
    not a refinement of it.

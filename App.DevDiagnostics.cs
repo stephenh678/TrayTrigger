@@ -103,7 +103,11 @@ public partial class App
             bool isScan = arg.Equals("--test-scan", StringComparison.OrdinalIgnoreCase) ||
                           arg.Equals("-test-scan", StringComparison.OrdinalIgnoreCase) ||
                           arg.Equals("--test-identify", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("-test-identify", StringComparison.OrdinalIgnoreCase);
+                          arg.Equals("-test-identify", StringComparison.OrdinalIgnoreCase) ||
+                          // The DLSS probe reads the driver and a process, never the library, so it
+                          // must run before the view model exists - a game need not be imported to
+                          // be probed.
+                          arg.Equals("--test-dlss", StringComparison.OrdinalIgnoreCase);
             bool requiresVm = !isScan && (
                               arg.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
@@ -167,6 +171,16 @@ public partial class App
                 _ = RunXboxDiagnosticAsync(launch, target);
                 return;
             }
+            // --test-dlss [exe path | exe name | library title]: read-only DLSS report. The
+            // executable is optional - without one it still prints the driver-side half.
+            if (e.Args[i].Equals("--test-dlss", StringComparison.OrdinalIgnoreCase))
+            {
+                string? target = i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null;
+                RunDlssDiagnostic(target);
+                ExitApplication();
+                return;
+            }
+
             if (e.Args[i].Equals("--test-scan", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {
                 string targetFolder = e.Args[i + 1];
