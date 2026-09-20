@@ -235,7 +235,7 @@ public sealed class DlssCardViewModel : ViewModelBase
                 // The save reported success but the values are not there. Saying it worked would
                 // be the most misleading thing the card could do.
                 ? "NVIDIA accepted the change but did not report it back, so it may not have taken effect."
-                : "On. It takes effect next time you play.";
+                : "DLSS Override is on. It takes effect the next time you start the game.";
 
             await ReloadAsync().ConfigureAwait(true);
         }
@@ -279,8 +279,8 @@ public sealed class DlssCardViewModel : ViewModelBase
             Status = !result.Succeeded
                 ? result.Error ?? "NVIDIA would not undo the change."
                 : result.HadForeignChanges
-                    ? "Put back what TrayTrigger changed. Some were left alone because something else has changed them since."
-                    : "Put back the way it was.";
+                    ? "DLSS Override is off. Settings another tool has changed since were left as they are."
+                    : "DLSS Override is off. This game's NVIDIA settings are back to what they were.";
 
             await ReloadAsync().ConfigureAwait(true);
         }
