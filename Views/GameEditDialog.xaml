@@ -434,56 +434,69 @@
                             <Grid Margin="0,0,0,8">
                                 <TextBlock Text="NVIDIA DLSS Override" FontSize="12.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                <!-- Always present, disabled by the command when there is nothing
-                                     of TrayTrigger's to undo: a button that appears only after you
-                                     commit hides the way back at the moment you want to see it,
-                                     and reflows the card as you tick. -->
+                                <!-- Always present on the full card, disabled by the command when
+                                     there is nothing of TrayTrigger's to undo: a button that appears
+                                     only after you commit hides the way back at the moment you want
+                                     to see it, and reflows the card as you tick. The full card is
+                                     shown whenever there is something to undo. -->
                                 <Button Content="Restore" HorizontalAlignment="Right"
                                         AutomationProperties.Name="Restore the DLSS settings TrayTrigger changed"
                                         Style="{StaticResource ModernOutlineButton}"
+                                        Visibility="{Binding Dlss.ShowFullCard, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding Dlss.RestoreCommand}"/>
                             </Grid>
 
-                            <TextBlock FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,10"
+                            <!-- The other state, and the only other one: a game that ships no DLSS.
+                                 One quiet line. A greyed-out switch, a description and a disabled
+                                 Restore for something that cannot apply read as a fault, and most
+                                 games ship no DLSS. -->
+                            <TextBlock Text="{Binding Dlss.NotAvailableText}"
+                                       FontSize="11.5" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"
-                                       Text="Runs this game on the DLSS files installed with your GeForce driver, instead of the older ones inside the game. Nothing in the game folder changes."/>
+                                       Visibility="{Binding Dlss.ShowNotAvailable, Converter={StaticResource BoolToVis}}"/>
 
-                            <!-- The version pair rides the switch's own row, so before and after
-                                 are read together without a sentence to join them. -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <!-- NVIDIA App's own wording for this toggle: anyone who has seen it
-                                     there recognises it, and anyone else has a term to search. -->
-                                <CheckBox Grid.Column="0" Content="Enable DLSS Override for this game"
-                                          AutomationProperties.Name="Enable DLSS Override for this game"
-                                          IsChecked="{Binding Dlss.OverrideEnabled}"
-                                          IsEnabled="{Binding Dlss.CanEnable}"
-                                          Style="{StaticResource ModernCheckBox}"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"
-                                           FontSize="11.5" FontWeight="SemiBold" Margin="12,0,0,0"
-                                           VerticalAlignment="Center"
-                                           Foreground="{StaticResource BrushTextPrimary}"/>
-                            </Grid>
-                            <TextBlock Text="Applies to game-supported DLSS features: Super Resolution, Ray Reconstruction, and Frame Generation."
-                                       FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
-                                       Foreground="{StaticResource BrushTextSecondary}"/>
+                            <StackPanel Visibility="{Binding Dlss.ShowFullCard, Converter={StaticResource BoolToVis}}">
+                                <TextBlock FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Foreground="{StaticResource BrushTextSecondary}"
+                                           Text="Runs this game on the DLSS files installed with your GeForce driver, instead of the older ones inside the game. Nothing in the game folder changes."/>
 
-                            <!-- What actually loaded last time, on a line of its own. Says so until the
-                                 game has been played, which is the only time it can be known; left
-                                 out for a game with no DLSS, where there is nothing to load. -->
-                            <TextBlock Text="{Binding Dlss.LastRunLine}"
-                                       FontSize="11" Margin="24,8,0,0" TextWrapping="Wrap"
-                                       Foreground="{StaticResource BrushTextSecondary}"
-                                       Visibility="{Binding Dlss.CanEnable, Converter={StaticResource BoolToVis}}"/>
+                                <!-- The version pair rides the switch's own row, so before and after
+                                     are read together without a sentence to join them. -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- NVIDIA App's own wording for this toggle: anyone who has seen it
+                                         there recognises it, and anyone else has a term to search. -->
+                                    <CheckBox Grid.Column="0" Content="Enable DLSS Override for this game"
+                                              AutomationProperties.Name="Enable DLSS Override for this game"
+                                              IsChecked="{Binding Dlss.OverrideEnabled}"
+                                              IsEnabled="{Binding Dlss.CanEnable}"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"
+                                               FontSize="11.5" FontWeight="SemiBold" Margin="12,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource BrushTextPrimary}"/>
+                                </Grid>
+                                <TextBlock Text="Applies to game-supported DLSS features: Super Resolution, Ray Reconstruction, and Frame Generation."
+                                           FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
+                                           Foreground="{StaticResource BrushTextSecondary}"/>
 
-                            <!-- Only when a change did not work. When it works, the switch says so. -->
-                            <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,10,0,0"
-                                       AutomationProperties.LiveSetting="Polite"
-                                       Foreground="{StaticResource BrushWarning}" TextWrapping="Wrap"
-                                       Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}}"/>
+                                <!-- What actually loaded last time, on a line of its own. Says so until the
+                                     game has been played, which is the only time it can be known; left
+                                     out for a game with no DLSS, where there is nothing to load. -->
+                                <TextBlock Text="{Binding Dlss.LastRunLine}"
+                                           FontSize="11" Margin="24,8,0,0" TextWrapping="Wrap"
+                                           Foreground="{StaticResource BrushTextSecondary}"
+                                           Visibility="{Binding Dlss.CanEnable, Converter={StaticResource BoolToVis}}"/>
+
+                                <!-- Only when a change did not work. When it works, the switch says so. -->
+                                <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,10,0,0"
+                                           AutomationProperties.LiveSetting="Polite"
+                                           Foreground="{StaticResource BrushWarning}" TextWrapping="Wrap"
+                                           Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
 
                             <Button AutomationProperties.Name="Learn more about NVIDIA DLSS Override" Style="{StaticResource HelpLinkButton}"
                                     Margin="0,8,0,0"

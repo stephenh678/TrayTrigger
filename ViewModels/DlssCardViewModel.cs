@@ -92,10 +92,31 @@ public sealed class DlssCardViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Shown on any machine with an NVIDIA driver. A game that ships no DLSS keeps the card, greyed
-    /// out and saying why, so its absence is never mistaken for a fault.
+    /// Shown on any machine with an NVIDIA driver. A game that ships no DLSS keeps the card, as one
+    /// line saying so, so its absence is never mistaken for a fault.
     /// </summary>
     public bool IsVisible => _hasLoaded && _content.HasDriver && IsOnTab;
+
+    /// <summary>
+    /// The card has two states and no more. The whole card, for a game that ships DLSS - and for
+    /// one TrayTrigger still holds an override for, whatever the game ships now, so Restore can
+    /// always be reached. Otherwise <see cref="NotAvailableLine"/> and nothing else: a greyed-out
+    /// switch, a description and a disabled Restore for a feature that cannot apply read as
+    /// something broken, and most games ship no DLSS.
+    /// </summary>
+    public bool ShowFullCard => _content.HasDlss || _records.Count > 0;
+
+    /// <summary>The one-line state. See <see cref="ShowFullCard"/>.</summary>
+    public bool ShowNotAvailable => !ShowFullCard;
+
+    /// <summary>
+    /// Not "No DLSS files found": that describes a search that failed, and invites the reader to
+    /// go and fix it. "Include", not "support": what is known is what is in the game's folder.
+    /// </summary>
+    public const string NotAvailableLine = "Not available. This game doesn't include DLSS.";
+
+    /// <summary><see cref="NotAvailableLine"/>, where the XAML can bind to it.</summary>
+    public string NotAvailableText => NotAvailableLine;
 
     /// <summary>False when the game ships no DLSS: there is nothing for an override to replace.</summary>
     public bool CanEnable => _content.HasDlss;
@@ -111,8 +132,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// to join them.
     /// </summary>
     public string VersionLine =>
-        _hasLoaded && _content.HasDriver && !_content.HasDlss ? "No DLSS files found in this game"
-        : _content.GameVersion == null ? string.Empty
+        _content.GameVersion == null ? string.Empty
         : _content.DriverVersion == null ? _content.GameVersion
         : _content.DriverIsNewer
             ? $"{_content.GameVersion} → {_content.DriverVersion}"
@@ -332,6 +352,8 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsVisible));
         OnPropertyChanged(nameof(CanEnable));
+        OnPropertyChanged(nameof(ShowFullCard));
+        OnPropertyChanged(nameof(ShowNotAvailable));
         OnPropertyChanged(nameof(VersionLine));
         OnPropertyChanged(nameof(OverrideEnabled));
         OnPropertyChanged(nameof(CanRestore));

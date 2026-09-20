@@ -43,7 +43,7 @@ NVIDIA DLSS Override                                          [ Restore ]
 - **Last run** is the reading: what the game actually loaded the last time it ran with the override
   on. On a line of its own, and "nothing recorded yet" until the game has been played - always there, so a
   missing line is never mistaken for a fault.
-- A game that ships no DLSS DLL keeps the card, with the switch greyed out and "No DLSS files found in this game" where the versions would be, so a missing card is never mistaken for a fault. On a PC with no NVIDIA driver the card is hidden.
+- A game that ships no DLSS DLL keeps the card as one line - "Not available. This game doesn't include DLSS." - with no switch, description or Restore, so a missing card is never mistaken for a fault and a dead one is never mistaken for a broken one. (It first said "No DLSS files found in this game" beside a greyed-out switch, which read as a search that had failed.) The whole card stays while TrayTrigger holds an override for the game, whatever it ships, so Restore can be reached. On a PC with no NVIDIA driver the card is hidden.
 
 Two things are not per game, and live on the **NVIDIA DLSS** card in Settings > Launch &
 Performance (hidden on a PC with no NVIDIA driver):
