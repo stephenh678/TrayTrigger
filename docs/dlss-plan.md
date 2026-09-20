@@ -44,13 +44,18 @@ NVIDIA DLSS Override                                          [ Restore ]
   on. Absent until the game has been played.
 - A game that ships no DLSS DLL keeps the card, with the switch greyed out and "No DLSS files found in this game" where the versions would be, so a missing card is never mistaken for a fault. On a PC with no NVIDIA driver the card is hidden.
 
-Two things live on the **System** page, not on the card:
+Two things are not per game, and live on the **NVIDIA DLSS** card in Settings > Launch &
+Performance (hidden on a PC with no NVIDIA driver):
 
-- **NVIDIA DLSS Override** - an informational row: how many games have it on, and **Restore All**.
-- **NVIDIA DLSS Indicator** - an ordinary opt-in toggle for NVIDIA's on-screen overlay.
+- **DLSS Override: On for N games**, with **Restore All**.
+- **Show the NVIDIA DLSS Indicator in games** - NVIDIA's on-screen overlay, behind a UAC prompt.
 
-Help: `Help/tweaks/dlss_override.md` (linked from the card and the System row) and
-`Help/tweaks/dlss_indicator.md`.
+They were first rows on the System page, among the Performance Tweaks. Neither is a tweak - one
+only holds a button, the other is a debug overlay - and an informational row's ON badge read as a
+system-wide switch for the override.
+
+Help: `Help/dlss/override.md` (linked from both cards) and `Help/dlss/indicator.md`, in a Help
+section of their own.
 
 **The wording rule:** keep the terms NVIDIA itself prints - *DLSS Override*, *DLSS Indicator*,
 *DLSS Preset*, the three feature names, and *GeForce driver* - because they are what a user
@@ -115,7 +120,8 @@ The card does not read the Global profile. `--test-dlss` does.
 | `Services/DlssProbeService.cs` | Read-only. What the card is built from (shipped versions, driver-store versions, whether a driver is there), the rendering executable, the module scan, and `ReadLastRun`. |
 | `Services/DlssOverrideService.cs` | Apply, undo, the pre-launch re-apply, `RestoreAll`. The ownership rules live here. |
 | `ViewModels/DlssCardViewModel.cs` | The card. `Project()` is pure, so the display rules are testable without a driver. |
-| `Services/SystemTweaksService.cs` | The two System-page rows: `dlss_override` (informational, Restore All) and `dlss_indicator`. |
+| `ViewModels/DlssSettingsViewModel.cs` | The Settings card: the game count, Restore All, the Indicator switch. |
+| `Services/SystemTweaksService.cs` | `SetDlssIndicator` / `IsDlssIndicatorOn` - here for the elevated HKLM write and the prior-value capture, not as a tweak row. |
 | `App.DlssDiagnostics.cs` | `--test-dlss`, DEBUG only. Read-only report, for when someone says DLSS is not doing what they expect. It does its own reading, so none of it is in a release build. |
 
 The fake session is a private copy of the database that only `Save` writes back, as NVAPI behaves,
@@ -225,9 +231,10 @@ Matching rules, each easy to get wrong:
   `310,1,0,0`.
 
 **The DLSS Indicator.** `ShowDlssIndicator` = `0x400` under `HKLM\...\NGXCore`. The only thing that
-shows the active **preset**. It is one machine-wide value, so it is one machine-wide toggle on the
-System page, opt-in, using the tweak framework's own record-and-restore; absent before means
-deleted on restore, not set to 0.
+shows the active **preset**. It is one machine-wide value, so it is one machine-wide switch, in
+Settings, opt-in, using the tweak framework's own record-and-restore; absent before means deleted
+when unticked, not set to 0. It is not a tweak row, so the preset and Restore Previous Settings
+never touch it.
 
 ## Lifecycle
 

@@ -171,7 +171,7 @@ Games ship with whatever DLSS version was current when they were built, and ofte
 - **Says what you'll get, then what you got**: the card shows the version inside the game and the one the driver would use (310.1.0 → 310.9.0), and after you've played, the version the game actually loaded and where it came from.
 - **Easy to take back out**: untick it, or **Restore**, and that game's NVIDIA settings return to exactly what they were, leaving alone anything another tool has changed since. **Restore All** on the System page does every game at once. Removing a game puts its override back, and so does uninstalling TrayTrigger.
 - **No administrator rights needed.** The card appears for games that ship DLSS, Steam and other launcher games included, on a PC with an NVIDIA driver.
-- **NVIDIA DLSS Indicator**: an opt-in toggle on the System page turns on NVIDIA's own on-screen overlay (DLSS version, preset letter, render resolution) for checking that an override took.
+- **NVIDIA DLSS Indicator**: an opt-in switch in Settings turns on NVIDIA's own on-screen overlay (DLSS version, preset letter, render resolution) for checking that an override took.
 
 ### Pre-Launch and Post-Exit Scripts
 
@@ -217,7 +217,7 @@ Windows set up for games, and an eye on the hardware running them.
 
 ### Performance Tweaks
 
-System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks and the NVIDIA DLSS Indicator, plus status readouts for Core Isolation and DLSS Override, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
+System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
 <!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Restore Previous Settings) -->
 

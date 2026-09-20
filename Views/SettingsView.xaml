@@ -1024,7 +1024,57 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 4.1 Preset & Reset Options -->
+                    <!-- 4.1 NVIDIA DLSS: the two things about DLSS that are not per game. Hidden on a
+                         PC with no NVIDIA driver, as the Edit Game card is. -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10"
+                            Visibility="{Binding Dlss.IsAvailable, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                        <StackPanel>
+                            <TextBlock Text="NVIDIA DLSS" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="DLSS Override runs a game on the DLSS files installed with your GeForce driver instead of the older ones inside the game. It is switched on per game, in Edit Game."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}">
+                                        <Run Text="DLSS Override:"/>
+                                        <Run Text="{Binding Dlss.OverrideCountText, Mode=OneWay}" FontWeight="SemiBold"/>
+                                    </TextBlock>
+                                    <TextBlock Text="Restore All turns it off for every game and puts NVIDIA's settings back the way they were. The setting lives in NVIDIA's driver, not in TrayTrigger, so do this before uninstalling."
+                                               Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,3,12,2" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Restore All" VerticalAlignment="Center"
+                                        AutomationProperties.Name="Restore the DLSS settings of every game"
+                                        Style="{StaticResource ModernOutlineButton}"
+                                        Command="{Binding Dlss.RestoreAllCommand}"/>
+                            </Grid>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="About DLSS Override" Margin="0,0,0,10"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="dlss/override"/>
+
+                            <CheckBox Content="Show the NVIDIA DLSS Indicator in games (asks for administrator permission)"
+                                      IsChecked="{Binding Dlss.IndicatorOn}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="NVIDIA's own on-screen overlay: the DLSS version in use, the preset letter and the render resolution. For checking that an override is in effect, not for leaving on - it draws over every game that uses DLSS until you untick it."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,2" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="About the DLSS Indicator" Margin="24,0,0,2"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="dlss/indicator"/>
+
+                            <!-- Only when a change did not work. -->
+                            <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,8,0,0"
+                                       AutomationProperties.LiveSetting="Polite"
+                                       Foreground="{StaticResource BrushWarning}" TextWrapping="Wrap"
+                                       Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 4.2 Preset & Reset Options -->
                     <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
                             BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">

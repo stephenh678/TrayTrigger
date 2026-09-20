@@ -73,6 +73,7 @@ public static class HelpContentService
     {
         ("tweaks", "Performance Tweaks"),
         ("profiles", "Performance Profiles"),
+        ("dlss", "NVIDIA DLSS"),
         ("scanner", "Game Scanner"),
         ("traymenu", "Tray Menu"),
         ("tools", "Tools"),

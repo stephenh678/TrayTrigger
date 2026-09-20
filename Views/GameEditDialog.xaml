@@ -486,7 +486,7 @@
 
                             <Button AutomationProperties.Name="Learn more about NVIDIA DLSS Override" Style="{StaticResource HelpLinkButton}"
                                     Margin="0,8,0,0"
-                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/dlss_override"/>
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="dlss/override"/>
 
                         </StackPanel>
                     </Border>

@@ -210,46 +210,6 @@ public partial class SystemTweaksService
             UnavailableReason = !IsWindows11 ? "Auto HDR exists only on Windows 11." : !hasHdrDisplay ? "No connected display reports HDR support." : ""
         });
 
-        bool dlssIndicatorOn = CheckDlssIndicatorOn();
-        bool hasNvidiaNgx = HasNvidiaNgx();
-        list.Add(new SystemTweakItem
-        {
-            Id = "dlss_indicator",
-            Name = "NVIDIA DLSS Indicator",
-            Category = TweakCategory.InputAndDisplay,
-            ShortDescription = "Draws NVIDIA's own on-screen overlay in every DLSS game: the DLSS version in use, the preset letter, and the render resolution.",
-            WhyItMatters = "For testing, not for leaving on. It is the one place the active preset letter is shown, and the quickest way to see that a DLSS Override set in Edit Game is really in effect. It is NVIDIA's diagnostic overlay and it draws over the game, in every game that uses DLSS, until you turn it off here.",
-            IsOptimal = dlssIndicatorOn,
-            StatusText = !hasNvidiaNgx ? "NVIDIA driver not found" : dlssIndicatorOn ? "Shown in DLSS games" : "Hidden",
-            RequiresAdmin = true,
-            RequiresReboot = false,
-            IsOptIn = true,
-            IsAvailable = hasNvidiaNgx,
-            UnavailableReason = hasNvidiaNgx ? "" : "Needs an NVIDIA GeForce driver with DLSS support."
-        });
-
-        int dlssOverrideGames = DlssOverrideGameCount?.Invoke() ?? 0;
-        list.Add(new SystemTweakItem
-        {
-            Id = "dlss_override",
-            Name = "NVIDIA DLSS Override",
-            Category = TweakCategory.InputAndDisplay,
-            ShortDescription = "Runs a game on the DLSS files installed with your GeForce driver instead of the older ones inside the game. Switched on per game, in Edit Game.",
-            WhyItMatters = "This row shows how many games have it on and puts them all back in one step - the thing to do before uninstalling TrayTrigger, since the setting lives in NVIDIA's driver, not in TrayTrigger. Restore All returns every game to exactly what NVIDIA's settings held before, and leaves alone anything another tool has changed since.",
-            // Informational: IsOptimal here means "on for at least one game"; the row shows a
-            // neutral ON/OFF badge and stays out of the optimization score.
-            IsOptimal = dlssOverrideGames > 0,
-            StatusText = dlssOverrideGames == 0 ? "Not on for any game" : dlssOverrideGames == 1 ? "On for 1 game" : $"On for {dlssOverrideGames} games",
-            RequiresAdmin = false,
-            RequiresReboot = false,
-            CanToggle = false,
-            HasCustomAction = true,
-            CustomActionLabel = "Restore All",
-            IsInformational = true,
-            IsAvailable = hasNvidiaNgx,
-            UnavailableReason = hasNvidiaNgx ? "" : "Needs an NVIDIA GeForce driver with DLSS support."
-        });
-
         bool stickyKeysDisabled = CheckAccessibilityShortcutsDisabled();
         list.Add(new SystemTweakItem
         {
@@ -566,7 +526,6 @@ public partial class SystemTweaksService
                 "mpo_disable" => SetMpoDisabled(enableOptimal),
                 "wu_driver_exclude" => SetWuDriversExcluded(enableOptimal),
                 "priority_separation" => SetPrioritySeparation(enableOptimal),
-                "dlss_indicator" => SetDlssIndicator(enableOptimal),
                 _ => false
             };
 
@@ -610,8 +569,6 @@ public partial class SystemTweaksService
             "mpo_disable" => CheckMpoDisabled(),
             "wu_driver_exclude" => CheckWuDriversExcluded(),
             "priority_separation" => CheckPrioritySeparationOptimal(),
-            "dlss_indicator" => CheckDlssIndicatorOn(),
-            "dlss_override" => (DlssOverrideGameCount?.Invoke() ?? 0) > 0,
             "core_isolation" => CheckHvciActive(),
             _ => false
         };
@@ -700,13 +657,6 @@ public partial class SystemTweaksService
             entries.Add(int.TryParse(prior, out int priorValue)
                 ? new RegFileEntry(PriorityControlKey, "Win32PrioritySeparation", priorValue, RegistryValueKind.DWord, Delete: false)
                 : new RegFileEntry(PriorityControlKey, "Win32PrioritySeparation", 2, RegistryValueKind.DWord, Delete: false));
-        }
-        if (ids.Contains("dlss_indicator"))
-        {
-            // Absent before means deleting, not writing zero - zero is a value NVIDIA never had there.
-            entries.Add(int.TryParse(TakePrior("dlss_indicator"), out int priorIndicator)
-                ? new RegFileEntry(NgxCoreKey, "ShowDlssIndicator", priorIndicator, RegistryValueKind.DWord, Delete: false)
-                : new RegFileEntry(NgxCoreKey, "ShowDlssIndicator", null, RegistryValueKind.None, Delete: true));
         }
         if (ids.Contains("nagle_disable"))
         {
@@ -1232,17 +1182,9 @@ public partial class SystemTweaksService
     private static bool SetWuDriversExcluded(bool exclude) =>
         exclude ? SetHklmDword(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate", 1) : DeleteHklmValue(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate");
 
-    // ---- NVIDIA DLSS Override (informational row) ----------------------------------------------
-    // The overrides belong to games, which this service knows nothing about; the library supplies
-    // the count and the action.
-
-    /// <summary>How many games have the override on. Set by the main view model.</summary>
-    public Func<int>? DlssOverrideGameCount { get; set; }
-
-    /// <summary>Puts every game's override back and returns a line for the status bar.</summary>
-    public Func<string>? RestoreAllDlssOverrides { get; set; }
-
     // ---- NVIDIA DLSS Indicator -----------------------------------------------------------------
+    // Not a tweak row: it is switched from the NVIDIA DLSS card in Settings. It lives here for the
+    // elevated HKLM write and the prior-value capture.
 
     private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";
 
@@ -1263,7 +1205,7 @@ public partial class SystemTweaksService
     }
 
     /// <summary>The driver creates the NGXCore key; without it there is nothing to draw the indicator.</summary>
-    private static bool HasNvidiaNgx()
+    public static bool HasNvidiaNgx()
     {
         try
         {
@@ -1273,9 +1215,10 @@ public partial class SystemTweaksService
         catch { return false; }
     }
 
-    private static bool CheckDlssIndicatorOn() => ReadDlssIndicator() == DlssIndicatorRetail;
+    public static bool IsDlssIndicatorOn() => ReadDlssIndicator() == DlssIndicatorRetail;
 
-    private bool SetDlssIndicator(bool show)
+    /// <summary>Turning it off puts back what was there before it was turned on, absent included.</summary>
+    public bool SetDlssIndicator(bool show)
     {
         if (show)
         {

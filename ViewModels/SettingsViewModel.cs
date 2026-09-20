@@ -245,6 +245,9 @@ public class SettingsViewModel : ViewModelBase
     public ObservableCollection<IgnoredGamePathRowViewModel> IgnoredGamePaths { get; } = new();
     public bool HasNoIgnoredGamePaths => IgnoredGamePaths.Count == 0;
 
+    /// <summary>The NVIDIA DLSS card. Set by the main view model once the services it needs exist.</summary>
+    public DlssSettingsViewModel? Dlss { get; set; }
+
     public SettingsViewModel(
         AppSettings settings,
         StorageService storageService,
