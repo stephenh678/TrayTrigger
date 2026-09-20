@@ -17,9 +17,9 @@ public class ScriptLibraryServiceTests : IDisposable
 {
     private static readonly string[] Examples =
     {
-        "Example-CompanionApps.ps1",
+        "Example-StartCompanionApps.ps1",
         "Example-OBSReplayBuffer.ps1",
-        "Example-QuietMode.ps1",
+        "Example-CloseBackgroundApps.ps1",
         "Example-SaveBackup.ps1",
         "Example-WallpaperEnginePause.ps1",
     };
@@ -73,27 +73,162 @@ public class ScriptLibraryServiceTests : IDisposable
         Assert.Equal(expected, ScriptLibraryService.BundledFileNames());
     }
 
+    /// <summary>
+    /// The bundled files are TrayTrigger's copy, not the user's: one still exactly as TrayTrigger
+    /// left it is replaced silently, so a correction to a template or an example reaches a folder
+    /// that already exists instead of only ever reaching fresh installs. An edited one is kept - see
+    /// <see cref="EnsureInstalled_AnEditedFile_IsKeptAsPrevious"/>.
+    /// </summary>
     [Fact]
-    public void EnsureInstalled_WritesEverything_ThenNeverOverwritesUserEdits_ButRefreshesReadme()
+    public void EnsureInstalled_WritesEverything_ThenReplacesWhatItWroteItself()
     {
         var first = _lib.EnsureInstalled();
         Assert.Equal(Examples.Length + 3, first.Count);
         Assert.Equal(Path.Combine(_base, "Scripts"), _lib.ScriptsDirectory);
 
         string example = Path.Combine(_lib.ScriptsDirectory, "Example-SaveBackup.ps1");
+        string blank = Path.Combine(_lib.ScriptsDirectory, "_Blank.ps1");
         string readme = Path.Combine(_lib.ScriptsDirectory, "README.txt");
-        File.WriteAllText(example, "# my edit");
-        File.WriteAllText(readme, "stale");
+
+        // An older TrayTrigger's copy: untouched since it was written, so it is ours to replace.
+        // Simulated by writing it and recording it the way EnsureInstalled itself would.
+        StaleButUnedited(example, "# an older version");
+        StaleButUnedited(blank, "# an older version");
+        StaleButUnedited(readme, "an older version");
 
         var second = _lib.EnsureInstalled();
 
-        Assert.Equal(new[] { "README.txt" }, second);
-        Assert.Equal("# my edit", File.ReadAllText(example));
+        Assert.Equal(new[] { "Example-SaveBackup.ps1", "README.txt", "_Blank.ps1" }, second.OrderBy(n => n, StringComparer.Ordinal));
+        Assert.Equal(ScriptLibraryService.ReadBundled("Example-SaveBackup.ps1"), File.ReadAllText(example));
+        Assert.Equal(ScriptLibraryService.ReadBundled("_Blank.ps1"), File.ReadAllText(blank));
         Assert.Equal(ScriptLibraryService.ReadBundled("README.txt"), File.ReadAllText(readme));
 
-        // Nothing to do on a third pass.
+        // Nothing set aside: none of these was the user's work.
+        Assert.Empty(Directory.GetFiles(_lib.ScriptsDirectory, "*" + ScriptLibraryService.SetAsideSuffix + "*"));
+
+        // Nothing to do on a third pass: only a file that differs is rewritten, so the folder's
+        // timestamps don't churn on every start.
         Assert.Empty(_lib.EnsureInstalled());
     }
+
+    /// <summary>
+    /// Writes <paramref name="content"/> to a bundled file and records it in the manifest as though
+    /// TrayTrigger had written it, which is what an older version's copy looks like: out of date,
+    /// but untouched since.
+    /// </summary>
+    private void StaleButUnedited(string path, string content)
+    {
+        File.WriteAllText(path, content);
+        string manifest = Path.Combine(_base, "scripts-bundled.txt");
+        var lines = File.Exists(manifest)
+            ? File.ReadAllLines(manifest).Where(l => !l.StartsWith(Path.GetFileName(path) + "\t", StringComparison.OrdinalIgnoreCase)).ToList()
+            : new List<string>();
+        lines.Add(Path.GetFileName(path) + "\t" + Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content))));
+        File.WriteAllLines(manifest, lines);
+    }
+
+    /// <summary>
+    /// The user edited a bundled file. It is their work, so it is renamed to ".previous" rather than
+    /// overwritten - the notice at the top of each file warns them, and the ones who lose work are
+    /// exactly the ones who did not read it. The fresh copy still lands.
+    /// </summary>
+    [Fact]
+    public void EnsureInstalled_AnEditedFile_IsKeptAsPrevious()
+    {
+        _lib.EnsureInstalled();
+        string example = Path.Combine(_lib.ScriptsDirectory, "Example-CloseBackgroundApps.ps1");
+        File.WriteAllText(example, "# my careful work");
+
+        var written = _lib.EnsureInstalled();
+
+        Assert.Contains("Example-CloseBackgroundApps.ps1", written);
+        Assert.Equal(ScriptLibraryService.ReadBundled("Example-CloseBackgroundApps.ps1"), File.ReadAllText(example));
+        Assert.Equal("# my careful work", File.ReadAllText(example + ScriptLibraryService.SetAsideSuffix));
+    }
+
+    /// <summary>A second edit does not overwrite the first rescue: each gets its own numbered name.</summary>
+    [Fact]
+    public void EnsureInstalled_ASecondEdit_DoesNotLoseTheFirstOneKept()
+    {
+        _lib.EnsureInstalled();
+        string example = Path.Combine(_lib.ScriptsDirectory, "Example-CloseBackgroundApps.ps1");
+
+        File.WriteAllText(example, "# first");
+        _lib.EnsureInstalled();
+        File.WriteAllText(example, "# second");
+        _lib.EnsureInstalled();
+
+        Assert.Equal("# first", File.ReadAllText(example + ScriptLibraryService.SetAsideSuffix));
+        Assert.Equal("# second", File.ReadAllText(example + ScriptLibraryService.SetAsideSuffix + ".2"));
+        Assert.Equal(ScriptLibraryService.ReadBundled("Example-CloseBackgroundApps.ps1"), File.ReadAllText(example));
+    }
+
+    /// <summary>
+    /// A folder from before the manifest existed cannot be told apart from an edited one, and the
+    /// older README promised edits here were safe - so it is kept rather than assumed to be ours.
+    /// </summary>
+    [Fact]
+    public void EnsureInstalled_AFolderWithNoManifest_KeepsWhatIsThere()
+    {
+        Directory.CreateDirectory(_lib.ScriptsDirectory);
+        string example = Path.Combine(_lib.ScriptsDirectory, "Example-CloseBackgroundApps.ps1");
+        File.WriteAllText(example, "# edited long ago, under the old rules");
+
+        _lib.EnsureInstalled();
+
+        Assert.Equal("# edited long ago, under the old rules", File.ReadAllText(example + ScriptLibraryService.SetAsideSuffix));
+        Assert.Equal(ScriptLibraryService.ReadBundled("Example-CloseBackgroundApps.ps1"), File.ReadAllText(example));
+    }
+
+    /// <summary>A file set aside is not a bundled name, so it is never touched again.</summary>
+    [Fact]
+    public void EnsureInstalled_LeavesAPreviousCopyAlone()
+    {
+        _lib.EnsureInstalled();
+        string example = Path.Combine(_lib.ScriptsDirectory, "Example-CloseBackgroundApps.ps1");
+        File.WriteAllText(example, "# mine");
+        _lib.EnsureInstalled();
+
+        string kept = example + ScriptLibraryService.SetAsideSuffix;
+        Assert.Empty(_lib.EnsureInstalled());
+        Assert.Equal("# mine", File.ReadAllText(kept));
+    }
+
+    /// <summary>
+    /// A script the user made is not a bundled name, so it is never among the files replaced.
+    /// "New script..." names its copy after the game, which is what keeps the two apart.
+    /// </summary>
+    [Fact]
+    public void EnsureInstalled_LeavesTheUsersOwnScriptsAlone()
+    {
+        _lib.EnsureInstalled();
+        string mine = Path.Combine(_lib.ScriptsDirectory, "Elden Ring-PreLaunch.ps1");
+        File.WriteAllText(mine, "# mine");
+
+        Assert.Empty(_lib.EnsureInstalled());
+        Assert.Equal("# mine", File.ReadAllText(mine));
+    }
+
+    /// <summary>
+    /// Every bundled file says it is replaced, because that is the only warning a user gets before
+    /// an edit of theirs disappears.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(AllBundledNames))]
+    public void EveryBundledFile_SaysItIsReplaced(string name)
+    {
+        string? content = ScriptLibraryService.ReadBundled(name);
+        Assert.NotNull(content);
+        Assert.Contains("DO NOT EDIT THIS FILE", content);
+        // And says where the edit goes instead, since the notice is useless without it.
+        Assert.Contains("New script...", content);
+    }
+
+    public static IEnumerable<object[]> AllBundledNames() =>
+        ScriptLibraryService.BundledFileNames()
+            .Where(n => !n.Equals("README.txt", StringComparison.OrdinalIgnoreCase))
+            .Select(n => new object[] { n });
 
     [Theory]
     [MemberData(nameof(ExampleNames))]
@@ -197,7 +332,7 @@ public class ScriptLibraryServiceTests : IDisposable
         using var running = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
 
         // The reopened copy would flash a console window during the test run.
-        string script = InstallExample("Example-QuietMode.ps1",
+        string script = InstallExample("Example-CloseBackgroundApps.ps1",
             ("Start-Process -FilePath $path -WorkingDirectory (Split-Path -Parent $path)",
              "Start-Process -FilePath $path -WorkingDirectory (Split-Path -Parent $path) -WindowStyle Hidden"));
 
@@ -225,7 +360,7 @@ public class ScriptLibraryServiceTests : IDisposable
     {
         string exe = CopyPing("TTCompanion");
         string name = Path.GetFileNameWithoutExtension(exe);
-        string script = InstallExample("Example-CompanionApps.ps1",
+        string script = InstallExample("Example-StartCompanionApps.ps1",
             ("$Companions = @(", $"$Companions = @( @{{ Path = '{exe}'; Arguments = '-n 120 127.0.0.1' }}"),
             ("$WindowStyle = 'Minimized'", "$WindowStyle = 'Hidden'"),
             ("$GraceSeconds = 5", "$GraceSeconds = 1"));

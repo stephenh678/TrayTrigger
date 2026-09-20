@@ -182,8 +182,8 @@ Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the 
 | Script | What it does |
 |---|---|
 | `Example-WallpaperEnginePause.ps1` | Pauses and mutes Wallpaper Engine while you play, resumes it after. |
-| `Example-QuietMode.ps1` | Closes the background apps you name (OneDrive, Teams, Dropbox) and reopens the ones it closed. |
-| `Example-CompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) and closes only the ones it started. |
+| `Example-CloseBackgroundApps.ps1` | Closes the background apps you name (OneDrive, Teams, Dropbox) and reopens the ones it closed. |
+| `Example-StartCompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) and closes only the ones it started. |
 | `Example-OBSReplayBuffer.ps1` | Runs OBS in the tray with the replay buffer on, so a hotkey saves the last minutes of play. |
 | `Example-SaveBackup.ps1` | Zips a save folder before and after you play, keeps the newest ten. |
 
