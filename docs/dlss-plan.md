@@ -1,13 +1,21 @@
-# DLSS model management
+# DLSS Override
 
-Built and verified on hardware, 2026-09-19/20. This describes the feature as it is. What changed
-along the way, and why, is in **Corrections** at the end - worth reading before changing anything
-here, because most of it was learned the expensive way.
+Built and verified on hardware 2026-09-19/20, then cut back the same day. This describes the
+feature as it is. What changed along the way, and why, is in **Corrections** and **Simplified** at
+the end - worth reading before changing anything here, because most of it was learned the expensive
+way.
+
+## The design rule
+
+**Size the machinery to what happens when it fails.** If the override does not take, the game runs
+its own DLSS file, as it always did. So nothing here guards against "it did not work". What is
+guarded is the one thing that is not benign: a setting left in NVIDIA's driver with nothing able to
+take it out again. Easy to turn on, easy to remove, and exact when removed.
 
 ## What it does
 
-An **NVIDIA DLSS Override** card in Edit Game, on the Performance tab, that puts a game on NVIDIA's
-current DLSS model with one click.
+An **NVIDIA DLSS Override** card in Edit Game, on the Performance tab, that puts a game on the DLSS
+files installed with the GeForce driver instead of the older ones inside the game.
 
 ```
 NVIDIA DLSS Override                                          [ Restore ]
@@ -21,17 +29,32 @@ NVIDIA DLSS Override                                          [ Restore ]
       Reconstruction, and Frame Generation.
       Last run: loaded 310.9.0 from NVIDIA.
 
-  [ ] Show the DLSS Indicator while this game runs
-      For testing only. Draws the official on-screen overlay showing
-      active DLSS version, preset letter, and render resolution
-      (requires administrator).
+  Learn more
 ```
+
+- **The switch is the status.** It shows what the driver holds when the card opens - on only while
+  every recorded setting is still exactly as TrayTrigger wrote it. There is no confirmation text
+  when a change works. A single line in the warning colour appears only when a change did not work,
+  because then the switch drops back and something has to say why.
+- **The version pair** is the oldest version the game ships and the newest the driver holds *for
+  that same feature*. It is a prediction, not a reading.
+- **Last run** is the reading: what the game actually loaded the last time it ran with the override
+  on. Absent until the game has been played.
+- The card is hidden when the game ships no DLSS DLL, and on a PC with no NVIDIA driver.
+
+Two things live on the **System** page, not on the card:
+
+- **NVIDIA DLSS Override** - an informational row: how many games have it on, and **Restore All**.
+- **NVIDIA DLSS Indicator** - an ordinary opt-in toggle for NVIDIA's on-screen overlay.
+
+Help: `Help/tweaks/dlss_override.md` (linked from the card and the System row) and
+`Help/tweaks/dlss_indicator.md`.
 
 **The wording rule:** keep the terms NVIDIA itself prints - *DLSS Override*, *DLSS Indicator*,
 *DLSS Preset*, the three feature names, and *GeForce driver* - because they are what a user
 recognises from NVIDIA App and what they can search. Drop the generic nouns that only sound
 official: *runtime*, *libraries*, *HUD*, *model preset*, and *driver* used as a bare noun for two
-different things. Three earlier versions of this card failed on that second list.
+different things.
 
 It works entirely through the NVIDIA driver's per-game profile database. **No file in any game
 folder is written, ever.** That single decision removes downloads, caches, backups, the NVIDIA
@@ -57,54 +80,83 @@ of the copy the game shipped:
 | `0x10E41DF1` | `0x00FFFFFE` | DLSS-FG - forced preset letter (**different sentinel**) |
 
 `nvngx_config.txt` in the model store maps NGX app ids to versions, and the override pseudo-app
-`app_E658700` has an explicit entry per feature. So **the version an override will load is readable
-before the game launches** - a fact, not a hope.
+`app_E658700` has an explicit entry per feature. TrayTrigger does not read it - the newest version
+folder per feature is what the card shows - but it is the file to look at if the two ever disagree.
 
 ### Nothing needs elevation
 
 Reads and writes both work unelevated, verified at a trust level below the filtered token a
 UAC-enabled administrator account gets. The card reads, applies and undoes with **no UAC prompt**.
-The one exception is the overlay, which writes HKLM.
+The one exception is the Indicator, which writes HKLM.
 
-### The three layers
+### The layers
 
 DRS resolves a setting through application profile → global profile → base profile → driver
-default. This matters constantly: on the development machine four DLSS settings already sat on the
-**Global** profile, written by another tool days earlier, so a per-game "use recommended" was
-partly a no-op that would still have reported success. The card always reads the global layer.
+default. On the development machine four DLSS settings already sat on the **Global** profile,
+written by another tool. Two consequences:
+
+- A game on such a PC gets the driver's DLSS whether the per-game switch is on or off. TrayTrigger
+  leaves settings it did not write alone; the Help topic says so.
+- The capture has to record *where* a previous value came from, not just the number - see the
+  ownership record.
+
+The card does not read the Global profile. `--test-dlss` does.
 
 ## The code
 
 | | |
 |---|---|
-| `Services/NvApi.cs` | NVAPI DRS interop. No import library exists, so every entry point comes through `nvapi_QueryInterface` by published id. Struct versions are computed as `sizeof \| (ver << 16)` rather than hard-coded, so a layout mistake cannot pass the driver a plausible-looking number. |
-| `Services/IDrsBackend.cs` | The seam. `NvApiDrsBackend` in production, `FakeDrsBackend` in tests. **Not** on `ISystemTweakBackend` - that is the performance-profile surface and has no shape for a session lifetime. |
-| `Services/NgxModelStore.cs` | The driver's model store, `nvngx_config.txt`, and the **one** table of the three DLSS features. |
-| `Services/DlssProbeService.cs` | Read-only: shipped versions, DRS state, loaded modules, NGX registry. Also resolves the rendering executable. |
-| `Services/DlssOverrideService.cs` | Apply, undo, and the pre-launch re-apply. The ownership rules live here. |
-| `Services/DlssVerificationService.cs` | Loaded modules → one observation per feature. |
-| `ViewModels/DlssCardViewModel.cs` | The card. `Project()` is pure, so every display rule is testable without a driver. |
-| `App.DlssDiagnostics.cs` | `--test-dlss`, DEBUG only. Read-only report, for when someone says DLSS is not doing what they expect. |
+| `Services/NvApi.cs` | NVAPI DRS interop. No import library exists, so every entry point comes through `nvapi_QueryInterface` by published id. Struct versions are computed as `sizeof \| (ver << 16)` rather than hard-coded, so a layout mistake cannot pass the driver a plausible-looking number. `nvapi64.dll` is loaded from System32 only. `Session.LastStatus` is how "not found" is told from a failure. |
+| `Services/NvApi.Diagnostics.cs` | DEBUG only: the Global profile and setting enumeration, which nothing but the report reads. |
+| `Services/IDrsBackend.cs` | The seam. `NvApiDrsBackend` in production, `FakeDrsBackend` in tests. **Not** on `ISystemTweakBackend` - that is the performance-profile surface and has no shape for a session lifetime. A null result with no error means "not there"; null *with* an error means the read failed. |
+| `Services/NgxModelStore.cs` | The driver's model store, and the **one** table of the three DLSS features. |
+| `Services/DlssProbeService.cs` | Read-only. What the card is built from (shipped versions, driver-store versions, whether a driver is there), the rendering executable, the module scan, and `ReadLastRun`. |
+| `Services/DlssOverrideService.cs` | Apply, undo, the pre-launch re-apply, `IsInEffect`, `RestoreAll`. The ownership rules live here. |
+| `ViewModels/DlssCardViewModel.cs` | The card. `Project()` is pure, so the display rules are testable without a driver. |
+| `Services/SystemTweaksService.cs` | The two System-page rows: `dlss_override` (informational, Restore All) and `dlss_indicator`. |
+| `App.DlssDiagnostics.cs` | `--test-dlss`, DEBUG only. Read-only report, for when someone says DLSS is not doing what they expect. It does its own reading, so none of it is in a release build. |
+
+The fake session is a private copy of the database that only `Save` writes back, as NVAPI behaves,
+and it refuses to *delete* a predefined setting - so the tests prove undo uses the restore call.
 
 ## The ownership record
 
 The part everything else depends on. A single "we enabled it" flag is not enough, because it cannot
-tell a value the user chose from one TrayTrigger wrote. Per setting, `GameEntry.DlssSettings` holds
-the previous value, **its origin**, what was written, and where.
+tell a value the user chose from one TrayTrigger wrote. Per setting, `GameEntry.DlssSettings` holds:
+the previous value and **its origin**, what was written, the profile and executable name, the
+renderer's **full path**, and whether TrayTrigger **created the profile**.
 
-**Undo restores the captured value, and only while the driver still reports what TrayTrigger
-wrote.** Anything else means somebody else changed it: leave it alone and say so.
+**Undo restores the captured state, and only while the driver still reports what TrayTrigger
+wrote.** Anything else means somebody else changed it: leave it alone.
 
 | Previous origin | Undo | Why |
 |---|---|---|
 | `UserSet` | Write the captured value back | A choice TrayTrigger replaced |
+| `Predefined` | **Restore the default** (`NvAPI_DRS_RestoreProfileDefaultSetting`) | NVIDIA's own value was there. Writing the number back makes it user-set; deleting is for a value that was never there |
 | `Inherited` | **Delete** | The setting was never on this profile. Writing the inherited value pins it, so it stops following the Global profile |
-| `Predefined` | **Delete** | Writing NVIDIA's own number back converts it into a user-set value |
 | `Absent` | **Delete** | Nothing was there |
 
-Matching is stricter than "same number": a TrayTrigger write is a *user-set value on the game's own
-profile*, so undo requires the value **and** that origin. The same number arriving from the Global
-profile belongs to someone else.
+Other rules, each closing a way the driver could be left changed:
+
+- **Matching is stricter than "same number".** A TrayTrigger write is a *user-set value on the
+  game's own profile*, so undo requires the value **and** that origin. The same number arriving
+  from the Global profile belongs to someone else. A driver-default reading is "absent", not a
+  value.
+- **A failed read is not "absent", and a failed lookup is not "no profile".** Only
+  `NVAPI_SETTING_NOT_FOUND` (-160) and `NVAPI_EXECUTABLE_NOT_FOUND` (-166) are answers. Anything
+  else stops the operation: apply creates nothing and captures nothing for that setting, undo keeps
+  every record, re-apply writes nothing.
+- **Profiles are looked up by full path**, falling back to the file name for a game that has moved.
+  NVIDIA's own entries can be qualified by folder or launcher, and a bare `game.exe` can match
+  another game's profile.
+- **A profile TrayTrigger created is removed again** once undo has emptied it - not one of
+  NVIDIA's, no settings left, no application beyond the one it was made for. Otherwise every game
+  ever overridden leaves one behind.
+- **Applying again over TrayTrigger's own values keeps the original capture.** "The state before
+  this write" is then TrayTrigger's value, and capturing it would make undo restore the override.
+  A value a stranger has set since *is* captured - taking over means undo gives theirs back.
+- **Already back as captured** (something reverted the write) undoes to nothing and the record is
+  dropped.
 
 NVAPI supplies the origin directly - `NVDRS_SETTING.settingLocation` plus `isCurrentPredefined` -
 so this is recorded, not inferred.
@@ -121,102 +173,130 @@ Renders   ...\Cyberpunk 2077\bin\x64\Cyberpunk2077.exe -> profile "Cyberpunk 207
 
 `ResolveRenderingExecutable` uses the strongest available signal: **the renderer sits beside the
 game's DLSS DLLs**, because that is how NGX finds them. Among those the largest wins, after
-discarding names that are never renderers - a 60 MB game against a 260 KB crash reporter. It is a
-heuristic, and verification is what catches it being wrong.
+discarding names that are never renderers - a 60 MB game against a 260 KB crash reporter.
 
-## Verification
+**Games launched by link.** A Steam import's executable path is `steam://rungameid/...`, and the
+same goes for any platform launched by link, so there is no folder to derive from it. The install
+folder the importer records as the entry's working directory is searched instead. Without this the
+card never appeared for most of a library. A link that resolves to nothing is refused, never
+written to.
 
-Three layers. Each reports **observations, never causation**: a loaded runtime shows what the
-process has open, not that TrayTrigger put it there, and seeing the game's own DLL does not
-establish that the game refused the override.
+The scan is recursive, so it refuses folders that are not one game's own (a drive root, Downloads,
+the top of Program Files - `ProcessPathResolver.IsUnsafeProcessFolder`), and it survives an
+unreadable subfolder. Without the guard an exe sitting loose in `D:\Games` would find a neighbour's
+DLSS DLL and the override would land on the neighbour's profile.
 
-**Layer 1 - write-back.** After saving, reopen the database and confirm each value is there and
-user-set. A second session is required: DRS sessions do not merge, so reading through the writing
-session only shows its own in-memory copy.
+It is a heuristic, and every Steam game depends on it. **Last run** is what catches it being wrong.
 
-**Layer 2 - module enumeration.** The primary method. A loaded module's full path is the answer:
-from `\NVIDIA\NGX\models\` means the override worked, from the game folder means it did not.
-Polled every 20 seconds during a session, stopping at the first runtime seen or after ~5 minutes -
-a game loads its runtime when it first builds the renderer, which can be minutes in. Anti-cheat
-titles refuse enumeration; that is reported as `Unable to verify` with the refusal as its reason,
-never as failure.
+## Checking that it worked
 
-Two matching rules, each easy to get wrong:
+**The write-back check.** After saving, the database is reopened and each value confirmed present
+and user-set. A second session is required: DRS sessions do not merge, so reading through the
+writing session only shows its own in-memory copy. It proves the write landed; it says nothing
+about whether a game honours it.
+
+**Last run.** While a game with the override on is running, the launcher reads which modules it has
+loaded - up to three times, 30 seconds apart, stopping at the first DLSS runtime seen. A game loads
+DLSS when it first builds its renderer, which can be a minute in; three ticks is as short as the
+window can be while covering the usual case, because this is reading a live game.
+
+The result is one small record on `GameEntry.DlssLastRun`: the versions loaded from NVIDIA's store,
+the versions loaded from the game's own files, and the game's own version at the time. It is an
+**observation, never causation** - a runtime loaded from the game's files shows what the process
+had open, not that the override failed - and the line says what was read and stops.
+
+- Needs no elevation. Anti-cheat titles, and an elevated game under an unelevated TrayTrigger,
+  refuse the read; then, as when nothing was seen in 90 seconds, **nothing is recorded**.
+- Cleared when the override changes. Ignored once the game ships a different DLSS version.
+- Written to `games.json` and logged. Nowhere else.
+
+Matching rules, each easy to get wrong:
 
 - **Store runtimes match by folder, game runtimes by file name.** All three substituted runtimes
   are called `160_E658700.bin`; only `models\dlss\` vs `dlssd\` vs `dlssg\` separates them.
 - **`nvngx_dlss` is a prefix of `nvngx_dlssd` and `nvngx_dlssg`**, so the game-folder match compares
   the whole stem.
+- **Where both are loaded for a feature the store's wins**: NGX can have the game's DLL open as
+  well as the one it substituted.
+- A store runtime's version comes from its `versions\<n>` directory, not the file - the hashed
+  `.bin` has no version resource. A game DLL's version is normalised; NVIDIA's own string reads
+  `310,1,0,0`.
 
-A store runtime's version comes from its `versions\<n>` directory, not the file - the hashed `.bin`
-has no version resource.
-
-**Layer 4 - the on-screen overlay.** `ShowDlssIndicator` = `0x400`, per game, off by default. The
-only thing that shows the active **preset**. Reference-counted across the sessions that asked for
-it, not "first wins" like other machine-wide tweaks: the overlay was rejected as a global toggle
-because it draws over every DLSS game, so a second game must not inherit it.
-
-(There was a layer 3, NGX log parsing. It was dropped: it depended on logs being attributable to a
-session, which was never established, and the overlay covers the same protected titles and also
-gives the preset.)
-
-Observations persist on `GameEntry.DlssObservations`, because they can only be learned by playing:
-
-| Changed | Effect |
-|---|---|
-| The override (apply or undo) | Cleared - describes a setup that no longer exists |
-| The game's DLSS version (a patch) | Cleared |
-| The driver | Kept, marked stale - what was seen was still seen |
+**The DLSS Indicator.** `ShowDlssIndicator` = `0x400` under `HKLM\...\NGXCore`. The only thing that
+shows the active **preset**. It is one machine-wide value, so it is one machine-wide toggle on the
+System page, opt-in, using the tweak framework's own record-and-restore; absent before means
+deleted on restore, not set to 0.
 
 ## Lifecycle
 
 **Pre-launch re-apply.** NVIDIA App reverts overrides on games it does not list, whenever it
-starts. TrayTrigger launches the game, so it writes the settings again first. The three-way rule:
+starts. TrayTrigger launches the game, so it looks first:
 
 | Found | Action |
 |---|---|
 | What TrayTrigger wrote | Nothing to do |
-| What TrayTrigger captured (reverted) | Re-apply silently |
-| Anything else | **Write nothing**, mark the game conflicted, stop re-applying, tell the user |
+| What TrayTrigger captured (reverted), or the whole profile gone | Write it again, recreating the profile if need be |
+| Anything else | **Write nothing**, this launch or the next, for as long as it stays that way |
 
-Everything is read before anything is written: one conflicting setting means something else is
-managing this game, and writing the rest would be the overwrite the rule exists to prevent.
+Everything is read before anything is written, in one session: one changed setting means something
+else is managing this game, and writing the rest would be the overwrite the rule exists to prevent.
+Nothing is remembered about it - the card's switch simply reads off, ticking it takes the settings
+over, and Restore hands them back.
 
-**Not handled yet.** Two library entries can share one executable, and therefore one override. A
-game removed from the library keeps its override. Uninstalling TrayTrigger leaves driver settings
-behind with nothing left to explain them - the installer should offer to clear them.
+**Removing a game** puts its override back when the removal becomes final - where the cached
+artwork is deleted, and for the same reason: inside the undo window the game may yet come back. A
+setting another library entry still holds a record for is left alone.
+
+**A crash inside that window.** Removed games are written to `pending-removal.json` before the
+library is saved without them, and the next start finishes the job. A game that is back in the
+library is skipped.
+
+**Restore All / uninstall.** The System row undoes every game's override in one step. The
+uninstaller runs the same thing headless, `TrayTrigger.exe --restore-dlss`, before the executable
+goes. It reads the library of the account the uninstaller runs as; from a different administrator
+account it finds nothing, which is why the button exists as well.
+
+**Still not handled.** Two library entries can share one executable and therefore one override;
+each applies and undoes independently, and the second to be undone finds values that are no longer
+its own and leaves them.
 
 ## What is verified, and what is not
 
-Proven on hardware (RTX 5080, driver 616.64, Cyberpunk 2077):
+Proven on hardware (RTX 5080, driver 616.64):
 
-- The override works: the game ships 310.1.0 and ran **310.9.0** on all three features, no game
-  file changed.
-- Apply and undo round-trip exactly, unelevated, restoring `Inherited`/`absent` as captured.
-- The in-session poller recorded all three features automatically, 52 seconds after a GOG launch.
+- The override works: Cyberpunk 2077 ships 310.1.0 and ran **310.9.0** on all three features, no
+  game file changed. After the simplification, a second game shipping 310.7.128 showed
+  "Last run: loaded 310.9.0 from NVIDIA." on the card.
 - Reads and writes need no elevation.
+- `0x400` draws the Indicator on a retail game.
+
+Proven before the ownership changes, **not re-run since**:
+
+- Apply and undo round-tripping exactly, restoring `Inherited`/`absent` as captured.
 
 Not established:
 
-- **Whether the override works on older DLSS.** The only test game ships 310.x. NVIDIA says DLSS
-  2.0+ for the DLL override and 3.1 for presets, so there is no hard floor in the code - the driver
-  decides and verification reports the truth.
+- **Undo of a `Predefined` value.** `NvAPI_DRS_RestoreProfileDefaultSetting` (`0x53F0381E`) and
+  `NvAPI_DRS_DeleteProfile` (`0x17093206`) are in use and have never run against a real driver.
+  Apply and undo a game whose profile has a predefined DLSS value, and one NVIDIA has no profile
+  for, and compare Profile Inspector before and after.
+- **A Steam game end to end** - the card appearing, and a Last run line after playing.
+- **The uninstaller** actually turning the overrides off.
+- **Whether the override works on older DLSS.** Both test games ship 310.x. NVIDIA says DLSS 2.0+
+  for the DLL override and 3.1 for presets, so there is no hard floor in the code - the driver
+  decides and Last run reports the truth.
 - **Anti-cheat.** No game files change and the loaded runtime is NVIDIA-signed, and this is
   NVIDIA's own shipped feature used on protected titles - but that is an argument for low risk, not
-  a test. Module enumeration is expected to be refused on protected titles.
-- **The overlay end to end.** `0x400` was confirmed to draw on a retail game, and the registry
-  lifecycle is unit-tested, but not the two together.
-- **Creating a profile for a game NVIDIA has never seen.** The code path exists and is unit-tested;
-  no real unlisted game has been tried.
+  a test.
 
 ## Remaining work
 
-Help topic and CHANGELOG. Automatic application to newly added games was deferred and is still
-deferred. The lifecycle gaps above.
+CHANGELOG. Automatic application to newly added games was deferred and is still deferred. The
+real-driver checks above.
 
 ## Corrections
 
-Six things this design got wrong, each found by testing on hardware rather than by reasoning.
+Things this design got wrong, each found by testing on hardware rather than by reasoning.
 
 **`0x00634291` does not exist.** It was in the recipe as "DLSS - Forced Model Preset Profile" and
 described as the gate everyone misses. It is not a DRS setting on any driver:
@@ -229,23 +309,48 @@ retires later is stepped over quietly rather than looking like a fault.
 check passed, because the settings really were written, just somewhere useless. Every GOG, Epic, EA
 and Ubisoft game would have been affected.
 
-**Deleting is right for more than "absent".** The plan said to delete only when the previous state
-was absent. Following that would have detached this machine's games from its Global profile
-settings on undo. See the ownership table.
-
-**Removing the profile guard applied unrelated tweaks.** Letting an overlay-only game past
-`PerformanceProfile == Off` also applied the power plan, HDR and Do Not Disturb. Every tweak had
-relied on that early return to gate on the tier, three screens away, with nothing in their own code
-saying so.
+**Deleting is right for more than "absent" - and wrong for "predefined".** The plan said to delete
+only when the previous state was absent; following that would have detached this machine's games
+from its Global profile settings on undo. The first fix then deleted predefined values too, and a
+test blessed the result: NVIDIA's own value gone after undo. See the ownership table.
 
 **Matching DLSS modules by file name gave the wrong answer.** The substituted runtime is a hashed
-`.bin`, not `nvngx_dlss.dll`. An earlier check filtered on the DLL names and reported "not
-substituted" on a machine where substitution was plainly working.
+`.bin`, not `nvngx_dlss.dll`. A check that filtered on the DLL names reported "not substituted" on
+a machine where substitution was plainly working.
 
 **Three times, a report hid a real defect.** The harness printed only write-back failures and
 missed an outright refusal; it read the launcher's profile while the code wrote the renderer's and
 declared success; it labelled a Windows DriverStore file as the game's. Each time the code was
 wrong and the report said fine. A diagnostic that overstates is worse than none.
+
+**The card was invisible for Steam games.** It looked for DLSS files beside the executable path,
+and a Steam entry's path is a link.
+
+## Simplified
+
+What was cut on 2026-09-20, and why - so it is not built again. This was meant to be an easy add,
+and it grew a verification service, a conflict state, a session-scoped registry tweak and a
+write-ahead save around a feature whose failure is "the game uses its own DLSS".
+
+- **The per-game DLSS Indicator.** Scoping one machine-wide registry value to a game meant writing
+  it at launch and putting it back at exit: an administrator prompt at each end, session counting,
+  a crash-recovery snapshot, shutdown deferral, and a profile service that had to track
+  overlay-only sessions - which broke the machine-wide tweaks for the next game and left the
+  indicator on in three different ways. It is now a System toggle, and `PerformanceProfileService`
+  is as it was before.
+- **`DlssVerificationService` and per-feature observations** - states, notes, paths, "unable to
+  verify" entries nobody was shown, and a driver-version staleness check nothing called. Last run
+  is one record and one function.
+- **The conflict flag and both notices.** One notice fired for every game on a PC whose Global
+  profile carried an override, permanently, even straight after Restore; the other promised a
+  take-over the switch could not do. The switch now reads the driver.
+- **Status text for success.** The switch already says it.
+- **The write-ahead save**, guarding a crash in the milliseconds between two saves.
+- **The `nvngx_config.txt` parser**, the NGX registry read, and the Global-profile walk on every
+  Edit Game open - all read only by the DEBUG report, which now does its own reading.
+
+What was *kept* through the same pass is the ownership record and everything in it: that is what
+makes removal exact, and removal is the part that is not benign.
 
 ## References
 
@@ -258,7 +363,7 @@ Recorded on the development machine, 2026-09-19, RTX 5080, driver 616.64:
   `nvdrsdb0.bin`/`nvdrsdb1.bin`; reading the wrong one gives a stale answer.
 - No `nvngx_dlss.dll` exists outside game folders. The driver's copy is the `.bin` in the store.
 - `HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore` has `FullPath` and `Installed` only -
-  `ShowDlssIndicator` is absent, so the overlay creates that value rather than changing one.
+  `ShowDlssIndicator` is absent, so the Indicator creates that value rather than changing one.
 
 NVIDIA's diagnostic `.reg` files are in [`utils/`](https://github.com/NVIDIA/DLSS/tree/main/utils)
 of their public DLSS repo. Preset letter meanings are in `nvsdk_ngx_defs.h`: A-D removed, E/F
