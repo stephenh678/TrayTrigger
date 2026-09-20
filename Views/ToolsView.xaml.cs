@@ -33,6 +33,21 @@ public partial class ToolsView : UserControl
         if (ToolsList.SelectedItems.Count > 0) ToolsList.UnselectAll();
     }
 
+    /// <summary>
+    /// Every tool the current tab and search leave showing, for Ctrl+A. Driven from MainWindow's
+    /// tunnelling window handler rather than this page's own KeyDown, as the library's is: a press
+    /// on blank space leaves keyboard focus outside the page, and a bubbling handler here only ever
+    /// sees keys that start inside it - which is why Ctrl+A used to need a tool clicked first.
+    /// </summary>
+    public void SelectAllTools() => ToolsList.SelectAll();
+
+    /// <summary>Puts the caret in the tools search box and selects what is there (Ctrl+F).</summary>
+    public void FocusSearchBox()
+    {
+        ToolsSearchTextBox.Focus();
+        ToolsSearchTextBox.SelectAll();
+    }
+
     private void OnDragOver(object sender, DragEventArgs e)
     {
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(ShellAppResolver.IdListFormat)
@@ -144,67 +159,34 @@ public partial class ToolsView : UserControl
 
     private void OnSelectionBarClear(object sender, RoutedEventArgs e) => ClearSelection();
 
-    /// <summary>Ctrl+F focuses the search. Tunnelling, as in the Library, so no focused control can take it first.</summary>
-    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            ToolsSearchTextBox.Focus();
-            ToolsSearchTextBox.SelectAll();
-            e.Handled = true;
-        }
-    }
-
     /// <summary>
-    /// The Library's other keys, bubbling so a focused control that uses the key itself (a button
-    /// taking Enter, an open dropdown taking Enter or Esc) gets it first: Esc clears the search and
-    /// then the selection, Delete removes the selection. Enter or Ctrl+Enter (a game's launch key)
-    /// launches and F2 renames when exactly one tool is selected and the list itself has focus.
+    /// The two keys that need the list itself focused, bubbling so a focused control that uses the
+    /// key (a button taking Enter, an open dropdown taking Esc) gets it first: Enter or Ctrl+Enter
+    /// launches, F2 renames, each when exactly one tool is selected. The library's Enter works the
+    /// same way, through its ListBox InputBindings.
+    ///
+    /// <para>Ctrl+F, Ctrl+A, Delete and Escape are not here. They are the library's page-wide keys
+    /// and are handled beside it in MainWindow.Window_PreviewKeyDown, which sees the key wherever
+    /// focus is - a bubbling handler on this page misses every press made after a click on blank
+    /// space, which is how Ctrl+A came to need a tool clicked first.</para>
     /// </summary>
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
         if (ViewModel is not { } viewModel) return;
-
-        if (e.Key == Key.Escape)
-        {
-            if (viewModel.SearchText.Length > 0)
-            {
-                viewModel.SearchText = string.Empty;
-                e.Handled = true;
-            }
-            else if (ToolsList.SelectedItems.Count > 0)
-            {
-                ToolsList.UnselectAll();
-                e.Handled = true;
-            }
-            return;
-        }
         if (Keyboard.FocusedElement is TextBox) return;
 
         var selected = viewModel.SelectedTools;
-        if (selected.Count == 0) return;
+        if (selected.Count != 1 || !ToolsList.IsKeyboardFocusWithin) return;
 
         if (e.Key == Key.Enter && Keyboard.Modifiers is ModifierKeys.None or ModifierKeys.Control)
         {
-            if (selected.Count == 1 && ToolsList.IsKeyboardFocusWithin)
-            {
-                viewModel.Launch(selected[0]);
-                e.Handled = true;
-            }
-            return;
+            viewModel.Launch(selected[0]);
+            e.Handled = true;
         }
-        if (Keyboard.Modifiers != ModifierKeys.None) return;
-
-        switch (e.Key)
+        else if (e.Key == Key.F2 && Keyboard.Modifiers == ModifierKeys.None)
         {
-            case Key.Delete:
-                viewModel.BatchRemoveCommand.Execute(null);
-                e.Handled = true;
-                break;
-            case Key.F2 when selected.Count == 1 && ToolsList.IsKeyboardFocusWithin:
-                viewModel.Rename(selected[0]);
-                e.Handled = true;
-                break;
+            viewModel.Rename(selected[0]);
+            e.Handled = true;
         }
     }
 }
