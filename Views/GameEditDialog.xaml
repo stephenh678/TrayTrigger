@@ -460,20 +460,20 @@
                                 <CheckBox Grid.Column="0" Content="Enable DLSS Override for this game"
                                           AutomationProperties.Name="Enable DLSS Override for this game"
                                           IsChecked="{Binding Dlss.OverrideEnabled}"
-                                          Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
+                                          Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"
                                            FontSize="11.5" FontWeight="SemiBold" Margin="12,0,0,0"
                                            VerticalAlignment="Center"
                                            Foreground="{StaticResource BrushTextPrimary}"/>
                             </Grid>
                             <TextBlock Text="Applies to game-supported DLSS features: Super Resolution, Ray Reconstruction, and Frame Generation."
-                                       FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
+                                       FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"/>
 
                             <!-- What actually loaded last time. Absent until the game has been
                                  played, which is the only time it can be known. -->
                             <TextBlock Text="{Binding Dlss.LastRunLine}"
-                                       FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
+                                       FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"
                                        Visibility="{Binding Dlss.HasLastRun, Converter={StaticResource BoolToVis}}"/>
 
@@ -483,10 +483,10 @@
                                       Content="Show the DLSS Indicator while this game runs"
                                       AutomationProperties.Name="Show the DLSS Indicator while this game runs"
                                       IsChecked="{Binding Dlss.ShowOverlay}"
-                                      Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
+                                      Style="{StaticResource ModernCheckBox}"/>
                             <!-- "For testing only" is bold because the admin prompt alone does not
                                  say this is a diagnostic rather than something to leave switched on. -->
-                            <TextBlock FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
+                            <TextBlock FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}">
                                 <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the official on-screen overlay showing active DLSS version, preset letter, and render resolution (requires administrator)."/>
                             </TextBlock>
