@@ -240,6 +240,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _message = message;
         _actionText = actionText;
         _action = action;
+        LoggingService.Shown("Launch popup", $"{kind} \"{target.Name}\"{(message == null ? string.Empty : ": " + message)}{(actionText == null ? string.Empty : $" [{actionText}]")}");
         Render(kind);
     }
 

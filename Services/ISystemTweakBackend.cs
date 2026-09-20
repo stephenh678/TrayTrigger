@@ -85,7 +85,7 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
             using var key = Registry.LocalMachine.OpenSubKey(subKey);
             return key?.GetValue(valueName) is int i ? i : null;
         }
-        catch { return null; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading a registry number"); return null; }
     }
 
     public string? ReadHklmString(string subKey, string valueName)
@@ -95,7 +95,7 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
             using var key = Registry.LocalMachine.OpenSubKey(subKey);
             return key?.GetValue(valueName) as string;
         }
-        catch { return null; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading a registry string"); return null; }
     }
 
     public bool WriteHklmDword(string subKey, string valueName, int value) => SystemTweaksService.SetHklmDword(subKey, valueName, value);
@@ -171,7 +171,7 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
 
     public void ReleaseHighTimerResolution()
     {
-        try { NtSetTimerResolution(HalfMillisecond, false, out _); } catch { }
+        try { NtSetTimerResolution(HalfMillisecond, false, out _); } catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "releasing the timer resolution request"); }
     }
 
     private const string NotificationSettingsPath = @"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings";
@@ -184,7 +184,7 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
             using var key = Registry.CurrentUser.OpenSubKey(NotificationSettingsPath);
             return key?.GetValue(ToastsEnabledValue) is int i ? i : null;
         }
-        catch { return null; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the notifications setting"); return null; }
     }
 
     public void SetToastsEnabled(int? value)

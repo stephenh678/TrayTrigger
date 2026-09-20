@@ -359,7 +359,13 @@ public partial class ModernDialog : Window
             dialog.Owner = activeOwner;
         }
 
+        // What was asked and what was answered: a dialog is the one place the user decides
+        // something, and a log that skips it cannot say why what followed happened.
+        LoggingService.Shown("Dialog", $"\"{title}\" - {message}{(string.IsNullOrWhiteSpace(detail) ? string.Empty : " " + detail)}");
         bool? res = dialog.ShowDialog();
-        return res == true && dialog.Result;
+        bool confirmed = res == true && dialog.Result;
+        if (cancelText != null)
+            LoggingService.Verbose("UI", $"Dialog \"{title}\" answered: {(confirmed ? confirmText : cancelText)}.");
+        return confirmed;
     }
 }

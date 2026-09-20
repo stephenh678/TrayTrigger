@@ -86,7 +86,7 @@ public partial class BattleNetScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("BattleNetScannerService", $"Could not read the Battle.net client's uninstall entry: {ex.Message}");
+            LoggingService.Verbose("BattleNetScanner", $"Could not read the Battle.net client's uninstall entry: {ex.Message}");
         }
 
         string fallback = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Battle.net", "Battle.net.exe");
@@ -126,7 +126,7 @@ public partial class BattleNetScannerService
                     var lookup = ResolveCode(install.Uid, catalog);
                     if (!lookup.Found)
                     {
-                        LoggingService.Warn("BattleNetScannerService", $"No launch code for '{install.Name}' (uid {install.Uid}): {lookup.Detail}. It imports anyway; the launcher looks again.");
+                        LoggingService.Warn("BattleNetScanner", $"No launch code for '{install.Name}' (uid {install.Uid}): {lookup.Detail}. It imports anyway; the launcher looks again.");
                     }
 
                     string? exe = ResolveExe(install, out string? iconFile);
@@ -141,13 +141,13 @@ public partial class BattleNetScannerService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Warn("BattleNetScannerService", $"Error reading Battle.net install '{install.Uid}': {ex.Message}");
+                    LoggingService.Warn("BattleNetScanner", $"Error reading Battle.net install '{install.Uid}': {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("BattleNetScannerService", $"Error scanning installed Battle.net games: {ex.Message}");
+            LoggingService.Warn("BattleNetScanner", $"Error scanning installed Battle.net games: {ex.Message}");
         }
 
         return results.OrderBy(g => g.Name).ToList();
@@ -188,7 +188,7 @@ public partial class BattleNetScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("BattleNetScannerService", $"Could not read the uninstall entry for uid '{uid}': {ex.Message}");
+            LoggingService.Verbose("BattleNetScanner", $"Could not read the uninstall entry for uid '{uid}': {ex.Message}");
             return null;
         }
     }
@@ -241,7 +241,7 @@ public partial class BattleNetScannerService
     {
         if (catalog.CatalogFiles == 0) return;
         int changed = _codeStore.Merge(BattleNetCatalog.Unambiguous(catalog.Owners));
-        LoggingService.Verbose("BattleNetScannerService", $"Battle.net catalog: {catalog.CatalogFiles} catalog file(s), {catalog.Owners.Count} install uid(s); saved code map {(changed > 0 ? $"updated ({changed} change(s), {_codeStore.Count} total)" : $"unchanged ({_codeStore.Count} total)")}.");
+        LoggingService.Verbose("BattleNetScanner", $"Battle.net catalog: {catalog.CatalogFiles} catalog file(s), {catalog.Owners.Count} install uid(s); saved code map {(changed > 0 ? $"updated ({changed} change(s), {_codeStore.Count} total)" : $"unchanged ({_codeStore.Count} total)")}.");
     }
 
     internal CatalogSnapshot ReadCatalog()
@@ -272,13 +272,13 @@ public partial class BattleNetScannerService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Verbose("BattleNetScannerService", $"Skipped cache file '{path}': {ex.Message}");
+                    LoggingService.Verbose("BattleNetScanner", $"Skipped cache file '{path}': {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("BattleNetScannerService", $"Stopped reading Battle.net's cache folder '{_cacheDirectory}' after {catalogFiles} catalog file(s): {ex.Message}");
+            LoggingService.Warn("BattleNetScanner", $"Stopped reading Battle.net's cache folder '{_cacheDirectory}' after {catalogFiles} catalog file(s): {ex.Message}");
             if (catalogFiles == 0 && !Directory.Exists(_cacheDirectory)) return new CatalogSnapshot(false, 0, owners);
         }
         return new CatalogSnapshot(true, catalogFiles, owners);
@@ -333,7 +333,7 @@ public partial class BattleNetScannerService
             }
             catch (Exception ex)
             {
-                LoggingService.Verbose("BattleNetScannerService", $"Could not read uninstall entries ({view}): {ex.Message}");
+                LoggingService.Verbose("BattleNetScanner", $"Could not read uninstall entries ({view}): {ex.Message}");
             }
 
             foreach (var entry in entries)

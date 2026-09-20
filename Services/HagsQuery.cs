@@ -136,8 +136,9 @@ public static partial class HagsQuery
             }
             return firstAttached ?? @"\\.\DISPLAY1";
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("HagsQuery", ex, "finding the primary display");
             return @"\\.\DISPLAY1";
         }
     }

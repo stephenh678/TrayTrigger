@@ -129,7 +129,7 @@ public class ShortcutService
             );
         }
 
-        LoggingService.Verbose("ShortcutService", $"Resolved '{filePath}' -> Name='{resolution.Name}', Target='{resolution.TargetPath}', IsSteamUrl={resolution.IsSteamUrl}, RunAsAdmin={resolution.RunAsAdmin}.");
+        LoggingService.Verbose("Shortcut", $"Resolved '{filePath}' -> Name='{resolution.Name}', Target='{resolution.TargetPath}', IsSteamUrl={resolution.IsSteamUrl}, RunAsAdmin={resolution.RunAsAdmin}.");
         return resolution;
     }
 
@@ -182,7 +182,7 @@ public class ShortcutService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("ShortcutService", $"Error reading .url: {ex.Message}");
+            LoggingService.Warn("Shortcut", $"Error reading .url: {ex.Message}");
         }
 
         bool isSteam = targetUrl.StartsWith("steam://rungameid/", StringComparison.OrdinalIgnoreCase);
@@ -195,7 +195,7 @@ public class ShortcutService
             steamAppId = UrlProtocolHelper.IsValidSteamAppId(rawId) ? rawId : null;
             if (steamAppId == null)
             {
-                LoggingService.Warn("ShortcutService", $"Ignoring malformed Steam App ID in '{urlPath}'.");
+                LoggingService.Warn("Shortcut", $"Ignoring malformed Steam App ID in '{urlPath}'.");
                 isSteam = false;
             }
         }
@@ -286,7 +286,7 @@ public class ShortcutService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("ShortcutService", $"Error resolving .lnk: {ex.Message}");
+            LoggingService.Warn("Shortcut", $"Error resolving .lnk: {ex.Message}");
             return new ShortcutResolution(
                 Name: cleanName,
                 TargetPath: lnkPath,
@@ -308,7 +308,7 @@ public class ShortcutService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Verbose("ShortcutService", $"FinalReleaseComObject failed while resolving '{lnkPath}': {ex.Message}");
+                    LoggingService.Verbose("Shortcut", $"FinalReleaseComObject failed while resolving '{lnkPath}': {ex.Message}");
                 }
             }
         }
@@ -332,7 +332,7 @@ public class ShortcutService
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("ShortcutService", $"Could not read the shell item behind '{lnkPath}': {ex.Message}");
+            LoggingService.Verbose("Shortcut", $"Could not read the shell item behind '{lnkPath}': {ex.Message}");
             return null;
         }
         finally
@@ -346,7 +346,7 @@ public class ShortcutService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Verbose("ShortcutService", $"FinalReleaseComObject failed after reading '{lnkPath}': {ex.Message}");
+                    LoggingService.Verbose("Shortcut", $"FinalReleaseComObject failed after reading '{lnkPath}': {ex.Message}");
                 }
             }
         }
@@ -362,7 +362,7 @@ public class ShortcutService
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("ShortcutService", $"Could not read the run-as-administrator flag of '{lnkPath}': {ex.Message}");
+            LoggingService.Verbose("Shortcut", $"Could not read the run-as-administrator flag of '{lnkPath}': {ex.Message}");
             return false;
         }
     }

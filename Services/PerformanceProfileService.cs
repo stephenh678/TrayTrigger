@@ -126,11 +126,19 @@ public class PerformanceProfileService
     /// </summary>
     public bool BeginGameSession(GameEntry game)
     {
-        if (game.PerformanceProfile == PerformanceProfileMode.Off) return false;
+        if (game.PerformanceProfile == PerformanceProfileMode.Off)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"'{game.Name}': profile is Off, nothing applied.");
+            return false;
+        }
 
         lock (_lock)
         {
-            if (_activeSessionKeys.Contains(game.Id)) return false;
+            if (_activeSessionKeys.Contains(game.Id))
+            {
+                LoggingService.Verbose("PerformanceProfile", $"'{game.Name}': its profile is already applied for a session in progress, not applied again.");
+                return false;
+            }
 
             var settings = _settingsProvider();
             bool isFirstSession = _activeSessionKeys.Count == 0;
@@ -822,6 +830,7 @@ public static class ProfileSnapshotValidator
         }
         catch
         {
+            // A path that cannot be parsed is not a usable one.
             return false;
         }
     }

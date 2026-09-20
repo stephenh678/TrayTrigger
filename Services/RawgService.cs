@@ -120,7 +120,7 @@ public class RawgService
             using var response = await HttpClient.GetAsync(searchUrl, ct).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                LoggingService.Warn("RawgService", "RAWG rejected the API key (401).");
+                LoggingService.Warn("Rawg", "RAWG rejected the API key (401).");
                 return RawgLookupResult.Unauthorized;
             }
             response.EnsureSuccessStatusCode();
@@ -132,7 +132,7 @@ public class RawgService
             if (best.Id == null || best.Similarity < minConfidence)
             {
                 if (best.Id != null)
-                    LoggingService.Verbose("RawgService", $"Rejected RAWG match '{best.Name}' for '{gameName}' (similarity {best.Similarity:F2} < {minConfidence:F2}).");
+                    LoggingService.Verbose("Rawg", $"Rejected RAWG match '{best.Name}' for '{gameName}' (similarity {best.Similarity:F2} < {minConfidence:F2}).");
                 lock (NoMatchCache) NoMatchCache[gameName] = best.Id != null ? best.Similarity : 0;
                 return RawgLookupResult.NoMatch;
             }
@@ -141,7 +141,7 @@ public class RawgService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("RawgService", $"Error looking up '{gameName}': {ex.Message}");
+            LoggingService.Warn("Rawg", $"Error looking up '{gameName}': {ex.Message}");
             return RawgLookupResult.Failed;
         }
     }
@@ -167,14 +167,14 @@ public class RawgService
             using var response = await HttpClient.GetAsync(detailUrl, ct).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                LoggingService.Warn("RawgService", "RAWG rejected the API key (401).");
+                LoggingService.Warn("Rawg", "RAWG rejected the API key (401).");
                 return RawgLookupResult.Unauthorized;
             }
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // A remembered id that RAWG has since removed/merged: treat as no match so the
                 // caller can drop the stale id and re-search by name.
-                LoggingService.Verbose("RawgService", $"RAWG id {rawgId} no longer exists (404).");
+                LoggingService.Verbose("Rawg", $"RAWG id {rawgId} no longer exists (404).");
                 Remove(rawgId);
                 return RawgLookupResult.NoMatch;
             }
@@ -193,7 +193,7 @@ public class RawgService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("RawgService", $"Error fetching RAWG id {rawgId}: {ex.Message}");
+            LoggingService.Warn("Rawg", $"Error fetching RAWG id {rawgId}: {ex.Message}");
             return RawgLookupResult.Failed;
         }
     }
@@ -224,7 +224,7 @@ public class RawgService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("RawgService", $"Error searching RAWG for '{query}': {ex.Message}");
+            LoggingService.Warn("Rawg", $"Error searching RAWG for '{query}': {ex.Message}");
             return (RawgLookupStatus.Failed, new List<RawgSearchHit>());
         }
     }
@@ -288,7 +288,7 @@ public class RawgService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("RawgService", $"Could not delete RAWG cache: {ex.Message}");
+                LoggingService.Warn("Rawg", $"Could not delete RAWG cache: {ex.Message}");
             }
         }
         lock (NoMatchCache) NoMatchCache.Clear();
@@ -311,7 +311,7 @@ public class RawgService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("RawgService", $"RAWG cache unreadable, starting fresh: {ex.Message}");
+            LoggingService.Warn("Rawg", $"RAWG cache unreadable, starting fresh: {ex.Message}");
         }
 
         _cache = new Dictionary<int, RawgGameDetails>();
@@ -335,7 +335,7 @@ public class RawgService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("RawgService", $"Could not save RAWG cache: {ex.Message}");
+            LoggingService.Warn("Rawg", $"Could not save RAWG cache: {ex.Message}");
         }
     }
 

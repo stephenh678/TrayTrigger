@@ -1165,10 +1165,11 @@ public partial class App
                 return;
             }
 
-            // --screenshot-edit-tab <All|Identity|Launch|Performance|Scripts> <out.png> [invalid]: Edit Game
+            // --screenshot-edit-tab <All|Identity|Launch|Performance|Scripts> <out.png> [invalid|nodlss]: Edit Game
             // (scripts on) on one tab. With "invalid", a bad Steam App ID is typed on the Identity
             // tab, the dialog is switched to the given tab and Save is pressed, so the capture shows
-            // where a refused value lands.
+            // where a refused value lands. With "nodlss", a game that ships no DLSS is picked, so
+            // the capture shows the DLSS card's one-line state.
             if ((e.Args[i].Equals("--screenshot-edit-tab", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-edit-tab", StringComparison.OrdinalIgnoreCase)) &&
                 i + 2 < e.Args.Length)
@@ -1176,15 +1177,17 @@ public partial class App
                 var section = Enum.Parse<GameEditSection>(e.Args[i + 1], ignoreCase: true);
                 string targetPng = e.Args[i + 2];
                 bool invalid = i + 3 < e.Args.Length && e.Args[i + 3].Equals("invalid", StringComparison.OrdinalIgnoreCase);
+                bool noDlss = i + 3 < e.Args.Length && e.Args[i + 3].Equals("nodlss", StringComparison.OrdinalIgnoreCase);
                 _skipSettingsSaveOnExit = true;
                 // A copy, so pressing Save for the "invalid" capture can never touch the library.
                 // Prefer a game that actually ships DLSS, so the Performance tab's DLSS card is in
                 // the capture. Falls back to the first entry when no game in the library has it.
+                // Looked for the way the card looks: in the game's folder, not the executable's.
                 var source = (section is GameEditSection.Performance or GameEditSection.All
                         ? _mainViewModel.Games.FirstOrDefault(g =>
                             !string.IsNullOrEmpty(g.Game.ExecutablePath) &&
-                            DlssProbeService.FindShippedRuntimes(
-                                System.IO.Path.GetDirectoryName(g.Game.ExecutablePath) ?? string.Empty).Count > 0)
+                            DlssProbeService.Locate(g.Game.ExecutablePath, g.Game.WorkingDirectory).Root is { Length: > 0 } root &&
+                            DlssProbeService.FindShippedRuntimes(root).Count > 0 != noDlss)
                         : null)?.Game
                     ?? _mainViewModel.Games.FirstOrDefault()?.Game;
                 var sampleGame = source == null

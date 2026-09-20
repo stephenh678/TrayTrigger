@@ -51,6 +51,33 @@ Open a [Feature Request](https://github.com/stephenh678/TrayTrigger/issues/new?t
 - `TrayTrigger.Tests/` — unit tests
 - `docs/` — developer-facing playbooks not tied to any single file (e.g. [adding a new game-platform integration](docs/adding-a-platform-integration.md))
 
+## Logging
+
+A tester's `debug.log` is usually the only evidence there is: the bug is on someone else's PC, in a library you cannot see. The test for any log line is whether it would let you answer "what happened, and why?" without asking them to try again. When a log cannot answer that, the fix costs a whole beta cycle, so the logging goes in with the feature, not after the first report.
+
+Everything goes through `LoggingService`. The levels:
+
+- **`Info`** — something the user did, or that changed their data, once per action: a launch, an import, a removal, a tweak applied, an override written. Written whether or not verbose logging is on, so keep it to one line per action.
+- **`Warn` / `Error`** — something failed that the user would notice or that loses something. Say what was being attempted and on what, not only the exception message.
+- **`Verbose`** — every decision the app makes on its own, and why. Only written when the user turns verbose logging on (Settings → Troubleshooting), so it can be generous.
+
+What must be logged at `Verbose`:
+
+- **Why a feature did nothing.** An early `return`, a candidate rejected, a fallback taken, a search that found nothing: say so, and say what was looked at. "No DLSS files found" is useless without the folder that was searched and how that folder was chosen.
+- **Every item a scan or filter drops, with the reason**, one line per item: already in library (and as which entry), on the ignore list, a DLC, an install with no executable on disk. A scan leg that is switched off says that too. `ImportCoordinator.OfferedBy` is the pattern.
+- **What the user was shown.** Status lines, dialogs (and the answer given), toasts and the launch popup are echoed by `LoggingService.Shown` at the one place each is set. A new surface that puts words in front of the user calls it too.
+- **Exceptions that are caught and not acted on**: `LoggingService.Swallowed(category, ex, "what was being attempted")`.
+
+Rules the tests hold the code to (`LoggingConventionTests`):
+
+- A `catch` block logs, rethrows, uses the exception it caught, or carries a comment saying why saying nothing is right. The comment is the honest choice on a hot path: code that runs for every process on every two-second poll must not write a line per miss.
+- The category (the `[Tag]` in the log) names the **area**, not the class: `SteamScanner`, not `SteamScannerService`. One spelling per area, so a log can be searched by tag.
+
+And two that they cannot:
+
+- Anything that loops, joins or formats a collection to build a verbose line is wrapped in `if (LoggingService.IsVerboseEnabled)`, so it costs nothing when verbose logging is off.
+- Never log an API key, a token or a password, and nothing from inside a user's files beyond a path.
+
 ## Code of Conduct
 
 Be respectful and constructive. Disagreements about implementation are fine; personal attacks are not. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the full policy.

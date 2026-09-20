@@ -59,7 +59,7 @@ public static class ReleaseManifestVerifier
             catch (Exception ex) when (ex is CryptographicException or FormatException)
             {
                 // A malformed signature or key is a failed check, not a crash; try the next key.
-                LoggingService.Verbose("UpdateService", $"Release signature check with one key failed: {ex.Message}");
+                LoggingService.Verbose("Update", $"Release signature check with one key failed: {ex.Message}");
             }
         }
 

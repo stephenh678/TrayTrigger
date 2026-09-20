@@ -223,6 +223,7 @@ public static class ToolCatalog
         }
         catch (Exception)
         {
+            // A path that cannot be parsed is not a network one.
             return false;
         }
     }

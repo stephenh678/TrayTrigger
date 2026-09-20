@@ -39,7 +39,7 @@ public partial class IconExtractorService
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("IconExtractorService", $"Large icon extraction failed for '{path}': {ex.Message}");
+            LoggingService.Verbose("IconExtractor", $"Large icon extraction failed for '{path}': {ex.Message}");
             return null;
         }
         finally
@@ -71,7 +71,7 @@ public partial class IconExtractorService
             {
                 if (ShellAppResolver.TrySaveIcon(appId, cachedIconPath))
                 {
-                    LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' cached from Store app '{appId}'.");
+                    LoggingService.Verbose("IconExtractor", $"Icon for '{gameName}' cached from Store app '{appId}'.");
                     return cachedIconPath;
                 }
             }
@@ -88,7 +88,7 @@ public partial class IconExtractorService
                     using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                     using var img = Image.FromStream(fs);
                     SaveDownscaled(img, cachedIconPath);
-                    LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' cached from source PNG '{sourcePath}'.");
+                    LoggingService.Verbose("IconExtractor", $"Icon for '{gameName}' cached from source PNG '{sourcePath}'.");
                     return cachedIconPath;
                 }
 
@@ -99,7 +99,7 @@ public partial class IconExtractorService
                     using var ico = new Icon(sourcePath, new System.Drawing.Size(256, 256));
                     using var bmp = ico.ToBitmap();
                     bmp.Save(cachedIconPath, ImageFormat.Png);
-                    LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' cached from .ico '{sourcePath}'.");
+                    LoggingService.Verbose("IconExtractor", $"Icon for '{gameName}' cached from .ico '{sourcePath}'.");
                     return cachedIconPath;
                 }
 
@@ -108,7 +108,7 @@ public partial class IconExtractorService
                     using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                     using var img = Image.FromStream(fs);
                     SaveDownscaled(img, cachedIconPath);
-                    LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' cached from source image '{sourcePath}'.");
+                    LoggingService.Verbose("IconExtractor", $"Icon for '{gameName}' cached from source image '{sourcePath}'.");
                     return cachedIconPath;
                 }
 
@@ -119,7 +119,7 @@ public partial class IconExtractorService
                 if (largeBmp != null)
                 {
                     largeBmp.Save(cachedIconPath, ImageFormat.Png);
-                    LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' cached via shell large-icon extraction from '{sourcePath}'.");
+                    LoggingService.Verbose("IconExtractor", $"Icon for '{gameName}' cached via shell large-icon extraction from '{sourcePath}'.");
                     return cachedIconPath;
                 }
 
@@ -128,26 +128,26 @@ public partial class IconExtractorService
                 {
                     using var bmp = associatedIcon.ToBitmap();
                     bmp.Save(cachedIconPath, ImageFormat.Png);
-                    LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' cached via associated-icon fallback from '{sourcePath}'.");
+                    LoggingService.Verbose("IconExtractor", $"Icon for '{gameName}' cached via associated-icon fallback from '{sourcePath}'.");
                     return cachedIconPath;
                 }
             }
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("IconExtractorService", $"Extraction failed for '{sourcePath}': {ex.Message}");
+            LoggingService.Warn("IconExtractor", $"Extraction failed for '{sourcePath}': {ex.Message}");
         }
 
         // Fallback: Generate a crisp, modern letter/badge icon
         try
         {
             GenerateFallbackIcon(cachedIconPath, gameName);
-            LoggingService.Verbose("IconExtractorService", $"Icon for '{gameName}' generated as a letter-badge fallback (source: '{sourcePath}').");
+            LoggingService.Verbose("IconExtractor", $"Icon for '{gameName}' generated as a letter-badge fallback (source: '{sourcePath}').");
             return cachedIconPath;
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("IconExtractorService", $"Fallback generation failed: {ex.Message}");
+            LoggingService.Warn("IconExtractor", $"Fallback generation failed: {ex.Message}");
             return string.Empty;
         }
     }
@@ -270,7 +270,7 @@ public partial class IconExtractorService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("IconExtractorService", $"Failed to load bitmap from '{path}': {ex.Message}");
+            LoggingService.Warn("IconExtractor", $"Failed to load bitmap from '{path}': {ex.Message}");
             return null;
         }
     }
@@ -315,7 +315,7 @@ public partial class IconExtractorService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("IconExtractorService", $"Failed to extract associated icon from '{path}': {ex.Message}");
+            LoggingService.Warn("IconExtractor", $"Failed to extract associated icon from '{path}': {ex.Message}");
             return null;
         }
     }

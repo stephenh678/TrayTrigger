@@ -172,7 +172,7 @@ public partial class FolderScannerService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("FolderScannerService", $"Error scanning files in '{currentDir}': {ex.Message}");
+                LoggingService.Warn("FolderScanner", $"Error scanning files in '{currentDir}': {ex.Message}");
             }
 
             // 2. Enqueue subdirectories if depth < MaxScanDepth
@@ -192,7 +192,7 @@ public partial class FolderScannerService
                 }
                 catch (Exception ex)
                 {
-                    LoggingService.Warn("FolderScannerService", $"Error getting subdirs of '{currentDir}': {ex.Message}");
+                    LoggingService.Warn("FolderScanner", $"Error getting subdirs of '{currentDir}': {ex.Message}");
                 }
             }
         }
@@ -307,7 +307,7 @@ public partial class FolderScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("FolderScannerService", $"Error listing subdirectories of '{folderPath}': {ex.Message}");
+            LoggingService.Warn("FolderScanner", $"Error listing subdirectories of '{folderPath}': {ex.Message}");
             return new List<GameCandidate>();
         }
 
@@ -641,7 +641,7 @@ public partial class FolderScannerService
 
     private static string NormalizeFolder(string path)
     {
-        try { path = Path.GetFullPath(path); } catch { }
+        try { path = Path.GetFullPath(path); } catch { /* an invalid path is compared as written */ }
         return path.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
     }
 

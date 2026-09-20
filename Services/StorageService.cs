@@ -154,7 +154,7 @@ public class StorageService : IProfileSnapshotStore
                     string target = Path.Combine(_iconsDirectory, Path.GetFileName(file));
                     if (!File.Exists(target))
                     {
-                        try { File.Copy(file, target, overwrite: false); } catch { }
+                        try { File.Copy(file, target, overwrite: false); } catch (Exception ex) { LoggingService.Swallowed("Storage", ex, "carrying a file over from the old data folder"); }
                     }
                 }
             }
@@ -167,7 +167,7 @@ public class StorageService : IProfileSnapshotStore
                     string target = Path.Combine(_coversDirectory, Path.GetFileName(file));
                     if (!File.Exists(target))
                     {
-                        try { File.Copy(file, target, overwrite: false); } catch { }
+                        try { File.Copy(file, target, overwrite: false); } catch (Exception ex) { LoggingService.Swallowed("Storage", ex, "carrying a file over from the old data folder"); }
                     }
                 }
             }
@@ -864,7 +864,7 @@ public class StorageService : IProfileSnapshotStore
         try
         {
             File.Copy(tempFile, targetFile, overwrite: true);
-            try { File.Delete(tempFile); } catch { }
+            try { File.Delete(tempFile); } catch { /* a stray temp file is harmless */ }
         }
         catch
         {

@@ -39,7 +39,7 @@ public static class ScanLocationService
             .ToList();
         foreach (var loc in toRemove)
         {
-            LoggingService.Info("ScanLocationService", $"Removing auto-managed Steam scan location no longer reported by Steam: '{loc.Path}'.");
+            LoggingService.Info("ScanLocation", $"Removing auto-managed Steam scan location no longer reported by Steam: '{loc.Path}'.");
         }
         int removed = settings.ScanLocations.RemoveAll(toRemove.Contains);
         changed |= removed > 0;
@@ -56,7 +56,7 @@ public static class ScanLocationService
                 IsAutoManaged = true,
                 IsEnabled = true
             });
-            LoggingService.Info("ScanLocationService", $"Added Steam scan location: '{path}'.");
+            LoggingService.Info("ScanLocation", $"Added Steam scan location: '{path}'.");
             changed = true;
         }
 

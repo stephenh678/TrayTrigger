@@ -299,6 +299,11 @@ public class GameCardViewModel : ViewModelBase
             if (_isMissing != value)
             {
                 _isMissing = value;
+                // The card's "executable missing" marker changes what Play does, so the log says
+                // when it went up or came down, and for which path.
+                LoggingService.Verbose("GameCard", value
+                    ? $"'{Game.Name}': marked missing, '{Game.ExecutablePath}' is not on disk."
+                    : $"'{Game.Name}': no longer marked missing.");
                 OnPropertyChanged();
             }
         }
@@ -457,7 +462,7 @@ public class GameCardViewModel : ViewModelBase
     private static DateTime? SafeGetLastWriteTimeUtc(string? path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
-        try { return File.GetLastWriteTimeUtc(path); } catch { return null; }
+        try { return File.GetLastWriteTimeUtc(path); } catch { /* a file that cannot be read has no timestamp to compare */ return null; }
     }
 
     /// <summary>
@@ -547,7 +552,7 @@ public class GameCardViewModel : ViewModelBase
                 // still passes Directory.Exists, and Explorer shows Documents for it instead.
                 if (LinkedDirectory.Resolve(Game.WorkingDirectory, out string folder) == LinkedDirectoryState.BrokenLink)
                 {
-                    LoggingService.Warn("GameCardViewModel", $"Cannot open the folder for '{Game.Name}': '{Game.WorkingDirectory}' links to a folder or drive that no longer exists.");
+                    LoggingService.Warn("GameCard", $"Cannot open the folder for '{Game.Name}': '{Game.WorkingDirectory}' links to a folder or drive that no longer exists.");
                     Views.ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "Folder Not Found",
                         $"The folder for \"{Game.Name}\" no longer exists.",
                         $"{Game.WorkingDirectory} points to a folder or drive that has been removed or isn't connected.");
@@ -560,7 +565,7 @@ public class GameCardViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("GameCardViewModel", $"Error opening folder: {ex.Message}");
+            LoggingService.Warn("GameCard", $"Error opening folder: {ex.Message}");
         }
     }
 

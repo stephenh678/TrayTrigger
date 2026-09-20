@@ -132,7 +132,7 @@ public class UpdateService
             return trimmed;
         }
 
-        LoggingService.Warn("UpdateService", $"Ignoring malformed update repository '{trimmed}'; using {DefaultRepository}.");
+        LoggingService.Warn("Update", $"Ignoring malformed update repository '{trimmed}'; using {DefaultRepository}.");
         return DefaultRepository;
 
         static bool IsRepositorySegment(string s) =>
@@ -183,14 +183,14 @@ public class UpdateService
             string url = includePrerelease
                 ? $"https://api.github.com/repos/{targetRepo}/releases?per_page=30"
                 : $"https://api.github.com/repos/{targetRepo}/releases/latest";
-            LoggingService.Info("UpdateService", $"Checking for updates at {url} (prerelease={includePrerelease})");
+            LoggingService.Info("Update", $"Checking for updates at {url} (prerelease={includePrerelease})");
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token).ConfigureAwait(false);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                LoggingService.Info("UpdateService", $"No releases found for repository {targetRepo} (HTTP 404).");
+                LoggingService.Info("Update", $"No releases found for repository {targetRepo} (HTTP 404).");
                 return new UpdateCheckResult(
                     UpdateStatus.NoReleasesFound,
                     null,
@@ -201,7 +201,7 @@ public class UpdateService
             if (!response.IsSuccessStatusCode)
             {
                 string statusMsg = $"GitHub API returned {(int)response.StatusCode} {response.ReasonPhrase}";
-                LoggingService.Warn("UpdateService", statusMsg);
+                LoggingService.Warn("Update", statusMsg);
                 return new UpdateCheckResult(UpdateStatus.Error, null, statusMsg, CurrentVersion);
             }
 
@@ -217,7 +217,7 @@ public class UpdateService
                 }
                 if (list.Count == 0)
                 {
-                    LoggingService.Info("UpdateService", $"Release list for {targetRepo} is empty.");
+                    LoggingService.Info("Update", $"Release list for {targetRepo} is empty.");
                     return new UpdateCheckResult(
                         UpdateStatus.NoReleasesFound,
                         null,
@@ -240,7 +240,7 @@ public class UpdateService
             var current = CurrentSemVer;
             if (remoteVersion != null && remoteVersion > current)
             {
-                LoggingService.Info("UpdateService", $"New release detected: {release.TagName} (Current: {CurrentVersionDisplay}, prerelease={release.Prerelease})");
+                LoggingService.Info("Update", $"New release detected: {release.TagName} (Current: {CurrentVersionDisplay}, prerelease={release.Prerelease})");
                 return new UpdateCheckResult(UpdateStatus.UpdateAvailable, release, null, CurrentVersion);
             }
 
@@ -248,28 +248,28 @@ public class UpdateService
             // build is behind a release it is in fact ahead of.
             if (remoteVersion != null && current > remoteVersion)
             {
-                LoggingService.Info("UpdateService", $"Running {CurrentVersionDisplay}, which is ahead of the latest release on GitHub ({release.TagName}).");
+                LoggingService.Info("Update", $"Running {CurrentVersionDisplay}, which is ahead of the latest release on GitHub ({release.TagName}).");
             }
             else
             {
-                LoggingService.Info("UpdateService", $"App is up to date. Latest release on GitHub is {release.TagName}.");
+                LoggingService.Info("Update", $"App is up to date. Latest release on GitHub is {release.TagName}.");
             }
 
             return new UpdateCheckResult(UpdateStatus.UpToDate, release, null, CurrentVersion);
         }
         catch (HttpRequestException ex)
         {
-            LoggingService.Warn("UpdateService", $"Network error checking for updates: {ex.Message}");
+            LoggingService.Warn("Update", $"Network error checking for updates: {ex.Message}");
             return new UpdateCheckResult(UpdateStatus.Error, null, "Network connection issue: Unable to reach GitHub.", CurrentVersion);
         }
         catch (TaskCanceledException)
         {
-            LoggingService.Warn("UpdateService", "Update check timed out.");
+            LoggingService.Warn("Update", "Update check timed out.");
             return new UpdateCheckResult(UpdateStatus.Error, null, "Connection timed out while checking for updates.", CurrentVersion);
         }
         catch (Exception ex)
         {
-            LoggingService.Error("UpdateService", "Unexpected error during update check", ex);
+            LoggingService.Error("Update", "Unexpected error during update check", ex);
             return new UpdateCheckResult(UpdateStatus.Error, null, $"Update check failed: {ex.Message}", CurrentVersion);
         }
     }
@@ -326,15 +326,15 @@ public class UpdateService
             byte[] signature = await FetchSmallAssetAsync(checksumsSignature.BrowserDownloadUrl, GitHubReleaseInfo.ChecksumsSignatureAssetName, cancellationToken).ConfigureAwait(false);
             if (!ReleaseManifestVerifier.Verify(sumsBytes, signature))
             {
-                LoggingService.Error("UpdateService", $"{GitHubReleaseInfo.ChecksumsAssetName} is not signed by a TrayTrigger release key.");
+                LoggingService.Error("Update", $"{GitHubReleaseInfo.ChecksumsAssetName} is not signed by a TrayTrigger release key.");
                 throw new UpdateVerificationException(
                     $"{GitHubReleaseInfo.ChecksumsAssetName} is not signed by a TrayTrigger release key.");
             }
-            LoggingService.Info("UpdateService", $"{GitHubReleaseInfo.ChecksumsAssetName} signature verified.");
+            LoggingService.Info("Update", $"{GitHubReleaseInfo.ChecksumsAssetName} signature verified.");
 
             if (!IsInstallerNamedForRelease(asset.Name, releaseTag))
             {
-                LoggingService.Error("UpdateService", $"Installer '{asset.Name}' is not the one named for release '{releaseTag}'.");
+                LoggingService.Error("Update", $"Installer '{asset.Name}' is not the one named for release '{releaseTag}'.");
                 throw new UpdateVerificationException(
                     $"The installer {asset.Name} does not belong to release {releaseTag}.");
             }
@@ -353,21 +353,21 @@ public class UpdateService
         string actualHash = await ComputeSha256Async(downloaded, cancellationToken).ConfigureAwait(false);
         if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
         {
-            LoggingService.Error("UpdateService",
+            LoggingService.Error("Update",
                 $"Checksum mismatch for {asset.Name}: expected {expectedHash}, got {actualHash}. Deleting the download.");
-            try { File.Delete(downloaded); } catch (Exception ex) { LoggingService.Warn("UpdateService", $"Could not delete unverified download: {ex.Message}"); }
+            try { File.Delete(downloaded); } catch (Exception ex) { LoggingService.Warn("Update", $"Could not delete unverified download: {ex.Message}"); }
             throw new UpdateVerificationException(
                 $"The downloaded {asset.Name} does not match the checksum published with the release.");
         }
 
-        LoggingService.Info("UpdateService", $"Verified {asset.Name} (SHA-256 {actualHash}).");
+        LoggingService.Info("Update", $"Verified {asset.Name} (SHA-256 {actualHash}).");
         lock (VerifiedDownloads) { VerifiedDownloads[downloaded] = actualHash; }
 
         string? signatureProblem = CheckInstallerSignature(downloaded);
         if (signatureProblem != null)
         {
-            LoggingService.Error("UpdateService", $"{signatureProblem} Deleting the download.");
-            try { File.Delete(downloaded); } catch (Exception ex) { LoggingService.Warn("UpdateService", $"Could not delete unverified download: {ex.Message}"); }
+            LoggingService.Error("Update", $"{signatureProblem} Deleting the download.");
+            try { File.Delete(downloaded); } catch (Exception ex) { LoggingService.Warn("Update", $"Could not delete unverified download: {ex.Message}"); }
             throw new UpdateVerificationException(signatureProblem);
         }
 
@@ -389,7 +389,7 @@ public class UpdateService
 
         if (string.IsNullOrEmpty(expectedSubject))
         {
-            LoggingService.Warn("UpdateService", "Running executable is not code-signed; skipping installer signature enforcement.");
+            LoggingService.Warn("Update", "Running executable is not code-signed; skipping installer signature enforcement.");
             return null;
         }
 
@@ -401,7 +401,7 @@ public class UpdateService
 
         if (!string.Equals(actualSubject, expectedSubject, StringComparison.Ordinal))
         {
-            LoggingService.Error("UpdateService", $"Installer signer '{actualSubject}' does not match running exe signer '{expectedSubject}'.");
+            LoggingService.Error("Update", $"Installer signer '{actualSubject}' does not match running exe signer '{expectedSubject}'.");
             return "The downloaded installer was signed by a different publisher than this installation.";
         }
 
@@ -417,11 +417,11 @@ public class UpdateService
         string? product = GetProductName(installerPath);
         if (!string.Equals(product, ExpectedInstallerProductName, StringComparison.OrdinalIgnoreCase))
         {
-            LoggingService.Error("UpdateService", $"Installer product name '{product}' is not '{ExpectedInstallerProductName}'.");
+            LoggingService.Error("Update", $"Installer product name '{product}' is not '{ExpectedInstallerProductName}'.");
             return "The downloaded installer is signed, but it is not a TrayTrigger installer.";
         }
 
-        LoggingService.Info("UpdateService", $"Installer signature verified: {actualSubject}");
+        LoggingService.Info("Update", $"Installer signature verified: {actualSubject}");
         return null;
     }
 
@@ -485,7 +485,7 @@ public class UpdateService
     private static string? GetProductName(string path)
     {
         try { return FileVersionInfo.GetVersionInfo(path).ProductName?.Trim(); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* a file that cannot be read has no product name to check */ return null; }
     }
 
     /// <summary>
@@ -553,7 +553,7 @@ public class UpdateService
 
         string targetPath = Path.Combine(tempFolder, safeName);
 
-        LoggingService.Info("UpdateService", $"Downloading update asset from {asset.BrowserDownloadUrl} to {targetPath}");
+        LoggingService.Info("Update", $"Downloading update asset from {asset.BrowserDownloadUrl} to {targetPath}");
 
         // No extra internal timeout here: the caller (UpdateDialog) already provides a real,
         // user-controlled cancellationToken wired to a visible Cancel button and progress bar, so
@@ -588,7 +588,7 @@ public class UpdateService
             }
         }
 
-        LoggingService.Info("UpdateService", $"Download completed: {targetPath}");
+        LoggingService.Info("Update", $"Download completed: {targetPath}");
         return targetPath;
     }
 
@@ -623,17 +623,17 @@ public class UpdateService
                 try
                 {
                     File.Delete(file);
-                    LoggingService.Verbose("UpdateService", $"Removed old installer: {file}");
+                    LoggingService.Verbose("Update", $"Removed old installer: {file}");
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    LoggingService.Verbose("UpdateService", $"Old installer still in use, skipping: {file} ({ex.Message})");
+                    LoggingService.Verbose("Update", $"Old installer still in use, skipping: {file} ({ex.Message})");
                 }
             }
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("UpdateService", $"Installer cleanup failed: {ex.Message}");
+            LoggingService.Warn("Update", $"Installer cleanup failed: {ex.Message}");
         }
     }
 
@@ -671,12 +671,12 @@ public class UpdateService
             string actual = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(guard)).ToLowerInvariant();
             if (!string.Equals(actual, verifiedSha256, StringComparison.OrdinalIgnoreCase))
             {
-                LoggingService.Error("UpdateService", $"Installer changed after verification: expected {verifiedSha256}, got {actual}.");
+                LoggingService.Error("Update", $"Installer changed after verification: expected {verifiedSha256}, got {actual}.");
                 throw new UpdateVerificationException("The downloaded installer changed after it was verified.");
             }
         }
 
-        LoggingService.Info("UpdateService", $"Launching installer: {installerPath} {InstallerUpdateArguments}");
+        LoggingService.Info("Update", $"Launching installer: {installerPath} {InstallerUpdateArguments}");
 
         var psi = new ProcessStartInfo
         {
@@ -694,13 +694,13 @@ public class UpdateService
             // The user declined the installer's elevation prompt. Not a download failure, which is
             // what the dialog's catch-all made of it - "check your internet connection" and a
             // Retry Download button for a file that had downloaded and verified.
-            LoggingService.Info("UpdateService", "Installer launch cancelled at the elevation prompt.");
+            LoggingService.Info("Update", "Installer launch cancelled at the elevation prompt.");
             throw new OperationCanceledException("The installer's elevation prompt was declined.", ex);
         }
 
         Application.Current?.Dispatcher.Invoke(() =>
         {
-            LoggingService.Info("UpdateService", "Shutting down application for update installation...");
+            LoggingService.Info("Update", "Shutting down application for update installation...");
             if (Application.Current is App app)
             {
                 app.ExitApplication();

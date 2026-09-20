@@ -42,6 +42,6 @@ public static class Motion
     private static bool ReadSystemSetting()
     {
         try { return SystemParameters.ClientAreaAnimation; }
-        catch { return true; }
+        catch { /* assume animations are on */ return true; }
     }
 }

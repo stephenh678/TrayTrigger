@@ -301,7 +301,7 @@ public class MainViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                LoggingService.Error("MainViewModel", "Failed to open GitHub repo link", ex);
+                LoggingService.Error("Main", "Failed to open GitHub repo link", ex);
             }
         });
         OpenGitHubIssuesCommand = new RelayCommand(() =>
@@ -313,7 +313,7 @@ public class MainViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                LoggingService.Error("MainViewModel", "Failed to open GitHub issues link", ex);
+                LoggingService.Error("Main", "Failed to open GitHub issues link", ex);
             }
         });
         CopySystemInfoCommand = new RelayCommand(() =>
@@ -325,7 +325,7 @@ public class MainViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                LoggingService.Error("MainViewModel", "Failed to copy the diagnostic report to the clipboard", ex);
+                LoggingService.Error("Main", "Failed to copy the diagnostic report to the clipboard", ex);
             }
         });
         SaveDiagnosticReportCommand = new RelayCommand(() =>
@@ -345,7 +345,7 @@ public class MainViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                LoggingService.Error("MainViewModel", "Failed to save the diagnostic report", ex);
+                LoggingService.Error("Main", "Failed to save the diagnostic report", ex);
             }
         });
         ExitApplicationCommand = new RelayCommand(PromptExitApplication);
@@ -510,8 +510,9 @@ public class MainViewModel : ViewModelBase
                 if (int.TryParse(build, out int b) && b >= 22000) product = product.Replace("Windows 10", "Windows 11");
                 return $"{product} {display} (build {build})".Replace("  ", " ").Trim();
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingService.Swallowed("Diagnostics", ex, "reading the Windows version");
                 return Environment.OSVersion.VersionString;
             }
         }
@@ -560,7 +561,7 @@ public class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("MainViewModel", $"Tweak state unavailable for the diagnostic report: {ex.Message}");
+            LoggingService.Verbose("Main", $"Tweak state unavailable for the diagnostic report: {ex.Message}");
         }
 
         bool startedMinimized = Environment.GetCommandLineArgs().Any(a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase));
@@ -582,7 +583,7 @@ public class MainViewModel : ViewModelBase
 
         static bool? Try(Func<bool> probe)
         {
-            try { return probe(); } catch { return null; }
+            try { return probe(); } catch (Exception ex) { LoggingService.Swallowed("Diagnostics", ex, "probing for a launcher"); return null; }
         }
     }
     public ICommand CheckForUpdatesCommand => Update.CheckForUpdatesCommand;

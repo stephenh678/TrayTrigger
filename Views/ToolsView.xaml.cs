@@ -87,7 +87,7 @@ public partial class ToolsView : UserControl
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("ToolsView", $"Could not read the dropped files: {ex.Message}");
+            LoggingService.Warn("Tools", $"Could not read the dropped files: {ex.Message}");
             return null;
         }
     }
@@ -103,7 +103,7 @@ public partial class ToolsView : UserControl
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("ToolsView", $"Could not read the dropped apps: {ex.Message}");
+            LoggingService.Warn("Tools", $"Could not read the dropped apps: {ex.Message}");
             return [];
         }
     }

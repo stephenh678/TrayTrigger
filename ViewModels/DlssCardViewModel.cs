@@ -41,7 +41,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private readonly List<DlssSettingRecord> _records;
     private readonly Action? _persist;
     private readonly GameEntry? _game;
-    private readonly Func<string, DlssProbeService.ProbeResult> _probe;
+    private readonly Func<string, string?, DlssProbeService.ProbeResult> _probe;
 
     private bool _isBusy;
     private bool _hasLoaded;
@@ -67,7 +67,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         List<DlssSettingRecord>? records = null,
         Action? persist = null,
         DlssOverrideService? overrides = null,
-        Func<string, DlssProbeService.ProbeResult>? probe = null,
+        Func<string, string?, DlssProbeService.ProbeResult>? probe = null,
         GameEntry? game = null)
     {
         _game = game;
@@ -79,7 +79,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         _records = records ?? new List<DlssSettingRecord>();
         _persist = persist;
         _overrides = overrides ?? new DlssOverrideService();
-        _probe = probe ?? (path => DlssProbeService.Probe(path));
+        _probe = probe ?? ((path, root) => DlssProbeService.Probe(path, root));
 
         RestoreCommand = new AsyncRelayCommand(RestoreAsync, () => CanRestore);
     }
@@ -92,10 +92,31 @@ public sealed class DlssCardViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Shown on any machine with an NVIDIA driver. A game that ships no DLSS keeps the card, greyed
-    /// out and saying why, so its absence is never mistaken for a fault.
+    /// Shown on any machine with an NVIDIA driver. A game that ships no DLSS keeps the card, as one
+    /// line saying so, so its absence is never mistaken for a fault.
     /// </summary>
     public bool IsVisible => _hasLoaded && _content.HasDriver && IsOnTab;
+
+    /// <summary>
+    /// The card has two states and no more. The whole card, for a game that ships DLSS - and for
+    /// one TrayTrigger still holds an override for, whatever the game ships now, so Restore can
+    /// always be reached. Otherwise <see cref="NotAvailableLine"/> and nothing else: a greyed-out
+    /// switch, a description and a disabled Restore for a feature that cannot apply read as
+    /// something broken, and most games ship no DLSS.
+    /// </summary>
+    public bool ShowFullCard => _content.HasDlss || _records.Count > 0;
+
+    /// <summary>The one-line state. See <see cref="ShowFullCard"/>.</summary>
+    public bool ShowNotAvailable => !ShowFullCard;
+
+    /// <summary>
+    /// Not "No DLSS files found": that describes a search that failed, and invites the reader to
+    /// go and fix it. "Include", not "support": what is known is what is in the game's folder.
+    /// </summary>
+    public const string NotAvailableLine = "Not available. This game doesn't include DLSS.";
+
+    /// <summary><see cref="NotAvailableLine"/>, where the XAML can bind to it.</summary>
+    public string NotAvailableText => NotAvailableLine;
 
     /// <summary>False when the game ships no DLSS: there is nothing for an override to replace.</summary>
     public bool CanEnable => _content.HasDlss;
@@ -111,8 +132,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// to join them.
     /// </summary>
     public string VersionLine =>
-        _hasLoaded && _content.HasDriver && !_content.HasDlss ? "No DLSS files found in this game"
-        : _content.GameVersion == null ? string.Empty
+        _content.GameVersion == null ? string.Empty
         : _content.DriverVersion == null ? _content.GameVersion
         : _content.DriverIsNewer
             ? $"{_content.GameVersion} → {_content.DriverVersion}"
@@ -141,7 +161,11 @@ public sealed class DlssCardViewModel : ViewModelBase
     public bool CanRestore => !IsBusy && _records.Count > 0;
 
     /// <summary>Why the last change did not work. Null otherwise: when it works, the switch says so.</summary>
-    public string? Status { get => _status; private set => SetProperty(ref _status, value); }
+    public string? Status
+    {
+        get => _status;
+        private set { if (SetProperty(ref _status, value)) LoggingService.Shown("DLSS card status", value); }
+    }
     public bool HasStatus => !string.IsNullOrEmpty(_status);
 
     /// <summary>
@@ -195,14 +219,26 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     private async Task LoadCoreAsync()
     {
-        if (string.IsNullOrWhiteSpace(_executablePath) && string.IsNullOrWhiteSpace(_installDirectory)) { _hasLoaded = true; return; }
+        if (string.IsNullOrWhiteSpace(_executablePath) && string.IsNullOrWhiteSpace(_installDirectory))
+        {
+            LoggingService.Verbose("Dlss", $"DLSS card hidden for '{_gameName}': no executable and no install folder to look in.");
+            _hasLoaded = true;
+            return;
+        }
         try
         {
             // The renderer, not the launcher: that is the profile an override is written to.
-            string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath ?? string.Empty, _installDirectory)).ConfigureAwait(true);
-            _rendererPath = path;
-            var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
+            var where = await Task.Run(() => DlssProbeService.Locate(_executablePath ?? string.Empty, _installDirectory)).ConfigureAwait(true);
+            _rendererPath = where.Renderer;
+            // The folder the renderer was found in, not one worked out again from the renderer.
+            var result = await Task.Run(() => _probe(where.Renderer, where.Root)).ConfigureAwait(true);
             _content = Project(result);
+
+            // Verbose only: most games ship no DLSS, and this runs every time Edit Game opens.
+            LoggingService.Verbose("Dlss",
+                !_content.HasDriver ? $"DLSS card hidden for '{_gameName}': no NVIDIA driver."
+                : !_content.HasDlss ? $"No DLSS files found for '{_gameName}': searched '{where.Root ?? "(no folder)"}' (launched '{_executablePath}', install folder '{_installDirectory}')."
+                : $"DLSS card for '{_gameName}': game {_content.GameVersion ?? "?"}, driver {_content.DriverVersion ?? "?"}, renderer '{where.Renderer}', searched '{where.Root}'.");
         }
         catch (Exception ex)
         {
@@ -320,6 +356,8 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsVisible));
         OnPropertyChanged(nameof(CanEnable));
+        OnPropertyChanged(nameof(ShowFullCard));
+        OnPropertyChanged(nameof(ShowNotAvailable));
         OnPropertyChanged(nameof(VersionLine));
         OnPropertyChanged(nameof(OverrideEnabled));
         OnPropertyChanged(nameof(CanRestore));

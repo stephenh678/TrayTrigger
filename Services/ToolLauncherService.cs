@@ -328,6 +328,7 @@ public class ToolLauncherService
             }
             catch (Exception)
             {
+                // The process has already exited.
                 exited = true;
             }
             if (!exited) continue;

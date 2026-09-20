@@ -93,12 +93,12 @@ public static class NgxModelStore
     private static IEnumerable<string> SafeDirectories(string path)
     {
         try { return Directory.EnumerateDirectories(path); }
-        catch { return Array.Empty<string>(); }
+        catch (Exception ex) { LoggingService.Swallowed("NgxModelStore", ex, "listing the driver's DLSS store"); return Array.Empty<string>(); }
     }
 
     private static IEnumerable<string> SafeFiles(string path)
     {
         try { return Directory.Exists(path) ? Directory.EnumerateFiles(path) : Array.Empty<string>(); }
-        catch { return Array.Empty<string>(); }
+        catch (Exception ex) { LoggingService.Swallowed("NgxModelStore", ex, "listing the driver's DLSS store"); return Array.Empty<string>(); }
     }
 }

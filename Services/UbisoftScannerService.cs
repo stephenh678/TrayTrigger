@@ -59,7 +59,7 @@ public class UbisoftScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("UbisoftScannerService", $"Error scanning installed Ubisoft games: {ex.Message}");
+            LoggingService.Warn("UbisoftScanner", $"Error scanning installed Ubisoft games: {ex.Message}");
         }
 
         return results.OrderBy(g => g.Name).ToList();
@@ -84,7 +84,7 @@ public class UbisoftScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("UbisoftScannerService", $"Error reading Ubisoft install list: {ex.Message}");
+            LoggingService.Warn("UbisoftScanner", $"Error reading Ubisoft install list: {ex.Message}");
         }
         return results;
     }
@@ -109,12 +109,16 @@ public class UbisoftScannerService
         try
         {
             string? installDir = ReadInstallDir(installsKey, gameId);
-            if (installDir == null) return null;
+            if (installDir == null)
+            {
+                LoggingService.Verbose("UbisoftScanner", $"Skipped install entry [{gameId}]: it has no InstallDir.");
+                return null;
+            }
             return ResolveInstall(gameId, installDir, existingSet);
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("UbisoftScannerService", $"Error parsing Ubisoft install entry '{gameId}': {ex.Message}");
+            LoggingService.Warn("UbisoftScanner", $"Error parsing Ubisoft install entry '{gameId}': {ex.Message}");
             return null;
         }
     }
@@ -123,11 +127,19 @@ public class UbisoftScannerService
     {
         try
         {
-            if (!Directory.Exists(installDir)) return null;
+            if (!Directory.Exists(installDir))
+            {
+                LoggingService.Verbose("UbisoftScanner", $"Skipped [{gameId}]: its install folder '{installDir}' is not on disk.");
+                return null;
+            }
 
             // Skip the expensive folder scan entirely for a game already in the library - the
             // scan result would only be discarded (via IsAlreadyImported) after paying the cost.
-            if (existingSet.Contains(gameId)) return null;
+            if (existingSet.Contains(gameId))
+            {
+                LoggingService.Verbose("UbisoftScanner", $"[{gameId}] at '{installDir}': already in library, not rescanned.");
+                return null;
+            }
 
             // preferExe: false is the whole point here. Ubisoft publishes no display name, so the
             // install folder is the only title available - and the class comment above has always
@@ -137,7 +149,11 @@ public class UbisoftScannerService
             // discard Steam's exact match of the real title.
             var candidates = _folderScannerService.ScanFolder(installDir, preferExe: false);
             var best = candidates.FirstOrDefault();
-            if (best == null) return null;
+            if (best == null)
+            {
+                LoggingService.Verbose("UbisoftScanner", $"Skipped [{gameId}]: no game executable was found under '{installDir}'.");
+                return null;
+            }
 
             return new DiscoveredUbisoftGame(
                 GameId: gameId,
@@ -150,7 +166,7 @@ public class UbisoftScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("UbisoftScannerService", $"Error parsing Ubisoft install entry '{gameId}': {ex.Message}");
+            LoggingService.Warn("UbisoftScanner", $"Error parsing Ubisoft install entry '{gameId}': {ex.Message}");
             return null;
         }
     }

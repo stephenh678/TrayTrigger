@@ -39,6 +39,7 @@ public class EpicScannerService
 
         if (!Directory.Exists(ManifestsDir))
         {
+            LoggingService.Verbose("EpicScanner", $"No '{ManifestsDir}': the Epic Games Launcher has installed nothing here.");
             return results;
         }
 
@@ -49,7 +50,7 @@ public class EpicScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("EpicScannerService", $"Error enumerating '{ManifestsDir}': {ex.Message}");
+            LoggingService.Warn("EpicScanner", $"Error enumerating '{ManifestsDir}': {ex.Message}");
             return results;
         }
 
@@ -67,26 +68,34 @@ public class EpicScannerService
 
     private static DiscoveredEpicGame? ParseManifest(string manifestPath, HashSet<string> existingSet)
     {
+        // Every manifest that is not offered says why: a game missing from a scan is otherwise
+        // indistinguishable from one Epic has no manifest for.
+        DiscoveredEpicGame? Skipped(string why)
+        {
+            LoggingService.Verbose("EpicScanner", $"Skipped '{Path.GetFileName(manifestPath)}': {why}.");
+            return null;
+        }
+
         try
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(manifestPath));
             var root = doc.RootElement;
 
             if (root.TryGetProperty("bIsIncompleteInstall", out var incomplete) && incomplete.ValueKind == JsonValueKind.True)
-                return null;
+                return Skipped("the install is incomplete");
             if (root.TryGetProperty("bIsApplication", out var isApp) && isApp.ValueKind != JsonValueKind.True)
-                return null;
+                return Skipped("it is not an application");
 
             // Entries with a non-empty MainGameAppName are DLC/add-ons that depend on a base
             // game, not a separately launchable title - same reasoning as GOG's dependsOn filter.
             if (root.TryGetProperty("MainGameAppName", out var mainGame) && mainGame.ValueKind == JsonValueKind.String
                 && !string.IsNullOrWhiteSpace(mainGame.GetString()))
-                return null;
+                return Skipped($"DLC for {mainGame.GetString()}, not a game of its own");
 
             if (root.TryGetProperty("AppCategories", out var categories) && categories.ValueKind == JsonValueKind.Array)
             {
                 bool isGame = categories.EnumerateArray().Any(c => string.Equals(c.GetString(), "games", StringComparison.OrdinalIgnoreCase));
-                if (!isGame) return null;
+                if (!isGame) return Skipped("its categories do not include \"games\"");
             }
 
             string? appName = root.TryGetProperty("AppName", out var an) ? an.GetString() : null;
@@ -96,7 +105,7 @@ public class EpicScannerService
 
             if (string.IsNullOrWhiteSpace(appName) || string.IsNullOrWhiteSpace(displayName) ||
                 string.IsNullOrWhiteSpace(installDir) || string.IsNullOrWhiteSpace(launchExe))
-                return null;
+                return Skipped("it has no AppName, DisplayName, InstallLocation or LaunchExecutable");
 
             // Path.Combine discards installDir entirely if LaunchExecutable is rooted, and happily
             // builds "..\" traversals - so a planted manifest could point at any exe on disk.
@@ -105,7 +114,9 @@ public class EpicScannerService
             if (!File.Exists(exePath) || !PlatformLookupService.IsPathUnderDirectory(exePath, installDir))
             {
                 if (File.Exists(exePath))
-                    LoggingService.Warn("EpicScannerService", $"Ignoring Epic manifest '{manifestPath}': LaunchExecutable '{launchExe}' resolves outside InstallLocation '{installDir}'.");
+                    LoggingService.Warn("EpicScanner", $"Ignoring Epic manifest '{manifestPath}': LaunchExecutable '{launchExe}' resolves outside InstallLocation '{installDir}'.");
+                else
+                    Skipped($"its executable '{exePath}' is not on disk");
                 return null;
             }
 
@@ -120,7 +131,7 @@ public class EpicScannerService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("EpicScannerService", $"Error parsing Epic manifest '{manifestPath}': {ex.Message}");
+            LoggingService.Warn("EpicScanner", $"Error parsing Epic manifest '{manifestPath}': {ex.Message}");
             return null;
         }
     }

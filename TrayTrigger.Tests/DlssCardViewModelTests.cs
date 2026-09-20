@@ -33,23 +33,49 @@ public class DlssCardViewModelTests
         FakeDrsBackend driver, List<DlssSettingRecord> records,
         Action? persist = null, DlssProbeService.ProbeResult? probe = null, GameEntry? game = null) =>
         new(Exe, "Test Game", records, persist, new DlssOverrideService(driver),
-            _ => probe ?? Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }),
+            (_, _) => probe ?? Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }),
             game ?? new GameEntry());
 
     // ---- What it says ------------------------------------------------------------------------
 
     [Fact]
-    public async Task AGameWithNoDlss_KeepsTheCard_GreyedOutAndSayingWhy()
+    public async Task AGameWithNoDlss_KeepsTheCard_AsOneLineSayingSo()
     {
         var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), probe: Result());
         await card.LoadAsync();
 
         Assert.True(card.IsVisible);
+        Assert.True(card.ShowNotAvailable);
+        Assert.False(card.ShowFullCard);
         Assert.False(card.CanEnable);
-        Assert.Equal("No DLSS files found in this game", card.VersionLine);
+        Assert.Equal("Not available. This game doesn't include DLSS.", card.NotAvailableText);
+        // Nothing where the versions would be: the line above is the whole message.
+        Assert.Equal(string.Empty, card.VersionLine);
 
         card.OverrideEnabled = true;
         Assert.False(card.OverrideEnabled);
+    }
+
+    [Fact]
+    public async Task AGameWithDlss_ShowsTheWholeCard()
+    {
+        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>());
+        await card.LoadAsync();
+
+        Assert.True(card.ShowFullCard);
+        Assert.False(card.ShowNotAvailable);
+    }
+
+    [Fact]
+    public async Task AnOverrideStillHeld_KeepsTheWholeCard_SoRestoreCanBeReached()
+    {
+        // A patch took the game's DLSS away after the override was turned on.
+        var records = new List<DlssSettingRecord> { new() { SettingId = 0x10E41E01, ExecutablePath = Exe } };
+        var card = Card(new FakeDrsBackend(), records, probe: Result());
+        await card.LoadAsync();
+
+        Assert.True(card.ShowFullCard);
+        Assert.True(card.CanRestore);
     }
 
     [Fact]

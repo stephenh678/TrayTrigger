@@ -164,7 +164,7 @@ public sealed class ToolsViewModel : ViewModelBase
     public string StatusMessage
     {
         get => _statusMessage;
-        set => SetProperty(ref _statusMessage, value ?? string.Empty);
+        set { if (SetProperty(ref _statusMessage, value ?? string.Empty)) LoggingService.Shown("Tools status", value); }
     }
 
     public bool HasAnyTools => Tools.Count > 0;

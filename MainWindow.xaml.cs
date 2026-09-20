@@ -29,7 +29,7 @@ public partial class MainWindow : Window
             var iconUri = new Uri("pack://application:,,,/TrayTrigger;component/Assets/app_icon.ico", UriKind.RelativeOrAbsolute);
             Icon = System.Windows.Media.Imaging.BitmapFrame.Create(iconUri);
         }
-        catch { }
+        catch (Exception ex) { LoggingService.Swallowed("MainWindow", ex, "loading the window icon"); }
 
         // Dark title bar is applied at SourceInitialized and the window stays cloaked
         // until its first frame renders, so the user never sees an unpainted white frame.

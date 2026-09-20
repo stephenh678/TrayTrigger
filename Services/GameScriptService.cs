@@ -345,7 +345,7 @@ public class GameScriptService
                     playedMinutes = (long)Math.Max(0, Math.Round((DateTime.UtcNow - started).TotalMinutes));
                 }
             }
-            catch { }
+            catch (Exception ex) { LoggingService.Swallowed("GameScript", ex, "working out the playtime to hand to the script"); }
 
             LoggingService.Info("GameScript", $"Running post-exit script for '{game.Name}' on application exit.");
             RunPostExit(game, playedMinutes);
@@ -414,8 +414,8 @@ public class GameScriptService
             bool exited = process.WaitForExit((int)limit.TotalMilliseconds);
             if (!exited)
             {
-                try { process.Kill(entireProcessTree: true); } catch { }
-                try { process.WaitForExit(5000); } catch { }
+                try { process.Kill(entireProcessTree: true); } catch (Exception ex) { LoggingService.Swallowed("GameScript", ex, "killing a script that outran its timeout"); }
+                try { process.WaitForExit(5000); } catch { /* already gone, or not ours to wait on */ }
                 return new ScriptTestResult(true, null, true, JoinOutput(), null, sw.Elapsed);
             }
 
@@ -451,7 +451,7 @@ public class GameScriptService
     {
         using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
         try { process.WaitForExitAsync(cts.Token).GetAwaiter().GetResult(); }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { /* the two seconds are up: whatever output arrived is what there is */ }
     }
 
     /// <summary>
@@ -492,7 +492,7 @@ public class GameScriptService
                 {
                     LoggingService.Verbose("GameScript", $"Script process {p.Id} exited with code {p.ExitCode}.");
                 }
-                catch { }
+                catch { /* the exit code of a process already disposed is not worth a line */ }
                 finally
                 {
                     p.Dispose();
@@ -505,8 +505,9 @@ public class GameScriptService
                 process.Dispose();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            LoggingService.Swallowed("GameScript", ex, "watching the script process for its exit");
             process.Dispose();
         }
     }
@@ -524,7 +525,11 @@ public class GameScriptService
         long? playedMinutes)
     {
         string path = scriptPath.Trim().Trim('"');
-        if (!IsSupportedScript(path) || !File.Exists(path)) return null;
+        if (!IsSupportedScript(path) || !File.Exists(path))
+        {
+            LoggingService.Verbose("GameScript", $"Not run: '{path}' is {(File.Exists(path) ? "not a .bat, .cmd or .ps1 script" : "not on disk")}.");
+            return null;
+        }
 
         string ext = Path.GetExtension(path).ToLowerInvariant();
         string workDir = Path.GetDirectoryName(path) ?? string.Empty;

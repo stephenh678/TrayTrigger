@@ -67,8 +67,9 @@ public static partial class BattleNetCatalog
             }
             return true;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            LoggingService.Swallowed("BattleNetCatalog", ex, "parsing the saved catalog");
             return false;
         }
     }

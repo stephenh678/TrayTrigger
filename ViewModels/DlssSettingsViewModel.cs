@@ -61,7 +61,12 @@ public sealed class DlssSettingsViewModel : ViewModelBase
     public string? Status
     {
         get => _status;
-        private set { if (SetProperty(ref _status, value)) OnPropertyChanged(nameof(HasStatus)); }
+        private set
+        {
+            if (!SetProperty(ref _status, value)) return;
+            LoggingService.Shown("DLSS settings status", value);
+            OnPropertyChanged(nameof(HasStatus));
+        }
     }
     public bool HasStatus => !string.IsNullOrEmpty(_status);
 

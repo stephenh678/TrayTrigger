@@ -121,6 +121,7 @@ public class PlatformLookupService
         }
         catch
         {
+            // An invalid path is compared as written.
             return null;
         }
     }
@@ -226,7 +227,7 @@ public class PlatformLookupService
             }
             catch (Exception ex)
             {
-                LoggingService.Warn("PlatformLookupService", $"{platform} lookup failed for '{path}': {ex.Message}");
+                LoggingService.Warn("PlatformLookup", $"{platform} lookup failed for '{path}': {ex.Message}");
                 return null;
             }
         }

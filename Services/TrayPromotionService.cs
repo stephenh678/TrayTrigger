@@ -53,11 +53,11 @@ public class TrayPromotionService
                         {
                             rootKey.DeleteSubKeyTree(subKeyName, false);
                             removedCount++;
-                            LoggingService.Info("TrayPromotionService", $"Removed stale tray registration for '{storedPath}' (Key: {subKeyName})");
+                            LoggingService.Info("TrayPromotion", $"Removed stale tray registration for '{storedPath}' (Key: {subKeyName})");
                         }
                         catch (Exception delEx)
                         {
-                            LoggingService.Warn("TrayPromotionService", $"Could not delete stale key {subKeyName}: {delEx.Message}");
+                            LoggingService.Warn("TrayPromotion", $"Could not delete stale key {subKeyName}: {delEx.Message}");
                         }
                     }
                 }
@@ -65,7 +65,7 @@ public class TrayPromotionService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("TrayPromotionService", $"Error cleaning stale tray registrations: {ex.Message}");
+            LoggingService.Warn("TrayPromotion", $"Error cleaning stale tray registrations: {ex.Message}");
         }
 
         return removedCount;
@@ -179,12 +179,12 @@ public class TrayPromotionService
                 ? "Applied. The icon was re-added so Windows picks the change up; if it's still in the overflow, drag it onto the taskbar once."
                 : "Applied. The icon follows Windows' default overflow behaviour again.";
             try { PromotionApplied?.Invoke(); }
-            catch (Exception ex) { LoggingService.Verbose("TrayPromotionService", $"PromotionApplied handler failed: {ex.Message}"); }
+            catch (Exception ex) { LoggingService.Verbose("TrayPromotion", $"PromotionApplied handler failed: {ex.Message}"); }
             return Outcome.Applied;
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("TrayPromotionService", $"Error writing to NotifyIconSettings: {ex.Message}");
+            LoggingService.Warn("TrayPromotion", $"Error writing to NotifyIconSettings: {ex.Message}");
             statusMessage = $"Couldn't write the setting: {ex.Message}";
             return Outcome.Failed;
         }
@@ -203,7 +203,7 @@ public class TrayPromotionService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn("TrayPromotionService", $"Error opening taskbar settings: {ex.Message}");
+            LoggingService.Warn("TrayPromotion", $"Error opening taskbar settings: {ex.Message}");
         }
     }
 
