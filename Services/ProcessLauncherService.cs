@@ -533,6 +533,11 @@ public partial class ProcessLauncherService
     /// <para>Failure is normal: anti-cheat titles refuse module enumeration, and then too there is
     /// simply nothing to record.</para>
     /// </summary>
+    private static string SafeProcessName(Process process)
+    {
+        try { return $"{process.ProcessName} (PID {process.Id})"; } catch { return "the game process"; }
+    }
+
     private void StartDlssObservation(ActiveGameSession session, Process process)
     {
         var game = session.Game;
@@ -556,8 +561,9 @@ public partial class ProcessLauncherService
             bool exited;
             try { exited = process.HasExited; } catch { exited = true; }
 
+            string? note = null;
             var lastRun = exited ? null
-                : DlssProbeService.ReadLastRun(DlssProbeService.ScanLoadedModules(process, out _), gameVersion);
+                : DlssProbeService.ReadLastRun(DlssProbeService.ScanLoadedModules(process, out note), gameVersion);
 
             // Keep waiting only while there is still a chance of seeing something.
             if (lastRun == null && !exited && ticks < DlssObserveMaxTicks) return true;
@@ -568,6 +574,12 @@ public partial class ProcessLauncherService
                 game.DlssLastRun = lastRun;
                 PersistLibrary?.Invoke();
                 LoggingService.Info("Dlss", $"'{game.Name}' loaded DLSS {string.Join(", ", lastRun.FromNvidia.Select(v => v + " from NVIDIA").Concat(lastRun.FromGame.Select(v => v + " from the game's own files")))}.");
+            }
+            else
+            {
+                // Once per launch, and only for a game with the override on: it is the one thing
+                // that says why the card has no Last run line.
+                LoggingService.Info("Dlss", $"'{game.Name}': no DLSS runtime seen in {SafeProcessName(process)} after {ticks} look(s){(exited ? " - the process had exited" : "")}. {note}");
             }
 
             // Only this poller's own registration: a stub handoff starts a second one under the
@@ -1167,6 +1179,8 @@ public partial class ProcessLauncherService
 
             if (!isRunning)
             {
+                if (session.Process == null && game.DlssSettings.Count > 0)
+                    LoggingService.Info("Dlss", $"'{game.Name}': its process was never found under the Steam install folder, so what DLSS it loaded could not be read.");
                 LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' session ended.");
                 FinishSession(session, gameRan: true, "Steam reports the game closed");
                 return false;
