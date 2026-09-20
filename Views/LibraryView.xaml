@@ -969,218 +969,225 @@
                                                        </Grid>
 
                                                        <!-- 3. Top Badges (Category, Steam Overlay, Missing, Hotkey) -->
-                                                       <DockPanel VerticalAlignment="Top" Margin="10,10,10,0" LastChildFill="False">
-                                                           <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" DockPanel.Dock="Left">
-                                                               <!-- Steam Game Indicator Badge Overlay - leftmost, no extra box since
-                                                                    the icon already includes its own colored background. -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                       <!-- Two rows. The pills and the favourite star share the first; the "this game
+                                                            isn't there" badge has the second to itself, centred. It used to sit beside
+                                                            the star, where NOT INSTALLED plus the star the card shows on hover outran
+                                                            the card and the badge was clipped to "INSTALLED" - which reads as the
+                                                            opposite of what it means. -->
+                                                       <StackPanel VerticalAlignment="Top" Margin="10,10,10,0">
+                                                           <DockPanel LastChildFill="False">
+                                                               <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" DockPanel.Dock="Left">
+                                                                   <!-- Steam Game Indicator Badge Overlay - leftmost, no extra box since
+                                                                        the icon already includes its own colored background. -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding HasSteamOverlay}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- GOG Game Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsGogGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                                   <!-- GOG Game Indicator Badge Overlay -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsGogGame}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- EA Game Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsEaGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                                   <!-- EA Game Indicator Badge Overlay -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsEaGame}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- Epic Games Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsEpicGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                                   <!-- Epic Games Indicator Badge Overlay -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsEpicGame}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- Ubisoft Connect Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsUbisoftGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                                   <!-- Ubisoft Connect Indicator Badge Overlay -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsUbisoftGame}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- Xbox / PC Game Pass Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                                   <!-- Xbox / PC Game Pass Indicator Badge Overlay -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsXboxGame}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- Battle.net Indicator Badge Overlay -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsBattleNetGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                                   <!-- Battle.net Indicator Badge Overlay -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsBattleNetGame}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- Local Games Indicator Badge Overlay - shown for a game added via plain
-                                                                    exe/shortcut/folder scan rather than any supported launcher. -->
-                                                               <Border VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsLocalGame}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <Image Source="pack://application:,,,/Assets/LauncherLogos/local_games.png"
-                                                                          Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
-                                                                          RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               </Border>
+                                                                   <!-- Local Games Indicator Badge Overlay - shown for a game added via plain
+                                                                        exe/shortcut/folder scan rather than any supported launcher. -->
+                                                                   <Border VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsLocalGame}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <Image Source="pack://application:,,,/Assets/LauncherLogos/local_games.png"
+                                                                              Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                                                              RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                   </Border>
 
-                                                               <!-- Category Pill (Hidden if category is Steam to prevent duplicate badges).
-                                                                    Always preceded by exactly one visible platform/local badge above, so
-                                                                    its left margin is unconditional. -->
-                                                               <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
-                                                                       CornerRadius="4" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Visible"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding ShowCategoryBadge}" Value="False">
-                                                                                   <Setter Property="Visibility" Value="Collapsed"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <TextBlock Text="{Binding Category}" FontSize="11"
-                                                                              Foreground="{StaticResource BrushTextSecondary}"
-                                                                              FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
-                                                               </Border>
+                                                                   <!-- Category Pill (Hidden if category is Steam to prevent duplicate badges).
+                                                                        Always preceded by exactly one visible platform/local badge above, so
+                                                                        its left margin is unconditional. -->
+                                                                   <Border Background="#D91D1D24" BorderBrush="#33FFFFFF" BorderThickness="1"
+                                                                           CornerRadius="4" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Visible"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding ShowCategoryBadge}" Value="False">
+                                                                                       <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <TextBlock Text="{Binding Category}" FontSize="11"
+                                                                                  Foreground="{StaticResource BrushTextSecondary}"
+                                                                                  FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                                                   </Border>
 
-                                                               <!-- Hidden Pill -->
-                                                               <Border Background="#2A2A3A" BorderBrush="#33FFFFFF" BorderThickness="1"
-                                                                       CornerRadius="4" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
-                                                                   <Border.Style>
-                                                                       <Style TargetType="Border">
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsHidden}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Border.Style>
-                                                                   <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
-                                                                              Foreground="#B8B8CC"
-                                                                              FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
-                                                               </Border>
-                                                           </StackPanel>
+                                                                   <!-- Hidden Pill -->
+                                                                   <Border Background="#2A2A3A" BorderBrush="#33FFFFFF" BorderThickness="1"
+                                                                           CornerRadius="4" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
+                                                                                  Foreground="#B8B8CC"
+                                                                                  FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                                                   </Border>
+                                                               </StackPanel>
 
-                                                           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                                                               <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
-                                                                   <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                                   <TextBlock Text="&#9654; PLAYING" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
-                                                               </Border>
-                                                               <Border Style="{StaticResource UnavailableBadgeBorder}"
-                                                                       CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
-                                                                   <TextBlock Style="{StaticResource UnavailableBadgeText}"
-                                                                              FontSize="9.5" FontFamily="{StaticResource AppFont}"/>
-                                                               </Border>
+                                                               <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                                                                   <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center">
+                                                                       <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                                                       <TextBlock Text="&#9654; PLAYING" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                                   </Border>
+                                                                   <!-- Favorite Star - outermost corner -->
+                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
+            AutomationProperties.Name="{Binding FavoriteMenuLabel}">
+                                                                       <Button.Style>
+                                                                           <Style TargetType="Button" BasedOn="{StaticResource FavoriteToggleButton}">
+                                                                               <Setter Property="Width" Value="19"/>
+                                                                               <Setter Property="Height" Value="19"/>
+                                                                               <Setter Property="FontSize" Value="13"/>
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                                   <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Button.Style>
+                                                                   </Button>
+                                                               </StackPanel>
+                                                           </DockPanel>
 
-                                                               <!-- Favorite Star - outermost corner -->
-                                                               <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
-        AutomationProperties.Name="{Binding FavoriteMenuLabel}">
-                                                                   <Button.Style>
-                                                                       <Style TargetType="Button" BasedOn="{StaticResource FavoriteToggleButton}">
-                                                                           <Setter Property="Width" Value="19"/>
-                                                                           <Setter Property="Height" Value="19"/>
-                                                                           <Setter Property="FontSize" Value="13"/>
-                                                                           <Setter Property="Visibility" Value="Collapsed"/>
-                                                                           <Style.Triggers>
-                                                                               <DataTrigger Binding="{Binding IsFavorite}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                               <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
-                                                                                   <Setter Property="Visibility" Value="Visible"/>
-                                                                               </DataTrigger>
-                                                                           </Style.Triggers>
-                                                                       </Style>
-                                                                   </Button.Style>
-                                                               </Button>
-                                                           </StackPanel>
-                                                       </DockPanel>
+                                                           <Border Style="{StaticResource UnavailableBadgeBorder}"
+                                                                   CornerRadius="4" Padding="6,2" Margin="0,5,0,0" HorizontalAlignment="Center">
+                                                               <TextBlock Style="{StaticResource UnavailableBadgeText}"
+                                                                          FontSize="9.5" FontFamily="{StaticResource AppFont}"/>
+                                                           </Border>
+                                                       </StackPanel>
 
                                                        <!-- 4. Hover Play Button Overlay. Not focusable: it shows only while the
                                                             card is hovered or focused, so Tab onto it hid it and dropped focus
