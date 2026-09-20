@@ -12,8 +12,9 @@ the game shipped with.
 
 **No file in any game folder is read for anything but its version, and none is ever written.** That
 single decision removes the anti-cheat risk, the download and cache machinery, the backup and
-restore machinery, the NVIDIA redistribution question and the "my game won't launch" support class,
-all of which the file-swapping tools (DLSS Swapper, RHI) carry.
+restore machinery, the NVIDIA redistribution question, collisions with Steam's "verify integrity of
+game files", file-permission and in-use locks, and the "my game won't launch" support class - all
+of which the file-swapping tools (DLSS Swapper, RHI) carry.
 
 Because the driver decides whether an override applies, and NVIDIA warns that some games disallow
 it, **verification is part of the feature, not an extra**: TrayTrigger reads the running game's
@@ -98,7 +99,12 @@ file-integrity check.
 
 ### Consequences
 
-- **Anti-cheat.** Nothing to detect. This is NVIDIA's own shipping feature, used by NVIDIA App on
+- **Anti-cheat.** Nothing to detect. Anti-cheat validates integrity three ways: hashing files on
+  disk inside the game directory, watching for injection (`CreateRemoteThread`, `VirtualAllocEx`,
+  unsigned modules mapped into the process), and checking signatures of loaded modules. The driver
+  path passes all three - no file in the game directory changes, nothing is injected, and the
+  runtime the driver loads is an Authenticode-signed NVIDIA binary mapped by the OS loader as a
+  trusted image. This is also NVIDIA's own shipping feature, used by NVIDIA App on
   hundreds of games including protected multiplayer titles, with no warning published anywhere.
   NVIDIA even ships driver profiles for the anti-cheat wrapper executables
   (`fortniteclient-win64-shipping_eac_eos.exe`, `r6-extraction_be.exe`), so protected games are
@@ -125,6 +131,11 @@ So the two halves have **different floors**:
 
 And the two compose. If the DLL override loads a 310.9 runtime into a DLSS 2.x game, the *loaded*
 runtime does honour presets - so the combination may work on games well below 3.1.
+
+The mechanism that makes this plausible is that NGX's evaluated-feature exports
+(`NVSDK_NGX_D3D12_EvaluateFeature`, `NVSDK_NGX_VULKAN_EvaluateFeature`) hold C-ABI backwards
+compatibility across DLSS 2.x and 3.x, so a newer runtime can serve an older integration. Plausible
+mechanism, not a test - expect engine-specific variance, which is what verification is for.
 
 This means the earlier decision to exclude pre-3.1 games was probably too conservative, and
 excluding them would have thrown away the single biggest win available: an old game on the 2021 CNN
@@ -162,13 +173,15 @@ NVIDIA's own words.
 | `0x00634291` gates whether presets apply | **Documented** | NVIDIA's description of that setting |
 | Overrides shipped in driver 572.16 | **Documented** | NVIDIA release notes / support article |
 | NVIDIA App enforces its allowlist, the driver does not | **Documented** | Third-party analysis of `ApplicationStorage.json` / `fingerprint.db`; consistent with Profile Inspector working on unlisted games |
-| **Driver-path overrides carry no realistic anti-cheat risk** | **Inferred** | No files change, it is NVIDIA's own shipped feature on protected titles, and no vendor publishes a warning. Strong, but it is an absence-of-evidence argument. |
-| **The 3.1 floor is about the game's API integration, not the model** | **Inferred** | Fits the observed cutoff; NVIDIA does not document the reason |
-| **Writing settings pre-launch defeats NVIDIA App reverting them** | **Inferred** | Follows from NVIDIA App reverting at its own startup, but the exact timing has not been tested |
+| **Driver-path overrides carry no realistic anti-cheat risk** | **Inferred** | No files change, nothing is injected, the loaded module is NVIDIA-signed, it is NVIDIA's own shipped feature on protected titles, and no vendor publishes a warning. Independently agreed by a second reviewer citing zero documented bans - but that is still absence of evidence, not a test. |
+| **The 3.1 floor is about the game's API integration, not the model** | **Inferred** | Fits the observed cutoff; NGX's evaluated-feature exports hold C-ABI compatibility across 2.x/3.x, which would allow a newer runtime to serve an older integration. NVIDIA does not document the reason. |
+| **Writing settings pre-launch defeats NVIDIA App reverting them** | **Inferred** | Reviewer reports NVIDIA App reconciles on its own startup, driver update or library scan, and does not hook process creation. Plausible and matches observed behaviour; untested by either party. |
 | **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated |
 | **Combining DLL override + preset works on a DLSS 2.x game** | **Untested** | The single highest-value unknown. The spike settles it. |
 | Module enumeration reveals the loaded DLL's path and version | **Verified** | `Process.Modules` read against a live process; not yet against a real DLSS module |
 | Anti-cheat blocks module enumeration | **Documented** | Standard EAC/BattlEye/Vanguard behaviour; not tested here |
+| The overlay renders on anti-cheat titles | **Documented** | It is an NVIDIA-signed swapchain hook, not third-party injection; reviewer-supplied, untested here |
+| The overlay shows the game's own version when the override is declined | **Documented** | Reviewer-supplied; makes layer 4 a complete check. Confirm in the spike. |
 
 Nothing in this plan has been tested by actually writing a driver setting. **The entire mechanism is
 believed, not demonstrated** - which is what the spike before step 3 exists to fix.
@@ -441,8 +454,29 @@ draw the overlay - consistent with the environment variable's documented `1024`.
 confirm during the spike.** NGX reads this at initialisation, so it must be set before the game
 starts, which the pre-launch step already guarantees.
 
+#### It works where layer 2 does not
+
+The overlay is drawn by `nvngx.dll` hooking the swapchain/present pipeline - an NVIDIA-signed
+driver component, not a third-party injector like RivaTuner or an OBS hook. Anti-cheat engines
+treat it as trusted. So on a protected game where module enumeration is refused, **the overlay
+still renders**, which makes layer 4 the practical companion to layer 3 rather than a luxury.
+
+It also reports the **negative** case: a game that rejects the override shows its own shipped
+version in the overlay (`2.3.7 | Preset: A`), not the driver's. That makes layer 4 a complete
+verification method on its own, not merely a preset check.
+
+Expected output on a modern runtime, per reviewer feedback:
+
+```
+DLSS (v310.9.0) | Render: 1920x1080 -> 2560x1440 | Preset: K
+```
+
 #### Caveats
 
+- **It may not render in every game.** Fullscreen-exclusive modes and titles with anti-tamper HUD
+  protection can fail to draw it, or flicker on resolution changes. A missing overlay therefore
+  means "could not display", never "the override failed" - the same three-state discipline layer 2
+  needs.
 - **Machine-wide while it is on.** A second DLSS game running concurrently also shows the overlay.
   A real but narrow edge case, and the profile service's existing "first wins" handling of
   machine-wide singletons is the precedent to follow.
@@ -730,14 +764,45 @@ Fortnite (310.2.1) and Rainbow Six Extraction (2.3.7) - then, while each is runn
 loaded modules and record the DLSS module's **path and version**. No registry changes needed for
 this; add NGX logging only if Fortnite refuses enumeration, which is the expected result.
 
-This answers, in one afternoon and before any interop is written:
+### Spike checklist
 
-1. Does the override work at all? (path points into the NGX store)
-2. Does it work below DLSS 3.1? (R6 Extraction - the highest-value unknown)
-3. Is the `0x00634291` recipe right? **Only the overlay answers this**, since it is the one place
-   the active preset letter is visible - so enable `ShowDlssIndicator` for the spike and confirm
-   whether `0x400` or `1` is the working value on retail builds.
-4. Does anti-cheat block module enumeration, forcing the log fallback? (Fortnite)
+No code. NVIDIA Profile Inspector and `reg` only. Refined from reviewer feedback.
+
+**Setup**
+
+1. Set `HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore\ShowDlssIndicator` = `0x400` (DWORD).
+   Note the value is **absent** beforehand, so cleanup means deleting it.
+2. Apply the seven DRS settings in Profile Inspector to each test game.
+
+**Game 1 - Rainbow Six Extraction (DLSS 2.3.7, Ubisoft, no anti-cheat markers).**
+The version-floor test, and the highest-value unknown in the plan.
+
+- Does the overlay appear at all?
+- Does it report **310.9.0** (override worked) or **2.3.7** (driver declined)?
+- What preset letter is shown? A CNN letter (A-F) versus a transformer letter (J/K/L/M) is the
+  direct answer to whether `0x00634291` = Recommended did anything.
+- Read the process's loaded modules and record the DLSS module's **path**. It should corroborate
+  the overlay.
+
+**Game 2 - Fortnite (DLSS 310.2.1, Easy Anti-Cheat).**
+The fallback test.
+
+- Does reading `Process.Modules` throw `Win32Exception` (access denied)? This confirms layer 2 is
+  blocked on protected titles and layer 3/4 is mandatory, not optional.
+- Does the overlay still render cleanly, with no anti-cheat complaint? Expected yes, since it is an
+  NVIDIA-signed swapchain hook.
+
+**If the overlay never appears on either game:** retry with `ShowDlssIndicator` = `1`, NVIDIA's own
+documented value, before concluding the mechanism does not work.
+
+**Cleanup** - do this even if the spike is abandoned midway:
+
+- `reg delete "HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore" /v ShowDlssIndicator /f`
+- Clear the DRS overrides on both games in Profile Inspector.
+- Confirm both games return to their shipped behaviour.
+
+Answers produced: does the override work at all; does it work below 3.1; is the `0x00634291`
+recipe right; does anti-cheat block enumeration; and which indicator value works on retail builds.
 
 ## Open questions
 
@@ -748,6 +813,41 @@ This answers, in one afternoon and before any interop is written:
   `C:\ProgramData\NVIDIA Corporation\Drs\`. RHI claims some of its per-game settings apply without
   admin. Worth confirming - if a subset works unelevated, the UAC prompt can be avoided for the
   common case.
+
+## Review history
+
+**Gemini, 2026-09-19.** Reviewed the full plan against the four questions below.
+
+Agreed with every decision: driver path over file swapping, no version floor, `0x00634291` = 1,
+`0x400` for the indicator, one-button UI, clearing overrides on uninstall, and session-scoped
+diagnostics. Raised no objection to anything.
+
+Contributed, and now folded in above:
+
+- The overlay is drawn by `nvngx.dll` hooking the swapchain - an NVIDIA-signed component - so it
+  renders on anti-cheat titles where module enumeration is refused. This makes layer 4 the
+  companion to layer 3, not a luxury.
+- The overlay reports the negative case too (a declined override shows the game's own version), so
+  it is a complete verification method rather than only a preset check.
+- Fullscreen-exclusive and anti-tamper HUD titles may fail to draw it or flicker - so a missing
+  overlay means "could not display", not "failed".
+- The three mechanisms anti-cheat actually uses, which is a sharper statement of why the driver
+  path is safe than the plan had.
+- NGX's C-ABI backwards compatibility as the plausible mechanism behind the DLSS 2.0 floor.
+- Steam "verify integrity" collisions as a further cost of file swapping.
+- A better-structured spike checklist, adopted above.
+
+**Not promoted on this review.** Gemini marked the anti-cheat reasoning and the pre-launch timing
+as settled. Neither moves out of **Inferred** in the Confidence table:
+
+- Its evidence for anti-cheat safety is "zero documented bans", which is the same
+  absence-of-evidence argument the plan already makes. It is a good argument; it is not a test.
+- Its claim that NVIDIA App reconciles DRS only on its own startup, driver update or library scan -
+  rather than hooking process creation - is plausible and matches observed behaviour, but neither
+  reviewer nor author has tested it.
+
+A second model agreeing is corroboration, not verification. The plan's safety case still rests on
+an inference, and the spike is still the thing that settles it.
 
 ## For reviewers
 
