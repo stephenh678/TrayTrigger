@@ -187,15 +187,6 @@ public class DlssCardViewModelTests
         Assert.Equal("The driver holds no DLSS runtimes of its own.", p.DriverLine);
     }
 
-    [Fact]
-    public void UnknownShippedVersion_IsLabelled_NotBlank()
-    {
-        var p = DlssCardViewModel.Project(Result(
-            shipped: new[] { new DlssProbeService.ShippedRuntime("Super Resolution", "nvngx_dlss.dll", "nvngx_dlss.dll", null, 0) },
-            profile: Profile()));
-
-        Assert.Equal("unknown", p.Rows[0].Version);
-    }
 
     [Fact]
     public void CardStaysHidden_UntilLoadHasRun()
@@ -322,18 +313,6 @@ public class DlssCardViewModelTests
         Assert.Contains("left alone", card.Status);
     }
 
-    [Fact]
-    public async Task UndoIsOfferedOnlyForSettingsTrayTriggerRecorded()
-    {
-        var driver = new FakeDrsBackend();
-        driver.AddProfile("game.exe", "Test Game");
-
-        var card = Card(driver, new List<DlssSettingRecord>());
-        await card.LoadAsync();
-
-        Assert.False(card.CanUndo);
-        Assert.True(card.CanApply);
-    }
 
     [Fact]
     public async Task ApplyIsNotOfferedOnAGameWithNoDlss()

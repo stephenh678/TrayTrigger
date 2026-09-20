@@ -10,8 +10,7 @@ namespace TrayTrigger.Services;
 
 /// <summary>
 /// Gathers everything TrayTrigger can observe about DLSS on this machine, for one game, without
-/// changing anything. Step 1 of the build order in docs/dlss-plan.md, plus the read half of the
-/// verification layer.
+/// changing anything. See docs/dlss-plan.md.
 ///
 /// <para>Strictly read-only: no DRS write, no registry write, no game file touched. It exists to
 /// answer "what do we actually know before we act", which the plan makes a precondition for the
@@ -74,15 +73,12 @@ public static class DlssProbeService
         /// <summary>Null when NVAPI could not be reached; the reason is in <see cref="DrsError"/>.</summary>
         public NvApi.DrsProfileInfo? Profile { get; init; }
         public string? DrsError { get; init; }
-        /// <summary>True when the driver has no application profile for this executable at all.</summary>
-        public bool ProfileMissing { get; init; }
 
         public IReadOnlyList<SettingState> SettingStates { get; init; } = Array.Empty<SettingState>();
         public IReadOnlyList<NvApi.DrsSettingValue> GlobalProfileDlssSettings { get; init; } = Array.Empty<NvApi.DrsSettingValue>();
 
         public IReadOnlyList<ShippedRuntime> ShippedRuntimes { get; init; } = Array.Empty<ShippedRuntime>();
         public IReadOnlyList<NgxModelStore.StoredRuntime> DriverRuntimes { get; init; } = Array.Empty<NgxModelStore.StoredRuntime>();
-        public IReadOnlyList<NgxModelStore.AppVersionMapping> OverrideMappings { get; init; } = Array.Empty<NgxModelStore.AppVersionMapping>();
 
         public IReadOnlyList<LoadedRuntime> LoadedRuntimes { get; init; } = Array.Empty<LoadedRuntime>();
         /// <summary>Why module enumeration produced nothing - anti-cheat, not running, or no DLSS in use.</summary>
@@ -103,7 +99,7 @@ public static class DlssProbeService
         string? gameDir = SafeDirectoryName(executablePath);
 
         var (gpu, driver) = ReadGpu();
-        var (profile, settingStates, globalDlss, drsError, profileMissing) = ReadDrs(exeName);
+        var (profile, settingStates, globalDlss, drsError) = ReadDrs(exeName);
 
         return new ProbeResult
         {
@@ -113,12 +109,10 @@ public static class DlssProbeService
             DriverVersion = driver,
             Profile = profile,
             DrsError = drsError,
-            ProfileMissing = profileMissing,
             SettingStates = settingStates,
             GlobalProfileDlssSettings = globalDlss,
             ShippedRuntimes = gameDir == null ? Array.Empty<ShippedRuntime>() : FindShippedRuntimes(gameDir),
             DriverRuntimes = NgxModelStore.Enumerate(),
-            OverrideMappings = NgxModelStore.ReadConfig(),
             LoadedRuntimes = ScanLoadedModules(runningProcess, out string? note),
             ModuleScanNote = note,
             NgxRegistry = ReadNgxRegistry()
@@ -140,17 +134,16 @@ public static class DlssProbeService
         }
     }
 
-    private static (NvApi.DrsProfileInfo?, List<SettingState>, List<NvApi.DrsSettingValue>, string?, bool)
+    private static (NvApi.DrsProfileInfo?, List<SettingState>, List<NvApi.DrsSettingValue>, string?)
         ReadDrs(string exeName)
     {
         var states = new List<SettingState>();
         var globalDlss = new List<NvApi.DrsSettingValue>();
 
         using var session = NvApi.Session.TryOpen(out string? error);
-        if (session == null) return (null, states, globalDlss, error, false);
+        if (session == null) return (null, states, globalDlss, error);
 
         var profile = session.FindProfileForExecutable(exeName, out IntPtr handle, out string? findError);
-        bool missing = profile == null;
 
         if (profile != null)
         {
@@ -172,7 +165,7 @@ public static class DlssProbeService
                 .ToList();
         }
 
-        return (profile, states, globalDlss, findError, missing);
+        return (profile, states, globalDlss, findError);
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ namespace TrayTrigger.Services;
 
 /// <summary>
 /// Applies and undoes the DLSS driver override, keeping the ownership record that makes undo safe.
-/// Step 3 of the build order in docs/dlss-plan.md.
+/// See docs/dlss-plan.md, The ownership record.
 ///
 /// <para>The rule the whole design turns on: <b>undo puts back what was captured, and only while
 /// the driver still reports the value TrayTrigger wrote.</b> If something else changed it -

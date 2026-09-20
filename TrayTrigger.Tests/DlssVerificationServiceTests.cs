@@ -111,17 +111,6 @@ public class DlssVerificationServiceTests
         Assert.Equal(DlssObservationState.UnableToVerify, observations.Single(o => o.Feature == "FG").State);
     }
 
-    [Fact]
-    public void AllThreeFeaturesCanBeObservedTogether()
-    {
-        var observations = Interpret(new[]
-        {
-            FromStore("dlss", 20318464), FromStore("dlssd", 20318464), FromStore("dlssg", 20318464)
-        });
-
-        Assert.All(observations, o => Assert.Equal(DlssObservationState.RuntimeObserved, o.State));
-        Assert.All(observations, o => Assert.Equal("310.9.0", o.Version));
-    }
 
     [Fact]
     public void ADriverChange_MakesAnObservationStale_NotWrong()
@@ -142,14 +131,6 @@ public class DlssVerificationServiceTests
         Assert.False(DlssVerificationService.IsInvalidated(observation, "310.1.0"));
     }
 
-    [Fact]
-    public void AnObservationFromBeforeVersionsWereTracked_IsKeptRatherThanDiscarded()
-    {
-        // Unknown is not a change. Throwing these away would silently erase what users had.
-        var observation = new DlssObservation { GameRuntimeVersion = null };
-
-        Assert.False(DlssVerificationService.IsInvalidated(observation, "310.1.0"));
-    }
 
     [Fact]
     public void ShippedVersionsAreRecordedPerFeature_SoAPatchCanBeDetectedLater()

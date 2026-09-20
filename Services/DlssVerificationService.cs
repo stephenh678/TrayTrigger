@@ -20,14 +20,6 @@ namespace TrayTrigger.Services;
 /// </summary>
 public static class DlssVerificationService
 {
-    /// <summary>The three features, by the short code the records and observations use.</summary>
-    public static readonly (string Code, string Name, string StoreFolder, string DllPrefix)[] Features =
-    {
-        ("SR", "Super Resolution",   "dlss",  "nvngx_dlss"),
-        ("RR", "Ray Reconstruction", "dlssd", "nvngx_dlssd"),
-        ("FG", "Frame Generation",   "dlssg", "nvngx_dlssg")
-    };
-
     /// <summary>
     /// Observes a running game. Returns one observation per feature, always - a feature with
     /// nothing to say still reports why, because silence reads as failure.
@@ -54,36 +46,34 @@ public static class DlssVerificationService
     {
         var result = new List<DlssObservation>();
 
-        foreach ((string code, string name, string storeFolder, string dllPrefix) in Features)
+        foreach (var feature in NgxModelStore.Features)
         {
-            string? shippedVersion = shipped?.FirstOrDefault(r => r.Feature == name)?.FileVersion;
-            var match = modules.FirstOrDefault(m => MatchesFeature(m, storeFolder, dllPrefix));
+            string? shippedVersion = shipped?.FirstOrDefault(r => r.Feature == feature.Name)?.FileVersion;
+            var match = modules.FirstOrDefault(m => MatchesFeature(m, feature));
 
             if (match == null)
             {
                 result.Add(new DlssObservation
                 {
-                    Feature = code,
+                    Feature = feature.Code,
                     State = DlssObservationState.UnableToVerify,
-                    Method = DlssObservationMethod.ModuleEnumeration,
                     ObservedUtc = observedUtc,
                     DriverVersion = driverVersion,
                     GameRuntimeVersion = shippedVersion,
                     // The scan note when there was one - "enumeration denied" is a different fact
                     // from "this feature is not in use", and conflating them would be the
                     // "it failed" claim the plan forbids.
-                    Note = scanNote ?? $"No {name.ToLowerInvariant()} activity observed."
+                    Note = scanNote ?? $"No {feature.Name.ToLowerInvariant()} activity observed."
                 });
                 continue;
             }
 
             result.Add(new DlssObservation
             {
-                Feature = code,
+                Feature = feature.Code,
                 State = DlssObservationState.RuntimeObserved,
                 Version = VersionOf(match),
                 LoadedFromPath = match.Path,
-                Method = DlssObservationMethod.ModuleEnumeration,
                 ObservedUtc = observedUtc,
                 DriverVersion = driverVersion,
                 GameRuntimeVersion = shippedVersion
@@ -101,14 +91,14 @@ public static class DlssVerificationService
     /// its path. The game's own copy is a differently named DLL per feature. So the store is
     /// matched by directory and the game folder by file name, and never the other way round.</para>
     /// </summary>
-    private static bool MatchesFeature(DlssProbeService.LoadedRuntime module, string storeFolder, string dllPrefix)
+    private static bool MatchesFeature(DlssProbeService.LoadedRuntime module, NgxModelStore.DlssFeature feature)
     {
         if (module.FromDriverStore)
-            return module.Path.Contains($@"\models\{storeFolder}\", StringComparison.OrdinalIgnoreCase);
+            return module.Path.Contains($@"\models\{feature.StoreFolder}\", StringComparison.OrdinalIgnoreCase);
 
         // nvngx_dlss.dll must not match the dlssd or dlssg prefixes, so compare the stem exactly.
         string stem = Path.GetFileNameWithoutExtension(module.Path);
-        return string.Equals(stem, dllPrefix, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(stem, feature.DllPrefix, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -145,9 +135,6 @@ public static class DlssVerificationService
             $"Observed runtime {observation.Version} from NVIDIA's driver store",
         DlssObservationState.RuntimeObserved =>
             $"Observed runtime {observation.Version} from the game folder",
-        DlssObservationState.PresetObserved =>
-            $"Observed runtime {observation.Version}, preset {observation.Preset}",
-        DlssObservationState.SettingsSaved => "Settings saved",
         _ => $"Unable to verify - {observation.Note ?? "nothing was readable"}"
     };
 

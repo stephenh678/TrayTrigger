@@ -107,12 +107,7 @@ public partial class App
                           // The DLSS probe reads the driver and a process, never the library, so it
                           // must run before the view model exists - a game need not be imported to
                           // be probed.
-                          arg.Equals("--test-dlss", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("--test-dlss-roundtrip", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("--test-dlss-apply", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("--test-dlss-observe", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("--test-dlss-undo", StringComparison.OrdinalIgnoreCase);
+                          arg.Equals("--test-dlss", StringComparison.OrdinalIgnoreCase);
             bool requiresVm = !isScan && (
                               arg.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
@@ -176,60 +171,6 @@ public partial class App
                 _ = RunXboxDiagnosticAsync(launch, target);
                 return;
             }
-            // --test-dlss-launch <name> / --test-dlss-launch-undo <name>: apply to a real library
-            // entry and launch it normally, so the launcher's in-session observation poller runs.
-            if (e.Args[i].Equals("--test-dlss-launch", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
-            {
-                RunDlssLaunch(e.Args[i + 1]);
-                return;   // stays running: the poller needs the process alive
-            }
-            if (e.Args[i].Equals("--test-dlss-launch-undo", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
-            {
-                RunDlssLaunchUndo(e.Args[i + 1]);
-                ExitApplication();
-                return;
-            }
-
-            // --test-dlss-apply / -observe / -undo: the round trip split across three runs, so a
-            // real game can be played in between. Apply parks its records on disk so undo works
-            // from a later process, and an interrupted test stays reversible.
-            if (e.Args[i].Equals("--test-dlss-apply", StringComparison.OrdinalIgnoreCase))
-            {
-                RunDlssApply(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
-                ExitApplication();
-                return;
-            }
-            if (e.Args[i].Equals("--test-dlss-observe", StringComparison.OrdinalIgnoreCase))
-            {
-                RunDlssObserve(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
-                ExitApplication();
-                return;
-            }
-            if (e.Args[i].Equals("--test-dlss-undo", StringComparison.OrdinalIgnoreCase))
-            {
-                RunDlssUndo();
-                ExitApplication();
-                return;
-            }
-
-            // --test-dlss-roundtrip <exe>: apply, then undo, comparing the settings before and
-            // after. The only thing in the codebase that calls NvAPI_DRS_SaveSettings for real.
-            if (e.Args[i].Equals("--test-dlss-roundtrip", StringComparison.OrdinalIgnoreCase))
-            {
-                RunDlssRoundTrip(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
-                ExitApplication();
-                return;
-            }
-
-            // --test-dlss-writecheck <exe>: exercises the DRS write interop in memory and never
-            // saves, so it separates "the interop is wrong" from "the driver refused".
-            if (e.Args[i].Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase))
-            {
-                RunDlssWriteCheck(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
-                ExitApplication();
-                return;
-            }
-
             // --test-dlss [exe path | exe name | library title]: read-only DLSS report. The
             // executable is optional - without one it still prints the driver-side half.
             if (e.Args[i].Equals("--test-dlss", StringComparison.OrdinalIgnoreCase))

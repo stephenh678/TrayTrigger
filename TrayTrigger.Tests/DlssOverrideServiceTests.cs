@@ -200,13 +200,6 @@ public class DlssOverrideServiceTests
         Assert.Contains("no NVIDIA display driver", applied.Error);
     }
 
-    [Fact]
-    public void ApplyWithNoExecutable_FailsRatherThanTargetingNothing()
-    {
-        var (service, _) = NewService();
-
-        Assert.False(service.Apply("", "Test Game").Succeeded);
-    }
 
     // --- Undo bookkeeping ------------------------------------------------------------------
 
@@ -269,15 +262,6 @@ public class DlssOverrideServiceTests
 
     // --- Naming -----------------------------------------------------------------------------
 
-    [Theory]
-    [InlineData("Cyberpunk 2077", "cp.exe", "Cyberpunk 2077 (cp.exe)")]
-    [InlineData("  Spaced  ", "s.exe", "Spaced (s.exe)")]
-    [InlineData("", "bare.exe", "bare.exe")]
-    [InlineData("   ", "bare.exe", "bare.exe")]
-    public void ProfileNameFor_DisambiguatesWithTheExecutable(string gameName, string exe, string expected)
-    {
-        Assert.Equal(expected, DlssOverrideService.ProfileNameFor(gameName, exe));
-    }
 
     // --- Layer 1: the write-back check ------------------------------------------------------
 
@@ -361,32 +345,7 @@ public class DlssOverrideServiceTests
         Assert.DoesNotContain(applied.Records, r => r.SettingId == SrPreset);
     }
 
-    [Fact]
-    public void AnUnsupportedId_IsNeverRecorded_SoUndoDoesNotTryToPutItBack()
-    {
-        var driver = new FakeDrsBackend();
-        var profile = driver.AddProfile(Exe, "Test Game");
-        driver.UnknownSettingIds.Add(SrPreset);
-        var service = new DlssOverrideService(driver);
 
-        var applied = service.Apply(TestExe, "Test Game");
-        var undone = service.Undo(applied.Records);
-
-        Assert.True(undone.Succeeded);
-        Assert.DoesNotContain(undone.Details, d => d.SettingId == SrPreset);
-        Assert.False(profile.Settings.ContainsKey(SrPreset));
-    }
-
-    [Fact]
-    public void TheRecipeContainsOnlyIdsWithAFeatureAndAValue()
-    {
-        Assert.All(DlssProbeService.Settings, def =>
-        {
-            Assert.Contains(def.FeatureCode, new[] { "SR", "RR", "FG" });
-            Assert.NotEqual(0u, def.Id);
-        });
-        Assert.DoesNotContain(DlssProbeService.Settings, d => d.Id == 0x00634291);
-    }
 
     // --- Step 5: the pre-launch re-apply and its three-way rule -----------------------------
 

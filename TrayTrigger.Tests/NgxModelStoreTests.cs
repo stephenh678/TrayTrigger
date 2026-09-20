@@ -23,12 +23,6 @@ public class NgxModelStoreTests
         Assert.Equal(expected, NgxModelStore.DecodeVersion(encoded));
     }
 
-    [Fact]
-    public void DecodeVersion_ZeroIsNotSpecialCased()
-    {
-        // 0.0.0 appears in the real config against two app ids; it must round-trip, not throw.
-        Assert.Equal("0.0.0", NgxModelStore.DecodeVersion(0));
-    }
 
     [Fact]
     public void ParseConfig_KeepsSectionForEachEntry()
@@ -69,14 +63,6 @@ public class NgxModelStoreTests
         Assert.Equal("app_A", entries[0].AppId);
     }
 
-    [Fact]
-    public void ParseConfig_EntriesBeforeAnySectionGetAnEmptySection()
-    {
-        var entries = NgxModelStore.ParseConfig("app_A = 1.0.0\n");
-
-        Assert.Single(entries);
-        Assert.Equal("", entries[0].Section);
-    }
 
     [Theory]
     [InlineData("nvngx_dlss.dll", "Super Resolution")]

@@ -23,13 +23,24 @@ public static class NgxModelStore
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "NVIDIA", "NGX", "models");
 
-    /// <summary>The three feature folders that matter: super resolution, ray reconstruction, frame generation.</summary>
-    public static readonly (string Folder, string Feature)[] Features =
+    /// <summary>
+    /// The three DLSS features, in one place. Everything that needs to name them - the model
+    /// store's folders, the game's DLL names, the short code the records use, and the label the
+    /// card shows - comes from here. It was three separate tables until 2026-09-20, which is two
+    /// too many for a feature with three rows.
+    /// </summary>
+    public static readonly DlssFeature[] Features =
     {
-        ("dlss",  "Super Resolution"),
-        ("dlssd", "Ray Reconstruction"),
-        ("dlssg", "Frame Generation")
+        new("SR", "Super Resolution",   "dlss",  "nvngx_dlss"),
+        new("RR", "Ray Reconstruction", "dlssd", "nvngx_dlssd"),
+        new("FG", "Frame Generation",   "dlssg", "nvngx_dlssg")
     };
+
+    /// <param name="Code">"SR", "RR" or "FG" - what the ownership record and observations store.</param>
+    /// <param name="Name">What the card shows.</param>
+    /// <param name="StoreFolder">Its folder under the driver's model store.</param>
+    /// <param name="DllPrefix">The file name stem the game ships, with no extension.</param>
+    public sealed record DlssFeature(string Code, string Name, string StoreFolder, string DllPrefix);
 
     /// <summary>One runtime held by the driver, as a version folder plus the payload inside it.</summary>
     public sealed record StoredRuntime(string Feature, string Version, uint EncodedVersion, string FilePath, long SizeBytes);
@@ -55,9 +66,9 @@ public static class NgxModelStore
         var result = new List<StoredRuntime>();
         if (!Directory.Exists(baseDir)) return result;
 
-        foreach ((string folder, string feature) in Features)
+        foreach (var feature in Features)
         {
-            string versionsDir = Path.Combine(baseDir, folder, "versions");
+            string versionsDir = Path.Combine(baseDir, feature.StoreFolder, "versions");
             if (!Directory.Exists(versionsDir)) continue;
 
             foreach (string dir in SafeDirectories(versionsDir))
@@ -72,7 +83,7 @@ public static class NgxModelStore
                 {
                     long size = 0;
                     try { size = new FileInfo(file).Length; } catch { /* reported as 0 */ }
-                    result.Add(new StoredRuntime(feature, DecodeVersion(encoded), encoded, file, size));
+                    result.Add(new StoredRuntime(feature.Name, DecodeVersion(encoded), encoded, file, size));
                 }
             }
         }

@@ -9,7 +9,7 @@ using TrayTrigger.Services;
 namespace TrayTrigger.ViewModels;
 
 /// <summary>
-/// The DLSS card in Edit Game - steps 1 and 4 of the build order in docs/dlss-plan.md.
+/// The DLSS card in Edit Game. See docs/dlss-plan.md.
 ///
 /// <para>One action plus undo, as the plan specifies: no version dropdown, no per-feature toggles,
 /// no preset letters. Everything shown is something that was actually read; where the probe could
@@ -407,13 +407,13 @@ public sealed class DlssCardViewModel : ViewModelBase
         var rows = new List<FeatureRow>();
         bool anyExternalOverride = false;
 
-        foreach ((_, string feature) in NgxModelStore.Features)
+        foreach (var feature in NgxModelStore.Features)
         {
-            if (!shipped.TryGetValue(feature, out var ship)) continue;
+            if (!shipped.TryGetValue(feature.Name, out var ship)) continue;
 
             var state = DescribeState(result, feature, owned, observations, currentDriverVersion, out bool isExternalOverride);
             anyExternalOverride |= isExternalOverride;
-            rows.Add(new FeatureRow(feature, ship.FileVersion ?? "unknown", state));
+            rows.Add(new FeatureRow(feature.Name, ship.FileVersion ?? "unknown", state));
         }
 
         if (rows.Count == 0) return Empty;
@@ -426,7 +426,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     }
 
     private static string DescribeState(
-        DlssProbeService.ProbeResult result, string feature,
+        DlssProbeService.ProbeResult result, NgxModelStore.DlssFeature feature,
         IReadOnlyCollection<DlssSettingRecord>? owned,
         IReadOnlyCollection<DlssObservation>? observations,
         string? currentDriverVersion,
@@ -442,7 +442,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         }
 
         var toggle = result.SettingStates.FirstOrDefault(s =>
-            string.Equals(s.Definition.Feature, feature, StringComparison.Ordinal) &&
+            string.Equals(s.Definition.FeatureCode, feature.Code, StringComparison.Ordinal) &&
             s.Definition.Name.Contains("Enable DLL Override", StringComparison.Ordinal));
 
         // What was actually seen outranks what is configured - the whole point of verifying.
@@ -451,13 +451,11 @@ public sealed class DlssCardViewModel : ViewModelBase
         bool managed = owned != null && owned.Count > 0;
         if (managed)
         {
-            string? code = DlssVerificationService.Features
-                .FirstOrDefault(f => string.Equals(f.Name, feature, StringComparison.Ordinal)).Code;
-            var seen = code == null ? null : observations?.FirstOrDefault(o => o.Feature == code);
-            string? shippedNow = result.ShippedRuntimes.FirstOrDefault(r => r.Feature == feature)?.FileVersion;
+            var seen = observations?.FirstOrDefault(o => o.Feature == feature.Code);
+            string? shippedNow = result.ShippedRuntimes.FirstOrDefault(r => r.Feature == feature.Name)?.FileVersion;
             if (seen != null && DlssVerificationService.IsInvalidated(seen, shippedNow)) seen = null;
 
-            if (seen != null && seen.State != DlssObservationState.SettingsSaved)
+            if (seen != null)
             {
                 string text = DlssVerificationService.Describe(seen);
                 return DlssVerificationService.IsStale(seen, currentDriverVersion)

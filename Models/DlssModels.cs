@@ -56,33 +56,13 @@ public class DlssSettingRecord
 /// </summary>
 public enum DlssObservationState
 {
-    /// <summary>
-    /// The values are in the profile database and read back correctly. Says nothing about
-    /// behaviour: the game has not been seen using them.
-    /// </summary>
-    SettingsSaved,
     /// <summary>A DLSS runtime was seen loaded, with its version and the path it came from.</summary>
     RuntimeObserved,
-    /// <summary>A preset letter was actually read from the on-screen overlay.</summary>
-    PresetObserved,
     /// <summary>
     /// Nothing could be read - enumeration refused, the feature not in use, or the game not
     /// running. Explicitly <b>not</b> the same as "the override failed".
     /// </summary>
     UnableToVerify
-}
-
-/// <summary>How an observation was obtained.</summary>
-public enum DlssObservationMethod
-{
-    /// <summary>Read from the driver settings database after writing.</summary>
-    WriteBack,
-    /// <summary>The running process's loaded module list - the primary method.</summary>
-    ModuleEnumeration,
-    /// <summary>NVIDIA's NGX log, for games that refuse module enumeration.</summary>
-    NgxLog,
-    /// <summary>Read off the on-screen indicator.</summary>
-    Overlay
 }
 
 /// <summary>
@@ -101,11 +81,6 @@ public class DlssObservation
 
     /// <summary>Where it was loaded from - the driver's NGX store, or the game folder. The proof.</summary>
     public string? LoadedFromPath { get; set; }
-
-    /// <summary>Only set when a preset letter was actually read, never inferred.</summary>
-    public string? Preset { get; set; }
-
-    public DlssObservationMethod Method { get; set; } = DlssObservationMethod.ModuleEnumeration;
 
     public DateTime ObservedUtc { get; set; }
 
