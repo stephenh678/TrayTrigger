@@ -131,6 +131,28 @@ public sealed class DlssCardViewModel : ViewModelBase
     public string ConflictNotice =>
         "Something else changed this game's DLSS settings, so TrayTrigger stopped re-applying them before launch. Use recommended to take them over again, or undo to hand them back.";
 
+    /// <summary>
+    /// Draw NVIDIA's DLSS indicator while this game runs. Off by default. Saved immediately rather
+    /// than on Save Changes, so it matches the rest of this card - everything here takes effect
+    /// when it is set, not when the dialog is closed.
+    /// </summary>
+    public bool ShowOverlay
+    {
+        get => _game?.DlssShowOverlay == true;
+        set
+        {
+            if (_game == null || _game.DlssShowOverlay == value) return;
+            _game.DlssShowOverlay = value;
+            _persist?.Invoke();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>The overlay needs a machine-wide registry value, which is an HKLM write.</summary>
+    public string OverlayHint =>
+        "Shows the DLSS version and preset in a corner of the game. Only while this game runs, and "
+        + "it is the only way to see which preset is active. Turning it on asks for administrator permission.";
+
     /// <summary>The result of the last apply or undo, in the user's words. Null before either.</summary>
     public string? Status { get => _status; private set => SetProperty(ref _status, value); }
     public bool HasStatus => !string.IsNullOrEmpty(_status);

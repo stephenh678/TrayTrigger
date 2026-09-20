@@ -154,6 +154,14 @@ public class PerformanceProfileSessionSnapshot
     public bool PlaybackMuteCaptured { get; set; }
     public bool PreviousPlaybackMuted { get; set; }
 
+    /// <summary>
+    /// NVIDIA's DLSS on-screen indicator, turned on for a game that asked for it. Machine-wide, so
+    /// it is captured once and restored when the last game using it ends. Null previous value means
+    /// the registry value was absent, and restoring means deleting it rather than writing a zero.
+    /// </summary>
+    public bool DlssOverlayCaptured { get; set; }
+    public int? PreviousDlssIndicator { get; set; }
+
     /// <summary>A timer-resolution request is held by this TrayTrigger process. Nothing to recover
     /// after a crash (the request dies with the process) - tracked so the last session releases it.</summary>
     public bool TimerResolutionRequested { get; set; }

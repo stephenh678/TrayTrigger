@@ -36,7 +36,13 @@ public class PerformanceProfileServiceTests : IDisposable
 
         public int? ReadHklmDword(string subKey, string valueName) => Hklm.GetValueOrDefault(subKey + "|" + valueName) as int?;
         public string? ReadHklmString(string subKey, string valueName) => Hklm.GetValueOrDefault(subKey + "|" + valueName) as string;
-        public bool WriteHklmDword(string subKey, string valueName, int value) { Hklm[subKey + "|" + valueName] = value; Log.Add($"hklm:{valueName}={value}"); return true; }
+        /// <summary>Models a declined UAC prompt: the write fails and nothing changes.</summary>
+        public bool RefuseHklmWrites;
+        public bool WriteHklmDword(string subKey, string valueName, int value)
+        {
+            if (RefuseHklmWrites) { Log.Add($"hklm:{valueName}=<refused>"); return false; }
+            Hklm[subKey + "|" + valueName] = value; Log.Add($"hklm:{valueName}={value}"); return true;
+        }
         public bool WriteHklmString(string subKey, string valueName, string value) { Hklm[subKey + "|" + valueName] = value; Log.Add($"hklm:{valueName}={value}"); return true; }
         public bool DeleteHklmValue(string subKey, string valueName) { Hklm.Remove(subKey + "|" + valueName); Log.Add($"hklm:{valueName}=<deleted>"); return true; }
 
@@ -493,5 +499,124 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.DoesNotContain(_backend.Log, l => l.StartsWith("hklm:"));
         Assert.DoesNotContain(_backend.Log, l => l.StartsWith("defender:"));
         Assert.Null(_store.OnDisk); // the poisoned file is still consumed so it can't be replayed
+    }
+
+    // --- The DLSS on-screen overlay (step 8) ------------------------------------------------
+
+    private const string NgxKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore|ShowDlssIndicator";
+
+    private GameEntry OverlayGame(string id, string exe, PerformanceProfileMode mode = PerformanceProfileMode.Off)
+    {
+        var game = Game(id, exe, mode);
+        game.DlssShowOverlay = true;
+        return game;
+    }
+
+    [Fact]
+    public void Overlay_TurnsOnEvenWithNoPerformanceProfile()
+    {
+        // It is not a profile tweak: a user can want the indicator on a game with no profile at
+        // all, and the session must start anyway.
+        Assert.True(_service.BeginGameSession(OverlayGame("g", _exeA)));
+
+        Assert.Equal(0x400, _backend.Hklm[NgxKey]);
+    }
+
+    [Fact]
+    public void Overlay_IsRemovedOnSessionEnd_BecauseItWasAbsentBefore()
+    {
+        // Absent before means restoring is a delete. Writing 0 would leave a value NVIDIA never had.
+        _service.BeginGameSession(OverlayGame("g", _exeA));
+        _service.EndGameSession("g");
+
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));
+    }
+
+    [Fact]
+    public void Overlay_PutsBackAValueTheUserAlreadyHad()
+    {
+        _backend.Hklm[NgxKey] = 1;
+
+        _service.BeginGameSession(OverlayGame("g", _exeA));
+        Assert.Equal(0x400, _backend.Hklm[NgxKey]);
+
+        _service.EndGameSession("g");
+        Assert.Equal(1, _backend.Hklm[NgxKey]);
+    }
+
+    [Fact]
+    public void Overlay_StaysOnWhileASecondGameThatWantedItIsStillRunning()
+    {
+        _service.BeginGameSession(OverlayGame("a", _exeA));
+        _service.BeginGameSession(OverlayGame("b", _exeB));
+
+        _service.EndGameSession("a");
+        Assert.Equal(0x400, _backend.Hklm[NgxKey]);
+
+        _service.EndGameSession("b");
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));
+    }
+
+    [Fact]
+    public void Overlay_EndsWithTheGameThatWantedIt_NotWithTheLastSessionOfAnyKind()
+    {
+        // The whole justification for the overlay is that it is scoped to one game. A second game
+        // running alongside must not keep it on, or inherit it.
+        _service.BeginGameSession(OverlayGame("overlay", _exeA));
+        _service.BeginGameSession(Game("plain", _exeB, PerformanceProfileMode.Optimized));
+
+        _service.EndGameSession("overlay");
+
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));
+        Assert.Contains("plain", _service.ActiveSessionGameIds);
+    }
+
+    [Fact]
+    public void Overlay_CapturesOnlyOnce_SoASecondGameCannotRecordOurOwnValueAsThePrevious()
+    {
+        // If the second Begin captured, it would record 0x400 - TrayTrigger's own write - as the
+        // value to restore, and the indicator would be left on forever.
+        _service.BeginGameSession(OverlayGame("a", _exeA));
+        _service.BeginGameSession(OverlayGame("b", _exeB));
+        _service.EndGameSession("a");
+        _service.EndGameSession("b");
+
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));
+    }
+
+    [Fact]
+    public void Overlay_SurvivesACrash_AndIsRestoredOnTheNextStart()
+    {
+        _service.BeginGameSession(OverlayGame("g", _exeA));
+        var leftBehind = _store.OnDisk;
+        Assert.NotNull(leftBehind);
+        Assert.True(leftBehind!.DlssOverlayCaptured);
+
+        // A new service instance, as after a crash, finds the snapshot and puts things back.
+        var recovered = new PerformanceProfileService(_store, () => _settings, _backend);
+        recovered.RecoverFromCrashIfNeeded();
+
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));
+    }
+
+    [Fact]
+    public void Overlay_WhenTheRegistryWriteIsRefused_RecordsNothingToRestore()
+    {
+        // The user declined the UAC prompt. Nothing was written, so nothing is owed - a capture
+        // here would later delete a value TrayTrigger never set.
+        _backend.RefuseHklmWrites = true;
+
+        bool started = _service.BeginGameSession(OverlayGame("g", _exeA));
+
+        Assert.False(started);                                  // nothing was applied
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));        // nothing was written
+        Assert.False(_store.OnDisk?.DlssOverlayCaptured ?? false); // and nothing is owed
+    }
+
+    [Fact]
+    public void AGameWithNeitherAProfileNorTheOverlay_StillAppliesNothing()
+    {
+        Assert.False(_service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Off)));
+        Assert.Empty(_backend.Log);
     }
 }

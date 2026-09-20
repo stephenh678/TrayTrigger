@@ -529,6 +529,15 @@
                                        Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
                                        Visibility="{Binding Dlss.HasExternalOverrideNotice, Converter={StaticResource BoolToVis}}"/>
 
+                            <!-- The only layer that can show the active preset, so it earns a
+                                 place on the card even though it is a diagnostic. -->
+                            <CheckBox Content="Show DLSS overlay while this game runs" Margin="0,8,0,0"
+                                      AutomationProperties.Name="Show DLSS overlay while this game runs"
+                                      IsChecked="{Binding Dlss.ShowOverlay}"
+                                      Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
+                            <TextBlock Text="{Binding Dlss.OverlayHint}" FontSize="11" Margin="0,2,0,0"
+                                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
+
                             <!-- Something else changed these settings, so the pre-launch re-apply
                                  has stopped. Shown above the status so the reason for the stopped
                                  state reads before the result of whatever the user does next. -->

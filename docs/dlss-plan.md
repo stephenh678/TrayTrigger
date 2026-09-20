@@ -1336,8 +1336,12 @@ with no driver interaction at all.
 6. ~~**Verification: module enumeration, the four reported states, and the `Verify` action.**~~
    **Done, 2026-09-20.** `DlssVerificationService`, `GameEntry.DlssObservations`, automatic capture
    during a session, and the `Verify` button.
-7. NGX logging as a session tweak, *only if* the spike shows logs can be attributed to a session.
-8. The per-game overlay toggle, reusing the layer 7 session-tweak plumbing.
+7. ~~NGX logging as a session tweak~~ **Dropped, 2026-09-20.** Owner decision. It was always
+   conditional on logs being attributable to a session, which was never established, and its only
+   unique contribution - a version for anti-cheat games - is weaker than the overlay's, which also
+   gives the preset. Layer 3 is out of the design; see Verification.
+8. ~~The per-game overlay toggle~~ **Done, 2026-09-20.** It has its own session-tweak plumbing
+   rather than layer 7's, since layer 7 no longer exists.
 9. Help topic and CHANGELOG bullet.
 
 Deferred past v1: automatic application to newly added games.
@@ -1869,3 +1873,49 @@ A second TrayTrigger cannot start - the single-instance mutex is correct and sto
 these two flags: launch, play, quit the game, exit TrayTrigger from the tray, then undo. Killing
 the instance instead would strand the performance profile's system tweaks until crash recovery
 picks them up on the next start.
+
+## The overlay, 2026-09-20 - and layer 3 dropped
+
+**Layer 3 (NGX log parsing) is out.** It was always conditional on logs being attributable to a
+session, which was never established, and everything it could contribute the overlay contributes
+better: the overlay gives the preset as well as the version, and works on the protected titles that
+were layer 3's whole reason for existing. Verification is now layers 1, 2 and 4.
+
+A checkbox on the DLSS card, off by default, writing `ShowDlssIndicator` = `0x400` under
+`HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore` before the game starts and removing it when the
+session ends. Absent before means restoring is a **delete**, not a zero.
+
+### Reference-counted, not "first wins"
+
+The other machine-wide tweaks restore when the last session of any kind ends. The overlay does not:
+it is counted across the sessions that asked for it, and goes off when the last of *those* ends.
+
+This is the difference between honouring the plan's justification and quietly breaking it. The
+overlay was rejected as a global toggle because it draws over every DLSS game, and re-adopted only
+because it is scoped to one. Under first-wins, a second game running alongside would inherit it -
+exactly the thing that was rejected.
+
+Capture happens only on the first request, for the same reason: a second game capturing would
+record `0x400` - TrayTrigger's own write - as the value to put back, and the indicator would never
+turn off again.
+
+### A bug the tests caught immediately
+
+The overlay has to work on a game whose performance profile is `Off`, so `BeginGameSession` can no
+longer return early on `Off`. Removing that guard **silently applied the power plan, HDR and Do Not
+Disturb to a game with no profile** - every tweak below it had relied on that early return to gate
+on the tier.
+
+Each one is now gated explicitly on `profileActive`. Worth remembering: the guard that made those
+tweaks correct was three screens away from them, and nothing in their own code said so.
+
+### A declined UAC prompt owes nothing
+
+The write is HKLM. If it is refused, the capture is dropped rather than left behind - otherwise the
+restore would later delete a value TrayTrigger never set.
+
+### Not yet seen on screen
+
+The registry lifecycle is unit-tested, and `0x400` was confirmed to draw on a retail game during
+the 2026-09-19 spike. What has not been done is the two together: TrayTrigger turning it on for one
+game's session and the overlay actually appearing.
