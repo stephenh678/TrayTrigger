@@ -1195,6 +1195,7 @@ public partial class ProcessLauncherService
                         _performanceProfileService.OnGameProcessStarted(game, proc);
                         CpuTopologyService.ApplyAffinity(proc, game);
                         WaitForWindowAndActivate(session, proc);
+                        StartDlssObservation(session, proc);
                     }
                 }
             }
