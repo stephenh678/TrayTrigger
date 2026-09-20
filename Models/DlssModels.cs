@@ -54,6 +54,8 @@ public enum DlssSettingOutcome
 {
     /// <summary>Written, or restored, as intended.</summary>
     Applied,
+    /// <summary>Already exactly as TrayTrigger left it. Nothing to do.</summary>
+    AlreadyCorrect,
     /// <summary>Restored to the captured previous value.</summary>
     Restored,
     /// <summary>Removed, because it was absent before TrayTrigger wrote it.</summary>
@@ -99,6 +101,19 @@ public sealed record DlssOperationResult(
         foreach (var d in Details)
             if (d.Outcome == outcome) return true;
         return false;
+    }
+
+    /// <summary>True when nothing needed doing - every setting was already as TrayTrigger left it.</summary>
+    public bool WasAlreadyCorrect
+    {
+        get
+        {
+            if (Details.Count == 0) return false;
+            foreach (var d in Details)
+                if (d.Outcome != DlssSettingOutcome.AlreadyCorrect && d.Outcome != DlssSettingOutcome.NotSupportedByDriver)
+                    return false;
+            return true;
+        }
     }
 
     public static DlssOperationResult Failure(string error) =>

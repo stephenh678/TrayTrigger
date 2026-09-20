@@ -1331,7 +1331,8 @@ with no driver interaction at all.
    undo only while the driver still reports what TrayTrigger wrote.
 4. ~~Apply and undo, wired to the button, with the layer 1 write-back check.~~ **Done,
    2026-09-19.** The check runs against a reloaded session, as specified.
-5. Re-apply in the pre-launch step, with the three-way conflict rule.
+5. ~~Re-apply in the pre-launch step, with the three-way conflict rule.~~ **Done, 2026-09-19**,
+   together with resolving the rendering executable.
 6. **Verification: module enumeration, the four reported states, and the `Verify` action.** Do this
    before shipping, not after - overriding games NVIDIA has not validated is only defensible if the
    product can tell the user what was actually observed.
@@ -1712,3 +1713,49 @@ printed **write-back** failures and this was an outright `Failed`. A setting nob
 id the driver refuses both read as "absent" through a profile, so the before/after comparison
 looked clean too. The harness now prints every outcome that is not a clean `Applied` - a reporting
 gap is how a real defect stays invisible.
+
+## The pre-launch re-apply, 2026-09-19
+
+`DlssOverrideService.Reapply`, called from `ProcessLauncherService.BeginSession` before the
+performance profile. Deliberately outside the profile: DLSS settings are persistent driver state,
+not a session tweak, so they apply even when the performance profile is `Off`.
+
+The three-way rule is implemented as specified. One addition it needed: **everything is read before
+anything is written.** A single conflicting setting means something else is managing this game, and
+writing the remaining five would be exactly the overwrite the rule exists to prevent. So the pass
+evaluates all six, and either writes what was reverted or writes nothing at all.
+
+A conflict sets `GameEntry.DlssConflicted`, which stops further re-applying rather than fighting
+every launch, and the card explains it. Applying or undoing clears it - both are the user saying
+what they want. The records are kept either way, so undo stays available.
+
+A launch never fails because of this: the whole call is wrapped, and a game with no records - which
+is almost every game - costs one list check.
+
+### Resolving the rendering executable: the bug this step actually found
+
+The plan flagged this and it turned out to matter more than it reads. A driver profile keys on the
+executable that renders, and for a launcher-based game **that is not the one TrayTrigger launches**:
+
+```
+Launched : ...\Cyberpunk 2077\REDprelauncher.exe      -> profile "RED Launcher Service"
+Renders  : ...\Cyberpunk 2077\bin\x64\Cyberpunk2077.exe -> profile "Cyberpunk 2077"
+```
+
+Every apply before this change wrote to the launcher's profile - a process that never renders a
+frame. No error, no effect, and the write-back check passed, because the settings really were
+written, just somewhere useless. Every GOG, Epic, EA and Ubisoft game would have been affected.
+
+`DlssProbeService.ResolveRenderingExecutable` uses the strongest signal available: **the renderer
+is the executable beside the game's DLSS DLLs**, because that is how NGX finds them. Among those the
+largest wins after discarding names that are never renderers - a 60 MB game executable against a
+260 KB crash reporter. It is a heuristic, and the module scan on a running game is what catches it
+being wrong.
+
+### And the harness hid it, again
+
+The round trip read the launched executable's profile for all three snapshots while `Apply` wrote
+to the renderer's. It compared a profile nothing had touched and reported *"every setting is back
+exactly as it started"* - which was true, and meaningless. That is the second time in this feature
+a reporting gap made a real defect invisible; the report now prints both paths and reads the one
+that is written.

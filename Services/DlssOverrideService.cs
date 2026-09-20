@@ -31,7 +31,9 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     /// </summary>
     public DlssOperationResult Apply(string executablePath, string gameName)
     {
-        string exeName = Path.GetFileName(executablePath);
+        // Not the launched executable: the one that renders. For a launcher-based game they differ,
+        // and the driver keys its profiles on the renderer. See ResolveRenderingExecutable.
+        string exeName = Path.GetFileName(DlssProbeService.ResolveRenderingExecutable(executablePath));
         if (string.IsNullOrWhiteSpace(exeName)) return DlssOperationResult.Failure("No executable to target.");
 
         // The write happens in its own scope so the session is closed before the check below.
@@ -251,6 +253,125 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         // TrayTrigger wrote, and dropping them would lose the only evidence of what it owns.
         return new DlssOperationResult(true, null, details, remaining);
     }
+
+    /// <summary>
+    /// The pre-launch step: put the settings back if something reverted them, moments before the
+    /// game reads them. NVIDIA App reverts overrides on games not on its own allowlist when it
+    /// starts, and TrayTrigger's advantage is that it launches the game.
+    ///
+    /// <para>The three-way rule from docs/dlss-plan.md, which resolves "always reapply" against
+    /// "never overwrite an external change":</para>
+    /// <list type="bullet">
+    /// <item>the value TrayTrigger wrote - nothing to do;</item>
+    /// <item>the value TrayTrigger captured, i.e. reverted - reapply silently;</item>
+    /// <item>anything else - do not overwrite, and report a conflict.</item>
+    /// </list>
+    ///
+    /// <para>Telling the second case from the third is exactly what the ownership record makes
+    /// possible. <b>Everything is read before anything is written</b>: one conflicting setting
+    /// means something else is managing this game, and writing the rest would be the overwrite
+    /// this rule exists to prevent.</para>
+    ///
+    /// <para>Best-effort, not a guarantee. No published contract says when NVIDIA App reconciles
+    /// DRS; reapplying here narrows the window, it does not close it.</para>
+    /// </summary>
+    public DlssOperationResult Reapply(IReadOnlyList<DlssSettingRecord> records)
+    {
+        if (records.Count == 0) return new DlssOperationResult(true, null, Array.Empty<DlssSettingOutcomeDetail>(), records);
+
+        var planned = new List<(DlssSettingRecord Record, DlssSettingOutcome Outcome)>();
+
+        using (var read = _backend.OpenSession(out string? readError))
+        {
+            if (read == null) return DlssOperationResult.Failure(readError ?? "The NVIDIA driver settings database is unavailable.");
+
+            foreach (var group in records.GroupBy(r => r.ApplicationName, StringComparer.OrdinalIgnoreCase))
+            {
+                var profile = read.FindProfileForExecutable(group.Key, out _);
+                foreach (var record in group)
+                {
+                    if (profile == null)
+                    {
+                        // The whole profile is gone - a driver reset, or someone deleted it. That is
+                        // not another tool disagreeing with us, so it is not a conflict; recreating
+                        // it is what a normal apply would do.
+                        planned.Add((record, DlssSettingOutcome.Failed));
+                        continue;
+                    }
+
+                    var current = read.GetSetting(profile, record.SettingId, out _);
+                    planned.Add((record,
+                        StillOursToUndo(current, record) ? DlssSettingOutcome.AlreadyCorrect
+                        : LooksLikeWhatWeCaptured(current, record) ? DlssSettingOutcome.Applied
+                        : DlssSettingOutcome.SkippedForeignChange));
+                }
+            }
+        }
+
+        if (planned.Any(p => p.Outcome == DlssSettingOutcome.SkippedForeignChange))
+        {
+            // Stop managing this game rather than fight over it. Nothing is written.
+            var conflicts = planned
+                .Select(p => new DlssSettingOutcomeDetail(p.Record.Feature, p.Record.SettingId,
+                    p.Outcome == DlssSettingOutcome.Applied ? DlssSettingOutcome.SkippedForeignChange : p.Outcome, null))
+                .ToList();
+            LoggingService.Warn("Dlss", $"Something else has changed the DLSS settings for {records[0].ApplicationName}; TrayTrigger is leaving them alone.");
+            return new DlssOperationResult(true, null, conflicts, records);
+        }
+
+        var toWrite = planned.Where(p => p.Outcome == DlssSettingOutcome.Applied).ToList();
+        if (toWrite.Count == 0)
+        {
+            return new DlssOperationResult(true, null,
+                planned.Select(p => new DlssSettingOutcomeDetail(p.Record.Feature, p.Record.SettingId, p.Outcome, null)).ToList(),
+                records);
+        }
+
+        var details = new List<DlssSettingOutcomeDetail>();
+        using (var write = _backend.OpenSession(out string? writeError))
+        {
+            if (write == null) return DlssOperationResult.Failure(writeError ?? "The NVIDIA driver settings database is unavailable.");
+
+            foreach (var (record, _) in toWrite)
+            {
+                var profile = write.FindProfileForExecutable(record.ApplicationName, out string? findError);
+                if (profile == null)
+                {
+                    details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, findError));
+                    continue;
+                }
+                if (!write.SetSetting(profile, record.SettingId, record.WrittenValue, out string? setError))
+                {
+                    details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, setError));
+                    continue;
+                }
+                details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Applied, null));
+            }
+
+            if (!write.Save(out string? saveError))
+            {
+                LoggingService.Warn("Dlss", $"Re-applying DLSS settings before launch failed: {saveError}");
+                return new DlssOperationResult(false, saveError, details, records);
+            }
+        }
+
+        foreach (var (record, outcome) in planned.Where(p => p.Outcome != DlssSettingOutcome.Applied))
+            details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, outcome, null));
+
+        LoggingService.Info("Dlss", $"Re-applied {toWrite.Count} DLSS setting(s) before launch - something had reverted them.");
+        return new DlssOperationResult(true, null, details, records);
+    }
+
+    /// <summary>
+    /// Whether the driver is reporting exactly the state the record captured - i.e. TrayTrigger's
+    /// write has been reverted, rather than replaced with something new. Absent has to match
+    /// absent: a setting that is now inherited was not what was captured if the capture said the
+    /// setting did not exist.
+    /// </summary>
+    internal static bool LooksLikeWhatWeCaptured(DrsSettingReading? current, DlssSettingRecord record) =>
+        record.PreviousOrigin == DlssSettingOrigin.Absent
+            ? current == null
+            : current != null && current.Value == record.PreviousValue && current.Origin == record.PreviousOrigin;
 
     /// <summary>
     /// Whether a setting is still the one TrayTrigger wrote. Requires both the value and that it

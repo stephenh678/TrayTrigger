@@ -524,6 +524,13 @@
                                        Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
                                        Visibility="{Binding Dlss.HasExternalOverrideNotice, Converter={StaticResource BoolToVis}}"/>
 
+                            <!-- Something else changed these settings, so the pre-launch re-apply
+                                 has stopped. Shown above the status so the reason for the stopped
+                                 state reads before the result of whatever the user does next. -->
+                            <TextBlock Text="{Binding Dlss.ConflictNotice}" FontSize="11" Margin="0,6,0,0"
+                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
+                                       Visibility="{Binding Dlss.IsConflicted, Converter={StaticResource BoolToVis}}"/>
+
                             <!-- What the last apply or undo actually did, including the case where
                                  the driver accepted a save but did not report the values back. -->
                             <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,6,0,0"

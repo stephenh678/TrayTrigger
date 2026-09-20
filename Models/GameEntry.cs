@@ -103,6 +103,14 @@ public class GameEntry
     public List<DlssSettingRecord> DlssSettings { get; set; } = new();
 
     /// <summary>
+    /// Set when the pre-launch reapply found a DLSS setting that is neither what TrayTrigger wrote
+    /// nor what it captured - so something else is changing this game's settings. TrayTrigger then
+    /// stops reapplying rather than fighting over them, and the card says so. Cleared by applying
+    /// or undoing, which are both the user deciding what they want.
+    /// </summary>
+    public bool DlssConflicted { get; set; }
+
+    /// <summary>
     /// Which cores the game's process may run on. Independent of the profile tier: on an Intel
     /// hybrid CPU (12th gen+) some engines and anti-cheat titles run worse when threads land on
     /// E-cores, and pinning to P-cores is the standard fix. No-op on non-hybrid CPUs.

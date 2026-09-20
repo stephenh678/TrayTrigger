@@ -387,4 +387,151 @@ public class DlssOverrideServiceTests
         });
         Assert.DoesNotContain(DlssProbeService.Settings, d => d.Id == 0x00634291);
     }
+
+    // --- Step 5: the pre-launch re-apply and its three-way rule -----------------------------
+
+    [Fact]
+    public void Reapply_WhenNothingChanged_WritesNothing()
+    {
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+        int savesAfterApply = driver.SaveCount;
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.WasAlreadyCorrect);
+        Assert.Equal(savesAfterApply, driver.SaveCount);
+    }
+
+    [Fact]
+    public void Reapply_WhenSomethingRevertedUsToTheCapturedValue_PutsItBack()
+    {
+        // The NVIDIA App case the step exists for: it reverts overrides on games it does not list.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+
+        foreach (var record in applied.Records) profile.Settings.Remove(record.SettingId);
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.HadForeignChanges);
+        Assert.Equal(1u, profile.Settings[SrEnable].Value);
+        Assert.Equal(0x00FFFFFFu, profile.Settings[SrPreset].Value);
+    }
+
+    [Fact]
+    public void Reapply_RestoresAnInheritedCapture_ByWritingOurValueBack()
+    {
+        // Captured as Inherited, reverted to Inherited: still "what we captured", so re-apply.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        driver.GlobalProfile[SrEnable] = 1;
+        var applied = service.Apply(TestExe, "Test Game");
+        profile.Settings.Remove(SrEnable);   // back to inheriting
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.False(result.HadForeignChanges);
+        Assert.Equal(1u, profile.Settings[SrEnable].Value);
+        Assert.False(profile.Settings[SrEnable].IsPredefined);
+    }
+
+    [Fact]
+    public void Reapply_WhenAValueIsNeitherOursNorTheCapture_WritesNothingAtAll()
+    {
+        // One conflicting setting means something else is managing this game. Writing the others
+        // would be exactly the overwrite the rule exists to prevent, so everything is read before
+        // anything is written.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+
+        profile.Settings.Remove(SrEnable);              // reverted - would normally be re-applied
+        profile.Settings[SrPreset] = (0x0000000D, false); // but this one is a stranger's
+        int savesBefore = driver.SaveCount;
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.True(result.HadForeignChanges);
+        Assert.Equal(savesBefore, driver.SaveCount);
+        Assert.False(profile.Settings.ContainsKey(SrEnable));
+        Assert.Equal(0x0000000Du, profile.Settings[SrPreset].Value);
+    }
+
+    [Fact]
+    public void Reapply_WhenConflicted_AppliesNothing_ButStillReportsEachSettingTruthfully()
+    {
+        // The conflict is per game - nothing is written - but a setting that is still exactly as
+        // TrayTrigger left it should not be reported as though a stranger had touched it.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+        profile.Settings[SrPreset] = (0x0000000D, false);
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.True(result.HadForeignChanges);
+        Assert.DoesNotContain(result.Details, d => d.Outcome == DlssSettingOutcome.Applied);
+        Assert.Contains(result.Details, d => d.SettingId == SrPreset && d.Outcome == DlssSettingOutcome.SkippedForeignChange);
+        Assert.Contains(result.Details, d => d.SettingId == SrEnable && d.Outcome == DlssSettingOutcome.AlreadyCorrect);
+    }
+
+    [Fact]
+    public void Reapply_KeepsTheRecords_SoTheUserCanStillUndo()
+    {
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+        profile.Settings[SrPreset] = (0x0000000D, false);
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.Equal(applied.Records.Count, result.Records.Count);
+    }
+
+    [Fact]
+    public void Reapply_WithNothingRecorded_IsANoOp()
+    {
+        var (service, driver) = NewService();
+
+        var result = service.Reapply(Array.Empty<DlssSettingRecord>());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(0, driver.SessionsOpened);
+    }
+
+    [Fact]
+    public void Reapply_WhenTheDriverIsUnavailable_FailsWithoutThrowing()
+    {
+        var service = new DlssOverrideService(new FakeDrsBackend { OpenError = "no driver" });
+
+        var result = service.Reapply(new[] { new DlssSettingRecord { ApplicationName = Exe, SettingId = SrEnable, WrittenValue = 1 } });
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("no driver", result.Error);
+    }
+
+    [Theory]
+    [InlineData(DlssSettingOrigin.Absent, null, null, true)]           // captured absent, still absent
+    [InlineData(DlssSettingOrigin.Absent, 1u, DlssSettingOrigin.Inherited, false)]  // absent then inherited is NOT the capture
+    [InlineData(DlssSettingOrigin.Inherited, 1u, DlssSettingOrigin.Inherited, true)]
+    [InlineData(DlssSettingOrigin.Inherited, 2u, DlssSettingOrigin.Inherited, false)] // right layer, wrong value
+    [InlineData(DlssSettingOrigin.UserSet, 5u, DlssSettingOrigin.UserSet, true)]
+    [InlineData(DlssSettingOrigin.UserSet, 5u, DlssSettingOrigin.Inherited, false)]   // right value, wrong layer
+    public void LooksLikeWhatWeCaptured_ComparesLayerAsWellAsValue(
+        DlssSettingOrigin capturedOrigin, uint? currentValue, DlssSettingOrigin? currentOrigin, bool expected)
+    {
+        var record = new DlssSettingRecord
+        {
+            PreviousOrigin = capturedOrigin,
+            PreviousValue = capturedOrigin == DlssSettingOrigin.Absent ? null : (capturedOrigin == DlssSettingOrigin.UserSet ? 5u : 1u)
+        };
+        var current = currentValue == null ? null : new DrsSettingReading(currentValue.Value, currentOrigin!.Value);
+
+        Assert.Equal(expected, DlssOverrideService.LooksLikeWhatWeCaptured(current, record));
+    }
 }

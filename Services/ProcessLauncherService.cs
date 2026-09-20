@@ -182,6 +182,18 @@ public partial class ProcessLauncherService
 
     private bool ShouldKeepLaunchersMinimized => KeepLaunchersMinimized?.Invoke() == true;
 
+    /// <summary>
+    /// Saves the library after a launch changed a game record. Set by App, like
+    /// <see cref="KeepLaunchersMinimized"/>; unset in tests, where nothing needs persisting.
+    /// </summary>
+    public Action? PersistLibrary { get; set; }
+
+    /// <summary>
+    /// The DLSS override service. A property rather than a constructor argument so the eight
+    /// existing test call sites keep working; tests that care substitute a fake backend.
+    /// </summary>
+    public DlssOverrideService DlssOverrides { get; set; } = new();
+
     /// <summary>The Epic launch link. "silent=true" asks the launcher not to show its window.</summary>
     internal static string BuildEpicLaunchUrl(string appName, bool silent) =>
         $"com.epicgames.launcher://apps/{Uri.EscapeDataString(appName)}?action=launch{(silent ? "&silent=true" : string.Empty)}";
@@ -472,6 +484,10 @@ public partial class ProcessLauncherService
             _sessions[game.Id] = session;
         }
 
+        // Before the profile, and deliberately outside it: DLSS settings are persistent driver
+        // state, not a session tweak, so they apply even when the performance profile is Off.
+        ReapplyDlssSettings(game);
+
         _performanceProfileService.BeginGameSession(game);
 
         var scriptResult = _scriptService.RunPreLaunch(game);
@@ -488,6 +504,41 @@ public partial class ProcessLauncherService
         try { SessionStarted?.Invoke(session); }
         catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionStarted handler failed: {ex.Message}"); }
         return session;
+    }
+
+    /// <summary>
+    /// Puts the DLSS settings back if something reverted them since they were applied - NVIDIA App
+    /// reverts overrides on games it does not list, whenever it starts. Does nothing for a game
+    /// TrayTrigger has never applied to, which is almost every game, so the common path is a single
+    /// list check.
+    /// </summary>
+    private void ReapplyDlssSettings(GameEntry game)
+    {
+        if (game.DlssSettings.Count == 0 || game.DlssConflicted) return;
+
+        try
+        {
+            var result = DlssOverrides.Reapply(game.DlssSettings);
+
+            if (result.HadForeignChanges)
+            {
+                // Something else is managing this game's settings. Stop reapplying rather than
+                // fight over them every launch; the card explains it and the user decides.
+                game.DlssConflicted = true;
+                PersistLibrary?.Invoke();
+                LoggingService.Warn("Launcher", $"DLSS settings for '{game.Name}' were changed by something else - TrayTrigger has stopped managing them.");
+            }
+            else if (!result.WasAlreadyCorrect)
+            {
+                LoggingService.Info("Launcher", $"Re-applied DLSS settings for '{game.Name}' before launch.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // A launch must never fail because of this. The override being stale is a worse
+            // outcome than a broken launch only in theory.
+            LoggingService.Warn("Launcher", $"Re-applying DLSS settings for '{game.Name}' failed: {ex.Message}");
+        }
     }
 
     /// <summary>Undo a session that never got as far as dispatching the game (or whose dispatch threw).</summary>

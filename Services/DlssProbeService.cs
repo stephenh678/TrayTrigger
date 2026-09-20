@@ -224,6 +224,79 @@ public static class DlssProbeService
         return info.FilePrivatePart == 0 ? version : $"{version}.{info.FilePrivatePart}";
     }
 
+    /// <summary>
+    /// Names that are never the thing doing the rendering, however large they are.
+    /// </summary>
+    private static readonly string[] NotRenderers =
+    {
+        "launcher", "prelauncher", "crash", "error", "report", "setup", "unins",
+        "redist", "helper", "updater", "installer", "config", "benchmark", "editor"
+    };
+
+    /// <summary>
+    /// The executable the driver will actually match a DLSS profile against.
+    ///
+    /// <para>Driver profiles key on the executable that renders, and for a launcher-based game
+    /// that is <b>not</b> the one TrayTrigger launches. Cyberpunk 2077's entry points at
+    /// <c>REDprelauncher.exe</c>, whose driver profile is "RED Launcher Service"; the renderer is
+    /// <c>bin\x64\Cyberpunk2077.exe</c>, whose profile is "Cyberpunk 2077". Writing DLSS settings
+    /// against the launcher would put them on a profile for a process that never renders a
+    /// frame - silently doing nothing, with no error anywhere.</para>
+    ///
+    /// <para>The signal used is the strongest one available: <b>the renderer is the executable
+    /// that sits beside the game's DLSS DLLs</b>, because that is how NGX finds them. Among those
+    /// the largest wins, after discarding names that are never renderers - a 60 MB game executable
+    /// against a 260 KB crash reporter. Falls back to the given path when the game ships no DLSS,
+    /// or when nothing in that folder looks better.</para>
+    ///
+    /// <para>A heuristic, and one the verification step exists to catch: if this picks wrong, the
+    /// module scan on a running game will show no substituted runtime.</para>
+    /// </summary>
+    public static string ResolveRenderingExecutable(string gameExecutablePath)
+    {
+        string? dir = SafeDirectoryName(gameExecutablePath);
+        if (dir == null) return gameExecutablePath;
+
+        var shipped = FindShippedRuntimes(dir);
+        if (shipped.Count == 0) return gameExecutablePath;
+
+        // The folders holding DLSS DLLs, most-shipped first; usually exactly one.
+        var candidateDirs = shipped
+            .Select(s => SafeDirectoryName(Path.Combine(dir, s.RelativePath)))
+            .Where(d => d != null)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        string givenName = Path.GetFileName(gameExecutablePath);
+
+        foreach (string? candidateDir in candidateDirs)
+        {
+            string[] exes;
+            try { exes = Directory.GetFiles(candidateDir!, "*.exe"); }
+            catch { continue; }
+
+            // The launched executable already living beside the DLLs means it is the renderer.
+            var self = exes.FirstOrDefault(e => string.Equals(Path.GetFileName(e), givenName, StringComparison.OrdinalIgnoreCase));
+            if (self != null) return self;
+
+            var best = exes
+                .Where(e => !NotRenderers.Any(n => Path.GetFileNameWithoutExtension(e).Contains(n, StringComparison.OrdinalIgnoreCase)))
+                .Select(e => (Path: e, Size: SafeLength(e)))
+                .OrderByDescending(e => e.Size)
+                .FirstOrDefault();
+
+            if (best.Path != null) return best.Path;
+        }
+
+        return gameExecutablePath;
+    }
+
+    private static long SafeLength(string path)
+    {
+        try { return new FileInfo(path).Length; }
+        catch { return 0; }
+    }
+
     /// <summary>Maps a shipped DLL name to its feature. Exposed for tests.</summary>
     public static string FeatureForShippedFile(string fileName) =>
         fileName.StartsWith("nvngx_dlssg", StringComparison.OrdinalIgnoreCase) ? "Frame Generation"

@@ -39,6 +39,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private readonly DlssOverrideService _overrides;
     private readonly List<DlssSettingRecord> _records;
     private readonly Action? _persist;
+    private readonly GameEntry? _game;
     private readonly Func<string, DlssProbeService.ProbeResult> _probe;
 
     private bool _isLoading;
@@ -66,8 +67,10 @@ public sealed class DlssCardViewModel : ViewModelBase
         List<DlssSettingRecord>? records = null,
         Action? persist = null,
         DlssOverrideService? overrides = null,
-        Func<string, DlssProbeService.ProbeResult>? probe = null)
+        Func<string, DlssProbeService.ProbeResult>? probe = null,
+        GameEntry? game = null)
     {
+        _game = game;
         _executablePath = executablePath;
         _gameName = gameName;
         _records = records ?? new List<DlssSettingRecord>();
@@ -110,6 +113,16 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// <summary>Undo is offered only for settings TrayTrigger actually recorded writing.</summary>
     public bool CanUndo => !IsBusy && _records.Count > 0;
 
+    /// <summary>
+    /// Set when a pre-launch reapply found this game's settings changed by something else, so
+    /// TrayTrigger stopped managing them. Applying or undoing clears it - both are the user
+    /// saying what they want.
+    /// </summary>
+    public bool IsConflicted => _game?.DlssConflicted == true;
+
+    public string ConflictNotice =>
+        "Something else changed this game's DLSS settings, so TrayTrigger stopped re-applying them before launch. Use recommended to take them over again, or undo to hand them back.";
+
     /// <summary>The result of the last apply or undo, in the user's words. Null before either.</summary>
     public string? Status { get => _status; private set => SetProperty(ref _status, value); }
     public bool HasStatus => !string.IsNullOrEmpty(_status);
@@ -136,7 +149,9 @@ public sealed class DlssCardViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            string path = _executablePath;
+            // Probe the renderer, not the launcher, so the card reports the profile that Apply
+            // will actually write to.
+            string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath)).ConfigureAwait(true);
             var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
             _content = Project(result, _records);
         }
@@ -174,6 +189,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             // this write, and keeping stale records would undo to the wrong values.
             _records.Clear();
             _records.AddRange(result.Records);
+            if (_game != null) _game.DlssConflicted = false;
             _persist?.Invoke();
 
             Status = DescribeApply(result);
@@ -204,6 +220,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             // settings it could not undo keep theirs, so a later attempt can still try.
             _records.Clear();
             _records.AddRange(result.Records);
+            if (_game != null) _game.DlssConflicted = false;
             _persist?.Invoke();
 
             Status = result.Succeeded
@@ -259,6 +276,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(CanApply));
         OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(IsConflicted));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasStatus));
     }

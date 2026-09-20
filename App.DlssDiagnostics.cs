@@ -180,7 +180,13 @@ public partial class App
 
         string? exePath = ResolveProbeTarget(target);
         if (exePath == null) { WriteReport(o.AppendLine("Pass an executable.").ToString(), "dlss-roundtrip.txt"); return; }
-        o.AppendLine($"Target        : {exePath}");
+        // Apply targets the renderer, not the launched executable. Reading the launcher's profile
+        // here would compare a profile nothing ever wrote to - and report success whatever
+        // happened. The first version of this harness did exactly that.
+        string renderer = DlssProbeService.ResolveRenderingExecutable(exePath);
+        o.AppendLine($"Launched      : {exePath}");
+        o.AppendLine($"Renders       : {renderer}{(renderer == exePath ? "" : "   <- the profile that is written")}");
+        exePath = renderer;
         o.AppendLine();
 
         // Which ids this driver actually knows. A setting nobody has set and an id the driver will
