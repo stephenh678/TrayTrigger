@@ -482,6 +482,10 @@
                                        Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
                                        Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}}"/>
 
+                            <Button AutomationProperties.Name="Learn more about NVIDIA DLSS Override" Style="{StaticResource HelpLinkButton}"
+                                    Margin="0,8,0,0"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/dlss_override"/>
+
                         </StackPanel>
                     </Border>
 

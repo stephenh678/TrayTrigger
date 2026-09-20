@@ -106,6 +106,7 @@ public class HelpContentServiceTests
     [InlineData("profiles/timer_resolution")]
     [InlineData("profiles/do_not_disturb")]
     [InlineData("profiles/cpu_affinity")]
+    [InlineData("tweaks/dlss_override")]
     [InlineData("scanner/overview")]
     [InlineData("traymenu/overview")]
     [InlineData("scripts/overview")]
