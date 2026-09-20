@@ -1,7 +1,8 @@
 # DLSS model management: design plan
 
-Status: design agreed 2026-09-19; core mechanism **proven by spike the same day** (see Spike
-results). Not yet scheduled; no branch, no code.
+Status: design agreed 2026-09-19; **both halves of the mechanism proven by spike the same day** -
+runtime substitution and preset selection (see Spike results). Not yet scheduled; no branch, no
+code.
 Target: a release after 1.4.6. NVIDIA only.
 
 ## Summary
@@ -119,6 +120,28 @@ negative that would have shipped and told users the feature had failed.
 `ProductName` is what distinguishes SR from RR from FG, since all three are `160_E658700.bin`.
 The per-feature observation model in Data depends on it.
 
+### Run 6: the preset settings work
+
+`0x00634291` = `1` (Recommended) and `0x10E41DF7` = `5` (Preset E) were written, and the game
+restarted. The overlay changed from **`Render Preset F`** - Ray Reconstruction's own default - to
+**`Render Preset E`**, NVIDIA's "Latest transformer model".
+
+Module reads at the same moment were unchanged and healthy: SR and RR at 310.9.0 from the NGX
+store, FG still on the game's 310.7.128 (its override remained off), Streamline 2.14.0.
+
+**This closes the last major unknown.** Both halves of the recipe are now demonstrated:
+
+| Half | Effect | Status |
+|---|---|---|
+| DLL override (`0x10E41E01`, `0x10E41E03`) | Substitutes the runtime from the driver's store | **Verified** |
+| Preset settings (`0x00634291`, `0x10E41DF7`) | Changes which model that runtime uses | **Verified** |
+
+**One nuance, deliberately not over-claimed.** Both settings were written together, so what is
+proven is that the *pair* works. Whether `0x00634291` is actually required - the reviewer claim
+that it gates preset overrides - was not isolated. Writing `0x10E41DF7` alone might suffice. This
+matters only for minimising the recipe, not for whether it works, and can be settled whenever
+convenient by clearing `0x00634291` and restarting.
+
 ### The overlay, read on-screen during run 5
 
 Two overlay lines were captured, and both cross-validate the module reads exactly:
@@ -156,15 +179,7 @@ and the overlay independently reads `DLSS RR2`. The header semantics are real dr
 
 ### Still not established
 
-- **Whether the preset settings do anything.** The overlay showed `Render Preset F` for Ray
-  Reconstruction - but no preset setting was ever written in this spike, so F is simply RR's
-  default. `0x00634291` and the forced-preset settings remain **entirely untested**. This is now
-  the largest remaining unknown.
-
-  The test: set `0x00634291` = `1` (Recommended) and `0x10E41DF7` = `5` (Preset E, which NVIDIA's
-  header calls "Latest transformer model" - deliberately a different letter from the F default),
-  restart, and read the overlay. If the line reads `Render Preset E`, the preset half of the
-  recipe works. If it still reads F, `0x00634291` does not do what the plan assumes.
+- ~~Whether the preset settings do anything.~~ **Settled - run 6, they work.** See below.
 - Whether the override works **below DLSS 3.1**. 007 First Light ships 310.7.128, so this run says
   nothing about old games. Rainbow Six Extraction remains the test, and its DLSS could not be
   enabled - itself possibly because a 2021 runtime does not recognise an RTX 5080.
@@ -356,7 +371,8 @@ game file modified. What remains untested is the preset half of the recipe, beha
 | **The overlay reports the active preset letter** | **Verified** | `Render Preset F` read on-screen, run 5 - the justification for layer 4 |
 | **The overlay and module enumeration agree** | **Verified** | FG, RR, Streamline and driver versions matched across both methods in the same session |
 | **NVIDIA's SDK header preset semantics are real driver behaviour** | **Verified** | Header calls preset F "Default model RR2"; the overlay independently reads `DLSS RR2` |
-| **Preset settings change the active preset** | **Untested** | No preset setting was written during the spike; F was RR's own default |
+| **Preset settings change the active preset** | **Verified** | Run 6: overlay went from `Render Preset F` (RR default) to `Render Preset E` after writing `0x00634291` and `0x10E41DF7` |
+| **`0x00634291` is required for preset overrides to apply** | **Untested** | Run 6 wrote it together with the preset letter, so the pair is proven but the gate is not isolated |
 
 ## What can and cannot be read back
 
