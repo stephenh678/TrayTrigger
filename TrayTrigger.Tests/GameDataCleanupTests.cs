@@ -284,6 +284,162 @@ public class GameDataCleanupTests : IDisposable
         Assert.Single(library.Games);
     });
 
+    // --- The DLSS override leaves with the game ---------------------------------------------
+
+    private static void RemoveSelected(LibraryViewModel library, params GameCardViewModel[] cards)
+    {
+        library.ConfirmBatchRemove = _ => true;
+        foreach (var card in cards) library.SetCardSelected(card, true);
+        library.BatchRemoveCommand.Execute(null);
+    }
+
+    [Fact]
+    public void RemovingAGame_PutsItsDlssOverrideBack_OnceTheUndoWindowEnds() => Sta(() =>
+    {
+        // The records leave with the library entry, and they are the only thing that can undo the
+        // override - so it has to be undone before they go.
+        var driver = new Fakes.FakeDrsBackend();
+        var library = CreateLibrary();
+        library.DlssOverrides = new DlssOverrideService(driver);
+        var alpha = AddGame(library, "Alpha");
+        alpha.Game.DlssSettings.AddRange(library.DlssOverrides.Apply(alpha.Game.ExecutablePath, "Alpha").Records);
+        Assert.True(driver.Profiles.ContainsKey("game.exe"));
+
+        RemoveSelected(library, alpha);
+
+        // Inside the window the game may yet come back, so nothing has been touched.
+        Assert.NotEmpty(driver.Profiles["game.exe"].Settings);
+
+        library.FinalizePendingRemoval();
+
+        // Settings gone, and the profile TrayTrigger had to create with them.
+        Assert.False(driver.Profiles.ContainsKey("game.exe"));
+    });
+
+    [Fact]
+    public void UndoingTheRemoval_LeavesTheOverrideAndItsRecordsAsTheyWere() => Sta(() =>
+    {
+        var driver = new Fakes.FakeDrsBackend();
+        var library = CreateLibrary();
+        library.DlssOverrides = new DlssOverrideService(driver);
+        var alpha = AddGame(library, "Alpha");
+        alpha.Game.DlssSettings.AddRange(library.DlssOverrides.Apply(alpha.Game.ExecutablePath, "Alpha").Records);
+        int held = alpha.Game.DlssSettings.Count;
+        int saves = driver.SaveCount;
+
+        RemoveSelected(library, alpha);
+        library.UndoDelete();
+        library.FinalizePendingRemoval();
+
+        Assert.Equal(saves, driver.SaveCount);
+        Assert.Equal(held, library.Games.Single().Game.DlssSettings.Count);
+    });
+
+    [Fact]
+    public void ASettingAnotherEntryStillHolds_IsLeftAlone() => Sta(() =>
+    {
+        // Two library entries for one executable. Undoing for the one removed would switch the
+        // override off under the one that is staying.
+        var driver = new Fakes.FakeDrsBackend();
+        var library = CreateLibrary();
+        library.DlssOverrides = new DlssOverrideService(driver);
+        var alpha = AddGame(library, "Alpha");
+        var copy = AddGame(library, "Alpha (copy)");
+        var records = library.DlssOverrides.Apply(alpha.Game.ExecutablePath, "Alpha").Records;
+        alpha.Game.DlssSettings.AddRange(records);
+        copy.Game.DlssSettings.AddRange(records);
+        int saves = driver.SaveCount;
+
+        RemoveSelected(library, alpha);
+        library.FinalizePendingRemoval();
+
+        Assert.Equal(saves, driver.SaveCount);
+        Assert.NotEmpty(driver.Profiles["game.exe"].Settings);
+    });
+
+    [Fact]
+    public void AnUnavailableDriver_NeverStopsTheRemoval() => Sta(() =>
+    {
+        var driver = new Fakes.FakeDrsBackend();
+        var library = CreateLibrary();
+        library.DlssOverrides = new DlssOverrideService(driver);
+        var alpha = AddGame(library, "Alpha");
+        alpha.Game.DlssSettings.AddRange(library.DlssOverrides.Apply(alpha.Game.ExecutablePath, "Alpha").Records);
+        driver.OpenError = "no driver";
+
+        RemoveSelected(library, alpha);
+        library.FinalizePendingRemoval();
+
+        Assert.Empty(library.Games);
+        Assert.True(FilesGone(alpha));
+    });
+
+    // --- A crash inside the undo window ------------------------------------------------------
+
+    [Fact]
+    public void ACrashInsideTheUndoWindow_IsFinishedOnTheNextStart() => Sta(() =>
+    {
+        // games.json was already saved without the game, so without the pending file nothing
+        // would know about its artwork - or hold the records that can undo its driver override.
+        var driver = new Fakes.FakeDrsBackend();
+        var library = CreateLibrary();
+        library.DlssOverrides = new DlssOverrideService(driver);
+        var alpha = AddGame(library, "Alpha");
+        var bravo = AddGame(library, "Bravo");
+        alpha.Game.DlssSettings.AddRange(library.DlssOverrides.Apply(alpha.Game.ExecutablePath, "Alpha").Records);
+
+        RemoveSelected(library, alpha);
+        // ...and the process dies here: no finalize, no undo.
+
+        var next = CreateLibrary();
+        next.DlssOverrides = new DlssOverrideService(driver);
+        next.LoadLibrary();
+
+        Assert.Equal("Bravo", Assert.Single(next.Games).Name);
+        Assert.True(FilesGone(alpha));
+        Assert.True(FilesExist(bravo));
+        Assert.False(driver.Profiles.ContainsKey("game.exe"));
+
+        // Consumed, so a third start does not go looking again.
+        Assert.Empty(new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local")).LoadPendingRemoval());
+    });
+
+    [Fact]
+    public void AfterAnUndo_OrACleanFinalize_NothingIsLeftPending() => Sta(() =>
+    {
+        var library = CreateLibrary();
+        var alpha = AddGame(library, "Alpha");
+        var storage = new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"));
+
+        RemoveSelected(library, alpha);
+        Assert.Single(storage.LoadPendingRemoval());
+
+        library.UndoDelete();
+        Assert.Empty(storage.LoadPendingRemoval());
+
+        RemoveSelected(library, library.Games.Single());
+        library.FinalizePendingRemoval();
+        Assert.Empty(storage.LoadPendingRemoval());
+    });
+
+    [Fact]
+    public void AGameThatIsBackInTheLibrary_IsNeverCleanedUpAfter() => Sta(() =>
+    {
+        // The crash came after an undo had saved the game back but before the pending file went.
+        var library = CreateLibrary();
+        var alpha = AddGame(library, "Alpha");
+        var storage = new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"));
+        library.SaveLibrary();
+        storage.SavePendingRemoval(new[] { alpha.Game });
+
+        var next = CreateLibrary();
+        next.LoadLibrary();
+
+        Assert.Single(next.Games);
+        Assert.True(FilesExist(alpha));
+        Assert.Empty(storage.LoadPendingRemoval());
+    });
+
     [Fact]
     public void RemovePlatformGames_DeletesDataImmediately_AndClearsTheirSelection() => Sta(() =>
     {

@@ -334,6 +334,8 @@ public class LibraryViewModel : ViewModelBase
             Games.Add(CreateCardViewModel(g, deferHeavyInit: true));
         }
 
+        RecoverPendingRemoval();
+
         RebuildCategories();
         UpdateHotkeys();
         ApplySort();
@@ -1583,6 +1585,11 @@ public class LibraryViewModel : ViewModelBase
             Games.Remove(card);
         }
 
+        // Before the library is saved without them: from that save on, this file is the only
+        // place these games' cached files and DLSS records are written down, and a crash inside
+        // the undo window would otherwise strand both. See RecoverPendingRemoval.
+        _storageService.SavePendingRemoval(_lastRemoved.Select(r => r.Game));
+
         RebuildCategories();
         SaveLibrary();
         UpdateHotkeys();
@@ -1619,6 +1626,34 @@ public class LibraryViewModel : ViewModelBase
         var removed = _lastRemoved.Select(r => r.Game).ToList();
         _lastRemoved.Clear();
         DeleteRemovedGameData(removed);
+        _storageService.DeletePendingRemoval();
+    }
+
+    /// <summary>
+    /// Finishes a removal that a previous run never got to the end of - a crash, or a kill, inside
+    /// the undo window. The library was already saved without those games, so nothing else knows
+    /// about their cached files, or holds the DLSS records that can put a driver override back.
+    ///
+    /// <para>A game that is in the library is skipped: the crash came before the library was saved
+    /// without it, or after an undo had put it back, and either way it was never removed.</para>
+    /// </summary>
+    internal void RecoverPendingRemoval()
+    {
+        // A removal still inside its window owns the file; its own finalize or undo deals with it.
+        if (_lastRemoved.Count > 0) return;
+
+        var pending = _storageService.LoadPendingRemoval();
+        if (pending.Count == 0) return;
+
+        var inLibrary = Games.Select(c => c.Game.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var gone = pending.Where(g => !inLibrary.Contains(g.Id)).ToList();
+
+        if (gone.Count > 0)
+        {
+            LoggingService.Warn("Library", $"Found {gone.Count} game(s) a previous run removed without finishing (likely an abnormal exit) - cleaning up after them now.");
+            DeleteRemovedGameData(gone);
+        }
+        _storageService.DeletePendingRemoval();
     }
 
     /// <summary>Games imported through <paramref name="launcher"/>'s integration, whatever
@@ -1682,6 +1717,9 @@ public class LibraryViewModel : ViewModelBase
         // Persist the removal *before* deleting cached files: a crash between the two would
         // otherwise leave games.json still listing these games with icon/cover paths that point
         // at deleted files, and nothing re-fetches art for an entry whose path is merely broken.
+        // Written down first, as in RemoveGames, so a crash between the save and the cleanup is
+        // finished on the next start instead of stranding artwork and DLSS overrides.
+        _storageService.SavePendingRemoval(toRemove.Select(c => c.Game));
         RebuildCategories();
         SaveLibrary();
         UpdateHotkeys();
@@ -1689,6 +1727,7 @@ public class LibraryViewModel : ViewModelBase
         NotifySelectionChanged();
 
         DeleteRemovedGameData(toRemove.Select(c => c.Game).ToList());
+        _storageService.DeletePendingRemoval();
         LoggingService.Info("Library", $"Removed {toRemove.Count} {launcher} game(s) from the library after the {launcher} integration was turned off.");
         return toRemove.Count;
     }
@@ -1761,6 +1800,9 @@ public class LibraryViewModel : ViewModelBase
 
         RebuildCategories();
         SaveLibrary();
+        // After the save, not before: a crash in between finds the games back in the library and
+        // skips them, where the other order would find nothing and have lost them.
+        _storageService.DeletePendingRemoval();
         UpdateHotkeys();
         ApplySort();
 
@@ -1789,6 +1831,68 @@ public class LibraryViewModel : ViewModelBase
             _storageService.IconsDirectory,
             _storageService.CoversDirectory);
         LoggingService.Verbose("Library", $"Cleaned up after {removed.Count} removed game(s): {result}.");
+
+        UndoDlssOverridesOf(removed);
+    }
+
+    /// <summary>
+    /// The DLSS override service. A property rather than a constructor argument, as on
+    /// <see cref="ProcessLauncherService"/>; tests substitute a fake backend.
+    /// </summary>
+    internal DlssOverrideService DlssOverrides { get; set; } = new();
+
+    /// <summary>
+    /// Puts back the driver settings TrayTrigger wrote for games that are now gone for good. The
+    /// ownership records leave with the library entry, and they are the only thing that can undo
+    /// the override - so without this, removing a game would leave its settings, and any profile
+    /// TrayTrigger created for it, in NVIDIA's database with nothing able to take them out again.
+    ///
+    /// <para>Here rather than in <see cref="RemoveGames"/>, for the same reason the cached files
+    /// are deleted here: inside the undo window the game may yet come back, records and all.</para>
+    ///
+    /// <para>A setting another library entry also holds a record for - two entries for the same
+    /// executable - is left alone. It is still in use, and that entry's own undo will restore it.</para>
+    /// </summary>
+    private void UndoDlssOverridesOf(IReadOnlyCollection<GameEntry> removed)
+    {
+        var stillHeld = Games
+            .SelectMany(c => c.Game.DlssSettings)
+            .Select(r => (r.ApplicationName.ToLowerInvariant(), r.SettingId))
+            .ToHashSet();
+
+        foreach (var game in removed)
+        {
+            var records = game.DlssSettings
+                .Where(r => !stillHeld.Contains((r.ApplicationName.ToLowerInvariant(), r.SettingId)))
+                .ToList();
+            if (records.Count == 0) continue;
+
+            try
+            {
+                var undone = DlssOverrides.Undo(records);
+                game.DlssSettings.Clear();
+                game.DlssSettings.AddRange(undone.Records);
+
+                // Settings something else has since changed are no longer TrayTrigger's to undo, so
+                // only a failure leaves anything behind that should not be there.
+                var failed = undone.Details.Where(d => d.Outcome == DlssSettingOutcome.Failed).ToList();
+                if (!undone.Succeeded || failed.Count > 0)
+                {
+                    string why = undone.Error ?? failed.FirstOrDefault()?.Error ?? "the driver refused";
+                    string ids = string.Join(", ", undone.Records.Select(r => $"0x{r.SettingId:X8}"));
+                    LoggingService.Warn("Library", $"Could not put back the DLSS override for removed game '{game.Name}' ({why}). Still set on profile '{records[0].ProfileName}' for {records[0].ApplicationName}: {ids}.");
+                }
+                else
+                {
+                    LoggingService.Info("Library", $"Put back the DLSS override for removed game '{game.Name}'.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Removing a game must never fail because of this.
+                LoggingService.Warn("Library", $"Undoing the DLSS override for removed game '{game.Name}' threw: {ex.Message}");
+            }
+        }
     }
 
     /// <summary>
