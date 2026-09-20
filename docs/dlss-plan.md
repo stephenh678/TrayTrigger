@@ -277,7 +277,8 @@ and the overlay independently reads `DLSS RR2`. The header semantics are real dr
   nothing about old games. Rainbow Six Extraction remains the test, and its DLSS could not be
   enabled - itself possibly because a 2021 runtime does not recognise an RTX 5080.
 - Whether NGX logs can be attributed to a session.
-- Whether `NvAPI_DRS_SaveSettings` needs elevation.
+- Whether `NvAPI_DRS_SaveSettings` needs elevation. (Reads are **settled** - they do not; see the
+  probe section. This is now a question about writes alone.)
 
 ## The in-app probe, 2026-09-19 - build order step 1, and what it settled
 
@@ -356,12 +357,30 @@ constants, `NvApi.cs` computes them with `sizeof`, so a layout mistake cannot ha
 plausible-looking version number. The returned setting names and values match the user's exported
 `.nip` profile field for field, which is the evidence the layouts are right.
 
+### Settled: reads need no elevation
+
+Run again at reduced trust (`runas /trustlevel:0x20000`, which reports `Elevated: NO`), every read
+came back byte for byte identical to the elevated run: the application profile, each setting's
+value and origin layer, the Global profile's contents, and the `HKLM\...\NGXCore` values.
+
+That trust level is *more* restricted than the filtered token a UAC-enabled admin account gets from
+Explorer, so it covers the ordinary user as well.
+
+**Consequence for the UI.** The DLSS card can show a game's complete current state - versions,
+which overrides are set, and which layer each comes from - with **no UAC prompt**. Elevation
+becomes a cost paid only at apply time, not at display time, which makes the read-only first step
+worth shipping on its own.
+
+A trap worth recording: on a UAC-enabled administrator account, processes are *not* elevated by
+default - Windows hands out a filtered token, and the absence of a UAC prompt means the process was
+unelevated, not that it was silently granted admin. An elevated terminal shows no prompt either,
+for the opposite reason, which is what made this take three attempts to measure.
+
 ### Not settled by the probe
 
-- **Elevation.** The probe was run from an elevated shell, so it shows only that reads work *when*
-  elevated. Reads are believed not to need it - DRS load is a read of ProgramData - but this is
-  **untested**. Settle it by launching the built exe from Explorer as the normal user.
 - **Writes.** Nothing above exercises `SaveSettings`, `CreateProfile` or `CreateApplication`.
+  Whether *those* need elevation is still open, and is now the only part of the elevation question
+  that remains.
 - Everything under "Still not established" above stands.
 
 ## Context for a reader outside the project
@@ -520,7 +539,8 @@ NVIDIA's own words.
 | **Driver-path overrides carry no realistic anti-cheat risk** | **Inferred** | No files change, nothing is injected, the loaded module is NVIDIA-signed, it is NVIDIA's own shipped feature on protected titles, and no vendor publishes a warning. Independently agreed by a second reviewer citing zero documented bans - but that is still absence of evidence, not a test. |
 | **The 3.1 floor is about the game's API integration, not the model** | **Inferred** | Fits the observed cutoff; NGX's evaluated-feature exports hold C-ABI compatibility across 2.x/3.x, which would allow a newer runtime to serve an older integration. NVIDIA does not document the reason. |
 | **Writing settings pre-launch defeats NVIDIA App reverting them** | **Inferred** | Reviewer reports NVIDIA App reconciles on its own startup, driver update or library scan, and does not hook process creation. Plausible and matches observed behaviour; untested by either party. |
-| **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated. DRS *reads* were verified working 2026-09-19, but only from an elevated shell, so they say nothing either way. |
+| **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated. Reads are now known not to need it, which says nothing about writes. |
+| **DRS reads need no elevation** | **Verified** | 2026-09-19, `runas /trustlevel:0x20000` (`Elevated: NO`): profile, values, origin layers, Global profile and the NGXCore registry all read back identically to the elevated run |
 | **DRS can be read from inside TrayTrigger** | **Verified** | 2026-09-19 probe: profile, per-setting value, origin layer and the Global profile's contents all read back, matching the user's exported `.nip` field for field |
 | **An executable absent from NVIDIA's database is detectable** | **Verified** | `NvAPI_DRS_FindApplicationByName` returns `NVAPI_EXECUTABLE_NOT_FOUND` (-166) |
 | **The version an override will load is readable before launch** | **Verified** | `nvngx_config.txt` maps the override pseudo-app `app_E658700` to an explicit version per feature |
