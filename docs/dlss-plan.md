@@ -1,6 +1,7 @@
 # DLSS model management: design plan
 
-Status: design agreed in discussion 2026-09-19. Not yet scheduled; no branch, no code.
+Status: design agreed 2026-09-19; core mechanism **proven by spike the same day** (see Spike
+results). Not yet scheduled; no branch, no code.
 Target: a release after 1.4.6. NVIDIA only.
 
 ## Summary
@@ -26,6 +27,75 @@ it, **verification is part of the feature, not an extra**: TrayTrigger reads the
 loaded modules - or, for anti-cheat games that block that, NVIDIA's own NGX logging - and reports
 in the app which DLSS actually loaded, and from where. An optional per-game overlay, off by
 default, additionally shows the active preset while that game runs.
+
+## Spike results, 2026-09-19 - the mechanism is proven
+
+Run on the development machine: RTX 5080, driver 616.64, **007 First Light** (no anti-cheat), DLSS
+DLLs first rolled back in RHI to the game's own 310.7.128.
+
+Two settings were applied in Profile Inspector - `0x10E41E01` (SR DLL override) and `0x10E41E03`
+(FG DLL override) - and the game restarted. Loaded modules were then read from the live process:
+
+```
+LOADED FROM THE DRIVER'S NGX STORE
+  310.9.0   NVIDIA Deep Learning SuperSampling   ...\models\dlss\versions\20318464\
+  310.9.0   NVIDIA DLSS-G MFGLW                  ...\models\dlssg\versions\20318464\
+  310.9.0   NVIDIA DLSS Ray Reconstruction       ...\models\dlssd\versions\20318464\
+  2.14.0    NVIDIA Streamline, six plugins       ...\models\sl_dlss_0, sl_dlss_g_0, ...
+
+STILL FROM THE GAME FOLDER
+  2.12.128  sl.interposer.dll    the entry point - expected
+  32.0.16   _nvngx.dll           the driver's own loader, from DriverStore
+```
+
+The game ships 310.7.128. It ran **310.9.0**, loaded from `C:\ProgramData\NVIDIA\NGX\models\`,
+with **no file in the game folder modified**. The on-screen indicator independently read 310.9.0.
+
+### What this establishes
+
+1. **The core mechanism works.** Previously the plan's central claim was believed, not
+   demonstrated. It is now demonstrated on real hardware with a real game.
+2. **All three features were substituted, though only two override settings were set.** SR, RR and
+   FG all came from the NGX store. Either the override is broader than per-feature, or one setting
+   pulls the others along. **Open question** - it affects how many settings the recipe needs.
+3. **Streamline is substituted too**, 2.12.128 to 2.14.0, six plugins, from
+   `models\sl_*_override_0`. The driver handles that layer itself. This is decisive support for
+   never touching `sl.*` files: RHI's separate Streamline swap column solves a problem the driver
+   already solves.
+4. **Settings apply only at process start.** Changing them mid-session did nothing; the game had
+   to be restarted. Confirms the pre-launch write step is necessary, not merely prudent.
+5. **A verification defect was caught before it shipped** - see below.
+
+### The filename trap - a real defect in the earlier design
+
+The substituted runtime is **not** named `nvngx_dlss.dll`. In the NGX store it is a hashed
+`.bin`: `160_E658700.bin`. All three features use that same filename in different directories.
+
+The first spike run matched modules on `nvngx_*` / `sl.*` filenames and therefore reported
+**"not substituted" on a system where the override was working perfectly**. That is a false
+negative that would have shipped and told users the feature had failed.
+
+**Match on path and `ProductName`, never on filename:**
+
+| Signal | Use |
+|---|---|
+| `FileName` contains `\NVIDIA\NGX\models\` | The definitive substitution test |
+| `FileVersionInfo.ProductName` | Identifies the feature: "NVIDIA Deep Learning SuperSampling", "NVIDIA DLSS-G MFGLW", "NVIDIA DLSS Ray Reconstruction", "NVIDIA STREAMLINE PRODUCTION" |
+| `FileVersionInfo.FileVersion` | The version, comma-separated (`310,9,0,0`) |
+| `ModuleName` | **Unreliable.** Hashed and identical across features. |
+
+`ProductName` is what distinguishes SR from RR from FG, since all three are `160_E658700.bin`.
+The per-feature observation model in Data depends on it.
+
+### Still not established
+
+- Whether the **preset** settings (`0x00634291`, `0x10E41DF3`) do anything. Only the overlay can
+  show that, and the preset letter was not recorded in this run.
+- Whether the override works **below DLSS 3.1**. 007 First Light ships 310.7.128, so this run says
+  nothing about old games. Rainbow Six Extraction remains the test, and its DLSS could not be
+  enabled - itself possibly because a 2021 runtime does not recognise an RTX 5080.
+- Whether NGX logs can be attributed to a session.
+- Whether `NvAPI_DRS_SaveSettings` needs elevation.
 
 ## Context for a reader outside the project
 
@@ -184,20 +254,29 @@ NVIDIA's own words.
 | **The 3.1 floor is about the game's API integration, not the model** | **Inferred** | Fits the observed cutoff; NGX's evaluated-feature exports hold C-ABI compatibility across 2.x/3.x, which would allow a newer runtime to serve an older integration. NVIDIA does not document the reason. |
 | **Writing settings pre-launch defeats NVIDIA App reverting them** | **Inferred** | Reviewer reports NVIDIA App reconciles on its own startup, driver update or library scan, and does not hook process creation. Plausible and matches observed behaviour; untested by either party. |
 | **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated |
-| **Combining DLL override + preset works on a DLSS 2.x game** | **Untested** | The single highest-value unknown. The spike settles it. |
+| **Combining DLL override + preset works on a DLSS 2.x game** | **Untested** | Still the highest-value unknown. The 2026-09-19 spike used a 310.7.128 game, so it says nothing about DLSS 2.x. |
 | `0x00634291` = 1 reproduces NVIDIA App's per-GPU/per-mode selection | **Untested** | An earlier draft claimed this was resolved. The XML label "Recommended" is not proof of equivalence. |
 | FG's `0x00FFFFFE` means "latest" rather than "default" | **Disputed** | Profile Inspector labels it "Use recommended preset". One reviewer says NVIDIA defines it as Default and `0x00FFFFFF` as Latest. **Neither sentinel exists in NVIDIA's SDK headers**, whose enum is 0-15. Unresolved until the spike. |
 | Preset letter meanings (K/L/M per-mode defaults; A-D removed) | **Documented** | `nvsdk_ngx_defs.h` and `nvsdk_ngx_defs_dlssd.h`, NVIDIA's own headers. These **contradict** Profile Inspector's labels. |
 | `ShowDlssIndicator` = 1024 works on retail builds | **Documented** | NVIDIA documents 1024 for release builds; also matches the documented `__NGX_SHOW_INDICATOR=1024`. Stronger than the "community reports" an earlier draft cited. |
 | `EnableLogPathOverride` / `LogPath` exist and work | **Unverified** | Not in NVIDIA's `.reg` files, which set only `LogLevel`. Secondary source only. |
 | An NGX log can be attributed to a specific game session | **Unverified** | Logging is machine-wide and filenames carry only a version. If false, layer 3 cannot verify anything. |
-| Module enumeration reveals the loaded DLL's path and version | **Verified** | `Process.Modules` read against a live process; not yet against a real DLSS module |
+| Module enumeration reveals the loaded DLL's path and version | **Verified** | Read against a real DLSS game, 2026-09-19. **Must match on path and ProductName, not filename** - the substituted runtime is a hashed `.bin`. |
 | Anti-cheat blocks module enumeration | **Documented** | Standard EAC/BattlEye/Vanguard behaviour; not tested here |
 | The overlay renders on anti-cheat titles | **Documented** | It is an NVIDIA-signed swapchain hook, not third-party injection; reviewer-supplied, untested here |
 | The overlay shows the game's own version when the override is declined | **Documented** | Reviewer-supplied; makes layer 4 a complete check. Confirm in the spike. |
 
-Nothing in this plan has been tested by actually writing a driver setting. **The entire mechanism is
-believed, not demonstrated** - which is what the spike before step 3 exists to fix.
+**Updated 2026-09-19.** The core mechanism is no longer believed - it is demonstrated. See Spike
+results. The driver substituted SR, RR, FG and six Streamline plugins from its own store, with no
+game file modified. What remains untested is the preset half of the recipe, behaviour below DLSS
+3.1, log attribution, and the elevation requirement.
+
+| Claim | Confidence | Basis |
+|---|---|---|
+| **The DLL override substitutes the runtime from the driver's store** | **Verified** | 007 First Light, 310.7.128 to 310.9.0, path under `\NVIDIA\NGX\models\`, 2026-09-19 |
+| **Streamline is substituted by the driver too** | **Verified** | Six `sl_*` plugins, 2.12.128 to 2.14.0, same run |
+| **Settings take effect only at process start** | **Verified** | Mid-session changes did nothing; a restart was required |
+| **One override setting can substitute more than its own feature** | **Observed, unexplained** | Only SR and FG overrides were set; RR was substituted as well |
 
 ## What can and cannot be read back
 
@@ -438,9 +517,13 @@ loaded from C:\ProgramData\NVIDIA\NGX\models\...   ->  the override worked
 loaded from <game folder>\nvngx_dlss.dll           ->  it did not
 ```
 
-In .NET this is `Process.Modules`, giving `ModuleName`, `FileName` and `FileVersionInfo`. Confirmed
-working on the development machine (read against a live process; no game was running at the time to
-read a real DLSS module).
+In .NET this is `Process.Modules`, giving `ModuleName`, `FileName` and `FileVersionInfo`.
+**Verified against a real DLSS game on 2026-09-19** - see Spike results.
+
+**Match on path and `ProductName`, never on filename.** The substituted runtime is a hashed `.bin`
+(`160_E658700.bin`), identical across all three features, distinguished only by its directory and
+its `ProductName`. An earlier version of this plan matched `nvngx_*` filenames and produced a false
+"not substituted" on a working system.
 
 Why this is better than logging where it works:
 
