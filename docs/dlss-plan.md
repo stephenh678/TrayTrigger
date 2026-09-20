@@ -17,12 +17,12 @@ NVIDIA DLSS Override                                          [ Restore ]
   changes.
 
   [x] Enable DLSS Override for this game            310.1.0 -> 310.9.0
-      Updates DLSS Super Resolution, DLSS Ray Reconstruction and DLSS
-      Frame Generation, whichever of them this game has.
+      Applies to game-supported DLSS features: Super Resolution, Ray
+      Reconstruction, and Frame Generation.
 
   [ ] Show the DLSS Indicator while this game runs
-      For testing only. Draws the DLSS version, preset letter and render
-      resolution on screen. Asks for administrator permission.
+      Draws the official on-screen overlay showing active DLSS version,
+      preset letter, and render resolution (requires administrator).
 ```
 
 **The wording rule:** keep the terms NVIDIA itself prints - *DLSS Override*, *DLSS Indicator*,

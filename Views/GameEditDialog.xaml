@@ -464,7 +464,7 @@
                                            VerticalAlignment="Center"
                                            Foreground="{StaticResource BrushTextPrimary}"/>
                             </Grid>
-                            <TextBlock Text="Updates DLSS Super Resolution, DLSS Ray Reconstruction and DLSS Frame Generation, whichever of them this game has."
+                            <TextBlock Text="Applies to game-supported DLSS features: Super Resolution, Ray Reconstruction, and Frame Generation."
                                        FontSize="11" Margin="22,2,0,10" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"/>
 
@@ -472,10 +472,9 @@
                                       AutomationProperties.Name="Show the DLSS Indicator while this game runs"
                                       IsChecked="{Binding Dlss.ShowOverlay}"
                                       Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
-                            <TextBlock FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
-                                       Foreground="{StaticResource BrushTextSecondary}">
-                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the DLSS version, preset letter and render resolution on screen. Asks for administrator permission."/>
-                            </TextBlock>
+                            <TextBlock Text="Draws the official on-screen overlay showing active DLSS version, preset letter, and render resolution (requires administrator)."
+                                       FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextSecondary}"/>
 
                             <!-- Only when true: a conflict, or somebody else&apos;s override. -->
                             <TextBlock Text="{Binding Dlss.Notice}" FontSize="11" Margin="0,10,0,0"
