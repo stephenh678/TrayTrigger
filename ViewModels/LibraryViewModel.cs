@@ -1841,6 +1841,29 @@ public class LibraryViewModel : ViewModelBase
     /// </summary>
     internal DlssOverrideService DlssOverrides { get; set; } = new();
 
+    /// <summary>How many games have the DLSS Override on. Read by the System page, possibly off the UI thread.</summary>
+    public int DlssOverrideGameCount
+    {
+        get
+        {
+            try { return Games.Count(c => c.Game.DlssSettings.Count > 0); }
+            catch (InvalidOperationException) { return 0; }   // the library changed mid-count
+        }
+    }
+
+    /// <summary>Puts every game's DLSS Override back and returns a line for the status bar.</summary>
+    public string RestoreAllDlssOverrides()
+    {
+        var result = DlssOverrides.RestoreAll(Games.Select(c => c.Game).ToList());
+        if (result.Games == 0) return "No game has the DLSS Override on.";
+
+        SaveGamesOnly();
+        string games = result.Games == 1 ? "1 game" : $"{result.Games} games";
+        return result.Failed == 0
+            ? $"DLSS Override put back for {games}."
+            : $"DLSS Override put back for {result.Games - result.Failed} of {games}. The rest could not be changed - see the log.";
+    }
+
     /// <summary>
     /// Puts back the driver settings TrayTrigger wrote for games that are now gone for good. The
     /// ownership records leave with the library entry, and they are the only thing that can undo

@@ -223,7 +223,23 @@ public class SystemTweakViewModel : ViewModelBase
 
     private void ExecuteCustomAction()
     {
-        if (Id == "core_isolation")
+        if (Id == "dlss_override")
+        {
+            if (!IsOptimal || _service.RestoreAllDlssOverrides == null) return;
+            if (!ModernDialog.Confirm(null, "Restore All DLSS Overrides",
+                    "This turns the DLSS Override off for every game and puts NVIDIA's settings back the way they were.",
+                    "Games will run on their own DLSS files again. You can switch it back on per game in Edit Game.",
+                    confirmText: "Restore All", cancelText: "Cancel"))
+            {
+                return;
+            }
+
+            string outcome = _service.RestoreAllDlssOverrides();
+            IsOptimal = _service.GetTweakState(Id);
+            StatusText = IsOptimal ? "Some could not be put back" : "Not on for any game";
+            _notifyParent(outcome);
+        }
+        else if (Id == "core_isolation")
         {
             try
             {

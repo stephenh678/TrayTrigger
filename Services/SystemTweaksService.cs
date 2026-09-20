@@ -228,6 +228,28 @@ public partial class SystemTweaksService
             UnavailableReason = hasNvidiaNgx ? "" : "Needs an NVIDIA GeForce driver with DLSS support."
         });
 
+        int dlssOverrideGames = DlssOverrideGameCount?.Invoke() ?? 0;
+        list.Add(new SystemTweakItem
+        {
+            Id = "dlss_override",
+            Name = "NVIDIA DLSS Override",
+            Category = TweakCategory.InputAndDisplay,
+            ShortDescription = "Runs a game on the DLSS files installed with your GeForce driver instead of the older ones inside the game. Switched on per game, in Edit Game.",
+            WhyItMatters = "This row shows how many games have it on and puts them all back in one step - the thing to do before uninstalling TrayTrigger, since the setting lives in NVIDIA's driver, not in TrayTrigger. Restore All returns every game to exactly what NVIDIA's settings held before, and leaves alone anything another tool has changed since.",
+            // Informational: IsOptimal here means "on for at least one game"; the row shows a
+            // neutral ON/OFF badge and stays out of the optimization score.
+            IsOptimal = dlssOverrideGames > 0,
+            StatusText = dlssOverrideGames == 0 ? "Not on for any game" : dlssOverrideGames == 1 ? "On for 1 game" : $"On for {dlssOverrideGames} games",
+            RequiresAdmin = false,
+            RequiresReboot = false,
+            CanToggle = false,
+            HasCustomAction = true,
+            CustomActionLabel = "Restore All",
+            IsInformational = true,
+            IsAvailable = hasNvidiaNgx,
+            UnavailableReason = hasNvidiaNgx ? "" : "Needs an NVIDIA GeForce driver with DLSS support."
+        });
+
         bool stickyKeysDisabled = CheckAccessibilityShortcutsDisabled();
         list.Add(new SystemTweakItem
         {
@@ -589,6 +611,7 @@ public partial class SystemTweaksService
             "wu_driver_exclude" => CheckWuDriversExcluded(),
             "priority_separation" => CheckPrioritySeparationOptimal(),
             "dlss_indicator" => CheckDlssIndicatorOn(),
+            "dlss_override" => (DlssOverrideGameCount?.Invoke() ?? 0) > 0,
             "core_isolation" => CheckHvciActive(),
             _ => false
         };
@@ -1208,6 +1231,16 @@ public partial class SystemTweaksService
 
     private static bool SetWuDriversExcluded(bool exclude) =>
         exclude ? SetHklmDword(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate", 1) : DeleteHklmValue(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate");
+
+    // ---- NVIDIA DLSS Override (informational row) ----------------------------------------------
+    // The overrides belong to games, which this service knows nothing about; the library supplies
+    // the count and the action.
+
+    /// <summary>How many games have the override on. Set by the main view model.</summary>
+    public Func<int>? DlssOverrideGameCount { get; set; }
+
+    /// <summary>Puts every game's override back and returns a line for the status bar.</summary>
+    public Func<string>? RestoreAllDlssOverrides { get; set; }
 
     // ---- NVIDIA DLSS Indicator -----------------------------------------------------------------
 

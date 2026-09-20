@@ -363,6 +363,46 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         return new DlssOperationResult(true, null, details, remaining);
     }
 
+    /// <summary>How a <see cref="RestoreAll"/> went: games that had an override, and games where some of it is still there.</summary>
+    public sealed record RestoreAllResult(int Games, int Failed);
+
+    /// <summary>
+    /// Puts back every game's override - the way out before an uninstall, and the one button for
+    /// "undo all of this". Each game's records are updated in place; the caller saves the library.
+    ///
+    /// <para>A setting something else has since changed is left alone and its record dropped, as
+    /// Restore on the card does: it is no longer TrayTrigger's. Only a failure keeps a record.</para>
+    /// </summary>
+    public RestoreAllResult RestoreAll(IEnumerable<GameEntry> games)
+    {
+        int count = 0, failed = 0;
+        foreach (var game in games.Where(g => g.DlssSettings.Count > 0).ToList())
+        {
+            count++;
+            var undone = Undo(game.DlssSettings.ToList());
+
+            var handedBack = undone.Details
+                .Where(d => d.Outcome == DlssSettingOutcome.SkippedForeignChange)
+                .Select(d => d.SettingId)
+                .ToHashSet();
+            var kept = undone.Succeeded
+                ? undone.Records.Where(r => !handedBack.Contains(r.SettingId)).ToList()
+                : undone.Records.ToList();
+
+            game.DlssSettings.Clear();
+            game.DlssSettings.AddRange(kept);
+            game.DlssConflicted = false;
+            game.DlssObservations.Clear();
+
+            if (kept.Count > 0)
+            {
+                failed++;
+                LoggingService.Warn("Dlss", $"Could not put back the DLSS override for '{game.Name}': {undone.Error ?? undone.Details.FirstOrDefault(d => d.Error != null)?.Error ?? "the driver refused"}.");
+            }
+        }
+        return new RestoreAllResult(count, failed);
+    }
+
     /// <summary>
     /// Removes a profile TrayTrigger created, but only while it is still only TrayTrigger's: not
     /// one of NVIDIA's, holding no settings, and no application beyond the one it was made for.

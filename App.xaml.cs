@@ -169,6 +169,14 @@ public partial class App : Application
 
         Log("Application starting...");
 
+        // The uninstaller's last call: the override lives in NVIDIA's driver, not in TrayTrigger,
+        // so removing the program would otherwise leave every game's setting behind for good.
+        if (e.Args.Any(a => a.Equals("--restore-dlss", StringComparison.OrdinalIgnoreCase)))
+        {
+            RestoreDlssOverridesAndExit();
+            return;
+        }
+
 #if DEBUG
         ProcessDevArguments(e);
         if (_isShuttingDown) return;
@@ -1307,6 +1315,27 @@ public partial class App : Application
     /// memory - finish its cleanup (cached art, Steam/RAWG details) before the process goes away.
     /// Isolated so a failure here can't skip the settings save or profile restore around it.
     /// </summary>
+    /// <summary>
+    /// Headless: no window, no tray icon, no single-instance check. Reads the library, puts every
+    /// DLSS Override back, saves, and exits. Never throws - an uninstall must not stall on it.
+    /// </summary>
+    private void RestoreDlssOverridesAndExit()
+    {
+        try
+        {
+            var storage = new StorageService();
+            var games = storage.LoadGames();
+            var result = new DlssOverrideService().RestoreAll(games);
+            if (result.Games > 0) storage.SaveGames(games);
+            LoggingService.Info("App", $"--restore-dlss: {result.Games} game(s) had the DLSS Override on, {result.Failed} could not be put back.");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("App", $"--restore-dlss failed: {ex.Message}");
+        }
+        Shutdown(0);
+    }
+
     private void FinalizePendingRemovalOnShutdown()
     {
         try

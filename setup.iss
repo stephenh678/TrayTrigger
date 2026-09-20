@@ -91,6 +91,13 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 ; app back up ourselves.
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait runasoriginaluser; Check: IsUpdate
 
+[UninstallRun]
+; The DLSS Override is a setting in NVIDIA's driver, not a TrayTrigger file, so it would outlive
+; the program. Put every game's back before the executable goes. It reads the library of the
+; account the uninstaller runs as; uninstalling from a different administrator account finds no
+; library and changes nothing, which is why the System page has Restore All as well.
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--restore-dlss"; RunOnceId: "RestoreDlssOverrides"; Flags: runhidden waituntilterminated
+
 [Code]
 const
   RunKeyPath = 'Software\Microsoft\Windows\CurrentVersion\Run';

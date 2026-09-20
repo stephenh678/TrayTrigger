@@ -706,4 +706,46 @@ public class DlssOverrideServiceTests
 
         Assert.Equal(expected, DlssOverrideService.LooksLikeWhatWeCaptured(current, record));
     }
+
+    // --- Restore All ------------------------------------------------------------------------
+
+    [Fact]
+    public void RestoreAll_PutsEveryGameBack_AndLeavesNothingHeld()
+    {
+        var (service, driver) = NewService();
+        var known = driver.AddProfile(Exe, "Test Game");
+        known.Settings[SrPreset] = (0x0000000B, false);
+
+        var first = new GameEntry { Name = "Known" };
+        first.DlssSettings.AddRange(service.Apply(TestExe, "Known").Records);
+        var second = new GameEntry { Name = "Unknown", DlssConflicted = true };
+        second.DlssSettings.AddRange(service.Apply(@"C:\Games\Other\other.exe", "Unknown").Records);
+        var untouched = new GameEntry { Name = "Never on" };
+
+        var result = service.RestoreAll(new[] { first, second, untouched });
+
+        Assert.Equal(2, result.Games);
+        Assert.Equal(0, result.Failed);
+        Assert.Empty(first.DlssSettings);
+        Assert.Empty(second.DlssSettings);
+        Assert.False(second.DlssConflicted);
+        Assert.Equal(0x0000000Bu, known.Settings[SrPreset].Value);
+        Assert.False(driver.Profiles.ContainsKey("other.exe"));   // the profile TrayTrigger created
+    }
+
+    [Fact]
+    public void RestoreAll_WhenTheDriverRefuses_KeepsTheRecords_SoItCanBeTriedAgain()
+    {
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+        var game = new GameEntry { Name = "Known" };
+        game.DlssSettings.AddRange(service.Apply(TestExe, "Known").Records);
+        int held = game.DlssSettings.Count;
+        driver.SaveError = "NVAPI_ACCESS_DENIED";
+
+        var result = service.RestoreAll(new[] { game });
+
+        Assert.Equal(1, result.Failed);
+        Assert.Equal(held, game.DlssSettings.Count);
+    }
 }
