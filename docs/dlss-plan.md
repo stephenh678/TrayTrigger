@@ -1328,8 +1328,8 @@ with no driver interaction at all.
 3. ~~**The ownership record**~~ **Done, 2026-09-19** (`DlssSettingRecord` on `GameEntry`,
    `DlssOverrideService.Apply`/`Undo`). Capture previous value and origin per setting, write, and
    undo only while the driver still reports what TrayTrigger wrote.
-4. Apply and undo, wired to the button, with the layer 1 write-back check performed against a
-   reloaded DRS session rather than the in-memory one.
+4. ~~Apply and undo, wired to the button, with the layer 1 write-back check.~~ **Done,
+   2026-09-19.** The check runs against a reloaded session, as specified.
 5. Re-apply in the pre-launch step, with the three-way conflict rule.
 6. **Verification: module enumeration, the four reported states, and the `Verify` action.** Do this
    before shipping, not after - overriding games NVIDIA has not validated is only defensible if the
@@ -1608,3 +1608,37 @@ nothing" true rather than hoped for.
 
 **`NvAPI_DRS_SaveSettings` is still untested**, and so is elevation for writes. Everything up to
 the save is proven.
+
+## Apply and undo, 2026-09-19
+
+The card's two buttons, `DlssOverrideService.Apply`/`Undo` behind them, and the layer 1 check.
+
+**The write-back check uses a second session.** NVIDIA's documentation says DRS sessions do not
+merge, so reading through the session that just wrote would only show its own in-memory copy and
+confirm nothing. `Apply` therefore writes and saves in one scope, closes it, and reopens to verify.
+A value counts as landed only if it is there **and** reads as user-set on the game's own profile -
+a matching number arriving from the Global profile is not the write.
+
+When the save succeeds but the values are not there, the card says so rather than reporting
+success. Claiming "applied" in that case would be the most misleading thing it could do.
+
+**Applying persists immediately, not on Save Changes.** The driver change has already happened when
+the button returns, so deferring the ownership record until the dialog is saved would let Cancel
+strand an override TrayTrigger could no longer undo. The records list is the game's own, mutated in
+place, and the library is saved straight after any driver change.
+
+### Two problems found while wiring it up
+
+- **The card accused itself.** The "something else has already set an override" notice keyed on
+  finding an override on the game's profile - which, one second after pressing Use recommended, is
+  TrayTrigger's own. The projection now takes the ownership records, so a setting matching a record
+  reads `Set by TrayTrigger`. Before step 4 this could not happen, because there was nothing to own.
+- **`AsyncRelayCommand` had no awaitable form.** `Execute` is `async void`, as ICommand requires,
+  so a test could only race it. It now exposes `ExecuteAsync`, which is also what lets the apply
+  and undo paths be tested end to end rather than only through the service underneath.
+
+### What has still never run
+
+`NvAPI_DRS_SaveSettings` against the real driver. Everything up to and including the staged write
+is proven on this machine; the save itself, and whether it needs elevation, are still untested and
+will stay that way until someone deliberately applies to a real game.

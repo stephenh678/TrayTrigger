@@ -78,6 +78,13 @@ public class AsyncRelayCommand : ICommand
 
     public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
 
+    /// <summary>
+    /// The awaitable form. <see cref="Execute"/> is <c>async void</c> because ICommand demands it,
+    /// which leaves a caller no way to know when the work finished - a test would race it. This
+    /// lets one wait. Exceptions propagate here rather than being logged and swallowed.
+    /// </summary>
+    public Task ExecuteAsync() => _execute();
+
     public async void Execute(object? parameter)
     {
         try

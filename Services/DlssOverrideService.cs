@@ -34,8 +34,32 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         string exeName = Path.GetFileName(executablePath);
         if (string.IsNullOrWhiteSpace(exeName)) return DlssOperationResult.Failure("No executable to target.");
 
+        // The write happens in its own scope so the session is closed before the check below.
+        // NVIDIA's own documentation warns that DRS sessions do not merge, and reading through the
+        // session that just wrote would only show its own in-memory copy - confirming nothing.
+        var written = WriteRecipe(exeName, gameName);
+        if (written.Error != null) return DlssOperationResult.Failure(written.Error);
+
+        var verified = VerifyWriteBack(exeName, written.Records, written.Details);
+
+        LoggingService.Info("Dlss", $"Applied DLSS override to {exeName} in profile '{written.ProfileName}' ({written.Records.Count} settings).");
+        return new DlssOperationResult(written.Records.Count > 0, null, verified, written.Records);
+    }
+
+    private sealed record WriteOutcome(
+        string ProfileName,
+        List<DlssSettingOutcomeDetail> Details,
+        List<DlssSettingRecord> Records,
+        string? Error);
+
+    private WriteOutcome WriteRecipe(string exeName, string gameName)
+    {
+        var noDetails = new List<DlssSettingOutcomeDetail>();
+        var noRecords = new List<DlssSettingRecord>();
+
         using var session = _backend.OpenSession(out string? error);
-        if (session == null) return DlssOperationResult.Failure(error ?? "The NVIDIA driver settings database is unavailable.");
+        if (session == null)
+            return new WriteOutcome("", noDetails, noRecords, error ?? "The NVIDIA driver settings database is unavailable.");
 
         var profile = session.FindProfileForExecutable(exeName, out _);
         if (profile == null)
@@ -44,7 +68,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
             // how the driver is told about an executable it has never seen.
             profile = session.CreateProfileForExecutable(ProfileNameFor(gameName, exeName), exeName, out string? createError);
             if (profile == null)
-                return DlssOperationResult.Failure($"Could not create a driver profile for {exeName}: {createError}");
+                return new WriteOutcome("", noDetails, noRecords, $"Could not create a driver profile for {exeName}: {createError}");
         }
 
         var details = new List<DlssSettingOutcomeDetail>();
@@ -80,11 +104,59 @@ public sealed class DlssOverrideService(IDrsBackend backend)
             // Nothing reached disk, so the records describe a write that did not happen. Returning
             // them would leave the game claiming an override it does not have.
             LoggingService.Warn("Dlss", $"Saving DLSS settings for {exeName} failed: {saveError}");
-            return DlssOperationResult.Failure($"The driver refused to save the settings: {saveError}");
+            return new WriteOutcome("", noDetails, noRecords, $"The driver refused to save the settings: {saveError}");
         }
 
-        LoggingService.Info("Dlss", $"Applied DLSS override to {exeName} in profile '{profile.Name}' ({records.Count} settings).");
-        return new DlssOperationResult(records.Count > 0, null, details, records);
+        return new WriteOutcome(profile.Name, details, records, null);
+    }
+
+    /// <summary>
+    /// Layer 1 of verification: reopen the database and confirm each value is there and user-set.
+    /// This proves the write landed in the profile database. It proves nothing about whether a
+    /// game will honour it - that needs the game to run.
+    /// </summary>
+    private List<DlssSettingOutcomeDetail> VerifyWriteBack(
+        string exeName, List<DlssSettingRecord> records, List<DlssSettingOutcomeDetail> details)
+    {
+        using var verify = _backend.OpenSession(out string? verifyError);
+        if (verify == null)
+        {
+            LoggingService.Warn("Dlss", $"Could not reopen DRS to verify the write for {exeName}: {verifyError}");
+            return details;
+        }
+
+        var profile = verify.FindProfileForExecutable(exeName, out _);
+        if (profile == null)
+        {
+            return records
+                .Select(r => new DlssSettingOutcomeDetail(r.Feature, r.SettingId, DlssSettingOutcome.WriteBackFailed,
+                    "the profile is not there after saving"))
+                .ToList();
+        }
+
+        var checkedDetails = new List<DlssSettingOutcomeDetail>(details.Count);
+        var byId = records.ToDictionary(r => r.SettingId);
+
+        foreach (var detail in details)
+        {
+            if (detail.Outcome != DlssSettingOutcome.Applied || !byId.TryGetValue(detail.SettingId, out var record))
+            {
+                checkedDetails.Add(detail);
+                continue;
+            }
+
+            var actual = verify.GetSetting(profile, record.SettingId, out _);
+            // User-set as well as equal: a matching value that reads as predefined or inherited is
+            // not the one that was just written.
+            bool landed = actual != null && actual.Value == record.WrittenValue && actual.Origin == DlssSettingOrigin.UserSet;
+
+            checkedDetails.Add(landed
+                ? detail
+                : new DlssSettingOutcomeDetail(detail.Feature, detail.SettingId, DlssSettingOutcome.WriteBackFailed,
+                    actual == null ? "absent after saving" : $"reads 0x{actual.Value:X8} [{actual.Origin}] after saving"));
+        }
+
+        return checkedDetails;
     }
 
     /// <summary>

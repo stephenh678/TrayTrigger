@@ -64,7 +64,12 @@ public enum DlssSettingOutcome
     /// </summary>
     SkippedForeignChange,
     /// <summary>The driver refused. <see cref="DlssOperationResult.Error"/> says why.</summary>
-    Failed
+    Failed,
+    /// <summary>
+    /// The save reported success, but reading the setting back from a fresh session did not show
+    /// the value TrayTrigger wrote. The write did not land; nothing else can be trusted about it.
+    /// </summary>
+    WriteBackFailed
 }
 
 /// <summary>One setting's fate within an operation.</summary>
@@ -78,14 +83,16 @@ public sealed record DlssOperationResult(
     IReadOnlyList<DlssSettingRecord> Records)
 {
     /// <summary>True when at least one setting was left alone because something else had changed it.</summary>
-    public bool HadForeignChanges
+    public bool HadForeignChanges => HasOutcome(DlssSettingOutcome.SkippedForeignChange);
+
+    /// <summary>True when the driver accepted the save but did not report the values back.</summary>
+    public bool HadWriteBackFailures => HasOutcome(DlssSettingOutcome.WriteBackFailed);
+
+    private bool HasOutcome(DlssSettingOutcome outcome)
     {
-        get
-        {
-            foreach (var d in Details)
-                if (d.Outcome == DlssSettingOutcome.SkippedForeignChange) return true;
-            return false;
-        }
+        foreach (var d in Details)
+            if (d.Outcome == outcome) return true;
+        return false;
     }
 
     public static DlssOperationResult Failure(string error) =>

@@ -277,4 +277,66 @@ public class DlssOverrideServiceTests
     {
         Assert.Equal(expected, DlssOverrideService.ProfileNameFor(gameName, exe));
     }
+
+    // --- Layer 1: the write-back check ------------------------------------------------------
+
+    [Fact]
+    public void ApplyVerifiesAgainstAFreshSession_AndReportsWhenAValueDidNotLand()
+    {
+        // The driver reports the save succeeded but the value is not there afterwards. Saying
+        // "applied" would be the most misleading thing the card could do.
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        driver.AfterSave = () => profile.Settings.Remove(SrEnable);
+        var service = new DlssOverrideService(driver);
+
+        var applied = service.Apply(@"C:\Games\Test\game.exe", "Test Game");
+
+        Assert.True(applied.HadWriteBackFailures);
+        Assert.Contains(applied.Details, d => d.SettingId == SrEnable && d.Outcome == DlssSettingOutcome.WriteBackFailed);
+        Assert.Contains(applied.Details, d => d.SettingId == SrPreset && d.Outcome == DlssSettingOutcome.Applied);
+    }
+
+    [Fact]
+    public void AWriteThatLands_ReportsNoVerificationProblem()
+    {
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+
+        var applied = service.Apply(@"C:\Games\Test\game.exe", "Test Game");
+
+        Assert.False(applied.HadWriteBackFailures);
+        Assert.All(applied.Details, d => Assert.Equal(DlssSettingOutcome.Applied, d.Outcome));
+    }
+
+    [Fact]
+    public void TheWriteBackCheckUsesASecondSession()
+    {
+        // NVIDIA's own documentation says DRS sessions do not merge, so reading through the
+        // session that just wrote would only show its own in-memory copy and confirm nothing.
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+
+        service.Apply(@"C:\Games\Test\game.exe", "Test Game");
+
+        Assert.Equal(2, driver.SessionsOpened);
+    }
+
+    [Fact]
+    public void AValueThatReadsBackAsInherited_IsNotTreatedAsLanded()
+    {
+        // Same number, wrong layer: our write is not there, the Global profile's is.
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        driver.AfterSave = () =>
+        {
+            profile.Settings.Remove(SrEnable);
+            driver.GlobalProfile[SrEnable] = 1;
+        };
+        var service = new DlssOverrideService(driver);
+
+        var applied = service.Apply(@"C:\Games\Test\game.exe", "Test Game");
+
+        Assert.Contains(applied.Details, d => d.SettingId == SrEnable && d.Outcome == DlssSettingOutcome.WriteBackFailed);
+    }
 }

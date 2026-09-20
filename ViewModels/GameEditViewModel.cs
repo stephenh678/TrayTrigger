@@ -100,7 +100,8 @@ public class GameEditViewModel : ViewModelBase
         bool scriptsEnabled = false,
         ScriptDefaults? scriptDefaults = null,
         ScriptLibraryService? scriptLibrary = null,
-        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null)
+        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null,
+        Action? persistLibrary = null)
     {
         SourceGame = game;
         _scriptDefaults = scriptDefaults;
@@ -121,7 +122,10 @@ public class GameEditViewModel : ViewModelBase
         _minConfidence = minConfidence;
         _profileTweaks = profileTweaks;
         IsNewGame = isNewGame;
-        Dlss = new DlssCardViewModel(game.ExecutablePath);
+        // The records list is the game's own, mutated in place: a DLSS apply changes the driver
+        // immediately, so the record has to be saved immediately too. Deferring it to Save Changes
+        // would let Cancel strand an override TrayTrigger could no longer undo.
+        Dlss = new DlssCardViewModel(game.ExecutablePath, game.Name, game.DlssSettings, persistLibrary);
 
         _name = game.Name;
         _executablePath = game.ExecutablePath;

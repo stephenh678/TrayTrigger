@@ -2,16 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
+using TrayTrigger.Models;
 using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
 /// <summary>
-/// The read-only DLSS card in Edit Game - step 1 of the build order in docs/dlss-plan.md.
+/// The DLSS card in Edit Game - steps 1 and 4 of the build order in docs/dlss-plan.md.
 ///
-/// <para>It reports and does not act. There is no apply button yet, because applying requires the
-/// ownership record (step 3) and nothing here can write. Everything shown is something the probe
-/// actually read; where it could not read, the card says so rather than guessing.</para>
+/// <para>One action plus undo, as the plan specifies: no version dropdown, no per-feature toggles,
+/// no preset letters. Everything shown is something that was actually read; where the probe could
+/// not read, the card says so rather than guessing.</para>
+///
+/// <para><b>Applying writes to the driver and persists immediately</b>, without waiting for Save
+/// Changes. The driver change is not part of the edit - it has already happened - so deferring the
+/// record until Save would let Cancel strand an override TrayTrigger could no longer undo.</para>
 /// </summary>
 public sealed class DlssCardViewModel : ViewModelBase
 {
@@ -29,14 +35,49 @@ public sealed class DlssCardViewModel : ViewModelBase
         string? ExternalOverrideNotice);
 
     private readonly string? _executablePath;
+    private readonly string _gameName;
+    private readonly DlssOverrideService _overrides;
+    private readonly List<DlssSettingRecord> _records;
+    private readonly Action? _persist;
+    private readonly Func<string, DlssProbeService.ProbeResult> _probe;
+
     private bool _isLoading;
+    private bool _isBusy;
     private bool _hasLoaded;
     private bool _isOnTab = true;
+    private string? _status;
     private Projection _content = Empty;
+    private Task? _load;
 
     private static readonly Projection Empty = new(false, Array.Empty<FeatureRow>(), string.Empty, null);
 
-    public DlssCardViewModel(string? executablePath) => _executablePath = executablePath;
+    /// <param name="records">
+    /// The game's live ownership records. Mutated in place and handed to <paramref name="persist"/>,
+    /// so the record and the driver never disagree about what TrayTrigger owns.
+    /// </param>
+    /// <param name="persist">Saves the library. Called immediately after any driver change.</param>
+    /// <param name="probe">
+    /// Substituted by tests so the card's behaviour - including apply and undo - can be exercised
+    /// without an NVIDIA machine. Null uses the real probe.
+    /// </param>
+    public DlssCardViewModel(
+        string? executablePath,
+        string gameName = "",
+        List<DlssSettingRecord>? records = null,
+        Action? persist = null,
+        DlssOverrideService? overrides = null,
+        Func<string, DlssProbeService.ProbeResult>? probe = null)
+    {
+        _executablePath = executablePath;
+        _gameName = gameName;
+        _records = records ?? new List<DlssSettingRecord>();
+        _persist = persist;
+        _overrides = overrides ?? new DlssOverrideService();
+        _probe = probe ?? (path => DlssProbeService.Probe(path));
+
+        ApplyCommand = new AsyncRelayCommand(ApplyAsync, () => CanApply);
+        UndoCommand = new AsyncRelayCommand(UndoAsync, () => CanUndo);
+    }
 
     /// <summary>
     /// Whether the card's tab is selected. Owned here rather than combined in XAML so the card has
@@ -50,12 +91,28 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     /// <summary>Hidden until the probe has run and found a DLSS runtime the game ships.</summary>
     public bool IsVisible => _hasLoaded && _content.HasDlss && IsOnTab;
+
     public bool IsLoading { get => _isLoading; private set { if (SetProperty(ref _isLoading, value)) OnPropertyChanged(nameof(IsVisible)); } }
+
+    /// <summary>True while a driver write is in flight. Both buttons are disabled meanwhile.</summary>
+    public bool IsBusy { get => _isBusy; private set => SetProperty(ref _isBusy, value); }
 
     public IReadOnlyList<FeatureRow> Rows => _content.Rows;
     public string DriverLine => _content.DriverLine;
     public string? ExternalOverrideNotice => _content.ExternalOverrideNotice;
     public bool HasExternalOverrideNotice => !string.IsNullOrEmpty(_content.ExternalOverrideNotice);
+
+    public ICommand ApplyCommand { get; }
+    public ICommand UndoCommand { get; }
+
+    public bool CanApply => !IsBusy && _hasLoaded && _content.HasDlss && !string.IsNullOrWhiteSpace(_executablePath);
+
+    /// <summary>Undo is offered only for settings TrayTrigger actually recorded writing.</summary>
+    public bool CanUndo => !IsBusy && _records.Count > 0;
+
+    /// <summary>The result of the last apply or undo, in the user's words. Null before either.</summary>
+    public string? Status { get => _status; private set => SetProperty(ref _status, value); }
+    public bool HasStatus => !string.IsNullOrEmpty(_status);
 
     /// <summary>
     /// The sentence the plan calls load-bearing: it is what reassures someone who has heard that
@@ -73,8 +130,6 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// </summary>
     public Task LoadAsync() => _load ??= LoadCoreAsync();
 
-    private Task? _load;
-
     private async Task LoadCoreAsync()
     {
         if (string.IsNullOrWhiteSpace(_executablePath)) { _hasLoaded = true; return; }
@@ -82,8 +137,8 @@ public sealed class DlssCardViewModel : ViewModelBase
         try
         {
             string path = _executablePath;
-            var result = await Task.Run(() => DlssProbeService.Probe(path)).ConfigureAwait(true);
-            _content = Project(result);
+            var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
+            _content = Project(result, _records);
         }
         catch (Exception ex)
         {
@@ -95,16 +150,127 @@ public sealed class DlssCardViewModel : ViewModelBase
         {
             _hasLoaded = true;
             IsLoading = false;
-            OnPropertyChanged(nameof(Rows));
-            OnPropertyChanged(nameof(DriverLine));
-            OnPropertyChanged(nameof(ExternalOverrideNotice));
-            OnPropertyChanged(nameof(HasExternalOverrideNotice));
-            OnPropertyChanged(nameof(IsVisible));
+            RaiseContentChanged();
         }
     }
 
-    /// <summary>Turns a probe result into the card's content. Pure; exercised directly by tests.</summary>
-    public static Projection Project(DlssProbeService.ProbeResult result)
+    private async Task ApplyAsync()
+    {
+        if (!CanApply) return;
+        IsBusy = true;
+        try
+        {
+            string path = _executablePath!;
+            string name = _gameName;
+            var result = await Task.Run(() => _overrides.Apply(path, name)).ConfigureAwait(true);
+
+            if (!result.Succeeded)
+            {
+                Status = result.Error ?? "The driver would not apply the change.";
+                return;
+            }
+
+            // Replace rather than merge: the new capture describes the state immediately before
+            // this write, and keeping stale records would undo to the wrong values.
+            _records.Clear();
+            _records.AddRange(result.Records);
+            _persist?.Invoke();
+
+            Status = DescribeApply(result);
+            await ReloadAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Dlss", $"Applying the DLSS override failed: {ex.Message}", ex);
+            Status = $"Something went wrong: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            RaiseActionState();
+        }
+    }
+
+    private async Task UndoAsync()
+    {
+        if (!CanUndo) return;
+        IsBusy = true;
+        try
+        {
+            var toUndo = _records.ToList();
+            var result = await Task.Run(() => _overrides.Undo(toUndo)).ConfigureAwait(true);
+
+            // Whatever the outcome, the records the service hands back are the ones still owned -
+            // settings it could not undo keep theirs, so a later attempt can still try.
+            _records.Clear();
+            _records.AddRange(result.Records);
+            _persist?.Invoke();
+
+            Status = result.Succeeded
+                ? (result.HadForeignChanges
+                    ? "Put back what TrayTrigger changed. Some settings were left alone because something else has changed them since."
+                    : "Put back what TrayTrigger changed.")
+                : result.Error ?? "The driver would not undo the change.";
+
+            await ReloadAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Dlss", $"Undoing the DLSS override failed: {ex.Message}", ex);
+            Status = $"Something went wrong: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            RaiseActionState();
+        }
+    }
+
+    /// <summary>Re-probes so the rows show the driver's new answer rather than the one before the write.</summary>
+    private async Task ReloadAsync()
+    {
+        _load = null;
+        _hasLoaded = false;
+        await LoadAsync().ConfigureAwait(true);
+    }
+
+    private static string DescribeApply(DlssOperationResult result)
+    {
+        if (result.HadWriteBackFailures)
+        {
+            // The save reported success but the values are not there. Saying "applied" would be
+            // the most misleading thing the card could do.
+            return "The driver accepted the change but did not report it back. It may not have taken effect.";
+        }
+        return "Set to NVIDIA's recommended model. Play the game once to confirm which runtime loads.";
+    }
+
+    private void RaiseContentChanged()
+    {
+        OnPropertyChanged(nameof(Rows));
+        OnPropertyChanged(nameof(DriverLine));
+        OnPropertyChanged(nameof(ExternalOverrideNotice));
+        OnPropertyChanged(nameof(HasExternalOverrideNotice));
+        OnPropertyChanged(nameof(IsVisible));
+        RaiseActionState();
+    }
+
+    private void RaiseActionState()
+    {
+        OnPropertyChanged(nameof(CanApply));
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(HasStatus));
+    }
+
+    /// <summary>
+    /// Turns a probe result into the card's content. Pure; exercised directly by tests.
+    /// </summary>
+    /// <param name="owned">
+    /// The game's ownership records. Without them the card cannot tell TrayTrigger's own override
+    /// from a stranger's, and would accuse itself the moment it applied one.
+    /// </param>
+    public static Projection Project(DlssProbeService.ProbeResult result, IReadOnlyCollection<DlssSettingRecord>? owned = null)
     {
         if (result.ShippedRuntimes.Count == 0) return Empty;
 
@@ -121,7 +287,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         {
             if (!shipped.TryGetValue(feature, out var ship)) continue;
 
-            var state = DescribeState(result, feature, out bool isExternalOverride);
+            var state = DescribeState(result, feature, owned, out bool isExternalOverride);
             anyExternalOverride |= isExternalOverride;
             rows.Add(new FeatureRow(feature, ship.FileVersion ?? "unknown", state));
         }
@@ -129,14 +295,15 @@ public sealed class DlssCardViewModel : ViewModelBase
         if (rows.Count == 0) return Empty;
 
         return new Projection(true, rows, DescribeDriver(result), anyExternalOverride
-            // TrayTrigger has written nothing - there is no write path yet - so any override found
-            // came from somewhere else. The plan forbids silently overwriting it, and a user who
-            // does not know it is there cannot make sense of what the game reports.
-            ? "Something else has already set a DLSS override for this game - NVIDIA App, Profile Inspector or a similar tool. TrayTrigger has not changed anything."
+            // The plan forbids silently overwriting an override TrayTrigger did not set, and a
+            // user who does not know it is there cannot make sense of what the game reports.
+            ? "Something else has already set a DLSS override for this game - NVIDIA App, Profile Inspector or a similar tool. Using recommended will replace it, and undo will put it back."
             : null);
     }
 
-    private static string DescribeState(DlssProbeService.ProbeResult result, string feature, out bool isExternalOverride)
+    private static string DescribeState(
+        DlssProbeService.ProbeResult result, string feature,
+        IReadOnlyCollection<DlssSettingRecord>? owned, out bool isExternalOverride)
     {
         isExternalOverride = false;
 
@@ -152,6 +319,15 @@ public sealed class DlssCardViewModel : ViewModelBase
             s.Definition.Name.Contains("Enable DLL Override", StringComparison.Ordinal));
 
         if (toggle?.Value == null || toggle.Value.CurrentValue == 0) return "Game default";
+
+        // Ours, if a record says we wrote this exact value and the driver still reports it on the
+        // game's own profile. Without this the card would accuse itself the moment it applied.
+        bool isOurs = owned != null && owned.Any(r =>
+            r.SettingId == toggle.Value.SettingId &&
+            r.WrittenValue == toggle.Value.CurrentValue &&
+            toggle.Value.Origin == NvApi.SettingOrigin.ApplicationProfile);
+
+        if (isOurs) return "Set by TrayTrigger";
 
         isExternalOverride = true;
         return toggle.Value.Origin switch

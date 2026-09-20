@@ -31,6 +31,18 @@ public sealed class FakeDrsBackend : IDrsBackend
     /// <summary>How many times Save actually reached "disk". Nothing should persist without it.</summary>
     public int SaveCount { get; private set; }
 
+    /// <summary>
+    /// Sessions opened. The write-back check must use a second one: NVIDIA's own documentation
+    /// says DRS sessions do not merge, so reading through the session that wrote confirms nothing.
+    /// </summary>
+    public int SessionsOpened { get; private set; }
+
+    /// <summary>
+    /// Runs immediately after a successful Save, to stage what the write-back check will find -
+    /// the "the driver said yes but the value is not there" case.
+    /// </summary>
+    public Action? AfterSave { get; set; }
+
     /// <summary>Profiles created during the test, so "NVIDIA did not know this game" is observable.</summary>
     public List<string> CreatedProfiles { get; } = new();
 
@@ -52,7 +64,9 @@ public sealed class FakeDrsBackend : IDrsBackend
     public IDrsSession? OpenSession(out string? error)
     {
         error = OpenError;
-        return OpenError != null ? null : new FakeSession(this);
+        if (OpenError != null) return null;
+        SessionsOpened++;
+        return new FakeSession(this);
     }
 
     private sealed class FakeSession(FakeDrsBackend owner) : IDrsSession
@@ -118,6 +132,7 @@ public sealed class FakeDrsBackend : IDrsBackend
             foreach (var write in _pending) write();
             _pending.Clear();
             owner.SaveCount++;
+            owner.AfterSave?.Invoke();
             return true;
         }
 

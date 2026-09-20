@@ -1,4 +1,6 @@
+using TrayTrigger.Models;
 using TrayTrigger.Services;
+using TrayTrigger.Tests.Fakes;
 using TrayTrigger.ViewModels;
 
 namespace TrayTrigger.Tests;
@@ -110,15 +112,15 @@ public class DlssCardViewModelTests
     [Fact]
     public void AnyExistingOverride_WarnsThatSomethingElseSetIt()
     {
-        // TrayTrigger has no write path yet, so every override found came from elsewhere. The plan
-        // forbids silently overwriting one.
+        // The plan forbids silently overwriting an override TrayTrigger did not set. With no
+        // ownership records, an override on the profile belongs to somebody else by definition.
         var p = DlssCardViewModel.Project(Result(
             shipped: new[] { Ship("Super Resolution", "310.2.1") },
             profile: Profile(),
             settings: new[] { Toggle("Super Resolution", 1, NvApi.SettingOrigin.GlobalProfile) }));
 
         Assert.NotNull(p.ExternalOverrideNotice);
-        Assert.Contains("TrayTrigger has not changed anything", p.ExternalOverrideNotice);
+        Assert.Contains("Something else has already set", p.ExternalOverrideNotice);
     }
 
     [Fact]
@@ -215,5 +217,133 @@ public class DlssCardViewModelTests
 
         Assert.False(vm.IsVisible);
         Assert.Empty(vm.Rows);
+    }
+
+    // --- Apply and undo, wired to the buttons (step 4) --------------------------------------
+
+    private const string TestExe = @"C:\Games\Test\game.exe";
+
+    private static DlssCardViewModel Card(
+        FakeDrsBackend driver,
+        List<DlssSettingRecord> records,
+        Action? persist = null,
+        DlssProbeService.ProbeResult? probeResult = null) =>
+        new(TestExe, "Test Game", records, persist,
+            new DlssOverrideService(driver),
+            _ => probeResult ?? Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }, profile: Profile()));
+
+    [Fact]
+    public async Task Apply_WritesRecordsAndPersistsImmediately()
+    {
+        // The driver change has already happened when Apply returns, so the record must reach disk
+        // then - not on Save Changes, which the user may never press.
+        var driver = new FakeDrsBackend();
+        driver.AddProfile("game.exe", "Test Game");
+        var records = new List<DlssSettingRecord>();
+        int persisted = 0;
+
+        var card = Card(driver, records, () => persisted++);
+        await card.LoadAsync();
+        await ((AsyncRelayCommand)card.ApplyCommand).ExecuteAsync();
+
+        Assert.Equal(DlssProbeService.Settings.Length, records.Count);
+        Assert.Equal(1, persisted);
+        Assert.True(card.CanUndo);
+    }
+
+    [Fact]
+    public async Task Apply_WhenTheDriverRefuses_RecordsNothingAndSaysWhy()
+    {
+        var driver = new FakeDrsBackend { SaveError = "NVAPI_ACCESS_DENIED" };
+        driver.AddProfile("game.exe", "Test Game");
+        var records = new List<DlssSettingRecord>();
+        int persisted = 0;
+
+        var card = Card(driver, records, () => persisted++);
+        await card.LoadAsync();
+        await ((AsyncRelayCommand)card.ApplyCommand).ExecuteAsync();
+
+        Assert.Empty(records);
+        Assert.Equal(0, persisted);
+        Assert.False(card.CanUndo);
+        Assert.Contains("NVAPI_ACCESS_DENIED", card.Status);
+    }
+
+    [Fact]
+    public async Task Apply_WhenTheValueDoesNotReadBack_DoesNotClaimItWorked()
+    {
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile("game.exe", "Test Game");
+        driver.AfterSave = () => profile.Settings.Clear();
+
+        var card = Card(driver, new List<DlssSettingRecord>());
+        await card.LoadAsync();
+        await ((AsyncRelayCommand)card.ApplyCommand).ExecuteAsync();
+
+        Assert.Contains("did not report it back", card.Status);
+        Assert.DoesNotContain("recommended model", card.Status);
+    }
+
+    [Fact]
+    public async Task Undo_ClearsTheRecordsItRestoredAndPersists()
+    {
+        var driver = new FakeDrsBackend();
+        driver.AddProfile("game.exe", "Test Game");
+        var records = new List<DlssSettingRecord>();
+        int persisted = 0;
+
+        var card = Card(driver, records, () => persisted++);
+        await card.LoadAsync();
+        await ((AsyncRelayCommand)card.ApplyCommand).ExecuteAsync();
+        await ((AsyncRelayCommand)card.UndoCommand).ExecuteAsync();
+
+        Assert.Empty(records);
+        Assert.Equal(2, persisted);
+        Assert.False(card.CanUndo);
+    }
+
+    [Fact]
+    public async Task Undo_KeepsRecordsForSettingsSomethingElseChanged_SoUndoStaysAvailable()
+    {
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile("game.exe", "Test Game");
+        var records = new List<DlssSettingRecord>();
+
+        var card = Card(driver, records);
+        await card.LoadAsync();
+        await ((AsyncRelayCommand)card.ApplyCommand).ExecuteAsync();
+
+        profile.Settings[0x10E41DF3] = (0x0000000D, false);   // changed elsewhere
+        await ((AsyncRelayCommand)card.UndoCommand).ExecuteAsync();
+
+        var kept = Assert.Single(records);
+        Assert.Equal(0x10E41DF3u, kept.SettingId);
+        Assert.True(card.CanUndo);
+        Assert.Contains("left alone", card.Status);
+    }
+
+    [Fact]
+    public async Task UndoIsOfferedOnlyForSettingsTrayTriggerRecorded()
+    {
+        var driver = new FakeDrsBackend();
+        driver.AddProfile("game.exe", "Test Game");
+
+        var card = Card(driver, new List<DlssSettingRecord>());
+        await card.LoadAsync();
+
+        Assert.False(card.CanUndo);
+        Assert.True(card.CanApply);
+    }
+
+    [Fact]
+    public async Task ApplyIsNotOfferedOnAGameWithNoDlss()
+    {
+        var driver = new FakeDrsBackend();
+        var card = Card(driver, new List<DlssSettingRecord>(), probeResult: Result());
+
+        await card.LoadAsync();
+
+        Assert.False(card.CanApply);
+        Assert.False(card.IsVisible);
     }
 }
