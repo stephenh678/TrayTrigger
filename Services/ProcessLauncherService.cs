@@ -508,7 +508,7 @@ public partial class ProcessLauncherService
 
     // Holds each session's DLSS poller until it stops: a Timer nobody references can be collected
     // mid-loop, the same reason the Battle.net dispatchers are held.
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> _dlssObservers = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Poller> _dlssObservers = new();
 
     private static readonly TimeSpan DlssObserveInterval = TimeSpan.FromSeconds(30);
     private const int DlssObserveMaxTicks = 3;   // ~90 seconds
@@ -538,25 +538,22 @@ public partial class ProcessLauncherService
         var game = session.Game;
         if (game.DlssSettings.Count == 0) return;
 
-        string? driver = null;
-        try
-        {
-            driver = new SystemInfoService().GetGpuInfoList()
-                .FirstOrDefault(g => g.ModelName.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase))?.DriverVersion;
-        }
-        catch (Exception ex) { LoggingService.Verbose("Dlss", $"Driver version unavailable: {ex.Message}"); }
+        string? driver = DlssProbeService.ReadGpu().Driver;
+        // Once, not per tick: what the game ships cannot change while it is running, and the scan
+        // walks the whole install folder.
+        var shipped = DlssProbeService.FindShippedRuntimes(System.IO.Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
 
         int ticks = 0;
         string key = game.Id;
 
-        var poller = new Poller(DlssObserveInterval, () =>
+        Poller? self = null;
+        self = new Poller(DlssObserveInterval, () =>
         {
             ticks++;
             bool exited;
             try { exited = process.HasExited; } catch { exited = true; }
 
-            var observations = DlssVerificationService.Observe(exited ? null : process, driver,
-                DlssProbeService.FindShippedRuntimes(System.IO.Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty));
+            var observations = DlssVerificationService.Observe(exited ? null : process, driver, shipped);
             bool sawRuntime = observations.Any(o => o.State == DlssObservationState.RuntimeObserved);
 
             // Keep waiting only while there is still a chance of seeing something.
@@ -572,11 +569,20 @@ public partial class ProcessLauncherService
                     LoggingService.Info("Dlss", $"'{game.Name}' {o.Feature}: {DlssVerificationService.Describe(o)}");
             }
 
-            _dlssObservers.TryRemove(key, out _);
+            // Only this poller's own registration: a stub handoff starts a second one under the
+            // same game, and removing by key alone would drop that one instead.
+            _dlssObservers.TryRemove(new KeyValuePair<string, Poller>(key, self!));
             return false;
         });
 
-        _dlssObservers[key] = poller;
+        // A stub handoff attaches twice. The earlier poller is watching a process that is gone,
+        // and would record "not running" for a game that is.
+        var poller = self;
+        _dlssObservers.AddOrUpdate(key, poller, (_, previous) =>
+        {
+            previous.Stop();
+            return poller;
+        });
     }
 
     /// <summary>
@@ -601,8 +607,14 @@ public partial class ProcessLauncherService
                 PersistLibrary?.Invoke();
                 LoggingService.Warn("Launcher", $"DLSS settings for '{game.Name}' were changed by something else - TrayTrigger has stopped managing them.");
             }
+            else if (!result.Succeeded)
+            {
+                LoggingService.Warn("Launcher", $"Could not re-apply DLSS settings for '{game.Name}': {result.Error ?? "the driver refused"}.");
+            }
             else if (!result.WasAlreadyCorrect)
             {
+                // Recreating a profile marks the records, so undo can remove it again.
+                PersistLibrary?.Invoke();
                 LoggingService.Info("Launcher", $"Re-applied DLSS settings for '{game.Name}' before launch.");
             }
         }

@@ -49,7 +49,12 @@ public static class DlssVerificationService
         foreach (var feature in NgxModelStore.Features)
         {
             string? shippedVersion = shipped?.FirstOrDefault(r => r.Feature == feature.Name)?.FileVersion;
-            var match = modules.FirstOrDefault(m => MatchesFeature(m, feature));
+            // The store's runtime first: NGX can have the game's own DLL open as well as the one it
+            // substituted, and module order would otherwise decide which of the two is reported.
+            var match = modules
+                .Where(m => MatchesFeature(m, feature))
+                .OrderByDescending(m => m.FromDriverStore)
+                .FirstOrDefault();
 
             if (match == null)
             {

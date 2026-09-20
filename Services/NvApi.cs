@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace TrayTrigger.Services;
 
 /// <summary>
-/// Minimal, read-only interop for NVIDIA's driver settings database (DRS) - the store behind
+/// Minimal interop for NVIDIA's driver settings database (DRS) - the store behind
 /// "Manage 3D settings" and the per-game profiles NVIDIA App and Profile Inspector write. The DLSS
 /// override settings live there; see docs/dlss-plan.md.
 ///
@@ -38,6 +38,12 @@ public static unsafe class NvApi
     private const uint IdDrsDeleteProfileSetting    = 0xE4A26362;
     private const uint IdDrsSaveSettings            = 0xFCBC7E14;
     private const uint IdDrsCreateProfile           = 0xCC176068;
+    private const uint IdDrsDeleteProfile           = 0x17093206;
+    private const uint IdDrsRestoreDefaultSetting   = 0x53F0381E;
+
+    /// <summary>The two statuses that are answers rather than failures. Everything else is an error.</summary>
+    public const int StatusSettingNotFound = -160;
+    public const int StatusExecutableNotFound = -166;
     private const uint IdDrsCreateApplication       = 0x4347A9DE;
     private const uint IdDrsGetSettingNameFromId    = 0xD61CBE6E;
 
@@ -45,7 +51,8 @@ public static unsafe class NvApi
 
     private static IntPtr _module;
     private static delegate* unmanaged[Cdecl]<uint, IntPtr> _queryInterface;
-    private static bool _initialised;
+    private static volatile bool _initialised;
+    private static readonly object InitLock = new();
     private static string? _loadFailure;
 
     /// <summary>Why NVAPI is unavailable, or null when it loaded. Reported verbatim by the probe.</summary>
@@ -58,11 +65,21 @@ public static unsafe class NvApi
     public static bool TryInitialize()
     {
         if (_initialised) return true;
+        // The card probes on a pool thread while a launch can be re-applying on another.
+        lock (InitLock) return InitializeLocked();
+    }
+
+    private static bool InitializeLocked()
+    {
+        if (_initialised) return true;
         if (_loadFailure != null) return false;
 
         try
         {
-            if (!NativeLibrary.TryLoad("nvapi64.dll", out _module))
+            // System32 only. The default search starts in TrayTrigger's own folder, and a portable
+            // copy run from Downloads would load whatever nvapi64.dll had been dropped beside it -
+            // into a process that may be elevated.
+            if (!NativeLibrary.TryLoad("nvapi64.dll", typeof(NvApi).Assembly, DllImportSearchPath.System32, out _module))
             {
                 _loadFailure = "nvapi64.dll not present (no NVIDIA display driver).";
                 return false;
@@ -239,12 +256,20 @@ public static unsafe class NvApi
 
     /// <summary>
     /// An open DRS session. Loading pulls the whole settings database into memory; nothing reaches
-    /// disk unless SaveSettings is called, which this type does not expose.
+    /// disk until <see cref="Save"/>.
     /// </summary>
     public sealed class Session : IDisposable
     {
         private IntPtr _handle;
         private bool _disposed;
+
+        /// <summary>
+        /// The raw status of the last <see cref="FindProfileForExecutable"/> or
+        /// <see cref="GetSetting"/>. A null from either means "not there" only when this is the
+        /// matching not-found status; anything else is a failure, and a caller that treated it as
+        /// absent would capture - and later restore - the wrong thing.
+        /// </summary>
+        public int LastStatus { get; private set; }
 
         private Session(IntPtr handle) => _handle = handle;
 
@@ -291,6 +316,7 @@ public static unsafe class NvApi
             var app = new NvDrsApplicationV4 { Version = VersionOf<NvDrsApplicationV4>(4) };
             IntPtr h;
             int status = find(_handle, name, &h, &app);
+            LastStatus = status;
             if (status != 0) { error = Describe(status); return null; }
 
             profile = h;
@@ -355,12 +381,14 @@ public static unsafe class NvApi
 
             var s = new NvDrsSetting { Version = VersionOf<NvDrsSetting>(1) };
             int status = fn(_handle, profile, settingId, &s);
+            LastStatus = status;
             if (status != 0) { error = Describe(status); return null; }
 
             // Only DWORD settings matter for DLSS; reading a binary or string one as a DWORD would
             // be meaningless, so it is reported as unsupported rather than as a bogus number.
             if (s.SettingType != 0)
             {
+                LastStatus = int.MinValue;   // not "absent": present, and unreadable
                 error = $"setting type {s.SettingType} is not a DWORD";
                 return null;
             }
@@ -454,6 +482,41 @@ public static unsafe class NvApi
         }
 
         /// <summary>
+        /// Puts NVIDIA's own predefined value back on a setting a user value is sitting over. This
+        /// - not <see cref="DeleteSetting"/> - is the undo for a setting that was predefined
+        /// before: deleting is for a value that was never there.
+        /// </summary>
+        public bool RestoreSettingDefault(IntPtr profile, uint settingId, out string? error)
+        {
+            error = null;
+            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, uint, int>)Lookup(IdDrsRestoreDefaultSetting);
+            if (fn == null) { error = "NvAPI_DRS_RestoreProfileDefaultSetting not exposed."; return false; }
+
+            int status = fn(_handle, profile, settingId);
+            if (status != 0) { error = Describe(status); return false; }
+            return true;
+        }
+
+        /// <summary>How many applications and settings a profile holds, as this session sees it.</summary>
+        public (uint Applications, uint Settings)? GetProfileCounts(IntPtr profile)
+        {
+            var info = DescribeProfile(profile, null, null, out _);
+            return info == null ? null : (info.ApplicationCount, info.SettingCount);
+        }
+
+        /// <summary>Removes a whole profile. Only ever for one TrayTrigger created and has emptied.</summary>
+        public bool DeleteProfile(IntPtr profile, out string? error)
+        {
+            error = null;
+            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, int>)Lookup(IdDrsDeleteProfile);
+            if (fn == null) { error = "NvAPI_DRS_DeleteProfile not exposed."; return false; }
+
+            int status = fn(_handle, profile);
+            if (status != 0) { error = Describe(status); return false; }
+            return true;
+        }
+
+        /// <summary>
         /// Commits the session to the driver's database. This is the only call here that touches
         /// disk, and the only one expected to need elevation.
         /// </summary>
@@ -491,7 +554,15 @@ public static unsafe class NvApi
             WriteFixed(app.UserFriendlyName, exeFileName);
 
             status = createApp(_handle, handle, &app);
-            if (status != 0) { error = $"NvAPI_DRS_CreateApplication: {Describe(status)}"; return IntPtr.Zero; }
+            if (status != 0)
+            {
+                error = $"NvAPI_DRS_CreateApplication: {Describe(status)}";
+                // The profile already exists in this session. Left there, a caller that goes on to
+                // Save for other reasons would commit an empty profile nobody owns.
+                var deleteProfile = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, int>)Lookup(IdDrsDeleteProfile);
+                if (deleteProfile != null) deleteProfile(_handle, handle);
+                return IntPtr.Zero;
+            }
 
             return handle;
         }

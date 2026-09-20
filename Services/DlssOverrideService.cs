@@ -26,23 +26,35 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     /// <summary>
     /// Writes the "use recommended" recipe for a game, capturing what each setting was first.
     ///
-    /// <para>Existing records are replaced, not merged: re-applying re-captures, and the capture
-    /// must describe the state immediately before <i>this</i> write.</para>
+    /// <para>Existing records are replaced, and the capture describes the state immediately
+    /// before <i>this</i> write - with one exception. Where a setting is still exactly as an
+    /// <paramref name="existing"/> record left it, "the state before this write" is TrayTrigger's
+    /// own value, and capturing that would make undo restore the override. There the original
+    /// capture is carried over instead.</para>
     /// </summary>
-    public DlssOperationResult Apply(string executablePath, string gameName)
+    /// <param name="beforeSave">
+    /// Handed the records about to be committed, before the driver is told to save. Persisting
+    /// them here is what makes a crash between the two recoverable: a record with no write behind
+    /// it undoes to nothing, a write with no record behind it cannot be undone at all.
+    /// </param>
+    public DlssOperationResult Apply(
+        string executablePath, string gameName,
+        IReadOnlyList<DlssSettingRecord>? existing = null,
+        Action<IReadOnlyList<DlssSettingRecord>>? beforeSave = null)
     {
         // Not the launched executable: the one that renders. For a launcher-based game they differ,
         // and the driver keys its profiles on the renderer. See ResolveRenderingExecutable.
-        string exeName = Path.GetFileName(DlssProbeService.ResolveRenderingExecutable(executablePath));
+        string exePath = DlssProbeService.ResolveRenderingExecutable(executablePath);
+        string exeName = Path.GetFileName(exePath);
         if (string.IsNullOrWhiteSpace(exeName)) return DlssOperationResult.Failure("No executable to target.");
 
         // The write happens in its own scope so the session is closed before the check below.
         // NVIDIA's own documentation warns that DRS sessions do not merge, and reading through the
         // session that just wrote would only show its own in-memory copy - confirming nothing.
-        var written = WriteRecipe(exeName, gameName);
+        var written = WriteRecipe(exePath, exeName, gameName, existing, beforeSave);
         if (written.Error != null) return DlssOperationResult.Failure(written.Error);
 
-        var verified = VerifyWriteBack(exeName, written.Records, written.Details);
+        var verified = VerifyWriteBack(exePath, exeName, written.Records, written.Details);
 
         LoggingService.Info("Dlss", $"Applied DLSS override to {exeName} in profile '{written.ProfileName}' ({written.Records.Count} settings).");
         return new DlssOperationResult(written.Records.Count > 0, null, verified, written.Records);
@@ -54,7 +66,32 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         List<DlssSettingRecord> Records,
         string? Error);
 
-    private WriteOutcome WriteRecipe(string exeName, string gameName)
+    /// <summary>
+    /// By full path first, because that is what disambiguates NVIDIA's folder- and
+    /// launcher-qualified entries; by name when the path finds nothing, for a game that has moved
+    /// since. Null with <paramref name="error"/> set is a failed lookup, not a missing profile.
+    /// </summary>
+    private static DrsProfileHandle? FindProfile(IDrsSession session, string? exePath, string exeName, out string? error)
+    {
+        error = null;
+        if (!string.IsNullOrWhiteSpace(exePath) && !string.Equals(exePath, exeName, StringComparison.OrdinalIgnoreCase))
+        {
+            var byPath = session.FindProfileForExecutable(exePath, out error);
+            if (byPath != null || error != null) return byPath;
+        }
+        return session.FindProfileForExecutable(exeName, out error);
+    }
+
+    private static DrsProfileHandle? FindProfile(IDrsSession session, DlssSettingRecord record, out string? error) =>
+        FindProfile(session, record.ExecutablePath, record.ApplicationName, out error);
+
+    private static bool SameApplication(DlssSettingRecord record, string exeName) =>
+        string.Equals(record.ApplicationName, exeName, StringComparison.OrdinalIgnoreCase);
+
+    private WriteOutcome WriteRecipe(
+        string exePath, string exeName, string gameName,
+        IReadOnlyList<DlssSettingRecord>? existing,
+        Action<IReadOnlyList<DlssSettingRecord>>? beforeSave)
     {
         var noDetails = new List<DlssSettingOutcomeDetail>();
         var noRecords = new List<DlssSettingRecord>();
@@ -63,7 +100,15 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         if (session == null)
             return new WriteOutcome("", noDetails, noRecords, error ?? "The NVIDIA driver settings database is unavailable.");
 
-        var profile = session.FindProfileForExecutable(exeName, out _);
+        var profile = FindProfile(session, exePath, exeName, out string? findError);
+        if (profile == null && findError != null)
+        {
+            // Not "no profile": the lookup itself failed. Creating one now could shadow a profile
+            // that is there, and everything captured against it would be wrong.
+            return new WriteOutcome("", noDetails, noRecords, $"Could not look up the driver profile for {exeName}: {findError}");
+        }
+
+        bool created = false;
         if (profile == null)
         {
             // NVIDIA has no entry for this game. Creating one is normal, not a workaround: it is
@@ -71,7 +116,11 @@ public sealed class DlssOverrideService(IDrsBackend backend)
             profile = session.CreateProfileForExecutable(ProfileNameFor(gameName, exeName), exeName, out string? createError);
             if (profile == null)
                 return new WriteOutcome("", noDetails, noRecords, $"Could not create a driver profile for {exeName}: {createError}");
+            created = true;
         }
+
+        // A profile TrayTrigger created stays TrayTrigger's across a re-apply.
+        created |= existing?.Any(r => r.ProfileCreated && SameApplication(r, exeName)) == true;
 
         var details = new List<DlssSettingOutcomeDetail>();
         var records = new List<DlssSettingRecord>();
@@ -89,7 +138,14 @@ public sealed class DlssOverrideService(IDrsBackend backend)
                 continue;
             }
 
-            var before = session.GetSetting(profile, def.Id, out _);
+            var before = session.GetSetting(profile, def.Id, out string? readError);
+            if (before == null && readError != null)
+            {
+                // Unreadable is not absent. Writing over it would record "nothing was here", and
+                // undo would then delete whatever actually was.
+                details.Add(new DlssSettingOutcomeDetail(def.FeatureCode, def.Id, DlssSettingOutcome.Failed, readError));
+                continue;
+            }
 
             if (!session.SetSetting(profile, def.Id, def.RecommendedValue, out string? setError))
             {
@@ -97,24 +153,34 @@ public sealed class DlssOverrideService(IDrsBackend backend)
                 continue;
             }
 
+            // Still exactly as an earlier apply left it: what is there now is TrayTrigger's own
+            // value, so the state to go back to is the one that apply captured, not this one.
+            var carried = existing?.FirstOrDefault(r => r.SettingId == def.Id && SameApplication(r, exeName));
+            bool stillOurs = carried != null && StillOursToUndo(before, carried);
+
             records.Add(new DlssSettingRecord
             {
                 Feature = def.FeatureCode,
                 SettingId = def.Id,
-                PreviousValue = before?.Value,
-                PreviousOrigin = before?.Origin ?? DlssSettingOrigin.Absent,
+                PreviousValue = stillOurs ? carried!.PreviousValue : before?.Value,
+                PreviousOrigin = stillOurs ? carried!.PreviousOrigin : before?.Origin ?? DlssSettingOrigin.Absent,
                 WrittenValue = def.RecommendedValue,
                 ProfileName = profile.Name,
                 ApplicationName = exeName,
+                ExecutablePath = exePath,
+                ProfileCreated = created,
                 WrittenUtc = now
             });
             details.Add(new DlssSettingOutcomeDetail(def.FeatureCode, def.Id, DlssSettingOutcome.Applied, null));
         }
 
+        if (records.Count > 0) beforeSave?.Invoke(records);
+
         if (!session.Save(out string? saveError))
         {
             // Nothing reached disk, so the records describe a write that did not happen. Returning
-            // them would leave the game claiming an override it does not have.
+            // them would leave the game claiming an override it does not have. A caller that
+            // persisted them in beforeSave puts back what it had.
             LoggingService.Warn("Dlss", $"Saving DLSS settings for {exeName} failed: {saveError}");
             return new WriteOutcome("", noDetails, noRecords, $"The driver refused to save the settings: {saveError}");
         }
@@ -128,7 +194,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     /// game will honour it - that needs the game to run.
     /// </summary>
     private List<DlssSettingOutcomeDetail> VerifyWriteBack(
-        string exeName, List<DlssSettingRecord> records, List<DlssSettingOutcomeDetail> details)
+        string exePath, string exeName, List<DlssSettingRecord> records, List<DlssSettingOutcomeDetail> details)
     {
         using var verify = _backend.OpenSession(out string? verifyError);
         if (verify == null)
@@ -137,7 +203,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
             return details;
         }
 
-        var profile = verify.FindProfileForExecutable(exeName, out _);
+        var profile = FindProfile(verify, exePath, exeName, out _);
         if (profile == null)
         {
             return records
@@ -174,6 +240,13 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     /// <summary>
     /// Puts back what <see cref="Apply"/> captured, skipping any setting the driver no longer
     /// reports as TrayTrigger wrote it.
+    ///
+    /// <para>"Put back" is three different calls, because a setting can have been three different
+    /// things. A user's own value is written back. NVIDIA's predefined value is <i>restored</i> -
+    /// deleting is not the same thing, and is not what the driver offers for it. Anything that was
+    /// not on this profile at all - absent, or inherited from a lower layer - is deleted, so it
+    /// goes back to following that layer. And a profile TrayTrigger had to create is removed once
+    /// it is empty, or every game ever overridden would leave one behind.</para>
     /// </summary>
     public DlssOperationResult Undo(IReadOnlyList<DlssSettingRecord> records)
     {
@@ -188,24 +261,54 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
         foreach (var group in records.GroupBy(r => r.ApplicationName, StringComparer.OrdinalIgnoreCase))
         {
-            var profile = session.FindProfileForExecutable(group.Key, out string? findError);
+            var profile = FindProfile(session, group.First(), out string? findError);
             if (profile == null)
             {
-                // The profile is gone - a driver reset, or someone deleted it. There is nothing to
-                // put back, and nothing to warn about either.
                 foreach (var record in group)
-                    details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Deleted, findError));
+                {
+                    if (findError != null)
+                    {
+                        // The lookup failed; the profile may well be there with our values in it.
+                        // Dropping the records now would lose the only means of undoing them.
+                        details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, findError));
+                        remaining.Add(record);
+                    }
+                    else
+                    {
+                        // The profile is gone - a driver reset, or someone deleted it. There is
+                        // nothing to put back, and nothing to warn about either.
+                        details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Deleted, null));
+                    }
+                }
                 continue;
             }
 
+            int stillHeld = 0;
+
             foreach (var record in group)
             {
-                var current = session.GetSetting(profile, record.SettingId, out _);
+                var current = session.GetSetting(profile, record.SettingId, out string? readError);
+                if (current == null && readError != null)
+                {
+                    details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, readError));
+                    remaining.Add(record);
+                    stillHeld++;
+                    continue;
+                }
 
                 if (!StillOursToUndo(current, record))
                 {
+                    if (LooksLikeWhatWeCaptured(current, record))
+                    {
+                        // Already back as it was - something reverted the write, or it never
+                        // landed. Nothing to undo and nothing left to own.
+                        details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.AlreadyCorrect, null));
+                        continue;
+                    }
+
                     details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.SkippedForeignChange, null));
                     remaining.Add(record);
+                    stillHeld++;
                     continue;
                 }
 
@@ -218,14 +321,19 @@ public sealed class DlssOverrideService(IDrsBackend backend)
                     ok = session.SetSetting(profile, record.SettingId, record.PreviousValue.Value, out undoError);
                     outcome = DlssSettingOutcome.Restored;
                 }
+                else if (record.PreviousOrigin == DlssSettingOrigin.Predefined)
+                {
+                    // NVIDIA's own value was here. Writing the number back would turn it into a
+                    // user-set one, and deleting is for a value that was never there; the driver
+                    // has a call for exactly this.
+                    ok = session.RestoreSettingDefault(profile, record.SettingId, out undoError);
+                    outcome = DlssSettingOutcome.Restored;
+                }
                 else
                 {
-                    // Absent, inherited, or NVIDIA's own predefined value: in all three the setting
-                    // did not exist on this profile as a user choice, so removing it is what puts
-                    // the machine back. Writing the value instead would pin it - an inherited
-                    // setting would stop following the Global profile, and a predefined one would
-                    // become user-set. See the plan; an earlier draft said to delete only when the
-                    // previous state was absent, which is too narrow.
+                    // Absent or inherited: the setting did not exist on this profile, so removing
+                    // it is what puts the machine back. Writing the value instead would pin it, and
+                    // an inherited setting would stop following the Global profile.
                     ok = session.DeleteSetting(profile, record.SettingId, out undoError);
                     outcome = DlssSettingOutcome.Deleted;
                 }
@@ -239,8 +347,12 @@ public sealed class DlssOverrideService(IDrsBackend backend)
                 {
                     details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, undoError));
                     remaining.Add(record);
+                    stillHeld++;
                 }
             }
+
+            if (stillHeld == 0 && group.Any(r => r.ProfileCreated) && RemoveCreatedProfile(session, profile))
+                anythingChanged = true;
         }
 
         if (anythingChanged && !session.Save(out string? saveError))
@@ -252,6 +364,21 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         // Records for settings that were skipped or failed are kept: they still describe values
         // TrayTrigger wrote, and dropping them would lose the only evidence of what it owns.
         return new DlssOperationResult(true, null, details, remaining);
+    }
+
+    /// <summary>
+    /// Removes a profile TrayTrigger created, but only while it is still only TrayTrigger's: not
+    /// one of NVIDIA's, holding no settings, and no application beyond the one it was made for.
+    /// Anything a user has since put in it is theirs, and it stays.
+    /// </summary>
+    private static bool RemoveCreatedProfile(IDrsSession session, DrsProfileHandle profile)
+    {
+        if (profile.IsPredefined) return false;
+        if (session.GetProfileCounts(profile) is not { Settings: 0, Applications: <= 1 }) return false;
+
+        if (session.DeleteProfile(profile, out string? error)) return true;
+        LoggingService.Warn("Dlss", $"Could not remove the driver profile '{profile.Name}' TrayTrigger created: {error}");
+        return false;
     }
 
     /// <summary>
@@ -270,41 +397,56 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     /// <para>Telling the second case from the third is exactly what the ownership record makes
     /// possible. <b>Everything is read before anything is written</b>: one conflicting setting
     /// means something else is managing this game, and writing the rest would be the overwrite
-    /// this rule exists to prevent.</para>
+    /// this rule exists to prevent. One session does both, so what is written is decided on
+    /// exactly what was read - a second session would load the database afresh, and whatever had
+    /// changed in between would be overwritten unseen.</para>
+    ///
+    /// <para>A read that <i>fails</i> stops the whole step. It is neither "reverted" nor "absent",
+    /// and guessing either way writes to a profile on the strength of nothing.</para>
     ///
     /// <para>Best-effort, not a guarantee. No published contract says when NVIDIA App reconciles
     /// DRS; reapplying here narrows the window, it does not close it.</para>
     /// </summary>
+    /// <remarks>
+    /// When the profile had to be recreated, the records passed in are marked
+    /// <see cref="DlssSettingRecord.ProfileCreated"/> in place, so a later undo removes it.
+    /// </remarks>
     public DlssOperationResult Reapply(IReadOnlyList<DlssSettingRecord> records)
     {
         if (records.Count == 0) return new DlssOperationResult(true, null, Array.Empty<DlssSettingOutcomeDetail>(), records);
 
+        using var session = _backend.OpenSession(out string? openError);
+        if (session == null) return DlssOperationResult.Failure(openError ?? "The NVIDIA driver settings database is unavailable.");
+
         var planned = new List<(DlssSettingRecord Record, DlssSettingOutcome Outcome)>();
+        var profiles = new Dictionary<string, DrsProfileHandle?>(StringComparer.OrdinalIgnoreCase);
 
-        using (var read = _backend.OpenSession(out string? readError))
+        foreach (var group in records.GroupBy(r => r.ApplicationName, StringComparer.OrdinalIgnoreCase))
         {
-            if (read == null) return DlssOperationResult.Failure(readError ?? "The NVIDIA driver settings database is unavailable.");
+            var profile = FindProfile(session, group.First(), out string? findError);
+            if (profile == null && findError != null)
+                return DlssOperationResult.Failure($"Could not look up the driver profile for {group.Key}: {findError}");
+            profiles[group.Key] = profile;
 
-            foreach (var group in records.GroupBy(r => r.ApplicationName, StringComparer.OrdinalIgnoreCase))
+            foreach (var record in group)
             {
-                var profile = read.FindProfileForExecutable(group.Key, out _);
-                foreach (var record in group)
+                if (profile == null)
                 {
-                    if (profile == null)
-                    {
-                        // The whole profile is gone - a driver reset, or someone deleted it. That is
-                        // not another tool disagreeing with us, so it is not a conflict; recreating
-                        // it is what a normal apply would do.
-                        planned.Add((record, DlssSettingOutcome.Failed));
-                        continue;
-                    }
-
-                    var current = read.GetSetting(profile, record.SettingId, out _);
-                    planned.Add((record,
-                        StillOursToUndo(current, record) ? DlssSettingOutcome.AlreadyCorrect
-                        : LooksLikeWhatWeCaptured(current, record) ? DlssSettingOutcome.Applied
-                        : DlssSettingOutcome.SkippedForeignChange));
+                    // The whole profile is gone - a driver reset, or someone deleted it. That is
+                    // not another tool disagreeing with us, so it is not a conflict; recreating
+                    // it is what a normal apply would do, and the write below does.
+                    planned.Add((record, DlssSettingOutcome.Applied));
+                    continue;
                 }
+
+                var current = session.GetSetting(profile, record.SettingId, out string? readError);
+                if (current == null && readError != null)
+                    return DlssOperationResult.Failure($"Could not read setting 0x{record.SettingId:X8} for {group.Key}: {readError}");
+
+                planned.Add((record,
+                    StillOursToUndo(current, record) ? DlssSettingOutcome.AlreadyCorrect
+                    : LooksLikeWhatWeCaptured(current, record) ? DlssSettingOutcome.Applied
+                    : DlssSettingOutcome.SkippedForeignChange));
             }
         }
 
@@ -328,31 +470,38 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         }
 
         var details = new List<DlssSettingOutcomeDetail>();
-        using (var write = _backend.OpenSession(out string? writeError))
+        foreach (var (record, _) in toWrite)
         {
-            if (write == null) return DlssOperationResult.Failure(writeError ?? "The NVIDIA driver settings database is unavailable.");
-
-            foreach (var (record, _) in toWrite)
+            var profile = profiles[record.ApplicationName];
+            if (profile == null)
             {
-                var profile = write.FindProfileForExecutable(record.ApplicationName, out string? findError);
+                profile = session.CreateProfileForExecutable(
+                    string.IsNullOrWhiteSpace(record.ProfileName) ? record.ApplicationName : record.ProfileName,
+                    record.ApplicationName, out string? createError);
                 if (profile == null)
                 {
-                    details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, findError));
+                    details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, createError));
                     continue;
                 }
-                if (!write.SetSetting(profile, record.SettingId, record.WrittenValue, out string? setError))
-                {
-                    details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, setError));
-                    continue;
-                }
-                details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Applied, null));
+
+                // Created once, and the rest of this game's records land in the same one.
+                profiles[record.ApplicationName] = profile;
+                foreach (var sibling in records.Where(r => SameApplication(r, record.ApplicationName)))
+                    sibling.ProfileCreated = true;
             }
 
-            if (!write.Save(out string? saveError))
+            if (!session.SetSetting(profile, record.SettingId, record.WrittenValue, out string? setError))
             {
-                LoggingService.Warn("Dlss", $"Re-applying DLSS settings before launch failed: {saveError}");
-                return new DlssOperationResult(false, saveError, details, records);
+                details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Failed, setError));
+                continue;
             }
+            details.Add(new DlssSettingOutcomeDetail(record.Feature, record.SettingId, DlssSettingOutcome.Applied, null));
+        }
+
+        if (!session.Save(out string? saveError))
+        {
+            LoggingService.Warn("Dlss", $"Re-applying DLSS settings before launch failed: {saveError}");
+            return new DlssOperationResult(false, saveError, details, records);
         }
 
         foreach (var (record, outcome) in planned.Where(p => p.Outcome != DlssSettingOutcome.Applied))

@@ -102,10 +102,11 @@ public class DlssOverrideServiceTests
     }
 
     [Fact]
-    public void NvidiasOwnPredefinedValue_IsCapturedAsPredefined_AndUndoDeletesRatherThanClaimingIt()
+    public void NvidiasOwnPredefinedValue_IsCapturedAsPredefined_AndUndoRestoresItAsNvidias()
     {
         // Writing the same number back would convert NVIDIA's value into a user-set one, which is
-        // a different state even though it reads the same.
+        // a different state even though it reads the same - and deleting would leave nothing where
+        // NVIDIA had a value. The driver has a call for exactly this, and undo has to use it.
         var (service, driver) = NewService();
         var profile = driver.AddProfile(Exe, "Test Game");
         profile.Settings[SrPreset] = (0x00000002, IsPredefined: true);
@@ -115,8 +116,203 @@ public class DlssOverrideServiceTests
 
         Assert.Equal(DlssSettingOrigin.Predefined, record.PreviousOrigin);
 
+        var undone = service.Undo(applied.Records);
+
+        Assert.Equal((0x00000002u, true), profile.Settings[SrPreset]);
+        Assert.Contains(undone.Details, d => d.SettingId == SrPreset && d.Outcome == DlssSettingOutcome.Restored);
+        Assert.DoesNotContain(undone.Records, r => r.SettingId == SrPreset);
+    }
+
+    // --- Putting it back exactly ------------------------------------------------------------
+
+    [Fact]
+    public void AProfileTrayTriggerCreated_IsRemovedAgainOnUndo()
+    {
+        // Otherwise every game ever overridden leaves an empty profile in the driver for good.
+        var (service, driver) = NewService();
+
+        var applied = service.Apply(TestExe, "Test Game");
+        Assert.All(applied.Records, r => Assert.True(r.ProfileCreated));
+        Assert.True(driver.Profiles.ContainsKey(Exe));
+
         service.Undo(applied.Records);
-        Assert.False(profile.Settings.ContainsKey(SrPreset));
+
+        Assert.False(driver.Profiles.ContainsKey(Exe));
+    }
+
+    [Fact]
+    public void AProfileNvidiaShipped_IsNeverRemoved()
+    {
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+
+        var applied = service.Apply(TestExe, "Test Game");
+        Assert.All(applied.Records, r => Assert.False(r.ProfileCreated));
+
+        service.Undo(applied.Records);
+
+        Assert.True(driver.Profiles.ContainsKey(Exe));
+    }
+
+    [Fact]
+    public void ACreatedProfileTheUserHasSincePutSomethingIn_IsLeftAlone()
+    {
+        var (service, driver) = NewService();
+        var applied = service.Apply(TestExe, "Test Game");
+        driver.Profiles[Exe].Settings[0x12345678] = (1, false);   // theirs, added afterwards
+
+        service.Undo(applied.Records);
+
+        Assert.True(driver.Profiles.ContainsKey(Exe));
+        Assert.Equal(1u, driver.Profiles[Exe].Settings[0x12345678].Value);
+        Assert.False(driver.Profiles[Exe].Settings.ContainsKey(SrEnable));
+    }
+
+    [Fact]
+    public void ProfilesAreLookedUpByFullPath_NotByBareFileName()
+    {
+        // NVIDIA's own entries can be qualified by folder or launcher, so a bare game.exe can
+        // match another game's profile. The record keeps the path so undo asks the same question.
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+
+        var applied = service.Apply(TestExe, "Test Game");
+        Assert.Equal(TestExe, driver.FindRequests[0]);
+        Assert.All(applied.Records, r => Assert.Equal(TestExe, r.ExecutablePath));
+
+        driver.FindRequests.Clear();
+        service.Undo(applied.Records);
+        Assert.Equal(TestExe, driver.FindRequests[0]);
+    }
+
+    [Fact]
+    public void AFailedLookup_IsNotAMissingProfile_SoApplyCreatesNothing()
+    {
+        var (service, driver) = NewService();
+        driver.FindError = "NVAPI_ERROR (-1)";
+
+        var result = service.Apply(TestExe, "Test Game");
+
+        Assert.False(result.Succeeded);
+        Assert.Empty(driver.CreatedProfiles);
+        Assert.Equal(0, driver.SaveCount);
+    }
+
+    [Fact]
+    public void AFailedLookupDuringUndo_KeepsEveryRecord()
+    {
+        // Reading "profile gone" into a failed lookup would drop the only means of undoing values
+        // that are still sitting in the driver.
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+        driver.FindError = "NVAPI_ERROR (-1)";
+
+        var undone = service.Undo(applied.Records);
+
+        Assert.Equal(applied.Records.Count, undone.Records.Count);
+        Assert.All(undone.Details, d => Assert.Equal(DlssSettingOutcome.Failed, d.Outcome));
+    }
+
+    [Fact]
+    public void ASettingThatCannotBeRead_IsNotCapturedAsAbsent()
+    {
+        // Captured as absent, undo would later delete whatever was really there.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        profile.Settings[SrPreset] = (0x0000000B, false);
+        driver.UnreadableSettingIds.Add(SrPreset);
+
+        var applied = service.Apply(TestExe, "Test Game");
+
+        Assert.DoesNotContain(applied.Records, r => r.SettingId == SrPreset);
+        Assert.Equal(0x0000000Bu, profile.Settings[SrPreset].Value);
+        Assert.Contains(applied.Details, d => d.SettingId == SrPreset && d.Outcome == DlssSettingOutcome.Failed);
+    }
+
+    [Fact]
+    public void Reapply_WhenAReadFails_WritesNothing()
+    {
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+        profile.Settings.Remove(SrEnable);
+        driver.UnreadableSettingIds.Add(SrPreset);
+        int saves = driver.SaveCount;
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(saves, driver.SaveCount);
+    }
+
+    [Fact]
+    public void ApplyingAgainOverOurOwnValues_KeepsTheOriginalCapture()
+    {
+        // "The state before this write" is then TrayTrigger's own value. Capturing that would make
+        // undo restore the override instead of what the user had.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        profile.Settings[SrPreset] = (0x0000000B, false);
+
+        var first = service.Apply(TestExe, "Test Game");
+        var second = service.Apply(TestExe, "Test Game", existing: first.Records);
+
+        Assert.Equal(0x0000000Bu, second.Records.First(r => r.SettingId == SrPreset).PreviousValue);
+
+        service.Undo(second.Records);
+        Assert.Equal(0x0000000Bu, profile.Settings[SrPreset].Value);
+        Assert.False(profile.Settings.ContainsKey(SrEnable));
+    }
+
+    [Fact]
+    public void ApplyingAgainOverAStrangersValue_CapturesTheirs()
+    {
+        // Taking over from a conflict: what goes back on undo is what they had set.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var first = service.Apply(TestExe, "Test Game");
+        profile.Settings[SrPreset] = (0x0000000D, false);
+
+        var second = service.Apply(TestExe, "Test Game", existing: first.Records);
+        service.Undo(second.Records);
+
+        Assert.Equal(0x0000000Du, profile.Settings[SrPreset].Value);
+    }
+
+    [Fact]
+    public void TheRecordsAreHandedOver_BeforeTheDriverIsToldToSave()
+    {
+        // A write with no record behind it can never be undone; a record with no write behind it
+        // undoes to nothing. So the record goes first.
+        var (service, driver) = NewService();
+        driver.AddProfile(Exe, "Test Game");
+        int savesWhenHandedOver = -1;
+        IReadOnlyList<DlssSettingRecord>? handed = null;
+
+        service.Apply(TestExe, "Test Game", beforeSave: r => { handed = r; savesWhenHandedOver = driver.SaveCount; });
+
+        Assert.NotNull(handed);
+        Assert.NotEmpty(handed!);
+        Assert.Equal(0, savesWhenHandedOver);
+        Assert.Equal(1, driver.SaveCount);
+    }
+
+    [Fact]
+    public void ARecordWhoseWriteNeverLanded_UndoesToNothing_AndIsDropped()
+    {
+        // The crash-between-record-and-save case: the driver is already as it was.
+        var (service, driver) = NewService();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        var applied = service.Apply(TestExe, "Test Game");
+        foreach (var r in applied.Records) profile.Settings.Remove(r.SettingId);
+        int saves = driver.SaveCount;
+
+        var undone = service.Undo(applied.Records);
+
+        Assert.Empty(undone.Records);
+        Assert.False(undone.HadForeignChanges);
+        Assert.Equal(saves, driver.SaveCount);
     }
 
     [Fact]
@@ -397,6 +593,23 @@ public class DlssOverrideServiceTests
         Assert.False(result.HadForeignChanges);
         Assert.Equal(1u, profile.Settings[SrEnable].Value);
         Assert.False(profile.Settings[SrEnable].IsPredefined);
+    }
+
+    [Fact]
+    public void Reapply_WhenTheWholeProfileIsGone_RecreatesIt()
+    {
+        // A clean driver install drops a profile TrayTrigger created. That is not a conflict, and
+        // leaving it would keep the switch on over a driver that has nothing.
+        var (service, driver) = NewService();
+        var applied = service.Apply(TestExe, "Test Game");
+        driver.Profiles.Remove(Exe);
+
+        var result = service.Reapply(applied.Records);
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.HadForeignChanges);
+        Assert.Equal(1u, driver.Profiles[Exe].Settings[SrEnable].Value);
+        Assert.Equal(applied.Records[0].ProfileName, driver.Profiles[Exe].Name);
     }
 
     [Fact]

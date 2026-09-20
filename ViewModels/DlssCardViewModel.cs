@@ -116,12 +116,18 @@ public sealed class DlssCardViewModel : ViewModelBase
     public string OverrideLabel => "Enable DLSS Override for this game";
 
     /// <summary>
-    /// The switch. On means TrayTrigger has written the override for this game; off means it has
-    /// not, or has put it back. Setting it does the work - there is no separate apply.
+    /// The switch. On means TrayTrigger has written the override for this game and is still the
+    /// one managing it; off means it has not, has put it back, or has stood down because something
+    /// else changed the settings. Setting it does the work - there is no separate apply.
+    ///
+    /// <para>A conflicted game reads as off although its records are kept. Were it to read as on,
+    /// the notice's "switch it on again to take them over" could never be done: unticking runs a
+    /// restore that leaves a stranger's values alone, the records stay, and the box ticks itself
+    /// again.</para>
     /// </summary>
     public bool OverrideEnabled
     {
-        get => _records.Count > 0;
+        get => _records.Count > 0 && _game?.DlssConflicted != true;
         set
         {
             if (value == OverrideEnabled || IsBusy) return;
@@ -244,10 +250,34 @@ public sealed class DlssCardViewModel : ViewModelBase
         {
             string path = _executablePath;
             string name = _gameName;
-            var result = await Task.Run(() => _overrides.Apply(path, name)).ConfigureAwait(true);
+            var before = _records.ToList();
+            var ui = System.Threading.SynchronizationContext.Current;
+
+            // The record reaches disk before the driver is told to save. The other order leaves a
+            // window where a crash strands an override nothing can ever undo; this one leaves a
+            // record with no write behind it, which undoes to nothing.
+            void WriteAhead(IReadOnlyList<DlssSettingRecord> pending)
+            {
+                void Commit()
+                {
+                    _records.Clear();
+                    _records.AddRange(pending);
+                    _persist?.Invoke();
+                }
+                if (ui != null) ui.Send(_ => Commit(), null); else Commit();
+            }
+
+            var result = await Task.Run(() => _overrides.Apply(path, name, before, WriteAhead)).ConfigureAwait(true);
 
             if (!result.Succeeded)
             {
+                // Nothing was saved to the driver, so what was written ahead describes nothing.
+                if (!_records.SequenceEqual(before))
+                {
+                    _records.Clear();
+                    _records.AddRange(before);
+                    _persist?.Invoke();
+                }
                 Status = result.Error ?? "NVIDIA would not accept the change.";
                 return;
             }
@@ -288,10 +318,19 @@ public sealed class DlssCardViewModel : ViewModelBase
             var toUndo = _records.ToList();
             var result = await Task.Run(() => _overrides.Undo(toUndo)).ConfigureAwait(true);
 
-            // The records handed back are the ones still owned: anything that could not be undone
-            // keeps its record, so a later attempt can still try.
+            // The records handed back are the ones still owned: anything that failed keeps its
+            // record, so a later attempt can still try. A setting something else has changed is
+            // different - Restore is the user handing those back, as the notice says, and a record
+            // kept for a value that is no longer TrayTrigger's could never be cleared.
+            var handedBack = result.Details
+                .Where(d => d.Outcome == DlssSettingOutcome.SkippedForeignChange)
+                .Select(d => d.SettingId)
+                .ToHashSet();
             _records.Clear();
-            _records.AddRange(result.Records);
+            if (result.Succeeded)
+                _records.AddRange(result.Records.Where(r => !handedBack.Contains(r.SettingId)));
+            else
+                _records.AddRange(result.Records);
             ClearDerivedState();
             _persist?.Invoke();
 
@@ -355,7 +394,9 @@ public sealed class DlssCardViewModel : ViewModelBase
         DlssProbeService.ProbeResult result,
         IReadOnlyCollection<DlssSettingRecord>? owned = null)
     {
-        if (result.ShippedRuntimes.Count == 0) return Empty;
+        // No NVIDIA driver means nothing here can work, whatever the game ships: the card stays
+        // hidden rather than offering a switch that can only fail.
+        if (result.ShippedRuntimes.Count == 0 || !result.DriverAvailable) return Empty;
 
         // One version for the card. Where a game ships its three features at different versions,
         // this shows the oldest: it is the one with the most to gain, and the override lifts all
@@ -364,8 +405,12 @@ public sealed class DlssCardViewModel : ViewModelBase
             .GroupBy(s => s.Feature, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First().FileVersion, StringComparer.Ordinal);
 
-        string? gameVersion = shipped.Values.Where(v => v != null).OrderBy(Order).FirstOrDefault();
+        // The driver's version is taken for that same feature. The newest across all three would
+        // pair one feature's "before" with another's "after".
+        var oldest = shipped.Where(kv => kv.Value != null).OrderBy(kv => Order(kv.Value)).FirstOrDefault();
+        string? gameVersion = oldest.Value;
         string? driverVersion = result.DriverRuntimes
+            .Where(d => string.Equals(d.Feature, oldest.Key, StringComparison.Ordinal))
             .OrderByDescending(d => d.EncodedVersion)
             .Select(d => d.Version)
             .FirstOrDefault();

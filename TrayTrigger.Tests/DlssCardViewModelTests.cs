@@ -259,16 +259,18 @@ public class DlssCardViewModelTests
         var driver = new FakeDrsBackend();
         driver.AddProfile("game.exe", "Test Game");
         var records = new List<DlssSettingRecord>();
-        int persisted = 0;
+        var driverSavesAtEachPersist = new List<int>();
 
-        var card = Card(driver, records, () => persisted++);
+        var card = Card(driver, records, () => driverSavesAtEachPersist.Add(driver.SaveCount));
         await card.LoadAsync();
         card.OverrideEnabled = true;
         await WaitForIdle(card);
 
         Assert.True(card.OverrideEnabled);
         Assert.Equal(DlssProbeService.Settings.Length, records.Count);
-        Assert.Equal(1, persisted);
+        // Once before the driver commits - so a crash in between leaves a record that undoes to
+        // nothing rather than a write nothing can undo - and once after, with the result.
+        Assert.Equal(new[] { 0, 1 }, driverSavesAtEachPersist);
         Assert.True(card.CanRestore);
     }
 
@@ -407,6 +409,82 @@ public class DlssCardViewModelTests
             settings: new[] { Toggle("Super Resolution", 0, NvApi.SettingOrigin.ApplicationProfile) }));
 
         Assert.Null(p.ExternalOverrideNotice);
+    }
+
+    [Fact]
+    public void WithNoNvidiaDriver_TheCardStaysHidden_WhateverTheGameShips()
+    {
+        var p = DlssCardViewModel.Project(
+            Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }) with { DriverAvailable = false });
+
+        Assert.False(p.HasDlss);
+    }
+
+    [Fact]
+    public void TheVersionPair_IsForOneFeature_NotTheOldestOfOneAgainstTheNewestOfAnother()
+    {
+        var p = DlssCardViewModel.Project(Result(
+            shipped: new[] { Ship("Super Resolution", "310.2.0"), Ship("Frame Generation", "310.1.0") },
+            driver: new[] { Store("Super Resolution", "310.1.0", 20316416), Store("Frame Generation", "310.4.0", 20317184) }));
+
+        Assert.Equal("310.1.0", p.GameVersion);
+        Assert.Equal("310.4.0", p.DriverVersion);
+
+        var srOnly = DlssCardViewModel.Project(Result(
+            shipped: new[] { Ship("Super Resolution", "310.2.0") },
+            driver: new[] { Store("Super Resolution", "310.1.0", 20316416), Store("Frame Generation", "310.4.0", 20317184) }));
+
+        Assert.Equal("310.1.0", srOnly.DriverVersion);
+        Assert.False(srOnly.DriverIsNewer);
+    }
+
+    [Fact]
+    public async Task AConflictedGame_ReadsAsOff_SoItCanBeSwitchedOnAgainToTakeOver()
+    {
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile("game.exe", "Test Game");
+        var game = new GameEntry();
+        var card = Card(driver, game.DlssSettings, game: game);
+        await card.LoadAsync();
+        card.OverrideEnabled = true;
+        await WaitForIdle(card);
+
+        uint preset = DlssProbeService.Settings.First(d => d.FeatureCode == "SR" && d.Name.Contains("Preset")).Id;
+        profile.Settings[preset] = (0x0000000D, false);   // a stranger's value
+        game.DlssConflicted = true;                        // as the launcher marks it
+
+        Assert.False(card.OverrideEnabled);
+
+        card.OverrideEnabled = true;
+        await WaitForIdle(card);
+
+        Assert.True(card.OverrideEnabled);
+        Assert.False(game.DlssConflicted);
+        // Their value is what undo now gives back.
+        Assert.Equal(0x0000000Du, game.DlssSettings.First(r => r.SettingId == preset).PreviousValue);
+    }
+
+    [Fact]
+    public async Task RestoringAConflictedGame_HandsTheStrangersSettingsBack_AndLeavesNothingHeld()
+    {
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile("game.exe", "Test Game");
+        var game = new GameEntry();
+        var card = Card(driver, game.DlssSettings, game: game);
+        await card.LoadAsync();
+        card.OverrideEnabled = true;
+        await WaitForIdle(card);
+
+        uint preset = DlssProbeService.Settings.First(d => d.FeatureCode == "SR" && d.Name.Contains("Preset")).Id;
+        profile.Settings[preset] = (0x0000000D, false);
+        game.DlssConflicted = true;
+
+        await ((AsyncRelayCommand)card.RestoreCommand).ExecuteAsync();
+
+        Assert.Empty(game.DlssSettings);
+        Assert.False(card.OverrideEnabled);
+        Assert.False(card.CanRestore);
+        Assert.Equal(0x0000000Du, profile.Settings[preset].Value);
     }
 
     [Fact]

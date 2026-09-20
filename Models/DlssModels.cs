@@ -46,6 +46,20 @@ public class DlssSettingRecord
     /// <summary>The executable the setting was attached to, as the driver matches it.</summary>
     public string ApplicationName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The renderer's full path at the time. Profiles are looked up by this, not by
+    /// <see cref="ApplicationName"/>: NVIDIA's own entries can be qualified by folder or launcher,
+    /// and a bare file name such as game.exe can match a different game's profile. Empty on a
+    /// record that predates it, which falls back to the name.
+    /// </summary>
+    public string ExecutablePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// True when the profile did not exist and TrayTrigger created it. Undo then removes the
+    /// profile too, once it is empty - otherwise every game ever overridden would leave one behind.
+    /// </summary>
+    public bool ProfileCreated { get; set; }
+
     public DateTime WrittenUtc { get; set; }
 }
 

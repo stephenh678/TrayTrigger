@@ -74,6 +74,13 @@ public static class DlssProbeService
         public NvApi.DrsProfileInfo? Profile { get; init; }
         public string? DrsError { get; init; }
 
+        /// <summary>
+        /// False when the driver's settings database could not be opened at all - no NVIDIA driver,
+        /// which is every AMD and Intel machine. Distinct from <see cref="Profile"/> being null,
+        /// which only says NVIDIA has no entry for this game.
+        /// </summary>
+        public bool DriverAvailable { get; init; } = true;
+
         public IReadOnlyList<SettingState> SettingStates { get; init; } = Array.Empty<SettingState>();
         public IReadOnlyList<NvApi.DrsSettingValue> GlobalProfileDlssSettings { get; init; } = Array.Empty<NvApi.DrsSettingValue>();
 
@@ -99,7 +106,7 @@ public static class DlssProbeService
         string? gameDir = SafeDirectoryName(executablePath);
 
         var (gpu, driver) = ReadGpu();
-        var (profile, settingStates, globalDlss, drsError) = ReadDrs(exeName);
+        var (profile, settingStates, globalDlss, drsError, driverAvailable) = ReadDrs(exeName);
 
         return new ProbeResult
         {
@@ -109,6 +116,7 @@ public static class DlssProbeService
             DriverVersion = driver,
             Profile = profile,
             DrsError = drsError,
+            DriverAvailable = driverAvailable,
             SettingStates = settingStates,
             GlobalProfileDlssSettings = globalDlss,
             ShippedRuntimes = gameDir == null ? Array.Empty<ShippedRuntime>() : FindShippedRuntimes(gameDir),
@@ -119,7 +127,8 @@ public static class DlssProbeService
         };
     }
 
-    private static (string? Gpu, string? Driver) ReadGpu()
+    /// <summary>The NVIDIA GPU's name and driver version, or nulls when there is none.</summary>
+    internal static (string? Gpu, string? Driver) ReadGpu()
     {
         try
         {
@@ -134,14 +143,14 @@ public static class DlssProbeService
         }
     }
 
-    private static (NvApi.DrsProfileInfo?, List<SettingState>, List<NvApi.DrsSettingValue>, string?)
+    private static (NvApi.DrsProfileInfo?, List<SettingState>, List<NvApi.DrsSettingValue>, string?, bool)
         ReadDrs(string exeName)
     {
         var states = new List<SettingState>();
         var globalDlss = new List<NvApi.DrsSettingValue>();
 
         using var session = NvApi.Session.TryOpen(out string? error);
-        if (session == null) return (null, states, globalDlss, error);
+        if (session == null) return (null, states, globalDlss, error, false);
 
         var profile = session.FindProfileForExecutable(exeName, out IntPtr handle, out string? findError);
 
@@ -165,7 +174,7 @@ public static class DlssProbeService
                 .ToList();
         }
 
-        return (profile, states, globalDlss, findError);
+        return (profile, states, globalDlss, findError, true);
     }
 
     /// <summary>
@@ -177,9 +186,20 @@ public static class DlssProbeService
         var result = new List<ShippedRuntime>();
         if (!Directory.Exists(gameDirectory)) return result;
 
+        // The walk is recursive, so a folder that is not one game's own - a drive root, Downloads,
+        // the top of Program Files - would find other games' DLLs, and ResolveRenderingExecutable
+        // would then hand back another game's executable to write the override to.
+        if (ProcessPathResolver.IsUnsafeProcessFolder(gameDirectory, out string why))
+        {
+            LoggingService.Verbose("Dlss", $"Not scanning {gameDirectory} for DLSS DLLs: it is {why}.");
+            return result;
+        }
+
         try
         {
-            foreach (string file in Directory.EnumerateFiles(gameDirectory, "nvngx_dlss*.dll", SearchOption.AllDirectories))
+            // One unreadable subfolder must not end the walk and lose everything after it.
+            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
+            foreach (string file in Directory.EnumerateFiles(gameDirectory, "nvngx_dlss*.dll", options))
             {
                 string name = Path.GetFileName(file);
                 string feature = FeatureForShippedFile(name);
@@ -292,9 +312,11 @@ public static class DlssProbeService
 
     /// <summary>Maps a shipped DLL name to its feature. Exposed for tests.</summary>
     public static string FeatureForShippedFile(string fileName) =>
-        fileName.StartsWith("nvngx_dlssg", StringComparison.OrdinalIgnoreCase) ? "Frame Generation"
-        : fileName.StartsWith("nvngx_dlssd", StringComparison.OrdinalIgnoreCase) ? "Ray Reconstruction"
-        : "Super Resolution";
+        // Longest prefix first: "nvngx_dlss" is also the start of the other two.
+        (NgxModelStore.Features
+            .OrderByDescending(f => f.DllPrefix.Length)
+            .FirstOrDefault(f => fileName.StartsWith(f.DllPrefix, StringComparison.OrdinalIgnoreCase))
+         ?? NgxModelStore.Features[0]).Name;
 
     /// <summary>
     /// Enumerates the DLSS-related modules a running game has loaded.
@@ -338,7 +360,7 @@ public static class DlssProbeService
             string? product = null;
             try { product = module.FileVersionInfo.ProductName; } catch { /* optional */ }
 
-            bool fromStore = path.Contains(@"\NVIDIA\NGX\models\", StringComparison.OrdinalIgnoreCase);
+            bool fromStore = path.Contains(Models.DlssObservation.NgxStoreMarker, StringComparison.OrdinalIgnoreCase);
             bool byProduct = product != null &&
                              (product.Contains("DLSS", StringComparison.OrdinalIgnoreCase) ||
                               product.Contains("NGX", StringComparison.OrdinalIgnoreCase) ||
@@ -349,7 +371,8 @@ public static class DlssProbeService
             if (!fromStore && !byProduct && !byName) continue;
 
             string? version = null;
-            try { version = module.FileVersionInfo.FileVersion; } catch { /* optional */ }
+            // Normalized, as the shipped DLLs are: NVIDIA's own string reads "310,1,0,0".
+            try { version = NormalizeFileVersion(module.FileVersionInfo); } catch { /* optional */ }
 
             result.Add(new LoadedRuntime(name, path, version, product, fromStore));
         }

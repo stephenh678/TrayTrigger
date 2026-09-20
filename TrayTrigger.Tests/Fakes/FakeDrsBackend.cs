@@ -52,7 +52,24 @@ public sealed class FakeDrsBackend : IDrsBackend
         public bool IsPredefined { get; init; }
         /// <summary>Settings held on this profile, with whether the value is NVIDIA's own.</summary>
         public Dictionary<uint, (uint Value, bool IsPredefined)> Settings { get; } = new();
+        /// <summary>
+        /// NVIDIA's values that a user value is currently sitting over. The driver keeps them: a
+        /// user write hides a predefined value, it does not destroy it, and only
+        /// RestoreSettingDefault brings it back.
+        /// </summary>
+        public Dictionary<uint, uint> HiddenPredefined { get; } = new();
+        /// <summary>Applications attached to the profile. One, unless a test adds more.</summary>
+        public int Applications { get; set; } = 1;
     }
+
+    /// <summary>When set, every profile lookup fails with this - an error, not "not found".</summary>
+    public string? FindError { get; set; }
+
+    /// <summary>Setting ids whose reads fail - an error, not "absent".</summary>
+    public HashSet<uint> UnreadableSettingIds { get; } = new();
+
+    /// <summary>What each lookup was asked for, so "by full path" is observable.</summary>
+    public List<string> FindRequests { get; } = new();
 
     public FakeProfile AddProfile(string exeName, string profileName, bool isPredefined = true)
     {
@@ -75,41 +92,71 @@ public sealed class FakeDrsBackend : IDrsBackend
         return new FakeSession(this);
     }
 
-    private sealed class FakeSession(FakeDrsBackend owner) : IDrsSession
+    private sealed class FakeSession : IDrsSession
     {
-        // Writes are staged until Save, exactly as NVAPI behaves, so a test can prove that a
-        // refused Save leaves the database untouched.
-        private readonly List<Action> _pending = new();
+        // A session is a private copy of the database, exactly as NVAPI behaves: loaded on open,
+        // changed in memory, and written back only by Save. So a refused Save leaves the database
+        // untouched, and reads inside the session see its own unsaved changes.
+        private readonly FakeDrsBackend _owner;
+        private readonly Dictionary<string, Working> _profiles = new(StringComparer.OrdinalIgnoreCase);
 
-        public DrsProfileHandle? FindProfileForExecutable(string exeFileName, out string? error)
+        private sealed class Working
         {
-            error = null;
-            if (owner.Profiles.TryGetValue(exeFileName, out var p))
-                return new DrsProfileHandle(IntPtr.Zero, p.Name, p.IsPredefined);
-            error = "NVAPI_EXECUTABLE_NOT_FOUND (-166)";
-            return null;
+            public required string Name;
+            public bool IsPredefined;
+            public int Applications = 1;
+            public Dictionary<uint, (uint Value, bool IsPredefined)> Settings = new();
+            public Dictionary<uint, uint> HiddenPredefined = new();
+        }
+
+        public FakeSession(FakeDrsBackend owner)
+        {
+            _owner = owner;
+            foreach (var (exe, p) in owner.Profiles)
+            {
+                _profiles[exe] = new Working
+                {
+                    Name = p.Name,
+                    IsPredefined = p.IsPredefined,
+                    Applications = p.Applications,
+                    Settings = new(p.Settings),
+                    HiddenPredefined = new(p.HiddenPredefined)
+                };
+            }
+        }
+
+        public DrsProfileHandle? FindProfileForExecutable(string exePathOrFileName, out string? error)
+        {
+            _owner.FindRequests.Add(exePathOrFileName);
+            error = _owner.FindError;
+            if (error != null) return null;
+            // The driver matches on the file name whether or not it was handed a path.
+            return _profiles.TryGetValue(System.IO.Path.GetFileName(exePathOrFileName), out var p)
+                ? new DrsProfileHandle(IntPtr.Zero, p.Name, p.IsPredefined)
+                : null;   // not found is an answer, not an error
         }
 
         public DrsProfileHandle? CreateProfileForExecutable(string profileName, string exeFileName, out string? error)
         {
             error = null;
-            owner.CreatedProfiles.Add(profileName);
-            var p = owner.AddProfile(exeFileName, profileName, isPredefined: false);
-            return new DrsProfileHandle(IntPtr.Zero, p.Name, false);
+            _owner.CreatedProfiles.Add(profileName);
+            _profiles[exeFileName] = new Working { Name = profileName };
+            return new DrsProfileHandle(IntPtr.Zero, profileName, false);
         }
 
         public DrsSettingReading? GetSetting(DrsProfileHandle profile, uint settingId, out string? error)
         {
             error = null;
+            if (_owner.UnreadableSettingIds.Contains(settingId)) { error = "NVAPI_ERROR (-1)"; return null; }
+
             var p = Resolve(profile);
             if (p != null && p.Settings.TryGetValue(settingId, out var held))
                 return new DrsSettingReading(held.Value, held.IsPredefined ? DlssSettingOrigin.Predefined : DlssSettingOrigin.UserSet);
 
-            if (owner.GlobalProfile.TryGetValue(settingId, out uint global))
+            if (_owner.GlobalProfile.TryGetValue(settingId, out uint global))
                 return new DrsSettingReading(global, DlssSettingOrigin.Inherited);
 
-            error = "NVAPI_SETTING_NOT_FOUND (-160)";
-            return null;
+            return null;   // absent at every layer
         }
 
         public bool SetSetting(DrsProfileHandle profile, uint settingId, uint value, out string? error)
@@ -117,8 +164,11 @@ public sealed class FakeDrsBackend : IDrsBackend
             error = null;
             var p = Resolve(profile);
             if (p == null) { error = "no such profile"; return false; }
+            // A user write hides NVIDIA's value rather than destroying it.
+            if (p.Settings.TryGetValue(settingId, out var held) && held.IsPredefined)
+                p.HiddenPredefined[settingId] = held.Value;
             // A written value is never predefined - that is what makes it distinguishable later.
-            _pending.Add(() => p.Settings[settingId] = (value, false));
+            p.Settings[settingId] = (value, false);
             return true;
         }
 
@@ -127,23 +177,72 @@ public sealed class FakeDrsBackend : IDrsBackend
             error = null;
             var p = Resolve(profile);
             if (p == null) { error = "no such profile"; return false; }
-            _pending.Add(() => p.Settings.Remove(settingId));
+            // Deliberately strict: deleting is for a value that was never NVIDIA's. Whatever the
+            // real driver does here, the code under test must not depend on it.
+            if (p.HiddenPredefined.ContainsKey(settingId) || (p.Settings.TryGetValue(settingId, out var held) && held.IsPredefined))
+            {
+                error = "predefined setting: restore it, do not delete it";
+                return false;
+            }
+            p.Settings.Remove(settingId);
+            return true;
+        }
+
+        public bool RestoreSettingDefault(DrsProfileHandle profile, uint settingId, out string? error)
+        {
+            error = null;
+            var p = Resolve(profile);
+            if (p == null) { error = "no such profile"; return false; }
+            if (p.HiddenPredefined.Remove(settingId, out uint predefined))
+                p.Settings[settingId] = (predefined, true);
+            else if (!(p.Settings.TryGetValue(settingId, out var held) && held.IsPredefined))
+                p.Settings.Remove(settingId);
+            return true;
+        }
+
+        public (uint Applications, uint Settings)? GetProfileCounts(DrsProfileHandle profile)
+        {
+            var p = Resolve(profile);
+            return p == null ? null : ((uint)p.Applications, (uint)p.Settings.Count);
+        }
+
+        public bool DeleteProfile(DrsProfileHandle profile, out string? error)
+        {
+            error = null;
+            string? key = _profiles.FirstOrDefault(kv => kv.Value.Name == profile.Name).Key;
+            if (key == null) { error = "no such profile"; return false; }
+            _profiles.Remove(key);
             return true;
         }
 
         public bool Save(out string? error)
         {
-            error = owner.SaveError;
+            error = _owner.SaveError;
             if (error != null) return false;
-            foreach (var write in _pending) write();
-            _pending.Clear();
-            owner.SaveCount++;
-            owner.AfterSave?.Invoke();
+
+            foreach (string gone in _owner.Profiles.Keys.Where(k => !_profiles.ContainsKey(k)).ToList())
+                _owner.Profiles.Remove(gone);
+
+            foreach (var (exe, w) in _profiles)
+            {
+                // Written back into the same object, so a test holding a profile still sees it.
+                if (!_owner.Profiles.TryGetValue(exe, out var target) || target.Name != w.Name)
+                    _owner.Profiles[exe] = target = new FakeProfile { Name = w.Name, IsPredefined = w.IsPredefined };
+
+                target.Applications = w.Applications;
+                target.Settings.Clear();
+                foreach (var (id, v) in w.Settings) target.Settings[id] = v;
+                target.HiddenPredefined.Clear();
+                foreach (var (id, v) in w.HiddenPredefined) target.HiddenPredefined[id] = v;
+            }
+
+            _owner.SaveCount++;
+            _owner.AfterSave?.Invoke();
             return true;
         }
 
-        private FakeProfile? Resolve(DrsProfileHandle handle) =>
-            owner.Profiles.Values.FirstOrDefault(p => p.Name == handle.Name);
+        private Working? Resolve(DrsProfileHandle handle) =>
+            _profiles.Values.FirstOrDefault(p => p.Name == handle.Name);
 
         public void Dispose() { }
     }

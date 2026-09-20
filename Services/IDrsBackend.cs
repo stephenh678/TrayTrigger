@@ -38,22 +38,37 @@ public interface IDrsSession : IDisposable
 {
     /// <summary>
     /// The profile the driver would apply to this executable, or null when NVIDIA has no entry for
-    /// it - which is a normal answer, not a failure.
+    /// it - which is a normal answer, not a failure, and leaves <paramref name="error"/> null.
+    /// <b>Null with an error is a failed lookup</b>: the profile may well be there, and a caller
+    /// must not go on as though it were not.
+    ///
+    /// <para>Takes a full path where one is known. NVIDIA's own entries can be qualified by folder
+    /// or launcher, and a bare <c>game.exe</c> can match another game's profile.</para>
     /// </summary>
-    DrsProfileHandle? FindProfileForExecutable(string exeFileName, out string? error);
+    DrsProfileHandle? FindProfileForExecutable(string exePathOrFileName, out string? error);
 
     /// <summary>Creates a profile for an executable NVIDIA does not know about.</summary>
     DrsProfileHandle? CreateProfileForExecutable(string profileName, string exeFileName, out string? error);
 
     /// <summary>
-    /// The setting as it applies to this profile, including which layer supplied it. Null means
-    /// absent at every layer.
+    /// The setting as it applies to this profile, including which layer supplied it. Null with no
+    /// <paramref name="error"/> means absent at every layer; <b>null with an error means the read
+    /// failed</b>, and recording that as "absent" would make undo delete a value that was there.
     /// </summary>
     DrsSettingReading? GetSetting(DrsProfileHandle profile, uint settingId, out string? error);
 
     bool SetSetting(DrsProfileHandle profile, uint settingId, uint value, out string? error);
 
     bool DeleteSetting(DrsProfileHandle profile, uint settingId, out string? error);
+
+    /// <summary>Puts NVIDIA's predefined value back where a user value is sitting over it.</summary>
+    bool RestoreSettingDefault(DrsProfileHandle profile, uint settingId, out string? error);
+
+    /// <summary>What a profile holds, as this session sees it - unsaved deletes included.</summary>
+    (uint Applications, uint Settings)? GetProfileCounts(DrsProfileHandle profile);
+
+    /// <summary>Removes a whole profile. Only for one TrayTrigger created and has since emptied.</summary>
+    bool DeleteProfile(DrsProfileHandle profile, out string? error);
 
     /// <summary>Commits to the driver's database. The only step expected to need elevation.</summary>
     bool Save(out string? error);
@@ -83,10 +98,12 @@ public sealed class NvApiDrsBackend : IDrsBackend
 
     private sealed class NvApiDrsSession(NvApi.Session session) : IDrsSession
     {
-        public DrsProfileHandle? FindProfileForExecutable(string exeFileName, out string? error)
+        public DrsProfileHandle? FindProfileForExecutable(string exePathOrFileName, out string? error)
         {
-            var info = session.FindProfileForExecutable(exeFileName, out IntPtr handle, out error);
-            return info == null ? null : new DrsProfileHandle(handle, info.ProfileName, info.IsPredefined);
+            var info = session.FindProfileForExecutable(exePathOrFileName, out IntPtr handle, out error);
+            if (info != null) return new DrsProfileHandle(handle, info.ProfileName, info.IsPredefined);
+            if (session.LastStatus == NvApi.StatusExecutableNotFound) error = null;
+            return null;
         }
 
         public DrsProfileHandle? CreateProfileForExecutable(string profileName, string exeFileName, out string? error)
@@ -98,7 +115,16 @@ public sealed class NvApiDrsBackend : IDrsBackend
         public DrsSettingReading? GetSetting(DrsProfileHandle profile, uint settingId, out string? error)
         {
             var value = session.GetSetting(profile.Handle, settingId, out error);
-            return value == null ? null : new DrsSettingReading(value.CurrentValue, Translate(value));
+            if (value == null)
+            {
+                if (session.LastStatus == NvApi.StatusSettingNotFound) error = null;
+                return null;
+            }
+            // The driver's built-in default is "absent at every layer", which this interface
+            // promises as null. Handing back a reading with an Absent origin instead matches
+            // neither "ours" nor "what we captured", and Reapply would call it a conflict.
+            var origin = Translate(value);
+            return origin == DlssSettingOrigin.Absent ? null : new DrsSettingReading(value.CurrentValue, origin);
         }
 
         public bool SetSetting(DrsProfileHandle profile, uint settingId, uint value, out string? error) =>
@@ -106,6 +132,15 @@ public sealed class NvApiDrsBackend : IDrsBackend
 
         public bool DeleteSetting(DrsProfileHandle profile, uint settingId, out string? error) =>
             session.DeleteSetting(profile.Handle, settingId, out error);
+
+        public bool RestoreSettingDefault(DrsProfileHandle profile, uint settingId, out string? error) =>
+            session.RestoreSettingDefault(profile.Handle, settingId, out error);
+
+        public (uint Applications, uint Settings)? GetProfileCounts(DrsProfileHandle profile) =>
+            session.GetProfileCounts(profile.Handle);
+
+        public bool DeleteProfile(DrsProfileHandle profile, out string? error) =>
+            session.DeleteProfile(profile.Handle, out error);
 
         public bool Save(out string? error) => session.Save(out error);
 
