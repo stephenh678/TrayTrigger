@@ -119,10 +119,52 @@ negative that would have shipped and told users the feature had failed.
 `ProductName` is what distinguishes SR from RR from FG, since all three are `160_E658700.bin`.
 The per-feature observation model in Data depends on it.
 
+### The overlay, read on-screen during run 5
+
+Two overlay lines were captured, and both cross-validate the module reads exactly:
+
+```
+NVIDIA DLSSG v310.7.128 CL 38277099 - endpoint - Release - DD v616.64
+  - SL v2.14.0-rc2 - D3D12 - Output 3440x1440 - MVec 229...
+
+Render Preset F: voracious_chowchow/weights_avg_00067-00070.pth
+DLSS RR2 v310.9.0 DX12 Cubin: sm120 Res: (2293x960 -> 3440x1440), PerfQual: 2
+```
+
+| Overlay says | Module read said | Agrees |
+|---|---|---|
+| `DLSSG v310.7.128` | FG 310.7.128, game folder | yes - FG override was off |
+| `DLSS RR2 v310.9.0` | RR 310.9.0, NGX store | yes |
+| `SL v2.14.0-rc2` | Streamline 2.14.0, NGX store | yes |
+| `DD v616.64` | driver 616.64 | yes |
+
+**The overlay shows the preset letter.** This was the whole justification for keeping layer 4 and
+it is now verified rather than assumed.
+
+**`Render Preset F` corroborates NVIDIA's headers over Profile Inspector's labels.**
+`nvsdk_ngx_defs_dlssd.h` records `RayReconstruction_Hint_Render_Preset_F = 6 // Default model RR2`,
+and the overlay independently reads `DLSS RR2`. The header semantics are real driver behaviour.
+
+**Two traps for anyone reading the overlay**, each capable of producing a wrong conclusion:
+
+1. **Every line names its feature.** `DLSSG`, `DLSS RR2` and plain `DLSS` are different things.
+   Reading `310.7.128` off the DLSSG line while the SR override is on would look like total
+   failure when only the deliberately-disabled feature had reverted.
+2. **Ray Reconstruction does the upscaling when it is active**, so a game running RR may show no
+   separate SR line at all even though the SR runtime is loaded. Absence of an SR line is not
+   absence of SR.
+
 ### Still not established
 
-- Whether the **preset** settings (`0x00634291`, `0x10E41DF3`) do anything. Only the overlay can
-  show that, and the preset letter was not recorded in this run.
+- **Whether the preset settings do anything.** The overlay showed `Render Preset F` for Ray
+  Reconstruction - but no preset setting was ever written in this spike, so F is simply RR's
+  default. `0x00634291` and the forced-preset settings remain **entirely untested**. This is now
+  the largest remaining unknown.
+
+  The test: set `0x00634291` = `1` (Recommended) and `0x10E41DF7` = `5` (Preset E, which NVIDIA's
+  header calls "Latest transformer model" - deliberately a different letter from the F default),
+  restart, and read the overlay. If the line reads `Render Preset E`, the preset half of the
+  recipe works. If it still reads F, `0x00634291` does not do what the plan assumes.
 - Whether the override works **below DLSS 3.1**. 007 First Light ships 310.7.128, so this run says
   nothing about old games. Rainbow Six Extraction remains the test, and its DLSS could not be
   enabled - itself possibly because a 2021 runtime does not recognise an RTX 5080.
@@ -311,6 +353,10 @@ game file modified. What remains untested is the preset half of the recipe, beha
 | **The override settings are per-feature** | **Verified** | Run 5: FG override off left FG on the game's 310.7.128 while SR and RR came from the store |
 | **A feature the game is not using produces no observation at all** | **Verified** | Runs 1-3 loaded no SR module from either source, because SR was off in-game |
 | **RR is substituted without `0x10E41E02`** | **Observed, unexplained** | Run 5 had only the SR override set. May mean one setting covers both. |
+| **The overlay reports the active preset letter** | **Verified** | `Render Preset F` read on-screen, run 5 - the justification for layer 4 |
+| **The overlay and module enumeration agree** | **Verified** | FG, RR, Streamline and driver versions matched across both methods in the same session |
+| **NVIDIA's SDK header preset semantics are real driver behaviour** | **Verified** | Header calls preset F "Default model RR2"; the overlay independently reads `DLSS RR2` |
+| **Preset settings change the active preset** | **Untested** | No preset setting was written during the spike; F was RR's own default |
 
 ## What can and cannot be read back
 
