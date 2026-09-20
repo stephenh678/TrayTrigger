@@ -18,20 +18,16 @@ public class DlssCardViewModelTests
 
     private static DlssProbeService.ProbeResult Result(
         IReadOnlyList<DlssProbeService.ShippedRuntime>? shipped = null,
-        NvApi.DrsProfileInfo? profile = null,
         IReadOnlyList<DlssProbeService.SettingState>? settings = null,
         IReadOnlyList<NgxModelStore.StoredRuntime>? driver = null) => new()
         {
-            ExecutablePath = Exe,
-            ExecutableName = "game.exe",
-            Profile = profile,
             SettingStates = settings ?? Array.Empty<DlssProbeService.SettingState>(),
             ShippedRuntimes = shipped ?? Array.Empty<DlssProbeService.ShippedRuntime>(),
             DriverRuntimes = driver ?? Array.Empty<NgxModelStore.StoredRuntime>()
         };
 
     private static DlssProbeService.ShippedRuntime Ship(string feature, string version) =>
-        new(feature, "nvngx_dlss.dll", @"bin\nvngx_dlss.dll", version, 1024);
+        new(feature, @"bin\nvngx_dlss.dll", version);
 
     private static NgxModelStore.StoredRuntime Store(string feature, string version, uint encoded) =>
         new(feature, version, encoded, "x.bin", 1);
@@ -39,7 +35,7 @@ public class DlssCardViewModelTests
     private static DlssProbeService.SettingState Toggle(string feature, uint value, NvApi.SettingOrigin origin)
     {
         var def = DlssProbeService.Settings.First(s => s.Feature == feature && s.Name.Contains("Enable DLL Override"));
-        return new DlssProbeService.SettingState(def, new NvApi.DrsSettingValue(def.Id, def.Name, value, origin, false, false, 0), null);
+        return new DlssProbeService.SettingState(def, new NvApi.DrsSettingValue(def.Id, def.Name, value, origin, false));
     }
 
     private static DlssCardViewModel Card(
@@ -128,14 +124,6 @@ public class DlssCardViewModelTests
         await card.LoadAsync();
 
         Assert.Equal("310.9.0 (already current)", card.VersionLine);
-    }
-
-    [Fact]
-    public void TheSwitchIsLabelledWithNvidiasOwnTerm_SoItCanBeSearchedFor()
-    {
-        // "DLSS Override" is what NVIDIA App calls this. An earlier label invented its own phrase
-        // and left the user with nothing to look up.
-        Assert.Equal("Enable DLSS Override for this game", new DlssCardViewModel(Exe).OverrideLabel);
     }
 
     // ---- What actually loaded last run ---------------------------------------------------------

@@ -455,8 +455,10 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <CheckBox Grid.Column="0" Content="{Binding Dlss.OverrideLabel}"
-                                          AutomationProperties.Name="{Binding Dlss.OverrideLabel}"
+                                <!-- NVIDIA App's own wording for this toggle: anyone who has seen it
+                                     there recognises it, and anyone else has a term to search. -->
+                                <CheckBox Grid.Column="0" Content="Enable DLSS Override for this game"
+                                          AutomationProperties.Name="Enable DLSS Override for this game"
                                           IsChecked="{Binding Dlss.OverrideEnabled}"
                                           Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
                                 <TextBlock Grid.Column="1" Text="{Binding Dlss.VersionLine}"

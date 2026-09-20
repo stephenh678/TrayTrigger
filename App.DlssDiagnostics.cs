@@ -1,28 +1,31 @@
 #if DEBUG
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Microsoft.Win32;
 using TrayTrigger.Services;
 
 namespace TrayTrigger;
 
 /// <summary>
-/// <c>--test-dlss [executable-path-or-name]</c>: prints everything
-/// <see cref="DlssProbeService"/> can observe, and changes nothing.
+/// <c>--test-dlss [executable-path-or-name]</c>: prints everything that can be observed about DLSS
+/// for one game, and changes nothing. The one thing worth having when someone reports that DLSS
+/// is not doing what they expect.
 ///
-/// <para>There were eight of these flags while the feature was being built - apply, undo,
-/// round-trip, write-check, launch. They existed to answer questions that are now answered, and
-/// each was a second implementation of something the product already does. Only the read-only
-/// report survives, because it is the one worth having when someone reports that DLSS is not
-/// doing what they expect.</para>
+/// <para>It reads well beyond what the card does - the Global profile, the NGX registry, the
+/// modules a running game has loaded - and does that reading here, so none of it is in a release
+/// build.</para>
 ///
 /// <para>The report goes to a file as well as the console: TrayTrigger is a WinExe, so a run
 /// started from anywhere but a console has nowhere to print.</para>
 /// </summary>
 public partial class App
 {
+    private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";
+
     private static void RunDlssDiagnostic(string? target)
     {
         var sb = new StringBuilder();
@@ -78,75 +81,87 @@ public partial class App
         using Process? running = FindRunningProcess(exePath);
         o.AppendLine($"Running       : {(running == null ? "no" : $"yes (pid {running.Id})")}");
 
-        var r = DlssProbeService.Probe(exePath, running);
-
-        o.AppendLine($"GPU           : {r.GpuName ?? "not an NVIDIA machine"}");
-        o.AppendLine($"Driver        : {r.DriverVersion ?? "unknown"}");
+        var gpu = new SystemInfoService().GetGpuInfoList()
+            .FirstOrDefault(g => g.ModelName.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase));
+        o.AppendLine($"GPU           : {gpu?.ModelName ?? "not an NVIDIA machine"}");
+        o.AppendLine($"Driver        : {gpu?.DriverVersion ?? "unknown"}");
         o.AppendLine();
 
-        PrintProfile(o, r);
-        PrintSettings(o, r);
-        PrintGlobalProfile(o, r);
-        PrintShipped(o, r);
+        PrintDriverDatabase(o, exePath);
+        PrintShipped(o, exePath);
         PrintDriverStore(o);
-        PrintLoaded(o, r);
-        PrintRegistry(o, r);
+        PrintLoaded(o, exePath, running);
+        PrintRegistry(o);
 
         o.AppendLine();
         o.AppendLine("=== END (nothing was modified) ===");
     }
 
-    private static void PrintProfile(StringBuilder o, DlssProbeService.ProbeResult r)
+    /// <summary>The game's profile, its DLSS settings, and the Global profile's - one session.</summary>
+    private static void PrintDriverDatabase(StringBuilder o, string exePath)
     {
+        string exeName = Path.GetFileName(exePath);
+
+        using var session = NvApi.Session.TryOpen(out string? openError);
+        if (session == null)
+        {
+            o.AppendLine($"-- Driver settings database: unavailable ({openError}) --");
+            o.AppendLine();
+            return;
+        }
+
         o.AppendLine("-- Driver profile --");
-        if (r.Profile == null)
+        var profile = session.FindProfileForExecutable(exePath, out IntPtr handle, out string? findError)
+            ?? session.FindProfileForExecutable(exeName, out handle, out findError);
+        if (profile == null)
         {
             // Not a failure: NVIDIA has no entry for this executable, and applying would create one.
-            o.AppendLine($"  None for {r.ExecutableName}: {r.DrsError}");
+            o.AppendLine($"  None for {exeName}: {findError}");
         }
         else
         {
-            o.AppendLine($"  Name        : {r.Profile.ProfileName}");
-            o.AppendLine($"  Predefined  : {(r.Profile.IsPredefined ? "yes (shipped by NVIDIA)" : "no (created by a user or tool)")}");
-            o.AppendLine($"  Applications: {r.Profile.ApplicationCount}   Settings: {r.Profile.SettingCount}");
+            o.AppendLine($"  Name        : {profile.ProfileName}");
+            o.AppendLine($"  Predefined  : {(profile.IsPredefined ? "yes (shipped by NVIDIA)" : "no (created by a user or tool)")}");
+            o.AppendLine($"  Applications: {profile.ApplicationCount}   Settings: {profile.SettingCount}");
         }
         o.AppendLine();
-    }
 
-    private static void PrintSettings(StringBuilder o, DlssProbeService.ProbeResult r)
-    {
         o.AppendLine("-- DLSS settings, as the driver reports them for this game --");
-        if (r.SettingStates.Count == 0) o.AppendLine("  (not read - no profile)");
-        foreach (var s in r.SettingStates)
+        if (profile == null)
         {
-            o.AppendLine(s.Value == null
-                ? $"  0x{s.Definition.Id:X8}  {s.Definition.Name,-38} absent"
-                : $"  0x{s.Definition.Id:X8}  {s.Definition.Name,-38} 0x{s.Value.CurrentValue:X8}  [{s.Value.OriginLabel}]");
-        }
-        o.AppendLine();
-    }
-
-    private static void PrintGlobalProfile(StringBuilder o, DlssProbeService.ProbeResult r)
-    {
-        o.AppendLine("-- Global profile: DLSS settings applying to every game --");
-        if (r.GlobalProfileDlssSettings.Count == 0)
-        {
-            o.AppendLine("  (none)");
+            o.AppendLine("  (not read - no profile)");
         }
         else
         {
-            // Easy to forget about, and they make a per-game override look like a no-op.
-            foreach (var s in r.GlobalProfileDlssSettings)
-                o.AppendLine($"  0x{s.SettingId:X8}  {s.Name,-38} 0x{s.CurrentValue:X8}  [{s.OriginLabel}]");
+            foreach (var def in DlssProbeService.Settings)
+            {
+                var value = session.GetSetting(handle, def.Id, out _);
+                o.AppendLine(value == null
+                    ? $"  0x{def.Id:X8}  {def.Name,-38} absent"
+                    : $"  0x{def.Id:X8}  {def.Name,-38} 0x{value.CurrentValue:X8}  [{NvApi.OriginLabel(value)}]");
+            }
         }
+        o.AppendLine();
+
+        // Easy to forget about, and they make a per-game override look like a no-op: a value here
+        // applies to every game that has no override of its own.
+        o.AppendLine("-- Global profile: DLSS settings applying to every game --");
+        var known = DlssProbeService.Settings.Select(d => d.Id).ToHashSet();
+        var global = session.GetGlobalProfile(out IntPtr globalHandle, out _) == null
+            ? new List<NvApi.DrsSettingValue>()
+            : session.EnumSettings(globalHandle, out _).Where(v => known.Contains(v.SettingId)).ToList();
+        if (global.Count == 0) o.AppendLine("  (none)");
+        foreach (var v in global)
+            o.AppendLine($"  0x{v.SettingId:X8}  {v.Name,-38} 0x{v.CurrentValue:X8}  [{NvApi.OriginLabel(v)}]");
         o.AppendLine();
     }
 
-    private static void PrintShipped(StringBuilder o, DlssProbeService.ProbeResult r)
+    private static void PrintShipped(StringBuilder o, string exePath)
     {
         o.AppendLine("-- DLSS runtimes the game ships --");
-        if (r.ShippedRuntimes.Count == 0) o.AppendLine("  (none found)");
-        foreach (var s in r.ShippedRuntimes)
+        var shipped = DlssProbeService.FindShippedRuntimes(Path.GetDirectoryName(exePath) ?? string.Empty);
+        if (shipped.Count == 0) o.AppendLine("  (none found)");
+        foreach (var s in shipped)
             o.AppendLine($"  {s.Feature,-18} {s.FileVersion ?? "?",-12} {s.RelativePath}");
         o.AppendLine();
     }
@@ -154,26 +169,25 @@ public partial class App
     private static void PrintDriverStore(StringBuilder o)
     {
         o.AppendLine("-- Runtimes the driver already holds --");
-        var newest = NgxModelStore.NewestPerFeature();
-        if (newest.Count == 0)
-        {
-            o.AppendLine($"  (no model store at {NgxModelStore.DefaultRoot})");
-        }
-        else
-        {
-            foreach (var kv in newest.OrderBy(k => k.Key, StringComparer.Ordinal))
-                o.AppendLine($"  {kv.Key,-18} newest {kv.Value.Version,-10} {kv.Value.SizeBytes / 1024 / 1024} MB");
-        }
+        var newest = NgxModelStore.Enumerate()
+            .GroupBy(r => r.Feature, StringComparer.Ordinal)
+            .Select(g => g.OrderByDescending(r => r.EncodedVersion).First())
+            .OrderBy(r => r.Feature, StringComparer.Ordinal)
+            .ToList();
+        if (newest.Count == 0) o.AppendLine($"  (no model store at {NgxModelStore.DefaultRoot})");
+        foreach (var r in newest)
+            o.AppendLine($"  {r.Feature,-18} newest {r.Version,-10} {r.SizeBytes / 1024 / 1024} MB");
         o.AppendLine();
     }
 
-    private static void PrintLoaded(StringBuilder o, DlssProbeService.ProbeResult r)
+    private static void PrintLoaded(StringBuilder o, string exePath, Process? running)
     {
         o.AppendLine("-- DLSS modules loaded right now --");
-        if (r.LoadedRuntimes.Count == 0) o.AppendLine($"  {r.ModuleScanNote}");
+        var loaded = DlssProbeService.ScanLoadedModules(running, out string? note);
+        if (loaded.Count == 0) o.AppendLine($"  {note}");
 
-        string gameDir = Path.GetDirectoryName(r.ExecutablePath) ?? string.Empty;
-        foreach (var m in r.LoadedRuntimes)
+        string gameDir = Path.GetDirectoryName(exePath) ?? string.Empty;
+        foreach (var m in loaded)
         {
             o.AppendLine($"  [{SourceLabel(m, gameDir)}] {m.ModuleName}");
             o.AppendLine($"      {m.Path}");
@@ -181,17 +195,24 @@ public partial class App
         o.AppendLine();
     }
 
-    private static void PrintRegistry(StringBuilder o, DlssProbeService.ProbeResult r)
+    private static void PrintRegistry(StringBuilder o)
     {
-        o.AppendLine(@"-- NGX diagnostics registry (HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore) --");
-        foreach (var kv in r.NgxRegistry)
-            o.AppendLine($"  {kv.Key,-24} {kv.Value?.ToString() ?? "absent"}");
+        o.AppendLine($@"-- NGX diagnostics registry (HKLM\{NgxCoreKey}) --");
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
+            foreach (string name in new[] { "ShowDlssIndicator", "LogLevel", "EnableLogPathOverride", "LogPath" })
+                o.AppendLine($"  {name,-24} {key?.GetValue(name)?.ToString() ?? "absent"}");
+        }
+        catch (Exception ex)
+        {
+            o.AppendLine($"  (could not be read: {ex.Message})");
+        }
     }
 
     /// <summary>
     /// Where a loaded module came from, in three kinds rather than two. "Not the NGX store" does
-    /// not mean "the game folder": NVIDIA's own loader lives under Windows' DriverStore, which an
-    /// earlier version of this report labelled as the game's.
+    /// not mean "the game folder": NVIDIA's own loader lives under Windows' DriverStore.
     /// </summary>
     private static string SourceLabel(DlssProbeService.LoadedRuntime module, string gameDirectory) =>
         module.FromDriverStore ? "DRIVER STORE"

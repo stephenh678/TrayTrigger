@@ -9,16 +9,12 @@ namespace TrayTrigger.Services;
 /// <see cref="NvApi"/>, and tests substitute a fake so the ownership rules - capture, write,
 /// and refuse to undo a value something else changed - can be exercised without an NVIDIA machine.
 ///
-/// <para>The plan said to put this behind <c>ISystemTweakBackend</c>. It is a separate interface
-/// instead: that one is the performance-profile surface (power plans, Defender, HDR, timer
-/// resolution) and DRS sessions have a lifetime of their own, which that interface has no shape
-/// for. Same pattern, different seam.</para>
+/// <para>A separate interface rather than more of <c>ISystemTweakBackend</c>: that one is the
+/// performance-profile surface (power plans, Defender, HDR, timer resolution), and DRS sessions
+/// have a lifetime of their own, which it has no shape for.</para>
 /// </summary>
 public interface IDrsBackend
 {
-    /// <summary>False on machines with no NVIDIA driver. The card and its actions stay hidden.</summary>
-    bool IsAvailable { get; }
-
     /// <summary>Opens a settings session, or returns null with the reason.</summary>
     IDrsSession? OpenSession(out string? error);
 
@@ -86,8 +82,6 @@ public sealed record DrsSettingReading(uint Value, DlssSettingOrigin Origin);
 /// <summary>Production <see cref="IDrsBackend"/> - thin pass-throughs to <see cref="NvApi"/>, no logic.</summary>
 public sealed class NvApiDrsBackend : IDrsBackend
 {
-    public bool IsAvailable => NvApi.TryInitialize();
-
     public string? GetSettingName(uint settingId) => NvApi.GetSettingName(settingId);
 
     public IDrsSession? OpenSession(out string? error)

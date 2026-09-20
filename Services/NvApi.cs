@@ -19,7 +19,7 @@ namespace TrayTrigger.Services;
 /// <c>nvapi_QueryInterface</c>, keyed by a published 32-bit function id. An id this driver does not
 /// expose returns null rather than crashing, which is why every call site checks.</para>
 /// </summary>
-public static unsafe class NvApi
+public static unsafe partial class NvApi
 {
     // Published NVAPI function ids. NVIDIA treats these as ABI and they have been stable for years,
     // but a null lookup is still handled - an id NVIDIA retired would present exactly that way.
@@ -28,12 +28,9 @@ public static unsafe class NvApi
     private const uint IdDrsCreateSession           = 0x0694D52E;
     private const uint IdDrsDestroySession          = 0xDAD9CFF8;
     private const uint IdDrsLoadSettings            = 0x375DBD6B;
-    private const uint IdDrsGetBaseProfile          = 0xDA8466A0;
-    private const uint IdDrsGetCurrentGlobalProfile = 0x617BFF9F;
     private const uint IdDrsFindApplicationByName   = 0xEEE566B2;
     private const uint IdDrsGetProfileInfo          = 0x61CD6FD6;
     private const uint IdDrsGetSetting              = 0x73BF8338;
-    private const uint IdDrsEnumSettings            = 0xAE3039DA;
     private const uint IdDrsSetSetting              = 0x577DD202;
     private const uint IdDrsDeleteProfileSetting    = 0xE4A26362;
     private const uint IdDrsSaveSettings            = 0xFCBC7E14;
@@ -227,38 +224,16 @@ public static unsafe class NvApi
         string Name,
         uint CurrentValue,
         SettingOrigin Origin,
-        bool IsCurrentPredefined,
-        bool HasPredefined,
-        uint PredefinedValue)
-    {
-        /// <summary>
-        /// The plan's origin label. "Predefined" means the value is NVIDIA's own for this game
-        /// rather than something a user or another tool wrote - the distinction that decides
-        /// whether TrayTrigger may later undo it.
-        /// </summary>
-        public string OriginLabel => Origin switch
-        {
-            SettingOrigin.ApplicationProfile => IsCurrentPredefined ? "Predefined" : "UserSet",
-            SettingOrigin.GlobalProfile => "Inherited (Global profile)",
-            SettingOrigin.BaseProfile => "Inherited (base profile)",
-            _ => "DriverDefault"
-        };
-    }
+        bool IsCurrentPredefined);
 
-    /// <summary>A DRS profile and, when the lookup was by executable, the application entry inside it.</summary>
-    public sealed record DrsProfileInfo(
-        string ProfileName,
-        bool IsPredefined,
-        uint ApplicationCount,
-        uint SettingCount,
-        string? MatchedApplicationName,
-        string? MatchedFriendlyName);
+    /// <summary>A DRS profile as the driver describes it.</summary>
+    public sealed record DrsProfileInfo(string ProfileName, bool IsPredefined, uint ApplicationCount, uint SettingCount);
 
     /// <summary>
     /// An open DRS session. Loading pulls the whole settings database into memory; nothing reaches
     /// disk until <see cref="Save"/>.
     /// </summary>
-    public sealed class Session : IDisposable
+    public sealed partial class Session : IDisposable
     {
         private IntPtr _handle;
         private bool _disposed;
@@ -320,36 +295,10 @@ public static unsafe class NvApi
             if (status != 0) { error = Describe(status); return null; }
 
             profile = h;
-            return DescribeProfile(h, ReadFixed(app.AppName), ReadFixed(app.UserFriendlyName), out error);
+            return DescribeProfile(h, out error);
         }
 
-        /// <summary>The user's Global profile - the layer tools such as RHI write, above the base profile.</summary>
-        public DrsProfileInfo? GetGlobalProfile(out IntPtr profile, out string? error)
-        {
-            profile = IntPtr.Zero;
-            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr*, int>)Lookup(IdDrsGetCurrentGlobalProfile);
-            if (fn == null) { error = "NvAPI_DRS_GetCurrentGlobalProfile not exposed."; return null; }
-            IntPtr h;
-            int status = fn(_handle, &h);
-            if (status != 0) { error = Describe(status); return null; }
-            profile = h;
-            return DescribeProfile(h, null, null, out error);
-        }
-
-        /// <summary>The driver's base profile - the bottom layer, below Global.</summary>
-        public DrsProfileInfo? GetBaseProfile(out IntPtr profile, out string? error)
-        {
-            profile = IntPtr.Zero;
-            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr*, int>)Lookup(IdDrsGetBaseProfile);
-            if (fn == null) { error = "NvAPI_DRS_GetBaseProfile not exposed."; return null; }
-            IntPtr h;
-            int status = fn(_handle, &h);
-            if (status != 0) { error = Describe(status); return null; }
-            profile = h;
-            return DescribeProfile(h, null, null, out error);
-        }
-
-        private DrsProfileInfo? DescribeProfile(IntPtr profile, string? appName, string? friendly, out string? error)
+        private DrsProfileInfo? DescribeProfile(IntPtr profile, out string? error)
         {
             error = null;
             var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, NvDrsProfile*, int>)Lookup(IdDrsGetProfileInfo);
@@ -359,13 +308,7 @@ public static unsafe class NvApi
             int status = fn(_handle, profile, &info);
             if (status != 0) { error = Describe(status); return null; }
 
-            return new DrsProfileInfo(
-                ReadFixed(info.ProfileName),
-                info.IsPredefined != 0,
-                info.NumOfApps,
-                info.NumOfSettings,
-                string.IsNullOrEmpty(appName) ? null : appName,
-                string.IsNullOrEmpty(friendly) ? null : friendly);
+            return new DrsProfileInfo(ReadFixed(info.ProfileName), info.IsPredefined != 0, info.NumOfApps, info.NumOfSettings);
         }
 
         /// <summary>
@@ -393,49 +336,15 @@ public static unsafe class NvApi
                 return null;
             }
 
-            return new DrsSettingValue(
-                s.SettingId,
-                ReadFixed(s.SettingName),
-                *(uint*)s.CurrentValue,
-                (SettingOrigin)Math.Min(s.SettingLocation, 3u),
-                s.IsCurrentPredefined != 0,
-                s.IsPredefinedValid != 0,
-                *(uint*)s.PredefinedValue);
+            return ToValue(&s);
         }
 
-        /// <summary>
-        /// Every DWORD setting explicitly stored on a profile. This is how the Global profile's
-        /// contents become visible - the confound that made the 2026-09-19 spike ambiguous, because
-        /// four DLSS settings were already there and nothing in the UI showed them.
-        /// </summary>
-        public List<DrsSettingValue> EnumSettings(IntPtr profile, out string? error)
-        {
-            error = null;
-            var result = new List<DrsSettingValue>();
-            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr, uint, uint*, NvDrsSetting*, int>)Lookup(IdDrsEnumSettings);
-            if (fn == null) { error = "NvAPI_DRS_EnumSettings not exposed."; return result; }
-
-            // The driver ends enumeration with a non-zero status; the bound is only a guard against
-            // a driver that never does.
-            for (uint index = 0; index < 4096; index++)
-            {
-                var s = new NvDrsSetting { Version = VersionOf<NvDrsSetting>(1) };
-                uint count = 1;
-                int status = fn(_handle, profile, index, &count, &s);
-                if (status != 0 || count == 0) break;
-                if (s.SettingType != 0) continue;
-
-                result.Add(new DrsSettingValue(
-                    s.SettingId,
-                    ReadFixed(s.SettingName),
-                    *(uint*)s.CurrentValue,
-                    (SettingOrigin)Math.Min(s.SettingLocation, 3u),
-                    s.IsCurrentPredefined != 0,
-                    s.IsPredefinedValid != 0,
-                    *(uint*)s.PredefinedValue));
-            }
-            return result;
-        }
+        private static DrsSettingValue ToValue(NvDrsSetting* s) => new(
+            s->SettingId,
+            ReadFixed(s->SettingName),
+            *(uint*)s->CurrentValue,
+            (SettingOrigin)Math.Min(s->SettingLocation, 3u),
+            s->IsCurrentPredefined != 0);
 
         // ---- Writes ------------------------------------------------------------------------
         // Nothing below reaches disk until Save(). Callers must have captured the previous value
@@ -500,7 +409,7 @@ public static unsafe class NvApi
         /// <summary>How many applications and settings a profile holds, as this session sees it.</summary>
         public (uint Applications, uint Settings)? GetProfileCounts(IntPtr profile)
         {
-            var info = DescribeProfile(profile, null, null, out _);
+            var info = DescribeProfile(profile, out _);
             return info == null ? null : (info.ApplicationCount, info.SettingCount);
         }
 

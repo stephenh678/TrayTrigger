@@ -20,8 +20,6 @@ public sealed class FakeDrsBackend : IDrsBackend
     /// <summary>Values every profile inherits when it has nothing of its own.</summary>
     public Dictionary<uint, uint> GlobalProfile { get; } = new();
 
-    public bool IsAvailable { get; set; } = true;
-
     /// <summary>When set, opening a session fails with this message.</summary>
     public string? OpenError { get; set; }
 

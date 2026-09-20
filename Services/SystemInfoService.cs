@@ -286,8 +286,7 @@ public partial class SystemInfoService
 
     /// <summary>
     /// GPU model, driver version and VRAM straight from the display-class registry keys - no WMI,
-    /// so it is cheap enough to call on its own. <see cref="DlssProbeService"/> needs the NVIDIA
-    /// driver version without paying for a full hardware report.
+    /// so it is cheap enough to call on its own, as the DLSS diagnostic report does.
     /// </summary>
     public List<GpuHardwareInfo> GetGpuInfoList()
     {

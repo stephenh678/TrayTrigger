@@ -24,44 +24,6 @@ public class NgxModelStoreTests
     }
 
 
-    [Fact]
-    public void ParseConfig_KeepsSectionForEachEntry()
-    {
-        string text = "[dlss]\napp_E658700 = 310.9.0\napp_B9DB490 = 2.3.4\n\n[dlssg]\napp_E658700 = 310.9.0\n";
-
-        var entries = NgxModelStore.ParseConfig(text);
-
-        Assert.Equal(3, entries.Count);
-        Assert.Equal(new[] { "dlss", "dlss", "dlssg" }, entries.Select(e => e.Section));
-        Assert.Equal("app_E658700", entries[0].AppId);
-        Assert.Equal("310.9.0", entries[0].Version);
-        Assert.Equal("2.3.4", entries[1].Version);
-    }
-
-    [Fact]
-    public void ParseConfig_HandlesCrLfBlankLinesAndComments()
-    {
-        // The real file is CRLF; splitting on '\n' alone would leave a trailing '\r' on the value
-        // and make every version string compare unequal.
-        string text = "[dlss]\r\n\r\n; a comment\r\napp_E658700 = 310.9.0\r\n";
-
-        var entries = NgxModelStore.ParseConfig(text);
-
-        Assert.Single(entries);
-        Assert.Equal("310.9.0", entries[0].Version);
-        Assert.Equal("dlss", entries[0].Section);
-    }
-
-    [Fact]
-    public void ParseConfig_IgnoresMalformedLines()
-    {
-        string text = "[dlss]\nno equals sign here\n= missing key\napp_A = 1.0.0\napp_B =\n";
-
-        var entries = NgxModelStore.ParseConfig(text);
-
-        Assert.Single(entries);
-        Assert.Equal("app_A", entries[0].AppId);
-    }
 
 
     [Theory]

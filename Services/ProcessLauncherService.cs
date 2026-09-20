@@ -506,8 +506,8 @@ public partial class ProcessLauncherService
         return session;
     }
 
-    // Holds each session's DLSS poller until it stops: a Timer nobody references can be collected
-    // mid-loop, the same reason the Battle.net dispatchers are held.
+    // Each session's DLSS poller, so a stub handoff can stop the one watching the process that
+    // has gone before starting the next.
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Poller> _dlssObservers = new();
 
     private static readonly TimeSpan DlssObserveInterval = TimeSpan.FromSeconds(30);
@@ -538,7 +538,6 @@ public partial class ProcessLauncherService
         var game = session.Game;
         if (game.DlssSettings.Count == 0) return;
 
-        string? driver = DlssProbeService.ReadGpu().Driver;
         // Once, not per tick: what the game ships cannot change while it is running, and the scan
         // walks the whole install folder.
         var shipped = DlssProbeService.FindShippedRuntimes(System.IO.Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
@@ -553,7 +552,7 @@ public partial class ProcessLauncherService
             bool exited;
             try { exited = process.HasExited; } catch { exited = true; }
 
-            var observations = DlssVerificationService.Observe(exited ? null : process, driver, shipped);
+            var observations = DlssVerificationService.Observe(exited ? null : process, shipped);
             bool sawRuntime = observations.Any(o => o.State == DlssObservationState.RuntimeObserved);
 
             // Keep waiting only while there is still a chance of seeing something.

@@ -4,17 +4,12 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Microsoft.Win32;
 
 namespace TrayTrigger.Services;
 
 /// <summary>
-/// Gathers everything TrayTrigger can observe about DLSS on this machine, for one game, without
-/// changing anything. See docs/dlss-plan.md.
-///
-/// <para>Strictly read-only: no DRS write, no registry write, no game file touched. It exists to
-/// answer "what do we actually know before we act", which the plan makes a precondition for the
-/// apply path rather than a nicety.</para>
+/// Reads what the DLSS card needs to know about one game, without changing anything: no DRS write,
+/// no registry write, no game file touched. See docs/dlss-plan.md.
 /// </summary>
 public static class DlssProbeService
 {
@@ -22,159 +17,84 @@ public static class DlssProbeService
     /// The DLSS settings in NVIDIA's driver database. Ids are NVIDIA's; the names are Profile
     /// Inspector's, kept because they are what a user searching the web will find.
     ///
-    /// <para>There were seven. <c>0x00634291</c>, "DLSS - Forced Model Preset Profile", which the
-    /// plan called the gate that everyone misses, is <b>not a DRS setting at all</b>:
-    /// <c>NvAPI_DRS_GetSettingNameFromId</c> does not recognise it and <c>SetSetting</c> refuses it
-    /// with NVAPI_SETTING_NOT_FOUND. Verified on driver 616.64, 2026-09-19. The preset letters work
+    /// <para><c>0x00634291</c>, "DLSS - Forced Model Preset Profile", is often listed alongside
+    /// these and is <b>not a DRS setting</b>: <c>NvAPI_DRS_GetSettingNameFromId</c> does not
+    /// recognise it and <c>SetSetting</c> refuses it (driver 616.64). The preset letters work
     /// without it.</para>
     /// </summary>
     public static readonly DlssSettingDefinition[] Settings =
     {
-        new(0x10E41E01, "DLSS - Enable DLL Override",         "Super Resolution",   "SR", 1,          "Substitutes the driver's runtime for the game's"),
-        new(0x10E41DF3, "DLSS - Forced Preset Letter",        "Super Resolution",   "SR", 0x00FFFFFF, "0x00FFFFFF = use NVIDIA's recommended preset"),
-        new(0x10E41E02, "DLSS-RR - Enable DLL Override",      "Ray Reconstruction", "RR", 1,          "Substitutes the driver's runtime for the game's"),
-        new(0x10E41DF7, "DLSS-RR - Forced Preset Letter",     "Ray Reconstruction", "RR", 0x00FFFFFF, "0x00FFFFFF = use NVIDIA's recommended preset"),
-        new(0x10E41E03, "DLSS-FG - Enable DLL Override",      "Frame Generation",   "FG", 1,          "Substitutes the driver's runtime for the game's"),
-        new(0x10E41DF1, "DLSS-FG - Forced Preset Letter",     "Frame Generation",   "FG", 0x00FFFFFE, "Sentinel is 0x00FFFFFE here, not 0x00FFFFFF")
+        // 1 substitutes the driver's runtime for the game's; 0x00FFFFFF is "NVIDIA's recommended
+        // preset" - except for Frame Generation, whose sentinel is 0x00FFFFFE.
+        new(0x10E41E01, "DLSS - Enable DLL Override",     "Super Resolution",   "SR", 1),
+        new(0x10E41DF3, "DLSS - Forced Preset Letter",    "Super Resolution",   "SR", 0x00FFFFFF),
+        new(0x10E41E02, "DLSS-RR - Enable DLL Override",  "Ray Reconstruction", "RR", 1),
+        new(0x10E41DF7, "DLSS-RR - Forced Preset Letter", "Ray Reconstruction", "RR", 0x00FFFFFF),
+        new(0x10E41E03, "DLSS-FG - Enable DLL Override",  "Frame Generation",   "FG", 1),
+        new(0x10E41DF1, "DLSS-FG - Forced Preset Letter", "Frame Generation",   "FG", 0x00FFFFFE)
     };
 
     /// <summary>
-    /// One DLSS driver setting: what it is, the short feature code the ownership record stores,
-    /// the value "Use recommended" writes, and why the plan writes it.
+    /// One DLSS driver setting: what it is, the short feature code the ownership record stores, and
+    /// the value the override writes.
     /// </summary>
-    public sealed record DlssSettingDefinition(uint Id, string Name, string Feature, string FeatureCode, uint RecommendedValue, string Purpose);
-
-    /// <summary>NVIDIA's NGX diagnostics key. Only read here; the overlay toggle would write it later.</summary>
-    private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";
-
-    // ---- Result shapes ---------------------------------------------------------------------
+    public sealed record DlssSettingDefinition(uint Id, string Name, string Feature, string FeatureCode, uint RecommendedValue);
 
     /// <summary>A DLSS runtime the game itself ships, found in its install folder.</summary>
-    public sealed record ShippedRuntime(string Feature, string FileName, string RelativePath, string? FileVersion, long SizeBytes);
+    public sealed record ShippedRuntime(string Feature, string RelativePath, string? FileVersion);
 
     /// <summary>A DLSS-related module observed loaded in a running game.</summary>
-    public sealed record LoadedRuntime(string ModuleName, string Path, string? FileVersion, string? ProductName, bool FromDriverStore);
+    public sealed record LoadedRuntime(string ModuleName, string Path, string? FileVersion, bool FromDriverStore);
 
-    /// <summary>The state of one DLSS setting as the driver reports it for a game.</summary>
-    public sealed record SettingState(DlssSettingDefinition Definition, NvApi.DrsSettingValue? Value, string? Note)
-    {
-        /// <summary>True when the driver has no value for this setting at any layer.</summary>
-        public bool IsAbsent => Value == null;
-    }
+    /// <summary>One DLSS setting as the driver reports it for a game. A null value is absent.</summary>
+    public sealed record SettingState(DlssSettingDefinition Definition, NvApi.DrsSettingValue? Value);
 
-    /// <summary>Everything the probe could observe for one game.</summary>
+    /// <summary>What the card is built from.</summary>
     public sealed record ProbeResult
     {
-        public required string ExecutablePath { get; init; }
-        public required string ExecutableName { get; init; }
-        public string? GpuName { get; init; }
-        public string? DriverVersion { get; init; }
-
-        /// <summary>Null when NVAPI could not be reached; the reason is in <see cref="DrsError"/>.</summary>
-        public NvApi.DrsProfileInfo? Profile { get; init; }
-        public string? DrsError { get; init; }
-
         /// <summary>
         /// False when the driver's settings database could not be opened at all - no NVIDIA driver,
-        /// which is every AMD and Intel machine. Distinct from <see cref="Profile"/> being null,
-        /// which only says NVIDIA has no entry for this game.
+        /// which is every AMD and Intel machine.
         /// </summary>
         public bool DriverAvailable { get; init; } = true;
 
+        /// <summary>Empty when NVIDIA has no profile for the game.</summary>
         public IReadOnlyList<SettingState> SettingStates { get; init; } = Array.Empty<SettingState>();
-        public IReadOnlyList<NvApi.DrsSettingValue> GlobalProfileDlssSettings { get; init; } = Array.Empty<NvApi.DrsSettingValue>();
-
         public IReadOnlyList<ShippedRuntime> ShippedRuntimes { get; init; } = Array.Empty<ShippedRuntime>();
         public IReadOnlyList<NgxModelStore.StoredRuntime> DriverRuntimes { get; init; } = Array.Empty<NgxModelStore.StoredRuntime>();
-
-        public IReadOnlyList<LoadedRuntime> LoadedRuntimes { get; init; } = Array.Empty<LoadedRuntime>();
-        /// <summary>Why module enumeration produced nothing - anti-cheat, not running, or no DLSS in use.</summary>
-        public string? ModuleScanNote { get; init; }
-
-        public IReadOnlyDictionary<string, object?> NgxRegistry { get; init; } = new Dictionary<string, object?>();
     }
 
-    // ---- The probe -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Collects the full picture for one game executable. Never throws: every layer degrades to a
-    /// note, because a probe that fails loudly on one machine is useless as a diagnostic.
-    /// </summary>
-    public static ProbeResult Probe(string executablePath, Process? runningProcess = null)
+    /// <summary>Never throws: a layer that cannot be read comes back empty.</summary>
+    public static ProbeResult Probe(string executablePath)
     {
-        string exeName = Path.GetFileName(executablePath);
         string? gameDir = SafeDirectoryName(executablePath);
-
-        var (gpu, driver) = ReadGpu();
-        var (profile, settingStates, globalDlss, drsError, driverAvailable) = ReadDrs(exeName);
+        var (settingStates, driverAvailable) = ReadSettings(executablePath);
 
         return new ProbeResult
         {
-            ExecutablePath = executablePath,
-            ExecutableName = exeName,
-            GpuName = gpu,
-            DriverVersion = driver,
-            Profile = profile,
-            DrsError = drsError,
             DriverAvailable = driverAvailable,
             SettingStates = settingStates,
-            GlobalProfileDlssSettings = globalDlss,
             ShippedRuntimes = gameDir == null ? Array.Empty<ShippedRuntime>() : FindShippedRuntimes(gameDir),
-            DriverRuntimes = NgxModelStore.Enumerate(),
-            LoadedRuntimes = ScanLoadedModules(runningProcess, out string? note),
-            ModuleScanNote = note,
-            NgxRegistry = ReadNgxRegistry()
+            DriverRuntimes = NgxModelStore.Enumerate()
         };
     }
 
-    /// <summary>The NVIDIA GPU's name and driver version, or nulls when there is none.</summary>
-    internal static (string? Gpu, string? Driver) ReadGpu()
-    {
-        try
-        {
-            var gpu = new SystemInfoService().GetGpuInfoList().FirstOrDefault(g =>
-                g.ModelName.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase));
-            return (gpu?.ModelName, gpu?.DriverVersion);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("Dlss", $"GPU query failed: {ex.Message}");
-            return (null, null);
-        }
-    }
-
-    private static (NvApi.DrsProfileInfo?, List<SettingState>, List<NvApi.DrsSettingValue>, string?, bool)
-        ReadDrs(string exeName)
+    private static (List<SettingState> States, bool DriverAvailable) ReadSettings(string executablePath)
     {
         var states = new List<SettingState>();
-        var globalDlss = new List<NvApi.DrsSettingValue>();
 
-        using var session = NvApi.Session.TryOpen(out string? error);
-        if (session == null) return (null, states, globalDlss, error, false);
+        using var session = NvApi.Session.TryOpen(out _);
+        if (session == null) return (states, false);
 
-        var profile = session.FindProfileForExecutable(exeName, out IntPtr handle, out string? findError);
+        // By full path, as the override itself looks it up; by name for a game that has moved.
+        var profile = session.FindProfileForExecutable(executablePath, out IntPtr handle, out _)
+            ?? session.FindProfileForExecutable(Path.GetFileName(executablePath), out handle, out _);
+        if (profile == null) return (states, true);
 
-        if (profile != null)
-        {
-            foreach (var def in Settings)
-            {
-                var value = session.GetSetting(handle, def.Id, out string? note);
-                states.Add(new SettingState(def, value, value == null ? note : null));
-            }
-        }
+        foreach (var def in Settings)
+            states.Add(new SettingState(def, session.GetSetting(handle, def.Id, out _)));
 
-        // The Global profile is read regardless: a value there applies to every game that has no
-        // per-game override, and on the development machine four DLSS settings were already
-        // present from another tool. Anything reporting only the per-game layer would miss it.
-        var known = Settings.Select(s => s.Id).ToHashSet();
-        if (session.GetGlobalProfile(out IntPtr globalHandle, out _) != null)
-        {
-            globalDlss = session.EnumSettings(globalHandle, out _)
-                .Where(s => known.Contains(s.SettingId))
-                .ToList();
-        }
-
-        return (profile, states, globalDlss, findError, true);
+        return (states, true);
     }
 
     /// <summary>
@@ -201,18 +121,11 @@ public static class DlssProbeService
             var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
             foreach (string file in Directory.EnumerateFiles(gameDirectory, "nvngx_dlss*.dll", options))
             {
-                string name = Path.GetFileName(file);
-                string feature = FeatureForShippedFile(name);
                 string? version = null;
-                long size = 0;
-                try
-                {
-                    version = NormalizeFileVersion(FileVersionInfo.GetVersionInfo(file));
-                    size = new FileInfo(file).Length;
-                }
+                try { version = NormalizeFileVersion(FileVersionInfo.GetVersionInfo(file)); }
                 catch { /* an unreadable DLL is still worth listing */ }
 
-                result.Add(new ShippedRuntime(feature, name, Path.GetRelativePath(gameDirectory, file), version, size));
+                result.Add(new ShippedRuntime(FeatureForShippedFile(Path.GetFileName(file)), Path.GetRelativePath(gameDirectory, file), version));
             }
         }
         catch (Exception ex)
@@ -323,10 +236,9 @@ public static class DlssProbeService
     ///
     /// <para><b>Never match on file name.</b> When the driver substitutes a runtime, what appears
     /// in the process is a hashed .bin from the driver's store - <c>160_E658700.bin</c> on the
-    /// development machine - not <c>nvngx_dlss.dll</c>. An earlier version of this check filtered
-    /// on the DLL names and reported "not substituted" on a machine where substitution was plainly
-    /// working. Match on path and ProductName; the name filters are only a last resort for the
-    /// game's own copy.</para>
+    /// development machine - not <c>nvngx_dlss.dll</c>. Filtering on the DLL names reports "not
+    /// substituted" on a machine where substitution is plainly working. Match on path and
+    /// ProductName; the name filters are only a last resort for the game's own copy.</para>
     /// </summary>
     public static List<LoadedRuntime> ScanLoadedModules(Process? process, out string? note)
     {
@@ -374,36 +286,13 @@ public static class DlssProbeService
             // Normalized, as the shipped DLLs are: NVIDIA's own string reads "310,1,0,0".
             try { version = NormalizeFileVersion(module.FileVersionInfo); } catch { /* optional */ }
 
-            result.Add(new LoadedRuntime(name, path, version, product, fromStore));
+            result.Add(new LoadedRuntime(name, path, version, fromStore));
         }
 
         if (result.Count == 0)
             note = "No DLSS modules loaded. The game may not be using DLSS in its current settings.";
 
         return result;
-    }
-
-    /// <summary>NVIDIA's NGX diagnostics values, read only. Absent values are reported as null.</summary>
-    public static Dictionary<string, object?> ReadNgxRegistry()
-    {
-        var values = new Dictionary<string, object?>(StringComparer.Ordinal)
-        {
-            ["ShowDlssIndicator"] = null,
-            ["LogLevel"] = null,
-            ["EnableLogPathOverride"] = null,
-            ["LogPath"] = null
-        };
-        try
-        {
-            using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
-            if (key == null) return values;
-            foreach (string name in values.Keys.ToList()) values[name] = key.GetValue(name);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Warn("Dlss", $"Reading NGXCore failed: {ex.Message}");
-        }
-        return values;
     }
 
     private static string? SafeDirectoryName(string path)

@@ -21,8 +21,6 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
     public DlssOverrideService() : this(new NvApiDrsBackend()) { }
 
-    public bool IsAvailable => _backend.IsAvailable;
-
     /// <summary>
     /// Writes the "use recommended" recipe for a game, capturing what each setting was first.
     ///
@@ -124,7 +122,6 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
         var details = new List<DlssSettingOutcomeDetail>();
         var records = new List<DlssSettingRecord>();
-        DateTime now = DateTime.UtcNow;
 
         foreach (var def in DlssProbeService.Settings)
         {
@@ -168,8 +165,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
                 ProfileName = profile.Name,
                 ApplicationName = exeName,
                 ExecutablePath = exePath,
-                ProfileCreated = created,
-                WrittenUtc = now
+                ProfileCreated = created
             });
             details.Add(new DlssSettingOutcomeDetail(def.FeatureCode, def.Id, DlssSettingOutcome.Applied, null));
         }

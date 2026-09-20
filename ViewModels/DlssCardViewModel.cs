@@ -109,13 +109,6 @@ public sealed class DlssCardViewModel : ViewModelBase
             : $"{_content.GameVersion} (already current)";
 
     /// <summary>
-    /// NVIDIA App's own wording for this toggle. Anyone who has seen it there recognises it, and
-    /// anyone who has not has an exact term to search. The version pair is beside it rather than
-    /// in it, because the label names the feature and the pair states the effect.
-    /// </summary>
-    public string OverrideLabel => "Enable DLSS Override for this game";
-
-    /// <summary>
     /// The switch. On means TrayTrigger has written the override for this game and is still the
     /// one managing it; off means it has not, has put it back, or has stood down because something
     /// else changed the settings. Setting it does the work - there is no separate apply.
@@ -376,7 +369,6 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsVisible));
         OnPropertyChanged(nameof(VersionLine));
-        OnPropertyChanged(nameof(OverrideLabel));
         OnPropertyChanged(nameof(OverrideEnabled));
         OnPropertyChanged(nameof(CanRestore));
         OnPropertyChanged(nameof(Status));

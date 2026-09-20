@@ -25,11 +25,10 @@ public static class DlssVerificationService
     /// nothing to say still reports why, because silence reads as failure.
     /// </summary>
     public static List<DlssObservation> Observe(
-        Process? process, string? driverVersion,
-        IReadOnlyList<DlssProbeService.ShippedRuntime>? shipped = null)
+        Process? process, IReadOnlyList<DlssProbeService.ShippedRuntime>? shipped = null)
     {
         var modules = DlssProbeService.ScanLoadedModules(process, out string? note);
-        return Interpret(modules, note, driverVersion, DateTime.UtcNow, shipped);
+        return Interpret(modules, note, shipped);
     }
 
     /// <summary>
@@ -40,8 +39,6 @@ public static class DlssVerificationService
     public static List<DlssObservation> Interpret(
         IReadOnlyList<DlssProbeService.LoadedRuntime> modules,
         string? scanNote,
-        string? driverVersion,
-        DateTime observedUtc,
         IReadOnlyList<DlssProbeService.ShippedRuntime>? shipped = null)
     {
         var result = new List<DlssObservation>();
@@ -62,8 +59,6 @@ public static class DlssVerificationService
                 {
                     Feature = feature.Code,
                     State = DlssObservationState.UnableToVerify,
-                    ObservedUtc = observedUtc,
-                    DriverVersion = driverVersion,
                     GameRuntimeVersion = shippedVersion,
                     // The scan note when there was one - "enumeration denied" is a different fact
                     // from "this feature is not in use", and conflating them would be the
@@ -79,8 +74,6 @@ public static class DlssVerificationService
                 State = DlssObservationState.RuntimeObserved,
                 Version = VersionOf(match),
                 LoadedFromPath = match.Path,
-                ObservedUtc = observedUtc,
-                DriverVersion = driverVersion,
                 GameRuntimeVersion = shippedVersion
             });
         }
@@ -142,18 +135,6 @@ public static class DlssVerificationService
             $"loaded {observation.Version} from the game's own files",
         _ => $"Unable to verify - {observation.Note ?? "nothing was readable"}"
     };
-
-    /// <summary>
-    /// Whether a stored observation still describes the current situation.
-    ///
-    /// <para>An observation is invalidated when the override changed or the game's own DLSS version
-    /// changed - both mean it describes a setup that no longer exists. A <i>driver</i> change only
-    /// makes it <b>stale</b>: what was seen was still seen, it just may not happen again.</para>
-    /// </summary>
-    public static bool IsStale(DlssObservation observation, string? currentDriverVersion) =>
-        !string.IsNullOrEmpty(observation.DriverVersion) &&
-        !string.IsNullOrEmpty(currentDriverVersion) &&
-        !string.Equals(observation.DriverVersion, currentDriverVersion, StringComparison.Ordinal);
 
     /// <summary>
     /// Whether an observation should be discarded rather than shown. True once the game has shipped

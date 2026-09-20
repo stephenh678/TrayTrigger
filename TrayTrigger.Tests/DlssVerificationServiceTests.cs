@@ -16,14 +16,14 @@ public class DlssVerificationServiceTests
 
     private static DlssProbeService.LoadedRuntime FromStore(string feature, uint encodedVersion) =>
         new("160_E658700.bin", $@"{Store}\{feature}\versions\{encodedVersion}\files\160_E658700.bin",
-            null, "NVIDIA NGX", FromDriverStore: true);
+            null, FromDriverStore: true);
 
     private static DlssProbeService.LoadedRuntime FromGame(string dll, string version) =>
-        new(dll, $@"C:\Games\Test\bin\x64\{dll}", version, "NVIDIA DLSS", FromDriverStore: false);
+        new(dll, $@"C:\Games\Test\bin\x64\{dll}", version, FromDriverStore: false);
 
     private static List<DlssObservation> Interpret(
-        IEnumerable<DlssProbeService.LoadedRuntime> modules, string? note = null, string? driver = "616.64") =>
-        DlssVerificationService.Interpret(modules.ToList(), note, driver, new DateTime(2026, 9, 20));
+        IEnumerable<DlssProbeService.LoadedRuntime> modules, string? note = null) =>
+        DlssVerificationService.Interpret(modules.ToList(), note);
 
     [Fact]
     public void ARuntimeFromTheDriverStore_IsReportedWithItsVersionAndSource()
@@ -113,16 +113,6 @@ public class DlssVerificationServiceTests
 
 
     [Fact]
-    public void ADriverChange_MakesAnObservationStale_NotWrong()
-    {
-        var observation = new DlssObservation { DriverVersion = "616.64" };
-
-        Assert.True(DlssVerificationService.IsStale(observation, "620.10"));
-        Assert.False(DlssVerificationService.IsStale(observation, "616.64"));
-        Assert.False(DlssVerificationService.IsStale(observation, null));
-    }
-
-    [Fact]
     public void AGamePatch_InvalidatesAnObservationOutright()
     {
         var observation = new DlssObservation { GameRuntimeVersion = "310.1.0" };
@@ -137,12 +127,12 @@ public class DlssVerificationServiceTests
     {
         var shipped = new[]
         {
-            new DlssProbeService.ShippedRuntime("Super Resolution", "nvngx_dlss.dll", "nvngx_dlss.dll", "310.1.0", 1),
-            new DlssProbeService.ShippedRuntime("Frame Generation", "nvngx_dlssg.dll", "nvngx_dlssg.dll", "310.2.0", 1)
+            new DlssProbeService.ShippedRuntime("Super Resolution", "nvngx_dlss.dll", "310.1.0"),
+            new DlssProbeService.ShippedRuntime("Frame Generation", "nvngx_dlssg.dll", "310.2.0")
         };
 
         var observations = DlssVerificationService.Interpret(
-            new[] { FromStore("dlss", 20318464) }, null, "616.64", DateTime.UtcNow, shipped);
+            new[] { FromStore("dlss", 20318464) }, null, shipped);
 
         Assert.Equal("310.1.0", observations.Single(o => o.Feature == "SR").GameRuntimeVersion);
         Assert.Equal("310.2.0", observations.Single(o => o.Feature == "FG").GameRuntimeVersion);
@@ -152,7 +142,7 @@ public class DlssVerificationServiceTests
     [Fact]
     public void ANullProcess_ProducesUnableToVerify_RatherThanThrowing()
     {
-        var observations = DlssVerificationService.Observe(null, "616.64");
+        var observations = DlssVerificationService.Observe(null);
 
         Assert.Equal(3, observations.Count);
         Assert.All(observations, o => Assert.Equal(DlssObservationState.UnableToVerify, o.State));

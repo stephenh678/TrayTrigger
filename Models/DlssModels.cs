@@ -59,14 +59,12 @@ public class DlssSettingRecord
     /// profile too, once it is empty - otherwise every game ever overridden would leave one behind.
     /// </summary>
     public bool ProfileCreated { get; set; }
-
-    public DateTime WrittenUtc { get; set; }
 }
 
 /// <summary>
 /// What was observed about one DLSS feature, in order of how much it establishes. These are
 /// observations, never causation: a loaded runtime shows what the process has open, not that
-/// TrayTrigger put it there. See docs/dlss-plan.md - an earlier draft overclaimed here.
+/// TrayTrigger put it there.
 /// </summary>
 public enum DlssObservationState
 {
@@ -95,11 +93,6 @@ public class DlssObservation
 
     /// <summary>Where it was loaded from - the driver's NGX store, or the game folder. The proof.</summary>
     public string? LoadedFromPath { get; set; }
-
-    public DateTime ObservedUtc { get; set; }
-
-    /// <summary>The driver at the time. A driver change makes an observation stale, not wrong.</summary>
-    public string? DriverVersion { get; set; }
 
     /// <summary>Why nothing could be read. Only meaningful for <see cref="DlssObservationState.UnableToVerify"/>.</summary>
     public string? Note { get; set; }
