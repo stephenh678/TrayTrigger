@@ -9,9 +9,9 @@ using TrayTrigger.Models;
 namespace TrayTrigger.Services;
 
 /// <summary>
-/// Turns what was seen loaded in a running game into per-feature observations. Layer 2 of
-/// verification in docs/dlss-plan.md, and the reason overriding games NVIDIA has not validated is
-/// defensible: the product can say what actually happened.
+/// Turns what was seen loaded in a running game into per-feature observations - the reason
+/// overriding games NVIDIA has not validated is defensible: the product can say what actually
+/// happened. See docs/dlss-plan.md.
 ///
 /// <para><b>Observations, never causation.</b> A loaded runtime shows what the process has open.
 /// It does not show that TrayTrigger caused it - an existing NVIDIA App setting or an over-the-air
@@ -61,8 +61,8 @@ public static class DlssVerificationService
                     State = DlssObservationState.UnableToVerify,
                     GameRuntimeVersion = shippedVersion,
                     // The scan note when there was one - "enumeration denied" is a different fact
-                    // from "this feature is not in use", and conflating them would be the
-                    // "it failed" claim the plan forbids.
+                    // from "this feature is not in use", and conflating them would claim the
+                    // override failed when nothing of the kind was seen.
                     Note = scanNote ?? $"No {feature.Name.ToLowerInvariant()} activity observed."
                 });
                 continue;
@@ -124,8 +124,7 @@ public static class DlssVerificationService
     }
 
     /// <summary>
-    /// One line describing an observation, in the plan's wording: state the reading, stop short of
-    /// explaining it.
+    /// One line describing an observation: state the reading, stop short of explaining it.
     /// </summary>
     public static string Describe(DlssObservation observation) => observation.State switch
     {

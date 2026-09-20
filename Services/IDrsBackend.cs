@@ -141,7 +141,7 @@ public sealed class NvApiDrsBackend : IDrsBackend
         public void Dispose() => session.Dispose();
 
         /// <summary>
-        /// NVAPI's two fields collapse into the plan's origin. A value on the game's own profile is
+        /// NVAPI's two fields collapse into one origin. A value on the game's own profile is
         /// NVIDIA's if <c>isCurrentPredefined</c> says so and the user's otherwise; anything from a
         /// lower layer is inherited, whoever set it there.
         /// </summary>

@@ -9,8 +9,7 @@ namespace TrayTrigger.Tests;
 /// The DLSS Override card: two versions and one switch.
 ///
 /// <para>What these protect is the wording and the switch's meaning. The card's whole job is to
-/// tell a user what they will get, and an earlier version of it described the mechanism instead -
-/// three feature rows, a version each, and "Settings saved".</para>
+/// tell a user what they will get, not to describe the mechanism.</para>
 /// </summary>
 public class DlssCardViewModelTests
 {

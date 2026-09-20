@@ -12,15 +12,12 @@ namespace TrayTrigger.ViewModels;
 /// The DLSS Override card in Edit Game. See docs/dlss-plan.md.
 ///
 /// <para><b>DLSS Override is NVIDIA's name for this</b>, not ours - it is what the driver calls
-/// the settings ("Enable DLSS-SR override") and what NVIDIA App calls the feature. An earlier
-/// version of this card invented "Use recommended", which appears in nobody's vocabulary and left
-/// the user with nothing to search for.</para>
+/// the settings ("Enable DLSS-SR override") and what NVIDIA App calls the feature, so a user has
+/// an exact term to search for.</para>
 ///
-/// <para>The card says two versions and offers one switch. Everything else it used to show - a row
-/// per feature, a Verify button, a details expander, what was observed loading - was the mechanism
-/// on display rather than the outcome, and is gone. The override covers all three features in one
-/// write, so a per-feature breakdown answered a question nobody was asking; the switch's sub-line
-/// names the three features instead.</para>
+/// <para>The card says two versions and offers one switch. The override covers all three features
+/// in one write, so there is no per-feature breakdown; the switch's sub-line names the three
+/// features instead.</para>
 ///
 /// <para>Turning the switch on writes to the driver and saves <i>immediately</i>, not on Save
 /// Changes: the driver change has already happened, so deferring the record would let Cancel
@@ -98,8 +95,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// <summary>
     /// What the game has now and what it would get, as a pair: <c>310.1.0 -> 310.9.0</c>. It sits
     /// on the switch's own row, so the before and after are read together and no sentence is needed
-    /// to join them. An earlier card printed the two numbers in prose and left the reader to work
-    /// out which was which.
+    /// to join them.
     /// </summary>
     public string VersionLine =>
         _content.GameVersion == null ? string.Empty

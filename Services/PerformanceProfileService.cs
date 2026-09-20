@@ -196,7 +196,6 @@ public class PerformanceProfileService
     /// <summary>
     /// NVIDIA ships 1 in its own .reg file, which only draws for developer builds. 0x400 is what
     /// permits a retail game to draw it, matching the documented __NGX_SHOW_INDICATOR=1024.
-    /// Confirmed working on a retail game during the 2026-09-19 spike.
     /// </summary>
     private const int ShowDlssIndicatorRetail = 0x400;
 

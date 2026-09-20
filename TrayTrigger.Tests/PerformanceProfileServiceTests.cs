@@ -505,7 +505,7 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Null(_store.OnDisk); // the poisoned file is still consumed so it can't be replayed
     }
 
-    // --- The DLSS on-screen overlay (step 8) ------------------------------------------------
+    // --- The DLSS on-screen overlay ---------------------------------------------------------
 
     private const string NgxKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore|ShowDlssIndicator";
 

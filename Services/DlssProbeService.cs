@@ -235,8 +235,8 @@ public static class DlssProbeService
     /// Enumerates the DLSS-related modules a running game has loaded.
     ///
     /// <para><b>Never match on file name.</b> When the driver substitutes a runtime, what appears
-    /// in the process is a hashed .bin from the driver's store - <c>160_E658700.bin</c> on the
-    /// development machine - not <c>nvngx_dlss.dll</c>. Filtering on the DLL names reports "not
+    /// in the process is a hashed .bin from the driver's store - <c>160_E658700.bin</c>, say - not
+    /// <c>nvngx_dlss.dll</c>. Filtering on the DLL names reports "not
     /// substituted" on a machine where substitution is plainly working. Match on path and
     /// ProductName; the name filters are only a last resort for the game's own copy.</para>
     /// </summary>

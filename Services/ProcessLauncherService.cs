@@ -523,7 +523,7 @@ public partial class ProcessLauncherService
     /// and record "unable to verify" for a game that was about to work perfectly. It stops at the
     /// first runtime seen, when the process exits, or after three ticks.</para>
     ///
-    /// <para><b>Three ticks, not fifteen.</b> Enumerating another process's modules is what a
+    /// <para><b>Three ticks, and no more.</b> Enumerating another process's modules is what a
     /// cheat does when it goes looking for a game's memory layout. It is a documented API and
     /// anti-cheat refuses it cleanly rather than punishing it, but the window is still time spent
     /// reading a live game, so it is as short as it can be while covering the usual case. A game

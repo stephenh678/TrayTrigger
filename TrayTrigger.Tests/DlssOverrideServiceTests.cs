@@ -82,8 +82,8 @@ public class DlssOverrideServiceTests
     [Fact]
     public void AnInheritedSetting_IsCapturedAsInherited_AndUndoDeletesRatherThanPinningIt()
     {
-        // The case on the development machine: four DLSS settings already live on the Global
-        // profile. Writing the inherited value back onto the game's profile would pin it there, so
+        // DLSS settings can already live on the Global profile, put there by another tool.
+        // Writing the inherited value back onto the game's profile would pin it there, so
         // it would stop following the Global profile - the machine would not be as it was.
         var (service, driver) = NewService();
         var profile = driver.AddProfile(Exe, "Test Game");
@@ -459,7 +459,7 @@ public class DlssOverrideServiceTests
     // --- Naming -----------------------------------------------------------------------------
 
 
-    // --- Layer 1: the write-back check ------------------------------------------------------
+    // --- The write-back check ---------------------------------------------------------------
 
     [Fact]
     public void ApplyVerifiesAgainstAFreshSession_AndReportsWhenAValueDidNotLand()
@@ -526,7 +526,7 @@ public class DlssOverrideServiceTests
     [Fact]
     public void AnIdTheDriverDoesNotHave_IsSteppedOver_NotFailed()
     {
-        // The recipe carried 0x00634291 - "the gate" - for months. No driver has ever had it:
+        // 0x00634291 is the real example: widely listed as a DLSS setting, and no driver has it -
         // GetSettingNameFromId does not recognise it and SetSetting refuses it. An id NVIDIA
         // retires later should behave the same way, quietly, rather than looking like a fault.
         var driver = new FakeDrsBackend();

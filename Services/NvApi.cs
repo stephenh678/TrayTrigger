@@ -205,7 +205,7 @@ public static unsafe partial class NvApi
         for (int i = n; i < UnicodeStringMax; i++) dest[i] = 0;
     }
 
-    /// <summary>Where a setting's current value comes from - the plan's "origin".</summary>
+    /// <summary>Where a setting's current value comes from.</summary>
     public enum SettingOrigin
     {
         /// <summary>Set on the game's own application profile.</summary>

@@ -127,8 +127,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         {
             // NVIDIA adds and retires setting ids between driver versions. An id this driver does
             // not have is stepped over, not reported as a failure - and never recorded, because
-            // there is nothing to undo. This check exists because the recipe carried an id for
-            // months that no driver has ever had; see DlssProbeService.Settings.
+            // there is nothing to undo.
             if (_backend.GetSettingName(def.Id) == null)
             {
                 details.Add(new DlssSettingOutcomeDetail(def.FeatureCode, def.Id, DlssSettingOutcome.NotSupportedByDriver, null));
@@ -185,7 +184,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     }
 
     /// <summary>
-    /// Layer 1 of verification: reopen the database and confirm each value is there and user-set.
+    /// Reopens the database and confirms each value is there and user-set.
     /// This proves the write landed in the profile database. It proves nothing about whether a
     /// game will honour it - that needs the game to run.
     /// </summary>

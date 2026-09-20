@@ -7,8 +7,7 @@ namespace TrayTrigger.Tests;
 /// Turning loaded modules into per-feature observations.
 ///
 /// <para>The rule that matters most here is what the service must NOT say. A loaded runtime is a
-/// reading, not a cause, and a failed read is not a failed override - the plan rewrote this
-/// section once for overclaiming both ways.</para>
+/// reading, not a cause, and a failed read is not a failed override.</para>
 /// </summary>
 public class DlssVerificationServiceTests
 {
