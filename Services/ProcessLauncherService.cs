@@ -567,7 +567,7 @@ public partial class ProcessLauncherService
         // the only one there is for a game launched by link.
         string renderer = game.DlssSettings[0].ExecutablePath;
         string? gameVersion = DlssProbeService.OldestVersion(DlssProbeService.FindShippedRuntimes(
-            System.IO.Path.GetDirectoryName(DlssProbeService.IsFilePath(renderer) ? renderer : game.ExecutablePath) ?? string.Empty));
+            DlssProbeService.DlssSearchRoot(DlssProbeService.IsFilePath(renderer) ? renderer : game.ExecutablePath, game.WorkingDirectory) ?? string.Empty));
 
         int ticks = 0;
         string key = game.Id;

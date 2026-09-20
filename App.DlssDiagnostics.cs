@@ -159,7 +159,7 @@ public partial class App
     private static void PrintShipped(StringBuilder o, string exePath)
     {
         o.AppendLine("-- DLSS runtimes the game ships --");
-        var shipped = DlssProbeService.FindShippedRuntimes(Path.GetDirectoryName(exePath) ?? string.Empty);
+        var shipped = DlssProbeService.FindShippedRuntimes(DlssProbeService.DlssSearchRoot(exePath) ?? string.Empty);
         if (shipped.Count == 0) o.AppendLine("  (none found)");
         foreach (var s in shipped)
             o.AppendLine($"  {s.Feature,-18} {s.FileVersion ?? "?",-12} {s.RelativePath}");

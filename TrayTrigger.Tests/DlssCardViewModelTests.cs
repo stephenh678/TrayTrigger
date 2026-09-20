@@ -33,7 +33,7 @@ public class DlssCardViewModelTests
         FakeDrsBackend driver, List<DlssSettingRecord> records,
         Action? persist = null, DlssProbeService.ProbeResult? probe = null, GameEntry? game = null) =>
         new(Exe, "Test Game", records, persist, new DlssOverrideService(driver),
-            _ => probe ?? Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }),
+            (_, _) => probe ?? Result(shipped: new[] { Ship("Super Resolution", "310.1.0") }),
             game ?? new GameEntry());
 
     // ---- What it says ------------------------------------------------------------------------

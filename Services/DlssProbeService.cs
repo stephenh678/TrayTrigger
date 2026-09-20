@@ -60,9 +60,13 @@ public static class DlssProbeService
     }
 
     /// <summary>Never throws: a layer that cannot be read comes back empty.</summary>
-    public static ProbeResult Probe(string executablePath)
+    /// <param name="searchRoot">
+    /// The game's folder when the caller has already worked it out - see <see cref="Locate"/> -
+    /// so the card reads the same folder the renderer was found in.
+    /// </param>
+    public static ProbeResult Probe(string executablePath, string? searchRoot = null)
     {
-        string? gameDir = SafeDirectoryName(executablePath);
+        string? gameDir = string.IsNullOrWhiteSpace(searchRoot) ? DlssSearchRoot(executablePath) : searchRoot;
 
         return new ProbeResult
         {
@@ -79,18 +83,182 @@ public static class DlssProbeService
     }
 
     /// <summary>
+    /// Folders that hold many games, one per subfolder: the manual scan locations, and each Steam
+    /// library's <c>steamapps\common</c>. Supplied by whoever has the settings, so this service
+    /// stays free of them. They do two jobs: the subfolder an executable sits under is exactly its
+    /// game's folder, whatever the engine; and the library itself is never searched as one game.
+    /// </summary>
+    public static Func<IEnumerable<string>>? LibraryFolderProvider { get; set; }
+
+    /// <summary>
+    /// Folder names that only ever hold a game's binaries, never the game: the executable is in
+    /// one and the rest of the game is above it. REDengine's <c>bin\x64</c>, CryEngine's
+    /// <c>Bin64</c>, Source 2's <c>bin\win64</c>, Unreal's <c>Binaries\Win64</c>.
+    /// </summary>
+    private static readonly HashSet<string> BinaryFolderNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bin", "bin32", "bin64", "binaries", "x64", "x86", "win32", "win64", "wingdk",
+        "win_x64", "win_x86", "retail", "shipping"
+    };
+
+    /// <summary>How far above the executable a game's folder is looked for.</summary>
+    private const int MaxRootDepth = 4;
+
+    /// <summary>
+    /// The folder of the game <paramref name="executablePath"/> belongs to - where its DLSS DLLs
+    /// are searched for - or null when the path has no folder.
+    ///
+    /// <para><b>Not the executable's own folder.</b> That was the first version, and it said "No
+    /// DLSS files found" for any game that keeps its DLSS somewhere the executable is not: every
+    /// Unreal game (the DLLs belong to a plugin under <c>Engine\Plugins</c>, the executable is in
+    /// <c>&lt;Project&gt;\Binaries\Win64</c>), and any other engine with a <c>bin</c> folder
+    /// beside its plugins. The game's whole folder is searched instead.</para>
+    ///
+    /// <para>Found by the strongest evidence there is, in order: the folder under Steam's
+    /// <c>steamapps\common</c>; the folder under a known library (<see cref="LibraryFolderProvider"/>);
+    /// the install folder the importer recorded; and, for a game added by its executable from
+    /// anywhere else, by walking up out of binaries-only folders and an Unreal project folder.
+    /// The walk never enters a library or a shared folder, so another game's DLLs are never
+    /// found - that would put the override on another game's executable.</para>
+    /// </summary>
+    public static string? DlssSearchRoot(string executablePath, string? installDirectory = null)
+    {
+        string? exeDir = SafeDirectoryName(executablePath);
+        if (string.IsNullOrEmpty(exeDir)) return exeDir;
+
+        try
+        {
+            string full = Path.GetFullPath(exeDir);
+            var libraries = LibraryFolders();
+
+            // Which rule answered is logged every time: "No DLSS files found" on someone else's
+            // machine is only explicable by knowing which folder was searched, and why that one.
+            if (FolderUnder(full, SteamCommonFolder(full)) is { } steam)
+                return Found(steam, "its folder under steamapps\\common");
+
+            foreach (string library in libraries)
+            {
+                if (FolderUnder(full, library) is { } under)
+                    return Found(under, $"its folder under the scan location '{library}'");
+            }
+
+            if (!string.IsNullOrWhiteSpace(installDirectory))
+            {
+                string install = Path.GetFullPath(installDirectory).TrimEnd('\\', '/');
+                // Strictly above the executable: a game added by hand records the executable's own
+                // folder here, which says nothing about where the game's folder starts.
+                if (LevelsBelow(full, install) is > 0 and <= MaxRootDepth && !IsSharedFolder(install, libraries))
+                    return Found(install, "the install folder recorded for the game");
+            }
+
+            var current = new DirectoryInfo(full);
+            for (int i = 0; i < MaxRootDepth && BinaryFolderNames.Contains(current.Name) && CanStepTo(current.Parent, libraries); i++)
+                current = current.Parent!;
+
+            // An Unreal project folder: <root>\<Project>, with <root>\Engine beside it.
+            bool unreal = false;
+            if (current.Parent is { } parent && CanStepTo(parent, libraries) &&
+                !string.Equals(current.Name, "Engine", StringComparison.OrdinalIgnoreCase) &&
+                Directory.Exists(Path.Combine(parent.FullName, "Engine")))
+            {
+                current = parent;
+                unreal = true;
+            }
+
+            return Found(current.FullName,
+                unreal ? "the Unreal root (an Engine folder beside the project)"
+                : string.Equals(current.FullName, full, StringComparison.OrdinalIgnoreCase) ? "the executable's own folder (nothing said the game starts higher)"
+                : "walked up out of binaries-only folders");
+        }
+        catch (Exception ex)
+        {
+            // A path that cannot be walked is searched where it stands.
+            LoggingService.Warn("Dlss", $"Could not work out the game folder for '{executablePath}' ({ex.Message}); searching '{exeDir}'.");
+        }
+
+        return exeDir;
+
+        string Found(string root, string how)
+        {
+            LoggingService.Verbose("Dlss", $"Game folder for '{executablePath}' is '{root}': {how}.");
+            return root;
+        }
+    }
+
+    private static List<string> LibraryFolders()
+    {
+        try
+        {
+            return (LibraryFolderProvider?.Invoke() ?? Enumerable.Empty<string>())
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .Select(l => Path.GetFullPath(l).TrimEnd('\\', '/'))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Dlss", $"Could not read the scan locations ({ex.Message}); game folders will be found by layout alone.");
+            return new List<string>();
+        }
+    }
+
+    /// <summary><c>...\steamapps\common</c> when <paramref name="dir"/> is inside one, else null.</summary>
+    private static string? SteamCommonFolder(string dir)
+    {
+        int at = dir.IndexOf(@"\steamapps\common\", StringComparison.OrdinalIgnoreCase);
+        return at < 0 ? null : dir[..(at + @"\steamapps\common".Length)];
+    }
+
+    /// <summary>The immediate subfolder of <paramref name="library"/> that holds <paramref name="dir"/>, or null.</summary>
+    private static string? FolderUnder(string dir, string? library)
+    {
+        if (library == null || LevelsBelow(dir, library) is not > 0) return null;
+        int end = dir.IndexOf('\\', library.Length + 1);
+        return end < 0 ? dir : dir[..end];
+    }
+
+    /// <summary>How many folders <paramref name="dir"/> is below <paramref name="ancestor"/>: 0 for the same folder, null when it is not under it.</summary>
+    private static int? LevelsBelow(string dir, string ancestor)
+    {
+        if (string.Equals(dir, ancestor, StringComparison.OrdinalIgnoreCase)) return 0;
+        if (!dir.StartsWith(ancestor + '\\', StringComparison.OrdinalIgnoreCase)) return null;
+        return dir[ancestor.Length..].Count(c => c == '\\');
+    }
+
+    private static bool CanStepTo(DirectoryInfo? dir, List<string> libraries) =>
+        dir != null && !IsSharedFolder(dir.FullName, libraries);
+
+    /// <summary>A folder that is not one game's own: a system or profile folder, a drive root, or a library of games.</summary>
+    private static bool IsSharedFolder(string dir, List<string> libraries)
+    {
+        string trimmed = dir.TrimEnd('\\', '/');
+        return ProcessPathResolver.IsUnsafeProcessFolder(dir, out _)
+            || trimmed.EndsWith(@"\steamapps\common", StringComparison.OrdinalIgnoreCase)
+            || libraries.Any(l => string.Equals(l, trimmed, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// DLSS DLLs the game ships. Reported for context only - the driver path never reads them for
     /// anything but their version, and never writes them.
     /// </summary>
     public static List<ShippedRuntime> FindShippedRuntimes(string gameDirectory)
     {
         var result = new List<ShippedRuntime>();
-        if (!Directory.Exists(gameDirectory)) return result;
+        if (!Directory.Exists(gameDirectory))
+        {
+            LoggingService.Verbose("Dlss", $"Not scanning '{gameDirectory}' for DLSS DLLs: the folder does not exist.");
+            return result;
+        }
 
         // The walk is recursive, so a folder that is not one game's own - a drive root, Downloads,
         // the top of Program Files - would find other games' DLLs, and ResolveRenderingExecutable
         // would then hand back another game's executable to write the override to.
-        if (ProcessPathResolver.IsUnsafeProcessFolder(gameDirectory, out string why))
+        bool unsafeFolder = ProcessPathResolver.IsUnsafeProcessFolder(gameDirectory, out string why);
+        if (!unsafeFolder && IsSharedFolder(SafeFullPath(gameDirectory), LibraryFolders()))
+        {
+            unsafeFolder = true;
+            why = "a library of games, not one game's folder";
+        }
+        if (unsafeFolder)
         {
             LoggingService.Verbose("Dlss", $"Not scanning {gameDirectory} for DLSS DLLs: it is {why}.");
             return result;
@@ -112,6 +280,13 @@ public static class DlssProbeService
         catch (Exception ex)
         {
             LoggingService.Warn("Dlss", $"Scanning {gameDirectory} for DLSS DLLs failed: {ex.Message}");
+        }
+
+        if (LoggingService.IsVerboseEnabled)
+        {
+            LoggingService.Verbose("Dlss", result.Count == 0
+                ? $"No nvngx_dlss*.dll anywhere under '{gameDirectory}'."
+                : $"DLSS DLLs under '{gameDirectory}': {string.Join("; ", result.Select(r => $"{r.RelativePath} ({r.Feature} {r.FileVersion ?? "version unreadable"})"))}");
         }
         return result;
     }
@@ -165,45 +340,133 @@ public static class DlssProbeService
     /// link - so without this the whole feature would be invisible for most of a library. The
     /// importer records the install folder as the entry's working directory.
     /// </param>
-    public static string ResolveRenderingExecutable(string gameExecutablePath, string? installDirectory = null)
+    public static string ResolveRenderingExecutable(string gameExecutablePath, string? installDirectory = null) =>
+        Locate(gameExecutablePath, installDirectory).Renderer;
+
+    /// <summary>Where a game is: the executable that renders it, and the folder its DLSS DLLs were looked for in.</summary>
+    public sealed record GameLocation(string Renderer, string? Root);
+
+    /// <summary>
+    /// <see cref="ResolveRenderingExecutable"/>, together with the folder it searched - so the card
+    /// can read the same folder rather than working one out again from the renderer.
+    /// </summary>
+    public static GameLocation Locate(string gameExecutablePath, string? installDirectory = null)
     {
         bool isFile = IsFilePath(gameExecutablePath);
-        string? dir = isFile ? SafeDirectoryName(gameExecutablePath) : installDirectory;
-        if (string.IsNullOrWhiteSpace(dir)) return gameExecutablePath;
+        string? dir = isFile ? DlssSearchRoot(gameExecutablePath, installDirectory) : installDirectory;
+        if (string.IsNullOrWhiteSpace(dir))
+            return Located(gameExecutablePath, null, isFile ? "its path has no folder" : "it is launched by link and no install folder is recorded");
 
         var shipped = FindShippedRuntimes(dir);
-        if (shipped.Count == 0) return gameExecutablePath;
+        if (shipped.Count == 0) return Located(gameExecutablePath, dir, "the game ships no DLSS, so there is nothing to resolve");
 
-        // The folders holding DLSS DLLs, most-shipped first; usually exactly one.
-        var candidateDirs = shipped
+        // The folders holding DLSS DLLs; usually exactly one. Then an Unreal game's own binaries:
+        // its DLLs sit in a plugin folder with no executable in it, and the file at its root is a
+        // stub that starts <Project>\Binaries\<platform>\...-Shipping.exe.
+        var folders = shipped
             .Select(s => SafeDirectoryName(Path.Combine(dir, s.RelativePath)))
             .Where(d => d != null)
+            .Select(d => d!)
+            .Concat(UnrealBinariesFolders(dir))
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(d => (Folder: d, Exes: ExecutablesIn(d)))
             .ToList();
 
-        string? givenName = isFile ? Path.GetFileName(gameExecutablePath) : null;
-
-        foreach (string? candidateDir in candidateDirs)
+        // The launched executable already living beside the DLLs means it is the renderer. Looked
+        // for in every folder before anything is guessed: a second copy of the DLLs elsewhere in
+        // the game must not win over the folder the game is actually started from.
+        if (isFile)
         {
-            string[] exes;
-            try { exes = Directory.GetFiles(candidateDir!, "*.exe"); }
-            catch { continue; }
-
-            // The launched executable already living beside the DLLs means it is the renderer.
-            var self = givenName == null ? null
-                : exes.FirstOrDefault(e => string.Equals(Path.GetFileName(e), givenName, StringComparison.OrdinalIgnoreCase));
-            if (self != null) return self;
-
-            var best = exes
-                .Where(e => !NotRenderers.Any(n => Path.GetFileNameWithoutExtension(e).Contains(n, StringComparison.OrdinalIgnoreCase)))
-                .Select(e => (Path: e, Size: SafeLength(e)))
-                .OrderByDescending(e => e.Size)
-                .FirstOrDefault();
-
-            if (best.Path != null) return best.Path;
+            string givenName = Path.GetFileName(gameExecutablePath);
+            var self = folders.SelectMany(f => f.Exes)
+                .FirstOrDefault(e => string.Equals(Path.GetFileName(e), givenName, StringComparison.OrdinalIgnoreCase));
+            if (self != null) return Located(self, dir, "the launched executable sits beside the DLSS DLLs or in the game's binaries");
         }
 
-        return gameExecutablePath;
+        foreach (var (folder, exes) in folders)
+        {
+            if (LargestRenderer(exes) is { } best)
+                return Located(best, dir, $"the largest executable in '{folder}' that is not a helper by name ({exes.Length} there)");
+        }
+
+        // DLLs in a folder of their own, whatever the engine. The executable the user launches is
+        // the best answer there is, unless it says itself that it is a launcher - or there is no
+        // executable at all (a game launched by link), and then the largest one in the game is.
+        if (isFile && !IsNeverRenderer(gameExecutablePath))
+            return Located(gameExecutablePath, dir, "no executable sits beside the DLSS DLLs, and the launched one does not call itself a launcher");
+
+        try
+        {
+            var options = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = MaxRootDepth, IgnoreInaccessible = true };
+            string engine = Path.Combine(dir, "Engine") + Path.DirectorySeparatorChar;
+            var all = Directory.EnumerateFiles(dir, "*.exe", options)
+                .Where(e => !e.StartsWith(engine, StringComparison.OrdinalIgnoreCase));
+            if (LargestRenderer(all) is { } largest)
+                return Located(largest, dir, "no executable sits beside the DLSS DLLs, so the largest in the game that is not a helper by name");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Dlss", $"Looking through '{dir}' for the game's executable failed: {ex.Message}");
+        }
+
+        // The game ships DLSS and nothing better than what was given turned up. For a link that
+        // leaves nothing to write an override to, which is worth more than a verbose line.
+        if (!isFile)
+            LoggingService.Warn("Dlss", $"'{gameExecutablePath}' ships DLSS under '{dir}' but no executable to target was found there.");
+        return Located(gameExecutablePath, dir, "nothing better was found");
+
+        GameLocation Located(string renderer, string? root, string why)
+        {
+            bool moved = !string.Equals(renderer, gameExecutablePath, StringComparison.OrdinalIgnoreCase);
+            LoggingService.Verbose("Dlss", moved
+                ? $"Renderer for '{gameExecutablePath}' is '{renderer}': {why}."
+                : $"Renderer for '{gameExecutablePath}' is the path as given: {why}.");
+            return new GameLocation(renderer, root);
+        }
+    }
+
+    private static string[] ExecutablesIn(string folder)
+    {
+        try { return Directory.GetFiles(folder, "*.exe"); }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("Dlss", $"Could not list executables in '{folder}': {ex.Message}");
+            return Array.Empty<string>();
+        }
+    }
+
+    private static bool IsNeverRenderer(string exePath) =>
+        NotRenderers.Any(n => Path.GetFileNameWithoutExtension(exePath).Contains(n, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The largest executable that is not a helper by name, or null.</summary>
+    private static string? LargestRenderer(IEnumerable<string> exes) =>
+        exes.Where(e => !IsNeverRenderer(e))
+            .Select(e => (Path: e, Size: SafeLength(e)))
+            .OrderByDescending(e => e.Size)
+            .Select(e => e.Path)
+            .FirstOrDefault();
+
+    /// <summary>
+    /// <c>&lt;root&gt;\&lt;Project&gt;\Binaries\&lt;platform&gt;</c> for each project under an Unreal
+    /// root; empty for anything else. <c>Engine</c> is skipped: its binaries are the crash reporter
+    /// and web helper, never the game.
+    /// </summary>
+    private static IEnumerable<string> UnrealBinariesFolders(string root)
+    {
+        var result = new List<string>();
+        try
+        {
+            if (!Directory.Exists(Path.Combine(root, "Engine"))) return result;
+
+            foreach (string project in Directory.GetDirectories(root))
+            {
+                if (string.Equals(Path.GetFileName(project), "Engine", StringComparison.OrdinalIgnoreCase)) continue;
+                string binaries = Path.Combine(project, "Binaries");
+                if (Directory.Exists(binaries)) result.AddRange(Directory.GetDirectories(binaries));
+            }
+        }
+        catch { /* an unreadable root has no renderer to offer */ }
+        return result;
     }
 
     /// <summary>True for a path on disk; false for empty, or a launch link such as steam://.</summary>
@@ -352,6 +615,12 @@ public static class DlssProbeService
         var parts = (version ?? string.Empty).Split('.');
         int At(int i) => parts.Length > i && int.TryParse(parts[i], out int n) ? n : 0;
         return (At(0), At(1), At(2));
+    }
+
+    private static string SafeFullPath(string path)
+    {
+        try { return Path.GetFullPath(path); }
+        catch { return path; }
     }
 
     private static string? SafeDirectoryName(string path)

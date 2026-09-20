@@ -103,6 +103,13 @@ public class ImportCoordinator : ViewModelBase
         // folder ignored a moment ago is skipped by the next scan without a restart.
         _folderScannerService.IgnoredFolderProvider = () =>
             settings.IgnoredGamePaths.Where(p => !string.IsNullOrWhiteSpace(p.FolderPath)).Select(p => p.FolderPath!);
+        // Every scan location is a folder of games, one per subfolder - which is exactly what the
+        // DLSS card needs to know to find a game's own folder. Disabled ones too: whether a
+        // location is scanned does not change what it is.
+        DlssProbeService.LibraryFolderProvider = () =>
+            settings.ScanLocations
+                .Where(l => !string.IsNullOrWhiteSpace(l.Path))
+                .Select(l => l.Source == ScanLocationSource.Steam ? Path.Combine(l.Path, "steamapps", "common") : l.Path);
         _steamScannerService = steamScannerService;
         _gogScannerService = gogScannerService;
         _eaScannerService = eaScannerService;

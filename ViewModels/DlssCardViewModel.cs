@@ -41,7 +41,7 @@ public sealed class DlssCardViewModel : ViewModelBase
     private readonly List<DlssSettingRecord> _records;
     private readonly Action? _persist;
     private readonly GameEntry? _game;
-    private readonly Func<string, DlssProbeService.ProbeResult> _probe;
+    private readonly Func<string, string?, DlssProbeService.ProbeResult> _probe;
 
     private bool _isBusy;
     private bool _hasLoaded;
@@ -67,7 +67,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         List<DlssSettingRecord>? records = null,
         Action? persist = null,
         DlssOverrideService? overrides = null,
-        Func<string, DlssProbeService.ProbeResult>? probe = null,
+        Func<string, string?, DlssProbeService.ProbeResult>? probe = null,
         GameEntry? game = null)
     {
         _game = game;
@@ -79,7 +79,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         _records = records ?? new List<DlssSettingRecord>();
         _persist = persist;
         _overrides = overrides ?? new DlssOverrideService();
-        _probe = probe ?? (path => DlssProbeService.Probe(path));
+        _probe = probe ?? ((path, root) => DlssProbeService.Probe(path, root));
 
         RestoreCommand = new AsyncRelayCommand(RestoreAsync, () => CanRestore);
     }
@@ -195,14 +195,26 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     private async Task LoadCoreAsync()
     {
-        if (string.IsNullOrWhiteSpace(_executablePath) && string.IsNullOrWhiteSpace(_installDirectory)) { _hasLoaded = true; return; }
+        if (string.IsNullOrWhiteSpace(_executablePath) && string.IsNullOrWhiteSpace(_installDirectory))
+        {
+            LoggingService.Verbose("Dlss", $"DLSS card hidden for '{_gameName}': no executable and no install folder to look in.");
+            _hasLoaded = true;
+            return;
+        }
         try
         {
             // The renderer, not the launcher: that is the profile an override is written to.
-            string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath ?? string.Empty, _installDirectory)).ConfigureAwait(true);
-            _rendererPath = path;
-            var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
+            var where = await Task.Run(() => DlssProbeService.Locate(_executablePath ?? string.Empty, _installDirectory)).ConfigureAwait(true);
+            _rendererPath = where.Renderer;
+            // The folder the renderer was found in, not one worked out again from the renderer.
+            var result = await Task.Run(() => _probe(where.Renderer, where.Root)).ConfigureAwait(true);
             _content = Project(result);
+
+            // Verbose only: most games ship no DLSS, and this runs every time Edit Game opens.
+            LoggingService.Verbose("Dlss",
+                !_content.HasDriver ? $"DLSS card hidden for '{_gameName}': no NVIDIA driver."
+                : !_content.HasDlss ? $"No DLSS files found for '{_gameName}': searched '{where.Root ?? "(no folder)"}' (launched '{_executablePath}', install folder '{_installDirectory}')."
+                : $"DLSS card for '{_gameName}': game {_content.GameVersion ?? "?"}, driver {_content.DriverVersion ?? "?"}, renderer '{where.Renderer}', searched '{where.Root}'.");
         }
         catch (Exception ex)
         {
