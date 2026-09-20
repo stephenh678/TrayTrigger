@@ -1623,6 +1623,17 @@ public class ImportCoordinator : ViewModelBase
                 .Select(g => g.Game.BattleNetUid!)
                 .ToList();
             var existingExePaths = new HashSet<string>(_library.Games.Select(g => g.Game.ExecutablePath), StringComparer.OrdinalIgnoreCase);
+            // Which entry holds each App ID, for the log only: "already in library" is no answer when
+            // the user cannot see the game - it may be hidden, or a folder entry matched to that ID.
+            var appIdHolders = LoggingService.IsVerboseEnabled
+                ? _library.Games
+                    .Where(g => !string.IsNullOrEmpty(g.Game.SteamAppId))
+                    .GroupBy(g => g.Game.SteamAppId!, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => string.Join("; ", g.Select(c => $"'{c.Game.Name}' in '{c.Game.Category}'{(c.Game.IsHidden ? ", hidden" : string.Empty)}, launches '{c.Game.ExecutablePath}'")),
+                        StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string>();
             var ignoredAppIds = new HashSet<string>(
                 _settings.IgnoredGamePaths.Where(p => p.SteamAppId != null).Select(p => p.SteamAppId!),
                 StringComparer.OrdinalIgnoreCase);
@@ -1674,12 +1685,16 @@ public class ImportCoordinator : ViewModelBase
                 {
                     string? steamPath = _steamScannerService.GetSteamInstallPath();
                     LoggingService.Verbose("SteamScan", $"Steam at '{steamPath ?? "(not found)"}'; libraries: {string.Join(", ", steamLocations.Select(l => $"'{l.Path}'"))}");
+                    // A game in a library that is switched off is never offered, and looks exactly
+                    // like a game Steam does not have.
+                    foreach (var off in _settings.ScanLocations.Where(l => l.Source == ScanLocationSource.Steam && !l.IsEnabled))
+                        LoggingService.Verbose("SteamScan", $"Not scanned: Steam library '{off.Path}' is switched off in Settings.");
                     if (!string.IsNullOrEmpty(steamPath))
                     {
                         var found = _steamScannerService.ScanInstalledGames(steamLocations.Select(l => l.Path), steamPath, existingAppIds);
                         foreach (var g in LoggingService.IsVerboseEnabled ? found : [])
                         {
-                            string verdict = g.IsAlreadyImported ? "already in library (App ID)"
+                            string verdict = g.IsAlreadyImported ? $"already in library as {appIdHolders.GetValueOrDefault(g.AppId, "(unknown entry)")}"
                                 : ignoredAppIds.Contains(g.AppId) ? "on the ignore list"
                                 : g.ExePath != null && existingExePaths.Contains(g.ExePath) ? $"already in library (exe '{g.ExePath}')"
                                 : "offered";
@@ -1811,7 +1826,7 @@ public class ImportCoordinator : ViewModelBase
                 .DistinctBy(c => c.Platform != null ? PlatformKey(c.Platform) : c.ExePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            LoggingService.Verbose("ImportCoordinator", $"Scan found new games -Steam {steamGames.Count}, GOG {gogGames.Count}, EA {eaGames.Count}, Epic {epicGames.Count}, Ubisoft {ubisoftGames.Count}, Xbox {xboxGames.Count}, Battle.net {battleNetGames.Count}, folders {folderCandidates.Count}.");
+            LoggingService.Verbose("ImportCoordinator", $"Scan found new games - Steam {steamGames.Count}, GOG {gogGames.Count}, EA {eaGames.Count}, Epic {epicGames.Count}, Ubisoft {ubisoftGames.Count}, Xbox {xboxGames.Count}, Battle.net {battleNetGames.Count}, folders {folderCandidates.Count}.");
 
             if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && xboxGames.Count == 0 && battleNetGames.Count == 0 && folderCandidates.Count == 0)
             {

@@ -119,11 +119,15 @@ public partial class SteamScannerService
             }
 
             if (!Directory.Exists(steamappsDir))
+            {
+                LoggingService.Verbose("SteamScannerService", $"Skipped library '{folder}': the folder does not exist (a drive not attached?).");
                 continue;
+            }
 
             try
             {
                 var manifestFiles = Directory.GetFiles(steamappsDir, "appmanifest_*.acf");
+                LoggingService.Verbose("SteamScannerService", $"'{steamappsDir}': {manifestFiles.Length} app manifest(s).");
                 foreach (var manifest in manifestFiles)
                 {
                     var game = ParseManifest(manifest, folder, steamPath, existingSet);
@@ -260,7 +264,13 @@ public partial class SteamScannerService
         try
         {
             var header = ReadManifestHeader(manifestPath);
-            if (header == null) return null;
+            if (header == null)
+            {
+                // Said out loud: a game missing from a scan is otherwise indistinguishable from
+                // one Steam has no manifest for.
+                LoggingService.Verbose("SteamScannerService", $"Skipped '{manifestPath}': it has no appid or no name.");
+                return null;
+            }
             var (appId, name, installdir) = header.Value;
 
             // Filter out common Steam redistributables / tool runtimes
@@ -268,6 +278,7 @@ public partial class SteamScannerService
                 name.StartsWith("Proton ", StringComparison.OrdinalIgnoreCase) ||
                 name.StartsWith("Steam Linux Runtime", StringComparison.OrdinalIgnoreCase))
             {
+                LoggingService.Verbose("SteamScannerService", $"Skipped '{name}' [{appId}]: a Steam runtime, not a game.");
                 return null;
             }
 
