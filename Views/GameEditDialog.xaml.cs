@@ -80,6 +80,10 @@ public partial class GameEditDialog : Window
         {
             WindowThemeService.CenterOverOwner(this);
             Activate();
+            // The DLSS probe reads the driver and the game folder, so it runs here rather than in
+            // the view model's constructor: the dialog opens immediately and the card appears when
+            // there is something true to put in it.
+            _ = _viewModel.Dlss.LoadAsync();
         };
 
         _viewModel.ScriptTestCompleted += report =>

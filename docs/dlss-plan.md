@@ -1301,11 +1301,13 @@ with no driver interaction at all.
 
 ## Build order
 
-1. ~~Detection and read-only display.~~ **Service layer done, 2026-09-19** (`DlssProbeService`,
-   `NgxModelStore`, `NvApi`, `--test-dlss`). The card itself is not built yet.
+1. ~~Detection and read-only display.~~ **Done, 2026-09-19.** `DlssProbeService`, `NgxModelStore`,
+   `NvApi`, `--test-dlss`, and the read-only card (`DlssCardViewModel`) on the Performance tab.
 2. NVAPI DRS interop behind `ISystemTweakBackend`, with the fake for tests. No UI.
    **Read half done**; the write half is untouched, and reads currently bypass the backend
-   interface because there is nothing to fake yet.
+   interface because there is nothing to fake yet. **Do the interface extraction as part of step 3,
+   not before it** - the ownership record is the first logic that genuinely needs a fake, and
+   retrofitting the seam afterwards means rewriting its tests.
 3. **The ownership record** - capture previous value and origin per setting, write, and undo only
    when the current value still matches what was written. This is a prerequisite for the button,
    not a refinement of it.
@@ -1523,3 +1525,34 @@ NVIDIA's own diagnostic `.reg` files, which these settings are taken from, are i
 [`utils/`](https://github.com/NVIDIA/DLSS/tree/main/utils) of their public DLSS repo:
 `ngx_driver_onscreenindicator.reg`, `ngx_log_on.reg`, `ngx_log_verbose.reg`,
 `ngx_log_window_on.reg`, and the matching `_off` variants.
+
+## The read-only card, 2026-09-19
+
+`ViewModels/DlssCardViewModel.cs`, on the Performance tab of Edit Game. It reports and does not
+act: there is no apply button, because applying needs the ownership record (step 3).
+
+Three rules it enforces, each with a test, because the card's whole justification is that it states
+what was read rather than what we assume:
+
+- **No shipped DLSS, no card.** It never appears on a game that cannot use the feature.
+- **No driver profile is not "Game default".** When NVIDIA has no entry for the executable, nothing
+  was read about its settings, so the card says `No driver profile`. Claiming a default there would
+  assert something the probe never saw.
+- **An override set to zero is not an override.** An explicit off reads as `Game default`; saying
+  otherwise would tell a user something is happening to their game when nothing is.
+
+Where an override *is* found, the card names the layer it came from - this game, your global
+settings, or the driver - and adds a notice that something else set it. TrayTrigger has no write
+path, so every override it can currently find is external by definition.
+
+Two things the build turned up:
+
+- **`FileVersionInfo.FileVersion` is the wrong property.** It returns the version resource's own
+  string, and NVIDIA writes that comma-separated: Cyberpunk 2077's DLSS reads back as `310,1,0,0`.
+  The numeric parts have no such formatting. `DlssProbeService.NormalizeFileVersion` uses them, so
+  a shipped runtime prints in the same `310.1.0` form the driver's model store uses.
+- **The card loads asynchronously, which the screenshot harness had to learn.** A capture taken
+  straight after `Show()` omitted it entirely, so `--screenshot-edit-tab` would have quietly
+  misrepresented the tab from here on. `LoadAsync` now returns the same task on every call and the
+  harness pumps the dispatcher until it completes. It also picks a game that ships DLSS, rather
+  than whichever happens to sort first.

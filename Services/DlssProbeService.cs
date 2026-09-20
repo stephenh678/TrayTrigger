@@ -186,7 +186,7 @@ public static class DlssProbeService
                 long size = 0;
                 try
                 {
-                    version = FileVersionInfo.GetVersionInfo(file).FileVersion;
+                    version = NormalizeFileVersion(FileVersionInfo.GetVersionInfo(file));
                     size = new FileInfo(file).Length;
                 }
                 catch { /* an unreadable DLL is still worth listing */ }
@@ -199,6 +199,21 @@ public static class DlssProbeService
             LoggingService.Warn("Dlss", $"Scanning {gameDirectory} for DLSS DLLs failed: {ex.Message}");
         }
         return result;
+    }
+
+    /// <summary>
+    /// A DLSS DLL's version as "major.minor.build".
+    ///
+    /// <para>Not <see cref="FileVersionInfo.FileVersion"/>, which returns the version resource's
+    /// own string: NVIDIA writes that comma-separated, so Cyberpunk 2077's DLSS reads back as
+    /// "310,1,0,0". The numeric parts have no such formatting. The fourth part is dropped when it
+    /// is zero, which it always is on NVIDIA's runtimes, so this matches the "310.9.0" form the
+    /// driver's own model store uses.</para>
+    /// </summary>
+    public static string NormalizeFileVersion(FileVersionInfo info)
+    {
+        string version = $"{info.FileMajorPart}.{info.FileMinorPart}.{info.FileBuildPart}";
+        return info.FilePrivatePart == 0 ? version : $"{version}.{info.FilePrivatePart}";
     }
 
     /// <summary>Maps a shipped DLL name to its feature. Exposed for tests.</summary>

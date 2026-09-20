@@ -1178,7 +1178,15 @@ public partial class App
                 bool invalid = i + 3 < e.Args.Length && e.Args[i + 3].Equals("invalid", StringComparison.OrdinalIgnoreCase);
                 _skipSettingsSaveOnExit = true;
                 // A copy, so pressing Save for the "invalid" capture can never touch the library.
-                var source = _mainViewModel.Games.FirstOrDefault()?.Game;
+                // Prefer a game that actually ships DLSS, so the Performance tab's DLSS card is in
+                // the capture. Falls back to the first entry when no game in the library has it.
+                var source = (section is GameEditSection.Performance or GameEditSection.All
+                        ? _mainViewModel.Games.FirstOrDefault(g =>
+                            !string.IsNullOrEmpty(g.Game.ExecutablePath) &&
+                            DlssProbeService.FindShippedRuntimes(
+                                System.IO.Path.GetDirectoryName(g.Game.ExecutablePath) ?? string.Empty).Count > 0)
+                        : null)?.Game
+                    ?? _mainViewModel.Games.FirstOrDefault()?.Game;
                 var sampleGame = source == null
                     ? new GameEntry { Name = "DOOM Eternal", Category = "Action", ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe" }
                     : new GameEntry { Name = source.Name, Category = source.Category, ExecutablePath = source.ExecutablePath, WorkingDirectory = source.WorkingDirectory, Arguments = source.Arguments, IconPath = source.IconPath, CoverImagePath = source.CoverImagePath, SteamAppId = source.SteamAppId, IsSteamGame = source.IsSteamGame };
@@ -1190,6 +1198,17 @@ public partial class App
                 if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
                 editVm.SelectedSection = section;
                 dlg.Show();
+                // The DLSS card loads asynchronously, so a capture taken straight after Show()
+                // would omit it and quietly misrepresent the tab. Pump the dispatcher until the
+                // probe Loaded started has finished; LoadAsync hands back that same task.
+                var dlssLoad = editVm.Dlss.LoadAsync();
+                if (!dlssLoad.IsCompleted)
+                {
+                    var frame = new System.Windows.Threading.DispatcherFrame();
+                    _ = dlssLoad.ContinueWith(_ => frame.Continue = false,
+                        System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
+                    System.Windows.Threading.Dispatcher.PushFrame(frame);
+                }
                 dlg.UpdateLayout();
                 if (invalid)
                 {
