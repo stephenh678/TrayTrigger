@@ -358,6 +358,96 @@ public partial class App
     }
 
     /// <summary>
+    /// <c>--test-dlss-launch &lt;name&gt;</c>: applies the override to a real library entry and
+    /// launches it through the normal launch path, then stays running so the in-session poller
+    /// can do its work. The only way to exercise the automatic observation - every other harness
+    /// here bypasses the launcher.
+    ///
+    /// <para><c>--test-dlss-launch-undo &lt;name&gt;</c> reverses it from the game's own records
+    /// and clears them.</para>
+    /// </summary>
+    private void RunDlssLaunch(string? target)
+    {
+        var o = new StringBuilder();
+        o.AppendLine("=== DLSS LAUNCH (applies, then launches for real) ===");
+        o.AppendLine($"Elevated      : {SystemTweaksService.IsElevated}");
+
+        var card = FindLibraryCard(target);
+        if (card == null)
+        {
+            WriteReport(o.AppendLine($"No library entry matches '{target}'.").ToString(), "dlss-launch.txt");
+            ExitApplication();
+            return;
+        }
+
+        var game = card.Game;
+        o.AppendLine($"Game          : {game.Name}");
+        o.AppendLine($"Launches      : {game.ExecutablePath}");
+        o.AppendLine($"Renders       : {DlssProbeService.ResolveRenderingExecutable(game.ExecutablePath)}");
+
+        var result = new DlssOverrideService().Apply(game.ExecutablePath, game.Name);
+        o.AppendLine($"Apply         : {(result.Succeeded ? "OK" : $"FAILED - {result.Error}")}");
+        if (!result.Succeeded)
+        {
+            WriteReport(o.ToString(), "dlss-launch.txt");
+            ExitApplication();
+            return;
+        }
+
+        // Onto the real entry, so the launcher's poller sees a game it is managing - which is the
+        // whole point of this harness.
+        game.DlssSettings = result.Records.ToList();
+        game.DlssObservations.Clear();
+        game.DlssConflicted = false;
+        _mainViewModel!.Library.SaveGamesOnly();
+        o.AppendLine($"Records       : {game.DlssSettings.Count} stored on the library entry");
+        o.AppendLine();
+        o.AppendLine("Launching. TrayTrigger stays running; the poller checks every 20s for ~5 min.");
+        o.AppendLine("Watch debug.log for [Dlss] lines, then run --test-dlss-launch-undo.");
+        WriteReport(o.ToString(), "dlss-launch.txt");
+
+        _mainViewModel.Library.LaunchGame(card);
+    }
+
+    private void RunDlssLaunchUndo(string? target)
+    {
+        var o = new StringBuilder();
+        o.AppendLine("=== DLSS LAUNCH UNDO ===");
+
+        var card = FindLibraryCard(target);
+        if (card == null)
+        {
+            WriteReport(o.AppendLine($"No library entry matches '{target}'.").ToString(), "dlss-launch-undo.txt");
+            return;
+        }
+
+        var game = card.Game;
+        o.AppendLine($"Game          : {game.Name}");
+        o.AppendLine($"Records       : {game.DlssSettings.Count}");
+
+        foreach (var obs in game.DlssObservations)
+            o.AppendLine($"  observed {obs.Feature}: {DlssVerificationService.Describe(obs)}");
+
+        var result = new DlssOverrideService().Undo(game.DlssSettings);
+        o.AppendLine($"Undo          : {(result.Succeeded ? "OK" : $"FAILED - {result.Error}")}");
+        foreach (var d in result.Details) o.AppendLine($"  0x{d.SettingId:X8}  {d.Outcome}");
+
+        game.DlssSettings = result.Records.ToList();
+        game.DlssObservations.Clear();
+        game.DlssConflicted = false;
+        _mainViewModel!.Library.SaveGamesOnly();
+
+        o.AppendLine();
+        Dump(o, "AFTER UNDO", ReadSettings(DlssProbeService.ResolveRenderingExecutable(game.ExecutablePath)));
+        WriteReport(o.ToString(), "dlss-launch-undo.txt");
+    }
+
+    private ViewModels.GameCardViewModel? FindLibraryCard(string? target) =>
+        string.IsNullOrWhiteSpace(target)
+            ? null
+            : _mainViewModel?.Games.FirstOrDefault(g => g.Name.Contains(target, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
     /// Where a loaded module came from, in three kinds rather than two.
     ///
     /// <para>"Not the NGX store" does not mean "the game folder": Cyberpunk loads NVIDIA's own

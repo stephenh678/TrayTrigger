@@ -176,6 +176,20 @@ public partial class App
                 _ = RunXboxDiagnosticAsync(launch, target);
                 return;
             }
+            // --test-dlss-launch <name> / --test-dlss-launch-undo <name>: apply to a real library
+            // entry and launch it normally, so the launcher's in-session observation poller runs.
+            if (e.Args[i].Equals("--test-dlss-launch", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunDlssLaunch(e.Args[i + 1]);
+                return;   // stays running: the poller needs the process alive
+            }
+            if (e.Args[i].Equals("--test-dlss-launch-undo", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunDlssLaunchUndo(e.Args[i + 1]);
+                ExitApplication();
+                return;
+            }
+
             // --test-dlss-apply / -observe / -undo: the round trip split across three runs, so a
             // real game can be played in between. Apply parks its records on disk so undo works
             // from a later process, and an interrupted test stays reversible.

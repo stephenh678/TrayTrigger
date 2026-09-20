@@ -1839,3 +1839,33 @@ stated something false, so it now distinguishes the store, the game folder and e
 **Still not exercised:** the launcher's in-session polling. The observation path is proven; the
 20-second poller that drives it automatically during a real TrayTrigger launch has only been
 reasoned about.
+
+## The in-session poller, proven 2026-09-20
+
+The last untested link. `--test-dlss-launch <name>` applies to a real library entry, launches it
+through the normal launch path and stays running, so the launcher's own poller does the work.
+
+Cyberpunk 2077, launched through TrayTrigger on the GOG route:
+
+```
+00:30:40  [Launcher] Dispatched direct GOG launch for 'Cyberpunk 2077'.
+00:31:32  [Dlss] 'Cyberpunk 2077' SR: Observed runtime 310.9.0 from NVIDIA's driver store
+00:31:32  [Dlss] 'Cyberpunk 2077' RR: Observed runtime 310.9.0 from NVIDIA's driver store
+00:31:32  [Dlss] 'Cyberpunk 2077' FG: Observed runtime 310.9.0 from NVIDIA's driver store
+```
+
+52 seconds, unattended - the launcher-to-renderer handoff the GOG route makes, the process handle,
+the poller and the persistence all worked. The library entry then held the full record: state,
+version, store path per feature, the shipped `310.1.0` for patch invalidation, and the driver
+`616.64` for staleness.
+
+This closes steps 1 to 6: **every part of the feature has now been exercised against a real game
+on real hardware**, not only unit-tested.
+
+### A gap in the harness, not the product
+
+A second TrayTrigger cannot start - the single-instance mutex is correct and stops it - so
+`--test-dlss-launch-undo` has to run after the first instance exits. Worth knowing before using
+these two flags: launch, play, quit the game, exit TrayTrigger from the tray, then undo. Killing
+the instance instead would strand the performance profile's system tweaks until crash recovery
+picks them up on the next start.
