@@ -1832,6 +1832,12 @@ public class ImportCoordinator : ViewModelBase
         finally
         {
             _isScanningForGames = false;
+            // Scanning is the moment TrayTrigger goes and looks at what is on this PC, so it is
+            // also when a game uninstalled since startup should stop looking playable. Every exit
+            // above runs this, "No new games found" most of all - that is the scan most likely to
+            // be the one where something went away rather than arrived. Fire and forget: the
+            // cards re-mark themselves when it lands.
+            _ = _library.RefreshAvailabilityInBackground();
         }
     }
 

@@ -128,6 +128,7 @@ public sealed class LibraryFilterViewModel : ViewModelBase
         AddStatus("played", "Played at least once", c => c.Game.LastPlayed != null);
         AddStatus("favorite", "Favorite", c => c.Game.IsFavorite);
         AddStatus("missing", "Executable missing", c => c.IsMissing);
+        AddStatus("notinstalled", "Not installed", c => c.IsNotInstalled);
         AddStatus("hotkey", "Has a hotkey", c => !string.IsNullOrWhiteSpace(c.Game.Hotkey));
         AddStatus("scripts", "Has launch scripts", c => c.Game.HasScripts);
         AddStatus("admin", "Runs as administrator", c => c.Game.RunAsAdmin);

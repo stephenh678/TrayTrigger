@@ -1,6 +1,6 @@
 # How the Game Scanner works
 
-"Scan for Games" looks for installed games it doesn't already know about - from every launcher integration you've enabled, plus any extra Scan Locations you've added - and prompts you to pick which ones to add.
+"Scan for Games" looks for installed games it doesn't already know about - from every launcher integration you've enabled, plus any extra Scan Locations you've added - and prompts you to pick which ones to add. It also checks the games you already have, and marks the ones that are no longer installed.
 
 ## Launcher Integrations
 
@@ -35,7 +35,24 @@ Dropping a game folder or exe onto the Library, or using "Add Folder", also reco
 - Click "Scan for Games" (Library page or here in Settings) for a single-click scan: it runs immediately, with no extra prompts.
 - If it finds one or more new games, the New Games Found picker opens so you can choose which to add - even a single result goes through that picker, since a scan can just as easily turn up several at once.
 - If nothing new turns up, or no integrations or scan locations are configured, you just get a status message - no dialog.
-- Turn on "Automatically scan for new games on startup" to run this quietly every time TrayTrigger opens. It stays quiet unless it actually finds something new.
+- Turn on "Automatically scan on startup" to run this quietly every time TrayTrigger opens. It stays quiet unless it actually finds something new.
+
+## Games that are no longer installed
+
+A game you uninstall stays in your library, so its playtime, hotkey, scripts and performance profile are all still there when you put it back. It's greyed out and tagged instead:
+
+- **NOT INSTALLED** - a launcher game (Steam, GOG, EA, Epic, Ubisoft, Xbox, Battle.net) that its own launcher no longer has. Reinstall it there and the tag goes on the next scan.
+- **MISSING** - a game you added yourself, by drop or by folder scan, whose file isn't where TrayTrigger left it. It may only have moved, so right-click it and choose "Locate Executable..." to point it at the new place.
+
+The check runs at startup and on every scan. Play still works on a tagged game: for a Steam game it offers to open it in Steam, where you can reinstall it, and for the rest it says which launcher to reinstall from. To find them all at once, open the filter beside the search box and tick "Not installed" or "Executable missing" - from there you can select the ones you won't reinstall and remove them together.
+
+A game is only tagged when its launcher was read in full and doesn't list it. If a launcher isn't installed, or a game sits on a drive that isn't plugged in, nothing is tagged - an external drive that's asleep is not an uninstall.
+
+## When a game comes back
+
+Put a game back - reinstall it, or plug the drive in again - and the tag clears on the next scan, or the next time TrayTrigger starts. TrayTrigger doesn't watch for drives being plugged in, so until one of those happens the card still looks tagged.
+
+You don't have to wait for either. Pressing Play on a tagged game asks its launcher (or looks for the file) once more before it refuses, so a game that is back simply starts, and the tag clears as it does.
 
 ## Ignoring a false positive
 

@@ -198,6 +198,77 @@ public partial class SteamScannerService
     }
 
     /// <summary>
+    /// Every installed game's AppId, or null when any library folder could not be read - a library
+    /// on a drive that is asleep is not an uninstall, and the install check needs the two apart
+    /// rather than quietly returning a short list.
+    ///
+    /// <para>The manifest alone is the answer, without confirming the install folder: that matches
+    /// what launching does, which hands the AppId to Steam and lets Steam repair or re-download
+    /// whatever is missing underneath.</para>
+    /// </summary>
+    public HashSet<string>? TryListInstalledAppIds()
+    {
+        string? steamPath = GetSteamInstallPath();
+        if (steamPath == null)
+        {
+            LoggingService.Verbose("SteamScanner", "Steam is not installed on this PC, so nothing can be said about which Steam games are installed.");
+            return null;
+        }
+
+        var appIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool everyLibraryRead = true;
+        int librariesRead = 0;
+
+        foreach (var folder in GetLibraryFolders(steamPath))
+        {
+            string? steamappsDir = ResolveSteamappsDir(folder);
+            if (steamappsDir == null)
+            {
+                everyLibraryRead = false;
+                LoggingService.Verbose("SteamScanner", $"Library '{folder}' is not there (a drive not attached?); its games cannot be told apart from uninstalled ones.");
+                continue;
+            }
+
+            try
+            {
+                foreach (var manifest in Directory.GetFiles(steamappsDir, "appmanifest_*.acf"))
+                {
+                    string appId = Path.GetFileNameWithoutExtension(manifest)[ManifestPrefix.Length..];
+                    if (appId.Length > 0) appIds.Add(appId);
+                }
+                librariesRead++;
+            }
+            catch (Exception ex)
+            {
+                everyLibraryRead = false;
+                LoggingService.Warn("SteamScanner", $"Could not list app manifests in '{steamappsDir}': {ex.Message}");
+            }
+        }
+
+        if (!everyLibraryRead)
+        {
+            LoggingService.Verbose("SteamScanner", "At least one library folder could not be read, so no Steam entry is judged installed or not.");
+            return null;
+        }
+
+        LoggingService.Verbose("SteamScanner", $"{appIds.Count} game(s) installed across {librariesRead} library folder(s).");
+        return appIds;
+    }
+
+    private const string ManifestPrefix = "appmanifest_";
+
+    /// <summary>
+    /// A library root's steamapps folder, tolerating a library configured as "...\steamapps"
+    /// itself rather than its parent. Null when neither is there.
+    /// </summary>
+    private static string? ResolveSteamappsDir(string libraryFolder)
+    {
+        string steamappsDir = Path.Combine(libraryFolder, "steamapps");
+        if (Directory.Exists(steamappsDir)) return steamappsDir;
+        return Directory.Exists(Path.Combine(libraryFolder, "common")) ? libraryFolder : null;
+    }
+
+    /// <summary>
     /// The install folder (steamapps\common\&lt;installdir&gt;) of one AppId across every library,
     /// or null if it isn't installed. Manifest-header read only; used by the launcher to find a
     /// Steam game's real process (window focus, priority, force-close) since a steam:// dispatch
