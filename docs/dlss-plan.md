@@ -33,8 +33,17 @@ default, additionally shows the active preset while that game runs.
 Run on the development machine: RTX 5080, driver 616.64, **007 First Light** (no anti-cheat), DLSS
 DLLs first rolled back in RHI to the game's own 310.7.128.
 
-Two settings were applied in Profile Inspector - `0x10E41E01` (SR DLL override) and `0x10E41E03`
-(FG DLL override) - and the game restarted. Loaded modules were then read from the live process:
+Settings were applied incrementally in Profile Inspector, with a restart and a module read at each
+step. **The order matters and is the most interesting part of the result:**
+
+| Run | Settings set | Observed |
+|---|---|---|
+| 1 | `0x10E41E01` SR override | `nvngx_dlssg` **310.7.128, game folder**. No SR module loaded. |
+| 2 | same, DLSS enabled in-game, no restart | identical - same process, so no effect possible |
+| 3 | same, **clean restart** | still **310.7.128, game folder**. Still no SR module. |
+| 4 | `0x10E41E01` **+ `0x10E41E03`** FG override, restart | **everything from the NGX store at 310.9.0** |
+
+Run 4's module list:
 
 ```
 LOADED FROM THE DRIVER'S NGX STORE
@@ -55,9 +64,23 @@ with **no file in the game folder modified**. The on-screen indicator independen
 
 1. **The core mechanism works.** Previously the plan's central claim was believed, not
    demonstrated. It is now demonstrated on real hardware with a real game.
-2. **All three features were substituted, though only two override settings were set.** SR, RR and
-   FG all came from the NGX store. Either the override is broader than per-feature, or one setting
-   pulls the others along. **Open question** - it affects how many settings the recipe needs.
+2. **The FG override appears to be the switch that mattered - not the SR override.** With
+   `0x10E41E01` alone, across a clean restart, nothing was substituted. Adding `0x10E41E03`
+   substituted SR, RR, FG and Streamline together.
+
+   Probable mechanism: frame generation runs through Streamline, so enabling the FG override makes
+   the driver substitute **Streamline wholesale** (`sl_common_0`, `sl_dlss_0`, `sl_dlss_d_0`,
+   `sl_dlss_g_0`, `sl_pcl_0`, `sl_reflex_0`), and those plugins then load their own NGX runtimes
+   from the store - bringing SR and RR with them. If so, **`0x10E41E01` alone may do nothing in a
+   Streamline game**, and the recipe's shape is wrong.
+
+   **Confounded, so not yet conclusive.** No SR module was loaded in runs 1-3 at all - not even
+   from the game folder - so the SR override may have had nothing to act on rather than having
+   failed. Two variables moved between runs 3 and 4.
+
+   **Disambiguating test:** turn the FG override off, leave SR on, restart. If SR and RR revert to
+   the game folder, the FG override was doing the work. If SR still comes from the NGX store, the
+   SR override works and run 3 simply had SR inactive.
 3. **Streamline is substituted too**, 2.12.128 to 2.14.0, six plugins, from
    `models\sl_*_override_0`. The driver handles that layer itself. This is decisive support for
    never touching `sl.*` files: RHI's separate Streamline swap column solves a problem the driver
