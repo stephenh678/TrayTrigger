@@ -44,7 +44,11 @@ public class PerformanceProfileServiceTests : IDisposable
             Hklm[subKey + "|" + valueName] = value; Log.Add($"hklm:{valueName}={value}"); return true;
         }
         public bool WriteHklmString(string subKey, string valueName, string value) { Hklm[subKey + "|" + valueName] = value; Log.Add($"hklm:{valueName}={value}"); return true; }
-        public bool DeleteHklmValue(string subKey, string valueName) { Hklm.Remove(subKey + "|" + valueName); Log.Add($"hklm:{valueName}=<deleted>"); return true; }
+        public bool DeleteHklmValue(string subKey, string valueName)
+        {
+            if (RefuseHklmWrites) { Log.Add($"hklm:{valueName}=<refused>"); return false; }
+            Hklm.Remove(subKey + "|" + valueName); Log.Add($"hklm:{valueName}=<deleted>"); return true;
+        }
 
         public readonly List<HdrControlService.DisplayColorState> HdrDisplays = new();
         public List<HdrControlService.DisplayColorState> GetHdrDisplayStates() => new(HdrDisplays);
@@ -611,6 +615,74 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.False(started);                                  // nothing was applied
         Assert.False(_backend.Hklm.ContainsKey(NgxKey));        // nothing was written
         Assert.False(_store.OnDisk?.DlssOverlayCaptured ?? false); // and nothing is owed
+    }
+
+    [Fact]
+    public void AnOverlayOnlyGame_DoesNotCountAsTheFirstProfileSession()
+    {
+        // It applies none of the machine-wide tweaks, so the profile game that follows it is the
+        // first session for those and must still get them.
+        _service.BeginGameSession(OverlayGame("overlay", _exeA));
+        _service.BeginGameSession(Game("plain", _exeB, PerformanceProfileMode.Optimized));
+
+        Assert.Equal("ultimate", _backend.ActiveScheme);
+    }
+
+    [Fact]
+    public void WhenTheLastProfileGameEnds_ItsTweaksGoBack_EvenWithAnOverlayOnlyGameStillRunning()
+    {
+        // Otherwise the next profile game is a first session again and captures TrayTrigger's own
+        // power plan as the one to restore.
+        _service.BeginGameSession(OverlayGame("overlay", _exeA));
+        _service.BeginGameSession(Game("plain", _exeB, PerformanceProfileMode.Optimized));
+
+        _service.EndGameSession("plain");
+
+        Assert.Equal("381b4222-f694-41f0-9685-ff5bb260df2e", _backend.ActiveScheme);
+        Assert.Equal(0x400, _backend.Hklm[NgxKey]);   // the overlay game is still playing
+
+        _service.BeginGameSession(Game("again", _exeB, PerformanceProfileMode.Optimized));
+        _service.EndGameSession("again");
+        _service.EndGameSession("overlay");
+
+        Assert.Equal("381b4222-f694-41f0-9685-ff5bb260df2e", _backend.ActiveScheme);
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));
+    }
+
+    [Fact]
+    public void Overlay_DeferredAtShutdown_StaysOnDiskForTheNextStart()
+    {
+        // Not elevated at sign-out: the HKLM restore is skipped, so the snapshot is the only thing
+        // that can turn the indicator off again.
+        _backend.IsElevated = false;
+        _service.BeginGameSession(OverlayGame("g", _exeA));
+
+        _service.RestoreActiveSessionOnShutdown(skipElevated: true);
+
+        Assert.True(_store.OnDisk?.DlssOverlayCaptured);
+
+        var next = new PerformanceProfileService(_store, () => _settings, _backend);
+        next.RecoverFromCrashIfNeeded();
+        Assert.False(_backend.Hklm.ContainsKey(NgxKey));
+    }
+
+    [Fact]
+    public void Overlay_WhenTheRestoreIsRefused_KeepsTheRealPreviousValue()
+    {
+        _backend.Hklm[NgxKey] = 1;
+        _service.BeginGameSession(OverlayGame("a", _exeA));
+
+        _backend.RefuseHklmWrites = true;       // the UAC prompt at session end is declined
+        _service.EndGameSession("a");
+        Assert.True(_store.OnDisk?.DlssOverlayCaptured);
+
+        // The next overlay game must not capture TrayTrigger's own 0x400 as the previous value.
+        _backend.RefuseHklmWrites = false;
+        _service.BeginGameSession(OverlayGame("b", _exeB));
+        _service.EndGameSession("b");
+
+        Assert.Equal(1, _backend.Hklm[NgxKey]);
+        Assert.Null(_store.OnDisk);
     }
 
     [Fact]
