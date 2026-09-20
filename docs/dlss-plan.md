@@ -1805,6 +1805,37 @@ refusal as its reason - honestly, but it is still a gap, and layers 3 and 4 (NGX
 are what close it. `PresetObserved` exists in the model and nothing produces it yet, because only
 the overlay can.
 
-**Not yet exercised end to end.** Every rule here is unit-tested against synthetic module readings,
-and the module reader itself was verified against a real game during the spike, but no game has yet
-been launched through TrayTrigger with an override applied and its observation recorded.
+### Exercised end to end, 2026-09-20 - Cyberpunk 2077
+
+Applied unelevated, the game played, then observed while rendering:
+
+```
+[DRIVER STORE] 160_E658700.bin  ...\NGX\models\dlss\versions\20318464\files\160_E658700.bin
+[DRIVER STORE] 160_E658700.bin  ...\NGX\models\dlssg\versions\20318464\files\160_E658700.bin
+[DRIVER STORE] 160_E658700.bin  ...\NGX\models\dlssd\versions\20318464\files\160_E658700.bin
+
+SR: Observed runtime 310.9.0 from NVIDIA's driver store
+RR: Observed runtime 310.9.0 from NVIDIA's driver store
+FG: Observed runtime 310.9.0 from NVIDIA's driver store
+```
+
+The game ships 310.1.0 and ran 310.9.0 on all three features, with no game file changed. Undo then
+returned every setting to `Inherited`/`absent` exactly as captured.
+
+This is also the first real test of the rule that worried me most: **three modules with the same
+file name, distinguished only by their folder**, attributed to the right feature each time. A
+name-based match would have reported one feature three times, and every unit test for it used
+synthetic paths until now.
+
+Streamline's own plugins load from the store too (`sl_dlss_0`, `sl_dlss_g_0`, `sl_reflex_0` at
+2.14.0) and are correctly ignored for feature attribution, since they sit outside the three
+feature folders.
+
+**One defect found.** `_nvngx.dll` loads from `C:\Windows\System32\DriverStore`, and the report
+labelled anything outside the NGX store as "game folder" - so it claimed a Windows file was the
+game's. Nothing depended on the label, but it is the third time in this feature that a report has
+stated something false, so it now distinguishes the store, the game folder and elsewhere.
+
+**Still not exercised:** the launcher's in-session polling. The observation path is proven; the
+20-second poller that drives it automatically during a real TrayTrigger launch has only been
+reasoned about.
