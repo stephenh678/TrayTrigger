@@ -109,7 +109,10 @@ public partial class App
                           // be probed.
                           arg.Equals("--test-dlss", StringComparison.OrdinalIgnoreCase) ||
                           arg.Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("--test-dlss-roundtrip", StringComparison.OrdinalIgnoreCase);
+                          arg.Equals("--test-dlss-roundtrip", StringComparison.OrdinalIgnoreCase) ||
+                          arg.Equals("--test-dlss-apply", StringComparison.OrdinalIgnoreCase) ||
+                          arg.Equals("--test-dlss-observe", StringComparison.OrdinalIgnoreCase) ||
+                          arg.Equals("--test-dlss-undo", StringComparison.OrdinalIgnoreCase);
             bool requiresVm = !isScan && (
                               arg.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
@@ -173,6 +176,28 @@ public partial class App
                 _ = RunXboxDiagnosticAsync(launch, target);
                 return;
             }
+            // --test-dlss-apply / -observe / -undo: the round trip split across three runs, so a
+            // real game can be played in between. Apply parks its records on disk so undo works
+            // from a later process, and an interrupted test stays reversible.
+            if (e.Args[i].Equals("--test-dlss-apply", StringComparison.OrdinalIgnoreCase))
+            {
+                RunDlssApply(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
+                ExitApplication();
+                return;
+            }
+            if (e.Args[i].Equals("--test-dlss-observe", StringComparison.OrdinalIgnoreCase))
+            {
+                RunDlssObserve(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
+                ExitApplication();
+                return;
+            }
+            if (e.Args[i].Equals("--test-dlss-undo", StringComparison.OrdinalIgnoreCase))
+            {
+                RunDlssUndo();
+                ExitApplication();
+                return;
+            }
+
             // --test-dlss-roundtrip <exe>: apply, then undo, comparing the settings before and
             // after. The only thing in the codebase that calls NvAPI_DRS_SaveSettings for real.
             if (e.Args[i].Equals("--test-dlss-roundtrip", StringComparison.OrdinalIgnoreCase))

@@ -248,6 +248,128 @@ public partial class App
         WriteReport(o.ToString(), "dlss-roundtrip.txt");
     }
 
+    /// <summary>Where a stand-alone apply parks its ownership records so a later undo can find them.</summary>
+    private static string DlssRecordsPath => Path.Combine(
+        Path.GetDirectoryName(LoggingService.LogFilePath) ?? Path.GetTempPath(), "dlss-roundtrip-records.json");
+
+    /// <summary>
+    /// <c>--test-dlss-apply &lt;exe&gt;</c> / <c>--test-dlss-observe &lt;exe&gt;</c> /
+    /// <c>--test-dlss-undo</c>: the round trip split across three runs, so a real game can be
+    /// played in between. This is the only way to exercise the observation path against a game
+    /// that is actually rendering.
+    ///
+    /// <para>Apply writes its records to disk before returning, so undo works from a later process
+    /// - and so an interrupted test is still reversible.</para>
+    /// </summary>
+    private static void RunDlssApply(string? target)
+    {
+        var o = new StringBuilder();
+        o.AppendLine("=== DLSS APPLY (leaves the settings in place) ===");
+        o.AppendLine($"Elevated      : {SystemTweaksService.IsElevated}");
+
+        string? exePath = ResolveProbeTarget(target);
+        if (exePath == null) { WriteReport(o.AppendLine("Pass an executable.").ToString(), "dlss-apply.txt"); return; }
+
+        string renderer = DlssProbeService.ResolveRenderingExecutable(exePath);
+        o.AppendLine($"Renders       : {renderer}");
+
+        var result = new DlssOverrideService().Apply(exePath, "DLSS end-to-end test");
+        o.AppendLine($"Apply         : {(result.Succeeded ? "OK" : $"FAILED - {result.Error}")}");
+        foreach (var d in result.Details.Where(d => d.Outcome != DlssSettingOutcome.Applied))
+            o.AppendLine($"  0x{d.SettingId:X8}  {d.Outcome}: {d.Error}");
+
+        if (result.Succeeded)
+        {
+            try
+            {
+                File.WriteAllText(DlssRecordsPath, System.Text.Json.JsonSerializer.Serialize(result.Records,
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                o.AppendLine($"Records       : {DlssRecordsPath}");
+            }
+            catch (Exception ex) { o.AppendLine($"Records       : FAILED to save - {ex.Message}"); }
+
+            o.AppendLine();
+            Dump(o, "NOW", ReadSettings(renderer));
+            o.AppendLine("Play the game, then run --test-dlss-observe, then --test-dlss-undo.");
+        }
+
+        WriteReport(o.ToString(), "dlss-apply.txt");
+    }
+
+    private static void RunDlssObserve(string? target)
+    {
+        var o = new StringBuilder();
+        o.AppendLine("=== DLSS OBSERVE (read-only) ===");
+        o.AppendLine($"When          : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
+        string? exePath = ResolveProbeTarget(target);
+        if (exePath == null) { WriteReport(o.AppendLine("Pass an executable.").ToString(), "dlss-observe.txt"); return; }
+
+        string renderer = DlssProbeService.ResolveRenderingExecutable(exePath);
+        o.AppendLine($"Renders       : {renderer}");
+
+        using var process = FindRunningProcess(renderer);
+        o.AppendLine($"Running       : {(process == null ? "NO - start the game first" : $"yes (pid {process.Id})")}");
+        o.AppendLine();
+
+        var probe = DlssProbeService.Probe(renderer, process);
+        o.AppendLine("-- Modules seen --");
+        if (probe.LoadedRuntimes.Count == 0) o.AppendLine($"  {probe.ModuleScanNote}");
+        string gameDir = Path.GetDirectoryName(renderer) ?? string.Empty;
+        foreach (var m in probe.LoadedRuntimes)
+            o.AppendLine($"  [{SourceLabel(m, gameDir)}] {m.ModuleName}  {m.Path}");
+        o.AppendLine();
+
+        var observations = DlssVerificationService.Interpret(
+            probe.LoadedRuntimes, probe.ModuleScanNote, probe.DriverVersion, DateTime.UtcNow,
+            probe.ShippedRuntimes);
+
+        o.AppendLine("-- What the card would say --");
+        foreach (var obs in observations)
+            o.AppendLine($"  {obs.Feature}: {DlssVerificationService.Describe(obs)}");
+
+        WriteReport(o.ToString(), "dlss-observe.txt");
+    }
+
+    private static void RunDlssUndo()
+    {
+        var o = new StringBuilder();
+        o.AppendLine("=== DLSS UNDO ===");
+        try
+        {
+            var records = System.Text.Json.JsonSerializer.Deserialize<List<DlssSettingRecord>>(File.ReadAllText(DlssRecordsPath))
+                          ?? new List<DlssSettingRecord>();
+            o.AppendLine($"Records       : {records.Count} from {DlssRecordsPath}");
+
+            var result = new DlssOverrideService().Undo(records);
+            o.AppendLine($"Undo          : {(result.Succeeded ? "OK" : $"FAILED - {result.Error}")}");
+            foreach (var d in result.Details)
+                o.AppendLine($"  0x{d.SettingId:X8}  {d.Outcome}");
+
+            if (records.Count > 0)
+            {
+                o.AppendLine();
+                Dump(o, "AFTER UNDO", ReadSettings(records[0].ApplicationName));
+            }
+        }
+        catch (Exception ex) { o.AppendLine($"FAILED: {ex.Message}"); }
+
+        WriteReport(o.ToString(), "dlss-undo.txt");
+    }
+
+    /// <summary>
+    /// Where a loaded module came from, in three kinds rather than two.
+    ///
+    /// <para>"Not the NGX store" does not mean "the game folder": Cyberpunk loads NVIDIA's own
+    /// <c>_nvngx.dll</c> loader out of <c>C:\Windows\System32\DriverStore</c>, which an earlier
+    /// version of this report labelled as the game's. Nothing depended on that label, but a report
+    /// that states something false is how the last two defects in this feature stayed hidden.</para>
+    /// </summary>
+    private static string SourceLabel(DlssProbeService.LoadedRuntime module, string gameDirectory) =>
+        module.FromDriverStore ? "DRIVER STORE"
+        : !string.IsNullOrEmpty(gameDirectory) && module.Path.StartsWith(gameDirectory, StringComparison.OrdinalIgnoreCase) ? "game folder"
+        : "elsewhere";
+
     /// <summary>
     /// Prints a report and writes it next to the log. TrayTrigger is a WinExe, so a run started
     /// from Explorer - or at a reduced trust level - has no console to attach to and would
@@ -413,9 +535,10 @@ public partial class App
         }
         else
         {
+            string gameDir = Path.GetDirectoryName(r.ExecutablePath) ?? string.Empty;
             foreach (var m in r.LoadedRuntimes)
             {
-                string source = m.FromDriverStore ? "DRIVER STORE" : "game folder";
+                string source = SourceLabel(m, gameDir);
                 o.AppendLine($"  [{source}] {m.ModuleName}  {m.FileVersion ?? "?"}");
                 o.AppendLine($"      {m.Path}");
                 if (m.ProductName != null) o.AppendLine($"      product: {m.ProductName}");
