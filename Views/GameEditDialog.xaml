@@ -420,6 +420,69 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- CARD 3b: DLSS OVERRIDE. "DLSS Override" is NVIDIA's own name for this,
+                         so a user who has seen it in NVIDIA App recognises it and anyone else can
+                         search for it. Two versions, one switch; the per-feature breakdown is
+                         behind the expander because it answers a question almost nobody asks. -->
+                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
+                            Visibility="{Binding Dlss.IsVisible, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="DLSS Override" FontSize="12.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                <!-- Only offered once there is something of TrayTrigger's to undo. -->
+                                <Button Content="Restore" HorizontalAlignment="Right"
+                                        AutomationProperties.Name="Restore the DLSS settings TrayTrigger changed"
+                                        Style="{StaticResource ModernOutlineButton}"
+                                        Command="{Binding Dlss.RestoreCommand}"
+                                        Visibility="{Binding Dlss.CanRestore, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+
+                            <TextBlock Text="{Binding Dlss.VersionLine}" FontSize="11.5" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+
+                            <CheckBox Content="Use the driver&apos;s DLSS for this game"
+                                      AutomationProperties.Name="Use the driver&apos;s DLSS for this game"
+                                      IsChecked="{Binding Dlss.OverrideEnabled}"
+                                      Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
+                            <TextBlock Text="No game files are changed - the driver supplies the newer model."
+                                       FontSize="11" Margin="22,2,0,8" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextSecondary}"/>
+
+                            <CheckBox Content="Show the DLSS overlay while this game runs"
+                                      AutomationProperties.Name="Show the DLSS overlay while this game runs"
+                                      IsChecked="{Binding Dlss.ShowOverlay}"
+                                      Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
+                            <TextBlock FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextSecondary}">
+                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the DLSS version and preset over the game. Asks for administrator permission."/>
+                            </TextBlock>
+
+                            <!-- Only when true: a conflict, or somebody else&apos;s override. -->
+                            <TextBlock Text="{Binding Dlss.Notice}" FontSize="11" Margin="0,10,0,0"
+                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
+                                       Visibility="{Binding Dlss.HasNotice, Converter={StaticResource BoolToVis}}"/>
+
+                            <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,10,0,0"
+                                       AutomationProperties.LiveSetting="Polite"
+                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
+                                       Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}}"/>
+
+                            <Expander Header="Details" Style="{StaticResource DisclosureExpander}" Margin="0,10,0,0"
+                                      Visibility="{Binding Dlss.HasDetails, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl ItemsSource="{Binding Dlss.Details}" Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Mode=OneWay}" FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,1,0,0"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+
                     <!-- CARD 3: PERFORMANCE (session-scoped tweaks) - its own card so the profile
                          is explained where it is chosen instead of only on the System page. -->
                     <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
@@ -462,95 +525,6 @@
                                        TextWrapping="Wrap" Margin="0,0,0,4"/>
                             <Button AutomationProperties.Name="Learn more about CPU affinity" Style="{StaticResource HelpLinkButton}"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- CARD 3b: DLSS (read-only). Shares the Performance tab. Hidden entirely
-                         until the probe has found a DLSS runtime the game ships, so it never
-                         appears on a game that cannot use it. No action button in this step:
-                         applying needs the ownership record first (docs/dlss-plan.md). -->
-                    <Border Background="#16161D" BorderBrush="{StaticResource BrushBorderDark}"
-                            BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12"
-                            Visibility="{Binding Dlss.IsVisible, Converter={StaticResource BoolToVis}}">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,10">
-                                <TextBlock Text="DLSS" FontSize="12.5" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                <!-- One action plus undo, as the plan specifies: no version
-                                     dropdown, no per-feature toggles, no preset letters. -->
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Content="Undo TrayTrigger changes" Margin="0,0,6,0"
-                                            AutomationProperties.Name="Undo TrayTrigger DLSS changes"
-                                            Style="{StaticResource ModernOutlineButton}"
-                                            Command="{Binding Dlss.UndoCommand}"
-                                            Visibility="{Binding Dlss.CanUndo, Converter={StaticResource BoolToVis}}"/>
-                                    <Button Content="Verify" Margin="0,0,6,0"
-                                            AutomationProperties.Name="Check what DLSS actually loaded"
-                                            Style="{StaticResource ModernOutlineButton}"
-                                            Command="{Binding Dlss.VerifyCommand}"
-                                            Visibility="{Binding Dlss.CanVerify, Converter={StaticResource BoolToVis}}"/>
-                                    <Button Content="Use recommended"
-                                            AutomationProperties.Name="Use NVIDIA's recommended DLSS model"
-                                            Style="{StaticResource ModernOutlineButton}"
-                                            Command="{Binding Dlss.ApplyCommand}"/>
-                                </StackPanel>
-                            </Grid>
-
-                            <ItemsControl ItemsSource="{Binding Dlss.Rows}" Margin="0,0,0,8"
-                                          AutomationProperties.Name="DLSS features in this game">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,0,0,3">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="150"/>
-                                                <ColumnDefinition Width="110"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding Feature}" FontSize="11.5"
-                                                       Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Version}" FontSize="11.5"
-                                                       Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding State}" FontSize="11.5"
-                                                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <TextBlock Text="{Binding Dlss.DriverLine}" FontSize="11"
-                                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,4"/>
-
-                            <!-- The plan calls this sentence load-bearing: it is what reassures a
-                                 user who has heard that swapping DLSS DLLs is risky. -->
-                            <TextBlock Text="{Binding Dlss.NoFilesChangedNotice}" FontSize="11"
-                                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
-
-                            <TextBlock Text="{Binding Dlss.ExternalOverrideNotice}" FontSize="11" Margin="0,6,0,0"
-                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
-                                       Visibility="{Binding Dlss.HasExternalOverrideNotice, Converter={StaticResource BoolToVis}}"/>
-
-                            <!-- The only layer that can show the active preset, so it earns a
-                                 place on the card even though it is a diagnostic. -->
-                            <CheckBox Content="Show DLSS overlay while this game runs" Margin="0,8,0,0"
-                                      AutomationProperties.Name="Show DLSS overlay while this game runs"
-                                      IsChecked="{Binding Dlss.ShowOverlay}"
-                                      Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>
-                            <TextBlock Text="{Binding Dlss.OverlayHint}" FontSize="11" Margin="0,2,0,0"
-                                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
-
-                            <!-- Something else changed these settings, so the pre-launch re-apply
-                                 has stopped. Shown above the status so the reason for the stopped
-                                 state reads before the result of whatever the user does next. -->
-                            <TextBlock Text="{Binding Dlss.ConflictNotice}" FontSize="11" Margin="0,6,0,0"
-                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
-                                       Visibility="{Binding Dlss.IsConflicted, Converter={StaticResource BoolToVis}}"/>
-
-                            <!-- What the last apply or undo actually did, including the case where
-                                 the driver accepted a save but did not report the values back. -->
-                            <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,6,0,0"
-                                       AutomationProperties.LiveSetting="Polite"
-                                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"
-                                       Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}}"/>
                         </StackPanel>
                     </Border>
 
