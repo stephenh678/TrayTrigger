@@ -121,16 +121,6 @@ public class GameEntry
     public List<DlssObservation> DlssObservations { get; set; } = new();
 
     /// <summary>
-    /// Draw NVIDIA's DLSS indicator on screen while this game runs. Off by default, and
-    /// session-scoped: the registry value it needs is machine-wide, so it is written before the
-    /// game starts and removed when the session ends.
-    ///
-    /// <para>It is the only thing that shows the active <b>preset</b>, which no other verification
-    /// layer can read.</para>
-    /// </summary>
-    public bool DlssShowOverlay { get; set; }
-
-    /// <summary>
     /// Which cores the game's process may run on. Independent of the profile tier: on an Intel
     /// hybrid CPU (12th gen+) some engines and anti-cheat titles run worse when threads land on
     /// E-cores, and pinning to P-cores is the standard fix. No-op on non-hybrid CPUs.

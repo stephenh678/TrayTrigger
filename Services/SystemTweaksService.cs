@@ -210,6 +210,24 @@ public partial class SystemTweaksService
             UnavailableReason = !IsWindows11 ? "Auto HDR exists only on Windows 11." : !hasHdrDisplay ? "No connected display reports HDR support." : ""
         });
 
+        bool dlssIndicatorOn = CheckDlssIndicatorOn();
+        bool hasNvidiaNgx = HasNvidiaNgx();
+        list.Add(new SystemTweakItem
+        {
+            Id = "dlss_indicator",
+            Name = "NVIDIA DLSS Indicator",
+            Category = TweakCategory.InputAndDisplay,
+            ShortDescription = "Draws NVIDIA's own on-screen overlay in every DLSS game: the DLSS version in use, the preset letter, and the render resolution.",
+            WhyItMatters = "For testing, not for leaving on. It is the one place the active preset letter is shown, and the quickest way to see that a DLSS Override set in Edit Game is really in effect. It is NVIDIA's diagnostic overlay and it draws over the game, in every game that uses DLSS, until you turn it off here.",
+            IsOptimal = dlssIndicatorOn,
+            StatusText = !hasNvidiaNgx ? "NVIDIA driver not found" : dlssIndicatorOn ? "Shown in DLSS games" : "Hidden",
+            RequiresAdmin = true,
+            RequiresReboot = false,
+            IsOptIn = true,
+            IsAvailable = hasNvidiaNgx,
+            UnavailableReason = hasNvidiaNgx ? "" : "Needs an NVIDIA GeForce driver with DLSS support."
+        });
+
         bool stickyKeysDisabled = CheckAccessibilityShortcutsDisabled();
         list.Add(new SystemTweakItem
         {
@@ -526,6 +544,7 @@ public partial class SystemTweaksService
                 "mpo_disable" => SetMpoDisabled(enableOptimal),
                 "wu_driver_exclude" => SetWuDriversExcluded(enableOptimal),
                 "priority_separation" => SetPrioritySeparation(enableOptimal),
+                "dlss_indicator" => SetDlssIndicator(enableOptimal),
                 _ => false
             };
 
@@ -569,6 +588,7 @@ public partial class SystemTweaksService
             "mpo_disable" => CheckMpoDisabled(),
             "wu_driver_exclude" => CheckWuDriversExcluded(),
             "priority_separation" => CheckPrioritySeparationOptimal(),
+            "dlss_indicator" => CheckDlssIndicatorOn(),
             "core_isolation" => CheckHvciActive(),
             _ => false
         };
@@ -657,6 +677,13 @@ public partial class SystemTweaksService
             entries.Add(int.TryParse(prior, out int priorValue)
                 ? new RegFileEntry(PriorityControlKey, "Win32PrioritySeparation", priorValue, RegistryValueKind.DWord, Delete: false)
                 : new RegFileEntry(PriorityControlKey, "Win32PrioritySeparation", 2, RegistryValueKind.DWord, Delete: false));
+        }
+        if (ids.Contains("dlss_indicator"))
+        {
+            // Absent before means deleting, not writing zero - zero is a value NVIDIA never had there.
+            entries.Add(int.TryParse(TakePrior("dlss_indicator"), out int priorIndicator)
+                ? new RegFileEntry(NgxCoreKey, "ShowDlssIndicator", priorIndicator, RegistryValueKind.DWord, Delete: false)
+                : new RegFileEntry(NgxCoreKey, "ShowDlssIndicator", null, RegistryValueKind.None, Delete: true));
         }
         if (ids.Contains("nagle_disable"))
         {
@@ -1181,6 +1208,53 @@ public partial class SystemTweaksService
 
     private static bool SetWuDriversExcluded(bool exclude) =>
         exclude ? SetHklmDword(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate", 1) : DeleteHklmValue(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate");
+
+    // ---- NVIDIA DLSS Indicator -----------------------------------------------------------------
+
+    private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";
+
+    /// <summary>
+    /// NVIDIA ships 1 in its own .reg file, which only draws for developer builds. 0x400 is what
+    /// permits a retail game to draw it, matching the documented __NGX_SHOW_INDICATOR=1024.
+    /// </summary>
+    private const int DlssIndicatorRetail = 0x400;
+
+    private static int? ReadDlssIndicator()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
+            return key?.GetValue("ShowDlssIndicator") is int i ? i : null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>The driver creates the NGXCore key; without it there is nothing to draw the indicator.</summary>
+    private static bool HasNvidiaNgx()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
+            return key != null;
+        }
+        catch { return false; }
+    }
+
+    private static bool CheckDlssIndicatorOn() => ReadDlssIndicator() == DlssIndicatorRetail;
+
+    private bool SetDlssIndicator(bool show)
+    {
+        if (show)
+        {
+            CapturePrior("dlss_indicator", ReadDlssIndicator()?.ToString() ?? "absent");
+            return SetHklmDword(NgxCoreKey, "ShowDlssIndicator", DlssIndicatorRetail);
+        }
+
+        // Absent before means deleting, not writing zero - zero is a value NVIDIA never had there.
+        return int.TryParse(TakePrior("dlss_indicator"), out int prior)
+            ? SetHklmDword(NgxCoreKey, "ShowDlssIndicator", prior)
+            : DeleteHklmValue(NgxCoreKey, "ShowDlssIndicator");
+    }
 
     private const int PrioritySeparationBoost = 0x26;
     private const int PrioritySeparationClientDefault = 0x02;

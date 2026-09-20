@@ -81,6 +81,7 @@ public class HelpContentServiceTests
     [InlineData("mpo_disable")]
     [InlineData("wu_driver_exclude")]
     [InlineData("priority_separation")]
+    [InlineData("dlss_indicator")]
     public void EverySystemTweak_HasAHelpTopic(string tweakId)
     {
         // Mirrors the Id values in SystemTweaksService.BuildTweaks. If a tweak is added there,

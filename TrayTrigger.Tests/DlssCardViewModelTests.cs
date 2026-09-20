@@ -343,23 +343,6 @@ public class DlssCardViewModelTests
         Assert.Contains("Put back", card.Status);
     }
 
-    // ---- The overlay -------------------------------------------------------------------------
-
-    [Fact]
-    public void TheOverlayIsOffByDefault_AndSavesWhenTicked()
-    {
-        var game = new GameEntry();
-        int persisted = 0;
-        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), () => persisted++, game: game);
-
-        Assert.False(card.ShowOverlay);
-
-        card.ShowOverlay = true;
-
-        Assert.True(game.DlssShowOverlay);
-        Assert.Equal(1, persisted);
-    }
-
     // ---- Notices -----------------------------------------------------------------------------
 
     [Fact]

@@ -129,22 +129,6 @@ public sealed class DlssCardViewModel : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// Off by default, and labelled as a testing aid because that is what it is: it draws over the
-    /// game, needs administrator permission, and tells you nothing you need for normal play.
-    /// </summary>
-    public bool ShowOverlay
-    {
-        get => _game?.DlssShowOverlay == true;
-        set
-        {
-            if (_game == null || _game.DlssShowOverlay == value) return;
-            _game.DlssShowOverlay = value;
-            _persist?.Invoke();
-            OnPropertyChanged();
-        }
-    }
-
     /// <summary>Puts back everything TrayTrigger changed, whatever the switch currently says.</summary>
     public ICommand RestoreCommand { get; }
 

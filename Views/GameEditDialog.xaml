@@ -477,20 +477,6 @@
                                        Foreground="{StaticResource BrushTextSecondary}"
                                        Visibility="{Binding Dlss.HasLastRun, Converter={StaticResource BoolToVis}}"/>
 
-                            <!-- The gap belongs on the next control, so it collapses with the
-                                 line above rather than leaving a hole when there is no last run. -->
-                            <CheckBox Margin="0,10,0,0"
-                                      Content="Show the DLSS Indicator while this game runs"
-                                      AutomationProperties.Name="Show the DLSS Indicator while this game runs"
-                                      IsChecked="{Binding Dlss.ShowOverlay}"
-                                      Style="{StaticResource ModernCheckBox}"/>
-                            <!-- "For testing only" is bold because the admin prompt alone does not
-                                 say this is a diagnostic rather than something to leave switched on. -->
-                            <TextBlock FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
-                                       Foreground="{StaticResource BrushTextSecondary}">
-                                <Run Text="For testing only." FontWeight="SemiBold"/><Run Text=" Draws the official on-screen overlay showing active DLSS version, preset letter, and render resolution (requires administrator)."/>
-                            </TextBlock>
-
                             <!-- Only when true: a conflict, or somebody else&apos;s override. -->
                             <TextBlock Text="{Binding Dlss.Notice}" FontSize="11" Margin="0,10,0,0"
                                        Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"

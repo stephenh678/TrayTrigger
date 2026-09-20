@@ -52,21 +52,6 @@ public class PerformanceProfileService
     private readonly ISystemTweakBackend _backend;
     private readonly Lock _lock = new();
     private readonly HashSet<string> _activeSessionKeys = new();
-
-    /// <summary>
-    /// Sessions that asked for the DLSS overlay. Reference-counted rather than treated as an
-    /// ordinary machine-wide tweak: the whole justification for the overlay is that it is scoped
-    /// to one game, so a second game running alongside must not inherit it. It goes on for the
-    /// first game that wants it and off when the last one ends.
-    /// </summary>
-    private readonly HashSet<string> _overlaySessions = new();
-
-    /// <summary>
-    /// Sessions whose profile tier is not Off. "First session" for the machine-wide tweaks means
-    /// first among these: a game tracked only for its DLSS overlay applies none of them, so it
-    /// must not count as the session a later profile game joins.
-    /// </summary>
-    private readonly HashSet<string> _profileSessions = new();
     private PerformanceProfileSessionSnapshot? _snapshot;
 
     public PerformanceProfileService(StorageService storageService)
@@ -141,17 +126,14 @@ public class PerformanceProfileService
     /// </summary>
     public bool BeginGameSession(GameEntry game)
     {
-        // The DLSS overlay is not a profile tweak - a user can want it on a game with no profile
-        // at all - so it alone can keep this from being a no-op.
-        if (game.PerformanceProfile == PerformanceProfileMode.Off && !game.DlssShowOverlay) return false;
+        if (game.PerformanceProfile == PerformanceProfileMode.Off) return false;
 
         lock (_lock)
         {
             if (_activeSessionKeys.Contains(game.Id)) return false;
 
             var settings = _settingsProvider();
-            bool profileActive = game.PerformanceProfile != PerformanceProfileMode.Off;
-            bool isFirstSession = _profileSessions.Count == 0;
+            bool isFirstSession = _activeSessionKeys.Count == 0;
 
             _snapshot ??= new PerformanceProfileSessionSnapshot();
 
@@ -163,9 +145,7 @@ public class PerformanceProfileService
             // A later game that adds no per-exe tweaks of its own still relies on the machine-wide
             // ones the first session applied, so it joins the session: otherwise the first game
             // ending restores them while this one is still running.
-            // A game that joined an overlay another session already turned on applied nothing
-            // itself, but holds a reference to it and has to be tracked so it can be released.
-            if (!appliedAnything && isFirstSession && !_overlaySessions.Contains(game.Id))
+            if (!appliedAnything && isFirstSession)
             {
                 LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
                 if (IsEmpty(_snapshot))
@@ -176,7 +156,6 @@ public class PerformanceProfileService
             }
 
             _activeSessionKeys.Add(game.Id);
-            if (profileActive) _profileSessions.Add(game.Id);
             LoggingService.Info("PerformanceProfile", $"Applied {game.PerformanceProfile} profile for '{game.Name}' (pre-launch).");
             return true;
         }
@@ -184,83 +163,7 @@ public class PerformanceProfileService
 
     private static bool IsEmpty(PerformanceProfileSessionSnapshot s) =>
         s.PerGameSnapshots.Count == 0 && !s.PowerPlanCaptured && !s.SystemResponsivenessCaptured
-        && !s.SchedulingCategoryCaptured && !s.HdrCaptured && !s.ToastsCaptured && !s.TimerResolutionRequested
-        && !s.DlssOverlayCaptured;
-
-    // --- DLSS on-screen indicator -------------------------------------------------------------
-
-    /// <summary>NVIDIA's NGX settings key. The indicator value is machine-wide.</summary>
-    private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";
-    private const string ShowDlssIndicatorValue = "ShowDlssIndicator";
-
-    /// <summary>
-    /// NVIDIA ships 1 in its own .reg file, which only draws for developer builds. 0x400 is what
-    /// permits a retail game to draw it, matching the documented __NGX_SHOW_INDICATOR=1024.
-    /// </summary>
-    private const int ShowDlssIndicatorRetail = 0x400;
-
-    /// <summary>
-    /// Turns the indicator on for this session. Returns true only when this call changed the
-    /// registry - a second game joining an already-on overlay has nothing to do, and must not
-    /// capture a "previous value" of TrayTrigger's own making.
-    /// </summary>
-    private bool ApplyDlssOverlay(GameEntry game, PerformanceProfileSessionSnapshot snapshot)
-    {
-        bool first = _overlaySessions.Count == 0;
-        _overlaySessions.Add(game.Id);
-        if (!first) return false;
-
-        // A capture still held means an earlier restore was refused and the value in the registry
-        // is TrayTrigger's own. Capturing again would record that as the "previous" value and the
-        // real one would be lost for good.
-        bool capturedHere = !snapshot.DlssOverlayCaptured;
-        if (capturedHere)
-        {
-            snapshot.PreviousDlssIndicator = _backend.ReadHklmDword(NgxCoreKey, ShowDlssIndicatorValue);
-            snapshot.DlssOverlayCaptured = true;
-        }
-
-        if (!_backend.WriteHklmDword(NgxCoreKey, ShowDlssIndicatorValue, ShowDlssIndicatorRetail))
-        {
-            // Needs elevation, and the user may have declined. Nothing was written, so nothing is
-            // owed - drop the capture rather than leave a restore that would delete a value
-            // TrayTrigger never set.
-            if (capturedHere)
-            {
-                snapshot.DlssOverlayCaptured = false;
-                snapshot.PreviousDlssIndicator = null;
-            }
-            _overlaySessions.Remove(game.Id);
-            LoggingService.Warn("PerformanceProfile", $"Could not turn on the DLSS overlay for '{game.Name}' - the registry write was refused.");
-            return false;
-        }
-
-        LoggingService.Info("PerformanceProfile", $"DLSS overlay on for '{game.Name}'.");
-        return true;
-    }
-
-    /// <summary>
-    /// Puts the indicator back once no session wants it. Absent before means deleting, not
-    /// writing zero - zero is a value NVIDIA never had there.
-    /// </summary>
-    private void RestoreDlssOverlay(PerformanceProfileSessionSnapshot snapshot)
-    {
-        if (!snapshot.DlssOverlayCaptured) return;
-
-        bool ok = snapshot.PreviousDlssIndicator.HasValue
-            ? _backend.WriteHklmDword(NgxCoreKey, ShowDlssIndicatorValue, snapshot.PreviousDlssIndicator.Value)
-            : _backend.DeleteHklmValue(NgxCoreKey, ShowDlssIndicatorValue);
-
-        if (!ok)
-        {
-            LoggingService.Warn("PerformanceProfile", "Could not turn the DLSS overlay back off; leaving it recorded so the next start can.");
-            return;
-        }
-
-        snapshot.DlssOverlayCaptured = false;
-        snapshot.PreviousDlssIndicator = null;
-        LoggingService.Info("PerformanceProfile", "DLSS overlay off.");
-    }
+        && !s.SchedulingCategoryCaptured && !s.HdrCaptured && !s.ToastsCaptured && !s.TimerResolutionRequested;
 
     /// <summary>
     /// POST-START phase. Applies the tweaks that need the actual game process. These need no
@@ -283,22 +186,9 @@ public class PerformanceProfileService
     {
         bool applied = false;
         bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
-        // A session can now start for the DLSS overlay alone, so every profile tweak below has to
-        // be gated on the tier explicitly. Before the overlay existed, BeginGameSession returning
-        // early on Off was what did that - and simply removing that guard silently applied the
-        // power plan, HDR and Do Not Disturb to a game whose profile is Off.
-        bool profileActive = game.PerformanceProfile != PerformanceProfileMode.Off;
-
-        // Independent of the profile tier and of isFirstSession: this game asked for it, and the
-        // reference count decides whether the registry actually has to change.
-        if (game.DlssShowOverlay && ApplyDlssOverlay(game, snapshot))
-        {
-            applied = true;
-            _store.SaveProfileSessionSnapshot(snapshot);
-        }
 
         // --- Machine-wide (first session only) ---
-        if (isFirstSession && profileActive)
+        if (isFirstSession)
         {
             if (settings.OptimizedProfileTweaks.PowerPlanEnabled && ApplyPowerPlan(snapshot))
             {
@@ -353,14 +243,14 @@ public class PerformanceProfileService
         string? resolvedExePath = ResolveRealExecutablePath(game);
         PerGameProfileSnapshot? perGame = null;
 
-        if (profileActive && settings.OptimizedProfileTweaks.GpuPreferenceEnabled && resolvedExePath != null)
+        if (settings.OptimizedProfileTweaks.GpuPreferenceEnabled && resolvedExePath != null)
         {
             perGame = new PerGameProfileSnapshot { GameId = game.Id };
             ApplyGpuPreference(perGame, resolvedExePath);
             applied = true;
         }
 
-        if (profileActive && aggressive && settings.AggressiveProfileTweaks.DefenderExclusionEnabled && resolvedExePath != null)
+        if (aggressive && settings.AggressiveProfileTweaks.DefenderExclusionEnabled && resolvedExePath != null)
         {
             perGame ??= new PerGameProfileSnapshot { GameId = game.Id };
             ApplyDefenderExclusion(perGame, resolvedExePath);
@@ -386,15 +276,7 @@ public class PerformanceProfileService
         lock (_lock)
         {
             if (!_activeSessionKeys.Remove(gameId)) return false;
-            bool wasProfileSession = _profileSessions.Remove(gameId);
-            bool releasedOverlay = _overlaySessions.Remove(gameId);
             if (_snapshot == null) return true;
-
-            if (releasedOverlay && _overlaySessions.Count == 0)
-            {
-                RestoreDlssOverlay(_snapshot);
-                _store.SaveProfileSessionSnapshot(_snapshot);
-            }
 
             var perGame = _snapshot.PerGameSnapshots.FirstOrDefault(p => p.GameId == gameId);
             if (perGame != null)
@@ -406,29 +288,12 @@ public class PerformanceProfileService
             if (_activeSessionKeys.Count == 0)
             {
                 RestoreGlobalTweaks(_snapshot, skipElevated: false);
-                if (_snapshot.DlssOverlayCaptured)
-                {
-                    // The overlay restore was refused. Keep the capture - on disk for the next
-                    // start, in memory so the next overlay game does not capture over it.
-                    _store.SaveProfileSessionSnapshot(_snapshot);
-                    LoggingService.Info("PerformanceProfile", "All tracked game sessions ended; the DLSS overlay is still to be turned off.");
-                }
-                else
-                {
-                    _snapshot = null;
-                    _store.DeleteProfileSessionSnapshot();
-                    LoggingService.Info("PerformanceProfile", "All tracked game sessions ended; restored pre-profile system state.");
-                }
+                _snapshot = null;
+                _store.DeleteProfileSessionSnapshot();
+                LoggingService.Info("PerformanceProfile", "All tracked game sessions ended; restored pre-profile system state.");
             }
             else
             {
-                // Only overlay-only games are left. The profile's machine-wide tweaks go back now:
-                // the next profile game is a first session again and would otherwise capture
-                // TrayTrigger's own power plan as the one to restore.
-                if (wasProfileSession && _profileSessions.Count == 0)
-                {
-                    RestoreGlobalTweaks(_snapshot, skipElevated: false, includeOverlay: false);
-                }
                 _store.SaveProfileSessionSnapshot(_snapshot);
             }
             return true;
@@ -466,14 +331,9 @@ public class PerformanceProfileService
                 }
             }
 
-            // The overlay counts whether it was deferred or refused: still captured here means it
-            // is still on, and the snapshot is the only thing that can turn it off.
-            bool anythingDeferred = _snapshot.DlssOverlayCaptured ||
-                (deferElevated && (_snapshot.SystemResponsivenessCaptured || _snapshot.SchedulingCategoryCaptured || _snapshot.PerGameSnapshots.Count > 0));
+            bool anythingDeferred = deferElevated && (_snapshot.SystemResponsivenessCaptured || _snapshot.SchedulingCategoryCaptured || _snapshot.PerGameSnapshots.Count > 0);
 
             _activeSessionKeys.Clear();
-            _profileSessions.Clear();
-            _overlaySessions.Clear();
             if (anythingDeferred)
             {
                 _store.SaveProfileSessionSnapshot(_snapshot);
@@ -703,7 +563,7 @@ public class PerformanceProfileService
         LoggingService.Verbose("PerformanceProfile", "Timer resolution: request released.");
     }
 
-    private void RestoreGlobalTweaks(PerformanceProfileSessionSnapshot snapshot, bool skipElevated, bool includeOverlay = true)
+    private void RestoreGlobalTweaks(PerformanceProfileSessionSnapshot snapshot, bool skipElevated)
     {
         RestorePowerPlan(snapshot);
         snapshot.PowerPlanCaptured = false;
@@ -719,7 +579,6 @@ public class PerformanceProfileService
         {
             return;
         }
-        if (includeOverlay) RestoreDlssOverlay(snapshot);
         RestoreSystemResponsiveness(snapshot);
         snapshot.SystemResponsivenessCaptured = false;
         RestoreSchedulingCategory(snapshot);
