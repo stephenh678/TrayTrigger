@@ -6,10 +6,22 @@ using TrayTrigger.ViewModels;
 namespace TrayTrigger.Tests;
 
 /// <summary>
+/// Every test class that sets <see cref="InstalledGameIndex.Current"/>. It is one static shared
+/// by the whole app, so two classes swapping it at once would each see the other's index; xunit
+/// runs the members of one collection one after another.
+/// </summary>
+[CollectionDefinition(InstallIndexCollection.Name)]
+public class InstallIndexCollection
+{
+    public const string Name = "InstalledGameIndex.Current";
+}
+
+/// <summary>
 /// How a card takes an availability result, and in particular when it decides the question is
 /// settled. Getting that wrong is silent: the marker simply never appears, and nothing in the log
 /// says why, because as far as the card is concerned it already has an answer.
 /// </summary>
+[Collection(InstallIndexCollection.Name)]
 public class GameCardAvailabilityTests : IDisposable
 {
     private readonly InstalledGameIndex _indexBefore = InstalledGameIndex.Current;

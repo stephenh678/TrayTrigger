@@ -6,6 +6,7 @@ using TrayTrigger.Services;
 
 namespace TrayTrigger.Tests;
 
+[Collection(InstallIndexCollection.Name)]
 public class DiagnosticReportServiceTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "TrayTriggerDiag_" + Guid.NewGuid().ToString("N"));
@@ -40,6 +41,28 @@ public class DiagnosticReportServiceTests : IDisposable
         AppVersion = "v1.4.2-beta.4",
     };
 
+    /// <summary>
+    /// A launcher game the launcher no longer lists is named too, with the launcher that was
+    /// asked - the one thing a "this game is greyed out and it shouldn't be" report has to say.
+    /// </summary>
+    [Fact]
+    public void Build_NamesAGameItsLauncherNoLongerHas()
+    {
+        var was = InstalledGameIndex.Current;
+        try
+        {
+            InstalledGameIndex.Current = InstalledGameIndex.ForTest(steamAppIds: ["440"]);
+            string report = DiagnosticReportService.Build(SampleInputs(), () => "- Windows: 11");
+
+            Assert.Contains("missing exe 1, not installed 1", report);
+            Assert.Contains("- Portal 2 (Steam): Steam does not list it", report);
+        }
+        finally
+        {
+            InstalledGameIndex.Current = was;
+        }
+    }
+
     [Fact]
     public void Build_CoversEverySection_AndNeverLeaksApiKeys()
     {
@@ -53,7 +76,9 @@ public class DiagnosticReportServiceTests : IDisposable
         Assert.Contains("Battle.net 1", report);
         Assert.Contains("Steam 1", report);
         Assert.Contains("Local 1", report);
-        Assert.Contains("Hidden 1, with hotkey 1, with scripts 1, missing exe 1", report);
+        Assert.Contains("Hidden 1, with hotkey 1, with scripts 1, missing exe 1, not installed 0", report);
+        // Named, not just counted: the report exists to answer "why is that one greyed out".
+        Assert.Contains(@"- Fatekeeper (Local): not on disk: C:\definitely\missing\Fatekeeper.exe", report);
         Assert.Contains("Scripts: on; default scripts: on (pre-launch set, post-exit none)", report);
         Assert.Contains("SteamGridDB: on, key present; RAWG: off, key present", report);
         Assert.Contains("last result: Applied.", report);

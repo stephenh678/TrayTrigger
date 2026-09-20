@@ -127,10 +127,34 @@ public static class DiagnosticReportService
         int hidden = games.Count(g => g.IsHidden);
         int hotkeys = games.Count(g => !string.IsNullOrWhiteSpace(g.Hotkey));
         int scripts = games.Count(g => g.HasScripts);
-        int missing = games.Count(g => IsExeMissing(g));
-        sb.AppendLine($"- Hidden {hidden}, with hotkey {hotkeys}, with scripts {scripts}, missing exe {missing}");
+
+        // The same snapshot the cards are marked from, not a fresh read: the question this
+        // answers is "why is that game greyed out", and a reading taken now could differ from
+        // the one the user is looking at.
+        var marked = games
+            .Select(g => (Game: g, Availability: InstalledGameIndex.Current.AvailabilityOf(g)))
+            .Where(x => x.Availability != GameAvailability.Available)
+            .ToList();
+        int notInstalled = marked.Count(x => x.Availability == GameAvailability.NotInstalled);
+        int missing = marked.Count(x => x.Availability == GameAvailability.ExecutableMissing);
+
+        sb.AppendLine($"- Hidden {hidden}, with hotkey {hotkeys}, with scripts {scripts}, missing exe {missing}, not installed {notInstalled}");
+        // Named, because a count alone cannot answer the report this exists for: a game marked
+        // when it should not have been. The platform says which launcher was asked.
+        foreach (var (game, availability) in marked.Take(MarkedGamesListed))
+        {
+            string reason = availability == GameAvailability.NotInstalled
+                ? $"{PlatformOf(game)} does not list it"
+                : $"not on disk: {game.ExecutablePath}";
+            sb.AppendLine($"  - {game.Name} ({PlatformOf(game)}): {reason}");
+        }
+        if (marked.Count > MarkedGamesListed) sb.AppendLine($"  - ...and {marked.Count - MarkedGamesListed} more");
+
         sb.AppendLine($"- Scan locations: {inputs.Settings.ScanLocations.Count} ({inputs.Settings.ScanLocations.Count(l => l.IsEnabled)} enabled); ignored entries: {inputs.Settings.IgnoredGamePaths.Count}");
     }
+
+    /// <summary>How many marked games the report names before it starts counting instead.</summary>
+    private const int MarkedGamesListed = 15;
 
     private static void AppendSettings(StringBuilder sb, Inputs inputs)
     {
@@ -346,13 +370,6 @@ public static class DiagnosticReportService
         : g.IsXboxGame ? "Xbox"
         : g.IsBattleNetGame ? "Battle.net"
         : "Local";
-
-    private static bool IsExeMissing(GameEntry g)
-    {
-        if (g.IsSteamGame || g.IsXboxGame || g.IsBattleNetGame) return false;
-        if (string.IsNullOrWhiteSpace(g.ExecutablePath) || ProcessLauncherService.IsNonFileProtocolUrl(g.ExecutablePath)) return false;
-        return !File.Exists(g.ExecutablePath);
-    }
 
     private static bool IsElevated()
     {
