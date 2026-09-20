@@ -172,6 +172,21 @@ substituted when it was on. That remains a clean result.
 overlay to **E**. So **a per-game setting overrides a global one** - verified, and not previously
 established.
 
+#### Precedence, confirmed
+
+DRS resolves a setting **application profile -> global profile -> base profile -> driver default**.
+NVIDIA's DRS reference exposes all three tiers (`NvAPI_DRS_GetBaseProfile`,
+`NvAPI_DRS_GetCurrentGlobalProfile`, per-application profiles) and `NVDRS_SETTING` carries
+`isCurrentPredefined` / `isPredefinedValid` / `predefinedValue` to express inheritance - but it
+does not state the ordering outright.
+
+**Run 6 demonstrates it directly**, which is better evidence than the documentation offers: the
+Global profile held RR preset `0x00FFFFFF` ("recommended"), which rendered as Preset F; a per-game
+Preset E rendered as E. The application profile wins.
+
+This is what makes the feature viable at all - TrayTrigger can override a game whatever RHI or
+NVIDIA App wrote globally. The cost is the trap below.
+
 #### Consequence for the design: there are three layers, not two
 
 The plan's ownership model assumes a setting is either TrayTrigger's or absent. In reality a value
@@ -415,7 +430,7 @@ game file modified. What remains untested is the preset half of the recipe, beha
 | **The override settings are per-feature** | **Verified** | Run 5: FG override off left FG on the game's 310.7.128 while SR and RR came from the store |
 | **A feature the game is not using produces no observation at all** | **Verified** | Runs 1-3 loaded no SR module from either source, because SR was off in-game |
 | **RR is substituted without a per-game `0x10E41E02`** | **Explained** | The Global profile already had `0x10E41E02` = 1, pre-existing, probably from RHI |
-| **A per-game setting overrides a global one** | **Verified** | Run 6: global RR preset `0x00FFFFFF` rendered as F; per-game Preset E rendered as E |
+| **A per-game setting overrides a global one** | **Verified** | Run 6: global RR preset `0x00FFFFFF` rendered as F; per-game Preset E rendered as E. Precedence is application -> global -> base -> default; NVIDIA exposes the tiers but does not document the ordering, so this observation is the primary evidence. |
 | **The per-game SR override was what caused SR substitution** | **Confounded** | Global already had `0x10E41E01` = 1, so runs 1-5 cannot attribute SR substitution to the per-game setting |
 | **The overlay reports the active preset letter** | **Verified** | `Render Preset F` read on-screen, run 5 - the justification for layer 4 |
 | **The overlay and module enumeration agree** | **Verified** | FG, RR, Streamline and driver versions matched across both methods in the same session |
