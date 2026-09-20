@@ -69,7 +69,13 @@ public enum DlssSettingOutcome
     /// The save reported success, but reading the setting back from a fresh session did not show
     /// the value TrayTrigger wrote. The write did not land; nothing else can be trusted about it.
     /// </summary>
-    WriteBackFailed
+    WriteBackFailed,
+    /// <summary>
+    /// This driver does not have this setting. Not a failure - NVIDIA adds and retires setting ids
+    /// between driver versions, and a recipe entry that no longer exists should be stepped over,
+    /// not reported as something going wrong.
+    /// </summary>
+    NotSupportedByDriver
 }
 
 /// <summary>One setting's fate within an operation.</summary>

@@ -108,7 +108,8 @@ public partial class App
                           // must run before the view model exists - a game need not be imported to
                           // be probed.
                           arg.Equals("--test-dlss", StringComparison.OrdinalIgnoreCase) ||
-                          arg.Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase);
+                          arg.Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase) ||
+                          arg.Equals("--test-dlss-roundtrip", StringComparison.OrdinalIgnoreCase);
             bool requiresVm = !isScan && (
                               arg.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) ||
                               arg.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
@@ -172,6 +173,15 @@ public partial class App
                 _ = RunXboxDiagnosticAsync(launch, target);
                 return;
             }
+            // --test-dlss-roundtrip <exe>: apply, then undo, comparing the settings before and
+            // after. The only thing in the codebase that calls NvAPI_DRS_SaveSettings for real.
+            if (e.Args[i].Equals("--test-dlss-roundtrip", StringComparison.OrdinalIgnoreCase))
+            {
+                RunDlssRoundTrip(i + 1 < e.Args.Length && !e.Args[i + 1].StartsWith('-') ? e.Args[i + 1] : null);
+                ExitApplication();
+                return;
+            }
+
             // --test-dlss-writecheck <exe>: exercises the DRS write interop in memory and never
             // saves, so it separates "the interop is wrong" from "the driver refused".
             if (e.Args[i].Equals("--test-dlss-writecheck", StringComparison.OrdinalIgnoreCase))

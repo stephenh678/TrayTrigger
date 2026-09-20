@@ -89,13 +89,16 @@ public class NgxModelStoreTests
     }
 
     [Fact]
-    public void Settings_CoverTheSevenIdsInThePlan_WithNoDuplicates()
+    public void Settings_CoverSixIds_WithNoDuplicates()
     {
+        // Six, not the seven the plan first listed: 0x00634291 turned out not to be a DRS setting
+        // on any driver. See DlssProbeService.Settings.
         var ids = DlssProbeService.Settings.Select(s => s.Id).ToList();
 
-        Assert.Equal(7, ids.Count);
+        Assert.Equal(6, ids.Count);
         Assert.Equal(ids.Count, ids.Distinct().Count());
-        Assert.Contains(0x00634291u, ids);   // the gate that is easiest to forget
         Assert.Contains(0x10E41DF1u, ids);   // frame generation, whose sentinel differs
+        // All six live in NVIDIA's DLSS block; anything outside it would be a typo.
+        Assert.All(ids, id => Assert.InRange(id, 0x10E41DF0u, 0x10E41E0Fu));
     }
 }

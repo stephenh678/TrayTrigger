@@ -61,6 +61,12 @@ public sealed class FakeDrsBackend : IDrsBackend
         return profile;
     }
 
+    /// <summary>Setting ids this driver pretends not to have.</summary>
+    public HashSet<uint> UnknownSettingIds { get; } = new();
+
+    public string? GetSettingName(uint settingId) =>
+        UnknownSettingIds.Contains(settingId) ? null : $"Setting 0x{settingId:X8}";
+
     public IDrsSession? OpenSession(out string? error)
     {
         error = OpenError;

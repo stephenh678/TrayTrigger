@@ -77,6 +77,16 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
         foreach (var def in DlssProbeService.Settings)
         {
+            // NVIDIA adds and retires setting ids between driver versions. An id this driver does
+            // not have is stepped over, not reported as a failure - and never recorded, because
+            // there is nothing to undo. This check exists because the recipe carried an id for
+            // months that no driver has ever had; see DlssProbeService.Settings.
+            if (_backend.GetSettingName(def.Id) == null)
+            {
+                details.Add(new DlssSettingOutcomeDetail(def.FeatureCode, def.Id, DlssSettingOutcome.NotSupportedByDriver, null));
+                continue;
+            }
+
             var before = session.GetSetting(profile, def.Id, out _);
 
             if (!session.SetSetting(profile, def.Id, def.RecommendedValue, out string? setError))

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using TrayTrigger.Models;
 using TrayTrigger.Services;
 
 namespace TrayTrigger;
@@ -161,6 +162,128 @@ public partial class App
         o.AppendLine("Run --test-dlss afterwards to confirm the value is unchanged on disk.");
         Console.Write(o);
     }
+
+    /// <summary>
+    /// <c>--test-dlss-roundtrip &lt;exe&gt;</c>: the first thing that actually calls
+    /// <c>NvAPI_DRS_SaveSettings</c>. Reads the settings, applies, reads again, undoes, reads a
+    /// third time, and compares the first and last readings.
+    ///
+    /// <para>Self-reversing, and the ownership records are written to a file <i>before</i> the
+    /// undo, so a crash between the two still leaves enough to put the machine back by hand.</para>
+    /// </summary>
+    private static void RunDlssRoundTrip(string? target)
+    {
+        var o = new StringBuilder();
+        o.AppendLine("=== DLSS ROUND TRIP (this one really writes) ===");
+        o.AppendLine($"When          : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        o.AppendLine($"Elevated      : {SystemTweaksService.IsElevated}");
+
+        string? exePath = ResolveProbeTarget(target);
+        if (exePath == null) { WriteReport(o.AppendLine("Pass an executable.").ToString(), "dlss-roundtrip.txt"); return; }
+        o.AppendLine($"Target        : {exePath}");
+        o.AppendLine();
+
+        // Which ids this driver actually knows. A setting nobody has set and an id the driver will
+        // refuse to write both read as "absent" through a profile; only this tells them apart.
+        o.AppendLine("-- Does the driver recognise these setting ids? --");
+        foreach (var def in DlssProbeService.Settings)
+        {
+            string? name = NvApi.GetSettingName(def.Id);
+            o.AppendLine($"  0x{def.Id:X8}  {(name == null ? "NOT KNOWN TO THIS DRIVER" : $"known as \"{name}\"")}");
+        }
+        o.AppendLine();
+
+        var service = new DlssOverrideService();
+        var before = ReadSettings(exePath);
+        Dump(o, "BEFORE", before);
+
+        var applied = service.Apply(exePath, "Round trip test");
+        o.AppendLine($"Apply         : {(applied.Succeeded ? "OK" : $"FAILED - {applied.Error}")}");
+        // Every outcome that is not a clean Applied, not just the write-back ones. Printing only
+        // write-back failures hid a setting the driver had refused outright.
+        foreach (var d in applied.Details.Where(d => d.Outcome != DlssSettingOutcome.Applied))
+            o.AppendLine($"  0x{d.SettingId:X8}  {d.Outcome}: {d.Error}");
+
+        if (!applied.Succeeded)
+        {
+            // Nothing was saved, so there is nothing to undo and nothing to compare.
+            o.AppendLine();
+            o.AppendLine("Nothing was written. The database is untouched.");
+            WriteReport(o.ToString(), "dlss-roundtrip.txt");
+            return;
+        }
+
+        // Written before the undo on purpose: if this process dies now, this file is the only
+        // record of what to put back.
+        string recordPath = Path.Combine(Path.GetDirectoryName(LoggingService.LogFilePath) ?? Path.GetTempPath(), "dlss-roundtrip-records.json");
+        try
+        {
+            File.WriteAllText(recordPath, System.Text.Json.JsonSerializer.Serialize(applied.Records,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            o.AppendLine($"Records saved : {recordPath}");
+        }
+        catch (Exception ex) { o.AppendLine($"Records saved : FAILED - {ex.Message}"); }
+
+        o.AppendLine();
+        Dump(o, "AFTER APPLY", ReadSettings(exePath));
+
+        var undone = service.Undo(applied.Records);
+        o.AppendLine($"Undo          : {(undone.Succeeded ? "OK" : $"FAILED - {undone.Error}")}");
+        if (undone.HadForeignChanges) o.AppendLine("  some settings were left alone (changed elsewhere)");
+
+        o.AppendLine();
+        var after = ReadSettings(exePath);
+        Dump(o, "AFTER UNDO", after);
+
+        o.AppendLine(Matches(before, after)
+            ? "RESULT: every setting is back exactly as it started."
+            : "RESULT: *** the settings did NOT return to their original state - see above ***");
+
+        WriteReport(o.ToString(), "dlss-roundtrip.txt");
+    }
+
+    /// <summary>
+    /// Prints a report and writes it next to the log. TrayTrigger is a WinExe, so a run started
+    /// from Explorer - or at a reduced trust level - has no console to attach to and would
+    /// otherwise print into the void.
+    /// </summary>
+    private static void WriteReport(string report, string fileName)
+    {
+        Console.Write(report);
+        try
+        {
+            string path = Path.Combine(Path.GetDirectoryName(LoggingService.LogFilePath) ?? Path.GetTempPath(), fileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, report);
+            Console.WriteLine($"Report written to {path}");
+            LoggingService.Info("Dlss", $"Report written to {path}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not write the report file: {ex.Message}");
+            LoggingService.Warn("Dlss", $"Could not write the report: {ex.Message}");
+        }
+    }
+
+    private static Dictionary<uint, string> ReadSettings(string exePath)
+    {
+        var map = new Dictionary<uint, string>();
+        var r = DlssProbeService.Probe(exePath);
+        foreach (var s in r.SettingStates)
+            map[s.Definition.Id] = s.Value == null ? "absent" : $"0x{s.Value.CurrentValue:X8} [{s.Value.OriginLabel}]";
+        return map;
+    }
+
+    private static void Dump(StringBuilder o, string label, Dictionary<uint, string> settings)
+    {
+        o.AppendLine($"-- {label} --");
+        foreach (var def in DlssProbeService.Settings)
+            o.AppendLine($"  0x{def.Id:X8}  {def.Name,-38} {(settings.TryGetValue(def.Id, out string? v) ? v : "not read")}");
+        o.AppendLine();
+    }
+
+    private static bool Matches(Dictionary<uint, string> a, Dictionary<uint, string> b) =>
+        a.Count == b.Count && a.All(kv => b.TryGetValue(kv.Key, out string? v) && v == kv.Value);
 
     private static void PrintProfile(StringBuilder o, DlssProbeService.ProbeResult r)
     {

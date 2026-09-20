@@ -22,11 +22,16 @@ public static class DlssProbeService
     /// <summary>
     /// The DLSS settings in NVIDIA's driver database. Ids are NVIDIA's; the names are Profile
     /// Inspector's, kept because they are what a user searching the web will find.
+    ///
+    /// <para>There were seven. <c>0x00634291</c>, "DLSS - Forced Model Preset Profile", which the
+    /// plan called the gate that everyone misses, is <b>not a DRS setting at all</b>:
+    /// <c>NvAPI_DRS_GetSettingNameFromId</c> does not recognise it and <c>SetSetting</c> refuses it
+    /// with NVAPI_SETTING_NOT_FOUND. Verified on driver 616.64, 2026-09-19. The preset letters work
+    /// without it.</para>
     /// </summary>
     public static readonly DlssSettingDefinition[] Settings =
     {
         new(0x10E41E01, "DLSS - Enable DLL Override",         "Super Resolution",   "SR", 1,          "Substitutes the driver's runtime for the game's"),
-        new(0x00634291, "DLSS - Forced Model Preset Profile", "Super Resolution",   "SR", 1,          "The gate: without it the preset letters may do nothing"),
         new(0x10E41DF3, "DLSS - Forced Preset Letter",        "Super Resolution",   "SR", 0x00FFFFFF, "0x00FFFFFF = use NVIDIA's recommended preset"),
         new(0x10E41E02, "DLSS-RR - Enable DLL Override",      "Ray Reconstruction", "RR", 1,          "Substitutes the driver's runtime for the game's"),
         new(0x10E41DF7, "DLSS-RR - Forced Preset Letter",     "Ray Reconstruction", "RR", 0x00FFFFFF, "0x00FFFFFF = use NVIDIA's recommended preset"),

@@ -21,6 +21,13 @@ public interface IDrsBackend
 
     /// <summary>Opens a settings session, or returns null with the reason.</summary>
     IDrsSession? OpenSession(out string? error);
+
+    /// <summary>
+    /// The driver's own name for a setting id, or null when it does not have that setting.
+    /// Needed because a setting nobody has set and an id the driver will refuse both read as
+    /// absent through a profile - only this tells them apart.
+    /// </summary>
+    string? GetSettingName(uint settingId);
 }
 
 /// <summary>
@@ -65,6 +72,8 @@ public sealed record DrsSettingReading(uint Value, DlssSettingOrigin Origin);
 public sealed class NvApiDrsBackend : IDrsBackend
 {
     public bool IsAvailable => NvApi.TryInitialize();
+
+    public string? GetSettingName(uint settingId) => NvApi.GetSettingName(settingId);
 
     public IDrsSession? OpenSession(out string? error)
     {

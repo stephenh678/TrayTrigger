@@ -39,6 +39,7 @@ public static unsafe class NvApi
     private const uint IdDrsSaveSettings            = 0xFCBC7E14;
     private const uint IdDrsCreateProfile           = 0xCC176068;
     private const uint IdDrsCreateApplication       = 0x4347A9DE;
+    private const uint IdDrsGetSettingNameFromId    = 0xD61CBE6E;
 
     private const int UnicodeStringMax = 2048;
 
@@ -96,6 +97,23 @@ public static unsafe class NvApi
     }
 
     private static IntPtr Lookup(uint id) => _queryInterface == null ? IntPtr.Zero : _queryInterface(id);
+
+    /// <summary>
+    /// The driver's own name for a setting id, or null when it does not recognise it. Session-free,
+    /// so it answers "does this driver know this setting at all" independently of any profile -
+    /// which is the difference between a setting nobody has set and an id the driver will refuse
+    /// to write.
+    /// </summary>
+    public static string? GetSettingName(uint settingId)
+    {
+        if (!TryInitialize()) return null;
+        var fn = (delegate* unmanaged[Cdecl]<uint, ushort*, int>)Lookup(IdDrsGetSettingNameFromId);
+        if (fn == null) return null;
+
+        ushort* buffer = stackalloc ushort[UnicodeStringMax];
+        for (int i = 0; i < UnicodeStringMax; i++) buffer[i] = 0;
+        return fn(settingId, buffer) == 0 ? ReadFixed(buffer) : null;
+    }
 
     /// <summary>NVAPI's own text for a status code, falling back to the raw number.</summary>
     public static string Describe(int status)

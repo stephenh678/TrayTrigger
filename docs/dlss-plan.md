@@ -277,8 +277,8 @@ and the overlay independently reads `DLSS RR2`. The header semantics are real dr
   nothing about old games. Rainbow Six Extraction remains the test, and its DLSS could not be
   enabled - itself possibly because a 2021 runtime does not recognise an RTX 5080.
 - Whether NGX logs can be attributed to a session.
-- Whether `NvAPI_DRS_SaveSettings` needs elevation. (Reads are **settled** - they do not; see the
-  probe section. This is now a question about writes alone.)
+- ~~Whether `NvAPI_DRS_SaveSettings` needs elevation.~~ **Settled: it does not.** Neither reads
+  nor writes need elevation; see the round trip.
 
 ## The in-app probe, 2026-09-19 - build order step 1, and what it settled
 
@@ -533,20 +533,20 @@ NVIDIA's own words.
 | NVIDIA's public repo serves signed, tagged DLSS runtimes | **Verified** | Downloaded `v310.9.1`, 56.2 MB, signature Valid, `CN=NVIDIA Corporation` |
 | The seven setting IDs and their values | **Community-sourced** | `CustomSettingNames.xml` - authoritative for Profile Inspector's mapping, not for driver behaviour or NVIDIA authorship |
 | DLL override works on DLSS 2.0+, presets need 3.1 | **Documented** | NVIDIA's setting description: "Only DLSS2+ games support the override" |
-| `0x00634291` gates whether presets apply | **Documented** | NVIDIA's description of that setting |
+| ~~`0x00634291` gates whether presets apply~~ | **Refuted** | The id is not a DRS setting at all. See the round trip, 2026-09-19 |
 | Overrides shipped in driver 572.16 | **Documented** | NVIDIA release notes / support article |
 | NVIDIA App enforces its allowlist, the driver does not | **Documented** | Third-party analysis of `ApplicationStorage.json` / `fingerprint.db`; consistent with Profile Inspector working on unlisted games |
 | **Driver-path overrides carry no realistic anti-cheat risk** | **Inferred** | No files change, nothing is injected, the loaded module is NVIDIA-signed, it is NVIDIA's own shipped feature on protected titles, and no vendor publishes a warning. Independently agreed by a second reviewer citing zero documented bans - but that is still absence of evidence, not a test. |
 | **The 3.1 floor is about the game's API integration, not the model** | **Inferred** | Fits the observed cutoff; NGX's evaluated-feature exports hold C-ABI compatibility across 2.x/3.x, which would allow a newer runtime to serve an older integration. NVIDIA does not document the reason. |
 | **Writing settings pre-launch defeats NVIDIA App reverting them** | **Inferred** | Reviewer reports NVIDIA App reconciles on its own startup, driver update or library scan, and does not hook process creation. Plausible and matches observed behaviour; untested by either party. |
-| **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated. Reads are now known not to need it, which says nothing about writes. |
+| ~~**`NvAPI_DRS_SaveSettings` needs elevation**~~ | **Refuted** | 2026-09-19: a full apply and undo succeeded at reduced trust, `Elevated: False`. The feature needs no UAC prompt at all |
 | **DRS reads need no elevation** | **Verified** | 2026-09-19, `runas /trustlevel:0x20000` (`Elevated: NO`): profile, values, origin layers, Global profile and the NGXCore registry all read back identically to the elevated run |
 | **DRS can be read from inside TrayTrigger** | **Verified** | 2026-09-19 probe: profile, per-setting value, origin layer and the Global profile's contents all read back, matching the user's exported `.nip` field for field |
 | **An executable absent from NVIDIA's database is detectable** | **Verified** | `NvAPI_DRS_FindApplicationByName` returns `NVAPI_EXECUTABLE_NOT_FOUND` (-166) |
 | **The version an override will load is readable before launch** | **Verified** | `nvngx_config.txt` maps the override pseudo-app `app_E658700` to an explicit version per feature |
-| **A profile can be created for an unlisted executable** | **Untested** | `CreateProfile`/`CreateApplication` are writes and wait on the ownership record |
+| **A profile can be created for an unlisted executable** | **Untested** | The code path exists and is unit-tested; no real unlisted game has been tried |
 | **Combining DLL override + preset works on a DLSS 2.x game** | **Untested** | Still the highest-value unknown. The 2026-09-19 spike used a 310.7.128 game, so it says nothing about DLSS 2.x. |
-| `0x00634291` = 1 reproduces NVIDIA App's per-GPU/per-mode selection | **Untested** | An earlier draft claimed this was resolved. The XML label "Recommended" is not proof of equivalence. |
+| ~~`0x00634291` = 1 reproduces NVIDIA App's selection~~ | **Moot** | There is no such setting to write |
 | FG's `0x00FFFFFE` means "latest" rather than "default" | **Disputed** | Profile Inspector labels it "Use recommended preset". One reviewer says NVIDIA defines it as Default and `0x00FFFFFF` as Latest. **Neither sentinel exists in NVIDIA's SDK headers**, whose enum is 0-15. Unresolved until the spike. |
 | Preset letter meanings (K/L/M per-mode defaults; A-D removed) | **Documented** | `nvsdk_ngx_defs.h` and `nvsdk_ngx_defs_dlssd.h`, NVIDIA's own headers. These **contradict** Profile Inspector's labels. |
 | `ShowDlssIndicator` = 1024 works on retail builds | **Documented** | NVIDIA documents 1024 for release builds; also matches the documented `__NGX_SHOW_INDICATOR=1024`. Stronger than the "community reports" an earlier draft cited. |
@@ -576,7 +576,7 @@ game file modified. What remains untested is the preset half of the recipe, beha
 | **The overlay and module enumeration agree** | **Verified** | FG, RR, Streamline and driver versions matched across both methods in the same session |
 | **NVIDIA's SDK header preset semantics are real driver behaviour** | **Verified** | Header calls preset F "Default model RR2"; the overlay independently reads `DLSS RR2` |
 | **Preset settings change the active preset** | **Verified** | Run 6: overlay went from `Render Preset F` (RR default) to `Render Preset E` after writing `0x00634291` and `0x10E41DF7` |
-| **`0x00634291` is required for preset overrides to apply** | **Untested** | Run 6 wrote it together with the preset letter, so the pair is proven but the gate is not isolated |
+| **`0x00634291` is required for preset overrides to apply** | **Refuted** | It is not a setting. Run 6's preset change came from `0x10E41DF7` alone, which isolates the preset letter after all |
 
 ## What can and cannot be read back
 
@@ -614,7 +614,6 @@ separate settings, and there is a third that gates whether the preset is honoure
 | Setting ID | Name | Value | Purpose |
 |---|---|---|---|
 | `0x10E41E01` | DLSS - Enable DLL Override | `1` | Load the newest **installed** DLSS-SR runtime instead of the game's |
-| `0x00634291` | DLSS - Forced Model Preset Profile | `1` = Recommended | **Gates whether preset overrides apply at all** |
 | `0x10E41DF3` | DLSS - Forced Preset Letter | `0x00FFFFFF` = Use recommended preset | Which SR model |
 | `0x10E41E02` | DLSS-RR - Enable DLL Override | `1` | Ray Reconstruction runtime |
 | `0x10E41DF7` | DLSS-RR - Forced Preset Letter | `0x00FFFFFF` | Which RR model |
@@ -623,12 +622,14 @@ separate settings, and there is a third that gates whether the preset is honoure
 
 ### Traps
 
-- **`0x00634291` is the one everyone misses.** Profile Inspector's description: *"If 'Forced Preset
-  Letter' has no effect, this setting may need to be changed for the game to apply the custom
-  preset."* Without it the preset settings may silently do nothing. Values: `0` N/A, `1`
-  Recommended, `2` Custom. Use `1`. **Whether `1` reproduces NVIDIA App's per-GPU, per-mode
-  selection is a hypothesis, not established** - the XML label "Recommended" is not proof of
-  equivalence. Earlier drafts of this plan claimed it resolved that open question; it does not.
+- **`0x00634291` does not exist.** It was in this plan as "DLSS - Forced Model Preset Profile",
+  described as the gate that everyone misses, and it is not a DRS setting on any driver:
+  `NvAPI_DRS_GetSettingNameFromId` does not recognise the id, and `SetSetting` refuses it with
+  `NVAPI_SETTING_NOT_FOUND`. Verified on driver 616.64, 2026-09-19. It has been removed from the
+  recipe, which is six settings, not seven. **The preset letters work without it** - see the round
+  trip below. Every other id in the recipe the driver names itself, and those names match the
+  user's exported `.nip` field for field.
+
 - **Frame generation's sentinel is `0x00FFFFFE`, not `0x00FFFFFF`.** Profile Inspector labels FG's
   `0x00FFFFFE` "Use recommended preset" and SR's `0x00FFFFFF` the same. An earlier draft called the
   difference a "nonsense value" trap; that framing was wrong. **Neither sentinel appears anywhere
@@ -1642,3 +1643,72 @@ place, and the library is saved straight after any driver change.
 `NvAPI_DRS_SaveSettings` against the real driver. Everything up to and including the staged write
 is proven on this machine; the save itself, and whether it needs elevation, are still untested and
 will stay that way until someone deliberately applies to a real game.
+
+## The first real write, 2026-09-19 - Cyberpunk 2077 round trip
+
+`--test-dlss-roundtrip` reads the settings, applies, reads, undoes, reads again, and compares the
+first and last readings. It is the only thing in the codebase that calls `NvAPI_DRS_SaveSettings`
+for real. The ownership records are written to a file **before** the undo, so a crash between the
+two still leaves enough to put the machine back by hand.
+
+Run against Cyberpunk 2077 at reduced trust (`Elevated: False`):
+
+```
+BEFORE       0x10E41E01 = 0x00000001 [Inherited (Global profile)]   ... FG absent
+AFTER APPLY  0x10E41E01 = 0x00000001 [UserSet]                      ... FG 0x00000001 / 0x00FFFFFE [UserSet]
+AFTER UNDO   0x10E41E01 = 0x00000001 [Inherited (Global profile)]   ... FG absent
+RESULT: every setting is back exactly as it started.
+```
+
+### Settled: nothing in this feature needs elevation
+
+The save succeeded unelevated, at a trust level *more* restricted than the filtered token a
+UAC-enabled administrator account gets. So the DLSS card reads, applies and undoes with **no UAC
+prompt anywhere**. The plan assumed elevation would be needed and said so in three places; all of
+them were wrong.
+
+### Settled: the inherited-origin rule is right on real hardware
+
+Four of the six settings were inherited from this machine's Global profile. Apply moved them to
+`UserSet` on the game's own profile; undo **deleted** them, so they went back to `Inherited` rather
+than being pinned. That is the correction made while implementing step 3, now confirmed against the
+driver rather than a fake.
+
+### Refuted: `0x00634291`, "the gate"
+
+The recipe had seven settings. The seventh is not a DRS setting on any driver:
+
+```
+0x10E41E01  known as "Enable DLSS-SR override"
+0x00634291  NOT KNOWN TO THIS DRIVER
+0x10E41DF3  known as "Override DLSS-SR presets"
+...
+```
+
+`NvAPI_DRS_GetSettingNameFromId` does not recognise the id and `SetSetting` refuses it with
+`NVAPI_SETTING_NOT_FOUND`. The other six the driver names itself, and those names match the user's
+exported `.nip` field for field.
+
+Three consequences:
+
+1. **The recipe is six settings.** The presets work without the seventh - this round trip set them
+   and the write-back check confirmed every one.
+2. **Spike run 6 is stronger, not weaker.** It wrote the phantom id and the RR preset letter
+   together, which the plan recorded as "the pair is proven but the gate is not isolated". Since
+   the phantom write did nothing, the preset letter alone produced the change. It was isolated all
+   along.
+3. **Profile Inspector's setting list is not the driver's.** A name in its XML is not evidence the
+   driver has that setting; the `.nip` export never contained this one either. Ask the driver.
+
+**Ask the driver, in code.** `IDrsBackend.GetSettingName` now gates every write: an id the driver
+does not have is stepped over as `NotSupportedByDriver` and never recorded, because there is
+nothing to undo. NVIDIA adds and retires setting ids between driver versions, and this should
+degrade quietly rather than look like a fault.
+
+### How this hid for so long
+
+The first round trip reported `Apply: OK` and the settings looked right, because the harness only
+printed **write-back** failures and this was an outright `Failed`. A setting nobody has set and an
+id the driver refuses both read as "absent" through a profile, so the before/after comparison
+looked clean too. The harness now prints every outcome that is not a clean `Applied` - a reporting
+gap is how a real defect stays invisible.

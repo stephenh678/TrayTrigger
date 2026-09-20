@@ -13,6 +13,7 @@ public class DlssOverrideServiceTests
     private const uint SrEnable = 0x10E41E01;   // DLSS - Enable DLL Override
     private const uint SrPreset = 0x10E41DF3;   // DLSS - Forced Preset Letter
     private const string Exe = "game.exe";
+    private const string TestExe = @"C:\Games\Test\game.exe";
 
     private static (DlssOverrideService Service, FakeDrsBackend Driver) NewService()
     {
@@ -338,5 +339,52 @@ public class DlssOverrideServiceTests
         var applied = service.Apply(@"C:\Games\Test\game.exe", "Test Game");
 
         Assert.Contains(applied.Details, d => d.SettingId == SrEnable && d.Outcome == DlssSettingOutcome.WriteBackFailed);
+    }
+
+    // --- Setting ids this driver does not have ---------------------------------------------
+
+    [Fact]
+    public void AnIdTheDriverDoesNotHave_IsSteppedOver_NotFailed()
+    {
+        // The recipe carried 0x00634291 - "the gate" - for months. No driver has ever had it:
+        // GetSettingNameFromId does not recognise it and SetSetting refuses it. An id NVIDIA
+        // retires later should behave the same way, quietly, rather than looking like a fault.
+        var driver = new FakeDrsBackend();
+        driver.AddProfile(Exe, "Test Game");
+        driver.UnknownSettingIds.Add(SrPreset);
+        var service = new DlssOverrideService(driver);
+
+        var applied = service.Apply(TestExe, "Test Game");
+
+        Assert.True(applied.Succeeded);
+        Assert.Contains(applied.Details, d => d.SettingId == SrPreset && d.Outcome == DlssSettingOutcome.NotSupportedByDriver);
+        Assert.DoesNotContain(applied.Records, r => r.SettingId == SrPreset);
+    }
+
+    [Fact]
+    public void AnUnsupportedId_IsNeverRecorded_SoUndoDoesNotTryToPutItBack()
+    {
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile(Exe, "Test Game");
+        driver.UnknownSettingIds.Add(SrPreset);
+        var service = new DlssOverrideService(driver);
+
+        var applied = service.Apply(TestExe, "Test Game");
+        var undone = service.Undo(applied.Records);
+
+        Assert.True(undone.Succeeded);
+        Assert.DoesNotContain(undone.Details, d => d.SettingId == SrPreset);
+        Assert.False(profile.Settings.ContainsKey(SrPreset));
+    }
+
+    [Fact]
+    public void TheRecipeContainsOnlyIdsWithAFeatureAndAValue()
+    {
+        Assert.All(DlssProbeService.Settings, def =>
+        {
+            Assert.Contains(def.FeatureCode, new[] { "SR", "RR", "FG" });
+            Assert.NotEqual(0u, def.Id);
+        });
+        Assert.DoesNotContain(DlssProbeService.Settings, d => d.Id == 0x00634291);
     }
 }
