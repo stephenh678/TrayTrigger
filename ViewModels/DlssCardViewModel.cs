@@ -44,7 +44,6 @@ public sealed class DlssCardViewModel : ViewModelBase
     private readonly Func<string, DlssProbeService.ProbeResult> _probe;
 
     private bool _isBusy;
-    private bool _inEffect;
     private bool _hasLoaded;
     private bool _isOnTab = true;
     private string? _status;
@@ -120,14 +119,15 @@ public sealed class DlssCardViewModel : ViewModelBase
             : $"{_content.GameVersion} (already current)";
 
     /// <summary>
-    /// The switch. On means the driver holds the override exactly as TrayTrigger wrote it - read
-    /// from the driver when the card loads, not remembered. If NVIDIA App or anything else has
-    /// changed a value since, it reads off; switching it on again takes the settings over, and
-    /// Restore hands them back. Setting it does the work - there is no separate apply.
+    /// The switch. On means TrayTrigger holds an override for this game - it was ticked here and
+    /// has not been unticked or restored. It does not re-read the driver: another tool changing a
+    /// value (NVIDIA App turns Frame Generation off for a game that has none) is not the user
+    /// switching this off. Last run says what actually loaded. Setting it does the work - there
+    /// is no separate apply.
     /// </summary>
     public bool OverrideEnabled
     {
-        get => _records.Count > 0 && _inEffect;
+        get => _records.Count > 0;
         set
         {
             if (value == OverrideEnabled || IsBusy || (value && !CanEnable)) return;
@@ -200,15 +200,12 @@ public sealed class DlssCardViewModel : ViewModelBase
             _rendererPath = path;
             var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
             _content = Project(result);
-            var held = _records.ToList();
-            _inEffect = await Task.Run(() => _overrides.IsInEffect(held)).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
             // A card that breaks the dialog would be worse than no card.
             LoggingService.Warn("Dlss", $"DLSS card probe failed: {ex.Message}");
             _content = Empty;
-            _inEffect = false;
         }
         finally
         {

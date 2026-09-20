@@ -350,7 +350,7 @@ public class DlssCardViewModelTests
         Assert.False(srOnly.DriverIsNewer);
     }
 
-    // ---- The switch shows what the driver holds ------------------------------------------------
+    // ---- The switch shows what TrayTrigger holds ------------------------------------------------
 
     private static uint SrPreset => DlssProbeService.Settings.First(d => d.FeatureCode == "SR" && d.Name.Contains("Preset")).Id;
 
@@ -375,7 +375,7 @@ public class DlssCardViewModelTests
     }
 
     [Fact]
-    public async Task ReopeningTheDialog_ShowsTheSwitchOn_WhileTheDriverStillHoldsOurValues()
+    public async Task ReopeningTheDialog_ShowsTheSwitchOn()
     {
         var (_, driver, _, game) = await SwitchedOn();
 
@@ -383,32 +383,31 @@ public class DlssCardViewModelTests
     }
 
     [Fact]
-    public async Task WhenSomethingElseHasChangedASetting_TheSwitchReadsOff_AndCanBeSwitchedOnAgainToTakeOver()
+    public async Task WhenSomethingElseHasChangedASetting_TheSwitchStaysOn_AndUntickingLetsGoOfIt()
     {
-        // Read from the driver, not remembered. Were it to read on, unticking would run a restore
-        // that leaves the stranger's value alone, and there would be no way to apply again.
+        // NVIDIA App turns Frame Generation off for a game that has none. That is not the user
+        // switching the override off, so the switch does not move.
         var (_, driver, profile, game) = await SwitchedOn();
         profile.Settings[SrPreset] = (0x0000000D, false);   // NVIDIA App, Profile Inspector...
 
         var card = await Reopened(driver, game);
-        Assert.False(card.OverrideEnabled);
-        Assert.True(card.CanRestore);
+        Assert.True(card.OverrideEnabled);
 
-        card.OverrideEnabled = true;
+        card.OverrideEnabled = false;
         await WaitForIdle(card);
 
-        Assert.True(card.OverrideEnabled);
-        // Their value is what undo now gives back; ours, where still ours, kept the original capture.
-        Assert.Equal(0x0000000Du, game.DlssSettings.First(r => r.SettingId == SrPreset).PreviousValue);
+        Assert.False(card.OverrideEnabled);
+        Assert.Empty(game.DlssSettings);
+        Assert.Equal(0x0000000Du, profile.Settings[SrPreset].Value);   // theirs, left alone
     }
 
     [Fact]
-    public async Task WhenTheWholeProfileIsGone_TheSwitchReadsOff()
+    public async Task WhenTheWholeProfileIsGone_TheSwitchStaysOn_BecauseTheNextLaunchPutsItBack()
     {
         var (_, driver, _, game) = await SwitchedOn();
         driver.Profiles.Remove("game.exe");   // a clean driver install
 
-        Assert.False((await Reopened(driver, game)).OverrideEnabled);
+        Assert.True((await Reopened(driver, game)).OverrideEnabled);
     }
 
     [Fact]

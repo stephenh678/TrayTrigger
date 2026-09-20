@@ -32,9 +32,11 @@ NVIDIA DLSS Override                                          [ Restore ]
   Learn more
 ```
 
-- **The switch is the status.** It shows what the driver holds when the card opens - on only while
-  every recorded setting is still exactly as TrayTrigger wrote it. There is no confirmation text
-  when a change works. A single line in the warning colour appears only when a change did not work,
+- **The switch is the status.** On means TrayTrigger holds an override for this game: it was
+  ticked and has not been unticked or restored. It does not re-read the driver - NVIDIA App turns
+  Frame Generation off for a game that has none (Doom Eternal), and that is not the user switching
+  the override off. Last run says what actually loaded. There is no confirmation text when a
+  change works. A single line in the warning colour appears only when a change did not work,
   because then the switch drops back and something has to say why.
 - **The version pair** is the oldest version the game ships and the newest the driver holds *for
   that same feature*. It is a prediction, not a reading.
@@ -111,7 +113,7 @@ The card does not read the Global profile. `--test-dlss` does.
 | `Services/IDrsBackend.cs` | The seam. `NvApiDrsBackend` in production, `FakeDrsBackend` in tests. **Not** on `ISystemTweakBackend` - that is the performance-profile surface and has no shape for a session lifetime. A null result with no error means "not there"; null *with* an error means the read failed. |
 | `Services/NgxModelStore.cs` | The driver's model store, and the **one** table of the three DLSS features. |
 | `Services/DlssProbeService.cs` | Read-only. What the card is built from (shipped versions, driver-store versions, whether a driver is there), the rendering executable, the module scan, and `ReadLastRun`. |
-| `Services/DlssOverrideService.cs` | Apply, undo, the pre-launch re-apply, `IsInEffect`, `RestoreAll`. The ownership rules live here. |
+| `Services/DlssOverrideService.cs` | Apply, undo, the pre-launch re-apply, `RestoreAll`. The ownership rules live here. |
 | `ViewModels/DlssCardViewModel.cs` | The card. `Project()` is pure, so the display rules are testable without a driver. |
 | `Services/SystemTweaksService.cs` | The two System-page rows: `dlss_override` (informational, Restore All) and `dlss_indicator`. |
 | `App.DlssDiagnostics.cs` | `--test-dlss`, DEBUG only. Read-only report, for when someone says DLSS is not doing what they expect. It does its own reading, so none of it is in a release build. |
@@ -240,8 +242,8 @@ starts. TrayTrigger launches the game, so it looks first:
 
 Everything is read before anything is written, in one session: one changed setting means something
 else is managing this game, and writing the rest would be the overwrite the rule exists to prevent.
-Nothing is remembered about it - the card's switch simply reads off, ticking it takes the settings
-over, and Restore hands them back.
+Nothing is remembered about it and the card's switch does not move. Unticking, or Restore, puts
+back what is still TrayTrigger's and lets go of the rest; ticking again takes the settings over.
 
 **Removing a game** puts its override back when the removal becomes final - where the cached
 artwork is deleted, and for the same reason: inside the undo window the game may yet come back. A
@@ -343,7 +345,10 @@ write-ahead save around a feature whose failure is "the game uses its own DLSS".
   is one record and one function.
 - **The conflict flag and both notices.** One notice fired for every game on a PC whose Global
   profile carried an override, permanently, even straight after Restore; the other promised a
-  take-over the switch could not do. The switch now reads the driver.
+  take-over the switch could not do.
+- **The switch re-reading the driver.** It read off on Doom Eternal, where NVIDIA App had zeroed
+  the two Frame Generation settings of a game with no Frame Generation, while the Super
+  Resolution override was working. The switch now shows what TrayTrigger holds.
 - **Status text for success.** The switch already says it.
 - **The write-ahead save**, guarding a crash in the milliseconds between two saves.
 - **The `nvngx_config.txt` parser**, the NGX registry read, and the Global-profile walk on every

@@ -729,28 +729,4 @@ public class DlssOverrideServiceTests
         Assert.Equal(1, result.Failed);
         Assert.Equal(held, game.DlssSettings.Count);
     }
-
-    // --- Is it in effect? --------------------------------------------------------------------
-
-    [Fact]
-    public void IsInEffect_OnlyWhileEveryRecordedSettingIsStillExactlyAsWritten()
-    {
-        var (service, driver) = NewService();
-        var profile = driver.AddProfile(Exe, "Test Game");
-        var applied = service.Apply(TestExe, "Test Game");
-
-        Assert.True(service.IsInEffect(applied.Records));
-
-        profile.Settings[SrPreset] = (0x0000000D, false);
-        Assert.False(service.IsInEffect(applied.Records));
-    }
-
-    [Fact]
-    public void IsInEffect_IsFalseWithNothingRecorded_AndNeverOpensTheDriverToFindOut()
-    {
-        var (service, driver) = NewService();
-
-        Assert.False(service.IsInEffect(Array.Empty<DlssSettingRecord>()));
-        Assert.Equal(0, driver.SessionsOpened);
-    }
 }
