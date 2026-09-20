@@ -11,10 +11,15 @@ driver settings and the driver loads its own current DLSS runtime for that game 
 the game shipped with.
 
 **No file in any game folder is read for anything but its version, and none is ever written.** That
-single decision removes the anti-cheat risk, the download and cache machinery, the backup and
-restore machinery, the NVIDIA redistribution question, collisions with Steam's "verify integrity of
-game files", file-permission and in-use locks, and the "my game won't launch" support class - all
-of which the file-swapping tools (DLSS Swapper, RHI) carry.
+single decision removes the download and cache machinery, the backup and restore machinery, the
+NVIDIA redistribution question, collisions with Steam's "verify integrity of game files",
+file-permission and in-use locks, and the class of failures caused by replacing a game's files -
+all of which the file-swapping tools (DLSS Swapper, RHI) carry. It substantially lowers, but does
+not eliminate, anti-cheat risk and "my game won't launch" reports: substituting a runtime can still
+introduce a compatibility problem even when no file changed.
+
+**The promise that is strictly true and worth making is "TrayTrigger does not modify game files."**
+Everything stronger than that is a probability, not a guarantee.
 
 Because the driver decides whether an override applies, and NVIDIA warns that some games disallow
 it, **verification is part of the feature, not an extra**: TrayTrigger reads the running game's
@@ -60,8 +65,8 @@ bullet written for players; one work item per commit.
 | Games below DLSS 3.1 | **Try anyway.** NVIDIA's own setting descriptions say the DLL override works on DLSS 2.0+, not 3.1+. See The version floor. |
 | Frame generation | Driver setting only, like the rest. Never a file swap (see Streamline, below). |
 | Card visibility | Visible by default on any game where a DLSS DLL is found. No setting to enable it. |
-| Applied by default | No. Per game, explicit, opt-in. Nothing changes until the user acts. |
-| Preset choice | One option, "Latest". Specific letters are not exposed in v1. |
+| Applied by default | No. Per game, explicit, opt-in. Nothing changes until the user acts. **Automatic application to newly added games is deferred** until the ownership and verification models are proven. |
+| Preset choice | One option, **"Use recommended"** - not "latest". NVIDIA's selection is per quality mode (K for DLAA/Balanced/Quality, M for Perf, L for Ultra Perf), so there is no single latest-and-best. Letters are not exposed in v1. |
 | Anti-cheat gate | **Not needed.** Nothing on disk changes. |
 | When settings are written | At apply time *and* again in the pre-launch step (see NVIDIA App conflict). |
 | Elevation | Required for `NvAPI_DRS_SaveSettings`. Reuses the existing "needs administrator" flow. |
@@ -99,13 +104,15 @@ file-integrity check.
 
 ### Consequences
 
-- **Anti-cheat.** Nothing to detect. Anti-cheat validates integrity three ways: hashing files on
-  disk inside the game directory, watching for injection (`CreateRemoteThread`, `VirtualAllocEx`,
-  unsigned modules mapped into the process), and checking signatures of loaded modules. The driver
-  path passes all three - no file in the game directory changes, nothing is injected, and the
-  runtime the driver loads is an Authenticode-signed NVIDIA binary mapped by the OS loader as a
-  trusted image. This is also NVIDIA's own shipping feature, used by NVIDIA App on
-  hundreds of games including protected multiplayer titles, with no warning published anywhere.
+- **Anti-cheat: lower risk, not zero risk.** Among the mechanisms anti-cheat is known to use -
+  hashing files on disk in the game directory, watching for injection (`CreateRemoteThread`,
+  `VirtualAllocEx`, unsigned modules mapped into the process), and checking signatures of loaded
+  modules - the driver path does not trip any: no file in the game directory changes, nothing is
+  injected, and the runtime the driver loads is an Authenticode-signed NVIDIA binary. That list is
+  not exhaustive and no vendor publishes its full detection model, so this argues for **low risk**,
+  not "nothing to detect". Supporting it: this is NVIDIA's own shipping feature, used by NVIDIA App
+  on hundreds of games including protected multiplayer titles, with no warning published anywhere,
+  and no reviewer found an authoritative report of a ban caused by it.
   NVIDIA even ships driver profiles for the anti-cheat wrapper executables
   (`fortniteclient-win64-shipping_eac_eos.exe`, `r6-extraction_be.exe`), so protected games are
   clearly expected to use these settings.
@@ -168,7 +175,7 @@ NVIDIA's own words.
 | NGX diagnostics are off by default | **Verified** | `NGXCore` key holds only `FullPath` and `Installed`; no NGX logs on disk |
 | Games ship Streamline DLLs beside the NGX module, versioned separately | **Verified** | Fortnite: `nvngx_dlssg.dll` 3.5.0 next to `sl.*` 2.2.0 |
 | NVIDIA's public repo serves signed, tagged DLSS runtimes | **Verified** | Downloaded `v310.9.1`, 56.2 MB, signature Valid, `CN=NVIDIA Corporation` |
-| The seven setting IDs and their values | **Documented** | `CustomSettingNames.xml`, which carries NVIDIA's own descriptions |
+| The seven setting IDs and their values | **Community-sourced** | `CustomSettingNames.xml` - authoritative for Profile Inspector's mapping, not for driver behaviour or NVIDIA authorship |
 | DLL override works on DLSS 2.0+, presets need 3.1 | **Documented** | NVIDIA's setting description: "Only DLSS2+ games support the override" |
 | `0x00634291` gates whether presets apply | **Documented** | NVIDIA's description of that setting |
 | Overrides shipped in driver 572.16 | **Documented** | NVIDIA release notes / support article |
@@ -178,6 +185,12 @@ NVIDIA's own words.
 | **Writing settings pre-launch defeats NVIDIA App reverting them** | **Inferred** | Reviewer reports NVIDIA App reconciles on its own startup, driver update or library scan, and does not hook process creation. Plausible and matches observed behaviour; untested by either party. |
 | **`NvAPI_DRS_SaveSettings` needs elevation** | **Inferred** | Reported access-denied issues and the ProgramData location; RHI claims some settings work unelevated |
 | **Combining DLL override + preset works on a DLSS 2.x game** | **Untested** | The single highest-value unknown. The spike settles it. |
+| `0x00634291` = 1 reproduces NVIDIA App's per-GPU/per-mode selection | **Untested** | An earlier draft claimed this was resolved. The XML label "Recommended" is not proof of equivalence. |
+| FG's `0x00FFFFFE` means "latest" rather than "default" | **Disputed** | Profile Inspector labels it "Use recommended preset". One reviewer says NVIDIA defines it as Default and `0x00FFFFFF` as Latest. **Neither sentinel exists in NVIDIA's SDK headers**, whose enum is 0-15. Unresolved until the spike. |
+| Preset letter meanings (K/L/M per-mode defaults; A-D removed) | **Documented** | `nvsdk_ngx_defs.h` and `nvsdk_ngx_defs_dlssd.h`, NVIDIA's own headers. These **contradict** Profile Inspector's labels. |
+| `ShowDlssIndicator` = 1024 works on retail builds | **Documented** | NVIDIA documents 1024 for release builds; also matches the documented `__NGX_SHOW_INDICATOR=1024`. Stronger than the "community reports" an earlier draft cited. |
+| `EnableLogPathOverride` / `LogPath` exist and work | **Unverified** | Not in NVIDIA's `.reg` files, which set only `LogLevel`. Secondary source only. |
+| An NGX log can be attributed to a specific game session | **Unverified** | Logging is machine-wide and filenames carry only a version. If false, layer 3 cannot verify anything. |
 | Module enumeration reveals the loaded DLL's path and version | **Verified** | `Process.Modules` read against a live process; not yet against a real DLSS module |
 | Anti-cheat blocks module enumeration | **Documented** | Standard EAC/BattlEye/Vanguard behaviour; not tested here |
 | The overlay renders on anti-cheat titles | **Documented** | It is an NVIDIA-signed swapchain hook, not third-party injection; reviewer-supplied, untested here |
@@ -201,10 +214,14 @@ we cannot verify.** Inventing one would be worse than saying less.
 
 ## Driver settings written - the "force latest" recipe
 
-Values below are taken from `nvidiaProfileInspector/CustomSettingNames.xml` in
+Setting IDs and values below come from `nvidiaProfileInspector/CustomSettingNames.xml` in
 [Orbmu2k/nvidiaProfileInspector](https://github.com/Orbmu2k/nvidiaProfileInspector), group
-"05 - Upscaling and Frame Generation", which carries NVIDIA's own setting descriptions. This is the
-authoritative list; earlier drafts of this plan were incomplete.
+"05 - Upscaling and Frame Generation".
+
+**That file is authoritative for Profile Inspector's own mapping, not for driver behaviour.** It is
+community-maintained; its descriptions are not necessarily NVIDIA's words and it does not guarantee
+what the driver does. Where NVIDIA's SDK headers disagree with it, the headers win - and they do
+disagree (see Preset semantics below). Treat every value here as a hypothesis the spike confirms.
 
 **Two things are needed, not one.** Forcing the newest runtime and forcing the newest model are
 separate settings, and there is a third that gates whether the preset is honoured at all.
@@ -221,17 +238,58 @@ separate settings, and there is a third that gates whether the preset is honoure
 
 ### Traps
 
-- **`0x00634291` is the one everyone misses.** NVIDIA's description: *"If 'Forced Preset Letter' has
-  no effect, this setting may need to be changed for the game to apply the custom preset."* Without
-  it the preset settings can silently do nothing. Values: `0` N/A, `1` Recommended, `2` Custom. Use
-  `1`, which is also NVIDIA's own per-GPU, per-quality-mode selection logic - **this resolves the
-  earlier open question about reproducing "Recommended" outside NVIDIA App.**
-- **Frame generation's "recommended" is `0x00FFFFFE`, not `0x00FFFFFF`.** Different by one from
-  every other preset setting. Getting this wrong writes a nonsense value.
-- **Preset letters are not a single scale across features.** For SR, `0x4` is Preset D (CNN) and
-  `0xA`/`0xB` are J/K (Transformer Gen 1), `0xC` is L (Gen 2). For **RR**, `0x4` is Preset D but it
-  is *Transformer Gen 1*, and `0x6` is F (Gen 2). Never share a letter-to-value map between
-  features.
+- **`0x00634291` is the one everyone misses.** Profile Inspector's description: *"If 'Forced Preset
+  Letter' has no effect, this setting may need to be changed for the game to apply the custom
+  preset."* Without it the preset settings may silently do nothing. Values: `0` N/A, `1`
+  Recommended, `2` Custom. Use `1`. **Whether `1` reproduces NVIDIA App's per-GPU, per-mode
+  selection is a hypothesis, not established** - the XML label "Recommended" is not proof of
+  equivalence. Earlier drafts of this plan claimed it resolved that open question; it does not.
+- **Frame generation's sentinel is `0x00FFFFFE`, not `0x00FFFFFF`.** Profile Inspector labels FG's
+  `0x00FFFFFE` "Use recommended preset" and SR's `0x00FFFFFF` the same. An earlier draft called the
+  difference a "nonsense value" trap; that framing was wrong. **Neither sentinel appears anywhere
+  in NVIDIA's SDK headers**, whose preset enum runs 0-15 with `Default = 0`. One reviewer states
+  NVIDIA defines `0x00FFFFFF` as Latest and `0x00FFFFFE` as Default; that could not be substantiated
+  either. Use the per-setting value Profile Inspector documents, and **confirm both in the spike** -
+  if FG's `0x00FFFFFE` means Default rather than Latest, the FG half of the recipe is wrong.
+- **Preset letters are not a single scale across features**, and the per-feature meanings differ.
+
+### Preset semantics, from NVIDIA's SDK headers
+
+`nvsdk_ngx_defs.h` and `nvsdk_ngx_defs_dlssd.h` in NVIDIA's public repo are the best available
+source, and they **contradict Profile Inspector's labels** - the XML calls `0x1` "Preset A (CNN)"
+while NVIDIA records A as removed.
+
+Super Resolution (`NVSDK_NGX_DLSS_Hint_Render_Preset`):
+
+| Value | NVIDIA's own comment |
+|---|---|
+| `0` Default | "default behavior, may or may not change after OTA" |
+| A, B, C, D | **Removed** - "use preset J or K" |
+| E (5), F (6) | Deprecated |
+| G, H, I, N, O | "Do not use, reverts to default behavior" |
+| J (10) | "Preset K is generally recommended over preset J" |
+| **K (11)** | "Default preset for DLAA/Balanced/Quality modes that is transformer based. Best image quality preset at a higher performance cost" |
+| **L (12)** | "Default for Ultra Perf mode" |
+| **M (13)** | "Default for Perf mode" |
+
+Ray Reconstruction (`NVSDK_NGX_RayReconstruction_Hint_Render_Preset`):
+
+| Value | NVIDIA's own comment |
+|---|---|
+| `0` Default | "may or may not change after OTA" |
+| A, B, C | **Removed** - "use preset D or E" |
+| D (4) | "Transformer model" |
+| E (5) | "Latest transformer model (must use if DoF guide is needed)" |
+| F (6) | "Default model RR2" |
+| G through O | "Do not use, reverts to default behavior" |
+
+Two consequences:
+
+1. **K, L and M are per-mode defaults, not a quality ranking.** There is no single "latest and
+   best" preset - which is why the button says *Use recommended*, not *Use latest*.
+2. `Default = 0` already carries the note "may or may not change after OTA", so NVIDIA's own
+   default is not frozen. Worth testing whether it alone tracks new models, which would make part
+   of this recipe unnecessary.
 
 ### Optional, later
 
@@ -331,6 +389,29 @@ TrayTrigger's advantage is that it launches the game. Write the settings again i
 pre-launch step, so they are in place moments before the game reads them, whatever NVIDIA App did
 earlier. Without this the feature will appear broken for anyone running NVIDIA App.
 
+**Best-effort, not a guarantee.** No published contract says when NVIDIA App reconciles DRS.
+Reapplying just before launch narrows the window; it does not close it.
+
+**Resolving the contradiction.** "Never overwrite an external change" and "always reapply" conflict
+whenever the pre-launch step finds a value that is neither what TrayTrigger wrote nor the captured
+previous value. The rule:
+
+| Found at pre-launch | Action |
+|---|---|
+| The value TrayTrigger wrote | Nothing to do |
+| The captured previous value (i.e. reverted) | Reapply silently - this is the NVIDIA App case the step exists for |
+| Anything else | **Do not overwrite.** Stop managing this game, mark the card as conflicted, and tell the user something else is changing it |
+
+Distinguishing the second row from the third is exactly what the ownership record makes possible,
+and is why a single boolean is not enough.
+
+**Verify persistence by reloading DRS after saving**, not by reading back the modified in-memory
+session - that would confirm only that the write reached memory.
+
+**Resolve the rendering executable before launch.** `ProcessPathResolver` identifies what actually
+launched, which is after the fact; the first launch would be wrong. Resolve the likely executable
+up front, including anti-cheat wrapper variants, and correct the record afterwards if it differs.
+
 This also means the settings should not be treated as a session tweak: they are persistent, not
 applied-and-reverted. Do not put them in `OptimizedProfileTweakConfig`.
 
@@ -377,33 +458,36 @@ was tampered with.
 
 Handle a failed enumeration as "could not read", never as "override failed". Fall back to layer 3.
 
-### Layer 3: NGX log parsing (fallback, one game session)
+### Layer 3: NGX log parsing (fallback, one game session) - weakest layer
 
-NVIDIA's NGX runtime can log what it loaded. All three keys live under
-`HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore`, and NVIDIA ships the `.reg` files for them in
-`utils/` of their public DLSS repo:
+NVIDIA's NGX runtime can log what it loaded. `LogLevel` lives under
+`HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore`, and NVIDIA ships `ngx_log_on.reg`,
+`ngx_log_verbose.reg` and `ngx_log_window_on.reg` in `utils/` of their public DLSS repo.
 
-| Value | Type | Meaning |
+**Correction.** An earlier draft said NVIDIA's `.reg` files document `EnableLogPathOverride` and
+`LogPath`. They do not - `ngx_log_on.reg` sets only `LogLevel`. Those two values came from a
+secondary source and are **unverified**. Confirm them in the spike before relying on redirection.
+
+| Value | Type | Status |
 |---|---|---|
-| `LogLevel` | dword | `1` on, `2` verbose, absent/`0` off |
-| `EnableLogPathOverride` | dword | `1` to redirect logs |
-| `LogPath` | string | Where to write them |
+| `LogLevel` | dword | `1` on, `2` verbose, absent/`0` off. **In NVIDIA's own .reg files.** |
+| `EnableLogPathOverride` | dword | `1` to redirect. **Unverified - secondary source.** |
+| `LogPath` | string | Destination. **Unverified - secondary source.** |
 
-Log files are named for what loaded - `nvngx_dlss_310_3_0.log`, with `dlssd*` for Ray Reconstruction
-and `dlssg*` for Frame Generation - **so the loaded version is in the filename** and no parsing of
-log contents is needed for the basic answer.
+**Hazard: an unwritable log path can make NGX/DLSS initialisation fail.** NVIDIA's programming
+guide warns about this. A diagnostic that stops DLSS working is far worse than no diagnostic, so
+if redirection is used the directory must be created and proved writable *before* the value is
+set, and the setting removed if it cannot be.
 
-`EnableLogPathOverride` + `LogPath` means TrayTrigger can point logs at its own folder rather than
-polluting NVIDIA's, and clean up afterwards.
+**The attribution problem, which is why this is the weakest layer.** Logging is machine-wide and a
+filename such as `nvngx_dlss_310_3_0.log` names a version, not a game, process, or launch. Another
+DLSS game running at the same time can produce that file, including in a freshly created
+directory. A version in a filename is therefore **not** evidence about *this* game.
 
-This is a **session tweak**, unlike the DLSS settings themselves: turn logging on before launch,
-turn it off when the session ends, read the log, report. That is exactly the
-`PerformanceProfileSessionSnapshot` capture/apply/restore pattern already in the codebase,
-including crash recovery - if TrayTrigger dies mid-session, logging must still be turned back off
-on next start.
-
-`ISystemTweakBackend.WriteHklmDword` already exists and is the right seam. `LogPath` is a string, so
-`WriteHklmString`/`DeleteHklmValue` cover the rest. No new backend concepts.
+Before committing to this fallback, the spike must establish whether the logs carry enough to tie
+a record to the target process or session - a PID, an executable name, a timestamp that can be
+bracketed by the session. **If they do not, report "unable to verify" rather than inferring.** An
+unattributable log must never become a "verified" line.
 
 ### Layer 4: on-screen overlay, per game, off by default
 
@@ -477,52 +561,101 @@ DLSS (v310.9.0) | Render: 1920x1080 -> 2560x1440 | Preset: K
   protection can fail to draw it, or flicker on resolution changes. A missing overlay therefore
   means "could not display", never "the override failed" - the same three-state discipline layer 2
   needs.
-- **Machine-wide while it is on.** A second DLSS game running concurrently also shows the overlay.
-  A real but narrow edge case, and the profile service's existing "first wins" handling of
-  machine-wide singletons is the precedent to follow.
+- **Calling it per-game does not make its effects per-game.** The registry value is machine-wide;
+  only its *lifetime* is scoped to a session. Every concurrent DLSS game shows the overlay. The
+  existing first-session/last-session restoration pattern does not by itself honour an individual
+  game's diagnostic preference, so the behaviour must be specified rather than inherited:
+
+  | Situation | Behaviour |
+  |---|---|
+  | Second game starts while the overlay is on for the first | Overlay stays on; it will draw on both. Do not promise otherwise. |
+  | Second game requests the overlay too | Reference-count; the last session ending restores. |
+  | Launch fails after the value was set | Restore immediately; do not wait for a session that never began. |
+  | TrayTrigger exits while the game still runs | Restore on exit. The overlay disappears mid-game, which is preferable to leaving it set. |
+  | TrayTrigger crashes | Restore on next start from the snapshot, as with every other session tweak. |
+  | The value already existed before TrayTrigger touched it | **Restore the captured value, not deletion.** Deletion is correct only when it was genuinely absent. |
 - **Needs elevation**, like the other HKLM writes.
 - **Diagnostic, not a feature.** Word it as one, keep it off by default, and do not promote it in
   the CHANGELOG as an image-quality option.
 
-### Where the result is shown
+### Reported states: say what was observed, not what it means
 
-In the DLSS card itself, as a status line under the versions - not a dialog, not an overlay. The
-card always shows the current versions; after a verified session it also shows what actually
-loaded.
+**An earlier draft of this section overclaimed and has been rewritten.** It said "The driver
+supplied a newer model, as configured" on success and "this game appears to disallow the override"
+on failure. Neither is supported by the evidence:
 
-Before any session:
+- A module path shows a runtime is **loaded**. It does not show that TrayTrigger *caused* it, that
+  DLSS is actively rendering, or that the recommended preset is selected. An existing NVIDIA App
+  setting or an OTA change could produce the same observation.
+- Seeing the game-folder DLL does **not** establish that the game disallows the override. Equally
+  consistent: the wrong profile or executable was targeted, something external changed the
+  settings, or the observation caught an intermediate loading state.
 
-```
-DLSS                                  [ Use latest ]  [ Verify ]
-  Super Resolution     310.2.1      Game default
-  Frame Generation     3.5.0        Game default
-  No game files are changed - the driver supplies the latest model.
-```
+So the UI reports **observations**, never causation. Four states, per feature:
 
-After a verified session where it worked:
+| State | Meaning |
+|---|---|
+| **Settings saved** | The seven values are in the profile database and read back correctly. Nothing yet about behaviour. |
+| **Runtime observed** | Feature, version, path and observation time. Says what loaded and from where. |
+| **Preset observed** | Only when the overlay was on and a preset letter was actually read. |
+| **Unable to verify** | Enumeration refused, no log attributable to this session, no DLSS activity yet, or the overlay did not draw. Explicitly *not* the same as "it failed". |
 
-```
-DLSS                            [ Restore default ]  [ Verify ]
-  Super Resolution     310.2.1  ->  loaded 310.9.0
-  Frame Generation     3.5.0    ->  loaded 310.9.0
-  Verified on 19 Sep. The driver supplied a newer model, as configured.
-```
-
-After a verified session where it did not:
+Wording follows the evidence:
 
 ```
-DLSS                            [ Restore default ]  [ Verify ]
-  Super Resolution     310.2.1  ->  loaded 310.2.1
-  The driver did not substitute - this game appears to disallow the override.
+DLSS                          [ Use recommended ]  [ Verify ]
+  Super Resolution   310.2.1      Settings saved
+  Frame Generation   3.5.0        Settings saved
+  No game files are changed.
 ```
 
-That last message is the reason verification is mandatory rather than optional. NVIDIA's own
-description warns that "certain games may also disallow using it", so failure is an expected
-outcome, not a bug. The product must say so plainly rather than leave the user believing a setting
-did something it did not.
+```
+DLSS                        [ Undo TrayTrigger changes ]  [ Verify ]
+  Super Resolution   Observed runtime 310.9.0 from NVIDIA's NGX store   19 Sep
+  Frame Generation   Unable to verify - no frame-gen activity observed
+```
 
-`Verify` turns NGX logging on for one session, launches the game, and reads the log on exit. The
-result is stored per game so the card can show it without re-running.
+```
+DLSS                        [ Undo TrayTrigger changes ]  [ Verify ]
+  Super Resolution   Observed runtime 310.2.1 from the game folder      19 Sep
+  The driver did not substitute a newer runtime in this session.
+```
+
+That last line states the observation and stops. It does not diagnose *why*.
+
+**Per feature, not per game.** SR can be substituted while FG is untouched or simply not in use, so
+one result per game cannot represent the truth. The data model carries an observation per feature.
+
+### Ownership: what TrayTrigger may undo
+
+`DlssOverrideEnabled` as a single boolean is **not sufficient**, and an earlier draft of this plan
+was wrong to rely on it. Two sequences break it:
+
+1. A user has their own presets, lets TrayTrigger replace them, then clicks Restore. Deleting the
+   settings destroys choices TrayTrigger never owned.
+2. A user changes a preset in Profile Inspector *after* TrayTrigger applied one. Uninstall cleanup
+   must not erase that newer choice.
+
+So record, per setting:
+
+- the **previous value and its origin** (user-set, NVIDIA predefined, or absent - NVAPI's setting
+  structure distinguishes current, predefined and inherited state),
+- the **value TrayTrigger wrote**,
+- the **profile and application** the setting was attached to.
+
+**Undo restores the captured previous value, and only when the current value still matches what
+TrayTrigger wrote.** If it does not match, something else changed it: leave it alone and say so.
+Deletion is correct only where the previous state was genuinely absent.
+
+The action is therefore labelled **"Undo TrayTrigger changes"**, not "Restore default" - it puts
+back what was there, which is not always a default.
+
+This is richer than the `DefenderExclusionWasPreExisting` boolean the plan previously cited as
+precedent. That pattern is the right *shape*; it is not enough on its own.
+
+Note also that DRS settings live on **profiles**, which contain applications. The collision problem
+is therefore wider than two library entries sharing an executable: two different executables can
+share one profile, and writing for one changes the other.
 
 ## Targeting the right executable
 
@@ -544,7 +677,7 @@ One card in Edit Game, on the Performance tab, visible whenever a DLSS DLL is fo
 **Supported game, untouched:**
 
 ```
-DLSS                                              [ Use latest ]
+DLSS                                              [ Use recommended ]
   Super Resolution     310.2.1      Game default
   Frame Generation     3.5.0        Game default
   No game files are changed - the driver supplies the latest model.
@@ -553,7 +686,7 @@ DLSS                                              [ Use latest ]
 **After applying, before verifying:**
 
 ```
-DLSS                            [ Restore default ]  [ Verify ]
+DLSS                            [ Undo TrayTrigger changes ]  [ Verify ]
   Super Resolution     310.2.1      Latest (driver)
   Frame Generation     3.5.0        Latest (driver)
   [ ] Show DLSS overlay while this game runs
@@ -563,7 +696,7 @@ DLSS                            [ Restore default ]  [ Verify ]
 **Old game** - offered, not excluded (see The version floor):
 
 ```
-DLSS                                  [ Use latest ]  [ Verify ]
+DLSS                                  [ Use recommended ]  [ Verify ]
   Super Resolution     2.3.7        Game default
   This game's DLSS predates preset support. The override may still work - Verify will say.
 ```
@@ -575,9 +708,12 @@ See Verification for the two verified states.
 Rules:
 
 - One action plus `Verify`. No version dropdown, no per-feature toggles, no preset letters in v1.
+- The action is **Use recommended**, and undo is **Undo TrayTrigger changes** - it restores captured
+  values, which are not always defaults.
 - The line "No game files are changed" is load-bearing. It is the sentence that reassures a user who
   has heard swapping DLLs is risky.
-- `Restore default` clears the settings; it does not write an "off" value.
+- `Undo TrayTrigger changes` restores each captured previous value, and deletes only where the
+  setting was genuinely absent before. It never writes an explicit "off".
 - If an override is present that TrayTrigger did not set (NVIDIA App, Profile Inspector), say so and
   do not silently overwrite it. Follow the `DefenderExclusionWasPreExisting` discipline already used
   for Defender exclusions.
@@ -586,32 +722,56 @@ Rules:
 
 One entry under Settings > General, off by default:
 
-- **Apply the latest DLSS model to new games automatically** - when a game is added and qualifies,
-  apply without asking. Off by default; the per-game control is the primary path.
+- **Apply the recommended DLSS model to new games automatically** - off by default.
+
+**Deferred past v1** on reviewer recommendation. Applying automatically means writing driver
+settings the user never asked for, on games where the outcome is unverified. It should wait until
+the ownership record and the verification states are proven in practice.
 
 No global "apply to all" button in v1. It is a large, silent, hard-to-undo change across a whole
 library.
 
 ## Data
 
-On `GameEntry`:
+An earlier draft had a single flag and one verification result. Both were too thin: overrides need
+an ownership record to be undoable safely, and observations are per feature.
+
+On `GameEntry`, one record per feature (`SR`, `RR`, `FG`):
 
 ```
-DlssOverrideEnabled    bool      TrayTrigger set the override for this game
-DlssVerifiedVersion    string?   What actually loaded, from the NGX log ("310.9.0")
-DlssVerifiedUtc        DateTime? When that was observed
-DlssVerifiedDriver     string?   Driver version at the time ("616.64")
-DlssShowOverlay        bool      Session-scoped diagnostic overlay for this game (default false)
+DlssSettings : list of {
+    Feature          "SR" | "RR" | "FG"
+    SettingId        e.g. 0x10E41E01
+    PreviousValue    uint?      null = the setting was absent
+    PreviousOrigin   "UserSet" | "Predefined" | "Inherited" | "Absent"
+    WrittenValue     uint       what TrayTrigger wrote
+    ProfileName      string     the DRS profile it landed in
+    ApplicationName  string     the executable it was attached to
+    WrittenUtc       DateTime
+}
+
+DlssObservations : list of {
+    Feature          "SR" | "RR" | "FG"
+    State            "SettingsSaved" | "RuntimeObserved" | "PresetObserved" | "UnableToVerify"
+    Version          string?    e.g. "310.9.0"
+    LoadedFromPath   string?    the NGX store, or the game folder
+    Preset           string?    only when actually read from the overlay
+    Method           "ModuleEnumeration" | "NgxLog" | "Overlay"
+    ObservedUtc      DateTime
+    DriverVersion    string     e.g. "616.64"
+}
+
+DlssShowOverlay  bool   Session-scoped diagnostic overlay (default false)
 ```
 
-Versions on disk and the override values are read live - from `FileVersionInfo` and from the driver
-respectively - so neither is cached. Only the verification result needs persisting, because it can
-only be learned by playing the game and the card should not go blank between sessions.
+`PreviousOrigin` matters because NVAPI distinguishes current, predefined and inherited state.
+Restoring a value the user never set is as wrong as deleting one they did.
 
-Clear the verification fields whenever the override is changed or cleared, or the game's own DLSS
-version changes: a stale "verified" line is worse than none. When only the **driver** has changed
-since, keep the result but mark it stale - the finding is still informative, it is just no longer
-current evidence about what "latest" resolves to.
+Versions on disk and live setting values are read live, never cached. Observations persist, since
+they can only be learned by playing.
+
+Invalidate an observation when the override changes, when the game's own DLSS version changes, or
+when the game is removed. When only the **driver** changed, keep it but mark it stale.
 
 ## Lifecycle and edge cases
 
@@ -657,10 +817,14 @@ and keep the window as small as possible.
 | NVIDIA changes setting IDs or semantics | Low, ongoing | Silent breakage | Write-back check catches a rejected write; verification catches a no-op |
 | Wrong executable targeted (anti-cheat wrappers) | Medium | Silent no-op | Verification catches it; resolve via `ProcessPathResolver` |
 | UAC prompt on every apply | Medium | Annoying enough to abandon | Open question - confirm whether elevation is always needed |
-| A user blames TrayTrigger for an unrelated graphics problem | Medium | Support load | `Restore default` is one click and the card states exactly what was changed |
+| A user blames TrayTrigger for an unrelated graphics problem | Medium | Support load | `Undo TrayTrigger changes` is one click and the card states exactly what was changed |
 | Anti-cheat flags it despite the reasoning | **Low** | **Severe** | Nothing on disk changes; this is NVIDIA's own feature. Accepted risk, documented as inferred. |
 
-The bottom row is the one worth arguing about. It is the only entry whose impact would be serious,
+| Undo destroys the user's own prior presets | Medium | Data loss, unrecoverable | The ownership record; undo only when the current value still matches what was written |
+| Log-based verification reports a result belonging to another game | Medium | A confident lie | Require session attribution or report "unable to verify" |
+| A redirected NGX log path is unwritable and breaks DLSS init | Low | Feature actively harms the game | Prove the directory writable before setting the value; remove it on failure |
+
+The anti-cheat row is the one worth arguing about. It is the only entry whose impact would be serious,
 and its likelihood rests on an inference rather than a test.
 
 ## Testing
@@ -715,7 +879,11 @@ with no driver interaction at all.
 - **Detection.** Scan the game's install folder for `nvngx_dlss.dll`, `nvngx_dlssd.dll`,
   `nvngx_dlssg.dll` and read `FileVersionInfo`. Cache per game; refresh on demand.
 - **Help.** One topic, matching the card title, per the control-name/Help-title convention.
-- **No GPU, no card.** Hide the card entirely on a machine with no NVIDIA GPU.
+- **Gate on GPU capability, not merely on NVIDIA.** NVIDIA documents SR and RR overrides for RTX
+  GPUs, and frame-generation upgrades for RTX 40/50 series. A GTX card, or an RTX 20/30 card for
+  FG, cannot use these settings even though a DLSS DLL may sit in the game folder. The presence of
+  the DLL establishes nothing about hardware support. Hide the card with no NVIDIA GPU; hide or
+  disable individual features the installed GPU cannot use, and say which.
 
 ## Out of scope for v1
 
@@ -747,17 +915,22 @@ with no driver interaction at all.
 1. Detection and read-only display. The card shows versions and `Game default`, with no action
    button. Verifiable on its own and useful for deciding whether the rest is worth it.
 2. NVAPI DRS interop behind `ISystemTweakBackend`, with the fake for tests. No UI.
-3. Apply and clear, wired to the button, with the pre-existing-override check and the layer 1
-   write-back check.
-4. Re-apply in the pre-launch step.
-5. **Verification: NGX logging as a session tweak, and the `Verify` action.** Do this before
-   shipping, not after - overriding non-validated games is only defensible if the product can tell
-   the user when it did not work.
-6. The per-game overlay toggle, reusing the layer 3 session-tweak plumbing.
-7. The Settings entry for new games.
-8. Help topic and CHANGELOG bullet.
+3. **The ownership record** - capture previous value and origin per setting, write, and undo only
+   when the current value still matches what was written. This is a prerequisite for the button,
+   not a refinement of it.
+4. Apply and undo, wired to the button, with the layer 1 write-back check performed against a
+   reloaded DRS session rather than the in-memory one.
+5. Re-apply in the pre-launch step, with the three-way conflict rule.
+6. **Verification: module enumeration, the four reported states, and the `Verify` action.** Do this
+   before shipping, not after - overriding games NVIDIA has not validated is only defensible if the
+   product can tell the user what was actually observed.
+7. NGX logging as a session tweak, *only if* the spike shows logs can be attributed to a session.
+8. The per-game overlay toggle, reusing the layer 7 session-tweak plumbing.
+9. Help topic and CHANGELOG bullet.
 
-Steps 1 and 2 are independent and can be done in either order. Step 5 depends on 3.
+Deferred past v1: automatic application to newly added games.
+
+Steps 1 and 2 are independent. Everything from 4 onwards depends on 3.
 
 **Spike before step 3.** Set the seven settings by hand with NVIDIA Profile Inspector on two games -
 Fortnite (310.2.1) and Rainbow Six Extraction (2.3.7) - then, while each is running, read its
@@ -801,8 +974,29 @@ documented value, before concluding the mechanism does not work.
 - Clear the DRS overrides on both games in Profile Inspector.
 - Confirm both games return to their shipped behaviour.
 
+**Additional steps, from reviewer feedback:**
+
+- **Capture the original settings first**, for every one of the seven IDs, including whether each
+  is user-set, predefined, inherited or absent. This is the ownership record's first real test.
+- **Establish an override-off baseline** for each game before changing anything, so a later
+  observation can be compared against something.
+- **Test the runtime override alone, then the full recipe.** If `0x10E41E01` by itself already
+  loads the newer runtime, the preset settings are doing less than assumed.
+- **Compare at least two quality modes** (Quality and Performance). NVIDIA's defaults differ by
+  mode - K versus M - so one mode cannot confirm "recommended" behaves correctly.
+- **Test whether the FG sentinel means Latest or Default**, since the headers do not define either
+  value and the two reviewers disagree.
+- **Attribute the logs.** Determine whether an NGX log can be tied to a specific process or
+  session. If it cannot, layer 3 can only ever return "unable to verify".
+- **Exercise NVIDIA App.** Refresh its library, then restart it, and check whether the settings
+  survive. This is the only way to test the pre-launch reapply premise.
+- **Verify exact restoration.** Undo, then confirm all seven settings match the captured originals
+  - including that absent ones are absent again, not zeroed.
+- **Include an RR or FG capable title** if those features ship in v1.
+
 Answers produced: does the override work at all; does it work below 3.1; is the `0x00634291`
-recipe right; does anti-cheat block enumeration; and which indicator value works on retail builds.
+recipe right; does anti-cheat block enumeration; which indicator value works on retail builds;
+whether logs can be attributed; and whether restoration is exact.
 
 ## Open questions
 
@@ -848,6 +1042,35 @@ as settled. Neither moves out of **Inferred** in the Confidence table:
 
 A second model agreeing is corroboration, not verification. The plan's safety case still rests on
 an inference, and the spike is still the thing that settles it.
+
+**ChatGPT, 2026-09-19.** Read the plan alongside the TrayTrigger services and snapshot models,
+and checked its claims against NVIDIA documentation, the NVAPI headers and Profile Inspector's
+source. Supported the driver-profile approach; judged the plan ready for a spike but **not yet a
+sufficient specification for the full feature**. Found real defects, all of which are now fixed:
+
+| Finding | Resolution |
+|---|---|
+| Verification reported causation the evidence cannot support ("the driver supplied a newer model, as configured"; "this game appears to disallow the override") | Rewritten as four observation-only states. The UI now says what was observed and stops. |
+| One verification result cannot represent SR succeeding while FG is inactive | Observations are now per feature |
+| Log filenames cannot attribute a version to a game, process or launch | Layer 3 demoted to weakest layer; must report "unable to verify" unless the spike proves attribution |
+| `EnableLogPathOverride` / `LogPath` were presented as documented in NVIDIA's `.reg` files; only `LogLevel` is | Corrected and marked unverified |
+| An unwritable log path can make NGX/DLSS initialisation fail | Added as a hazard; the directory must be proved writable first |
+| `DlssOverrideEnabled` as a boolean cannot restore a user's own prior presets, and risks erasing a newer external change | Replaced with a full ownership record: previous value, origin, written value, profile and application. Undo only when the current value still matches what was written. |
+| Undo mislabelled "Restore default" when it restores captured values | Renamed "Undo TrayTrigger changes" |
+| Profile Inspector's XML described as NVIDIA-authoritative | Corrected. NVIDIA's SDK headers added, and they contradict the XML - it labels `0x1` "Preset A" where NVIDIA records A as removed. |
+| `0x00634291` = 1 claimed to resolve the "Recommended" question | Downgraded to an untested hypothesis |
+| FG `0x00FFFFFF` called a "nonsense value" | Wrong framing, corrected. Recorded as disputed: neither sentinel appears in NVIDIA's headers. |
+| "Latest" mislabels a per-mode selection (K/L/M) | Button renamed **Use recommended** |
+| Anti-cheat claims were categorical ("nothing to detect", exhaustive three-method model), and file-avoidance was said to remove the "won't launch" class | Downgraded to low-risk-not-zero. The strictly true promise is "TrayTrigger does not modify game files". |
+| "Never overwrite external settings" and "always reapply" contradict each other | Resolved with an explicit three-way rule at pre-launch: ours, reverted, or conflicted |
+| Write-back read from the in-memory session proves only that the write reached memory | Must reload DRS after saving |
+| Resolving the executable after launch cannot fix the first launch | Resolve before launch, correct afterwards |
+| "Per-game" overlay does not make its effects per-game | Six concurrency situations specified explicitly |
+| Gating on NVIDIA presence rather than GPU capability | Now gates on RTX, and on 40/50 series for frame generation |
+| Auto-apply to new games shipped before the foundations are proven | Deferred past v1 |
+
+Both reviewers' recommendation is the same: **run the spike before building.** ChatGPT's expanded
+spike checklist is adopted above.
 
 ## For reviewers
 
