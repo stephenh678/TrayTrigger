@@ -138,6 +138,117 @@ public class DlssCardViewModelTests
         Assert.Equal("Enable DLSS Override for this game", new DlssCardViewModel(Exe).OverrideLabel);
     }
 
+    // ---- What actually loaded last run ---------------------------------------------------------
+
+    private static DlssObservation Observed(string feature, string version, string? path, string? shipped) =>
+        new()
+        {
+            Feature = feature,
+            State = DlssObservationState.RuntimeObserved,
+            Version = version,
+            LoadedFromPath = path,
+            GameRuntimeVersion = shipped
+        };
+
+    private const string StorePath = @"C:\ProgramData\NVIDIA\NGX\models\dlss\versions\20318464\files\x.bin";
+
+    private static async Task<DlssCardViewModel> Played(params DlssObservation[] observations)
+    {
+        var game = new GameEntry();
+        game.DlssObservations.AddRange(observations);
+        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), game: game);
+        await card.LoadAsync();
+        return card;
+    }
+
+    [Fact]
+    public async Task BeforeTheGameHasBeenPlayed_ThereIsNoLastRunLine()
+    {
+        // Everything else on the card is read off disk. This is the only thing that needs a run,
+        // and claiming it early would be inventing a result.
+        var card = await Played();
+
+        Assert.False(card.HasLastRun);
+        Assert.Empty(card.LastRunLine);
+    }
+
+    [Fact]
+    public async Task ARuntimeLoadedFromNvidia_IsTheWholePayoff()
+    {
+        var card = await Played(Observed("SR", "310.9.0", StorePath, "310.1.0"));
+
+        Assert.Equal("Last run: loaded 310.9.0 from NVIDIA.", card.LastRunLine);
+    }
+
+    [Fact]
+    public async Task TheGamesOwnRuntime_IsReportedWithoutCallingItAFailure()
+    {
+        // An intermediate load state, someone else's profile, or a genuine refusal all read the
+        // same. The line says what was seen and stops.
+        var card = await Played(Observed("SR", "310.1.0", @"C:\Games\Test\nvngx_dlss.dll", "310.1.0"));
+
+        Assert.Equal("Last run: loaded 310.1.0 from the game's own files.", card.LastRunLine);
+        Assert.DoesNotContain("fail", card.LastRunLine, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ThreeFeaturesOnOneVersion_SayItOnce()
+    {
+        var card = await Played(
+            Observed("SR", "310.9.0", StorePath, "310.1.0"),
+            Observed("RR", "310.9.0", StorePath, null),
+            Observed("FG", "310.9.0", StorePath, null));
+
+        Assert.Equal("Last run: loaded 310.9.0 from NVIDIA.", card.LastRunLine);
+    }
+
+    [Fact]
+    public async Task AMixOfSources_NamesBothRatherThanPickingOne()
+    {
+        var card = await Played(
+            Observed("SR", "310.9.0", StorePath, "310.1.0"),
+            Observed("FG", "310.1.0", @"C:\Games\Test\nvngx_dlssg.dll", null));
+
+        Assert.Equal(
+            "Last run: loaded 310.9.0 from NVIDIA and 310.1.0 from the game's own files.",
+            card.LastRunLine);
+    }
+
+    [Fact]
+    public async Task AnObservationFromBeforeAGamePatch_IsDroppedRatherThanShown()
+    {
+        // The probe reports the game shipping 310.1.0; the observation was taken when it shipped
+        // 309.0.0, so it describes a setup that no longer exists.
+        var card = await Played(Observed("SR", "310.9.0", StorePath, "309.0.0"));
+
+        Assert.False(card.HasLastRun);
+    }
+
+    [Fact]
+    public async Task AnObservationForAFeatureTheGameNeverShipped_IsStillShown()
+    {
+        // Ray Reconstruction has no shipped version to compare against, and unknown-versus-known
+        // is not a patch. Discarding it would lose the only evidence the override worked.
+        var card = await Played(Observed("RR", "310.9.0", StorePath, null));
+
+        Assert.Equal("Last run: loaded 310.9.0 from NVIDIA.", card.LastRunLine);
+    }
+
+    [Fact]
+    public async Task SwitchingTheOverride_ForgetsWhatTheOldSetupDid()
+    {
+        var game = new GameEntry();
+        game.DlssObservations.Add(Observed("SR", "310.9.0", StorePath, "310.1.0"));
+        var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), game: game);
+        await card.LoadAsync();
+        Assert.True(card.HasLastRun);
+
+        card.OverrideEnabled = true;
+        await WaitForIdle(card);
+
+        Assert.False(card.HasLastRun);
+    }
+
     // ---- The switch --------------------------------------------------------------------------
 
     [Fact]

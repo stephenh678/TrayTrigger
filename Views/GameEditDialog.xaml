@@ -465,10 +465,20 @@
                                            Foreground="{StaticResource BrushTextPrimary}"/>
                             </Grid>
                             <TextBlock Text="Applies to game-supported DLSS features: Super Resolution, Ray Reconstruction, and Frame Generation."
-                                       FontSize="11" Margin="22,2,0,10" TextWrapping="Wrap"
+                                       FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"/>
 
-                            <CheckBox Content="Show the DLSS Indicator while this game runs"
+                            <!-- What actually loaded last time. Absent until the game has been
+                                 played, which is the only time it can be known. -->
+                            <TextBlock Text="{Binding Dlss.LastRunLine}"
+                                       FontSize="11" Margin="22,2,0,0" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextSecondary}"
+                                       Visibility="{Binding Dlss.HasLastRun, Converter={StaticResource BoolToVis}}"/>
+
+                            <!-- The gap belongs on the next control, so it collapses with the
+                                 line above rather than leaving a hole when there is no last run. -->
+                            <CheckBox Margin="0,10,0,0"
+                                      Content="Show the DLSS Indicator while this game runs"
                                       AutomationProperties.Name="Show the DLSS Indicator while this game runs"
                                       IsChecked="{Binding Dlss.ShowOverlay}"
                                       Foreground="{StaticResource BrushTextPrimary}" FontSize="11.5"/>

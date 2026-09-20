@@ -510,18 +510,25 @@ public partial class ProcessLauncherService
     // mid-loop, the same reason the Battle.net dispatchers are held.
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> _dlssObservers = new();
 
-    private static readonly TimeSpan DlssObserveInterval = TimeSpan.FromSeconds(20);
-    private const int DlssObserveMaxTicks = 15;   // ~5 minutes
+    private static readonly TimeSpan DlssObserveInterval = TimeSpan.FromSeconds(30);
+    private const int DlssObserveMaxTicks = 3;   // ~90 seconds
 
     /// <summary>
     /// Records what DLSS actually loaded, while the game is running - the only time it can be
     /// known. Costs nothing for a game TrayTrigger has never applied to, which is almost all of them.
     ///
     /// <para><b>Polled, not sampled once.</b> A game loads its DLSS runtime when it first builds
-    /// the renderer, which can be minutes after the process starts - at a launcher, a shader
-    /// compile, a main menu. Looking once at process start would almost always see nothing and
-    /// record "unable to verify" for a game that was about to work perfectly. It stops at the
-    /// first runtime seen, when the process exits, or after about five minutes.</para>
+    /// the renderer, which can be a minute or more after the process starts - at a launcher, a
+    /// shader compile, a main menu. Looking once at process start would almost always see nothing
+    /// and record "unable to verify" for a game that was about to work perfectly. It stops at the
+    /// first runtime seen, when the process exits, or after three ticks.</para>
+    ///
+    /// <para><b>Three ticks, not fifteen.</b> Enumerating another process's modules is what a
+    /// cheat does when it goes looking for a game's memory layout. It is a documented API and
+    /// anti-cheat refuses it cleanly rather than punishing it, but the window is still time spent
+    /// reading a live game, so it is as short as it can be while covering the usual case. A game
+    /// that has not built its renderer within 90 seconds records "unable to verify", which is an
+    /// honest answer and costs nothing but a missing line on the card.</para>
     ///
     /// <para>Failure is normal and is recorded as such: anti-cheat titles refuse module
     /// enumeration, which is a finding, not an error.</para>

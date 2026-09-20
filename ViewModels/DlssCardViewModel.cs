@@ -34,6 +34,7 @@ public sealed class DlssCardViewModel : ViewModelBase
         string? GameVersion,
         string? DriverVersion,
         bool DriverIsNewer,
+        IReadOnlyDictionary<string, string?> ShippedByFeature,
         string? ExternalOverrideNotice);
 
     private readonly string? _executablePath;
@@ -51,7 +52,8 @@ public sealed class DlssCardViewModel : ViewModelBase
     private Projection _content = Empty;
     private Task? _load;
 
-    private static readonly Projection Empty = new(false, null, null, false, null);
+    private static readonly Projection Empty =
+        new(false, null, null, false, new Dictionary<string, string?>(StringComparer.Ordinal), null);
 
     /// <param name="records">
     /// The game's live ownership records, mutated in place and handed to <paramref name="persist"/>,
@@ -161,6 +163,46 @@ public sealed class DlssCardViewModel : ViewModelBase
         : _content.ExternalOverrideNotice;
 
     public bool HasNotice => !string.IsNullOrEmpty(Notice);
+
+    /// <summary>
+    /// What DLSS actually loaded the last time this game ran - the one question the rest of the
+    /// card cannot answer, because everything else on it is read off disk before you play.
+    ///
+    /// <para>Empty until the game has been played with the override on, and empty again once a
+    /// game patch changes what it ships, since the observation then describes a setup that no
+    /// longer exists. It reports what was seen and stops: a runtime loaded from the game's own
+    /// files is a reading, not a verdict that the override failed.</para>
+    /// </summary>
+    public string LastRunLine
+    {
+        get
+        {
+            var seen = (_game?.DlssObservations ?? new List<DlssObservation>())
+                .Where(o => o.State == DlssObservationState.RuntimeObserved && o.Version != null)
+                .Where(o => !DlssVerificationService.IsInvalidated(
+                    o, _content.ShippedByFeature.TryGetValue(o.Feature, out string? v) ? v : null))
+                .ToList();
+
+            if (seen.Count == 0) return string.Empty;
+
+            string Versions(bool fromNvidia) => string.Join(" and ", seen
+                .Where(o => o.FromDriverStore == fromNvidia)
+                .Select(o => o.Version!)
+                .Distinct(StringComparer.Ordinal));
+
+            string nvidia = Versions(true);
+            string game = Versions(false);
+
+            return (nvidia.Length > 0, game.Length > 0) switch
+            {
+                (true, false) => $"Last run: loaded {nvidia} from NVIDIA.",
+                (false, true) => $"Last run: loaded {game} from the game's own files.",
+                _ => $"Last run: loaded {nvidia} from NVIDIA and {game} from the game's own files."
+            };
+        }
+    }
+
+    public bool HasLastRun => LastRunLine.Length > 0;
 
     // ---- Work --------------------------------------------------------------------------------
 
@@ -302,6 +344,8 @@ public sealed class DlssCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasStatus));
         OnPropertyChanged(nameof(Notice));
         OnPropertyChanged(nameof(HasNotice));
+        OnPropertyChanged(nameof(LastRunLine));
+        OnPropertyChanged(nameof(HasLastRun));
     }
 
     // ---- Projection --------------------------------------------------------------------------
@@ -333,6 +377,13 @@ public sealed class DlssCardViewModel : ViewModelBase
             GameVersion: gameVersion,
             DriverVersion: driverVersion,
             DriverIsNewer: newer,
+            // Keyed by feature code, because that is how an observation names itself. Not shown:
+            // it exists so a stored observation can be thrown away once the game ships a different
+            // version for that feature.
+            ShippedByFeature: NgxModelStore.Features.ToDictionary(
+                f => f.Code,
+                f => shipped.TryGetValue(f.Name, out string? v) ? v : null,
+                StringComparer.Ordinal),
             ExternalOverrideNotice: HasForeignOverride(result, owned)
                 ? "Something else already overrides DLSS for this game - NVIDIA App, Profile Inspector or similar. Turning this on replaces it; Restore puts it back."
                 : null);
