@@ -30,15 +30,9 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     /// own value, and capturing that would make undo restore the override. There the original
     /// capture is carried over instead.</para>
     /// </summary>
-    /// <param name="beforeSave">
-    /// Handed the records about to be committed, before the driver is told to save. Persisting
-    /// them here is what makes a crash between the two recoverable: a record with no write behind
-    /// it undoes to nothing, a write with no record behind it cannot be undone at all.
-    /// </param>
     public DlssOperationResult Apply(
         string executablePath, string gameName,
-        IReadOnlyList<DlssSettingRecord>? existing = null,
-        Action<IReadOnlyList<DlssSettingRecord>>? beforeSave = null)
+        IReadOnlyList<DlssSettingRecord>? existing = null)
     {
         // Not the launched executable: the one that renders. For a launcher-based game they differ,
         // and the driver keys its profiles on the renderer. See ResolveRenderingExecutable.
@@ -51,7 +45,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         // The write happens in its own scope so the session is closed before the check below.
         // NVIDIA's own documentation warns that DRS sessions do not merge, and reading through the
         // session that just wrote would only show its own in-memory copy - confirming nothing.
-        var written = WriteRecipe(exePath, exeName, gameName, existing, beforeSave);
+        var written = WriteRecipe(exePath, exeName, gameName, existing);
         if (written.Error != null) return DlssOperationResult.Failure(written.Error);
 
         var verified = VerifyWriteBack(exePath, exeName, written.Records, written.Details);
@@ -90,8 +84,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
     private WriteOutcome WriteRecipe(
         string exePath, string exeName, string gameName,
-        IReadOnlyList<DlssSettingRecord>? existing,
-        Action<IReadOnlyList<DlssSettingRecord>>? beforeSave)
+        IReadOnlyList<DlssSettingRecord>? existing)
     {
         var noDetails = new List<DlssSettingOutcomeDetail>();
         var noRecords = new List<DlssSettingRecord>();
@@ -171,13 +164,10 @@ public sealed class DlssOverrideService(IDrsBackend backend)
             details.Add(new DlssSettingOutcomeDetail(def.FeatureCode, def.Id, DlssSettingOutcome.Applied, null));
         }
 
-        if (records.Count > 0) beforeSave?.Invoke(records);
-
         if (!session.Save(out string? saveError))
         {
             // Nothing reached disk, so the records describe a write that did not happen. Returning
-            // them would leave the game claiming an override it does not have. A caller that
-            // persisted them in beforeSave puts back what it had.
+            // them would leave the game claiming an override it does not have.
             LoggingService.Warn("Dlss", $"Saving DLSS settings for {exeName} failed: {saveError}");
             return new WriteOutcome("", noDetails, noRecords, $"The driver refused to save the settings: {saveError}");
         }

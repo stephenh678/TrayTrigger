@@ -217,18 +217,16 @@ public class DlssCardViewModelTests
         var driver = new FakeDrsBackend();
         driver.AddProfile("game.exe", "Test Game");
         var records = new List<DlssSettingRecord>();
-        var driverSavesAtEachPersist = new List<int>();
+        int persisted = 0;
 
-        var card = Card(driver, records, () => driverSavesAtEachPersist.Add(driver.SaveCount));
+        var card = Card(driver, records, () => persisted++);
         await card.LoadAsync();
         card.OverrideEnabled = true;
         await WaitForIdle(card);
 
         Assert.True(card.OverrideEnabled);
         Assert.Equal(DlssProbeService.Settings.Length, records.Count);
-        // Once before the driver commits - so a crash in between leaves a record that undoes to
-        // nothing rather than a write nothing can undo - and once after, with the result.
-        Assert.Equal(new[] { 0, 1 }, driverSavesAtEachPersist);
+        Assert.Equal(1, persisted);
         Assert.True(card.CanRestore);
     }
 

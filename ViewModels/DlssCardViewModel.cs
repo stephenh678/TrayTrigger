@@ -216,33 +216,10 @@ public sealed class DlssCardViewModel : ViewModelBase
             string path = _rendererPath;
             string name = _gameName;
             var before = _records.ToList();
-            var ui = System.Threading.SynchronizationContext.Current;
-
-            // The record reaches disk before the driver is told to save. The other order leaves a
-            // window where a crash strands an override nothing can ever undo; this one leaves a
-            // record with no write behind it, which undoes to nothing.
-            void WriteAhead(IReadOnlyList<DlssSettingRecord> pending)
-            {
-                void Commit()
-                {
-                    _records.Clear();
-                    _records.AddRange(pending);
-                    _persist?.Invoke();
-                }
-                if (ui != null) ui.Send(_ => Commit(), null); else Commit();
-            }
-
-            var result = await Task.Run(() => _overrides.Apply(path, name, before, WriteAhead)).ConfigureAwait(true);
+            var result = await Task.Run(() => _overrides.Apply(path, name, before)).ConfigureAwait(true);
 
             if (!result.Succeeded)
             {
-                // Nothing was saved to the driver, so what was written ahead describes nothing.
-                if (!_records.SequenceEqual(before))
-                {
-                    _records.Clear();
-                    _records.AddRange(before);
-                    _persist?.Invoke();
-                }
                 Status = result.Error ?? "NVIDIA would not accept the change.";
                 return;
             }

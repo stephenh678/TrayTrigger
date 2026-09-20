@@ -281,27 +281,9 @@ public class DlssOverrideServiceTests
     }
 
     [Fact]
-    public void TheRecordsAreHandedOver_BeforeTheDriverIsToldToSave()
-    {
-        // A write with no record behind it can never be undone; a record with no write behind it
-        // undoes to nothing. So the record goes first.
-        var (service, driver) = NewService();
-        driver.AddProfile(Exe, "Test Game");
-        int savesWhenHandedOver = -1;
-        IReadOnlyList<DlssSettingRecord>? handed = null;
-
-        service.Apply(TestExe, "Test Game", beforeSave: r => { handed = r; savesWhenHandedOver = driver.SaveCount; });
-
-        Assert.NotNull(handed);
-        Assert.NotEmpty(handed!);
-        Assert.Equal(0, savesWhenHandedOver);
-        Assert.Equal(1, driver.SaveCount);
-    }
-
-    [Fact]
     public void ARecordWhoseWriteNeverLanded_UndoesToNothing_AndIsDropped()
     {
-        // The crash-between-record-and-save case: the driver is already as it was.
+        // Something reverted every value: the driver is already as it was.
         var (service, driver) = NewService();
         var profile = driver.AddProfile(Exe, "Test Game");
         var applied = service.Apply(TestExe, "Test Game");
