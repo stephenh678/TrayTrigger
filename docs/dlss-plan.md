@@ -291,8 +291,8 @@ Not established:
 
 ## Remaining work
 
-CHANGELOG. Automatic application to newly added games was deferred and is still deferred. The
-real-driver checks above.
+Automatic application to newly added games was deferred and is still deferred. The real-driver
+checks above.
 
 ## Corrections
 
