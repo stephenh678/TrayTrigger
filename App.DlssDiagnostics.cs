@@ -62,7 +62,7 @@ public partial class App
         o.AppendLine($"When          : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         o.AppendLine($"Elevated      : {SystemTweaksService.IsElevated}");
 
-        string? launched = ResolveProbeTarget(target);
+        var (launched, installDir) = ResolveProbeTarget(target);
         if (launched == null)
         {
             // The driver-side half does not depend on a game.
@@ -74,7 +74,7 @@ public partial class App
 
         // Driver profiles key on the executable that renders, which for a launcher-based game is
         // not the one TrayTrigger launches.
-        string exePath = DlssProbeService.ResolveRenderingExecutable(launched);
+        string exePath = DlssProbeService.ResolveRenderingExecutable(launched, installDir);
         o.AppendLine($"Launched      : {launched}");
         if (exePath != launched) o.AppendLine($"Renders       : {exePath}");
 
@@ -224,10 +224,10 @@ public partial class App
     /// nothing is still probed, so an executable NVIDIA has never seen can be tested without
     /// importing it first.
     /// </summary>
-    private static string? ResolveProbeTarget(string? target)
+    private static (string? Path, string? InstallDirectory) ResolveProbeTarget(string? target)
     {
-        if (string.IsNullOrWhiteSpace(target)) return null;
-        if (target.Contains('\\') || target.Contains('/')) return target;
+        if (string.IsNullOrWhiteSpace(target)) return (null, null);
+        if (target.Contains('\\') || target.Contains('/')) return (target, null);
 
         var app = (App)Current;
         var match = app._mainViewModel?.Games
@@ -235,7 +235,8 @@ public partial class App
                                  (g.Name.Contains(target, StringComparison.OrdinalIgnoreCase) ||
                                   Path.GetFileName(g.Game.ExecutablePath).Contains(target, StringComparison.OrdinalIgnoreCase)));
 
-        return match?.Game.ExecutablePath ?? target;
+        // The install folder too: a Steam entry's path is a link, and that folder is all there is.
+        return (match?.Game.ExecutablePath ?? target, match?.Game.WorkingDirectory);
     }
 
     private static Process? FindRunningProcess(string exePath)
