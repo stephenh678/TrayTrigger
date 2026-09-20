@@ -172,6 +172,37 @@ substituted when it was on. That remains a clean result.
 overlay to **E**. So **a per-game setting overrides a global one** - verified, and not previously
 established.
 
+#### The global DLSS settings were three days old
+
+A Profile Inspector backup from **2026-09-16** was compared against the 2026-09-19 export: 34
+settings each, **nothing added, removed or changed**. All four DLSS overrides were already present
+on the 16th.
+
+So they were not a side effect of the spike, and the confound above is established rather than
+suspected. More importantly, this is a **realistic user, not an artifact**: a tool set them days
+earlier and the owner had forgotten. That is exactly who TrayTrigger will meet - global DLSS
+overrides already active from RHI or NVIDIA App, invisible unless something looks for them. For
+that user a per-game "Use recommended" may be a **complete no-op that still reports success**,
+which is the strongest argument in this document for reporting observations rather than causation.
+
+#### Reading the DRS store: check `nvdrssel.bin` first
+
+The store alternates between two database files and a selector picks the live one:
+
+```
+nvdrsdb0.bin    1,924,968      the stale copy
+nvdrsdb1.bin    1,925,512      the live one
+nvdrssel.bin    1 byte, value 1  ->  nvdrsdb1 is active
+```
+
+During cleanup verification this produced a false alarm: comparing against `nvdrsdb0.bin` showed
+576 bytes missing and suggested the revert had removed more than it should. Reading the file
+`nvdrssel.bin` actually points at showed the store within 32 bytes of baseline - a clean restore.
+
+TrayTrigger reads settings through NVAPI, not the files, so this does not affect the feature. It
+matters for **diagnostics, backups and support**: any tool that inspects or copies the DRS store
+must consult `nvdrssel.bin` first, or it will confidently report on data the driver is not using.
+
 #### Precedence, confirmed
 
 DRS resolves a setting **application profile -> global profile -> base profile -> driver default**.
