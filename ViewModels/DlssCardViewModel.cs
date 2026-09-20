@@ -148,12 +148,17 @@ public sealed class DlssCardViewModel : ViewModelBase
     /// What DLSS actually loaded the last time this game ran - the one question the rest of the
     /// card cannot answer, because everything else on it is read off disk before you play.
     ///
-    /// <para>Empty until the game has been played with the override on, and empty again once a
-    /// game patch changes what it ships, since the observation then describes a setup that no
-    /// longer exists. It reports what was seen and stops: a runtime loaded from the game's own
-    /// files is a reading, not a verdict that the override failed.</para>
+    /// <para>N/A until the game has been played with the override on, and N/A again once a game
+    /// patch changes what it ships, since the observation then describes a setup that no longer
+    /// exists. The line is always there, so its absence is never mistaken for a fault. It reports
+    /// what was seen and stops: a runtime loaded from the game's own files is a reading, not a
+    /// verdict that the override failed.</para>
     /// </summary>
-    public string LastRunLine
+    public string LastRunLine => LastRunReading is { Length: > 0 } reading ? reading : NoLastRun;
+
+    public const string NoLastRun = "Last run: N/A (appears after you play with the override on)";
+
+    private string LastRunReading
     {
         get
         {
@@ -178,8 +183,6 @@ public sealed class DlssCardViewModel : ViewModelBase
             };
         }
     }
-
-    public bool HasLastRun => LastRunLine.Length > 0;
 
     // ---- Work --------------------------------------------------------------------------------
 
@@ -323,7 +326,6 @@ public sealed class DlssCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasStatus));
         OnPropertyChanged(nameof(LastRunLine));
-        OnPropertyChanged(nameof(HasLastRun));
     }
 
     // ---- Projection --------------------------------------------------------------------------

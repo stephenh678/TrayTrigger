@@ -471,12 +471,13 @@
                                        FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"/>
 
-                            <!-- What actually loaded last time. Absent until the game has been
-                                 played, which is the only time it can be known. -->
+                            <!-- What actually loaded last time, on a line of its own. N/A until the
+                                 game has been played, which is the only time it can be known; left
+                                 out for a game with no DLSS, where there is nothing to load. -->
                             <TextBlock Text="{Binding Dlss.LastRunLine}"
-                                       FontSize="11" Margin="24,2,0,0" TextWrapping="Wrap"
+                                       FontSize="11" Margin="24,8,0,0" TextWrapping="Wrap"
                                        Foreground="{StaticResource BrushTextSecondary}"
-                                       Visibility="{Binding Dlss.HasLastRun, Converter={StaticResource BoolToVis}}"/>
+                                       Visibility="{Binding Dlss.CanEnable, Converter={StaticResource BoolToVis}}"/>
 
                             <!-- Only when a change did not work. When it works, the switch says so. -->
                             <TextBlock Text="{Binding Dlss.Status}" FontSize="11" Margin="0,10,0,0"

@@ -141,14 +141,13 @@ public class DlssCardViewModelTests
     }
 
     [Fact]
-    public async Task BeforeTheGameHasBeenPlayed_ThereIsNoLastRunLine()
+    public async Task BeforeTheGameHasBeenPlayed_TheLastRunLineSaysNotAvailable()
     {
         // Everything else on the card is read off disk. This is the only thing that needs a run,
         // and claiming it early would be inventing a result.
         var card = await Played(null);
 
-        Assert.False(card.HasLastRun);
-        Assert.Empty(card.LastRunLine);
+        Assert.Equal(DlssCardViewModel.NoLastRun, card.LastRunLine);
     }
 
     [Fact]
@@ -187,7 +186,7 @@ public class DlssCardViewModelTests
         // 309.0.0, so it describes a setup that no longer exists.
         var card = await Played(Ran(new[] { "310.9.0" }, None, gameVersion: "309.0.0"));
 
-        Assert.False(card.HasLastRun);
+        Assert.Equal(DlssCardViewModel.NoLastRun, card.LastRunLine);
     }
 
     [Fact]
@@ -206,12 +205,12 @@ public class DlssCardViewModelTests
         var game = new GameEntry { DlssLastRun = Ran(new[] { "310.9.0" }, None) };
         var card = Card(new FakeDrsBackend(), new List<DlssSettingRecord>(), game: game);
         await card.LoadAsync();
-        Assert.True(card.HasLastRun);
+        Assert.NotEqual(DlssCardViewModel.NoLastRun, card.LastRunLine);
 
         card.OverrideEnabled = true;
         await WaitForIdle(card);
 
-        Assert.False(card.HasLastRun);
+        Assert.Equal(DlssCardViewModel.NoLastRun, card.LastRunLine);
         Assert.Null(game.DlssLastRun);
     }
 
