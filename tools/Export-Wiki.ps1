@@ -40,6 +40,7 @@ $OutDir = Convert-Path -LiteralPath $OutDir
 $sectionOrder = @(
     @{ Key = 'tweaks';          Label = 'Performance Tweaks' },
     @{ Key = 'profiles';        Label = 'Performance Profiles' },
+    @{ Key = 'dlss';            Label = 'NVIDIA DLSS' },
     @{ Key = 'scanner';         Label = 'Game Scanner' },
     @{ Key = 'traymenu';        Label = 'Tray Menu' },
     @{ Key = 'tools';           Label = 'Tools' },

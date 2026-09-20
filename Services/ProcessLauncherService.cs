@@ -182,6 +182,18 @@ public partial class ProcessLauncherService
 
     private bool ShouldKeepLaunchersMinimized => KeepLaunchersMinimized?.Invoke() == true;
 
+    /// <summary>
+    /// Saves the library after a launch changed a game record. Set by App, like
+    /// <see cref="KeepLaunchersMinimized"/>; unset in tests, where nothing needs persisting.
+    /// </summary>
+    public Action? PersistLibrary { get; set; }
+
+    /// <summary>
+    /// The DLSS override service. A property rather than a constructor argument so the eight
+    /// existing test call sites keep working; tests that care substitute a fake backend.
+    /// </summary>
+    public DlssOverrideService DlssOverrides { get; set; } = new();
+
     /// <summary>The Epic launch link. "silent=true" asks the launcher not to show its window.</summary>
     internal static string BuildEpicLaunchUrl(string appName, bool silent) =>
         $"com.epicgames.launcher://apps/{Uri.EscapeDataString(appName)}?action=launch{(silent ? "&silent=true" : string.Empty)}";
@@ -472,6 +484,10 @@ public partial class ProcessLauncherService
             _sessions[game.Id] = session;
         }
 
+        // Before the profile, and deliberately outside it: DLSS settings are persistent driver
+        // state, not a session tweak, so they apply even when the performance profile is Off.
+        ReapplyDlssSettings(game);
+
         _performanceProfileService.BeginGameSession(game);
 
         var scriptResult = _scriptService.RunPreLaunch(game);
@@ -488,6 +504,161 @@ public partial class ProcessLauncherService
         try { SessionStarted?.Invoke(session); }
         catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionStarted handler failed: {ex.Message}"); }
         return session;
+    }
+
+    // Each session's DLSS poller, so a stub handoff can stop the one watching the process that
+    // has gone before starting the next.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Poller> _dlssObservers = new();
+
+    private static readonly TimeSpan DlssObserveInterval = TimeSpan.FromSeconds(30);
+    private const int DlssObserveMaxTicks = 3;   // ~90 seconds
+
+    /// <summary>
+    /// Records what DLSS actually loaded, while the game is running - the only time it can be
+    /// known. Costs nothing for a game TrayTrigger has never applied to, which is almost all of them.
+    ///
+    /// <para><b>Polled, not sampled once.</b> A game loads its DLSS runtime when it first builds
+    /// the renderer, which can be a minute or more after the process starts - at a launcher, a
+    /// shader compile, a main menu. Looking once at process start would almost always see nothing
+    /// and record "unable to verify" for a game that was about to work perfectly. It stops at the
+    /// first runtime seen, when the process exits, or after three ticks.</para>
+    ///
+    /// <para><b>Three ticks, and no more.</b> Enumerating another process's modules is what a
+    /// cheat does when it goes looking for a game's memory layout. It is a documented API and
+    /// anti-cheat refuses it cleanly rather than punishing it, but the window is still time spent
+    /// reading a live game, so it is as short as it can be while covering the usual case. A game
+    /// that has not built its renderer within 90 seconds records nothing, which costs a missing
+    /// line on the card and no more.</para>
+    ///
+    /// <para>Failure is normal: anti-cheat titles refuse module enumeration, and then too there is
+    /// simply nothing to record.</para>
+    /// </summary>
+    private static string SafeProcessName(Process process)
+    {
+        try { return $"{process.ProcessName} (PID {process.Id})"; } catch { return "the game process"; }
+    }
+
+    /// <summary>
+    /// The running process of the executable the override was written for, or null. The process a
+    /// session tracks can be a launcher - DOOM Eternal's is idTechLauncher - and a launcher never
+    /// loads DLSS. The caller disposes what this returns.
+    /// </summary>
+    private static Process? FindRendererProcess(string rendererPath)
+    {
+        if (!DlssProbeService.IsFilePath(rendererPath)) return null;
+
+        Process? found = null;
+        foreach (var candidate in Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(rendererPath)))
+        {
+            if (found == null) found = candidate;
+            else candidate.Dispose();
+        }
+        return found;
+    }
+
+    private void StartDlssObservation(ActiveGameSession session, Process process)
+    {
+        var game = session.Game;
+        if (game.DlssSettings.Count == 0) return;
+
+        // Once, not per tick: what the game ships cannot change while it is running, and the scan
+        // walks the whole install folder.
+        // Beside the renderer the override was written for - the same folder the card reads, and
+        // the only one there is for a game launched by link.
+        string renderer = game.DlssSettings[0].ExecutablePath;
+        string? gameVersion = DlssProbeService.OldestVersion(DlssProbeService.FindShippedRuntimes(
+            System.IO.Path.GetDirectoryName(DlssProbeService.IsFilePath(renderer) ? renderer : game.ExecutablePath) ?? string.Empty));
+
+        int ticks = 0;
+        string key = game.Id;
+
+        Poller? self = null;
+        self = new Poller(DlssObserveInterval, () =>
+        {
+            ticks++;
+
+            // The renderer by name first: the tracked process may be a launcher, and may be gone
+            // by now with the game still running.
+            using var rendererProcess = FindRendererProcess(renderer);
+            var target = rendererProcess ?? process;
+
+            bool exited;
+            try { exited = target.HasExited; } catch { exited = true; }
+
+            string? note = null;
+            var lastRun = exited ? null
+                : DlssProbeService.ReadLastRun(DlssProbeService.ScanLoadedModules(target, out note), gameVersion);
+
+            // Keep waiting only while there is still a chance of seeing something.
+            if (lastRun == null && !exited && ticks < DlssObserveMaxTicks) return true;
+
+            // Nothing seen is nothing to record: whatever an earlier run found stays.
+            if (lastRun != null)
+            {
+                game.DlssLastRun = lastRun;
+                PersistLibrary?.Invoke();
+                LoggingService.Info("Dlss", $"'{game.Name}' loaded DLSS {string.Join(", ", lastRun.FromNvidia.Select(v => v + " from NVIDIA").Concat(lastRun.FromGame.Select(v => v + " from the game's own files")))}.");
+            }
+            else
+            {
+                // Once per launch, and only for a game with the override on: it is the one thing
+                // that says why the card has no Last run line.
+                LoggingService.Info("Dlss", $"'{game.Name}': no DLSS runtime seen in {SafeProcessName(target)} after {ticks} look(s){(exited ? " - the process had exited" : "")}. {note}");
+            }
+
+            // Only this poller's own registration: a stub handoff starts a second one under the
+            // same game, and removing by key alone would drop that one instead.
+            _dlssObservers.TryRemove(new KeyValuePair<string, Poller>(key, self!));
+            return false;
+        });
+
+        // A stub handoff attaches twice. The earlier poller is watching a process that is gone,
+        // and would record "not running" for a game that is.
+        var poller = self;
+        _dlssObservers.AddOrUpdate(key, poller, (_, previous) =>
+        {
+            previous.Stop();
+            return poller;
+        });
+    }
+
+    /// <summary>
+    /// Puts the DLSS settings back if something reverted them since they were applied - NVIDIA App
+    /// reverts overrides on games it does not list, whenever it starts. Does nothing for a game
+    /// TrayTrigger has never applied to, which is almost every game, so the common path is a single
+    /// list check.
+    /// </summary>
+    private void ReapplyDlssSettings(GameEntry game)
+    {
+        if (game.DlssSettings.Count == 0) return;
+
+        try
+        {
+            var result = DlssOverrides.Reapply(game.DlssSettings);
+
+            if (result.HadForeignChanges)
+            {
+                // Something else has set these since. Nothing is written - not this launch, and not
+                // the next, for as long as it stays that way. The card's switch reads off.
+                LoggingService.Info("Launcher", $"DLSS settings for '{game.Name}' were changed by something else; TrayTrigger left them alone.");
+            }
+            else if (!result.Succeeded)
+            {
+                LoggingService.Warn("Launcher", $"Could not re-apply DLSS settings for '{game.Name}': {result.Error ?? "the driver refused"}.");
+            }
+            else if (!result.WasAlreadyCorrect)
+            {
+                // Recreating a profile marks the records, so undo can remove it again.
+                PersistLibrary?.Invoke();
+                LoggingService.Info("Launcher", $"Re-applied DLSS settings for '{game.Name}' before launch.");
+            }
+        }
+        catch (Exception ex)
+        {
+            // A launch must never fail because of this. The override being stale is a worse
+            // outcome than a broken launch only in theory.
+            LoggingService.Warn("Launcher", $"Re-applying DLSS settings for '{game.Name}' failed: {ex.Message}");
+        }
     }
 
     /// <summary>Undo a session that never got as far as dispatching the game (or whose dispatch threw).</summary>
@@ -1032,6 +1203,8 @@ public partial class ProcessLauncherService
 
             if (!isRunning)
             {
+                if (session.Process == null && game.DlssSettings.Count > 0)
+                    LoggingService.Info("Dlss", $"'{game.Name}': its process was never found under the Steam install folder, so what DLSS it loaded could not be read.");
                 LoggingService.Verbose("Launcher", $"Steam reports '{game.Name}' session ended.");
                 FinishSession(session, gameRan: true, "Steam reports the game closed");
                 return false;
@@ -1060,6 +1233,7 @@ public partial class ProcessLauncherService
                         _performanceProfileService.OnGameProcessStarted(game, proc);
                         CpuTopologyService.ApplyAffinity(proc, game);
                         WaitForWindowAndActivate(session, proc);
+                        StartDlssObservation(session, proc);
                     }
                 }
             }
@@ -1200,6 +1374,7 @@ public partial class ProcessLauncherService
         DateTime startedAt;
         try { startedAt = process.StartTime; } catch { startedAt = DateTime.Now; }
         MarkGameStarted(session, startedAt);
+        StartDlssObservation(session, process);
 
         int exitHandled = 0;
 

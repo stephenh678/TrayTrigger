@@ -100,7 +100,8 @@ public class GameEditViewModel : ViewModelBase
         bool scriptsEnabled = false,
         ScriptDefaults? scriptDefaults = null,
         ScriptLibraryService? scriptLibrary = null,
-        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null)
+        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null,
+        Action? persistLibrary = null)
     {
         SourceGame = game;
         _scriptDefaults = scriptDefaults;
@@ -121,6 +122,10 @@ public class GameEditViewModel : ViewModelBase
         _minConfidence = minConfidence;
         _profileTweaks = profileTweaks;
         IsNewGame = isNewGame;
+        // The records list is the game's own, mutated in place: a DLSS apply changes the driver
+        // immediately, so the record has to be saved immediately too. Deferring it to Save Changes
+        // would let Cancel strand an override TrayTrigger could no longer undo.
+        Dlss = new DlssCardViewModel(game.ExecutablePath, game.Name, game.DlssSettings, persistLibrary, game: game);
 
         _name = game.Name;
         _executablePath = game.ExecutablePath;
@@ -327,6 +332,16 @@ public class GameEditViewModel : ViewModelBase
         }
     }
 
+    // --- DLSS (read-only; see docs/dlss-plan.md) ---
+
+    /// <summary>
+    /// The DLSS card. Built here but deliberately not loaded here: <see cref="DlssCardViewModel"/>
+    /// only touches the driver when the dialog asks it to, so constructing this view model - which
+    /// the tests do freely - never does.
+    /// </summary>
+    public DlssCardViewModel Dlss { get; }
+
+
     // --- Pre-launch / post-exit scripts ---
 
     public bool ShowScriptsCard { get; }
@@ -360,6 +375,9 @@ public class GameEditViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ShowIdentityCard));
                 OnPropertyChanged(nameof(ShowLaunchCard));
                 OnPropertyChanged(nameof(ShowPerformanceCard));
+                // The DLSS card shares the Performance tab; it owns its own visibility so the
+                // XAML needs one binding rather than a multi-binding across two view models.
+                Dlss.IsOnTab = IsAllSection || IsPerformanceSection;
                 OnPropertyChanged(nameof(ShowScriptsCardOnTab));
                 OnPropertyChanged(nameof(ShowScriptsStubOnTab));
             }

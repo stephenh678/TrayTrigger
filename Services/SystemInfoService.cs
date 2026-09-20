@@ -284,7 +284,11 @@ public partial class SystemInfoService
     // GPU Detection
     // =========================================================================
 
-    private List<GpuHardwareInfo> GetGpuInfoList()
+    /// <summary>
+    /// GPU model, driver version and VRAM straight from the display-class registry keys - no WMI,
+    /// so it is cheap enough to call on its own, as the DLSS diagnostic report does.
+    /// </summary>
+    public List<GpuHardwareInfo> GetGpuInfoList()
     {
         var list = new List<GpuHardwareInfo>();
 

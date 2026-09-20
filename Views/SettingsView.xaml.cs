@@ -15,6 +15,8 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         InitializeComponent();
+        // The DLSS card's game count changes in Edit Game, so it is re-read when the page is shown.
+        IsVisibleChanged += (_, _) => { if (IsVisible) (DataContext as SettingsViewModel)?.Dlss?.Refresh(); };
     }
 
     /// <summary>The page's card search box, for the window's Ctrl+F / Escape handling.</summary>

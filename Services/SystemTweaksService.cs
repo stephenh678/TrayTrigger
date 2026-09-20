@@ -1182,6 +1182,56 @@ public partial class SystemTweaksService
     private static bool SetWuDriversExcluded(bool exclude) =>
         exclude ? SetHklmDword(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate", 1) : DeleteHklmValue(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate");
 
+    // ---- NVIDIA DLSS Indicator -----------------------------------------------------------------
+    // Not a tweak row: it is switched from the NVIDIA DLSS card in Settings. It lives here for the
+    // elevated HKLM write and the prior-value capture.
+
+    private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";
+
+    /// <summary>
+    /// NVIDIA ships 1 in its own .reg file, which only draws for developer builds. 0x400 is what
+    /// permits a retail game to draw it, matching the documented __NGX_SHOW_INDICATOR=1024.
+    /// </summary>
+    private const int DlssIndicatorRetail = 0x400;
+
+    private static int? ReadDlssIndicator()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
+            return key?.GetValue("ShowDlssIndicator") is int i ? i : null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>The driver creates the NGXCore key; without it there is nothing to draw the indicator.</summary>
+    public static bool HasNvidiaNgx()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
+            return key != null;
+        }
+        catch { return false; }
+    }
+
+    public static bool IsDlssIndicatorOn() => ReadDlssIndicator() == DlssIndicatorRetail;
+
+    /// <summary>Turning it off puts back what was there before it was turned on, absent included.</summary>
+    public bool SetDlssIndicator(bool show)
+    {
+        if (show)
+        {
+            CapturePrior("dlss_indicator", ReadDlssIndicator()?.ToString() ?? "absent");
+            return SetHklmDword(NgxCoreKey, "ShowDlssIndicator", DlssIndicatorRetail);
+        }
+
+        // Absent before means deleting, not writing zero - zero is a value NVIDIA never had there.
+        return int.TryParse(TakePrior("dlss_indicator"), out int prior)
+            ? SetHklmDword(NgxCoreKey, "ShowDlssIndicator", prior)
+            : DeleteHklmValue(NgxCoreKey, "ShowDlssIndicator");
+    }
+
     private const int PrioritySeparationBoost = 0x26;
     private const int PrioritySeparationClientDefault = 0x02;
 

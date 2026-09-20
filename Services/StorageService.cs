@@ -37,6 +37,7 @@ public class StorageService : IProfileSnapshotStore
     private readonly string _settingsFilePath;
     private readonly string _settingsBakFilePath;
     private readonly string _profileSessionFilePath;
+    private readonly string _pendingRemovalFilePath;
 
     private bool _gamesPrimaryUnreadableThisSession;
     private bool _settingsPrimaryUnreadableThisSession;
@@ -78,6 +79,7 @@ public class StorageService : IProfileSnapshotStore
         _settingsFilePath = Path.Combine(_baseDirectory, "settings.json");
         _settingsBakFilePath = Path.Combine(_baseDirectory, "settings.json.bak");
         _profileSessionFilePath = Path.Combine(_baseDirectory, "profile-session.json");
+        _pendingRemovalFilePath = Path.Combine(_baseDirectory, "pending-removal.json");
 
         EnsureDirectories();
         if (migrateLegacyData) MigrateLegacyData();
@@ -599,6 +601,68 @@ public class StorageService : IProfileSnapshotStore
             {
                 settings.SteamGridDbApiKey = plainApiKey;
                 settings.RawgApiKey = plainRawgKey;
+            }
+        }
+    }
+
+    // --- Pending removal ---------------------------------------------------------------------
+    // Games taken out of the library but still inside their undo window. games.json no longer
+    // lists them, and they carry things only they can clean up - cached artwork, and the DLSS
+    // ownership records that are the sole means of undoing a driver override. Kept on disk so a
+    // crash inside the window cannot strand either; the next start finishes the job.
+
+    private readonly Lock _pendingRemovalLock = new();
+
+    /// <summary>The games a previous run removed and never finished cleaning up after. Empty when none.</summary>
+    public List<GameEntry> LoadPendingRemoval()
+    {
+        lock (_pendingRemovalLock)
+        {
+            if (!File.Exists(_pendingRemovalFilePath)) return new List<GameEntry>();
+            try
+            {
+                string json = File.ReadAllText(_pendingRemovalFilePath);
+                var games = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListGameEntry);
+                return games?.Where(g => g != null).ToList() ?? new List<GameEntry>();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Storage", $"Failed to read '{_pendingRemovalFilePath}': {ex.Message}");
+                return new List<GameEntry>();
+            }
+        }
+    }
+
+    public void SavePendingRemoval(IEnumerable<GameEntry> games)
+    {
+        lock (_pendingRemovalLock)
+        {
+            try
+            {
+                EnsureDirectories();
+                string json = JsonSerializer.Serialize(games.ToList(), AppJsonContext.Default.ListGameEntry);
+                string tempFile = _pendingRemovalFilePath + ".tmp";
+                File.WriteAllText(tempFile, json);
+                SafeReplaceFile(tempFile, _pendingRemovalFilePath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error("Storage", $"Error saving '{_pendingRemovalFilePath}': {ex.Message}", ex);
+            }
+        }
+    }
+
+    public void DeletePendingRemoval()
+    {
+        lock (_pendingRemovalLock)
+        {
+            try
+            {
+                if (File.Exists(_pendingRemovalFilePath)) File.Delete(_pendingRemovalFilePath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Storage", $"Failed to delete '{_pendingRemovalFilePath}': {ex.Message}");
             }
         }
     }

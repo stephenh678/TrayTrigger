@@ -104,6 +104,8 @@ public class HelpContentServiceTests
     [InlineData("profiles/timer_resolution")]
     [InlineData("profiles/do_not_disturb")]
     [InlineData("profiles/cpu_affinity")]
+    [InlineData("dlss/override")]
+    [InlineData("dlss/indicator")]
     [InlineData("scanner/overview")]
     [InlineData("traymenu/overview")]
     [InlineData("scripts/overview")]
@@ -124,7 +126,7 @@ public class HelpContentServiceTests
         var index = HelpContentService.GetIndex();
 
         Assert.Equal(
-            new[] { "tweaks", "profiles", "scanner", "traymenu", "tools", "scripts", "library", "updates", "troubleshooting" },
+            new[] { "tweaks", "profiles", "dlss", "scanner", "traymenu", "tools", "scripts", "library", "updates", "troubleshooting" },
             index.Select(g => g.Section).ToArray());
 
         var tweaks = index.First(g => g.Section == "tweaks");

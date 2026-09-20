@@ -252,6 +252,9 @@ public class MainViewModel : ViewModelBase
         // The tweaks service records what it found on the machine before applying a tweak (prior
         // power plan, prior visual-effects state) into settings so "Restore Previous" is exact.
         _systemTweaksService = new SystemTweaksService(() => _settings, () => _storageService.SaveSettings(_settings, source: "SystemTweaksService.TweakApplied"));
+        // The Settings DLSS card counts and restores games, which only the library knows.
+        SettingsVM.Dlss = new DlssSettingsViewModel(_systemTweaksService,
+            () => Library.DlssOverrideGameCount, () => Library.RestoreAllDlssOverrides());
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
 
         // Navigation Commands

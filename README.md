@@ -162,6 +162,17 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 - **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
 - **Close Game / Force Close** in the game's right-click menu, Game Details and the tray: quit the game and get your tweaks back, or kill it if it won't close. A game that never appears is rolled back automatically after three minutes.
 
+### NVIDIA DLSS Override
+
+Games ship with whatever DLSS version was current when they were built, and often never update it. Your GeForce driver keeps newer ones. One switch in Edit Game runs the game on the driver's DLSS files instead, for Super Resolution, Ray Reconstruction, and Frame Generation.
+
+- **The same setting NVIDIA App calls DLSS Override**, per game, including games NVIDIA App doesn't list. NVIDIA App resets it on those; TrayTrigger puts it back each time it launches the game.
+- **No game files touched**: nothing is downloaded or swapped, so a game update or "verify files" can't undo it, and there is nothing to break. If a game ignores the override it simply uses its own DLSS, as before.
+- **Says what you'll get, then what you got**: the card shows the version inside the game and the one the driver would use (310.1.0 → 310.9.0), and a **Last run** line with the version the game actually loaded the last time you played, and where it came from.
+- **Easy to take back out**: untick it, or **Restore**, and that game's NVIDIA settings return to exactly what they were, leaving alone anything another tool has changed since. **Restore All** in Settings > Launch & Performance does every game at once. Removing a game puts its override back, and so does uninstalling TrayTrigger.
+- **No administrator rights needed.** Steam and other launcher games are included. On a PC with an NVIDIA driver the card is on every game, greyed out for one that ships no DLSS.
+- **NVIDIA DLSS Indicator**: an opt-in switch on the same Settings card turns on NVIDIA's own on-screen overlay (DLSS version, preset letter, render resolution) for checking that an override took.
+
 ### Pre-Launch and Post-Exit Scripts
 
 Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
@@ -206,11 +217,11 @@ Windows set up for games, and an eye on the hardware running them.
 
 ### Performance Tweaks
 
-System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a Core Isolation status readout, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
+System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
 <!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Restore Previous Settings) -->
 
-See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Reset Defaults**. Bulk changes can create a System Restore point.
+See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Restore Previous Settings**. Bulk changes can create a System Restore point.
 
 ### Hardware Monitoring
 

@@ -92,6 +92,24 @@ public class GameEntry
     public PerformanceProfileMode PerformanceProfile { get; set; } = PerformanceProfileMode.Off;
 
     /// <summary>
+    /// What TrayTrigger wrote into the NVIDIA driver's settings database for this game, and what
+    /// each setting was beforehand. Empty when no DLSS override has been applied.
+    ///
+    /// <para>This is the ownership record, not a flag: undo restores these captured values, and
+    /// only while the driver still reports what TrayTrigger wrote. A boolean could not tell a
+    /// value the user chose from one TrayTrigger wrote, so it could not undo without destroying
+    /// choices it never owned. See docs/dlss-plan.md.</para>
+    /// </summary>
+    public List<DlssSettingRecord> DlssSettings { get; set; } = new();
+
+    /// <summary>
+    /// What DLSS actually loaded the last time this game ran with the override on. Persisted
+    /// because it can only be learned by playing - unlike versions and settings, which are read
+    /// live. Cleared when the override changes; ignored once the game ships a different version.
+    /// </summary>
+    public DlssLastRun? DlssLastRun { get; set; }
+
+    /// <summary>
     /// Which cores the game's process may run on. Independent of the profile tier: on an Intel
     /// hybrid CPU (12th gen+) some engines and anti-cheat titles run worse when threads land on
     /// E-cores, and pinning to P-cores is the standard fix. No-op on non-hybrid CPUs.

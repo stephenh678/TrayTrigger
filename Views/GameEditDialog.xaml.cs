@@ -22,12 +22,13 @@ public partial class GameEditDialog : Window
         bool scriptsEnabled = false,
         ScriptDefaults? scriptDefaults = null,
         ScriptLibraryService? scriptLibrary = null,
-        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null)
+        Func<PerformanceProfileMode, IReadOnlyList<ProfileTweakToggleViewModel>>? profileTweaks = null,
+        Action? persistLibrary = null)
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
-        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary, profileTweaks);
+        _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary, profileTweaks, persistLibrary);
         DataContext = _viewModel;
 
         Owner = WindowHelper.ActiveOwner();
@@ -80,6 +81,10 @@ public partial class GameEditDialog : Window
         {
             WindowThemeService.CenterOverOwner(this);
             Activate();
+            // The DLSS probe reads the driver and the game folder, so it runs here rather than in
+            // the view model's constructor: the dialog opens immediately and the card appears when
+            // there is something true to put in it.
+            _ = _viewModel.Dlss.LoadAsync();
         };
 
         _viewModel.ScriptTestCompleted += report =>
