@@ -196,6 +196,9 @@ public partial class LibraryView : UserControl
             // to, and zooming the one under the cursor would read as if the menu were about it alone.
             _contextMenuCard = card;
             card.IsContextMenuOpen = true;
+            // Edit Game > Performance writes the same records, so the tick is re-read here rather
+            // than trusted from the last time this menu was open.
+            card.NotifyDlssOverrideChanged();
         }
 
         if (!card.IsSelected)

@@ -486,7 +486,8 @@ public class LibraryViewModel : ViewModelBase
             onRangeSelect: OnCardRangeSelect,
             // The quick settings change the game entry and nothing else, so this is the narrow
             // save - no settings.json rewrite for a menu tick.
-            onQuickSettingChanged: _ => SaveGamesOnly()
+            onQuickSettingChanged: _ => SaveGamesOnly(),
+            onToggleDlssOverride: card => _ = ToggleDlssOverrideAsync(card)
         );
         // Sessions outlive library reloads (a rescan while a game is running), so a fresh card
         // must pick up the live state rather than wait for the next SessionStarted event.
@@ -1969,6 +1970,13 @@ public class LibraryViewModel : ViewModelBase
     /// </summary>
     internal DlssOverrideService DlssOverrides { get; set; } = new();
 
+    /// <summary>
+    /// The DLSS probe, alongside <see cref="DlssOverrides"/> and for the same reason: substituted
+    /// by tests so the right-click menu's override path can be driven without an NVIDIA machine.
+    /// Null means the real one.
+    /// </summary>
+    internal Func<string, string?, DlssProbeService.ProbeResult>? DlssProbe { get; set; }
+
     /// <summary>How many games have the DLSS Override on. Read by the System page, possibly off the UI thread.</summary>
     public int DlssOverrideGameCount
     {
@@ -1976,6 +1984,67 @@ public class LibraryViewModel : ViewModelBase
         {
             try { return Games.Count(c => c.Game.DlssSettings.Count > 0); }
             catch (InvalidOperationException) { return 0; }   // the library changed mid-count
+        }
+    }
+
+    /// <summary>
+    /// The right-click menu's DLSS Override tick. The work is handed to a <see cref="DlssCardViewModel"/>
+    /// - the same one Edit Game > Performance builds - rather than repeated here: it owns which
+    /// settings were captured, which were handed back because something else had changed them, and
+    /// which are still TrayTrigger's to undo. A second copy of that reasoning that drifted would
+    /// leave overrides on the driver with no record able to take them off again.
+    ///
+    /// <para>Turning it on searches the game's folder for its DLSS files, so it is not instant and
+    /// the status bar says what is happening. Turning it off needs no search: the records already
+    /// say what to put back.</para>
+    /// </summary>
+    private async Task ToggleDlssOverrideAsync(GameCardViewModel card)
+    {
+        if (card.IsDlssOverrideBusy) return;
+        var game = card.Game;
+        bool turningOn = !card.DlssOverrideOn;
+        card.IsDlssOverrideBusy = true;
+        try
+        {
+            StatusMessage = turningOn
+                ? $"Looking for DLSS in {card.Name}..."
+                : $"Restoring NVIDIA's settings for {card.Name}...";
+
+            // The live record list, mutated in place and saved through persist - exactly how the
+            // Edit Game dialog hands it over, so both routes leave the same thing on disk.
+            var dlss = new DlssCardViewModel(
+                game.ExecutablePath, game.Name, game.DlssSettings,
+                // A lambda, not a method group: SaveGamesOnly takes caller-info arguments.
+                persist: () => SaveGamesOnly(), overrides: DlssOverrides, probe: DlssProbe, game: game);
+
+            await dlss.LoadAsync().ConfigureAwait(true);
+
+            // Most games ship no DLSS. Say so rather than leaving a tick that quietly refuses:
+            // the same sentence the card in Edit Game shows, so the two never disagree.
+            if (turningOn && !dlss.CanEnable)
+            {
+                StatusMessage = $"{card.Name}: {DlssCardViewModel.NotAvailableLine}";
+                return;
+            }
+
+            await dlss.SetOverrideAsync(turningOn).ConfigureAwait(true);
+
+            card.NotifyDlssOverrideChanged();
+            StatusMessage = dlss.Status is { Length: > 0 } problem
+                ? $"{card.Name}: {problem}"
+                : card.DlssOverrideOn
+                    ? $"DLSS Override is on for {card.Name}."
+                    : $"DLSS Override is off for {card.Name}; NVIDIA's settings are back as they were.";
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Dlss", $"Switching the DLSS Override for '{game.Name}' from the card menu failed: {ex.Message}", ex);
+            StatusMessage = $"{card.Name}: the DLSS Override could not be changed - see the log.";
+        }
+        finally
+        {
+            card.IsDlssOverrideBusy = false;
+            card.NotifyDlssOverrideChanged();
         }
     }
 

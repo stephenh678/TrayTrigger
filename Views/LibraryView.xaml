@@ -20,7 +20,12 @@
             <!-- Shared items keep the same order, check marks, and grouping as the single-game
                  menu below, minus everything that only makes sense for one game. Performance
                  Profile is the one addition: a single game reaches it through Edit Game
-                 Properties, and there is no batch equivalent of that dialog. -->
+                 Properties, and there is no batch equivalent of that dialog.
+
+                 DLSS Override is the one thing in the single-game menu deliberately left out, and
+                 not because it is per-game: it searches each game's folder before it can write, so
+                 a selection would sit there with nothing saying which game it was on. It needs the
+                 per-game progress the metadata refresh has before it belongs here. -->
 
             <!-- Scope, first: the items below read the same as the single-game menu's, and only
                  Remove asks before it acts. Without this the other four (category, profile,
@@ -126,10 +131,23 @@
 
             <Separator/>
 
-            <!-- Cascading quick settings, in the same order and with the same wording as the batch
-                 menu. Everything here writes a field Edit Game Properties also writes; the point is
-                 to flip one without opening a dialog, the way the batch menu already let you flip a
-                 whole selection. -->
+            <!-- Quick settings: the same settings Edit Game Properties holds, in the order that
+                 dialog lists them, so the two read alike - DLSS Override is its own card above the
+                 Performance card there, and comes first here for the same reason. The point is to
+                 flip one without opening the dialog, the way the batch menu already let you flip a
+                 whole selection. The three below are also in the batch menu, worded identically.
+
+                 DLSS Override is the exception in this group and the only one that is not: it
+                 writes to the NVIDIA driver rather than a field on the game, so it can fail, it is
+                 not instant (switching it on searches the game's folder first), and the status bar
+                 narrates it. A batch version would need per-game progress, so there isn't one yet.
+                 Flat rather than cascading because it has two states; the tick reads the game's own
+                 ownership records, so it always says what Edit Game > Performance says. Hidden on a
+                 PC with no NVIDIA driver, the way CPU Cores is hidden on a uniform CPU. -->
+            <MenuItem Header="DLSS Override" IsCheckable="True" IsChecked="{Binding DlssOverrideOn, Mode=OneWay}"
+                      Command="{Binding ToggleDlssOverrideCommand}"
+                      Visibility="{Binding HasNvidiaDriver, Converter={StaticResource BoolToVis}}"
+                      ToolTip="Runs this game on the GeForce driver's DLSS files instead of the older ones it shipped with - NVIDIA's own DLSS Override, for Super Resolution, Ray Reconstruction and Frame Generation. Nothing in the game folder is touched, and unticking puts NVIDIA's settings back. Switching it on searches the game's folder first, so it takes a moment."/>
             <MenuItem Header="Performance Profile">
                 <MenuItem Header="Off" IsCheckable="True" IsChecked="{Binding ProfileIsOff, Mode=OneWay}"
                           Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Off}"/>

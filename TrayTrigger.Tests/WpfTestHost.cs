@@ -52,4 +52,12 @@ internal static class WpfTestHost
 
     /// <summary>Runs the body on the shared UI thread, rethrowing anything it throws.</summary>
     internal static void Run(Action body) => Dispatcher.Invoke(body);
+
+    /// <summary>
+    /// The same for a body that awaits. Started on the UI thread and awaited from the test thread,
+    /// so work that resumes on the dispatcher (ConfigureAwait(true), which is how the view models
+    /// get back to the UI thread) has a running dispatcher to resume onto instead of deadlocking
+    /// against a blocked one.
+    /// </summary>
+    internal static Task RunAsync(Func<Task> body) => Dispatcher.InvokeAsync(body).Task.Unwrap();
 }

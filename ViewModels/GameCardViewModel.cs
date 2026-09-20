@@ -50,6 +50,7 @@ public class GameCardViewModel : ViewModelBase
     private bool _iconLoaded;
     private bool _coverLoaded;
     private bool _availabilityChecked;
+    private readonly Action<GameCardViewModel>? _onToggleDlssOverride;
 
     public GameEntry Game { get; }
 
@@ -76,9 +77,11 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onPrimaryClick = null,
         Action<GameCardViewModel>? onToggleSelect = null,
         Action<GameCardViewModel>? onRangeSelect = null,
-        Action<GameCardViewModel>? onQuickSettingChanged = null)
+        Action<GameCardViewModel>? onQuickSettingChanged = null,
+        Action<GameCardViewModel>? onToggleDlssOverride = null)
     {
         _onQuickSettingChanged = onQuickSettingChanged;
+        _onToggleDlssOverride = onToggleDlssOverride;
         _onCloseGame = onCloseGame;
         _onForceClose = onForceClose;
         _onPrimaryClick = onPrimaryClick;
@@ -168,6 +171,12 @@ public class GameCardViewModel : ViewModelBase
             NotifyQuickSettingsChanged();
             _onQuickSettingChanged?.Invoke(this);
         });
+        // Unlike its neighbours this writes to the NVIDIA driver, not just a field on the game, so
+        // the library does the work (and reports it in the status bar) rather than the card. It is
+        // slow enough to need saying out loud: turning it on searches the game's folder first.
+        ToggleDlssOverrideCommand = new RelayCommand(
+            () => _onToggleDlssOverride?.Invoke(this),
+            () => _onToggleDlssOverride != null && !IsDlssOverrideBusy);
         OpenFolderCommand = new RelayCommand(OpenContainingFolder);
         OpenStoreCommand = new RelayCommand(OpenStorePage);
         OpenInSteamLibraryCommand = new RelayCommand(OpenInSteamLibrary);
@@ -451,6 +460,7 @@ public class GameCardViewModel : ViewModelBase
     public ICommand SetCpuAffinityCommand { get; }
     public ICommand ToggleRunAsAdminCommand { get; }
     public ICommand ToggleCloseLauncherCommand { get; }
+    public ICommand ToggleDlssOverrideCommand { get; }
 
     // Check marks for the cascading quick-setting submenus.
     public bool ProfileIsOff => Game.PerformanceProfile == PerformanceProfileMode.Off;
@@ -476,6 +486,40 @@ public class GameCardViewModel : ViewModelBase
     /// process and cached, so this is free per card.
     /// </summary>
     public bool IsHybridCpu => CpuTopologyService.GetTopology().IsHybrid;
+
+    /// <summary>
+    /// Read once per process, like <see cref="IsHybridCpu"/>: it is a registry open, the menu asks
+    /// every time it is shown, and a driver does not appear while the app is running.
+    /// </summary>
+    private static readonly Lazy<bool> HasNvidiaDriverOnThisPc = new(SystemTweaksService.HasNvidiaNgx);
+
+    /// <summary>
+    /// False on an AMD or Intel machine, where the item is hidden - the same test that hides the
+    /// DLSS card in Edit Game and in Settings. An override there could only ever fail.
+    /// </summary>
+    public bool HasNvidiaDriver => HasNvidiaDriverOnThisPc.Value;
+
+    /// <summary>
+    /// The check mark. On means TrayTrigger holds an override for this game, which is exactly what
+    /// the switch in Edit Game > Performance reports, read from the same records. Cheap: no probe,
+    /// no driver call - so opening the menu costs nothing.
+    /// </summary>
+    public bool DlssOverrideOn => Game.DlssSettings.Count > 0;
+
+    /// <summary>True while this card's override is being applied or restored, so it isn't asked twice.</summary>
+    public bool IsDlssOverrideBusy
+    {
+        get => _isDlssOverrideBusy;
+        set
+        {
+            if (!SetProperty(ref _isDlssOverrideBusy, value)) return;
+            CommandManager.InvalidateRequerySuggested();
+        }
+    }
+    private bool _isDlssOverrideBusy;
+
+    /// <summary>Re-reads the check mark after the driver write, and each time the menu opens.</summary>
+    public void NotifyDlssOverrideChanged() => OnPropertyChanged(nameof(DlssOverrideOn));
 
     private void NotifyQuickSettingsChanged()
     {
