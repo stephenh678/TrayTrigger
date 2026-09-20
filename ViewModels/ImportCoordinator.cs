@@ -1661,17 +1661,36 @@ public class ImportCoordinator : ViewModelBase
             var steamTask = Task.Run(() =>
             {
                 var steamResults = new List<DiscoveredSteamGame>();
+
+                // This leg used to say nothing at all, so a Steam game that a scan did not offer
+                // left a verbose log with no trace of why: integration off, no library enabled,
+                // Steam not found, or the game filtered out below.
+                if (!_settings.SteamIntegrationEnabled)
+                    LoggingService.Verbose("SteamScan", "Skipped: Steam integration is off.");
+                else if (steamLocations.Count == 0)
+                    LoggingService.Verbose("SteamScan", $"Skipped: no enabled Steam library among {_settings.ScanLocations.Count(l => l.Source == ScanLocationSource.Steam)} known.");
+
                 if (steamLocations.Count > 0)
                 {
                     string? steamPath = _steamScannerService.GetSteamInstallPath();
+                    LoggingService.Verbose("SteamScan", $"Steam at '{steamPath ?? "(not found)"}'; libraries: {string.Join(", ", steamLocations.Select(l => $"'{l.Path}'"))}");
                     if (!string.IsNullOrEmpty(steamPath))
                     {
+                        var found = _steamScannerService.ScanInstalledGames(steamLocations.Select(l => l.Path), steamPath, existingAppIds);
+                        foreach (var g in LoggingService.IsVerboseEnabled ? found : [])
+                        {
+                            string verdict = g.IsAlreadyImported ? "already in library (App ID)"
+                                : ignoredAppIds.Contains(g.AppId) ? "on the ignore list"
+                                : g.ExePath != null && existingExePaths.Contains(g.ExePath) ? $"already in library (exe '{g.ExePath}')"
+                                : "offered";
+                            LoggingService.Verbose("SteamScan", $"'{g.Name}' [{g.AppId}]: {verdict}");
+                        }
+
                         // The exe-path fallback mirrors the GOG/EA/Epic/Ubisoft tasks below: a
                         // Steam game that reached the library without a SteamAppId (added by
                         // some route the platform lookup couldn't resolve) must not be offered
                         // again as "new" - selecting it would create a second row for the same exe.
-                        steamResults = _steamScannerService
-                            .ScanInstalledGames(steamLocations.Select(l => l.Path), steamPath, existingAppIds)
+                        steamResults = found
                             .Where(g => !g.IsAlreadyImported && !ignoredAppIds.Contains(g.AppId) &&
                                         (g.ExePath == null || !existingExePaths.Contains(g.ExePath)))
                             .ToList();
@@ -1791,6 +1810,8 @@ public class ImportCoordinator : ViewModelBase
                 .Where(c => c.Platform == null || !runPlatformKeys.Contains(PlatformKey(c.Platform)))
                 .DistinctBy(c => c.Platform != null ? PlatformKey(c.Platform) : c.ExePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
+            LoggingService.Verbose("ImportCoordinator", $"Scan found new games -Steam {steamGames.Count}, GOG {gogGames.Count}, EA {eaGames.Count}, Epic {epicGames.Count}, Ubisoft {ubisoftGames.Count}, Xbox {xboxGames.Count}, Battle.net {battleNetGames.Count}, folders {folderCandidates.Count}.");
 
             if (steamGames.Count == 0 && gogGames.Count == 0 && eaGames.Count == 0 && epicGames.Count == 0 && ubisoftGames.Count == 0 && xboxGames.Count == 0 && battleNetGames.Count == 0 && folderCandidates.Count == 0)
             {
