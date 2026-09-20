@@ -43,6 +43,8 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         // Not the launched executable: the one that renders. For a launcher-based game they differ,
         // and the driver keys its profiles on the renderer. See ResolveRenderingExecutable.
         string exePath = DlssProbeService.ResolveRenderingExecutable(executablePath);
+        // A launch link that resolved to nothing has no file name worth writing a profile for.
+        if (!DlssProbeService.IsFilePath(exePath)) return DlssOperationResult.Failure("No executable to target.");
         string exeName = Path.GetFileName(exePath);
         if (string.IsNullOrWhiteSpace(exeName)) return DlssOperationResult.Failure("No executable to target.");
 

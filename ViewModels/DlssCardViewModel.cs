@@ -35,6 +35,8 @@ public sealed class DlssCardViewModel : ViewModelBase
         string? ExternalOverrideNotice);
 
     private readonly string? _executablePath;
+    private readonly string? _installDirectory;
+    private string? _rendererPath;
     private readonly string _gameName;
     private readonly DlssOverrideService _overrides;
     private readonly List<DlssSettingRecord> _records;
@@ -68,6 +70,9 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         _game = game;
         _executablePath = executablePath;
+        // A platform game launched by link has no executable path; its install folder is what
+        // there is to look in.
+        _installDirectory = game?.WorkingDirectory;
         _gameName = gameName;
         _records = records ?? new List<DlssSettingRecord>();
         _persist = persist;
@@ -210,11 +215,12 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     private async Task LoadCoreAsync()
     {
-        if (string.IsNullOrWhiteSpace(_executablePath)) { _hasLoaded = true; return; }
+        if (string.IsNullOrWhiteSpace(_executablePath) && string.IsNullOrWhiteSpace(_installDirectory)) { _hasLoaded = true; return; }
         try
         {
             // The renderer, not the launcher: that is the profile an override is written to.
-            string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath)).ConfigureAwait(true);
+            string path = await Task.Run(() => DlssProbeService.ResolveRenderingExecutable(_executablePath ?? string.Empty, _installDirectory)).ConfigureAwait(true);
+            _rendererPath = path;
             var result = await Task.Run(() => _probe(path)).ConfigureAwait(true);
             _content = Project(result, _records);
         }
@@ -233,11 +239,12 @@ public sealed class DlssCardViewModel : ViewModelBase
 
     private async Task ApplyAsync()
     {
-        if (IsBusy || string.IsNullOrWhiteSpace(_executablePath)) return;
+        // The renderer the probe found, not the launch path: for a Steam game that is a link.
+        if (IsBusy || string.IsNullOrWhiteSpace(_rendererPath)) return;
         IsBusy = true;
         try
         {
-            string path = _executablePath;
+            string path = _rendererPath;
             string name = _gameName;
             var before = _records.ToList();
             var ui = System.Threading.SynchronizationContext.Current;

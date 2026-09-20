@@ -540,7 +540,11 @@ public partial class ProcessLauncherService
 
         // Once, not per tick: what the game ships cannot change while it is running, and the scan
         // walks the whole install folder.
-        var shipped = DlssProbeService.FindShippedRuntimes(System.IO.Path.GetDirectoryName(game.ExecutablePath) ?? string.Empty);
+        // Beside the renderer the override was written for - the same folder the card reads, and
+        // the only one there is for a game launched by link.
+        string renderer = game.DlssSettings[0].ExecutablePath;
+        var shipped = DlssProbeService.FindShippedRuntimes(
+            System.IO.Path.GetDirectoryName(DlssProbeService.IsFilePath(renderer) ? renderer : game.ExecutablePath) ?? string.Empty);
 
         int ticks = 0;
         string key = game.Id;

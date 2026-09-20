@@ -178,10 +178,17 @@ public static class DlssProbeService
     /// <para>A heuristic, and one the verification step exists to catch: if this picks wrong, the
     /// module scan on a running game will show no substituted runtime.</para>
     /// </summary>
-    public static string ResolveRenderingExecutable(string gameExecutablePath)
+    /// <param name="installDirectory">
+    /// Where to look when <paramref name="gameExecutablePath"/> is not a file at all. A Steam
+    /// import's is <c>steam://rungameid/...</c>, and the same goes for any platform launched by
+    /// link - so without this the whole feature would be invisible for most of a library. The
+    /// importer records the install folder as the entry's working directory.
+    /// </param>
+    public static string ResolveRenderingExecutable(string gameExecutablePath, string? installDirectory = null)
     {
-        string? dir = SafeDirectoryName(gameExecutablePath);
-        if (dir == null) return gameExecutablePath;
+        bool isFile = IsFilePath(gameExecutablePath);
+        string? dir = isFile ? SafeDirectoryName(gameExecutablePath) : installDirectory;
+        if (string.IsNullOrWhiteSpace(dir)) return gameExecutablePath;
 
         var shipped = FindShippedRuntimes(dir);
         if (shipped.Count == 0) return gameExecutablePath;
@@ -193,7 +200,7 @@ public static class DlssProbeService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        string givenName = Path.GetFileName(gameExecutablePath);
+        string? givenName = isFile ? Path.GetFileName(gameExecutablePath) : null;
 
         foreach (string? candidateDir in candidateDirs)
         {
@@ -202,7 +209,8 @@ public static class DlssProbeService
             catch { continue; }
 
             // The launched executable already living beside the DLLs means it is the renderer.
-            var self = exes.FirstOrDefault(e => string.Equals(Path.GetFileName(e), givenName, StringComparison.OrdinalIgnoreCase));
+            var self = givenName == null ? null
+                : exes.FirstOrDefault(e => string.Equals(Path.GetFileName(e), givenName, StringComparison.OrdinalIgnoreCase));
             if (self != null) return self;
 
             var best = exes
@@ -216,6 +224,10 @@ public static class DlssProbeService
 
         return gameExecutablePath;
     }
+
+    /// <summary>True for a path on disk; false for empty, or a launch link such as steam://.</summary>
+    public static bool IsFilePath(string? path) =>
+        !string.IsNullOrWhiteSpace(path) && !ProcessLauncherService.IsNonFileProtocolUrl(path);
 
     private static long SafeLength(string path)
     {

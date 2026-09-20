@@ -91,4 +91,31 @@ public class DlssRenderingExecutableTests : IDisposable
 
         Assert.Equal(missing, DlssProbeService.ResolveRenderingExecutable(missing));
     }
+
+    [Fact]
+    public void AGameLaunchedByLink_IsFoundThroughItsInstallFolder()
+    {
+        // A Steam import's executable path is steam://rungameid/..., so there is no folder to
+        // derive from it - the install folder the importer recorded is what there is to look in.
+        File_(@"bin\nvngx_dlss.dll", 512);
+        string game = File_(@"bin\Portal.exe", 60_000);
+        File_(@"bin\CrashReporter.exe", 90_000);
+
+        Assert.Equal(game, DlssProbeService.ResolveRenderingExecutable("steam://rungameid/620", _root), ignoreCase: true);
+    }
+
+    [Fact]
+    public void ALinkWithNothingToFind_ComesBackUnchanged_AndIsNeverWrittenTo()
+    {
+        const string link = "steam://rungameid/620";
+
+        Assert.Equal(link, DlssProbeService.ResolveRenderingExecutable(link, _root));
+        Assert.Equal(link, DlssProbeService.ResolveRenderingExecutable(link));
+
+        var driver = new Fakes.FakeDrsBackend();
+        var result = new DlssOverrideService(driver).Apply(link, "Portal 2");
+
+        Assert.False(result.Succeeded);
+        Assert.Empty(driver.CreatedProfiles);
+    }
 }
