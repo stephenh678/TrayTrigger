@@ -171,7 +171,7 @@ Games ship with whatever DLSS version was current when they were built, and ofte
 - **Says what you'll get, then what you got**: the card shows the version inside the game and the one the driver would use (310.1.0 → 310.9.0), and a **Last run** line with the version the game actually loaded the last time you played, and where it came from.
 - **Easy to take back out**: untick it, or **Restore**, and that game's NVIDIA settings return to exactly what they were, leaving alone anything another tool has changed since. **Restore All** in Settings > Launch & Performance does every game at once. Removing a game puts its override back, and so does uninstalling TrayTrigger.
 - **No administrator rights needed.** Steam and other launcher games are included. On a PC with an NVIDIA driver the card is on every game; for one that ships no DLSS it is a single line saying so.
-- **NVIDIA DLSS Indicator**: an opt-in switch on the same Settings card turns on NVIDIA's own on-screen overlay (DLSS version, preset letter, render resolution) for checking that an override took.
+- **NVIDIA DLSS overlays**: an opt-in switch on the same Settings card turns on NVIDIA's own two overlays for checking that an override took - the corner line (DLSS version, preset letter, render resolution) and, in a game using Frame Generation, the bar across the top (driver and Streamline versions, output and motion-vector resolutions, frame multiplier, refresh rate, and the driver profile in use).
 
 ### Pre-Launch and Post-Exit Scripts
 

@@ -21,7 +21,7 @@ It is the same setting NVIDIA App calls DLSS Override. TrayTrigger switches it o
 ## Checking that it worked
 
 - The card's **Last run** line says nothing is recorded yet until you have played with the override on. After that it shows the DLSS version the game actually loaded, and whether it came from NVIDIA or from the game's own files.
-- For the preset letter and render resolution, tick **Show the NVIDIA DLSS Indicator in games** in Settings > Launch & Performance > NVIDIA DLSS. It draws NVIDIA's own overlay in the game.
+- For the preset letter and render resolution, tick **Show the NVIDIA DLSS overlays in games** in Settings > Launch & Performance > NVIDIA DLSS. It draws NVIDIA's own overlays in the game: a corner line with the version, preset and resolution, and, where Frame Generation is running, a bar across the top that also names the driver profile the override was written to.
 
 ## Trade-offs
 
