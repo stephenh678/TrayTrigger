@@ -4,6 +4,29 @@ Notes on things discussed but not yet implemented, kept here so they survive bet
 
 ## Open
 
+### Bundled examples: copy on adopt, not run in place (design only, 2026-09-20)
+
+The bundled scripts do two jobs at once and the jobs disagree. They are reference documentation,
+which wants to be current, so 1.4.6 made TrayTrigger replace its own copies when it has a newer
+one. They are also runnable, configurable files a game is pointed at directly, which wants them
+never touched - three of them used to tell the reader to edit them in place. 1.4.6 resolves that
+with a notice at the top of each file, a rename to `<name>.previous` when an edited file is
+replaced, and moving the one setting that genuinely varies by PC (where OBS is installed) into
+Script Arguments. That works, but it is machinery around a design problem rather than a fix for
+it.
+
+The fix is the one `CreateFromBlankTemplate` already uses for `_Blank.*`: you never run the
+template, you run a copy named after your game. Extending that to the examples - "Use this
+example" copies `Example-SaveBackup.ps1` to `<Game>-SaveBackup.ps1` and points the game at the
+copy - would make the bundled folder a read-only reference library, leave every script a game
+actually runs owned by the user, and make the notice, the `.previous` rescue and the hash
+manifest all unnecessary. Stronger version: do not materialise them to disk at all, and install
+from an in-app gallery, so the scripts folder only ever holds the user's own files.
+
+Worth doing alongside the catalog installer below, so there is one mechanism rather than two.
+`Scripts/Library/README.txt` and `Help/scripts/overview.md` also duplicate each other today, and
+the Help page is the one that exists before the folder does.
+
 ### Community script catalog (design only, 2026-09-11)
 
 A curated catalog of game scripts that advanced users contribute and install from inside
@@ -65,7 +88,8 @@ Decisions made while building it:
   because templates for third-party apps depend on their install paths and command lines and can
   read as a TrayTrigger bug when those change. The owner found them hard to follow and not useful,
   so 1.4.0 ships five real-world examples instead: Wallpaper Engine pause, Quiet Mode, Companion
-  Apps, OBS replay buffer and Save Backup, plus the two blank templates and a task-first README
+  Apps, OBS replay buffer and Save Backup (the first two renamed in 1.4.6 to Close Background Apps
+  and Start Companion Apps, for what they do), plus the two blank templates and a task-first README
   (`Scripts/Library/`, `Services/ScriptLibraryService.cs`). The breakage risk is handled inside
   the scripts: each is presented as an example to copy, declares its dependencies in a
   catalog-style header, finds the third-party app at run time or through one setting at the top,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.Win32;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -210,18 +211,28 @@ public class PerformanceProfileService
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
+            // The two HKLM tweaks are captured first and written together, so one administrator
+            // prompt covers both. The snapshot is saved before the write for the same reason it
+            // always was: whatever happens next, what was there is already on disk.
+            var hklmChanges = new List<SystemTweaksService.RegFileEntry>(2);
+
             if (aggressive && settings.AggressiveProfileTweaks.SystemResponsivenessEnabled)
             {
-                ApplySystemResponsiveness(snapshot);
+                hklmChanges.Add(CaptureSystemResponsiveness(snapshot));
                 applied = true;
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
             if (aggressive && settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled)
             {
-                ApplySchedulingCategory(snapshot);
+                hklmChanges.Add(CaptureSchedulingCategory(snapshot));
                 applied = true;
                 _store.SaveProfileSessionSnapshot(snapshot);
+            }
+
+            if (hklmChanges.Count > 0)
+            {
+                _backend.ApplyHklmChanges(hklmChanges);
             }
 
             if (settings.OptimizedProfileTweaks.DoNotDisturbEnabled)
@@ -404,60 +415,85 @@ public class PerformanceProfileService
         LoggingService.Verbose("PerformanceProfile", $"Power Plan: restored active scheme to {snapshot.PreviousPowerSchemeGuid}.");
     }
 
-    private void ApplySystemResponsiveness(PerformanceProfileSessionSnapshot snapshot)
+    /// <summary>
+    /// Records what was there and returns the change to make, rather than making it. The two
+    /// machine-wide HKLM tweaks are written together in one elevated step - see
+    /// <see cref="ISystemTweakBackend.ApplyHklmChanges"/> - so the user answers one administrator
+    /// prompt for the pair instead of one each. Capturing before the write also means the snapshot
+    /// is on disk before anything changes, so a crash between the two can still be undone.
+    /// </summary>
+    private SystemTweaksService.RegFileEntry CaptureSystemResponsiveness(PerformanceProfileSessionSnapshot snapshot)
     {
         snapshot.PreviousSystemResponsiveness = _backend.ReadHklmDword(SystemResponsivenessPath, "SystemResponsiveness");
         snapshot.SystemResponsivenessCaptured = true;
 
+        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: setting to 10 (was {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}).");
+
         // Microsoft's MMCSS docs: values below 10 are clamped back up to 20, so 10 is the
         // lowest reserve Windows actually honors.
-        _backend.WriteHklmDword(SystemResponsivenessPath, "SystemResponsiveness", 10);
-        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: set to 10 (was {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}).");
+        return new SystemTweaksService.RegFileEntry(
+            SystemResponsivenessPath, "SystemResponsiveness", 10, RegistryValueKind.DWord, Delete: false);
     }
 
-    private void RestoreSystemResponsiveness(PerformanceProfileSessionSnapshot snapshot)
+    /// <summary>The change that puts it back, or false when there is nothing captured to undo.</summary>
+    private static bool TryRestoreSystemResponsiveness(
+        PerformanceProfileSessionSnapshot snapshot, out SystemTweaksService.RegFileEntry entry)
     {
-        if (!snapshot.SystemResponsivenessCaptured) return;
+        entry = default;
+        if (!snapshot.SystemResponsivenessCaptured) return false;
 
-        if (snapshot.PreviousSystemResponsiveness.HasValue)
-        {
-            _backend.WriteHklmDword(SystemResponsivenessPath, "SystemResponsiveness", snapshot.PreviousSystemResponsiveness.Value);
-        }
-        else
-        {
-            _backend.DeleteHklmValue(SystemResponsivenessPath, "SystemResponsiveness");
-        }
-        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: restored to {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}.");
+        entry = snapshot.PreviousSystemResponsiveness.HasValue
+            ? new SystemTweaksService.RegFileEntry(SystemResponsivenessPath, "SystemResponsiveness",
+                snapshot.PreviousSystemResponsiveness.Value, RegistryValueKind.DWord, Delete: false)
+            : new SystemTweaksService.RegFileEntry(SystemResponsivenessPath, "SystemResponsiveness",
+                null, RegistryValueKind.None, Delete: true);
+
+        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: restoring to {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}.");
+        return true;
     }
 
-    private void ApplySchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
+    /// <summary>Captures and returns the change; see <see cref="CaptureSystemResponsiveness"/>.</summary>
+    private SystemTweaksService.RegFileEntry CaptureSchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
     {
         snapshot.PreviousSchedulingCategory = _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category");
         snapshot.SchedulingCategoryCaptured = true;
 
+        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: setting to 'High' (was '{snapshot.PreviousSchedulingCategory ?? "unset"}').");
+
         // SFIO Priority is intentionally not written - Microsoft's MMCSS docs state it "is not used".
-        _backend.WriteHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", "High");
-        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: set to 'High' (was '{snapshot.PreviousSchedulingCategory ?? "unset"}').");
+        return new SystemTweaksService.RegFileEntry(
+            SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", "High", RegistryValueKind.String, Delete: false);
     }
 
-    private void RestoreSchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
+    /// <summary>
+    /// The change that puts it back. False when there is nothing captured, and also when the
+    /// captured value is not one Windows defines - writing that back would be worse than leaving
+    /// ours in place, and it must not be the only reason an elevated prompt is raised either.
+    /// </summary>
+    private static bool TryRestoreSchedulingCategory(
+        PerformanceProfileSessionSnapshot snapshot, out SystemTweaksService.RegFileEntry entry)
     {
-        if (!snapshot.SchedulingCategoryCaptured) return;
+        entry = default;
+        if (!snapshot.SchedulingCategoryCaptured) return false;
 
         if (snapshot.PreviousSchedulingCategory != null)
         {
             if (!ProfileSnapshotValidator.IsValidSchedulingCategory(snapshot.PreviousSchedulingCategory))
             {
                 LoggingService.Warn("PerformanceProfile", $"MMCSS Scheduling Category: not restoring - captured value '{snapshot.PreviousSchedulingCategory}' is not one Windows defines.");
-                return;
+                return false;
             }
-            _backend.WriteHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", snapshot.PreviousSchedulingCategory);
+            entry = new SystemTweaksService.RegFileEntry(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category",
+                snapshot.PreviousSchedulingCategory, RegistryValueKind.String, Delete: false);
         }
         else
         {
-            _backend.DeleteHklmValue(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category");
+            entry = new SystemTweaksService.RegFileEntry(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category",
+                null, RegistryValueKind.None, Delete: true);
         }
-        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: restored to '{snapshot.PreviousSchedulingCategory ?? "unset"}'.");
+
+        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: restoring to '{snapshot.PreviousSchedulingCategory ?? "unset"}'.");
+        return true;
     }
 
     /// <summary>
@@ -587,10 +623,20 @@ public class PerformanceProfileService
         {
             return;
         }
-        RestoreSystemResponsiveness(snapshot);
+        // Both together, as they were applied: one administrator prompt on the way out too.
+        var hklmChanges = new List<SystemTweaksService.RegFileEntry>(2);
+        if (TryRestoreSystemResponsiveness(snapshot, out var responsiveness)) hklmChanges.Add(responsiveness);
+        if (TryRestoreSchedulingCategory(snapshot, out var scheduling)) hklmChanges.Add(scheduling);
+
+        // Cleared whether or not there was anything to write: a capture we have decided not to put
+        // back must not be retried by crash recovery on the next start.
         snapshot.SystemResponsivenessCaptured = false;
-        RestoreSchedulingCategory(snapshot);
         snapshot.SchedulingCategoryCaptured = false;
+
+        if (hklmChanges.Count > 0)
+        {
+            _backend.ApplyHklmChanges(hklmChanges);
+        }
     }
 
     /// <summary>

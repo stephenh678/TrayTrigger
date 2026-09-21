@@ -676,7 +676,7 @@ public partial class SystemTweaksService
     }
 
     /// <summary>Writes and deletes together: direct when elevated, one reg import (one prompt) otherwise.</summary>
-    private static bool ApplyHklmEntries(List<RegFileEntry> entries)
+    internal static bool ApplyHklmEntries(List<RegFileEntry> entries)
     {
         if (entries.Count == 0) return true;
         if (!IsElevated) return RunElevatedRegImport(entries);
@@ -1186,8 +1186,18 @@ public partial class SystemTweaksService
     // ---- NVIDIA DLSS Indicator -----------------------------------------------------------------
     // Not a tweak row: it is switched from the NVIDIA DLSS card in Settings. It lives here for the
     // elevated HKLM write and the prior-value capture.
+    //
+    // Two values, one switch. NVIDIA draws two separate overlays and neither says what the other
+    // does: ShowDlssIndicator is the corner line with the DLSS version, preset letter and render
+    // resolution, and DLSSG_IndicatorText is Streamline's Frame Generation bar across the top -
+    // driver and Streamline versions, the API, output and motion-vector resolutions, the frame
+    // multiplier, refresh rate, how the game hands over its HUD, and the driver profile in effect.
+    // Someone checking whether an override took wants both, and a switch that gave one of them
+    // would be a switch you still had to finish by hand in regedit.
 
     private const string NgxCoreKey = @"SOFTWARE\NVIDIA Corporation\Global\NGXCore";
+    private const string DlssIndicatorValue = "ShowDlssIndicator";
+    private const string DlssGIndicatorValue = "DLSSG_IndicatorText";
 
     /// <summary>
     /// NVIDIA ships 1 in its own .reg file, which only draws for developer builds. 0x400 is what
@@ -1195,15 +1205,26 @@ public partial class SystemTweaksService
     /// </summary>
     private const int DlssIndicatorRetail = 0x400;
 
-    private static int? ReadDlssIndicator()
+    /// <summary>
+    /// Streamline documents {0, 1, 2} as {off, minimal, detailed} for the Frame Generation bar.
+    /// Detailed is the one worth having: minimal drops the resolutions and the profile name, which
+    /// are the two things that tell you an override took.
+    /// </summary>
+    private const int DlssGIndicatorDetailed = 2;
+
+    private static int? ReadNgxValue(string valueName, string what)
     {
         try
         {
             using var key = Registry.LocalMachine.OpenSubKey(NgxCoreKey);
-            return key?.GetValue("ShowDlssIndicator") is int i ? i : null;
+            return key?.GetValue(valueName) is int i ? i : null;
         }
-        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading the DLSS indicator setting"); return null; }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, what); return null; }
     }
+
+    private static int? ReadDlssIndicator() => ReadNgxValue(DlssIndicatorValue, "reading the DLSS indicator setting");
+
+    private static int? ReadDlssGIndicator() => ReadNgxValue(DlssGIndicatorValue, "reading the DLSS Frame Generation indicator setting");
 
     /// <summary>The driver creates the NGXCore key; without it there is nothing to draw the indicator.</summary>
     public static bool HasNvidiaNgx()
@@ -1216,22 +1237,48 @@ public partial class SystemTweaksService
         catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "checking for the NVIDIA registry key"); return false; }
     }
 
-    public static bool IsDlssIndicatorOn() => ReadDlssIndicator() == DlssIndicatorRetail;
+    /// <summary>
+    /// On only when both overlays are as this switch leaves them. Either one changed behind us -
+    /// NVIDIA App, a driver install, regedit - reads as off, and ticking the box puts both back,
+    /// which is the outcome someone reaching for it wants either way.
+    /// </summary>
+    public static bool IsDlssIndicatorOn() =>
+        ReadDlssIndicator() == DlssIndicatorRetail && ReadDlssGIndicator() == DlssGIndicatorDetailed;
 
-    /// <summary>Turning it off puts back what was there before it was turned on, absent included.</summary>
+    /// <summary>
+    /// Turning it off puts back what was there before it was turned on, absent included, for both
+    /// values - so a Frame Generation bar the user had set themselves survives the round trip.
+    /// Both go in one reg import, so there is one administrator prompt rather than two.
+    /// </summary>
     public bool SetDlssIndicator(bool show)
     {
+        var entries = new List<RegFileEntry>(2);
+
         if (show)
         {
             CapturePrior("dlss_indicator", ReadDlssIndicator()?.ToString() ?? "absent");
-            return SetHklmDword(NgxCoreKey, "ShowDlssIndicator", DlssIndicatorRetail);
+            CapturePrior("dlss_g_indicator", ReadDlssGIndicator()?.ToString() ?? "absent");
+            entries.Add(new RegFileEntry(NgxCoreKey, DlssIndicatorValue, DlssIndicatorRetail, RegistryValueKind.DWord, Delete: false));
+            entries.Add(new RegFileEntry(NgxCoreKey, DlssGIndicatorValue, DlssGIndicatorDetailed, RegistryValueKind.DWord, Delete: false));
+        }
+        else
+        {
+            entries.Add(RestoreNgxValue("dlss_indicator", DlssIndicatorValue));
+            entries.Add(RestoreNgxValue("dlss_g_indicator", DlssGIndicatorValue));
         }
 
-        // Absent before means deleting, not writing zero - zero is a value NVIDIA never had there.
-        return int.TryParse(TakePrior("dlss_indicator"), out int prior)
-            ? SetHklmDword(NgxCoreKey, "ShowDlssIndicator", prior)
-            : DeleteHklmValue(NgxCoreKey, "ShowDlssIndicator");
+        return ApplyHklmEntries(entries);
     }
+
+    /// <summary>
+    /// The entry that puts one overlay value back. Absent before means deleting, not writing zero -
+    /// zero is a value NVIDIA never had there, and the two are not the same to a driver that checks
+    /// whether the value exists.
+    /// </summary>
+    internal RegFileEntry RestoreNgxValue(string priorId, string valueName) =>
+        int.TryParse(TakePrior(priorId), out int prior)
+            ? new RegFileEntry(NgxCoreKey, valueName, prior, RegistryValueKind.DWord, Delete: false)
+            : new RegFileEntry(NgxCoreKey, valueName, null, RegistryValueKind.None, Delete: true);
 
     private const int PrioritySeparationBoost = 0x26;
     private const int PrioritySeparationClientDefault = 0x02;
@@ -2016,8 +2063,12 @@ public partial class SystemTweaksService
         return RunElevatedRegImport(entries);
     }
 
-    /// <summary>One line of a generated .reg file - see <see cref="BuildRegFileContent"/>.</summary>
-    internal readonly record struct RegFileEntry(string SubKey, string ValueName, object? Value, RegistryValueKind Kind, bool Delete);
+    /// <summary>
+    /// One line of a generated .reg file - see <see cref="BuildRegFileContent"/>. Public because it
+    /// is what <see cref="ISystemTweakBackend.ApplyHklmChanges"/> takes: a caller says which values
+    /// it wants written or removed, and the batch is applied under one administrator prompt.
+    /// </summary>
+    public readonly record struct RegFileEntry(string SubKey, string ValueName, object? Value, RegistryValueKind Kind, bool Delete);
 
     /// <summary>
     /// Serialises HKLM writes/deletes into Registry Editor 5.00 format. Pure so it can be unit

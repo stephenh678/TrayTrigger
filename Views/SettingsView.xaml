@@ -1057,10 +1057,10 @@
                             <Button Style="{StaticResource HelpLinkButton}" Content="About DLSS Override" Margin="0,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="dlss/override"/>
 
-                            <CheckBox Content="Show the NVIDIA DLSS Indicator in games (asks for administrator permission)"
+                            <CheckBox Content="Show the NVIDIA DLSS overlays in games (asks for administrator permission)"
                                       IsChecked="{Binding Dlss.IndicatorOn}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                            <TextBlock Text="NVIDIA's own on-screen overlay: the DLSS version in use, the preset letter and the render resolution. For checking that an override is in effect, not for leaving on - it draws over every game that uses DLSS until you untick it."
+                            <TextBlock Text="NVIDIA's own two overlays, together: the corner line with the DLSS version, preset letter and render resolution, and, in a game using Frame Generation, the bar across the top with the driver and Streamline versions, the output and motion-vector resolutions, the frame multiplier, refresh rate and the driver profile in use. For checking that an override is in effect, not for leaving on - they draw over every DLSS game until you untick this."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="About the DLSS Indicator" Margin="24,0,0,2"

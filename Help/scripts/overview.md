@@ -28,11 +28,17 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 
 ## The scripts folder, blank templates and examples
 
-TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there, and it is where "New script..." writes. When game scripts are enabled, TrayTrigger puts these files there. It only adds missing files, so a script you edited is never overwritten:
+TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there, and it is where "New script..." writes. When game scripts are enabled, TrayTrigger puts these files there:
 
 - _Blank.ps1 and _Blank.bat: empty templates with a phase branch and every argument already read for you. "New script..." next to each path box copies one of these to a name you choose, fills the path, and opens it for editing.
 - Five example scripts, described under Example scripts below.
 - README.txt: a quick start, the examples, and how to write and share your own scripts.
+
+These seven files are TrayTrigger's copy, not yours. Whenever TrayTrigger starts, and whenever you browse or open the folder from it, each one is compared with the copy inside this version and replaced if it differs - that is how a corrected template or a better example reaches a folder you already have. Nothing is written when they match, so an ordinary start changes nothing.
+
+It also means an edit you make to one of them is undone the next time TrayTrigger starts, not just when you update it. Your version is not thrown away: before the fresh copy is written, the file you changed is renamed alongside it with ".previous" on the end, and nothing touches it afterwards. A file kept that way is no longer the one your game runs, though, so move what you changed into a copy of your own.
+
+Work on a copy from the start: "New script..." makes one under a name you choose, or copy the file in Explorer and rename it. A file TrayTrigger did not put there is never touched. Settings that differ from one PC to the next - where a program is installed, which apps to close - belong in Script Arguments rather than in the file, so they survive.
 
 Every example is one file that handles both phases. In Edit Game, choose it as the pre-launch script and tick "Use the same script for pre-launch and post-exit". For the Settings defaults, set the same file in both boxes. "Open in editor" next to a path box opens that script in Notepad or whatever you have associated with editing that type; it never runs it.
 
@@ -78,8 +84,8 @@ Each script field in Edit Game has a Test button. It runs that script right now,
 The examples are real scripts for common gaming chores, written to be read, copied and changed. Each one opens with a comment block covering why you'd want it, how to set it up, how it works and what to change, followed by a "Change these" section of settings.
 
 - Example-WallpaperEnginePause.ps1 pauses and mutes Wallpaper Engine while you play and resumes it afterwards. It needs no Script Arguments.
-- Example-QuietMode.ps1 closes the background apps named in Script Arguments, such as OneDrive ms-teams Dropbox, and reopens the ones it closed after the game.
-- Example-CompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, and closes only the ones it started. A program you already had open is left alone.
+- Example-CloseBackgroundApps.ps1 closes the background apps named in Script Arguments, such as OneDrive ms-teams Dropbox, and reopens the ones it closed after the game.
+- Example-StartCompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, and closes only the ones it started. A program you already had open is left alone.
 - Example-OBSReplayBuffer.ps1 starts OBS in the tray with the replay buffer running and closes it after the game. An OBS you opened yourself is never touched. Script Arguments can name an OBS profile.
 - Example-SaveBackup.ps1 zips the save folder named in Script Arguments, such as "%APPDATA%\EldenRing", before and after you play, and keeps the newest ten backups.
 

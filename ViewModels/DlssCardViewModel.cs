@@ -148,11 +148,18 @@ public sealed class DlssCardViewModel : ViewModelBase
     public bool OverrideEnabled
     {
         get => _records.Count > 0;
-        set
-        {
-            if (value == OverrideEnabled || IsBusy || (value && !CanEnable)) return;
-            _ = value ? ApplyAsync() : RestoreAsync();
-        }
+        set => _ = SetOverrideAsync(value);
+    }
+
+    /// <summary>
+    /// What the switch does, awaitable. A property setter cannot hand its task back, and the game's
+    /// right-click menu has to wait for the driver write before it can say in the status bar what
+    /// happened. Same guards as the switch: a no-op returns a completed task.
+    /// </summary>
+    public Task SetOverrideAsync(bool on)
+    {
+        if (on == OverrideEnabled || IsBusy || (on && !CanEnable)) return Task.CompletedTask;
+        return on ? ApplyAsync() : RestoreAsync();
     }
 
     /// <summary>Puts back everything TrayTrigger changed, whatever the switch currently says.</summary>

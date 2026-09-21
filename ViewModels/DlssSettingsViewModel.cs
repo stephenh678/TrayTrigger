@@ -9,7 +9,7 @@ namespace TrayTrigger.ViewModels;
 /// <summary>
 /// The NVIDIA DLSS card in Settings: the two things about DLSS that are not per game. The override
 /// itself is switched on in Edit Game; here is the way to take every game's back out at once, and
-/// NVIDIA's on-screen indicator, which is one registry value for the whole PC.
+/// NVIDIA's on-screen overlays, which are two registry values for the whole PC.
 /// </summary>
 public sealed class DlssSettingsViewModel : ViewModelBase
 {
@@ -37,7 +37,11 @@ public sealed class DlssSettingsViewModel : ViewModelBase
 
     public bool IsBusy { get => _isBusy; private set => SetProperty(ref _isBusy, value); }
 
-    /// <summary>NVIDIA's overlay, for every DLSS game. Setting it does the work, behind a UAC prompt.</summary>
+    /// <summary>
+    /// NVIDIA's two overlays, for every DLSS game: the corner line, and Frame Generation's bar
+    /// across the top. One switch, because someone checking an override wants both, and one
+    /// administrator prompt. Setting it does the work, behind that prompt.
+    /// </summary>
     public bool IndicatorOn
     {
         get => _indicatorOn;
@@ -95,7 +99,7 @@ public sealed class DlssSettingsViewModel : ViewModelBase
 
             Status = _indicatorOn == show
                 ? null
-                : "The DLSS Indicator was not changed. The administrator prompt was cancelled or the change was rejected.";
+                : "The DLSS overlays were not changed. The administrator prompt was cancelled or the change was rejected.";
         }
         finally
         {

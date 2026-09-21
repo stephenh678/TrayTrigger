@@ -229,4 +229,94 @@ public class BatchQuickSettingsTests : IDisposable
         Assert.False(library.Games[0].HasLauncherToClose);
         Assert.True(library.Games[1].HasLauncherToClose);
     });
+
+    // --- DLSS Override -------------------------------------------------------------------
+    // The one quick setting that writes to the NVIDIA driver rather than a field on the game. What
+    // matters is that the tick says the same thing as the switch in Edit Game - both read the
+    // game's ownership records - and that the records are what the menu leaves behind, since they
+    // are the only thing that can ever take an override back off.
+
+    private static DlssProbeService.ProbeResult WithDlss() => new()
+    {
+        ShippedRuntimes = new[] { new DlssProbeService.ShippedRuntime("Super Resolution", @"bin
+vngx_dlss.dll", "310.1.0") }
+    };
+
+    private static DlssProbeService.ProbeResult WithoutDlss() => new();
+
+    /// <summary>The tick is the records, exactly as Edit Game > Performance reports it.</summary>
+    [Fact]
+    public void DlssOverrideTick_ReadsTheGamesOwnershipRecords() => Sta(() =>
+    {
+        var (library, _) = NewLibrary(Game("A"));
+        var card = library.Games[0];
+
+        Assert.False(card.DlssOverrideOn);
+
+        card.Game.DlssSettings.Add(new DlssSettingRecord
+        {
+            SettingId = 1, ProfileName = "A", ApplicationName = "game.exe"
+        });
+        card.NotifyDlssOverrideChanged();
+
+        Assert.True(card.DlssOverrideOn);
+    });
+
+    /// <summary>
+    /// Most games ship no DLSS. The menu must say so rather than leave a tick that quietly refuses,
+    /// and must not write a record for an override that never happened.
+    /// </summary>
+    [Fact]
+    public async Task DlssOverride_OnAGameWithNoDlss_SaysSoAndChangesNothing()
+    {
+        await WpfTestHost.RunAsync(async () =>
+        {
+            var (library, _) = NewLibrary(Game("A"));
+            library.DlssProbe = (_, _) => WithoutDlss();
+            var card = library.Games[0];
+
+            card.ToggleDlssOverrideCommand.Execute(null);
+            await WaitWhileBusy(card);
+
+            Assert.False(card.DlssOverrideOn);
+            Assert.Empty(card.Game.DlssSettings);
+            Assert.Contains(DlssCardViewModel.NotAvailableLine, library.StatusMessage);
+        });
+    }
+
+    /// <summary>The command refuses a second click while the driver write is still in flight.</summary>
+    [Fact]
+    public void DlssOverride_WhileBusy_RefusesASecondClick() => Sta(() =>
+    {
+        var (library, _) = NewLibrary(Game("A"));
+        var card = library.Games[0];
+
+        Assert.True(card.ToggleDlssOverrideCommand.CanExecute(null));
+        card.IsDlssOverrideBusy = true;
+        Assert.False(card.ToggleDlssOverrideCommand.CanExecute(null));
+        card.IsDlssOverrideBusy = false;
+        Assert.True(card.ToggleDlssOverrideCommand.CanExecute(null));
+    });
+
+    /// <summary>
+    /// Whether the driver is there is a fact about the PC, not about a game, so every card agrees.
+    /// Asserted as agreement rather than a fixed value: this has to mean the same on a machine with
+    /// an NVIDIA driver and without.
+    /// </summary>
+    [Fact]
+    public void DlssOverride_DriverPresence_IsTheSameOnEveryCard() => Sta(() =>
+    {
+        var (library, _) = NewLibrary(Game("A"), Game("B"));
+
+        Assert.Equal(library.Games[0].HasNvidiaDriver, library.Games[1].HasNvidiaDriver);
+    });
+
+    private static async Task WaitWhileBusy(GameCardViewModel card)
+    {
+        // The command starts the work and returns; the toggle clears the flag in its finally.
+        for (int i = 0; i < 200 && card.IsDlssOverrideBusy; i++)
+        {
+            await Task.Delay(10);
+        }
+    }
 }

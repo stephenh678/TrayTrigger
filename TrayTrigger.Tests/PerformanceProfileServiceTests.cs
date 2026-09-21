@@ -40,6 +40,26 @@ public class PerformanceProfileServiceTests : IDisposable
         public bool WriteHklmString(string subKey, string valueName, string value) { Hklm[subKey + "|" + valueName] = value; Log.Add($"hklm:{valueName}={value}"); return true; }
         public bool DeleteHklmValue(string subKey, string valueName) { Hklm.Remove(subKey + "|" + valueName); Log.Add($"hklm:{valueName}=<deleted>"); return true; }
 
+        /// <summary>
+        /// One elevated step, however many values it carries. Counted, because the count is what the
+        /// user experiences: in production each of these is one administrator prompt. The individual
+        /// changes are still routed through the calls above, so what the registry ends up holding is
+        /// asserted the same way as before.
+        /// </summary>
+        public int ElevatedBatches;
+        public bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries)
+        {
+            if (entries.Count == 0) return true;
+            ElevatedBatches++;
+            foreach (var e in entries)
+            {
+                if (e.Delete) DeleteHklmValue(e.SubKey, e.ValueName);
+                else if (e.Value is int i) WriteHklmDword(e.SubKey, e.ValueName, i);
+                else WriteHklmString(e.SubKey, e.ValueName, (string)e.Value!);
+            }
+            return true;
+        }
+
         public readonly List<HdrControlService.DisplayColorState> HdrDisplays = new();
         public List<HdrControlService.DisplayColorState> GetHdrDisplayStates() => new(HdrDisplays);
         public bool SetDisplayHdrEnabled(HdrControlService.LUID adapterId, uint targetId, bool enable)
@@ -52,13 +72,18 @@ public class PerformanceProfileServiceTests : IDisposable
         public void SetGpuPreference(string exePath, string value) { GpuPrefs[exePath] = value; Log.Add($"gpu:{Path.GetFileName(exePath)}={value}"); }
         public void DeleteGpuPreference(string exePath) { GpuPrefs.Remove(exePath); Log.Add($"gpu:{Path.GetFileName(exePath)}=<deleted>"); }
 
+        // Defender runs through elevated PowerShell, not the registry, so it cannot join the batch
+        // above - in production it is its own administrator prompt. Counted here for the same
+        // reason: ElevatedBatches is meant to be what the user is asked, not what we happened to
+        // route through one code path.
         public bool AddDefenderExclusion(string exePath)
         {
             if (!Defender.Add(exePath)) return false;
+            ElevatedBatches++;
             Log.Add("defender:+" + Path.GetFileName(exePath));
             return true;
         }
-        public bool RemoveDefenderExclusion(string exePath) { Defender.Remove(exePath); Log.Add("defender:-" + Path.GetFileName(exePath)); return true; }
+        public bool RemoveDefenderExclusion(string exePath) { if (Defender.Remove(exePath)) ElevatedBatches++; Log.Add("defender:-" + Path.GetFileName(exePath)); return true; }
 
         public void SetProcessPriority(Process process, ProcessPriorityClass priority) => Log.Add("priority:" + priority);
 
@@ -153,6 +178,117 @@ public class PerformanceProfileServiceTests : IDisposable
         // Was absent before -> deleted, not written back as some default.
         Assert.Null(_backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
         Assert.DoesNotContain(_exeA, _backend.Defender);
+    }
+
+    /// <summary>
+    /// The two machine-wide HKLM tweaks go in one elevated step, and so does putting them back.
+    /// Each elevated step is an administrator prompt, and written one at a time this profile asked
+    /// four times for a single game session - twice on the way in, twice on the way out.
+    /// </summary>
+    [Fact]
+    public void Aggressive_AsksForElevationOnceOnTheWayIn_AndOnceOnTheWayOut()
+    {
+        // Defender off: it is a separate elevated call and has its own test below.
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = false;
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        Assert.Equal(1, _backend.ElevatedBatches);
+
+        _service.EndGameSession("g");
+        Assert.Equal(2, _backend.ElevatedBatches);
+    }
+
+    /// <summary>A second game while the first is running is not a second prompt: these apply once.</summary>
+    [Fact]
+    public void Aggressive_ASecondGame_DoesNotAskAgain()
+    {
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = false;
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        _service.BeginGameSession(Game("h", _exeB, PerformanceProfileMode.Aggressive));
+
+        Assert.Equal(1, _backend.ElevatedBatches);
+    }
+
+    /// <summary>
+    /// Optimized touches nothing under HKLM - power plan, GPU preference, HDR, notifications and
+    /// audio are all either per-user or an API call - so it must never raise a prompt at all.
+    /// </summary>
+    [Fact]
+    public void Optimized_NeverAsksForElevation()
+    {
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = false;
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized));
+        _service.EndGameSession("g");
+
+        Assert.Equal(0, _backend.ElevatedBatches);
+    }
+
+    /// <summary>
+    /// With only one of the two tweaks on there is still exactly one prompt, and it carries only
+    /// that tweak - the batch must not write a value the user has switched off.
+    /// </summary>
+    [Fact]
+    public void Aggressive_WithOneTweakOff_StillAsksOnce_AndLeavesTheOtherValueAlone()
+    {
+        _settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled = false;
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = false;
+
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+
+        Assert.Equal(1, _backend.ElevatedBatches);
+        Assert.Equal(10, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Null(_backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
+    }
+
+    /// <summary>
+    /// Both off means nothing to write, so nothing to ask for - an empty batch must not reach the
+    /// backend and raise a prompt that changes nothing.
+    /// </summary>
+    [Fact]
+    public void Aggressive_WithBothHklmTweaksOff_NeverAsks()
+    {
+        _settings.AggressiveProfileTweaks.SystemResponsivenessEnabled = false;
+        _settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled = false;
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = false;
+
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        _service.EndGameSession("g");
+
+        Assert.Equal(0, _backend.ElevatedBatches);
+    }
+
+    /// <summary>
+    /// Defender Exclusion is the one tweak the batch cannot absorb: it is an elevated PowerShell
+    /// call, not a registry write, so turning it on costs a second prompt each way. Held so the
+    /// cost is visible rather than discovered, and so it fails if someone later folds the two into
+    /// one elevated step without meaning to.
+    /// </summary>
+    [Fact]
+    public void Aggressive_WithDefenderExclusion_CostsASecondPromptEachWay()
+    {
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = true;
+
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        Assert.Equal(2, _backend.ElevatedBatches);
+
+        _service.EndGameSession("g");
+        Assert.Equal(4, _backend.ElevatedBatches);
+    }
+
+    /// <summary>
+    /// And it is per game, not per session: the machine-wide tweaks are applied once however many
+    /// games run, but a second game with Defender Exclusion on is a second prompt. That is the one
+    /// place prompt fatigue can still come from, and batching cannot fix it.
+    /// </summary>
+    [Fact]
+    public void Aggressive_DefenderExclusion_AsksAgainForEachGame()
+    {
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = true;
+
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        int afterFirst = _backend.ElevatedBatches;
+        _service.BeginGameSession(Game("h", _exeB, PerformanceProfileMode.Aggressive));
+
+        Assert.Equal(afterFirst + 1, _backend.ElevatedBatches);
     }
 
     [Fact]

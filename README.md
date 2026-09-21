@@ -171,7 +171,7 @@ Games ship with whatever DLSS version was current when they were built, and ofte
 - **Says what you'll get, then what you got**: the card shows the version inside the game and the one the driver would use (310.1.0 → 310.9.0), and a **Last run** line with the version the game actually loaded the last time you played, and where it came from.
 - **Easy to take back out**: untick it, or **Restore**, and that game's NVIDIA settings return to exactly what they were, leaving alone anything another tool has changed since. **Restore All** in Settings > Launch & Performance does every game at once. Removing a game puts its override back, and so does uninstalling TrayTrigger.
 - **No administrator rights needed.** Steam and other launcher games are included. On a PC with an NVIDIA driver the card is on every game; for one that ships no DLSS it is a single line saying so.
-- **NVIDIA DLSS Indicator**: an opt-in switch on the same Settings card turns on NVIDIA's own on-screen overlay (DLSS version, preset letter, render resolution) for checking that an override took.
+- **NVIDIA DLSS overlays**: an opt-in switch on the same Settings card turns on NVIDIA's own two overlays for checking that an override took - the corner line (DLSS version, preset letter, render resolution) and, in a game using Frame Generation, the bar across the top (driver and Streamline versions, output and motion-vector resolutions, frame multiplier, refresh rate, and the driver profile in use).
 
 ### Pre-Launch and Post-Exit Scripts
 
@@ -182,10 +182,12 @@ Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the 
 | Script | What it does |
 |---|---|
 | `Example-WallpaperEnginePause.ps1` | Pauses and mutes Wallpaper Engine while you play, resumes it after. |
-| `Example-QuietMode.ps1` | Closes the background apps you name (OneDrive, Teams, Dropbox) and reopens the ones it closed. |
-| `Example-CompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) and closes only the ones it started. |
+| `Example-CloseBackgroundApps.ps1` | Closes the background apps you name (OneDrive, Teams, Dropbox) and reopens the ones it closed. |
+| `Example-StartCompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) and closes only the ones it started. |
 | `Example-OBSReplayBuffer.ps1` | Runs OBS in the tray with the replay buffer on, so a hotkey saves the last minutes of play. |
 | `Example-SaveBackup.ps1` | Zips a save folder before and after you play, keeps the newest ten. |
+
+These seven files (the five examples, two blank templates and a README) are TrayTrigger's copies, kept up to date as it updates, so a corrected template reaches a folder you already have. Work on a copy - "New script..." makes one named after the game, and a file TrayTrigger did not put there is never touched. If you edit a bundled one anyway, your version is kept beside it as `<name>.previous` rather than lost.
 
 A script doesn't have to be long. This is a complete pre-launch script:
 
@@ -248,7 +250,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.4.5-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.4.6-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
 

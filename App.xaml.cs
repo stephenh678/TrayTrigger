@@ -287,8 +287,10 @@ public partial class App : Application
         _gameScriptService = new GameScriptService(
             () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
             () => (_mainViewModel?.Settings ?? startupSettings).ScriptDefaults);
-        // Blank templates, examples and README land in the scripts folder once the feature is on
-        // (missing files only - user edits are never overwritten). Off the UI thread: file I/O.
+        // Blank templates, examples and README land in the scripts folder once the feature is on,
+        // and a stale one is replaced with this build's copy, so a correction to a template or an
+        // example reaches a folder that already exists. The user's own scripts are not bundled
+        // names and are never touched. Off the UI thread: file I/O.
         if (startupSettings.EnableGameScripts)
         {
             var scriptLibrary = new ScriptLibraryService(_storageService.BaseDirectory);

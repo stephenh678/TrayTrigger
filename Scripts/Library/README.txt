@@ -37,13 +37,13 @@ THE EXAMPLES
     Pauses and mutes Wallpaper Engine while you play, then resumes it.
     Script Arguments:  none
 
-  Example-QuietMode.ps1
+  Example-CloseBackgroundApps.ps1
     Closes background apps you name, such as OneDrive or Teams, before the
     game and reopens them after it.
     Script Arguments:  process names
                        OneDrive ms-teams Dropbox
 
-  Example-CompanionApps.ps1
+  Example-StartCompanionApps.ps1
     Starts the tools a game needs, such as SimHub or TrackIR, and closes them
     after the game. Tools you had already opened are left alone.
     Script Arguments:  program paths, each in double quotes
@@ -52,7 +52,9 @@ THE EXAMPLES
   Example-OBSReplayBuffer.ps1
     Runs OBS in the tray with the replay buffer on, so a hotkey saves the
     last minutes of play. An OBS you opened yourself is never touched.
-    Script Arguments:  none, or an OBS profile name in double quotes
+    Script Arguments:  none, or in double quotes: a path ending in .exe if
+                       OBS is somewhere other than Program Files (the Steam
+                       copy is), and an OBS profile name. Either, or both.
 
   Example-SaveBackup.ps1
     Zips a game's save folder before and after you play, and keeps the
@@ -72,11 +74,29 @@ CHANGING AN EXAMPLE
   settings most people want to adjust. Below it, every step has a comment
   saying what it does.
 
-  Work on a copy: copy the file in Explorer and give it your own name, for
-  example "My-SaveBackup.ps1". TrayTrigger never overwrites a script that is
-  already in this folder, so your edits are safe either way, but a copy lets
-  you compare with the original. If you delete an example, the original comes
-  back the next time you open this folder from TrayTrigger.
+  Work on a copy. The seven files TrayTrigger put in this folder are its
+  copy, not yours. Every time TrayTrigger starts, and every time you browse
+  or open this folder from it, each one is compared with the copy inside
+  TrayTrigger and replaced if it differs. That is how a corrected template
+  or a better example reaches you, and it means an edit of yours is undone
+  at the next start - not only when you update TrayTrigger.
+
+  Your version is not thrown away. Before the fresh copy is written, the
+  file you changed is renamed alongside it with ".previous" on the end, for
+  example "Example-SaveBackup.ps1.previous", and nothing touches it after
+  that. A second edit becomes ".previous.2", and so on. So an edit made by
+  mistake costs you a rename, not your work - but a file kept that way is no
+  longer the one your game runs, so move your changes back into a copy of
+  your own.
+
+  Better: copy the file in Explorer first and give it your own name, for
+  example "My-SaveBackup.ps1", or use "New script..." in Edit Game. A file
+  TrayTrigger did not put here is never touched. Deleting an example is
+  safe - the original comes back the next time TrayTrigger starts.
+
+  Settings that differ from one PC to the next - where a program is
+  installed, which apps to close - belong in Edit Game > Script Arguments
+  rather than in the file, so they survive every update.
 
 
 WRITING YOUR OWN

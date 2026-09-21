@@ -331,6 +331,13 @@ public partial class MainWindow : Window
     /// to the search box, Escape clears an active search filter. Settings, About and System get the
     /// same pair for their card search - Ctrl+F here, Escape in <see cref="Window_KeyDown"/>; everything
     /// else is a no-op outside those sections so it doesn't steal keystrokes.
+    ///
+    /// <para>Tools gets the library's set, rule for rule, because a page of things you select and
+    /// act on should not answer the keyboard differently depending on which one you are looking at.
+    /// They live here rather than in ToolsView for the reason the library's do: this handler
+    /// tunnels from the window, so it sees the key wherever focus happens to be, and a press on
+    /// blank space leaves focus outside the page. Enter and F2 stay in ToolsView - both need the
+    /// list itself focused, as the library's Enter does through its ListBox InputBindings.</para>
     /// </summary>
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -339,6 +346,40 @@ public partial class MainWindow : Window
             if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 pageSearch.FocusBox();
+                e.Handled = true;
+            }
+            return;
+        }
+        if (_viewModel.CurrentSection == NavSection.Tools)
+        {
+            var tools = _viewModel.Tools;
+            bool inTextBox = Keyboard.FocusedElement is System.Windows.Controls.TextBox;
+            if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                ToolsPage.FocusSearchBox();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control && !inTextBox)
+            {
+                ToolsPage.SelectAllTools();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Delete && Keyboard.Modifiers == ModifierKeys.None &&
+                     tools.SelectedTools.Count > 0 && !inTextBox)
+            {
+                tools.BatchRemoveCommand.Execute(null);
+                e.Handled = true;
+            }
+            // Selection before search, the order the library uses: the selection is the thing in
+            // front of you, and Escape again then clears the search.
+            else if (e.Key == Key.Escape && tools.SelectedTools.Count > 0)
+            {
+                ToolsPage.ClearSelection();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && !string.IsNullOrEmpty(tools.SearchText))
+            {
+                tools.SearchText = string.Empty;
                 e.Handled = true;
             }
             return;
