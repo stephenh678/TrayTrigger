@@ -187,6 +187,8 @@ Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the 
 | `Example-OBSReplayBuffer.ps1` | Runs OBS in the tray with the replay buffer on, so a hotkey saves the last minutes of play. |
 | `Example-SaveBackup.ps1` | Zips a save folder before and after you play, keeps the newest ten. |
 
+These seven files (the five examples, two blank templates and a README) are TrayTrigger's copies, kept up to date as it updates, so a corrected template reaches a folder you already have. Work on a copy - "New script..." makes one named after the game, and a file TrayTrigger did not put there is never touched. If you edit a bundled one anyway, your version is kept beside it as `<name>.previous` rather than lost.
+
 A script doesn't have to be long. This is a complete pre-launch script:
 
 ```bat
@@ -248,7 +250,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.4.5-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.4.6-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
 
