@@ -676,7 +676,7 @@ public partial class SystemTweaksService
     }
 
     /// <summary>Writes and deletes together: direct when elevated, one reg import (one prompt) otherwise.</summary>
-    private static bool ApplyHklmEntries(List<RegFileEntry> entries)
+    internal static bool ApplyHklmEntries(List<RegFileEntry> entries)
     {
         if (entries.Count == 0) return true;
         if (!IsElevated) return RunElevatedRegImport(entries);
@@ -2063,8 +2063,12 @@ public partial class SystemTweaksService
         return RunElevatedRegImport(entries);
     }
 
-    /// <summary>One line of a generated .reg file - see <see cref="BuildRegFileContent"/>.</summary>
-    internal readonly record struct RegFileEntry(string SubKey, string ValueName, object? Value, RegistryValueKind Kind, bool Delete);
+    /// <summary>
+    /// One line of a generated .reg file - see <see cref="BuildRegFileContent"/>. Public because it
+    /// is what <see cref="ISystemTweakBackend.ApplyHklmChanges"/> takes: a caller says which values
+    /// it wants written or removed, and the batch is applied under one administrator prompt.
+    /// </summary>
+    public readonly record struct RegFileEntry(string SubKey, string ValueName, object? Value, RegistryValueKind Kind, bool Delete);
 
     /// <summary>
     /// Serialises HKLM writes/deletes into Registry Editor 5.00 format. Pure so it can be unit

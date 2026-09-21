@@ -31,6 +31,13 @@ public interface ISystemTweakBackend
     bool WriteHklmString(string subKey, string valueName, string value);
     bool DeleteHklmValue(string subKey, string valueName);
 
+    /// <summary>
+    /// Several HKLM changes in one elevated step. Each of the calls above is its own reg import and
+    /// so its own administrator prompt; a profile that sets two values asked twice on the way in and
+    /// twice again on the way out, for one game session. Batched, that is one prompt each way.
+    /// </summary>
+    bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries);
+
     List<HdrControlService.DisplayColorState> GetHdrDisplayStates();
     bool SetDisplayHdrEnabled(HdrControlService.LUID adapterId, uint targetId, bool enable);
 
@@ -97,6 +104,9 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
         }
         catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading a registry string"); return null; }
     }
+
+    public bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries) =>
+        SystemTweaksService.ApplyHklmEntries(entries as List<SystemTweaksService.RegFileEntry> ?? entries.ToList());
 
     public bool WriteHklmDword(string subKey, string valueName, int value) => SystemTweaksService.SetHklmDword(subKey, valueName, value);
 
