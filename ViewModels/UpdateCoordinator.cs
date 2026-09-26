@@ -103,7 +103,7 @@ public class UpdateCoordinator : ViewModelBase
                     // visible - a silently-updated badge alone is easy to miss in that case. A
                     // "Remind Later" snooze still holds for those background checks.
                     Window? owner = WindowHelper.ActiveOwner();
-                    bool remindLater = UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease, result.CurrentVersion);
+                    bool remindLater = UpdateDialog.ShowUpdateDialog(owner, result.LatestRelease);
                     if (remindLater)
                     {
                         _settings.SkippedUpdateVersion = result.LatestRelease.TagName;

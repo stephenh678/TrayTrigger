@@ -448,7 +448,7 @@ public partial class App
                     }
                 };
 
-                var dlg = new UpdateDialog(mockRelease, UpdateService.CurrentVersion);
+                var dlg = new UpdateDialog(mockRelease);
                 dlg.Show();
                 dlg.UpdateLayout();
                 CaptureVisual(dlg, 540, 360, targetPng);
