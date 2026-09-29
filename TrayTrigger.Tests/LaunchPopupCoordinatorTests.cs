@@ -193,6 +193,34 @@ public class LaunchPopupCoordinatorTests
     }
 
     [Fact]
+    public void Closing_SaysWhatThePromptIsFor_UntilItIsAnswered()
+    {
+        var rig = new Rig();
+
+        Assert.True(rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner")));
+        Assert.Equal(LaunchPopupKind.Closing, rig.View.Shown!.Kind);
+        Assert.Equal("MSI Afterburner", rig.View.Shown.Name);
+        Assert.Equal("Closing", rig.View.Shown.Status);
+        Assert.Contains("Windows asks for permission to close it", rig.View.Shown.Detail);
+        Assert.False(rig.View.Shown.IsInteractive);
+
+        rig.Popup.EndClosing("other");
+        Assert.True(rig.View.Visible);
+
+        rig.Popup.EndClosing("t1");
+        Assert.False(rig.View.Visible);
+    }
+
+    [Fact]
+    public void Closing_WithThePopupOff_ShowsNothing()
+    {
+        var rig = new Rig { Enabled = false };
+
+        Assert.False(rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner")));
+        Assert.Null(rig.View.Shown);
+    }
+
+    [Fact]
     public void StartingTool_ForAnotherLaunch_IsIgnored()
     {
         var rig = new Rig();

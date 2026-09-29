@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
@@ -11,16 +14,21 @@ namespace TrayTrigger.Services;
 /// <summary>
 /// Tools that start with games (Edit Tool > "Start when I launch a game"). Before a game TrayTrigger
 /// launches, each one is started unless a copy of its program is already running - one the user
-/// opened, or one started for an earlier game - and the copy started here is remembered for "Close
-/// it when the game exits". Nothing is remembered across a restart: a copy started before TrayTrigger
-/// closed is left running.
+/// opened, or one started for an earlier game. The copy started here is remembered, and once the last
+/// game has exited it is closed if the tool says "Close it when the game exits"; a copy TrayTrigger
+/// didn't start is never touched. Nothing is remembered across a restart: a copy started before
+/// TrayTrigger closed is left running.
 /// </summary>
-public sealed class CompanionToolService
+public sealed partial class CompanionToolService
 {
     private readonly Func<IReadOnlyList<ToolEntry>> _tools;
     private readonly Func<bool> _isEnabled;
 
-    /// <summary>Starting is serialised, so two launches together can't both find a tool not running and start it twice.</summary>
+    /// <summary>
+    /// Starting and closing never overlap. Two launches together can't both find a tool not running and
+    /// start it twice, and a launch that arrives while tools are being closed waits, then finds the tool
+    /// closed and starts it again.
+    /// </summary>
     private readonly Lock _gate = new();
 
     /// <summary>
@@ -53,6 +61,22 @@ public sealed class CompanionToolService
     internal Func<string, int?> FindRunningCopy { get; set; } = FindRunningProgram;
 
     internal Func<string, bool> FileExists { get; set; } = File.Exists;
+
+    /// <summary>How long a tool is given to close when asked, before it is ended.</summary>
+    internal TimeSpan CloseGrace { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Asks the copy to close, then ends it. Replaced in tests.</summary>
+    internal Func<Process, TimeSpan, EndResult> EndCopy { get; set; } = EndNormally;
+
+    /// <summary>The same with administrator rights, behind one UAC prompt; true when it has closed. Replaced in tests.</summary>
+    internal Func<Process, TimeSpan, bool> EndCopyAsAdministrator { get; set; } = EndElevated;
+
+    /// <summary>
+    /// A tool running as administrator is about to be closed (true), which takes Windows' permission,
+    /// then the prompt has been answered (false). The prompt names Windows PowerShell rather than the
+    /// tool, so the launch popup says what it is for.
+    /// </summary>
+    public event Action<ToolEntry, bool>? ClosingAsAdministrator;
 
     /// <summary>The ids of the tools whose started copy is remembered. For tests.</summary>
     internal IReadOnlyList<string> Remembered
@@ -147,10 +171,86 @@ public sealed class CompanionToolService
         }
     }
 
+    /// <summary>
+    /// Closes, in the background, the copies started for games whose tool says "Close it when the game
+    /// exits" - once no game is running or being launched. <paramref name="isIdle"/> is asked again when
+    /// closing begins, so a game launched in the meantime keeps its tools until it has exited too.
+    /// </summary>
+    public Task CloseWhenIdleAsync(Func<bool> isIdle) => Task.Run(() => CloseIfIdle(isIdle));
+
+    internal void CloseIfIdle(Func<bool> isIdle)
+    {
+        lock (_gate)
+        {
+            if (_started.Count == 0) return;
+            if (!isIdle())
+            {
+                LoggingService.Verbose("Tools", "A game is running or being launched, so the tools started with games stay open.");
+                return;
+            }
+
+            var tools = _tools();
+            foreach (var (id, process) in _started.ToList())
+            {
+                // Forgotten whatever happens next: if it isn't closed now, it's the user's from here on.
+                _started.Remove(id);
+                using (process)
+                {
+                    Close(tools.FirstOrDefault(t => t.Id == id), process);
+                }
+            }
+        }
+    }
+
+    private void Close(ToolEntry? tool, Process process)
+    {
+        int? pid = SafeId(process);
+        if (HasExited(process))
+        {
+            LoggingService.Verbose("Tools", $"'{tool?.Name ?? "A removed tool"}' (PID {pid}) had already closed.");
+            return;
+        }
+        if (tool == null || !tool.StartWithGames || !tool.CloseAfterGames || !ToolCatalog.CanStartWithGames(tool))
+        {
+            LoggingService.Verbose("Tools", $"Leaving '{tool?.Name ?? "a removed tool"}' running (PID {pid}): it isn't set to close when the game exits.");
+            return;
+        }
+
+        var result = EndCopy(process, CloseGrace);
+        if (result == EndResult.NeedsAdministrator)
+        {
+            LoggingService.Info("Tools", $"'{tool.Name}' (PID {pid}) runs as administrator; asking Windows for permission to close it.");
+            AnnounceClosing(tool, true);
+            try
+            {
+                result = EndCopyAsAdministrator(process, CloseGrace) ? EndResult.Ended : EndResult.StillRunning;
+            }
+            finally
+            {
+                AnnounceClosing(tool, false);
+            }
+        }
+
+        if (result == EndResult.Ended)
+        {
+            LoggingService.Info("Tools", $"Closed '{tool.Name}' (PID {pid}), which was started with games.");
+        }
+        else
+        {
+            LoggingService.Warn("Tools", $"'{tool.Name}' (PID {pid}) is still running after TrayTrigger tried to close it.");
+        }
+    }
+
     private void Announce(GameEntry game, ToolEntry? tool)
     {
         try { Starting?.Invoke(game, tool); }
         catch (Exception ex) { LoggingService.Swallowed("Tools", ex, "showing which tool is starting"); }
+    }
+
+    private void AnnounceClosing(ToolEntry tool, bool asking)
+    {
+        try { ClosingAsAdministrator?.Invoke(tool, asking); }
+        catch (Exception ex) { LoggingService.Swallowed("Tools", ex, "showing which tool is closing"); }
     }
 
     private void Report(string message)
@@ -164,6 +264,97 @@ public sealed class CompanionToolService
         try { return process.Id; }
         catch (InvalidOperationException) { return null; } // it has already exited
     }
+
+    private static bool HasExited(Process process)
+    {
+        try { return process.HasExited; }
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+        {
+            // Nothing left to ask about: treat it as gone rather than end something unknown.
+            return true;
+        }
+    }
+
+    internal enum EndResult { Ended, NeedsAdministrator, StillRunning }
+
+    private const uint WmClose = 0x0010;
+    private const int ErrorAccessDenied = 5;
+
+    /// <summary>
+    /// Asks each top-level window of the process to close, as its own close button would, hidden ones
+    /// included: a tool in the tray has no visible window but usually still answers. Still running after
+    /// <paramref name="grace"/>, it is ended. Windows doesn't let a program close or end one running as
+    /// administrator, which is <see cref="EndResult.NeedsAdministrator"/>.
+    /// </summary>
+    internal static EndResult EndNormally(Process process, TimeSpan grace)
+    {
+        foreach (IntPtr window in TopLevelWindows(process.Id))
+        {
+            if (!PostMessage(window, WmClose, IntPtr.Zero, IntPtr.Zero) && Marshal.GetLastPInvokeError() == ErrorAccessDenied)
+            {
+                return EndResult.NeedsAdministrator;
+            }
+        }
+        if (process.WaitForExit(grace)) return EndResult.Ended;
+
+        try
+        {
+            process.Kill();
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorAccessDenied)
+        {
+            LoggingService.Verbose("Tools", $"PID {process.Id} can't be ended without administrator rights: {ex.Message}");
+            return EndResult.NeedsAdministrator;
+        }
+        catch (InvalidOperationException)
+        {
+            return EndResult.Ended; // it closed between the wait and the kill
+        }
+        return process.WaitForExit(TimeSpan.FromSeconds(5)) ? EndResult.Ended : EndResult.StillRunning;
+    }
+
+    /// <summary>
+    /// <see cref="EndNormally"/> with administrator rights, behind one UAC prompt: taskkill without /F
+    /// posts the same close request to the program's windows, and Stop-Process ends it if it's still
+    /// running after <paramref name="grace"/>. TrayTrigger holds the process open meanwhile, so its id
+    /// can't be given to another program. True when it has closed.
+    /// </summary>
+    internal static bool EndElevated(Process process, TimeSpan grace)
+    {
+        int pid = process.Id;
+        string taskkill = ElevatedPowerShell.QuoteLiteral(Path.Combine(Environment.SystemDirectory, "taskkill.exe"));
+        string script =
+            $"$p = Get-Process -Id {pid} -ErrorAction SilentlyContinue; if (-not $p) {{ exit 0 }}; " +
+            $"& {taskkill} /PID {pid} | Out-Null; " +
+            $"if (-not $p.WaitForExit({(int)grace.TotalMilliseconds})) {{ Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue }}; " +
+            "exit 0";
+        ElevatedPowerShell.Run(script, grace + TimeSpan.FromSeconds(15), "Tools");
+        // A process ended by Stop-Process can take a moment to finish exiting.
+        return process.WaitForExit(TimeSpan.FromSeconds(2));
+    }
+
+    /// <summary>Every top-level window the process owns, visible or not.</summary>
+    private static List<IntPtr> TopLevelWindows(int pid)
+    {
+        var windows = new List<IntPtr>();
+        IntPtr window = IntPtr.Zero;
+        while ((window = FindWindowEx(IntPtr.Zero, window, null, null)) != IntPtr.Zero)
+        {
+            GetWindowThreadProcessId(window, out uint owner);
+            if (owner == pid) windows.Add(window);
+        }
+        return windows;
+    }
+
+    [LibraryImport("user32.dll", EntryPoint = "FindWindowExW", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string? className, string? windowName);
+
+    [LibraryImport("user32.dll")]
+    private static partial uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    [LibraryImport("user32.dll", EntryPoint = "PostMessageW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
 
     /// <summary>
     /// A running copy of the program at <paramref name="path"/>, matched by its real image path rather

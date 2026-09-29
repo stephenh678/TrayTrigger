@@ -396,6 +396,18 @@ public partial class App : Application
         {
             if (_mainViewModel != null) _mainViewModel.Library.StatusMessage = message;
         });
+        companionTools.ClosingAsAdministrator += (tool, asking) =>
+        {
+            if (asking)
+            {
+                Dispatcher.Invoke(() => _launchPopup?.ShowClosing(new LaunchTarget(tool.Id, tool.Name)),
+                    System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
+            }
+            else
+            {
+                Dispatcher.BeginInvoke(() => _launchPopup?.EndClosing(tool.Id));
+            }
+        };
         _launcherService.CompanionTools = companionTools;
 
         // "Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon).

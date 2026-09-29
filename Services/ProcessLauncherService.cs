@@ -758,6 +758,24 @@ public partial class ProcessLauncherService
         {
             LauncherClientCloser.Close(platform, _steamScannerService.GetSteamInstallPath());
         }
+
+        CloseCompanionToolsIfIdle();
+    }
+
+    /// <summary>No game is running or being launched: the time to close the tools started with games.</summary>
+    private bool IsIdle()
+    {
+        lock (_sessionsLock) { return _sessions.Count == 0 && _launchesInProgress.Count == 0; }
+    }
+
+    /// <summary>
+    /// After the last game, closes the tools started with games that are set to close. Called when a
+    /// session ends and when a launch attempt ends, since a launch that failed after starting its tools
+    /// ends its session while its own launch still counts as in progress.
+    /// </summary>
+    private void CloseCompanionToolsIfIdle()
+    {
+        if (CompanionTools is { } tools && IsIdle()) _ = tools.CloseWhenIdleAsync(IsIdle);
     }
 
     /// <summary>
@@ -970,6 +988,7 @@ public partial class ProcessLauncherService
             if (claimed)
             {
                 lock (_sessionsLock) { _launchesInProgress.Remove(game.Id); }
+                CloseCompanionToolsIfIdle();
             }
         }
     }

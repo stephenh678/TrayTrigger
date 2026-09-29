@@ -17,6 +17,8 @@ public enum LaunchPopupKind
     Failed,
     /// <summary>A launch that needs the user (<see cref="ProcessLauncherService.LaunchNotice"/>). Stays until closed.</summary>
     Notice,
+    /// <summary>A tool started with games runs as administrator, so closing it takes Windows' permission. Goes once that's answered.</summary>
+    Closing,
 }
 
 /// <summary>
@@ -48,7 +50,7 @@ public sealed record LaunchPopupContent(
 {
     /// <summary>Has a close button (and maybe an action), so it can't be click-through.</summary>
     public bool IsInteractive => Kind is LaunchPopupKind.Failed or LaunchPopupKind.Notice;
-    public bool ShowsProgress => Kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting;
+    public bool ShowsProgress => Kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting or LaunchPopupKind.Closing;
 }
 
 /// <summary>The popup window, behind an interface so the coordinator's rules are testable without WPF windows.</summary>
@@ -231,6 +233,24 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         return true;
     }
 
+    /// <summary>
+    /// A tool started with games runs as administrator, so closing it takes a Windows prompt, and the
+    /// prompt names Windows PowerShell rather than the tool. The popup says what it's for until
+    /// <see cref="EndClosing"/>. False when the popup is turned off.
+    /// </summary>
+    public bool ShowClosing(LaunchTarget tool)
+    {
+        if (!_isEnabled()) return false;
+        Start(tool, LaunchPopupKind.Closing, message: null, actionText: null, action: null);
+        return true;
+    }
+
+    /// <summary>The prompt for closing <paramref name="id"/> has been answered.</summary>
+    public void EndClosing(string id)
+    {
+        if (_target?.Id == id && _kind == LaunchPopupKind.Closing) Hide();
+    }
+
     public void Dispose()
     {
         CancelTimers();
@@ -267,6 +287,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
             LaunchPopupKind.Launching => "Launching",
             LaunchPopupKind.Waiting => IsLauncher(_platform) ? $"Waiting for {_platform}" : "Still starting",
             LaunchPopupKind.Failed => "Couldn't launch",
+            LaunchPopupKind.Closing => "Closing",
             _ => "Needs your attention",
         };
 
@@ -274,6 +295,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         {
             LaunchPopupKind.Launching => LaunchingDetail(_target, _platform),
             LaunchPopupKind.Waiting => WaitingDetail(_platform),
+            LaunchPopupKind.Closing => "It runs as administrator, so Windows asks for permission to close it.",
             _ => _message,
         };
 
