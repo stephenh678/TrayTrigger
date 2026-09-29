@@ -84,6 +84,11 @@ public static class ToolCatalog
     /// </summary>
     public static bool CanStartWithGames(ToolEntry tool) => !IsStoreApp(tool) && !IsScript(tool);
 
+    /// <summary>"Wait before starting the game": the seconds it starts at, and the range Edit Tool accepts.</summary>
+    public const int DefaultWaitSeconds = 5;
+    public const int MinWaitSeconds = 1;
+    public const int MaxWaitSeconds = 60;
+
     /// <summary>What the list view and search show for where a tool starts from: the program's path, or the Store app's ID.</summary>
     public static string LaunchDisplay(ToolEntry tool) => IsStoreApp(tool) ? $"Store app: {tool.AppId.Trim()}" : tool.TargetPath;
 

@@ -42,6 +42,8 @@ public class ToolStorageTests : IDisposable
             Category = "Graphics",
             IsFavorite = true,
             StartWithGames = true,
+            WaitBeforeGame = true,
+            WaitBeforeGameSeconds = 9,
             CloseAfterGames = true
         };
         _storage.SaveTools([tool]);

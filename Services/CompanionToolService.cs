@@ -62,6 +62,10 @@ public sealed partial class CompanionToolService
 
     internal Func<string, bool> FileExists { get; set; } = File.Exists;
 
+    /// <summary>The clock and the wait for "Wait before starting the game". Replaced in tests.</summary>
+    internal Func<DateTime> UtcNow { get; set; } = () => DateTime.UtcNow;
+    internal Action<TimeSpan> Wait { get; set; } = Thread.Sleep;
+
     /// <summary>How long a tool is given to close when asked, before it is ended.</summary>
     internal TimeSpan CloseGrace { get; set; } = TimeSpan.FromSeconds(5);
 
@@ -103,6 +107,7 @@ public sealed partial class CompanionToolService
         lock (_gate)
         {
             bool announced = false;
+            (ToolEntry Tool, DateTime ReadyAt)? waitFor = null;
             try
             {
                 foreach (var tool in flagged)
@@ -130,8 +135,14 @@ public sealed partial class CompanionToolService
 
                     announced = true;
                     Announce(game, tool);
-                    Start(game, tool, remember);
+                    if (Start(game, tool, remember) && tool.WaitBeforeGame)
+                    {
+                        int seconds = Math.Clamp(tool.WaitBeforeGameSeconds, ToolCatalog.MinWaitSeconds, ToolCatalog.MaxWaitSeconds);
+                        DateTime readyAt = UtcNow() + TimeSpan.FromSeconds(seconds);
+                        if (waitFor == null || readyAt > waitFor.Value.ReadyAt) waitFor = (tool, readyAt);
+                    }
                 }
+                WaitUntilReady(game, waitFor);
             }
             finally
             {
@@ -140,14 +151,31 @@ public sealed partial class CompanionToolService
         }
     }
 
-    private void Start(GameEntry game, ToolEntry tool, bool remember)
+    /// <summary>
+    /// Holds the game back until every tool that asked for a wait has had its seconds. They start one
+    /// after another and each counts from its own start, so it's the latest of those, not their sum.
+    /// The popup names the tool being waited on.
+    /// </summary>
+    private void WaitUntilReady(GameEntry game, (ToolEntry Tool, DateTime ReadyAt)? waitFor)
+    {
+        if (waitFor is not { } last) return;
+        TimeSpan remaining = last.ReadyAt - UtcNow();
+        if (remaining <= TimeSpan.Zero) return;
+
+        Announce(game, last.Tool);
+        LoggingService.Verbose("Tools", $"Waiting {remaining.TotalSeconds:0.#}s for '{last.Tool.Name}' to get ready before starting '{game.Name}'.");
+        Wait(remaining);
+    }
+
+    /// <summary>True when the program was started; false when the prompt was declined or it failed.</summary>
+    private bool Start(GameEntry game, ToolEntry tool, bool remember)
     {
         try
         {
             var process = StartProcess(tool);
             int? pid = process == null ? null : SafeId(process);
             LoggingService.Info("Tools", $"Started '{tool.Name}' with '{game.Name}'{(pid != null ? $" (PID {pid})" : string.Empty)}.");
-            if (process == null) return;
+            if (process == null) return true;
 
             if (remember)
             {
@@ -159,15 +187,18 @@ public sealed partial class CompanionToolService
                 LoggingService.Verbose("Tools", $"'{tool.Name}' is left running after '{game.Name}': TrayTrigger can't tell when a game started from a link exits.");
                 process.Dispose();
             }
+            return true;
         }
         catch (Exception ex) when (ToolLauncherService.ClassifyStartFailure(ex) == ToolLaunchOutcome.Cancelled)
         {
             LoggingService.Info("Tools", $"'{tool.Name}' wasn't started with '{game.Name}': the administrator prompt was declined.");
+            return false;
         }
         catch (Exception ex)
         {
             LoggingService.Warn("Tools", $"Could not start '{tool.Name}' with '{game.Name}': {ex.Message}");
             Report($"\"{tool.Name}\" didn't start with the game: {ex.Message}");
+            return false;
         }
     }
 

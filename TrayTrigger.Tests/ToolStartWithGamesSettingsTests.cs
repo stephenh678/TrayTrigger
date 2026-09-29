@@ -94,6 +94,70 @@ public class ToolStartWithGamesSettingsTests : IDisposable
     });
 
     [Fact]
+    public void Save_Wait_KeepsTheSeconds() => Sta(() =>
+    {
+        var tool = new ToolEntry { Name = "MSI Afterburner", TargetPath = File("MSIAfterburner.exe") };
+        var vm = new ToolEditViewModel(tool, [], Icons()) { StartWithGames = true, WaitBeforeGame = true, WaitBeforeGameSeconds = " 8 " };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.True(tool.WaitBeforeGame);
+        Assert.Equal(8, tool.WaitBeforeGameSeconds);
+    });
+
+    [Fact]
+    public void Save_WaitBlank_IsTheDefault() => Sta(() =>
+    {
+        var tool = new ToolEntry { Name = "MSI Afterburner", TargetPath = File("MSIAfterburner.exe"), WaitBeforeGameSeconds = 12 };
+        var vm = new ToolEditViewModel(tool, [], Icons()) { StartWithGames = true, WaitBeforeGame = true, WaitBeforeGameSeconds = "" };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(ToolCatalog.DefaultWaitSeconds, tool.WaitBeforeGameSeconds);
+    });
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("61")]
+    [InlineData("five")]
+    public void Save_WaitOutsideOneToSixty_IsRefused_AndNothingIsSaved(string seconds) => Sta(() =>
+    {
+        var tool = new ToolEntry { Name = "MSI Afterburner", TargetPath = File("MSIAfterburner.exe") };
+        var vm = new ToolEditViewModel(tool, [], Icons()) { StartWithGames = true, WaitBeforeGame = true, WaitBeforeGameSeconds = seconds };
+        bool closed = false;
+        vm.RequestClose += _ => closed = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.False(closed);
+        Assert.Contains("between 1 and 60", vm.ValidationMessage);
+        Assert.False(tool.StartWithGames);
+    });
+
+    [Fact]
+    public void Save_WaitOff_ABadNumberKeepsTheOldOne() => Sta(() =>
+    {
+        var tool = new ToolEntry { Name = "MSI Afterburner", TargetPath = File("MSIAfterburner.exe"), WaitBeforeGameSeconds = 7 };
+        var vm = new ToolEditViewModel(tool, [], Icons()) { StartWithGames = true, WaitBeforeGame = false, WaitBeforeGameSeconds = "abc" };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.False(tool.WaitBeforeGame);
+        Assert.Equal(7, tool.WaitBeforeGameSeconds);
+    });
+
+    [Fact]
+    public void Save_WaitWithoutStart_IsNotSaved() => Sta(() =>
+    {
+        var tool = new ToolEntry { Name = "MSI Afterburner", TargetPath = File("MSIAfterburner.exe") };
+        var vm = new ToolEditViewModel(tool, [], Icons()) { StartWithGames = false, WaitBeforeGame = true };
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.False(tool.WaitBeforeGame);
+    });
+
+    [Fact]
     public void StartWithGames_IsAnUnsavedChange() => Sta(() =>
     {
         var vm = new ToolEditViewModel(new ToolEntry { Name = "MSI Afterburner", TargetPath = @"C:\Tools\MSIAfterburner.exe" }, [], Icons());

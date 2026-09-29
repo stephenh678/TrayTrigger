@@ -164,10 +164,24 @@
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="TrayTrigger starts it just before any game it launches, unless it's already running."
                                            FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,8"/>
-                                <CheckBox Content="Close it when the game exits" IsChecked="{Binding CloseAfterGames}" IsEnabled="{Binding StartWithGames}"
-                                          Style="{StaticResource ModernCheckBox}" Margin="22,0,0,0"/>
-                                <TextBlock Text="Only the copy TrayTrigger started, once your last game has closed. One you opened yourself is left running. It's asked to close, and ended if it's still open a few seconds later. Windows asks for permission to close a program running as administrator."
-                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="44,3,0,6"/>
+
+                                <!-- Both only mean something with Start ticked, so they're greyed out without it. -->
+                                <StackPanel IsEnabled="{Binding StartWithGames}" Margin="22,0,0,0">
+                                    <CheckBox Content="Wait before starting the game" IsChecked="{Binding WaitBeforeGame}"
+                                              Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                    <DockPanel Margin="22,0,0,8" LastChildFill="True" IsEnabled="{Binding WaitBeforeGame}">
+                                        <TextBox AutomationProperties.Name="Seconds to wait before starting the game" DockPanel.Dock="Left" Width="64"
+                                                 Text="{Binding WaitBeforeGameSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="seconds (1-60), for a tool that needs a moment to get ready, like Afterburner's overlay."
+                                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </DockPanel>
+
+                                    <CheckBox Content="Close it when the game exits" IsChecked="{Binding CloseAfterGames}"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                    <TextBlock Text="Only the copy TrayTrigger started, once your last game has closed. One you opened yourself is left running. It's asked to close, and ended if it's still open a few seconds later. Windows asks for permission to close a program running as administrator."
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,6"/>
+                                </StackPanel>
                                 <Button AutomationProperties.Name="Learn more about starting tools with games" Style="{StaticResource HelpLinkButton}"
                                         Margin="22,0,0,12"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/start_with_games"/>

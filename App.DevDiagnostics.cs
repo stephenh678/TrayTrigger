@@ -746,6 +746,7 @@ public partial class App
                     Category = "Graphics",
                     RunAsAdmin = true,
                     StartWithGames = true,
+                    WaitBeforeGame = true,
                     CloseAfterGames = true
                 };
                 var dlg = new ToolEditDialog(tool, ["Graphics"], _iconExtractorService);

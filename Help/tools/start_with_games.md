@@ -7,6 +7,7 @@ Tick "Start when I launch a game" in Edit Tool and TrayTrigger starts the tool j
 - It works for games you launch from the library, a hotkey or the tray menu.
 - A tool that's already running, however it was opened, is left as it is.
 - The tool starts after the game's pre-launch script and before the game. If Windows asks for permission to run it, the game waits for your answer and the launch popup says "Starting (the tool) first". If you decline, the tool stays closed and the game still starts.
+- Tick "Wait before starting the game" for a tool that needs a moment to get ready, and set how many seconds, from 1 to 60. Afterburner's on-screen display, for example, can end up in the middle of the screen when the game opens before it's ready. The game only waits when TrayTrigger has just started the tool, not when it was already running, and with several tools it waits for the longest one.
 - A tool that starts with games shows the Library's controller icon on its card.
 
 ## Closing it again

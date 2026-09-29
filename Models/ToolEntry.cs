@@ -40,6 +40,15 @@ public class ToolEntry
     /// </summary>
     public bool StartWithGames { get; set; }
     /// <summary>
+    /// With <see cref="StartWithGames"/>: once TrayTrigger has started the tool, the game waits
+    /// <see cref="WaitBeforeGameSeconds"/> before it starts, for a tool that needs a moment to get
+    /// ready. Afterburner starts RTSS, which hooks a game that opened before it was ready at the size
+    /// of its splash window, and leaves its overlay in the wrong place. No wait when it was already running.
+    /// </summary>
+    public bool WaitBeforeGame { get; set; }
+    /// <summary>See <see cref="WaitBeforeGame"/>; between <see cref="ToolCatalog.MinWaitSeconds"/> and <see cref="ToolCatalog.MaxWaitSeconds"/>.</summary>
+    public int WaitBeforeGameSeconds { get; set; } = ToolCatalog.DefaultWaitSeconds;
+    /// <summary>
     /// With <see cref="StartWithGames"/>: the copy TrayTrigger started is closed once the last game it
     /// launched has exited. A copy that was already running is never touched.
     /// </summary>

@@ -26,6 +26,8 @@ public sealed class ToolEditViewModel : ViewModelBase
     private bool _hideWindow;
     private bool _isFavorite;
     private bool _startWithGames;
+    private bool _waitBeforeGame;
+    private string _waitBeforeGameSeconds;
     private bool _closeAfterGames;
     private string _validationMessage = string.Empty;
     private string? _pendingIconSource;
@@ -46,6 +48,8 @@ public sealed class ToolEditViewModel : ViewModelBase
         _hideWindow = tool.HideWindow;
         _isFavorite = tool.IsFavorite;
         _startWithGames = tool.StartWithGames;
+        _waitBeforeGame = tool.WaitBeforeGame;
+        _waitBeforeGameSeconds = tool.WaitBeforeGameSeconds.ToString();
         _closeAfterGames = tool.CloseAfterGames;
         ExistingCategories = categories.ToList();
         _iconPreview = IconExtractorService.LoadBitmapSafely(tool.IconPath, decodePixelWidth: 64);
@@ -69,7 +73,8 @@ public sealed class ToolEditViewModel : ViewModelBase
     /// <summary>Every value Save copies onto the tool, joined into one comparable string.</summary>
     private string EditState() => string.Join("", new object?[]
     {
-        Name, Category, TargetPath, Arguments, WorkingDirectory, Hotkey, RunAsAdmin, HideWindow, IsFavorite, StartWithGames, CloseAfterGames, _pendingIconSource,
+        Name, Category, TargetPath, Arguments, WorkingDirectory, Hotkey, RunAsAdmin, HideWindow, IsFavorite,
+        StartWithGames, WaitBeforeGame, WaitBeforeGameSeconds, CloseAfterGames, _pendingIconSource,
     });
 
     public event Action<bool>? RequestClose;
@@ -114,7 +119,10 @@ public sealed class ToolEditViewModel : ViewModelBase
     /// <summary>A program, not a script or Store app, so it can start with games (<see cref="ToolCatalog.CanStartWithGames"/>). Follows the path as it's edited.</summary>
     public bool CanStartWithGames => IsProgram && !IsScript;
     public bool StartWithGames { get => _startWithGames; set => SetProperty(ref _startWithGames, value); }
-    /// <summary>Only saved with <see cref="StartWithGames"/>; the dialog disables it otherwise.</summary>
+    /// <summary>Only saved with <see cref="StartWithGames"/>, like <see cref="CloseAfterGames"/>; the dialog disables both otherwise.</summary>
+    public bool WaitBeforeGame { get => _waitBeforeGame; set => SetProperty(ref _waitBeforeGame, value); }
+    /// <summary>Text, as typed: Save checks it only while the wait is on, and blank means the default.</summary>
+    public string WaitBeforeGameSeconds { get => _waitBeforeGameSeconds; set => SetProperty(ref _waitBeforeGameSeconds, value ?? string.Empty); }
     public bool CloseAfterGames { get => _closeAfterGames; set => SetProperty(ref _closeAfterGames, value); }
     public bool HideWindow { get => _hideWindow; set => SetProperty(ref _hideWindow, value); }
     public string Arguments { get => _arguments; set => SetProperty(ref _arguments, value ?? string.Empty); }
@@ -225,14 +233,18 @@ public sealed class ToolEditViewModel : ViewModelBase
                 ValidationMessage = $"This file can't be used because {problem}.";
                 return;
             }
+            bool startWithGames = !ToolCatalog.IsScriptPath(target) && StartWithGames;
+            if (!TryReadWaitSeconds(startWithGames && WaitBeforeGame, out int waitSeconds)) return;
             targetChanged = !string.Equals(target, _tool.TargetPath, StringComparison.OrdinalIgnoreCase);
 
             _tool.TargetPath = target;
             _tool.WorkingDirectory = WorkingDirectory.Trim();
             _tool.RunAsAdmin = RunAsAdmin;
             _tool.HideWindow = ToolCatalog.IsScriptPath(target) && HideWindow;
-            _tool.StartWithGames = !ToolCatalog.IsScriptPath(target) && StartWithGames;
-            _tool.CloseAfterGames = _tool.StartWithGames && CloseAfterGames;
+            _tool.StartWithGames = startWithGames;
+            _tool.WaitBeforeGame = startWithGames && WaitBeforeGame;
+            _tool.WaitBeforeGameSeconds = waitSeconds;
+            _tool.CloseAfterGames = startWithGames && CloseAfterGames;
         }
 
         _tool.Name = name;
@@ -249,7 +261,33 @@ public sealed class ToolEditViewModel : ViewModelBase
             if (!string.IsNullOrEmpty(cached)) _tool.IconPath = cached;
         }
 
-        LoggingService.Info("Tools", $"Saved tool '{name}' ('{ToolCatalog.LaunchDisplay(_tool)}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}', start with games {_tool.StartWithGames}, close after games {_tool.CloseAfterGames}).");
+        LoggingService.Info("Tools", $"Saved tool '{name}' ('{ToolCatalog.LaunchDisplay(_tool)}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}', start with games {_tool.StartWithGames}, wait {(_tool.WaitBeforeGame ? $"{_tool.WaitBeforeGameSeconds}s" : "off")}, close after games {_tool.CloseAfterGames}).");
         RequestClose?.Invoke(true);
+    }
+
+    /// <summary>
+    /// The seconds to save: what was typed, blank meaning the default. Checked only while the wait is
+    /// on: with it off, text that isn't a valid number keeps the value saved before. False, with the
+    /// reason shown, when the wait is on and the number is outside 1-60.
+    /// </summary>
+    private bool TryReadWaitSeconds(bool waiting, out int seconds)
+    {
+        string text = WaitBeforeGameSeconds.Trim();
+        if (text.Length == 0)
+        {
+            seconds = ToolCatalog.DefaultWaitSeconds;
+            return true;
+        }
+        if (int.TryParse(text, out seconds) && seconds >= ToolCatalog.MinWaitSeconds && seconds <= ToolCatalog.MaxWaitSeconds)
+        {
+            return true;
+        }
+        if (!waiting)
+        {
+            seconds = _tool.WaitBeforeGameSeconds;
+            return true;
+        }
+        ValidationMessage = $"The wait before starting the game must be a whole number of seconds between {ToolCatalog.MinWaitSeconds} and {ToolCatalog.MaxWaitSeconds}.";
+        return false;
     }
 }

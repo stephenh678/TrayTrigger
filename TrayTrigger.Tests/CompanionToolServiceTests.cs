@@ -21,6 +21,8 @@ public class CompanionToolServiceTests : IDisposable
     private readonly List<string> _ended = new();
     private readonly List<(string Tool, bool Asking)> _elevatedClosing = new();
     private readonly List<Process> _toKill = new();
+    private readonly List<string> _events = new();
+    private readonly DateTime _now = new(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
     private bool _enabled = true;
     private readonly CompanionToolService _service;
 
@@ -45,10 +47,17 @@ public class CompanionToolServiceTests : IDisposable
                 return CompanionToolService.EndResult.Ended;
             },
             EndCopyAsAdministrator = (_, _) => throw new InvalidOperationException("not expected"),
-            CloseGrace = TimeSpan.FromMilliseconds(200)
+            CloseGrace = TimeSpan.FromMilliseconds(200),
+            // A fixed clock, and waits recorded instead of slept.
+            UtcNow = () => _now,
+            Wait = span => _events.Add($"wait {span.TotalSeconds}s")
         };
         _service.StartFailed += _failures.Add;
-        _service.Starting += (_, tool) => _announced.Add(tool?.Name);
+        _service.Starting += (_, tool) =>
+        {
+            _announced.Add(tool?.Name);
+            _events.Add($"popup {tool?.Name ?? "done"}");
+        };
         _service.ClosingAsAdministrator += (tool, asking) => _elevatedClosing.Add((tool.Name, asking));
     }
 
@@ -207,6 +216,70 @@ public class CompanionToolServiceTests : IDisposable
         _service.StartForGame(Game, remember: true);
 
         Assert.Equal(["MSI Afterburner", "SimHub", null], _announced);
+    }
+
+    // ------------------------------------------------------------------ waiting before the game
+
+    private ToolEntry AddWaiting(string name, int seconds)
+    {
+        var tool = Add(name);
+        tool.WaitBeforeGame = true;
+        tool.WaitBeforeGameSeconds = seconds;
+        return tool;
+    }
+
+    [Fact]
+    public void Wait_HoldsTheGameBack_WithThePopupNamingTheTool()
+    {
+        AddWaiting("MSI Afterburner", 7);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Equal(["popup MSI Afterburner", "popup MSI Afterburner", "wait 7s", "popup done"], _events);
+    }
+
+    [Fact]
+    public void Wait_SeveralTools_IsTheLongest_NotTheSum()
+    {
+        AddWaiting("MSI Afterburner", 5);
+        AddWaiting("SimHub", 8);
+        Add("TrackIR");
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Equal(["wait 8s"], _events.Where(e => e.StartsWith("wait", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void Wait_NotWhenTheToolWasAlreadyRunning()
+    {
+        AddWaiting("MSI Afterburner", 7);
+        _service.FindRunningCopy = _ => 4242;
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Empty(_events);
+    }
+
+    [Fact]
+    public void Wait_NotWhenThePromptWasDeclined()
+    {
+        AddWaiting("MSI Afterburner", 7);
+        _service.StartProcess = _ => throw new Win32Exception(ToolLauncherService.ErrorCancelled);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.DoesNotContain(_events, e => e.StartsWith("wait", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Wait_FromAHandEditedFile_IsKeptWithinAMinute()
+    {
+        AddWaiting("MSI Afterburner", 100000);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Contains("wait 60s", _events);
     }
 
     [Fact]
