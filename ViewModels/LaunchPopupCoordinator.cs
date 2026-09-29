@@ -162,15 +162,27 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         {
             if (token == _token && _kind == LaunchPopupKind.Launching) Render(LaunchPopupKind.Waiting);
         });
+        ArmCap(target);
+
+        LoggingService.Verbose("LaunchPopup", $"Showing the launch popup for '{target.Name}' ({(appInFront ? "launched from the TrayTrigger window" : "TrayTrigger window not in front")}).");
+        return true;
+    }
+
+    /// <summary>
+    /// Closes a progress popup after <see cref="MaxWait"/>. Armed again for each tool that starts with
+    /// the game: the game isn't dispatched until they have, so a tool's prompt and wait must not use up
+    /// the time the game itself is given.
+    /// </summary>
+    private void ArmCap(LaunchTarget target)
+    {
+        _capTimer?.Dispose();
+        int token = _token;
         _capTimer = _schedule(MaxWait, () =>
         {
             if (token != _token || !IsProgress) return;
             LoggingService.Verbose("LaunchPopup", $"'{target.Name}' still hadn't started after {MaxWait.TotalSeconds:0}s; closed the launch popup.");
             Hide();
         });
-
-        LoggingService.Verbose("LaunchPopup", $"Showing the launch popup for '{target.Name}' ({(appInFront ? "launched from the TrayTrigger window" : "TrayTrigger window not in front")}).");
-        return true;
     }
 
     /// <summary>The launcher registered a session; its platform label names what the game waits on.</summary>
@@ -189,6 +201,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     {
         if (!IsProgressFor(id)) return;
         _startingTool = toolName;
+        ArmCap(_target!);
         Render(_kind);
     }
 

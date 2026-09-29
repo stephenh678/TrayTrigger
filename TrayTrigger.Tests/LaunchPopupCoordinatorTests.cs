@@ -57,6 +57,10 @@ public class LaunchPopupCoordinatorTests
                 utcNow: () => Now);
         }
 
+        /// <summary>How many timers with this delay were ever scheduled, and how many are still live.</summary>
+        public (int Scheduled, int Live) Timers(TimeSpan delay) =>
+            (_timers.Count(t => t.Delay == delay), _timers.Count(t => t.Delay == delay && !t.Handle.Cancelled));
+
         /// <summary>Fires every live timer whose delay matches.</summary>
         public void Fire(Func<TimeSpan, bool> which)
         {
@@ -218,6 +222,24 @@ public class LaunchPopupCoordinatorTests
 
         Assert.False(rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner")));
         Assert.Null(rig.View.Shown);
+    }
+
+    /// <summary>
+    /// A tool's prompt and wait come before the game is dispatched, so the time the popup gives the
+    /// game starts again once the tools are done, instead of being used up by them.
+    /// </summary>
+    [Fact]
+    public void StartingTool_TheGameStillGetsTheWholeMaxWait()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnStartingTool("a", "MSI Afterburner");
+        rig.Popup.OnStartingTool("a", null);
+
+        Assert.Equal((3, 1), rig.Timers(LaunchPopupCoordinator.MaxWait));
+        rig.Fire(d => d == LaunchPopupCoordinator.MaxWait);
+        Assert.False(rig.View.Visible);
     }
 
     [Fact]
