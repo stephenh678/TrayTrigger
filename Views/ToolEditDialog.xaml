@@ -7,7 +7,7 @@
         xmlns:views="clr-namespace:TrayTrigger.Views"
         mc:Ignorable="d"
         Title="Edit Tool"
-        Height="640" Width="620"
+        Height="700" Width="620"
         MinHeight="520" MinWidth="560"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -154,6 +154,18 @@
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log (not when it also runs as administrator). A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
                                            FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                            </StackPanel>
+
+                            <!-- A program only: a script has pre-launch scripts, and a Store app can't be told apart when it's already running. -->
+                            <StackPanel Visibility="{Binding CanStartWithGames, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Start when I launch a game" IsChecked="{Binding StartWithGames}"
+                                          Style="{StaticResource ModernCheckBox}"/>
+                                <TextBlock Text="TrayTrigger starts it just before any game it launches, unless it's already running."
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,8"/>
+                                <CheckBox Content="Close it when the game exits" IsChecked="{Binding CloseAfterGames}" IsEnabled="{Binding StartWithGames}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="22,0,0,0"/>
+                                <TextBlock Text="Only the copy TrayTrigger started, once your last game has closed. One you opened yourself is left running. It's asked to close, and ended if it's still open a few seconds later. Windows asks for permission to close a program running as administrator."
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="44,3,0,12"/>
                             </StackPanel>
                         </StackPanel>
 

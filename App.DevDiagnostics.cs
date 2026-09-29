@@ -710,9 +710,9 @@ public partial class App
                 _mainViewModel.Tools.ReplaceToolsForCapture(new[]
                 {
                     new ToolEntry { Name = "DLSS Swapper", TargetPath = System.IO.Path.Combine(system, "notepad.exe"), Category = "Graphics", IsFavorite = true, Hotkey = "Ctrl+Alt+D" },
-                    new ToolEntry { Name = "MSI Afterburner", TargetPath = System.IO.Path.Combine(system, "calc.exe"), Category = "Graphics", RunAsAdmin = true },
+                    new ToolEntry { Name = "MSI Afterburner", TargetPath = System.IO.Path.Combine(system, "calc.exe"), Category = "Graphics", RunAsAdmin = true, StartWithGames = true, CloseAfterGames = true },
                     new ToolEntry { Name = "Vortex", TargetPath = System.IO.Path.Combine(windows, "explorer.exe"), Category = "Mods", IsFavorite = true },
-                    new ToolEntry { Name = "Discord", TargetPath = System.IO.Path.Combine(system, "cmd.exe"), Category = "Chat" },
+                    new ToolEntry { Name = "Discord", TargetPath = System.IO.Path.Combine(system, "cmd.exe"), Category = "Chat", StartWithGames = true },
                     new ToolEntry { Name = "Old Trainer", TargetPath = @"C:\Missing\trainer.exe", Category = "Mods" },
                 });
                 _mainViewModel.CurrentSection = NavSection.Tools;
@@ -726,6 +726,38 @@ public partial class App
                     _mainWindow.UpdateLayout();
                 }
                 CaptureVisual(_mainWindow, 960, 700, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            if ((e.Args[i].Equals("--screenshot-tool-edit", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-tool-edit", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                // Edit Tool for a sample program that starts and closes with games; nothing is saved.
+                // "bottom" scrolls to the Launch card's last options first:
+                // --screenshot-tool-edit <file.png> [bottom]
+                string targetPng = e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                var tool = new ToolEntry
+                {
+                    Name = "MSI Afterburner",
+                    TargetPath = System.IO.Path.Combine(Environment.SystemDirectory, "calc.exe"),
+                    Category = "Graphics",
+                    RunAsAdmin = true,
+                    StartWithGames = true,
+                    CloseAfterGames = true
+                };
+                var dlg = new ToolEditDialog(tool, ["Graphics"], _iconExtractorService);
+                dlg.Show();
+                dlg.UpdateLayout();
+                if (e.Args.Any(a => a.Equals("bottom", StringComparison.OrdinalIgnoreCase)))
+                {
+                    FindVisualChild<ScrollViewer>(dlg, _ => true)?.ScrollToEnd();
+                    dlg.UpdateLayout();
+                }
+                CaptureVisual(dlg, 620, 700, targetPng);
+                dlg.Close();
                 ExitApplication();
                 return;
             }

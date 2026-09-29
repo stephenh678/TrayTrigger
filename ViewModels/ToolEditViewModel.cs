@@ -10,7 +10,7 @@ using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
-/// <summary>The Edit Tool dialog: name, category, favorite, icon, program, folder, arguments, admin and hotkey.</summary>
+/// <summary>The Edit Tool dialog: name, category, favorite, icon, program, folder, arguments, admin, hotkey, and whether it starts with games.</summary>
 public sealed class ToolEditViewModel : ViewModelBase
 {
     private readonly ToolEntry _tool;
@@ -25,6 +25,8 @@ public sealed class ToolEditViewModel : ViewModelBase
     private bool _runAsAdmin;
     private bool _hideWindow;
     private bool _isFavorite;
+    private bool _startWithGames;
+    private bool _closeAfterGames;
     private string _validationMessage = string.Empty;
     private string? _pendingIconSource;
     private BitmapImage? _iconPreview;
@@ -43,6 +45,8 @@ public sealed class ToolEditViewModel : ViewModelBase
         _runAsAdmin = tool.RunAsAdmin;
         _hideWindow = tool.HideWindow;
         _isFavorite = tool.IsFavorite;
+        _startWithGames = tool.StartWithGames;
+        _closeAfterGames = tool.CloseAfterGames;
         ExistingCategories = categories.ToList();
         _iconPreview = IconExtractorService.LoadBitmapSafely(tool.IconPath, decodePixelWidth: 64);
 
@@ -65,7 +69,7 @@ public sealed class ToolEditViewModel : ViewModelBase
     /// <summary>Every value Save copies onto the tool, joined into one comparable string.</summary>
     private string EditState() => string.Join("", new object?[]
     {
-        Name, Category, TargetPath, Arguments, WorkingDirectory, Hotkey, RunAsAdmin, HideWindow, IsFavorite, _pendingIconSource,
+        Name, Category, TargetPath, Arguments, WorkingDirectory, Hotkey, RunAsAdmin, HideWindow, IsFavorite, StartWithGames, CloseAfterGames, _pendingIconSource,
     });
 
     public event Action<bool>? RequestClose;
@@ -97,12 +101,21 @@ public sealed class ToolEditViewModel : ViewModelBase
         get => _targetPath;
         set
         {
-            if (SetProperty(ref _targetPath, value ?? string.Empty)) OnPropertyChanged(nameof(IsScript));
+            if (SetProperty(ref _targetPath, value ?? string.Empty))
+            {
+                OnPropertyChanged(nameof(IsScript));
+                OnPropertyChanged(nameof(CanStartWithGames));
+            }
         }
     }
 
     /// <summary>The target is a script, so Hide Window applies. Follows the path as it's edited.</summary>
     public bool IsScript => IsProgram && ToolCatalog.IsScriptPath(TargetPath);
+    /// <summary>A program, not a script or Store app, so it can start with games (<see cref="ToolCatalog.CanStartWithGames"/>). Follows the path as it's edited.</summary>
+    public bool CanStartWithGames => IsProgram && !IsScript;
+    public bool StartWithGames { get => _startWithGames; set => SetProperty(ref _startWithGames, value); }
+    /// <summary>Only saved with <see cref="StartWithGames"/>; the dialog disables it otherwise.</summary>
+    public bool CloseAfterGames { get => _closeAfterGames; set => SetProperty(ref _closeAfterGames, value); }
     public bool HideWindow { get => _hideWindow; set => SetProperty(ref _hideWindow, value); }
     public string Arguments { get => _arguments; set => SetProperty(ref _arguments, value ?? string.Empty); }
     public string WorkingDirectory { get => _workingDirectory; set => SetProperty(ref _workingDirectory, value ?? string.Empty); }
@@ -218,6 +231,8 @@ public sealed class ToolEditViewModel : ViewModelBase
             _tool.WorkingDirectory = WorkingDirectory.Trim();
             _tool.RunAsAdmin = RunAsAdmin;
             _tool.HideWindow = ToolCatalog.IsScriptPath(target) && HideWindow;
+            _tool.StartWithGames = !ToolCatalog.IsScriptPath(target) && StartWithGames;
+            _tool.CloseAfterGames = _tool.StartWithGames && CloseAfterGames;
         }
 
         _tool.Name = name;
@@ -234,7 +249,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             if (!string.IsNullOrEmpty(cached)) _tool.IconPath = cached;
         }
 
-        LoggingService.Info("Tools", $"Saved tool '{name}' ('{ToolCatalog.LaunchDisplay(_tool)}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}').");
+        LoggingService.Info("Tools", $"Saved tool '{name}' ('{ToolCatalog.LaunchDisplay(_tool)}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}', start with games {_tool.StartWithGames}, close after games {_tool.CloseAfterGames}).");
         RequestClose?.Invoke(true);
     }
 }

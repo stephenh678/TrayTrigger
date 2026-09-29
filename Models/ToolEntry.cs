@@ -34,4 +34,14 @@ public class ToolEntry
     /// <summary>A tools-only category; never shared with game categories.</summary>
     public string Category { get; set; } = LibraryConstants.Uncategorized;
     public bool IsFavorite { get; set; }
+    /// <summary>
+    /// Started just before a game TrayTrigger launches, unless a copy is already running. A program
+    /// only (<see cref="ToolCatalog.CanStartWithGames"/>); ignored for a script or a Store app.
+    /// </summary>
+    public bool StartWithGames { get; set; }
+    /// <summary>
+    /// With <see cref="StartWithGames"/>: the copy TrayTrigger started is closed once the last game it
+    /// launched has exited. A copy that was already running is never touched.
+    /// </summary>
+    public bool CloseAfterGames { get; set; }
 }

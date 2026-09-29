@@ -40,7 +40,9 @@ public class ToolStorageTests : IDisposable
             IconPath = @"C:\cache\Icons\t1.png",
             Hotkey = "Ctrl+Alt+D",
             Category = "Graphics",
-            IsFavorite = true
+            IsFavorite = true,
+            StartWithGames = true,
+            CloseAfterGames = true
         };
         _storage.SaveTools([tool]);
 

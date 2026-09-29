@@ -42,6 +42,10 @@ public sealed class ToolCardViewModel : ViewModelBase
     public bool IsScript => ToolCatalog.IsScript(Tool);
     public bool IsFavorite => Tool.IsFavorite;
     public bool RunAsAdmin => Tool.RunAsAdmin && IsProgram;
+    /// <summary>Starts with games (<see cref="ToolEntry.StartWithGames"/>): the card shows the Library's controller icon.</summary>
+    public bool StartsWithGames => Tool.StartWithGames && ToolCatalog.CanStartWithGames(Tool);
+    /// <summary>What Narrator reads for the card: the controller icon can't be seen, so its meaning is spoken.</summary>
+    public string AccessibleName => StartsWithGames ? $"{Name}, starts with games" : Name;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public string HotkeyDisplay => HotkeyManager.Normalize(Tool.Hotkey) ?? string.Empty;
     public bool HasHotkey => HotkeyDisplay.Length > 0;

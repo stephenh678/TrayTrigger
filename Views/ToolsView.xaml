@@ -112,7 +112,7 @@
         <!-- VIEW 1: LARGE ICONS (64 px) -->
         <DataTemplate x:Key="LargeToolTemplate" DataType="{x:Type vm:ToolCardViewModel}">
             <Border Style="{StaticResource ToolCardBorder}" CornerRadius="8" Width="124" Height="136" Margin="6"
-                    AutomationProperties.Name="{Binding Name}"
+                    AutomationProperties.Name="{Binding AccessibleName}"
                     ContextMenu="{StaticResource ToolItemContextMenu}" ContextMenuOpening="OnCardContextMenuOpening">
                 <Border.InputBindings>
                     <MouseBinding Gesture="LeftDoubleClick" Command="{Binding LaunchCommand}"/>
@@ -130,6 +130,10 @@
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                     </DockPanel>
+                    <!-- Starts with games: centred on the card, so it's in the same place with or without the shield. -->
+                    <TextBlock Grid.Row="0" Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11"
+                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
                     <Grid Grid.Row="1" Width="64" Height="64" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Image Source="{Binding IconImage}" Width="64" Height="64" RenderOptions.BitmapScalingMode="HighQuality"/>
                         <TextBlock Style="{StaticResource ToolFallbackGlyph}" FontSize="32"/>
@@ -149,7 +153,7 @@
         <!-- VIEW 2: SMALL ICONS (32 px) -->
         <DataTemplate x:Key="SmallToolTemplate" DataType="{x:Type vm:ToolCardViewModel}">
             <Border Style="{StaticResource ToolCardBorder}" CornerRadius="6" Width="232" Height="50" Margin="4" Padding="8,0"
-                    AutomationProperties.Name="{Binding Name}"
+                    AutomationProperties.Name="{Binding AccessibleName}"
                     ContextMenu="{StaticResource ToolItemContextMenu}" ContextMenuOpening="OnCardContextMenuOpening">
                 <Border.InputBindings>
                     <MouseBinding Gesture="LeftDoubleClick" Command="{Binding LaunchCommand}"/>
@@ -175,6 +179,9 @@
                         <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,6,0"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,6,0"
+                                   Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
+                                   Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
                         <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}"
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                     </StackPanel>
@@ -185,7 +192,7 @@
         <!-- VIEW 3: LIST -->
         <DataTemplate x:Key="ListToolTemplate" DataType="{x:Type vm:ToolCardViewModel}">
             <Border Style="{StaticResource ToolCardBorder}" CornerRadius="6" Height="46" Margin="0,2,16,3" Padding="10,0"
-                    AutomationProperties.Name="{Binding Name}"
+                    AutomationProperties.Name="{Binding AccessibleName}"
                     ContextMenu="{StaticResource ToolItemContextMenu}" ContextMenuOpening="OnCardContextMenuOpening">
                 <Border.InputBindings>
                     <MouseBinding Gesture="LeftDoubleClick" Command="{Binding LaunchCommand}"/>
@@ -212,6 +219,9 @@
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                         <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
                                    Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="8,0,0,0"
+                                   Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
+                                   Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
                         <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="8,0,0,0"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>

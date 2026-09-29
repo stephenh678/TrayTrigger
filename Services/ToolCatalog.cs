@@ -77,6 +77,13 @@ public static class ToolCatalog
     /// <summary>A Store app, started by its app ID, rather than a program (.exe).</summary>
     public static bool IsStoreApp(ToolEntry tool) => !string.IsNullOrWhiteSpace(tool.AppId);
 
+    /// <summary>
+    /// A program (.exe) can start and close with games. A script already has pre-launch scripts, and a
+    /// Store app can't be told apart when it is already running: starting it again would bring it in
+    /// front of the game.
+    /// </summary>
+    public static bool CanStartWithGames(ToolEntry tool) => !IsStoreApp(tool) && !IsScript(tool);
+
     /// <summary>What the list view and search show for where a tool starts from: the program's path, or the Store app's ID.</summary>
     public static string LaunchDisplay(ToolEntry tool) => IsStoreApp(tool) ? $"Store app: {tool.AppId.Trim()}" : tool.TargetPath;
 
