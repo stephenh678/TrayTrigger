@@ -47,6 +47,10 @@ public class PerformanceProfileService
     internal const int WindowsDefaultSystemResponsiveness = 20;
     internal const string WindowsDefaultSchedulingCategory = "Medium";
 
+    /// <summary>What the Aggressive profile writes.</summary>
+    private const int AggressiveSystemResponsiveness = 10;
+    private const string AggressiveSchedulingCategory = "High";
+
     private readonly IProfileSnapshotStore _store;
     private readonly Func<AppSettings> _settingsProvider;
 
@@ -432,15 +436,22 @@ public class PerformanceProfileService
     /// </summary>
     private SystemTweaksService.RegFileEntry CaptureSystemResponsiveness(PerformanceProfileSessionSnapshot snapshot)
     {
-        snapshot.PreviousSystemResponsiveness = _backend.ReadHklmDword(SystemResponsivenessPath, "SystemResponsiveness");
+        int? current = _backend.ReadHklmDword(SystemResponsivenessPath, "SystemResponsiveness");
+        // Already ours before the game - only the first session captures, so no other is running: most
+        // likely left by an earlier session that never got to restore. Putting that back would keep
+        // the tweak on for good, so it counts as unknown and Windows' default goes back instead.
+        bool leftOver = current == AggressiveSystemResponsiveness;
+        snapshot.PreviousSystemResponsiveness = leftOver ? null : current;
         snapshot.SystemResponsivenessCaptured = true;
 
-        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: setting to 10 (was {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}).");
+        LoggingService.Verbose("PerformanceProfile", leftOver
+            ? $"System Responsiveness: setting to {AggressiveSystemResponsiveness} (already {current}, TrayTrigger's own value left from an earlier game; Windows' default {WindowsDefaultSystemResponsiveness} goes back afterwards)."
+            : $"System Responsiveness: setting to {AggressiveSystemResponsiveness} (was {current?.ToString() ?? "unset"}).");
 
         // Microsoft's MMCSS docs: values below 10 are clamped back up to 20, so 10 is the
         // lowest reserve Windows actually honors.
         return new SystemTweaksService.RegFileEntry(
-            SystemResponsivenessPath, "SystemResponsiveness", 10, RegistryValueKind.DWord, Delete: false);
+            SystemResponsivenessPath, "SystemResponsiveness", AggressiveSystemResponsiveness, RegistryValueKind.DWord, Delete: false);
     }
 
     /// <summary>
@@ -467,14 +478,19 @@ public class PerformanceProfileService
     /// <summary>Captures and returns the change; see <see cref="CaptureSystemResponsiveness"/>.</summary>
     private SystemTweaksService.RegFileEntry CaptureSchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
     {
-        snapshot.PreviousSchedulingCategory = _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category");
+        string? current = _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category");
+        // Already ours before the game: left over, as for System Responsiveness above.
+        bool leftOver = string.Equals(current, AggressiveSchedulingCategory, StringComparison.OrdinalIgnoreCase);
+        snapshot.PreviousSchedulingCategory = leftOver ? null : current;
         snapshot.SchedulingCategoryCaptured = true;
 
-        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: setting to 'High' (was '{snapshot.PreviousSchedulingCategory ?? "unset"}').");
+        LoggingService.Verbose("PerformanceProfile", leftOver
+            ? $"MMCSS Scheduling Category: setting to '{AggressiveSchedulingCategory}' (already '{current}', TrayTrigger's own value left from an earlier game; Windows' default '{WindowsDefaultSchedulingCategory}' goes back afterwards)."
+            : $"MMCSS Scheduling Category: setting to '{AggressiveSchedulingCategory}' (was '{current ?? "unset"}').");
 
         // SFIO Priority is intentionally not written - Microsoft's MMCSS docs state it "is not used".
         return new SystemTweaksService.RegFileEntry(
-            SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", "High", RegistryValueKind.String, Delete: false);
+            SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", AggressiveSchedulingCategory, RegistryValueKind.String, Delete: false);
     }
 
     /// <summary>

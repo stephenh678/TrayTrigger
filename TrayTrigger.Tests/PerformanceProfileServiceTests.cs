@@ -204,6 +204,23 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.DoesNotContain("\"Scheduling Category\"=-", reg);
     }
 
+    /// <summary>
+    /// Already 10 and "High" before the game means an earlier session never restored them. Putting
+    /// those back would leave the tweak on for good: Windows' defaults go back instead.
+    /// </summary>
+    [Fact]
+    public void Aggressive_ValuesAlreadyOurs_RestoreWindowsDefaults()
+    {
+        _backend.Hklm[PerformanceProfileService.SystemResponsivenessPath + "|SystemResponsiveness"] = 10;
+        _backend.Hklm[SystemTweaksService.MmcssGamesTaskPath + "|Scheduling Category"] = "High";
+
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        _service.EndGameSession("g");
+
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Equal("Medium", _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
+    }
+
     /// <summary>A category no Windows version writes isn't put back; Windows' own goes back instead.</summary>
     [Fact]
     public void Aggressive_PreviousCategoryNotOneWindowsDefines_RestoresMedium()
