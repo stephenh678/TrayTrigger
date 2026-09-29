@@ -762,6 +762,38 @@ public partial class ProcessLauncherService
         CloseCompanionToolsIfIdle();
     }
 
+    /// <summary>
+    /// Whether one of <paramref name="games"/> is running without TrayTrigger following it - started
+    /// from Steam or its own launcher, say. A Steam game by Steam's own "running" flag; any other by a
+    /// process from its folder, leaving out known helpers and the processes in <paramref name="ignore"/>
+    /// (the tools themselves, which may live in a game's folder). A game started from a bare link has
+    /// neither, and can't be seen.
+    /// </summary>
+    internal bool IsUntrackedGameRunning(IReadOnlyList<GameEntry> games, IReadOnlySet<int> ignore)
+    {
+        List<(int Pid, string Path)>? running = null;
+        foreach (var game in games)
+        {
+            if (game.IsSteamGame && !string.IsNullOrWhiteSpace(game.SteamAppId) && ReadSteamRunningFlag(game.SteamAppId))
+            {
+                LoggingService.Verbose("Launcher", $"'{game.Name}' is running without TrayTrigger following it (Steam says so).");
+                return true;
+            }
+
+            string dir = ResolveTrackedInstallDir(game);
+            if (ProcessPathResolver.IsUnsafeProcessFolder(dir, out _)) continue;
+            string prefix = ProcessPathResolver.NormalizeDirectory(dir);
+            running ??= ProcessPathResolver.RunningProcessPaths();
+            foreach (var (pid, path) in running)
+            {
+                if (ignore.Contains(pid) || !path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || ProcessPathResolver.IsKnownHelperProcess(path)) continue;
+                LoggingService.Verbose("Launcher", $"'{game.Name}' is running without TrayTrigger following it ({path}, PID {pid}).");
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// <summary>No game is running or being launched: the time to close the tools started with games.</summary>
     private bool IsIdle()
     {
@@ -1040,8 +1072,10 @@ public partial class ProcessLauncherService
             return false;
         }
 
-        // No exit to wait for either, so what starts here is left running.
+        // No exit to wait for either, so what starts here is left running, and so is anything started
+        // for an earlier game: nothing can say when this one is done with it.
         CompanionTools?.StartForGame(game, remember: false);
+        CompanionTools?.KeepOpenFor(game);
 
         LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
         Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });

@@ -408,6 +408,14 @@ public partial class App : Application
                 Dispatcher.BeginInvoke(() => _launchPopup?.EndClosing(tool.Id));
             }
         };
+        // A library game started outside TrayTrigger keeps the tools open until it closes. The library
+        // belongs to the UI thread; closing runs in the background, so it's read there.
+        companionTools.OtherGameRunning = ignore =>
+        {
+            var games = Dispatcher.Invoke(() => _mainViewModel?.Library.Games.Select(c => c.Game).ToList(),
+                System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
+            return games != null && _launcherService.IsUntrackedGameRunning(games, ignore);
+        };
         _launcherService.CompanionTools = companionTools;
 
         // "Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon).

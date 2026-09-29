@@ -489,6 +489,79 @@ public class CompanionToolServiceTests : IDisposable
         return condition();
     }
 
+    // ------------------------------------------------------------------ games TrayTrigger isn't following
+
+    [Fact]
+    public void AGameStartedFromALink_KeepsTheToolsOpen()
+    {
+        AddClosing("MSI Afterburner");
+        _service.StartForGame(Game, remember: true);
+
+        _service.KeepOpenFor(new GameEntry { Id = "g2", Name = "Some link" });
+        _service.CloseIfIdle(() => true);
+
+        Assert.Empty(_service.Remembered);
+        Assert.Empty(_ended);
+    }
+
+    [Fact]
+    public void AnUntrackedGameRunning_ClosingWaitsForIt_ThenCloses()
+    {
+        AddClosing("MSI Afterburner");
+        bool gameRunning = true;
+        IReadOnlySet<int>? ignored = null;
+        _service.OtherGameRunning = ours =>
+        {
+            ignored = ours;
+            return gameRunning;
+        };
+        var scheduled = new List<(TimeSpan Delay, Action Action)>();
+        _service.Schedule = (delay, action) => scheduled.Add((delay, action));
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+        _service.CloseIfIdle(() => true);   // a second end while waiting doesn't schedule a second look
+
+        Assert.Empty(_ended);
+        var recheck = Assert.Single(scheduled);
+        Assert.Equal(TimeSpan.FromSeconds(30), recheck.Delay);
+        // The tool's own process is left out, in case it lives in a game's folder.
+        Assert.Contains(Environment.ProcessId, ignored!);
+
+        gameRunning = false;
+        recheck.Action();
+
+        Assert.Equal(["MSI Afterburner"], _ended);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void IsUntrackedGameRunning_SeesAProcessFromTheGamesFolder_ButNotTheToolsOwn()
+    {
+        string folder = Path.Combine(_root, "Some Game");
+        string exe = CopyPing(folder, "TTGame" + Guid.NewGuid().ToString("N")[..8]);
+        var game = new GameEntry { Id = "outside", Name = "Some Game", ExecutablePath = exe, WorkingDirectory = folder };
+        var storage = new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"));
+        var launcher = new ProcessLauncherService(
+            storage, new PerformanceProfileService(storage), new GameScriptService(),
+            new SteamScannerService(), new GogScannerService(), new EaScannerService(),
+            new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService(), new BattleNetScannerService());
+
+        Assert.False(launcher.IsUntrackedGameRunning([game], new HashSet<int>()));
+
+        using var process = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        try
+        {
+            Assert.True(launcher.IsUntrackedGameRunning([game], new HashSet<int>()));
+            Assert.False(launcher.IsUntrackedGameRunning([game], new HashSet<int> { process.Id }));
+        }
+        finally
+        {
+            process.Kill();
+            process.WaitForExit(5000);
+        }
+    }
+
     [Fact]
     public void OneToolFailingToClose_DoesNotStopTheOthers()
     {
