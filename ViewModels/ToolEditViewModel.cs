@@ -39,7 +39,7 @@ public sealed class ToolEditViewModel : ViewModelBase
         _tool = tool;
         _icons = icons;
         _name = tool.Name;
-        _category = LibraryConstants.NormalizeCategory(tool.Category);
+        _category = ToolCatalog.NormalizeCategory(tool.Category);
         _targetPath = tool.TargetPath;
         _arguments = tool.Arguments;
         _workingDirectory = tool.WorkingDirectory;
@@ -248,7 +248,7 @@ public sealed class ToolEditViewModel : ViewModelBase
         }
 
         _tool.Name = name;
-        _tool.Category = LibraryConstants.NormalizeCategory(Category);
+        _tool.Category = ToolCatalog.NormalizeCategory(Category);
         _tool.Arguments = Arguments.Trim();
         _tool.IsFavorite = IsFavorite;
         _tool.Hotkey = HotkeyManager.Normalize(Hotkey) ?? string.Empty;

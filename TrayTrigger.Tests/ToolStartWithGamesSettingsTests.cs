@@ -57,6 +57,43 @@ public class ToolStartWithGamesSettingsTests : IDisposable
         Assert.Equal(expected, ToolCatalog.CanStartWithGames(new ToolEntry { TargetPath = target, AppId = appId }));
 
     [Fact]
+    public void Tabs_WithGamesOnlyWhileAToolStartsWithGames_AfterFavorites()
+    {
+        var afterburner = new ToolEntry { Name = "MSI Afterburner", TargetPath = @"C:\Tools\MSIAfterburner.exe", Category = "Graphics" };
+        var vortex = new ToolEntry { Name = "Vortex", TargetPath = @"C:\Tools\Vortex.exe", Category = "Mods" };
+        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, vortex]));
+
+        afterburner.StartWithGames = true;
+
+        Assert.Equal([LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, ToolCatalog.WithGamesTab, "Graphics", "Mods"], ToolCatalog.TabsFor([afterburner, vortex]));
+    }
+
+    [Fact]
+    public void WithGamesTab_ListsOnlyToolsThatStartWithGames()
+    {
+        var afterburner = new ToolEntry { TargetPath = @"C:\Tools\MSIAfterburner.exe", StartWithGames = true };
+        var vortex = new ToolEntry { TargetPath = @"C:\Tools\Vortex.exe" };
+        // Ticked in a hand-edited tools.json; a script can't start with games, so it isn't listed.
+        var script = new ToolEntry { TargetPath = @"C:\Tools\backup.ps1", StartWithGames = true };
+
+        Assert.True(ToolCatalog.IsInTab(afterburner, ToolCatalog.WithGamesTab));
+        Assert.False(ToolCatalog.IsInTab(vortex, ToolCatalog.WithGamesTab));
+        Assert.False(ToolCatalog.IsInTab(script, ToolCatalog.WithGamesTab));
+    }
+
+    [Fact]
+    public void ACategoryCalledWithGames_IsUncategorized_SoItCantBeTakenForTheTab()
+    {
+        var tool = new ToolEntry { TargetPath = @"C:\Tools\Vortex.exe", Category = "with games" };
+
+        Assert.Equal(LibraryConstants.Uncategorized, ToolCatalog.NormalizeCategory(tool.Category));
+        Assert.Equal([LibraryConstants.Uncategorized], ToolCatalog.CategoriesOf([tool]));
+        Assert.False(ToolCatalog.IsInTab(tool, ToolCatalog.WithGamesTab));
+        // Adding a tool while the tab is selected doesn't make a category of it either.
+        Assert.Equal(LibraryConstants.Uncategorized, ToolCatalog.CategoryForNewTool(ToolCatalog.WithGamesTab));
+    }
+
+    [Fact]
     public void Save_Program_KeepsBothBoxes() => Sta(() =>
     {
         var tool = new ToolEntry { Name = "MSI Afterburner", TargetPath = File("MSIAfterburner.exe") };

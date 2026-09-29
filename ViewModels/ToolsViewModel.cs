@@ -261,7 +261,8 @@ public sealed class ToolsViewModel : ViewModelBase
         {
             string display = tab == LibraryConstants.AllCategory ? "All Tools" : tab;
             bool isSelected = string.Equals(tab, _selectedCategory, StringComparison.OrdinalIgnoreCase);
-            CategoryTabs.Add(new CategoryTabItem(tab, display, isSelected, name => SelectedCategory = name));
+            CategoryTabs.Add(new CategoryTabItem(tab, display, isSelected, name => SelectedCategory = name,
+                isWithGamesTab: tab == ToolCatalog.WithGamesTab));
         }
         OnPropertyChanged(nameof(SelectedCategory));
     }
@@ -731,7 +732,7 @@ public sealed class ToolsViewModel : ViewModelBase
         };
         if (dialog.ShowDialog() == true)
         {
-            card.Tool.Category = LibraryConstants.NormalizeCategory(dialog.ResultValue);
+            card.Tool.Category = ToolCatalog.NormalizeCategory(dialog.ResultValue);
             card.RefreshState();
             CommitChanges($"Moved \"{card.Name}\" to {card.Category}");
         }
@@ -884,7 +885,7 @@ public sealed class ToolsViewModel : ViewModelBase
         };
         if (dialog.ShowDialog() != true) return;
 
-        string category = LibraryConstants.NormalizeCategory(dialog.ResultValue);
+        string category = ToolCatalog.NormalizeCategory(dialog.ResultValue);
         foreach (var card in cards)
         {
             card.Tool.Category = category;

@@ -9,7 +9,7 @@ Tick "Start when I launch a game" in Edit Tool and TrayTrigger starts the tool j
 - For a tool with launch arguments, "already running" means a copy started with the same arguments. A tool that runs a script or .jar through javaw.exe, python.exe or AutoHotkey therefore starts even when other programs of that kind are open. The other side of it: an app you gave an option like -m is started again if you opened it yourself without that option, so use the app's own "start minimized" setting instead.
 - The tool starts after the game's pre-launch script and before the game. If Windows asks for permission to run it, the game waits for your answer and the launch popup says "Starting (the tool) first". If you decline, the tool stays closed and the game still starts.
 - Tick "Wait before starting the game" for a tool that needs a moment to get ready, and set how many seconds, from 1 to 60. Afterburner's on-screen display, for example, can end up in the middle of the screen when the game opens before it's ready. The game only waits when TrayTrigger has just started the tool, not when it was already running, and with several tools it waits for the longest one.
-- A tool that starts with games shows the Library's controller icon on its card.
+- A tool that starts with games shows the Library's controller icon on its card, and is listed on the With Games tab.
 
 ## Closing it again
 

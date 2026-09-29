@@ -304,6 +304,10 @@
                                         <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}"
                                                    FontSize="13" Foreground="#FFD700" Margin="0,0,5,0" VerticalAlignment="Center"
                                                    Visibility="{Binding IsFavoritesTab, Converter={StaticResource BoolToVis}}"/>
+                                        <!-- The cards' controller, in the tab's own text colour so it reads selected or not. -->
+                                        <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}"
+                                                   FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsWithGamesTab, Converter={StaticResource BoolToVis}}"/>
                                         <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>

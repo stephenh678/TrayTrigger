@@ -39,7 +39,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 ## Categories, favorites and sorting
 
 - Tools have their own categories, separate from game categories. Set one with Change Category... or in Edit Tool; the picker suggests the categories your tools already use.
-- The tabs are All Tools, Favorites, then each category A to Z. A category tab disappears when its last tool leaves it.
+- The tabs are All Tools, Favorites, With Games while a tool starts with games, then each category A to Z. A category tab disappears when its last tool leaves it, and With Games when no tool starts with games any more. "With Games" can't be a category name, so a tool given it goes to Uncategorized.
 - Click the star on a tool to make it a favorite.
 - Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category, program path or Store app ID.
 - Three views: Large Icons, Small Icons and List. The page remembers the view, sort and tab you last used.
@@ -71,7 +71,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 ## Starting with your games
 
 - Tick "Start when I launch a game" in Edit Tool and the tool starts just before any game TrayTrigger launches, unless it's already running. Tick "Close it when the game exits" too and the copy TrayTrigger started is closed again once your last game has closed.
-- A tool that starts with games shows the Library's controller icon on its card.
+- A tool that starts with games shows the Library's controller icon on its card, and is listed on the With Games tab.
 - The Starting tools with your games topic has the details, including the permission prompts for a program that runs as administrator.
 
 ## Hotkeys
