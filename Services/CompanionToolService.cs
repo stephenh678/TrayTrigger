@@ -161,6 +161,9 @@ public sealed partial class CompanionToolService
         if (waitFor is not { } last) return;
         TimeSpan remaining = last.ReadyAt - UtcNow();
         if (remaining <= TimeSpan.Zero) return;
+        // The clock can be moved back while tools start (a time sync just after boot): never past the maximum.
+        TimeSpan longest = TimeSpan.FromSeconds(ToolCatalog.MaxWaitSeconds);
+        if (remaining > longest) remaining = longest;
 
         Announce(game, last.Tool);
         LoggingService.Verbose("Tools", $"Waiting {remaining.TotalSeconds:0.#}s for '{last.Tool.Name}' to get ready before starting '{game.Name}'.");
@@ -225,9 +228,19 @@ public sealed partial class CompanionToolService
             {
                 // Forgotten whatever happens next: if it isn't closed now, it's the user's from here on.
                 _started.Remove(id);
+                var tool = tools.FirstOrDefault(t => t.Id == id);
                 using (process)
                 {
-                    Close(tools.FirstOrDefault(t => t.Id == id), process);
+                    // One tool failing must not leave the rest open. This runs on a task nobody awaits,
+                    // so an exception that escaped would never be seen.
+                    try
+                    {
+                        Close(tool, process);
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Warn("Tools", $"Could not close '{tool?.Name ?? id}': {ex.Message}");
+                    }
                 }
             }
         }

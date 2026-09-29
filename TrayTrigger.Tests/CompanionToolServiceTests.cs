@@ -273,6 +273,19 @@ public class CompanionToolServiceTests : IDisposable
     }
 
     [Fact]
+    public void Wait_ClockMovedBackWhileStarting_IsStillAtMostAMinute()
+    {
+        AddWaiting("MSI Afterburner", 7);
+        int reads = 0;
+        // Read once when the tool starts, then ten minutes earlier: a time sync just after boot.
+        _service.UtcNow = () => reads++ == 0 ? _now : _now.AddMinutes(-10);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Contains("wait 60s", _events);
+    }
+
+    [Fact]
     public void Wait_FromAHandEditedFile_IsKeptWithinAMinute()
     {
         AddWaiting("MSI Afterburner", 100000);
@@ -382,6 +395,26 @@ public class CompanionToolServiceTests : IDisposable
         _service.CloseIfIdle(() => true);
 
         Assert.Empty(_ended);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void OneToolFailingToClose_DoesNotStopTheOthers()
+    {
+        AddClosing("SimHub");
+        AddClosing("TrackIR");
+        int calls = 0;
+        _service.EndCopy = (_, _) =>
+        {
+            if (calls++ == 0) throw new Win32Exception(6, "The handle is invalid");
+            _ended.Add("second");
+            return CompanionToolService.EndResult.Ended;
+        };
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.Equal(["second"], _ended);
         Assert.Empty(_service.Remembered);
     }
 
