@@ -18,4 +18,5 @@ Lowers the share of CPU time Windows reserves for low-priority background work, 
 
 ## Details
 
-- Sets SystemResponsiveness=10 under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile, and restores the previous value on exit.
+- Sets SystemResponsiveness=10 under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile, and restores the previous value on exit, or Windows' default of 20 when there wasn't one TrayTrigger could read.
+- The value is never removed: without it, the Multimedia Class Scheduler doesn't start.

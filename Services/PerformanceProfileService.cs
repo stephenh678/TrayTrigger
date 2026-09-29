@@ -39,6 +39,14 @@ public class PerformanceProfileService
 {
     internal const string SystemResponsivenessPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
 
+    /// <summary>
+    /// Windows' own values, put back when what was there before isn't known. Never a delete: MMCSS
+    /// reads SystemProfile when it starts, and without SystemResponsiveness it doesn't start at all
+    /// ("The server is currently disabled"), which takes webcams and audio in some apps down with it.
+    /// </summary>
+    internal const int WindowsDefaultSystemResponsiveness = 20;
+    internal const string WindowsDefaultSchedulingCategory = "Medium";
+
     private readonly IProfileSnapshotStore _store;
     private readonly Func<AppSettings> _settingsProvider;
 
@@ -435,20 +443,24 @@ public class PerformanceProfileService
             SystemResponsivenessPath, "SystemResponsiveness", 10, RegistryValueKind.DWord, Delete: false);
     }
 
-    /// <summary>The change that puts it back, or false when there is nothing captured to undo.</summary>
+    /// <summary>
+    /// The change that puts it back, or false when there is nothing captured to undo: what was there
+    /// before, or Windows' default when that isn't known (absent, unreadable, not a number). Never a
+    /// delete - see <see cref="WindowsDefaultSystemResponsiveness"/>.
+    /// </summary>
     private static bool TryRestoreSystemResponsiveness(
         PerformanceProfileSessionSnapshot snapshot, out SystemTweaksService.RegFileEntry entry)
     {
         entry = default;
         if (!snapshot.SystemResponsivenessCaptured) return false;
 
-        entry = snapshot.PreviousSystemResponsiveness.HasValue
-            ? new SystemTweaksService.RegFileEntry(SystemResponsivenessPath, "SystemResponsiveness",
-                snapshot.PreviousSystemResponsiveness.Value, RegistryValueKind.DWord, Delete: false)
-            : new SystemTweaksService.RegFileEntry(SystemResponsivenessPath, "SystemResponsiveness",
-                null, RegistryValueKind.None, Delete: true);
+        int value = snapshot.PreviousSystemResponsiveness ?? WindowsDefaultSystemResponsiveness;
+        entry = new SystemTweaksService.RegFileEntry(SystemResponsivenessPath, "SystemResponsiveness",
+            value, RegistryValueKind.DWord, Delete: false);
 
-        LoggingService.Verbose("PerformanceProfile", $"System Responsiveness: restoring to {snapshot.PreviousSystemResponsiveness?.ToString() ?? "unset"}.");
+        LoggingService.Verbose("PerformanceProfile", snapshot.PreviousSystemResponsiveness.HasValue
+            ? $"System Responsiveness: restoring to {value}."
+            : $"System Responsiveness: what it was before isn't known; restoring Windows' default, {value}.");
         return true;
     }
 
@@ -466,9 +478,10 @@ public class PerformanceProfileService
     }
 
     /// <summary>
-    /// The change that puts it back. False when there is nothing captured, and also when the
-    /// captured value is not one Windows defines - writing that back would be worse than leaving
-    /// ours in place, and it must not be the only reason an elevated prompt is raised either.
+    /// The change that puts it back, or false when there is nothing captured to undo: what was there
+    /// before when it's one of the categories Windows defines, otherwise Windows' default - for a
+    /// value that isn't known, and for one no Windows version writes, which it would be wrong to put
+    /// back. Never a delete, which would leave the Games task incomplete.
     /// </summary>
     private static bool TryRestoreSchedulingCategory(
         PerformanceProfileSessionSnapshot snapshot, out SystemTweaksService.RegFileEntry entry)
@@ -476,23 +489,26 @@ public class PerformanceProfileService
         entry = default;
         if (!snapshot.SchedulingCategoryCaptured) return false;
 
-        if (snapshot.PreviousSchedulingCategory != null)
+        string? previous = snapshot.PreviousSchedulingCategory;
+        string value;
+        if (previous == null)
         {
-            if (!ProfileSnapshotValidator.IsValidSchedulingCategory(snapshot.PreviousSchedulingCategory))
-            {
-                LoggingService.Warn("PerformanceProfile", $"MMCSS Scheduling Category: not restoring - captured value '{snapshot.PreviousSchedulingCategory}' is not one Windows defines.");
-                return false;
-            }
-            entry = new SystemTweaksService.RegFileEntry(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category",
-                snapshot.PreviousSchedulingCategory, RegistryValueKind.String, Delete: false);
+            value = WindowsDefaultSchedulingCategory;
+            LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: what it was before isn't known; restoring Windows' default, '{value}'.");
+        }
+        else if (!ProfileSnapshotValidator.IsValidSchedulingCategory(previous))
+        {
+            value = WindowsDefaultSchedulingCategory;
+            LoggingService.Warn("PerformanceProfile", $"MMCSS Scheduling Category: captured value '{previous}' is not one Windows defines; restoring Windows' default, '{value}'.");
         }
         else
         {
-            entry = new SystemTweaksService.RegFileEntry(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category",
-                null, RegistryValueKind.None, Delete: true);
+            value = previous;
+            LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: restoring to '{value}'.");
         }
 
-        LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: restoring to '{snapshot.PreviousSchedulingCategory ?? "unset"}'.");
+        entry = new SystemTweaksService.RegFileEntry(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category",
+            value, RegistryValueKind.String, Delete: false);
         return true;
     }
 

@@ -18,4 +18,4 @@ Raises the Multimedia Class Scheduler's built-in "Games" task from its default M
 
 ## Details
 
-- Sets Scheduling Category=High under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games, and restores the previous value on exit.
+- Sets Scheduling Category=High under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games, and restores the previous value on exit, or Windows' default, Medium, when there wasn't one TrayTrigger could read or it wasn't a category Windows uses. The value is never removed.
