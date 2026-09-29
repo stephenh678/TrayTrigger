@@ -383,6 +383,21 @@ public partial class App : Application
         _launcherService.SessionGameStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnGameStarted(s.GameId));
         _launcherService.SessionEnded += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionEnded(s.GameId));
 
+        // Tools that start with games (Edit Tool). The popup is updated before the tool starts, not
+        // queued, so it already names the tool when Windows' administrator prompt dims the screen;
+        // the timeout keeps a busy UI thread from holding up the launch.
+        var companionTools = new CompanionToolService(
+            tools: () => _mainViewModel?.Tools.ToolsSnapshot ?? [],
+            isEnabled: () => _mainViewModel?.Settings.EnableTools == true);
+        companionTools.Starting += (game, tool) =>
+            Dispatcher.Invoke(() => _launchPopup?.OnStartingTool(game.Id, tool?.Name),
+                System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
+        companionTools.StartFailed += message => Dispatcher.BeginInvoke(() =>
+        {
+            if (_mainViewModel != null) _mainViewModel.Library.StatusMessage = message;
+        });
+        _launcherService.CompanionTools = companionTools;
+
         // "Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon).
         _launcherService.KeepLaunchersMinimized = () => _mainViewModel?.Settings.KeepLaunchersMinimized == true;
         // The pre-launch DLSS reapply can mark a game conflicted, and the in-session observer

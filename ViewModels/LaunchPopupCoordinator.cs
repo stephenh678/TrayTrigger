@@ -111,6 +111,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     private LaunchTarget? _target;
     private LaunchPopupKind _kind;
     private string? _platform;
+    private string? _startingTool;
     private string? _message;
     private string? _actionText;
     private Action? _action;
@@ -178,6 +179,17 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         Render(_kind);
     }
 
+    /// <summary>
+    /// A tool that starts with games is being started before this game, or null once they all have.
+    /// Its administrator prompt holds up the launch, so the popup says what is being waited on.
+    /// </summary>
+    public void OnStartingTool(string id, string? toolName)
+    {
+        if (!IsProgressFor(id)) return;
+        _startingTool = toolName;
+        Render(_kind);
+    }
+
     /// <summary>The game's own process is running.</summary>
     public void OnGameStarted(string id)
     {
@@ -237,6 +249,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _token++;
         _target = target;
         _platform = null;
+        _startingTool = null;
         _message = message;
         _actionText = actionText;
         _action = action;
@@ -263,6 +276,13 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
             LaunchPopupKind.Waiting => WaitingDetail(_platform),
             _ => _message,
         };
+
+        // Until its tools have started the game hasn't been dispatched, so there's nothing else to wait on.
+        if (_startingTool != null && kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting)
+        {
+            status = "Launching";
+            detail = $"Starting {_startingTool} first";
+        }
 
         _view.Show(new LaunchPopupContent(kind, _target.Name, status, detail, _iconFor(_target), _actionText));
     }
@@ -308,6 +328,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         CancelTimers();
         _token++;
         _target = null;
+        _startingTool = null;
         _action = null;
         _view.Hide();
     }

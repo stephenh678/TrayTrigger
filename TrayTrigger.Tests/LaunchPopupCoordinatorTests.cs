@@ -175,6 +175,35 @@ public class LaunchPopupCoordinatorTests
     }
 
     [Fact]
+    public void StartingTool_NamesTheToolUntilItHasStarted_EvenPastTheWaitingTime()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnStartingTool("a", "MSI Afterburner");
+        Assert.Equal("Launching", rig.View.Shown!.Status);
+        Assert.Equal("Starting MSI Afterburner first", rig.View.Shown.Detail);
+
+        // An administrator prompt can take longer than WaitingAfter to answer.
+        rig.Fire(d => d == LaunchPopupCoordinator.WaitingAfter);
+        Assert.Equal("Starting MSI Afterburner first", rig.View.Shown!.Detail);
+
+        rig.Popup.OnStartingTool("a", null);
+        Assert.Equal("Still starting", rig.View.Shown!.Status);
+    }
+
+    [Fact]
+    public void StartingTool_ForAnotherLaunch_IsIgnored()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnStartingTool("b", "MSI Afterburner");
+
+        Assert.Null(rig.View.Shown!.Detail);
+    }
+
+    [Fact]
     public void Waiting_LocalGame_DoesNotClaimALauncher()
     {
         var rig = new Rig();

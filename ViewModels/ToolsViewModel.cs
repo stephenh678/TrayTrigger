@@ -185,6 +185,16 @@ public sealed class ToolsViewModel : ViewModelBase
 
     public ToolCardViewModel? FindCard(string id) => Tools.FirstOrDefault(c => c.Id == id);
 
+    private volatile IReadOnlyList<ToolEntry> _snapshot = [];
+
+    /// <summary>
+    /// Every tool, as of the last load or change. For the launch thread, which starts the tools that
+    /// start with games and must not walk <see cref="Tools"/> while the UI changes it.
+    /// </summary>
+    public IReadOnlyList<ToolEntry> ToolsSnapshot => _snapshot;
+
+    private void TakeSnapshot() => _snapshot = Tools.Select(c => c.Tool).ToList();
+
     // ------------------------------------------------------------------ load & save
 
     public void Load()
@@ -194,6 +204,7 @@ public sealed class ToolsViewModel : ViewModelBase
         {
             Tools.Add(new ToolCardViewModel(tool, this));
         }
+        TakeSnapshot();
         RebuildTabs();
         RefreshView();
         if (!string.IsNullOrWhiteSpace(_storage.ToolsLoadWarning))
@@ -222,6 +233,7 @@ public sealed class ToolsViewModel : ViewModelBase
     /// <summary>After any change to the tools: tabs, view, disk, then hotkeys and tray.</summary>
     private void CommitChanges(string? status = null)
     {
+        TakeSnapshot();
         RebuildTabs();
         RefreshView();
         Save();

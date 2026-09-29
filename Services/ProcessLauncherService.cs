@@ -194,6 +194,9 @@ public partial class ProcessLauncherService
     /// </summary>
     public DlssOverrideService DlssOverrides { get; set; } = new();
 
+    /// <summary>Tools that start with games (Edit Tool). Set by App; unset in tests, where none start.</summary>
+    public CompanionToolService? CompanionTools { get; set; }
+
     /// <summary>The Epic launch link. "silent=true" asks the launcher not to show its window.</summary>
     internal static string BuildEpicLaunchUrl(string appName, bool silent) =>
         $"com.epicgames.launcher://apps/{Uri.EscapeDataString(appName)}?action=launch{(silent ? "&silent=true" : string.Empty)}";
@@ -481,10 +484,10 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
-    /// Applies the profile, runs the pre-launch script, and registers the session. Returns null
-    /// (with <paramref name="abortReason"/> set) if the pre-launch script asked to cancel the launch,
-    /// in which case everything already applied has been rolled back.
-    /// Order: profile → pre-launch script → game. See PerformanceProfileService for why the
+    /// Applies the profile, runs the pre-launch script, starts the tools that start with games, and
+    /// registers the session. Returns null (with <paramref name="abortReason"/> set) if the pre-launch
+    /// script asked to cancel the launch, in which case everything already applied has been rolled back.
+    /// Order: profile → pre-launch script → tools → game. See PerformanceProfileService for why the
     /// profile goes first.
     /// </summary>
     private ActiveGameSession? BeginSession(GameEntry game, LaunchRoute route, out string? abortReason)
@@ -510,6 +513,10 @@ public partial class ProcessLauncherService
             RollbackSession(session);
             return null;
         }
+
+        // After the script, so a launch it cancels starts nothing; before the game, so a tool's
+        // administrator prompt is answered before the game can go full screen over it.
+        CompanionTools?.StartForGame(game, remember: true);
 
         // Guarded like SessionGameStarted and SessionEnded: a subscriber's failure must not turn
         // into a rolled-back session and a "launch failed" for a game that was about to start.
@@ -1013,6 +1020,9 @@ public partial class ProcessLauncherService
             errorMessage = $"Launch of \"{game.Name}\" was cancelled because {scriptResult.AbortReason}.";
             return false;
         }
+
+        // No exit to wait for either, so what starts here is left running.
+        CompanionTools?.StartForGame(game, remember: false);
 
         LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
         Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });
