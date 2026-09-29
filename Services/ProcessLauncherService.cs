@@ -765,12 +765,16 @@ public partial class ProcessLauncherService
     /// <summary>
     /// One of <paramref name="games"/> that is running without TrayTrigger following it - started from
     /// Steam or its own launcher, say - described for the log, or null. A Steam game by Steam's own
-    /// "running" flag; any other by a process from its folder, leaving out known helpers and the
-    /// processes in <paramref name="ignore"/> (the tools themselves, which may live in a game's folder).
-    /// A game started from a bare link has neither, and can't be seen.
+    /// "running" flag; any other by a process from its folder that has a window showing, leaving out
+    /// known helpers and the processes in <paramref name="ignore"/> (the tools themselves, which may
+    /// live in a game's folder). The window is what tells a game being played from something left in
+    /// its folder in the background, which would otherwise hold the tools open for good; a game's own
+    /// launcher left open still counts, and they close once it does. A game started from a bare link
+    /// has neither, and can't be seen.
     /// </summary>
-    internal string? FindUntrackedRunningGame(IReadOnlyList<GameEntry> games, IReadOnlySet<int> ignore)
+    internal string? FindUntrackedRunningGame(IReadOnlyList<GameEntry> games, IReadOnlySet<int> ignore, Func<int, bool>? hasVisibleWindow = null)
     {
+        hasVisibleWindow ??= ProcessPathResolver.HasVisibleWindow;
         List<(int Pid, string Path)>? running = null;
         foreach (var game in games)
         {
@@ -786,6 +790,11 @@ public partial class ProcessLauncherService
             foreach (var (pid, path) in running)
             {
                 if (ignore.Contains(pid) || !path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || ProcessPathResolver.IsKnownHelperProcess(path)) continue;
+                if (!hasVisibleWindow(pid))
+                {
+                    LoggingService.Verbose("Launcher", $"Not counting {path} (PID {pid}) as '{game.Name}' running: it has no window showing.");
+                    continue;
+                }
                 return $"'{game.Name}' ({path}, PID {pid})";
             }
         }

@@ -380,6 +380,35 @@ public static partial class ProcessPathResolver
         return result;
     }
 
+    /// <summary>Every top-level window the process owns, shown or not.</summary>
+    public static List<IntPtr> TopLevelWindows(int pid)
+    {
+        var windows = new List<IntPtr>();
+        IntPtr window = IntPtr.Zero;
+        while ((window = FindWindowEx(IntPtr.Zero, window, null, null)) != IntPtr.Zero)
+        {
+            GetWindowThreadProcessId(window, out uint owner);
+            if (owner == pid) windows.Add(window);
+        }
+        return windows;
+    }
+
+    /// <summary>
+    /// The process has a top-level window that is shown - minimized counts. A game being played always
+    /// has one; a service, crash reporter or tray helper running in the background doesn't.
+    /// </summary>
+    public static bool HasVisibleWindow(int pid) => TopLevelWindows(pid).Any(IsWindowVisible);
+
+    [LibraryImport("user32.dll", EntryPoint = "FindWindowExW", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string? className, string? windowName);
+
+    [LibraryImport("user32.dll")]
+    private static partial uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool IsWindowVisible(IntPtr window);
+
     private const int ProcessCommandLineInformation = 60;
 
     [LibraryImport("ntdll.dll")]

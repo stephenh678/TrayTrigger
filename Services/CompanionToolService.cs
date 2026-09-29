@@ -87,7 +87,7 @@ public sealed partial class CompanionToolService
     internal static IReadOnlyList<HeldProcess> StartedAsItStartedUp(HeldProcess root) =>
         ProcessTree.StartupDescendants(root, StartupWindow, child =>
         {
-            if (!TopLevelWindows(child.Id).Any(IsWindowVisible)) return true;
+            if (!ProcessPathResolver.HasVisibleWindow(child.Id)) return true;
             LoggingService.Verbose("Tools", $"Leaving {child.Name} (PID {child.Id}) open: '{root.Name}' started it, but it has a window of its own.");
             return false;
         });
@@ -454,7 +454,7 @@ public sealed partial class CompanionToolService
         var denied = new List<HeldProcess>();
         foreach (var target in targets)
         {
-            foreach (IntPtr window in TopLevelWindows(target.Id))
+            foreach (IntPtr window in ProcessPathResolver.TopLevelWindows(target.Id))
             {
                 if (!PostMessage(window, WmClose, IntPtr.Zero, IntPtr.Zero) && Marshal.GetLastPInvokeError() == ErrorAccessDenied)
                 {
@@ -527,29 +527,6 @@ public sealed partial class CompanionToolService
             target.WaitForExit(left);
         }
     }
-
-    /// <summary>Every top-level window the process owns, visible or not.</summary>
-    private static List<IntPtr> TopLevelWindows(int pid)
-    {
-        var windows = new List<IntPtr>();
-        IntPtr window = IntPtr.Zero;
-        while ((window = FindWindowEx(IntPtr.Zero, window, null, null)) != IntPtr.Zero)
-        {
-            GetWindowThreadProcessId(window, out uint owner);
-            if (owner == pid) windows.Add(window);
-        }
-        return windows;
-    }
-
-    [LibraryImport("user32.dll", EntryPoint = "FindWindowExW", StringMarshalling = StringMarshalling.Utf16)]
-    private static partial IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string? className, string? windowName);
-
-    [LibraryImport("user32.dll")]
-    private static partial uint GetWindowThreadProcessId(IntPtr window, out uint processId);
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool IsWindowVisible(IntPtr window);
 
     [LibraryImport("user32.dll", EntryPoint = "PostMessageW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

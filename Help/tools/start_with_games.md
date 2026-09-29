@@ -14,7 +14,7 @@ Tick "Start when I launch a game" in Edit Tool and TrayTrigger starts the tool j
 ## Closing it again
 
 - Tick "Close it when the game exits" as well to close the tool once your last game has closed. With two games running, it stays open until both have closed.
-- A game from your library that you started outside TrayTrigger, from Steam for example, keeps the tool open too: TrayTrigger looks again every 30 seconds and closes it once that game has gone.
+- A game from your library that you started outside TrayTrigger, from Steam for example, keeps the tool open too: TrayTrigger looks again every 30 seconds and closes it once that game has gone. A program in the game's folder counts only while it has a window open, so a helper left running in the background doesn't hold the tool open; the game's own launcher, left open, does until you close it.
 - A game started from a web or launcher link keeps the tools open for good. TrayTrigger can't see when it exits, so they're yours to close.
 - Only the copy TrayTrigger started is closed. One you opened yourself is left running.
 - Programs the tool starts in the background as it starts up, within its first 30 seconds, are closed with it: Afterburner's RTSS in the tray, for example. One with a window of its own, like a browser the tool opened, is left alone, and so is anything you open from the tool later.

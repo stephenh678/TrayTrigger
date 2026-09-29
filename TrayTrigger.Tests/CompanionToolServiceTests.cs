@@ -591,17 +591,22 @@ public class CompanionToolServiceTests : IDisposable
             new SteamScannerService(), new GogScannerService(), new EaScannerService(),
             new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService(), new BattleNetScannerService());
 
-        Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>()));
+        Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>(), _ => true));
 
         using var process = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
         try
         {
             // Named for the log, so a tester's log says what kept the tools open.
-            string? found = launcher.FindUntrackedRunningGame([game], new HashSet<int>());
+            string? found = launcher.FindUntrackedRunningGame([game], new HashSet<int>(), _ => true);
             Assert.NotNull(found);
             Assert.Contains("'Some Game'", found);
             Assert.Contains($"PID {process.Id}", found);
-            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int> { process.Id }));
+            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int> { process.Id }, _ => true));
+
+            // Something left running in the folder with no window showing isn't the game being played.
+            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>(), _ => false));
+            // And this one really has none, so the real check agrees.
+            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>()));
         }
         finally
         {
