@@ -69,11 +69,22 @@ public sealed partial class CompanionToolService
     /// <summary>How long a tool is given to close when asked, before it is ended.</summary>
     internal TimeSpan CloseGrace { get; set; } = TimeSpan.FromSeconds(5);
 
-    /// <summary>Asks the copy to close, then ends it. Replaced in tests.</summary>
-    internal Func<Process, TimeSpan, EndResult> EndCopy { get; set; } = EndNormally;
+    /// <summary>
+    /// How long after a tool starts a program it starts still counts as part of it, and is closed with
+    /// it: Afterburner starts RTSS within seconds. One opened from it later, like a browser for a link,
+    /// is left alone.
+    /// </summary>
+    internal static readonly TimeSpan StartupWindow = TimeSpan.FromSeconds(30);
 
-    /// <summary>The same with administrator rights, behind one UAC prompt; true when it has closed. Replaced in tests.</summary>
-    internal Func<Process, TimeSpan, bool> EndCopyAsAdministrator { get; set; } = EndElevated;
+    /// <summary>The programs a copy started as it started up. Replaced in tests.</summary>
+    internal Func<HeldProcess, IReadOnlyList<HeldProcess>> FindStartedBy { get; set; } =
+        root => ProcessTree.StartupDescendants(root, StartupWindow);
+
+    /// <summary>Asks the copy and what it started to close, then ends them. Replaced in tests.</summary>
+    internal Func<IReadOnlyList<HeldProcess>, TimeSpan, EndResult> EndCopy { get; set; } = EndNormally;
+
+    /// <summary>The same with administrator rights, behind one UAC prompt; true when they have all closed. Replaced in tests.</summary>
+    internal Func<IReadOnlyList<HeldProcess>, TimeSpan, bool> EndCopyAsAdministrator { get; set; } = EndElevated;
 
     /// <summary>
     /// A tool running as administrator is about to be closed (true), which takes Windows' permission,
@@ -260,28 +271,51 @@ public sealed partial class CompanionToolService
             return;
         }
 
-        var result = EndCopy(process, CloseGrace);
-        if (result == EndResult.NeedsAdministrator)
+        // The copy, and the programs it started as it started up, each held open until they're done.
+        using var root = pid is int id ? HeldProcess.Open(id, tool.Name) : null;
+        if (root == null)
         {
-            LoggingService.Info("Tools", $"'{tool.Name}' (PID {pid}) runs as administrator; asking Windows for permission to close it.");
-            AnnounceClosing(tool, true);
-            try
-            {
-                result = EndCopyAsAdministrator(process, CloseGrace) ? EndResult.Ended : EndResult.StillRunning;
-            }
-            finally
-            {
-                AnnounceClosing(tool, false);
-            }
+            LoggingService.Verbose("Tools", $"'{tool.Name}' (PID {pid}) closed while TrayTrigger was getting to it.");
+            return;
         }
+        var startedBy = FindStartedBy(root);
+        try
+        {
+            if (startedBy.Count > 0 && LoggingService.IsVerboseEnabled)
+            {
+                LoggingService.Verbose("Tools", $"'{tool.Name}' started {string.Join(", ", startedBy.Select(p => $"{p.Name} (PID {p.Id})"))} as it started up; closing them with it.");
+            }
+            var targets = new List<HeldProcess>(startedBy.Count + 1) { root };
+            targets.AddRange(startedBy);
 
-        if (result == EndResult.Ended)
-        {
-            LoggingService.Info("Tools", $"Closed '{tool.Name}' (PID {pid}), which was started with games.");
+            var result = EndCopy(targets, CloseGrace);
+            if (result == EndResult.NeedsAdministrator)
+            {
+                LoggingService.Info("Tools", $"'{tool.Name}' (PID {pid}) runs as administrator; asking Windows for permission to close it.");
+                AnnounceClosing(tool, true);
+                try
+                {
+                    result = EndCopyAsAdministrator(targets, CloseGrace) ? EndResult.Ended : EndResult.StillRunning;
+                }
+                finally
+                {
+                    AnnounceClosing(tool, false);
+                }
+            }
+
+            string also = startedBy.Count > 0 ? $" and {startedBy.Count} program(s) it started" : string.Empty;
+            if (result == EndResult.Ended)
+            {
+                LoggingService.Info("Tools", $"Closed '{tool.Name}' (PID {pid}){also}, started with games.");
+            }
+            else
+            {
+                LoggingService.Warn("Tools", $"'{tool.Name}' (PID {pid}){also} still running after TrayTrigger tried to close it.");
+            }
         }
-        else
+        finally
         {
-            LoggingService.Warn("Tools", $"'{tool.Name}' (PID {pid}) is still running after TrayTrigger tried to close it.");
+            foreach (var p in startedBy) p.Dispose();
         }
     }
 
@@ -325,56 +359,89 @@ public sealed partial class CompanionToolService
     private const int ErrorAccessDenied = 5;
 
     /// <summary>
-    /// Asks each top-level window of the process to close, as its own close button would, hidden ones
-    /// included: a tool in the tray has no visible window but usually still answers. Still running after
-    /// <paramref name="grace"/>, it is ended. Windows doesn't let a program close or end one running as
-    /// administrator, which is <see cref="EndResult.NeedsAdministrator"/>.
+    /// Asks each top-level window of every target to close, as its own close button would, hidden ones
+    /// included: a tool in the tray has no visible window but usually still answers. What's still running
+    /// after <paramref name="grace"/> is ended. Windows doesn't let a program close or end one running as
+    /// administrator; when a target is one of those it's <see cref="EndResult.NeedsAdministrator"/>, and
+    /// the rest have still had their chance.
     /// </summary>
-    internal static EndResult EndNormally(Process process, TimeSpan grace)
+    internal static EndResult EndNormally(IReadOnlyList<HeldProcess> targets, TimeSpan grace)
     {
-        foreach (IntPtr window in TopLevelWindows(process.Id))
+        var denied = new List<HeldProcess>();
+        foreach (var target in targets)
         {
-            if (!PostMessage(window, WmClose, IntPtr.Zero, IntPtr.Zero) && Marshal.GetLastPInvokeError() == ErrorAccessDenied)
+            foreach (IntPtr window in TopLevelWindows(target.Id))
             {
-                return EndResult.NeedsAdministrator;
+                if (!PostMessage(window, WmClose, IntPtr.Zero, IntPtr.Zero) && Marshal.GetLastPInvokeError() == ErrorAccessDenied)
+                {
+                    denied.Add(target);
+                    break;
+                }
             }
         }
-        if (process.WaitForExit(grace)) return EndResult.Ended;
 
-        try
+        var askable = targets.Except(denied).ToList();
+        WaitForAll(askable, grace);
+        foreach (var target in askable.Where(t => !t.HasExited))
         {
-            process.Kill();
+            try
+            {
+                // By id: it's held open, so the id still names the same process.
+                using var process = Process.GetProcessById(target.Id);
+                process.Kill();
+            }
+            catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorAccessDenied)
+            {
+                LoggingService.Verbose("Tools", $"{target.Name} (PID {target.Id}) can't be ended without administrator rights: {ex.Message}");
+                denied.Add(target);
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            {
+                // It closed between the wait and the kill.
+            }
         }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorAccessDenied)
-        {
-            LoggingService.Verbose("Tools", $"PID {process.Id} can't be ended without administrator rights: {ex.Message}");
-            return EndResult.NeedsAdministrator;
-        }
-        catch (InvalidOperationException)
-        {
-            return EndResult.Ended; // it closed between the wait and the kill
-        }
-        return process.WaitForExit(TimeSpan.FromSeconds(5)) ? EndResult.Ended : EndResult.StillRunning;
+        WaitForAll(askable, TimeSpan.FromSeconds(5));
+
+        if (targets.All(t => t.HasExited)) return EndResult.Ended;
+        return denied.Any(t => !t.HasExited) ? EndResult.NeedsAdministrator : EndResult.StillRunning;
     }
 
     /// <summary>
-    /// <see cref="EndNormally"/> with administrator rights, behind one UAC prompt: taskkill without /F
-    /// posts the same close request to the program's windows, and Stop-Process ends it if it's still
-    /// running after <paramref name="grace"/>. TrayTrigger holds the process open meanwhile, so its id
-    /// can't be given to another program. True when it has closed.
+    /// <see cref="EndNormally"/> with administrator rights, behind one UAC prompt, for every target
+    /// still running: taskkill without /F posts the same close request to each one's windows, and
+    /// Stop-Process ends what's still running after <paramref name="grace"/>. TrayTrigger holds them all
+    /// open meanwhile, so their ids can't be given to other programs. True when they've all closed.
     /// </summary>
-    internal static bool EndElevated(Process process, TimeSpan grace)
+    internal static bool EndElevated(IReadOnlyList<HeldProcess> targets, TimeSpan grace)
     {
-        int pid = process.Id;
+        var running = targets.Where(t => !t.HasExited).ToList();
+        if (running.Count == 0) return true;
+
         string taskkill = ElevatedPowerShell.QuoteLiteral(Path.Combine(Environment.SystemDirectory, "taskkill.exe"));
         string script =
-            $"$p = Get-Process -Id {pid} -ErrorAction SilentlyContinue; if (-not $p) {{ exit 0 }}; " +
-            $"& {taskkill} /PID {pid} | Out-Null; " +
-            $"if (-not $p.WaitForExit({(int)grace.TotalMilliseconds})) {{ Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue }}; " +
+            $"$ids = @({string.Join(",", running.Select(t => t.Id))}); " +
+            $"foreach ($id in $ids) {{ & {taskkill} /PID $id | Out-Null }}; " +
+            $"$deadline = [DateTime]::UtcNow.AddMilliseconds({(int)grace.TotalMilliseconds}); " +
+            "foreach ($id in $ids) { $p = Get-Process -Id $id -ErrorAction SilentlyContinue; if (-not $p) { continue }; " +
+            "$left = [int][Math]::Max(0, ($deadline - [DateTime]::UtcNow).TotalMilliseconds); " +
+            "if (-not $p.WaitForExit($left)) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue } }; " +
             "exit 0";
         ElevatedPowerShell.Run(script, grace + TimeSpan.FromSeconds(15), "Tools");
         // A process ended by Stop-Process can take a moment to finish exiting.
-        return process.WaitForExit(TimeSpan.FromSeconds(2));
+        WaitForAll(running, TimeSpan.FromSeconds(2));
+        return running.All(t => t.HasExited);
+    }
+
+    /// <summary>Waits until they've all exited or <paramref name="timeout"/> has passed, whichever is first.</summary>
+    private static void WaitForAll(IEnumerable<HeldProcess> targets, TimeSpan timeout)
+    {
+        var watch = Stopwatch.StartNew();
+        foreach (var target in targets)
+        {
+            TimeSpan left = timeout - watch.Elapsed;
+            if (left <= TimeSpan.Zero) return;
+            target.WaitForExit(left);
+        }
     }
 
     /// <summary>Every top-level window the process owns, visible or not.</summary>

@@ -40,10 +40,11 @@ public class CompanionToolServiceTests : IDisposable
                 _started.Add(tool.Name);
                 return Process.GetCurrentProcess();
             },
-            // Never the real one by default: a started copy here is this test run's own process.
-            EndCopy = (process, _) =>
+            // Never the real ones by default: a started copy here is this test run's own process.
+            FindStartedBy = _ => Array.Empty<HeldProcess>(),
+            EndCopy = (targets, _) =>
             {
-                _ended.Add(process.ProcessName);
+                _ended.Add(targets[0].Name);
                 return CompanionToolService.EndResult.Ended;
             },
             EndCopyAsAdministrator = (_, _) => throw new InvalidOperationException("not expected"),
@@ -426,6 +427,66 @@ public class CompanionToolServiceTests : IDisposable
 
         Assert.Empty(_ended);
         Assert.Empty(_service.Remembered);
+    }
+
+    /// <summary>
+    /// Afterburner starts RTSS as it starts up; closing Afterburner alone left RTSS running. Here the
+    /// tool is a Command Prompt that starts a ping, and closing the tool ends the ping too.
+    /// </summary>
+    [Fact]
+    public void Closing_AlsoEndsWhatTheToolStartedAsItStartedUp()
+    {
+        var tool = AddClosing("SimHub");
+        string childName = "TTChild" + Guid.NewGuid().ToString("N")[..8];
+        string child = CopyPing(Path.Combine(_root, "child"), childName);
+        _service.StartProcess = t =>
+        {
+            var cmd = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"), $"/d /c \"\"{child}\" -n 120 127.0.0.1\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            })!;
+            var watcher = Process.GetProcessById(cmd.Id);
+            _ = watcher.Handle;
+            _watchers[t.Id] = watcher;
+            _toKill.Add(watcher);
+            return cmd;
+        };
+        _service.EndCopy = CompanionToolService.EndNormally;
+        _service.FindStartedBy = root => ProcessTree.StartupDescendants(root, CompanionToolService.StartupWindow);
+        _service.StartForGame(Game, remember: true);
+        Assert.True(WaitUntil(() => Process.GetProcessesByName(childName).Length == 1), "the tool should have started its child");
+        var started = Process.GetProcessesByName(childName)[0];
+        _ = started.Handle;
+        _toKill.Add(started);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.True(_watchers[tool.Id].WaitForExit(5000), "the tool should have been ended");
+        Assert.True(started.WaitForExit(5000), "what the tool started should have been ended with it");
+    }
+
+    [Theory]
+    [InlineData(-1, false)]   // older than its "parent": the child of an earlier process with the same id
+    [InlineData(0, true)]
+    [InlineData(5, true)]     // RTSS, a few seconds after Afterburner
+    [InlineData(30, true)]
+    [InlineData(31, false)]   // opened from the tool later, like a browser for a link
+    public void IsStartupChild_WithinTheWindowAndNeverBeforeItsParent(int secondsAfterParent, bool expected)
+    {
+        var parent = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(expected, ProcessTree.IsStartupChild(parent, parent.AddSeconds(secondsAfterParent), parent + CompanionToolService.StartupWindow));
+    }
+
+    private static bool WaitUntil(Func<bool> condition)
+    {
+        var watch = Stopwatch.StartNew();
+        while (watch.ElapsedMilliseconds < 5000)
+        {
+            if (condition()) return true;
+            Thread.Sleep(50);
+        }
+        return condition();
     }
 
     [Fact]
