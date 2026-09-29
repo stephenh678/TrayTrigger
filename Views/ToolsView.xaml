@@ -131,7 +131,7 @@
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                     </DockPanel>
                     <!-- Starts with games: centred on the card, so it's in the same place with or without the shield. -->
-                    <TextBlock Grid.Row="0" Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11"
+                    <TextBlock Grid.Row="0" Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="15"
                                Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
                     <Grid Grid.Row="1" Width="64" Height="64" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -179,7 +179,7 @@
                         <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,6,0"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
-                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,6,0"
+                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="15" Margin="0,0,6,0"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
                         <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}"
@@ -219,7 +219,7 @@
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                         <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
                                    Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="8,0,0,0"
+                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="15" Margin="8,0,0,0"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
                         <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="8,0,0,0"
