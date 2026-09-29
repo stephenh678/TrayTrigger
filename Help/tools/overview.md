@@ -68,6 +68,17 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - Programs that always need admin, like MSI Afterburner, get that prompt even with the box unticked.
 - If you decline the prompt, the tool just stays closed. Nothing else is shown.
 
+## Starting with your games
+
+- Tick "Start when I launch a game" in Edit Tool and TrayTrigger starts the tool just before any game it launches, from the library, a hotkey or the tray menu. A tool that's already running, however it was opened, is left as it is.
+- The tool starts after the game's pre-launch script and before the game. If Windows asks for permission to run it, the game waits for your answer and the launch popup says "Starting (the tool) first". If you decline, the tool stays closed and the game still starts.
+- Tick "Close it when the game exits" as well to close it again once your last game has closed. Only the copy TrayTrigger started is closed; one you opened yourself is left running. The tool is asked to close, as its own close button would, and ended if it's still running five seconds later.
+- A program that runs as administrator, like MSI Afterburner, can only be closed with your permission, so Windows asks once when the game exits, and the launch popup shows which tool it's for. If you say no, the tool stays open and TrayTrigger doesn't ask again.
+- A tool that starts with games shows the Library's controller icon on its card.
+- Only programs can start with games. For a script, set it as the game's pre-launch script instead. A Store app can't be told apart when it's already running, so starting it again would bring it in front of your game.
+- A game started outside TrayTrigger, from Steam for example, doesn't start your tools. A game started from a web or launcher link does, but TrayTrigger can't see when it exits, so those tools stay open.
+- If TrayTrigger closes while a game is running, the tools it started are left running.
+
 ## Hotkeys
 
 - Give a tool a global hotkey in Edit Tool. It's recorded the same way as a game's, and a combination a game, the window hotkey or another app already uses is refused.
@@ -80,6 +91,6 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Turning Tools off
 
-Unticking "Enable Tools" hides the Tools page and the tray submenu and turns off tool hotkeys. Your tools are kept in tools.json next to your game library, so turning it back on brings every tool back as it was. Resetting settings to defaults turns Tools off but never deletes your tools.
+Unticking "Enable Tools" hides the Tools page and the tray submenu, turns off tool hotkeys, and stops tools starting with your games. Your tools are kept in tools.json next to your game library, so turning it back on brings every tool back as it was. Resetting settings to defaults turns Tools off but never deletes your tools.
 
 > Removing a tool only removes TrayTrigger's shortcut to it. The program itself is never touched.

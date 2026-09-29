@@ -8,6 +8,10 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.4.7
+
+- **Tools can start with your games** — tick "Start when I launch a game" in Edit Tool and a program like MSI Afterburner, SimHub or TrackIR is started just before any game you launch through TrayTrigger, unless it's already running, so it no longer has to start with Windows. Tick "Close it when the game exits" as well and it's closed again once your last game has closed: only the copy TrayTrigger started, never one you opened yourself. A program that runs as administrator asks for permission when it starts and again when it's closed, and the launch popup says which tool the prompt is for. A tool that starts with games shows the Library's controller icon on its card.
+
 ## 1.4.6
 
 - **Games you've uninstalled are greyed out, not lost** — uninstall a game and TrayTrigger used to go on showing it as if nothing had happened; pressing Play then did nothing useful. Library games are now checked against their own launcher at startup and on every scan, and one that's gone is dimmed and tagged **NOT INSTALLED** (or **MISSING**, for a game you added yourself whose file isn't where you left it). Nothing is removed: your playtime, hotkey, scripts and performance profile are all still there when you reinstall, and the tag clears itself on the next scan. Play still works — for a Steam game it offers to open it in Steam, and for the rest it says which launcher to reinstall from. New "Not installed" and "Executable missing" filters beside the search box list them all, so the ones you won't reinstall can be removed together. A game is only tagged when its launcher was read in full and doesn't list it, so an external drive that isn't plugged in never greys out the games on it.
