@@ -296,7 +296,7 @@ public class CompanionToolServiceTests : IDisposable
     }
 
     [Fact]
-    public void FindRunningProgram_MatchesByPath_NotByName()
+    public void FindRunningCopyOf_MatchesByPath_NotByName()
     {
         string name = "TTCompanion" + Guid.NewGuid().ToString("N")[..8];
         string running = CopyPing(Path.Combine(_root, "a"), name);
@@ -305,8 +305,8 @@ public class CompanionToolServiceTests : IDisposable
         using var process = Process.Start(new ProcessStartInfo(running, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
         try
         {
-            Assert.Equal(process.Id, CompanionToolService.FindRunningProgram(running));
-            Assert.Null(CompanionToolService.FindRunningProgram(sameNameElsewhere));
+            Assert.Equal(process.Id, CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = running }));
+            Assert.Null(CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = sameNameElsewhere }));
         }
         finally
         {
@@ -314,6 +314,36 @@ public class CompanionToolServiceTests : IDisposable
             process.WaitForExit(5000);
         }
     }
+
+    /// <summary>
+    /// A tool that runs something through a shared program (javaw.exe -jar tracker.jar) is running only
+    /// when a copy was started with its arguments - not whenever any copy of the program is.
+    /// </summary>
+    [Fact]
+    public void FindRunningCopyOf_WithArguments_OnlyACopyStartedWithThem()
+    {
+        string exe = CopyPing(Path.Combine(_root, "c"), "TTCompanion" + Guid.NewGuid().ToString("N")[..8]);
+        using var process = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        try
+        {
+            Assert.Equal(process.Id, CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = exe, Arguments = "-n 120 127.0.0.1" }));
+            Assert.Equal(process.Id, CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = exe, Arguments = " -N  120 127.0.0.1 " }));
+            Assert.Null(CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = exe, Arguments = "-n 60 127.0.0.1" }));
+        }
+        finally
+        {
+            process.Kill();
+            process.WaitForExit(5000);
+        }
+    }
+
+    [Theory]
+    [InlineData("\"C:\\Program Files\\Java\\bin\\javaw.exe\" -jar tracker.jar", "-jar tracker.jar")]
+    [InlineData("C:\\Tools\\ping.exe -n 5 host", "-n 5 host")]
+    [InlineData("\"C:\\Tools\\MSIAfterburner.exe\"", "")]
+    [InlineData("C:\\Tools\\MSIAfterburner.exe", "")]
+    public void ArgumentsOf_IsWhatFollowsTheProgram(string commandLine, string expected) =>
+        Assert.Equal(expected, ProcessPathResolver.ArgumentsOf(commandLine));
 
     // ------------------------------------------------------------------ closing after the last game
 

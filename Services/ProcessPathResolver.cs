@@ -345,6 +345,71 @@ public static partial class ProcessPathResolver
         return matching;
     }
 
+    private const int ProcessCommandLineInformation = 60;
+
+    [LibraryImport("ntdll.dll")]
+    private static partial int NtQueryInformationProcess(IntPtr processHandle, int informationClass, IntPtr information, int informationLength, out int returnLength);
+
+    /// <summary>
+    /// The command line a process was started with, or null when it can't be read. Asked for with
+    /// PROCESS_QUERY_LIMITED_INFORMATION (ProcessCommandLineInformation, Windows 8.1 and later), so a
+    /// program running as administrator can be read too.
+    /// </summary>
+    public static string? GetCommandLine(int pid)
+    {
+        IntPtr handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, (uint)pid);
+        if (handle == IntPtr.Zero) return null;
+        IntPtr buffer = IntPtr.Zero;
+        try
+        {
+            // The first call only says how big the answer is.
+            NtQueryInformationProcess(handle, ProcessCommandLineInformation, IntPtr.Zero, 0, out int needed);
+            if (needed <= 0) return null;
+            buffer = Marshal.AllocHGlobal(needed);
+            if (NtQueryInformationProcess(handle, ProcessCommandLineInformation, buffer, needed, out _) != 0) return null;
+
+            // A UNICODE_STRING: a length in bytes, then (after padding) a pointer into the same buffer.
+            int bytes = (ushort)Marshal.ReadInt16(buffer);
+            IntPtr text = Marshal.ReadIntPtr(buffer, IntPtr.Size);
+            return text == IntPtr.Zero ? null : Marshal.PtrToStringUni(text, bytes / 2);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Swallowed("ProcessPathResolver", ex, $"reading the command line of PID {pid}");
+            return null;
+        }
+        finally
+        {
+            if (buffer != IntPtr.Zero) Marshal.FreeHGlobal(buffer);
+            CloseHandle(handle);
+        }
+    }
+
+    /// <summary>What follows the program in a command line, whether the program is quoted or not.</summary>
+    public static string ArgumentsOf(string commandLine)
+    {
+        string s = commandLine.TrimStart();
+        int end;
+        if (s.StartsWith('"'))
+        {
+            int close = s.IndexOf('"', 1);
+            end = close < 0 ? s.Length : close + 1;
+        }
+        else
+        {
+            end = s.IndexOfAny([' ', '\t']);
+            if (end < 0) end = s.Length;
+        }
+        return s[end..].Trim();
+    }
+
+    /// <summary>Two argument strings are the same when they differ only in case and in how much space separates the words.</summary>
+    public static bool SameArguments(string? a, string? b) =>
+        string.Equals(CollapseSpaces(a), CollapseSpaces(b), StringComparison.OrdinalIgnoreCase);
+
+    private static string CollapseSpaces(string? s) =>
+        string.Join(' ', (s ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
     /// <summary>Normalizes a folder for prefix matching: trailing separator, no trailing slashes before it.</summary>
     public static string NormalizeDirectory(string dir) => dir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
 

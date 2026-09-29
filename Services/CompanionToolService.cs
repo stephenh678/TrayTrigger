@@ -57,8 +57,8 @@ public sealed partial class CompanionToolService
     /// <summary>Starts the tool's program the way the Tools page does. Replaced in tests, so nothing real is started.</summary>
     internal Func<ToolEntry, Process?> StartProcess { get; set; } = tool => Process.Start(ToolLauncherService.BuildStartInfo(tool));
 
-    /// <summary>The id of a running copy of the program, or null. Replaced in tests.</summary>
-    internal Func<string, int?> FindRunningCopy { get; set; } = FindRunningProgram;
+    /// <summary>The id of a running copy that counts as the tool already running, or null. Replaced in tests.</summary>
+    internal Func<ToolEntry, int?> FindRunningCopy { get; set; } = FindRunningCopyOf;
 
     internal Func<string, bool> FileExists { get; set; } = File.Exists;
 
@@ -127,7 +127,7 @@ public sealed partial class CompanionToolService
                         continue;
                     }
 
-                    if (FindRunningCopy(tool.TargetPath) is int pid)
+                    if (FindRunningCopy(tool) is int pid)
                     {
                         LoggingService.Verbose("Tools", $"Not starting '{tool.Name}' with '{game.Name}': it's already running (PID {pid}).");
                         continue;
@@ -401,16 +401,32 @@ public sealed partial class CompanionToolService
     private static partial bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
 
     /// <summary>
-    /// A running copy of the program at <paramref name="path"/>, matched by its real image path rather
-    /// than its name. The path of a program running as administrator can be read too
-    /// (<see cref="ProcessPathResolver"/>), so one of those counts as running.
+    /// A running copy of the tool's program that counts as the tool already running, or null. With no
+    /// launch arguments any copy does, one running as administrator included. With arguments only a
+    /// copy started with the same ones does, so a tool that runs a script or .jar through a program many
+    /// others share (javaw.exe, python.exe, AutoHotkey) isn't taken for running because some other one
+    /// is. A copy whose command line can't be read counts, rather than risk starting a second one.
     /// </summary>
-    internal static int? FindRunningProgram(string path)
+    internal static int? FindRunningCopyOf(ToolEntry tool)
     {
-        var copies = ProcessPathResolver.FindRunningCopies(path);
+        var copies = ProcessPathResolver.FindRunningCopies(tool.TargetPath);
         try
         {
-            return copies.Count > 0 ? copies[0].Id : null;
+            string wanted = tool.Arguments?.Trim() ?? string.Empty;
+            foreach (var copy in copies)
+            {
+                if (wanted.Length == 0) return copy.Id;
+                string? commandLine = ProcessPathResolver.GetCommandLine(copy.Id);
+                if (commandLine == null || ProcessPathResolver.SameArguments(ProcessPathResolver.ArgumentsOf(commandLine), wanted))
+                {
+                    return copy.Id;
+                }
+            }
+            if (copies.Count > 0 && LoggingService.IsVerboseEnabled)
+            {
+                LoggingService.Verbose("Tools", $"{copies.Count} copy(ies) of '{tool.TargetPath}' running, none with the tool's arguments ('{wanted}').");
+            }
+            return null;
         }
         finally
         {
