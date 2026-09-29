@@ -114,6 +114,8 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     private LaunchPopupKind _kind;
     private string? _platform;
     private string? _startingTool;
+    /// <summary>A failure or notice a tool's closing prompt covered, put back when the prompt is answered. Anything else shown drops it: the newer message wins.</summary>
+    private (LaunchTarget Target, LaunchPopupKind Kind, string? Message, string? ActionText, Action? Action)? _setAside;
     private string? _message;
     private string? _actionText;
     private Action? _action;
@@ -254,14 +256,31 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     public bool ShowClosing(LaunchTarget tool)
     {
         if (!_isEnabled()) return false;
+        (LaunchTarget, LaunchPopupKind, string?, string?, Action?)? waiting = null;
+        if (_target != null && _kind is LaunchPopupKind.Failed or LaunchPopupKind.Notice)
+        {
+            waiting = (_target, _kind, _message, _actionText, _action);
+        }
         Start(tool, LaunchPopupKind.Closing, message: null, actionText: null, action: null);
+        _setAside = waiting;
         return true;
     }
 
-    /// <summary>The prompt for closing <paramref name="id"/> has been answered.</summary>
+    /// <summary>
+    /// The prompt for closing <paramref name="id"/> has been answered. A failure or notice it covered
+    /// comes back, since it was still waiting for the user; otherwise the popup goes.
+    /// </summary>
     public void EndClosing(string id)
     {
-        if (_target?.Id == id && _kind == LaunchPopupKind.Closing) Hide();
+        if (_target?.Id != id || _kind != LaunchPopupKind.Closing) return;
+        if (_setAside is { } back)
+        {
+            Start(back.Target, back.Kind, back.Message, back.ActionText, back.Action);
+        }
+        else
+        {
+            Hide();
+        }
     }
 
     public void Dispose()
@@ -283,6 +302,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _target = target;
         _platform = null;
         _startingTool = null;
+        _setAside = null;
         _message = message;
         _actionText = actionText;
         _action = action;
@@ -364,6 +384,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _token++;
         _target = null;
         _startingTool = null;
+        _setAside = null;
         _action = null;
         _view.Hide();
     }

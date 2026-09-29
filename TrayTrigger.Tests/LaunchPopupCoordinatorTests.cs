@@ -215,6 +215,45 @@ public class LaunchPopupCoordinatorTests
         Assert.False(rig.View.Visible);
     }
 
+    /// <summary>
+    /// A launch failure still waiting for the user isn't lost to a tool's closing prompt: it's covered
+    /// while the prompt explains itself, and comes back, action and all, once the prompt is answered.
+    /// </summary>
+    [Fact]
+    public void Closing_PutsBackAFailureItCovered()
+    {
+        var rig = new Rig();
+        int located = 0;
+        Assert.True(rig.Popup.TryShowFailure(Game("a", "Elden Ring"), "Its program wasn't found.", "Locate program...", () => located++));
+
+        rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner"));
+        Assert.Equal(LaunchPopupKind.Closing, rig.View.Shown!.Kind);
+
+        rig.Popup.EndClosing("t1");
+        Assert.True(rig.View.Visible);
+        Assert.Equal(LaunchPopupKind.Failed, rig.View.Shown!.Kind);
+        Assert.Equal("Elden Ring", rig.View.Shown.Name);
+        Assert.Equal("Its program wasn't found.", rig.View.Shown.Detail);
+        Assert.Equal("Locate program...", rig.View.Shown.ActionText);
+
+        rig.View.ClickAction();
+        Assert.Equal(1, located);
+    }
+
+    [Fact]
+    public void Closing_ANewerMessageWins_OverTheOneItCovered()
+    {
+        var rig = new Rig();
+        rig.Popup.TryShowFailure(Game("a", "Elden Ring"), "Its program wasn't found.", null, null);
+        rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner"));
+
+        rig.Popup.TryShowNotice(Game("b", "Diablo IV"), "Battle.net needs you.");
+        rig.Popup.EndClosing("t1");
+
+        Assert.Equal("Diablo IV", rig.View.Shown!.Name);
+        Assert.True(rig.View.Visible);
+    }
+
     [Fact]
     public void Closing_WithThePopupOff_ShowsNothing()
     {
