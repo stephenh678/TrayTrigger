@@ -414,7 +414,7 @@ public partial class App : Application
         {
             var games = Dispatcher.Invoke(() => _mainViewModel?.Library.Games.Select(c => c.Game).ToList(),
                 System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
-            return games != null && _launcherService.IsUntrackedGameRunning(games, ignore);
+            return games == null ? null : _launcherService.FindUntrackedRunningGame(games, ignore);
         };
         _launcherService.CompanionTools = companionTools;
 

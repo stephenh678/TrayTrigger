@@ -67,9 +67,11 @@ internal static partial class ProcessTree
     /// <summary>
     /// The programs <paramref name="root"/> started as it started up - created within
     /// <paramref name="window"/> of it - and theirs in turn, held open. Afterburner's RTSS is one; a
-    /// program opened from it later, like a browser for a link, isn't.
+    /// program opened from it later, like a browser for a link, isn't. A child <paramref name="keep"/>
+    /// turns down is left out with everything under it: a browser the tool opened takes its own
+    /// renderer processes with it.
     /// </summary>
-    public static List<HeldProcess> StartupDescendants(HeldProcess root, TimeSpan window)
+    public static List<HeldProcess> StartupDescendants(HeldProcess root, TimeSpan window, Func<HeldProcess, bool> keep)
     {
         var found = new List<HeldProcess>();
         var everyone = Snapshot();
@@ -86,7 +88,7 @@ internal static partial class ProcessTree
                 if (entry.ParentId != parent.Id || !seen.Add(pid)) continue;
                 var child = HeldProcess.Open(pid, entry.Name);
                 if (child == null) continue;
-                if (!IsStartupChild(parent.StartedUtc, child.StartedUtc, latest))
+                if (!IsStartupChild(parent.StartedUtc, child.StartedUtc, latest) || !keep(child))
                 {
                     child.Dispose();
                     continue;

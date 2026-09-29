@@ -77,8 +77,20 @@ public sealed partial class CompanionToolService
     internal static readonly TimeSpan StartupWindow = TimeSpan.FromSeconds(30);
 
     /// <summary>The programs a copy started as it started up. Replaced in tests.</summary>
-    internal Func<HeldProcess, IReadOnlyList<HeldProcess>> FindStartedBy { get; set; } =
-        root => ProcessTree.StartupDescendants(root, StartupWindow);
+    internal Func<HeldProcess, IReadOnlyList<HeldProcess>> FindStartedBy { get; set; } = StartedAsItStartedUp;
+
+    /// <summary>
+    /// What a copy started as it started up and runs in the background, like RTSS in the tray. One with
+    /// a window of its own - a browser the tool opened, say - is the user's, and is left open with
+    /// everything under it.
+    /// </summary>
+    internal static IReadOnlyList<HeldProcess> StartedAsItStartedUp(HeldProcess root) =>
+        ProcessTree.StartupDescendants(root, StartupWindow, child =>
+        {
+            if (!TopLevelWindows(child.Id).Any(IsWindowVisible)) return true;
+            LoggingService.Verbose("Tools", $"Leaving {child.Name} (PID {child.Id}) open: '{root.Name}' started it, but it has a window of its own.");
+            return false;
+        });
 
     /// <summary>Asks the copy and what it started to close, then ends them. Replaced in tests.</summary>
     internal Func<IReadOnlyList<HeldProcess>, TimeSpan, EndResult> EndCopy { get; set; } = EndNormally;
@@ -87,11 +99,11 @@ public sealed partial class CompanionToolService
     internal Func<IReadOnlyList<HeldProcess>, TimeSpan, bool> EndCopyAsAdministrator { get; set; } = EndElevated;
 
     /// <summary>
-    /// Whether a library game TrayTrigger isn't following is running (started from Steam, say),
-    /// leaving out the given processes - the tools' own. Closing waits for it. Set by App; unset,
-    /// nothing is waited for.
+    /// A library game TrayTrigger isn't following that is running (started from Steam, say), described
+    /// for the log, or null when there's none; the given processes - the tools' own - don't count.
+    /// Closing waits for it. Set by App; unset, nothing is waited for.
     /// </summary>
-    public Func<IReadOnlySet<int>, bool>? OtherGameRunning { get; set; }
+    public Func<IReadOnlySet<int>, string?>? OtherGameRunning { get; set; }
 
     /// <summary>How often closing looks again while such a game is running.</summary>
     internal TimeSpan RecheckInterval { get; set; } = TimeSpan.FromSeconds(30);
@@ -101,7 +113,8 @@ public sealed partial class CompanionToolService
         (delay, action) => _ = Task.Delay(delay).ContinueWith(_ => action(), TaskScheduler.Default);
 
     private bool _recheckScheduled;
-    private bool _waitingForOtherGame;
+    /// <summary>The game closing is waiting for, as last logged: logged again only when it changes.</summary>
+    private string? _waitingFor;
 
     /// <summary>
     /// A tool running as administrator is about to be closed (true), which takes Windows' permission,
@@ -250,12 +263,12 @@ public sealed partial class CompanionToolService
                 LoggingService.Verbose("Tools", "A game is running or being launched, so the tools started with games stay open.");
                 return;
             }
-            if (IsOtherGameRunning())
+            if (OtherGameStillRunning() is { } game)
             {
-                if (!_waitingForOtherGame)
+                if (game != _waitingFor)
                 {
-                    _waitingForOtherGame = true;
-                    LoggingService.Info("Tools", "A game TrayTrigger isn't following is still running, so the tools started with games stay open until it closes.");
+                    _waitingFor = game;
+                    LoggingService.Info("Tools", $"{game} is still running without TrayTrigger following it, so the tools started with games stay open until it closes.");
                 }
                 if (!_recheckScheduled)
                 {
@@ -268,7 +281,7 @@ public sealed partial class CompanionToolService
                 }
                 return;
             }
-            _waitingForOtherGame = false;
+            _waitingFor = null;
 
             var tools = _tools();
             foreach (var (id, process) in _started.ToList())
@@ -297,9 +310,9 @@ public sealed partial class CompanionToolService
     /// Asked under the gate. A check that fails counts as no game running: the tools then close as they
     /// would have before this check existed.
     /// </summary>
-    private bool IsOtherGameRunning()
+    private string? OtherGameStillRunning()
     {
-        if (OtherGameRunning == null) return false;
+        if (OtherGameRunning == null) return null;
         try
         {
             var ours = _started.Values.Select(SafeId).OfType<int>().ToHashSet();
@@ -308,7 +321,7 @@ public sealed partial class CompanionToolService
         catch (Exception ex)
         {
             LoggingService.Swallowed("Tools", ex, "checking for a game TrayTrigger isn't following");
-            return false;
+            return null;
         }
     }
 
@@ -324,6 +337,7 @@ public sealed partial class CompanionToolService
             LoggingService.Info("Tools", $"'{game.Name}' was started from a link, which TrayTrigger can't follow to its exit, so the {_started.Count} tool(s) started with games stay open.");
             foreach (var process in _started.Values) process.Dispose();
             _started.Clear();
+            _waitingFor = null;
         }
     }
 
@@ -532,6 +546,10 @@ public sealed partial class CompanionToolService
 
     [LibraryImport("user32.dll")]
     private static partial uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool IsWindowVisible(IntPtr window);
 
     [LibraryImport("user32.dll", EntryPoint = "PostMessageW", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

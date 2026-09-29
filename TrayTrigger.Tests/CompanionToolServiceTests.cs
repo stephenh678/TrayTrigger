@@ -453,7 +453,7 @@ public class CompanionToolServiceTests : IDisposable
             return cmd;
         };
         _service.EndCopy = CompanionToolService.EndNormally;
-        _service.FindStartedBy = root => ProcessTree.StartupDescendants(root, CompanionToolService.StartupWindow);
+        _service.FindStartedBy = CompanionToolService.StartedAsItStartedUp;
         _service.StartForGame(Game, remember: true);
         Assert.True(WaitUntil(() => Process.GetProcessesByName(childName).Length == 1), "the tool should have started its child");
         var started = Process.GetProcessesByName(childName)[0];
@@ -478,10 +478,54 @@ public class CompanionToolServiceTests : IDisposable
         Assert.Equal(expected, ProcessTree.IsStartupChild(parent, parent.AddSeconds(secondsAfterParent), parent + CompanionToolService.StartupWindow));
     }
 
-    private static bool WaitUntil(Func<bool> condition)
+    /// <summary>
+    /// A browser a tool opened comes with renderer processes of its own. Turning down the browser must
+    /// leave those out too, or closing the tool would kill the renderers of a browser left open. Here a
+    /// Command Prompt starts PowerShell, which starts a ping: turn down PowerShell and the ping goes too.
+    /// </summary>
+    [Fact]
+    public void StartupDescendants_AChildTurnedDown_TakesEverythingUnderItWithIt()
+    {
+        string pingName = "TTNested" + Guid.NewGuid().ToString("N")[..8];
+        string ping = CopyPing(Path.Combine(_root, "nested"), pingName);
+        string powershell = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");
+        // /s strips exactly the outer pair of quotes, leaving the inner ones for PowerShell.
+        var outer = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+            $"/d /s /c \"\"{powershell}\" -NoProfile -NonInteractive -Command \"& '{ping}' -n 120 127.0.0.1\"\"")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true
+        })!;
+        _toKill.Add(outer);
+        Assert.True(WaitUntil(() => Process.GetProcessesByName(pingName).Length == 1, 20000), "the ping should have started under PowerShell");
+
+        using var root = HeldProcess.Open(outer.Id, "cmd")!;
+        var everything = ProcessTree.StartupDescendants(root, CompanionToolService.StartupWindow, _ => true);
+        // Cleaned up by what was found under this test's own Command Prompt - never by name, which
+        // would reach the PowerShell of a test running alongside this one.
+        foreach (var p in everything)
+        {
+            try { _toKill.Add(Process.GetProcessById(p.Id)); }
+            catch (ArgumentException) { /* it has already exited */ }
+        }
+        var withoutPowerShell = ProcessTree.StartupDescendants(root, CompanionToolService.StartupWindow,
+            p => !p.Name.StartsWith("powershell", StringComparison.OrdinalIgnoreCase));
+        try
+        {
+            Assert.Contains(everything, p => p.Name.StartsWith(pingName, StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(withoutPowerShell, p => p.Name.StartsWith(pingName, StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(withoutPowerShell, p => p.Name.StartsWith("powershell", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            foreach (var p in everything.Concat(withoutPowerShell)) p.Dispose();
+        }
+    }
+
+    private static bool WaitUntil(Func<bool> condition, int timeoutMs = 5000)
     {
         var watch = Stopwatch.StartNew();
-        while (watch.ElapsedMilliseconds < 5000)
+        while (watch.ElapsedMilliseconds < timeoutMs)
         {
             if (condition()) return true;
             Thread.Sleep(50);
@@ -513,7 +557,7 @@ public class CompanionToolServiceTests : IDisposable
         _service.OtherGameRunning = ours =>
         {
             ignored = ours;
-            return gameRunning;
+            return gameRunning ? "'Elden Ring' (Steam says it's running)" : null;
         };
         var scheduled = new List<(TimeSpan Delay, Action Action)>();
         _service.Schedule = (delay, action) => scheduled.Add((delay, action));
@@ -536,7 +580,7 @@ public class CompanionToolServiceTests : IDisposable
     }
 
     [Fact]
-    public void IsUntrackedGameRunning_SeesAProcessFromTheGamesFolder_ButNotTheToolsOwn()
+    public void FindUntrackedRunningGame_SeesAProcessFromTheGamesFolder_ButNotTheToolsOwn()
     {
         string folder = Path.Combine(_root, "Some Game");
         string exe = CopyPing(folder, "TTGame" + Guid.NewGuid().ToString("N")[..8]);
@@ -547,13 +591,17 @@ public class CompanionToolServiceTests : IDisposable
             new SteamScannerService(), new GogScannerService(), new EaScannerService(),
             new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService(), new BattleNetScannerService());
 
-        Assert.False(launcher.IsUntrackedGameRunning([game], new HashSet<int>()));
+        Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>()));
 
         using var process = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
         try
         {
-            Assert.True(launcher.IsUntrackedGameRunning([game], new HashSet<int>()));
-            Assert.False(launcher.IsUntrackedGameRunning([game], new HashSet<int> { process.Id }));
+            // Named for the log, so a tester's log says what kept the tools open.
+            string? found = launcher.FindUntrackedRunningGame([game], new HashSet<int>());
+            Assert.NotNull(found);
+            Assert.Contains("'Some Game'", found);
+            Assert.Contains($"PID {process.Id}", found);
+            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int> { process.Id }));
         }
         finally
         {

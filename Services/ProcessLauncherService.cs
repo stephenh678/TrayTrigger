@@ -763,21 +763,20 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
-    /// Whether one of <paramref name="games"/> is running without TrayTrigger following it - started
-    /// from Steam or its own launcher, say. A Steam game by Steam's own "running" flag; any other by a
-    /// process from its folder, leaving out known helpers and the processes in <paramref name="ignore"/>
-    /// (the tools themselves, which may live in a game's folder). A game started from a bare link has
-    /// neither, and can't be seen.
+    /// One of <paramref name="games"/> that is running without TrayTrigger following it - started from
+    /// Steam or its own launcher, say - described for the log, or null. A Steam game by Steam's own
+    /// "running" flag; any other by a process from its folder, leaving out known helpers and the
+    /// processes in <paramref name="ignore"/> (the tools themselves, which may live in a game's folder).
+    /// A game started from a bare link has neither, and can't be seen.
     /// </summary>
-    internal bool IsUntrackedGameRunning(IReadOnlyList<GameEntry> games, IReadOnlySet<int> ignore)
+    internal string? FindUntrackedRunningGame(IReadOnlyList<GameEntry> games, IReadOnlySet<int> ignore)
     {
         List<(int Pid, string Path)>? running = null;
         foreach (var game in games)
         {
             if (game.IsSteamGame && !string.IsNullOrWhiteSpace(game.SteamAppId) && ReadSteamRunningFlag(game.SteamAppId))
             {
-                LoggingService.Verbose("Launcher", $"'{game.Name}' is running without TrayTrigger following it (Steam says so).");
-                return true;
+                return $"'{game.Name}' (Steam says it's running)";
             }
 
             string dir = ResolveTrackedInstallDir(game);
@@ -787,11 +786,10 @@ public partial class ProcessLauncherService
             foreach (var (pid, path) in running)
             {
                 if (ignore.Contains(pid) || !path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || ProcessPathResolver.IsKnownHelperProcess(path)) continue;
-                LoggingService.Verbose("Launcher", $"'{game.Name}' is running without TrayTrigger following it ({path}, PID {pid}).");
-                return true;
+                return $"'{game.Name}' ({path}, PID {pid})";
             }
         }
-        return false;
+        return null;
     }
 
     /// <summary>No game is running or being launched: the time to close the tools started with games.</summary>
