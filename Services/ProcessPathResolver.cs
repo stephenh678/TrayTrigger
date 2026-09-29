@@ -318,6 +318,33 @@ public static partial class ProcessPathResolver
         return null;
     }
 
+    /// <summary>
+    /// Every running copy of the program at <paramref name="path"/>, matched by its real image path
+    /// rather than its name - one running as administrator included, since its path can be read
+    /// (see the class summary). The caller disposes what it gets back.
+    /// </summary>
+    public static List<Process> FindRunningCopies(string path)
+    {
+        Process[] candidates;
+        try
+        {
+            candidates = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(path));
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Swallowed("ProcessPathResolver", ex, $"looking for running copies of '{path}'");
+            return new List<Process>();
+        }
+
+        var matching = new List<Process>();
+        foreach (var candidate in candidates)
+        {
+            if (IsSamePath(GetProcessPath(candidate.Id), path)) matching.Add(candidate);
+            else candidate.Dispose();
+        }
+        return matching;
+    }
+
     /// <summary>Normalizes a folder for prefix matching: trailing separator, no trailing slashes before it.</summary>
     public static string NormalizeDirectory(string dir) => dir.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
 

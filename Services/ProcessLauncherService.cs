@@ -1366,15 +1366,9 @@ public partial class ProcessLauncherService
 
     private bool TryActivateRunningExecutable(GameEntry game)
     {
-        Process[]? candidates = null;
+        var matching = ProcessPathResolver.FindRunningCopies(game.ExecutablePath);
         try
         {
-            string procName = Path.GetFileNameWithoutExtension(game.ExecutablePath);
-            candidates = Process.GetProcessesByName(procName);
-
-            var matching = candidates
-                .Where(p => ProcessPathResolver.IsSamePath(ProcessPathResolver.GetProcessPath(p.Id), game.ExecutablePath))
-                .ToList();
             if (matching.Count == 0) return false;
 
             var activeProc = matching.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero) ?? matching[0];
@@ -1395,10 +1389,7 @@ public partial class ProcessLauncherService
         }
         finally
         {
-            if (candidates != null)
-            {
-                foreach (var p in candidates) p.Dispose();
-            }
+            foreach (var p in matching) p.Dispose();
         }
     }
 

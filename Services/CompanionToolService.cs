@@ -407,24 +407,14 @@ public sealed partial class CompanionToolService
     /// </summary>
     internal static int? FindRunningProgram(string path)
     {
-        Process[] candidates;
+        var copies = ProcessPathResolver.FindRunningCopies(path);
         try
         {
-            candidates = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(path));
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Swallowed("Tools", ex, $"looking for a running copy of '{path}'");
-            return null;
-        }
-
-        try
-        {
-            return candidates.FirstOrDefault(p => ProcessPathResolver.IsSamePath(ProcessPathResolver.GetProcessPath(p.Id), path))?.Id;
+            return copies.Count > 0 ? copies[0].Id : null;
         }
         finally
         {
-            foreach (var p in candidates) p.Dispose();
+            foreach (var p in copies) p.Dispose();
         }
     }
 }
