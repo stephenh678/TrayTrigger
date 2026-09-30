@@ -194,6 +194,9 @@ public partial class ProcessLauncherService
     /// </summary>
     public DlssOverrideService DlssOverrides { get; set; } = new();
 
+    /// <summary>Tools that start with games (Edit Tool). Set by App; unset in tests, where none start.</summary>
+    public CompanionToolService? CompanionTools { get; set; }
+
     /// <summary>The Epic launch link. "silent=true" asks the launcher not to show its window.</summary>
     internal static string BuildEpicLaunchUrl(string appName, bool silent) =>
         $"com.epicgames.launcher://apps/{Uri.EscapeDataString(appName)}?action=launch{(silent ? "&silent=true" : string.Empty)}";
@@ -481,10 +484,10 @@ public partial class ProcessLauncherService
     }
 
     /// <summary>
-    /// Applies the profile, runs the pre-launch script, and registers the session. Returns null
-    /// (with <paramref name="abortReason"/> set) if the pre-launch script asked to cancel the launch,
-    /// in which case everything already applied has been rolled back.
-    /// Order: profile → pre-launch script → game. See PerformanceProfileService for why the
+    /// Applies the profile, runs the pre-launch script, starts the tools that start with games, and
+    /// registers the session. Returns null (with <paramref name="abortReason"/> set) if the pre-launch
+    /// script asked to cancel the launch, in which case everything already applied has been rolled back.
+    /// Order: profile → pre-launch script → tools → game. See PerformanceProfileService for why the
     /// profile goes first.
     /// </summary>
     private ActiveGameSession? BeginSession(GameEntry game, LaunchRoute route, out string? abortReason)
@@ -510,6 +513,10 @@ public partial class ProcessLauncherService
             RollbackSession(session);
             return null;
         }
+
+        // After the script, so a launch it cancels starts nothing; before the game, so a tool's
+        // administrator prompt is answered before the game can go full screen over it.
+        CompanionTools?.StartForGame(game, remember: true);
 
         // Guarded like SessionGameStarted and SessionEnded: a subscriber's failure must not turn
         // into a rolled-back session and a "launch failed" for a game that was about to start.
@@ -751,6 +758,63 @@ public partial class ProcessLauncherService
         {
             LauncherClientCloser.Close(platform, _steamScannerService.GetSteamInstallPath());
         }
+
+        CloseCompanionToolsIfIdle();
+    }
+
+    /// <summary>
+    /// One of <paramref name="games"/> that is running without TrayTrigger following it - started from
+    /// Steam or its own launcher, say - described for the log, or null. A Steam game by Steam's own
+    /// "running" flag; any other by a process from its folder that has a window showing, leaving out
+    /// known helpers and the processes in <paramref name="ignore"/> (the tools themselves, which may
+    /// live in a game's folder). The window is what tells a game being played from something left in
+    /// its folder in the background, which would otherwise hold the tools open for good; a game's own
+    /// launcher left open still counts, and they close once it does. A game started from a bare link
+    /// has neither, and can't be seen.
+    /// </summary>
+    internal string? FindUntrackedRunningGame(IReadOnlyList<GameEntry> games, IReadOnlySet<int> ignore, Func<int, bool>? hasVisibleWindow = null)
+    {
+        hasVisibleWindow ??= ProcessPathResolver.HasVisibleWindow;
+        List<(int Pid, string Path)>? running = null;
+        foreach (var game in games)
+        {
+            if (game.IsSteamGame && !string.IsNullOrWhiteSpace(game.SteamAppId) && ReadSteamRunningFlag(game.SteamAppId))
+            {
+                return $"'{game.Name}' (Steam says it's running)";
+            }
+
+            string dir = ResolveTrackedInstallDir(game);
+            if (ProcessPathResolver.IsUnsafeProcessFolder(dir, out _)) continue;
+            string prefix = ProcessPathResolver.NormalizeDirectory(dir);
+            running ??= ProcessPathResolver.RunningProcessPaths();
+            foreach (var (pid, path) in running)
+            {
+                if (ignore.Contains(pid) || !path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || ProcessPathResolver.IsKnownHelperProcess(path)) continue;
+                if (!hasVisibleWindow(pid))
+                {
+                    LoggingService.Verbose("Launcher", $"Not counting {path} (PID {pid}) as '{game.Name}' running: it has no window showing.");
+                    continue;
+                }
+                return $"'{game.Name}' ({path}, PID {pid})";
+            }
+        }
+        return null;
+    }
+
+    /// <summary>No game is running or being launched: the time to close the tools started with games.</summary>
+    private bool IsIdle()
+    {
+        lock (_sessionsLock) { return _sessions.Count == 0 && _launchesInProgress.Count == 0; }
+    }
+
+    /// <summary>
+    /// After the last game, closes the tools started with games that are set to close. Called when a
+    /// session ends and when a launch attempt ends, since a launch that failed after starting its tools
+    /// ends its session while its own launch still counts as in progress.
+    /// </summary>
+    private void CloseCompanionToolsIfIdle()
+    {
+        if (CompanionTools is { } tools && IsIdle()) _ = tools.CloseWhenIdleAsync(IsIdle);
     }
 
     /// <summary>
@@ -963,6 +1027,7 @@ public partial class ProcessLauncherService
             if (claimed)
             {
                 lock (_sessionsLock) { _launchesInProgress.Remove(game.Id); }
+                CloseCompanionToolsIfIdle();
             }
         }
     }
@@ -1013,6 +1078,11 @@ public partial class ProcessLauncherService
             errorMessage = $"Launch of \"{game.Name}\" was cancelled because {scriptResult.AbortReason}.";
             return false;
         }
+
+        // No exit to wait for either, so what starts here is left running, and so is anything started
+        // for an earlier game: nothing can say when this one is done with it.
+        CompanionTools?.StartForGame(game, remember: false);
+        CompanionTools?.KeepOpenFor(game);
 
         LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
         Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });
@@ -1337,15 +1407,9 @@ public partial class ProcessLauncherService
 
     private bool TryActivateRunningExecutable(GameEntry game)
     {
-        Process[]? candidates = null;
+        var matching = ProcessPathResolver.FindRunningCopies(game.ExecutablePath);
         try
         {
-            string procName = Path.GetFileNameWithoutExtension(game.ExecutablePath);
-            candidates = Process.GetProcessesByName(procName);
-
-            var matching = candidates
-                .Where(p => ProcessPathResolver.IsSamePath(ProcessPathResolver.GetProcessPath(p.Id), game.ExecutablePath))
-                .ToList();
             if (matching.Count == 0) return false;
 
             var activeProc = matching.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero) ?? matching[0];
@@ -1366,10 +1430,7 @@ public partial class ProcessLauncherService
         }
         finally
         {
-            if (candidates != null)
-            {
-                foreach (var p in candidates) p.Dispose();
-            }
+            foreach (var p in matching) p.Dispose();
         }
     }
 

@@ -31,7 +31,7 @@ public sealed class ToolCardViewModel : ViewModelBase
 
     public string Id => Tool.Id;
     public string Name => Tool.Name;
-    public string Category => LibraryConstants.NormalizeCategory(Tool.Category);
+    public string Category => ToolCatalog.NormalizeCategory(Tool.Category);
     public string TargetPath => Tool.TargetPath;
     /// <summary>The program's path, or the Store app's ID: the list view's "where it starts from" column.</summary>
     public string LaunchDisplay => ToolCatalog.LaunchDisplay(Tool);
@@ -42,6 +42,10 @@ public sealed class ToolCardViewModel : ViewModelBase
     public bool IsScript => ToolCatalog.IsScript(Tool);
     public bool IsFavorite => Tool.IsFavorite;
     public bool RunAsAdmin => Tool.RunAsAdmin && IsProgram;
+    /// <summary>Starts with games (<see cref="ToolEntry.StartWithGames"/>): the card shows the Library's controller icon.</summary>
+    public bool StartsWithGames => ToolCatalog.StartsWithGames(Tool);
+    /// <summary>What Narrator reads for the card: the controller icon can't be seen, so its meaning is spoken.</summary>
+    public string AccessibleName => StartsWithGames ? $"{Name}, starts with games" : Name;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public string HotkeyDisplay => HotkeyManager.Normalize(Tool.Hotkey) ?? string.Empty;
     public bool HasHotkey => HotkeyDisplay.Length > 0;

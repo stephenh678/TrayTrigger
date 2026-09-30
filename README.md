@@ -134,7 +134,7 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 
 ### Tools
 
-Optional, off by default: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. Drop a program, script, shortcut, or Microsoft Store app on the Tools page to add it.
+Optional, off by default: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys, or have a program start with your games and close again after them. Drop a program, script, shortcut, or Microsoft Store app on the Tools page to add it.
 
 ---
 

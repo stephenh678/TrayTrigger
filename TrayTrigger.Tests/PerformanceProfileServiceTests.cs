@@ -47,10 +47,13 @@ public class PerformanceProfileServiceTests : IDisposable
         /// asserted the same way as before.
         /// </summary>
         public int ElevatedBatches;
+        /// <summary>Every change sent in an elevated step, so a test can build the .reg file production would import.</summary>
+        public readonly List<SystemTweaksService.RegFileEntry> Applied = new();
         public bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries)
         {
             if (entries.Count == 0) return true;
             ElevatedBatches++;
+            Applied.AddRange(entries);
             foreach (var e in entries)
             {
                 if (e.Delete) DeleteHklmValue(e.SubKey, e.ValueName);
@@ -175,9 +178,58 @@ public class PerformanceProfileServiceTests : IDisposable
 
         _service.EndGameSession("g");
         Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
-        // Was absent before -> deleted, not written back as some default.
-        Assert.Null(_backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
+        // Was absent before -> Windows' default, never deleted.
+        Assert.Equal("Medium", _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
         Assert.DoesNotContain(_exeA, _backend.Defender);
+    }
+
+    /// <summary>
+    /// A restore that deleted SystemResponsiveness stopped MMCSS starting at the next boot, which took
+    /// a webcam down with it. Whatever was captured, the .reg file imported on the way out writes both
+    /// values and deletes neither.
+    /// </summary>
+    [Fact]
+    public void Aggressive_PreviousValuesUnknown_RestoresWindowsDefaults_AndDeletesNothing()
+    {
+        _settings.AggressiveProfileTweaks.DefenderExclusionEnabled = false;
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        _service.EndGameSession("g");
+
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Equal("Medium", _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
+        string reg = SystemTweaksService.BuildRegFileContent(_backend.Applied);
+        Assert.Contains("\"SystemResponsiveness\"=dword:00000014", reg);
+        Assert.Contains("\"Scheduling Category\"=\"Medium\"", reg);
+        Assert.DoesNotContain("\"SystemResponsiveness\"=-", reg);
+        Assert.DoesNotContain("\"Scheduling Category\"=-", reg);
+    }
+
+    /// <summary>
+    /// Already 10 and "High" before the game means an earlier session never restored them. Putting
+    /// those back would leave the tweak on for good: Windows' defaults go back instead.
+    /// </summary>
+    [Fact]
+    public void Aggressive_ValuesAlreadyOurs_RestoreWindowsDefaults()
+    {
+        _backend.Hklm[PerformanceProfileService.SystemResponsivenessPath + "|SystemResponsiveness"] = 10;
+        _backend.Hklm[SystemTweaksService.MmcssGamesTaskPath + "|Scheduling Category"] = "High";
+
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        _service.EndGameSession("g");
+
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Equal("Medium", _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
+    }
+
+    /// <summary>A category no Windows version writes isn't put back; Windows' own goes back instead.</summary>
+    [Fact]
+    public void Aggressive_PreviousCategoryNotOneWindowsDefines_RestoresMedium()
+    {
+        _backend.Hklm[SystemTweaksService.MmcssGamesTaskPath + "|Scheduling Category"] = "Ultra";
+        _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
+        _service.EndGameSession("g");
+
+        Assert.Equal("Medium", _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category"));
     }
 
     /// <summary>
@@ -386,10 +438,10 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.True(_store.OnDisk.PerGameSnapshots[0].DefenderExclusionCaptured);
         Assert.Empty(_service.ActiveSessionGameIds);
 
-        // Next start: recovery finishes the job.
+        // Next start: recovery finishes the job. It was absent before, so Windows' default goes back.
         var next = new PerformanceProfileService(_store, () => _settings, _backend);
         next.RecoverFromCrashIfNeeded();
-        Assert.Null(_backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
         Assert.DoesNotContain(_exeA, _backend.Defender);
         Assert.Null(_store.OnDisk);
     }
@@ -400,7 +452,7 @@ public class PerformanceProfileServiceTests : IDisposable
         _backend.IsElevated = true;
         _service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive));
         _service.RestoreActiveSessionOnShutdown(skipElevated: true);
-        Assert.Null(_backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
+        Assert.Equal(20, _backend.ReadHklmDword(PerformanceProfileService.SystemResponsivenessPath, "SystemResponsiveness"));
         Assert.DoesNotContain(_exeA, _backend.Defender);
         Assert.Null(_store.OnDisk);
     }

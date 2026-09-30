@@ -17,6 +17,8 @@ public enum LaunchPopupKind
     Failed,
     /// <summary>A launch that needs the user (<see cref="ProcessLauncherService.LaunchNotice"/>). Stays until closed.</summary>
     Notice,
+    /// <summary>A tool started with games runs as administrator, so closing it takes Windows' permission. Goes once that's answered.</summary>
+    Closing,
 }
 
 /// <summary>
@@ -48,7 +50,7 @@ public sealed record LaunchPopupContent(
 {
     /// <summary>Has a close button (and maybe an action), so it can't be click-through.</summary>
     public bool IsInteractive => Kind is LaunchPopupKind.Failed or LaunchPopupKind.Notice;
-    public bool ShowsProgress => Kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting;
+    public bool ShowsProgress => Kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting or LaunchPopupKind.Closing;
 }
 
 /// <summary>The popup window, behind an interface so the coordinator's rules are testable without WPF windows.</summary>
@@ -111,6 +113,9 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     private LaunchTarget? _target;
     private LaunchPopupKind _kind;
     private string? _platform;
+    private string? _startingTool;
+    /// <summary>A failure or notice a tool's closing prompt covered, put back when the prompt is answered. Anything else shown drops it: the newer message wins.</summary>
+    private (LaunchTarget Target, LaunchPopupKind Kind, string? Message, string? ActionText, Action? Action)? _setAside;
     private string? _message;
     private string? _actionText;
     private Action? _action;
@@ -159,15 +164,27 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         {
             if (token == _token && _kind == LaunchPopupKind.Launching) Render(LaunchPopupKind.Waiting);
         });
+        ArmCap(target);
+
+        LoggingService.Verbose("LaunchPopup", $"Showing the launch popup for '{target.Name}' ({(appInFront ? "launched from the TrayTrigger window" : "TrayTrigger window not in front")}).");
+        return true;
+    }
+
+    /// <summary>
+    /// Closes a progress popup after <see cref="MaxWait"/>. Armed again for each tool that starts with
+    /// the game: the game isn't dispatched until they have, so a tool's prompt and wait must not use up
+    /// the time the game itself is given.
+    /// </summary>
+    private void ArmCap(LaunchTarget target)
+    {
+        _capTimer?.Dispose();
+        int token = _token;
         _capTimer = _schedule(MaxWait, () =>
         {
             if (token != _token || !IsProgress) return;
             LoggingService.Verbose("LaunchPopup", $"'{target.Name}' still hadn't started after {MaxWait.TotalSeconds:0}s; closed the launch popup.");
             Hide();
         });
-
-        LoggingService.Verbose("LaunchPopup", $"Showing the launch popup for '{target.Name}' ({(appInFront ? "launched from the TrayTrigger window" : "TrayTrigger window not in front")}).");
-        return true;
     }
 
     /// <summary>The launcher registered a session; its platform label names what the game waits on.</summary>
@@ -175,6 +192,18 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     {
         if (!IsProgressFor(id)) return;
         _platform = platformLabel;
+        Render(_kind);
+    }
+
+    /// <summary>
+    /// A tool that starts with games is being started before this game, or null once they all have.
+    /// Its administrator prompt holds up the launch, so the popup says what is being waited on.
+    /// </summary>
+    public void OnStartingTool(string id, string? toolName)
+    {
+        if (!IsProgressFor(id)) return;
+        _startingTool = toolName;
+        ArmCap(_target!);
         Render(_kind);
     }
 
@@ -219,6 +248,41 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         return true;
     }
 
+    /// <summary>
+    /// A tool started with games runs as administrator, so closing it takes a Windows prompt, and the
+    /// prompt names Windows PowerShell rather than the tool. The popup says what it's for until
+    /// <see cref="EndClosing"/>. False when the popup is turned off.
+    /// </summary>
+    public bool ShowClosing(LaunchTarget tool)
+    {
+        if (!_isEnabled()) return false;
+        (LaunchTarget, LaunchPopupKind, string?, string?, Action?)? waiting = null;
+        if (_target != null && _kind is LaunchPopupKind.Failed or LaunchPopupKind.Notice)
+        {
+            waiting = (_target, _kind, _message, _actionText, _action);
+        }
+        Start(tool, LaunchPopupKind.Closing, message: null, actionText: null, action: null);
+        _setAside = waiting;
+        return true;
+    }
+
+    /// <summary>
+    /// The prompt for closing <paramref name="id"/> has been answered. A failure or notice it covered
+    /// comes back, since it was still waiting for the user; otherwise the popup goes.
+    /// </summary>
+    public void EndClosing(string id)
+    {
+        if (_target?.Id != id || _kind != LaunchPopupKind.Closing) return;
+        if (_setAside is { } back)
+        {
+            Start(back.Target, back.Kind, back.Message, back.ActionText, back.Action);
+        }
+        else
+        {
+            Hide();
+        }
+    }
+
     public void Dispose()
     {
         CancelTimers();
@@ -237,6 +301,8 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _token++;
         _target = target;
         _platform = null;
+        _startingTool = null;
+        _setAside = null;
         _message = message;
         _actionText = actionText;
         _action = action;
@@ -254,6 +320,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
             LaunchPopupKind.Launching => "Launching",
             LaunchPopupKind.Waiting => IsLauncher(_platform) ? $"Waiting for {_platform}" : "Still starting",
             LaunchPopupKind.Failed => "Couldn't launch",
+            LaunchPopupKind.Closing => "Closing",
             _ => "Needs your attention",
         };
 
@@ -261,8 +328,16 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         {
             LaunchPopupKind.Launching => LaunchingDetail(_target, _platform),
             LaunchPopupKind.Waiting => WaitingDetail(_platform),
+            LaunchPopupKind.Closing => "It runs as administrator, so Windows asks for permission to close it.",
             _ => _message,
         };
+
+        // Until its tools have started the game hasn't been dispatched, so there's nothing else to wait on.
+        if (_startingTool != null && kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting)
+        {
+            status = "Launching";
+            detail = $"Starting {_startingTool} first";
+        }
 
         _view.Show(new LaunchPopupContent(kind, _target.Name, status, detail, _iconFor(_target), _actionText));
     }
@@ -308,6 +383,8 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         CancelTimers();
         _token++;
         _target = null;
+        _startingTool = null;
+        _setAside = null;
         _action = null;
         _view.Hide();
     }

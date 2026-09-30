@@ -10,8 +10,9 @@ namespace TrayTrigger.Services;
 /// <summary>
 /// The Tools section's rules with no UI or disk access, so they are unit-testable: sort options,
 /// view modes, category tabs, search, which tab a new tool lands in, and which targets may become
-/// a tool. Categories follow <see cref="LibraryConstants.NormalizeCategory"/> like games do, but the
-/// set of tool categories is built only from tools.
+/// a tool. Categories follow <see cref="LibraryConstants.NormalizeCategory"/> like games do, with the
+/// With Games tab's name reserved too (<see cref="NormalizeCategory"/>), and the set of tool
+/// categories is built only from tools.
 /// </summary>
 public static class ToolCatalog
 {
@@ -76,6 +77,34 @@ public static class ToolCatalog
 
     /// <summary>A Store app, started by its app ID, rather than a program (.exe).</summary>
     public static bool IsStoreApp(ToolEntry tool) => !string.IsNullOrWhiteSpace(tool.AppId);
+
+    /// <summary>
+    /// A program (.exe) can start and close with games. A script already has pre-launch scripts, and a
+    /// Store app can't be told apart when it is already running: starting it again would bring it in
+    /// front of the game.
+    /// </summary>
+    public static bool CanStartWithGames(ToolEntry tool) => !IsStoreApp(tool) && !IsScript(tool);
+
+    /// <summary>Ticked to start with games, and able to: what the card's controller icon and the With Games tab show.</summary>
+    public static bool StartsWithGames(ToolEntry tool) => tool.StartWithGames && CanStartWithGames(tool);
+
+    /// <summary>The Tools page's tab for the tools that start with games, shown only while at least one does.</summary>
+    public const string WithGamesTab = "With Games";
+
+    /// <summary>
+    /// A tool's category: <see cref="LibraryConstants.NormalizeCategory"/>, with the With Games tab's name
+    /// reserved as well, so no category can be taken for the tab. Game categories may still use it.
+    /// </summary>
+    public static string NormalizeCategory(string? category)
+    {
+        string normalized = LibraryConstants.NormalizeCategory(category);
+        return string.Equals(normalized, WithGamesTab, StringComparison.OrdinalIgnoreCase) ? LibraryConstants.Uncategorized : normalized;
+    }
+
+    /// <summary>"Wait before starting the game": the seconds it starts at, and the range Edit Tool accepts.</summary>
+    public const int DefaultWaitSeconds = 5;
+    public const int MinWaitSeconds = 1;
+    public const int MaxWaitSeconds = 60;
 
     /// <summary>What the list view and search show for where a tool starts from: the program's path, or the Store app's ID.</summary>
     public static string LaunchDisplay(ToolEntry tool) => IsStoreApp(tool) ? $"Store app: {tool.AppId.Trim()}" : tool.TargetPath;
@@ -155,20 +184,31 @@ public static class ToolCatalog
 
     /// <summary>The distinct categories the tools use, A to Z, spelled as the first tool that uses each.</summary>
     public static IReadOnlyList<string> CategoriesOf(IEnumerable<ToolEntry> tools) =>
-        tools.Select(t => LibraryConstants.NormalizeCategory(t.Category))
+        tools.Select(t => NormalizeCategory(t.Category))
              .Distinct(StringComparer.OrdinalIgnoreCase)
              .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
              .ToList();
 
     /// <summary>The Tools page's tabs: All, Favorites, then each category A to Z.</summary>
-    public static IReadOnlyList<string> TabsFor(IEnumerable<ToolEntry> tools) =>
-        [LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, .. CategoriesOf(tools)];
+    /// <summary>All Tools, Favorites, With Games while a tool starts with games, then each category A to Z.</summary>
+    public static IReadOnlyList<string> TabsFor(IEnumerable<ToolEntry> tools)
+    {
+        var list = tools as IReadOnlyCollection<ToolEntry> ?? tools.ToList();
+        return
+        [
+            LibraryConstants.AllCategory,
+            LibraryConstants.FavoritesCategory,
+            .. list.Any(StartsWithGames) ? [WithGamesTab] : Array.Empty<string>(),
+            .. CategoriesOf(list),
+        ];
+    }
 
     public static bool IsInTab(ToolEntry tool, string? tab)
     {
         if (string.IsNullOrWhiteSpace(tab) || string.Equals(tab, LibraryConstants.AllCategory, StringComparison.OrdinalIgnoreCase)) return true;
         if (string.Equals(tab, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase)) return tool.IsFavorite;
-        return string.Equals(LibraryConstants.NormalizeCategory(tool.Category), tab, StringComparison.OrdinalIgnoreCase);
+        if (string.Equals(tab, WithGamesTab, StringComparison.OrdinalIgnoreCase)) return StartsWithGames(tool);
+        return string.Equals(NormalizeCategory(tool.Category), tab, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Search matches the name, category, target path or Store app ID, case-insensitively. Blank matches everything.</summary>
@@ -183,7 +223,7 @@ public static class ToolCatalog
     }
 
     /// <summary>A tool added while a category tab is selected goes into that category; from All or Favorites it is Uncategorized.</summary>
-    public static string CategoryForNewTool(string? selectedTab) => LibraryConstants.NormalizeCategory(selectedTab);
+    public static string CategoryForNewTool(string? selectedTab) => NormalizeCategory(selectedTab);
 
     /// <summary>
     /// Why <paramref name="target"/> can't be a tool, or null when it can: only an existing .exe or
@@ -270,7 +310,7 @@ public static class ToolCatalog
     /// <summary>The category the batch dialog starts with: the shared one when every tool has the same, else blank.</summary>
     public static string CommonCategory(IEnumerable<ToolEntry> tools)
     {
-        var categories = tools.Select(t => LibraryConstants.NormalizeCategory(t.Category)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var categories = tools.Select(t => NormalizeCategory(t.Category)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         return categories.Count == 1 ? categories[0] : string.Empty;
     }
 

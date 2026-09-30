@@ -12,16 +12,14 @@ namespace TrayTrigger.Views;
 public partial class UpdateDialog : Window
 {
     private readonly GitHubReleaseInfo _release;
-    private readonly Version _currentVersion;
     private CancellationTokenSource? _downloadCts;
 
-    public UpdateDialog(GitHubReleaseInfo release, Version currentVersion)
+    public UpdateDialog(GitHubReleaseInfo release)
     {
         InitializeComponent();
         WindowThemeService.PrepareForFirstShow(this);
 
         _release = release;
-        _currentVersion = currentVersion;
 
         CurrentVersionText.Text = UpdateService.CurrentVersionDisplay;
         NewVersionText.Text = release.TagName;
@@ -191,10 +189,10 @@ public partial class UpdateDialog : Window
 
     /// <returns>True if the user clicked "Remind Later" (as opposed to installing or otherwise
     /// dismissing the dialog), so the caller can persist a snooze.</returns>
-    public static bool ShowUpdateDialog(Window? owner, GitHubReleaseInfo release, Version currentVersion)
+    public static bool ShowUpdateDialog(Window? owner, GitHubReleaseInfo release)
     {
         var activeOwner = owner ?? WindowHelper.ActiveOwner();
-        var dialog = new UpdateDialog(release, currentVersion);
+        var dialog = new UpdateDialog(release);
 
         if (activeOwner != null)
         {

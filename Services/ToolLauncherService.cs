@@ -344,13 +344,9 @@ public class ToolLauncherService
     /// </summary>
     private static ToolLaunchResult? TryActivateRunning(ToolEntry tool)
     {
-        Process[]? candidates = null;
+        var matching = ProcessPathResolver.FindRunningCopies(tool.TargetPath);
         try
         {
-            candidates = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(tool.TargetPath));
-            var matching = candidates
-                .Where(p => ProcessPathResolver.IsSamePath(ProcessPathResolver.GetProcessPath(p.Id), tool.TargetPath))
-                .ToList();
             if (matching.Count == 0) return null;
 
             var withWindow = matching.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
@@ -371,10 +367,7 @@ public class ToolLauncherService
         }
         finally
         {
-            if (candidates != null)
-            {
-                foreach (var p in candidates) p.Dispose();
-            }
+            foreach (var p in matching) p.Dispose();
         }
     }
 }

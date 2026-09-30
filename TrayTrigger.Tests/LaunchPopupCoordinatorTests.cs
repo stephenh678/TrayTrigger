@@ -57,6 +57,10 @@ public class LaunchPopupCoordinatorTests
                 utcNow: () => Now);
         }
 
+        /// <summary>How many timers with this delay were ever scheduled, and how many are still live.</summary>
+        public (int Scheduled, int Live) Timers(TimeSpan delay) =>
+            (_timers.Count(t => t.Delay == delay), _timers.Count(t => t.Delay == delay && !t.Handle.Cancelled));
+
         /// <summary>Fires every live timer whose delay matches.</summary>
         public void Fire(Func<TimeSpan, bool> which)
         {
@@ -172,6 +176,120 @@ public class LaunchPopupCoordinatorTests
         Assert.Equal(LaunchPopupKind.Waiting, rig.View.Shown!.Kind);
         Assert.Equal("Waiting for Battle.net", rig.View.Shown.Status);
         Assert.Contains("signing in", rig.View.Shown.Detail);
+    }
+
+    [Fact]
+    public void StartingTool_NamesTheToolUntilItHasStarted_EvenPastTheWaitingTime()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnStartingTool("a", "MSI Afterburner");
+        Assert.Equal("Launching", rig.View.Shown!.Status);
+        Assert.Equal("Starting MSI Afterburner first", rig.View.Shown.Detail);
+
+        // An administrator prompt can take longer than WaitingAfter to answer.
+        rig.Fire(d => d == LaunchPopupCoordinator.WaitingAfter);
+        Assert.Equal("Starting MSI Afterburner first", rig.View.Shown!.Detail);
+
+        rig.Popup.OnStartingTool("a", null);
+        Assert.Equal("Still starting", rig.View.Shown!.Status);
+    }
+
+    [Fact]
+    public void Closing_SaysWhatThePromptIsFor_UntilItIsAnswered()
+    {
+        var rig = new Rig();
+
+        Assert.True(rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner")));
+        Assert.Equal(LaunchPopupKind.Closing, rig.View.Shown!.Kind);
+        Assert.Equal("MSI Afterburner", rig.View.Shown.Name);
+        Assert.Equal("Closing", rig.View.Shown.Status);
+        Assert.Contains("Windows asks for permission to close it", rig.View.Shown.Detail);
+        Assert.False(rig.View.Shown.IsInteractive);
+
+        rig.Popup.EndClosing("other");
+        Assert.True(rig.View.Visible);
+
+        rig.Popup.EndClosing("t1");
+        Assert.False(rig.View.Visible);
+    }
+
+    /// <summary>
+    /// A launch failure still waiting for the user isn't lost to a tool's closing prompt: it's covered
+    /// while the prompt explains itself, and comes back, action and all, once the prompt is answered.
+    /// </summary>
+    [Fact]
+    public void Closing_PutsBackAFailureItCovered()
+    {
+        var rig = new Rig();
+        int located = 0;
+        Assert.True(rig.Popup.TryShowFailure(Game("a", "Elden Ring"), "Its program wasn't found.", "Locate program...", () => located++));
+
+        rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner"));
+        Assert.Equal(LaunchPopupKind.Closing, rig.View.Shown!.Kind);
+
+        rig.Popup.EndClosing("t1");
+        Assert.True(rig.View.Visible);
+        Assert.Equal(LaunchPopupKind.Failed, rig.View.Shown!.Kind);
+        Assert.Equal("Elden Ring", rig.View.Shown.Name);
+        Assert.Equal("Its program wasn't found.", rig.View.Shown.Detail);
+        Assert.Equal("Locate program...", rig.View.Shown.ActionText);
+
+        rig.View.ClickAction();
+        Assert.Equal(1, located);
+    }
+
+    [Fact]
+    public void Closing_ANewerMessageWins_OverTheOneItCovered()
+    {
+        var rig = new Rig();
+        rig.Popup.TryShowFailure(Game("a", "Elden Ring"), "Its program wasn't found.", null, null);
+        rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner"));
+
+        rig.Popup.TryShowNotice(Game("b", "Diablo IV"), "Battle.net needs you.");
+        rig.Popup.EndClosing("t1");
+
+        Assert.Equal("Diablo IV", rig.View.Shown!.Name);
+        Assert.True(rig.View.Visible);
+    }
+
+    [Fact]
+    public void Closing_WithThePopupOff_ShowsNothing()
+    {
+        var rig = new Rig { Enabled = false };
+
+        Assert.False(rig.Popup.ShowClosing(new LaunchTarget("t1", "MSI Afterburner")));
+        Assert.Null(rig.View.Shown);
+    }
+
+    /// <summary>
+    /// A tool's prompt and wait come before the game is dispatched, so the time the popup gives the
+    /// game starts again once the tools are done, instead of being used up by them.
+    /// </summary>
+    [Fact]
+    public void StartingTool_TheGameStillGetsTheWholeMaxWait()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnStartingTool("a", "MSI Afterburner");
+        rig.Popup.OnStartingTool("a", null);
+
+        Assert.Equal((3, 1), rig.Timers(LaunchPopupCoordinator.MaxWait));
+        rig.Fire(d => d == LaunchPopupCoordinator.MaxWait);
+        Assert.False(rig.View.Visible);
+    }
+
+    [Fact]
+    public void StartingTool_ForAnotherLaunch_IsIgnored()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnStartingTool("b", "MSI Afterburner");
+
+        Assert.Null(rig.View.Shown!.Detail);
     }
 
     [Fact]

@@ -7,7 +7,7 @@
         xmlns:views="clr-namespace:TrayTrigger.Views"
         mc:Ignorable="d"
         Title="Edit Tool"
-        Height="640" Width="620"
+        Height="700" Width="620"
         MinHeight="520" MinWidth="560"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -99,7 +99,9 @@
                         BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="Launch" FontSize="12.5" FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
+                                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                        <Button Style="{StaticResource HelpLinkButton}" Content="How tools work" Margin="0,0,0,10"
+                                Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/overview"/>
 
                         <!-- A Store app has no program, folder or elevation to edit: it starts by its app ID, like its Start menu tile. -->
                         <StackPanel Visibility="{Binding IsStoreApp, Converter={StaticResource BoolToVis}}">
@@ -154,6 +156,35 @@
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log (not when it also runs as administrator). A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
                                            FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                            </StackPanel>
+
+                            <!-- A program only: a script has pre-launch scripts, and a Store app can't be told apart when it's already running. -->
+                            <StackPanel Visibility="{Binding CanStartWithGames, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Start when I launch a game" IsChecked="{Binding StartWithGames}"
+                                          Style="{StaticResource ModernCheckBox}"/>
+                                <TextBlock Text="TrayTrigger starts it just before any game it launches, unless it's already running."
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,8"/>
+
+                                <!-- Both only mean something with Start ticked, so they're greyed out without it. -->
+                                <StackPanel IsEnabled="{Binding StartWithGames}" Margin="22,0,0,0">
+                                    <CheckBox Content="Wait before starting the game" IsChecked="{Binding WaitBeforeGame}"
+                                              Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
+                                    <DockPanel Margin="22,0,0,8" LastChildFill="True" IsEnabled="{Binding WaitBeforeGame}">
+                                        <TextBox AutomationProperties.Name="Seconds to wait before starting the game" DockPanel.Dock="Left" Width="64"
+                                                 Text="{Binding WaitBeforeGameSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="seconds (1-60), for a tool that needs a moment to get ready, like Afterburner's overlay."
+                                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </DockPanel>
+
+                                    <CheckBox Content="Close it when the game exits" IsChecked="{Binding CloseAfterGames}"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                    <TextBlock Text="Only the copy TrayTrigger started, once your last game has closed. One you opened yourself is left running. It's asked to close, and ended if it's still open a few seconds later. Windows asks for permission to close a program running as administrator."
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,6"/>
+                                </StackPanel>
+                                <Button AutomationProperties.Name="Learn more about starting tools with games" Style="{StaticResource HelpLinkButton}"
+                                        Margin="22,0,0,12"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/start_with_games"/>
                             </StackPanel>
                         </StackPanel>
 

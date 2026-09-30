@@ -1,0 +1,679 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using TrayTrigger.Models;
+using TrayTrigger.Services;
+
+namespace TrayTrigger.Tests;
+
+/// <summary>
+/// Tools that start with games: which ones start before a game, which are left alone, what is
+/// reported when one doesn't start, and which copies are closed after the last game. Programs are
+/// faked except where finding or ending a real copy is the point; those use a renamed ping.exe.
+/// </summary>
+public class CompanionToolServiceTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N"));
+    private readonly List<ToolEntry> _tools = new();
+    private readonly List<string> _started = new();
+    private readonly List<string> _failures = new();
+    private readonly List<string?> _announced = new();
+    private readonly List<string> _ended = new();
+    private readonly List<(string Tool, bool Asking)> _elevatedClosing = new();
+    private readonly List<Process> _toKill = new();
+    private readonly List<string> _events = new();
+    private readonly DateTime _now = new(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+    private bool _enabled = true;
+    private readonly CompanionToolService _service;
+
+    private static readonly GameEntry Game = new() { Id = "g1", Name = "Cyberpunk 2077" };
+
+    public CompanionToolServiceTests()
+    {
+        Directory.CreateDirectory(_root);
+        _service = new CompanionToolService(() => _tools, () => _enabled)
+        {
+            FileExists = _ => true,
+            FindRunningCopy = _ => null,
+            StartProcess = tool =>
+            {
+                _started.Add(tool.Name);
+                return Process.GetCurrentProcess();
+            },
+            // Never the real ones by default: a started copy here is this test run's own process.
+            FindStartedBy = _ => Array.Empty<HeldProcess>(),
+            EndCopy = (targets, _) =>
+            {
+                _ended.Add(targets[0].Name);
+                return CompanionToolService.EndResult.Ended;
+            },
+            EndCopyAsAdministrator = (_, _) => throw new InvalidOperationException("not expected"),
+            CloseGrace = TimeSpan.FromMilliseconds(200),
+            // A fixed clock, and waits recorded instead of slept.
+            UtcNow = () => _now,
+            Wait = span => _events.Add($"wait {span.TotalSeconds}s")
+        };
+        _service.StartFailed += _failures.Add;
+        _service.Starting += (_, tool) =>
+        {
+            _announced.Add(tool?.Name);
+            _events.Add($"popup {tool?.Name ?? "done"}");
+        };
+        _service.ClosingAsAdministrator += (tool, asking) => _elevatedClosing.Add((tool.Name, asking));
+    }
+
+    public void Dispose()
+    {
+        foreach (var process in _toKill)
+        {
+            try { process.Kill(); process.WaitForExit(5000); } catch { }
+            process.Dispose();
+        }
+        try { Directory.Delete(_root, recursive: true); } catch { }
+    }
+
+    private readonly Dictionary<string, Process> _watchers = new();
+
+    /// <summary>
+    /// A real, windowless copy of ping.exe that runs for two minutes, given to the service as the
+    /// started tool. The service disposes what it's given, so the test watches through a handle of
+    /// its own (<see cref="_watchers"/>), opened at once so it still names the process after it exits.
+    /// </summary>
+    private Process StartPing(ToolEntry tool)
+    {
+        string exe = CopyPing(Path.Combine(_root, tool.Id), "TTCompanion" + Guid.NewGuid().ToString("N")[..8]);
+        var process = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        var watcher = Process.GetProcessById(process.Id);
+        _ = watcher.Handle;
+        _watchers[tool.Id] = watcher;
+        _toKill.Add(watcher);
+        return process;
+    }
+
+    private ToolEntry AddClosing(string name)
+    {
+        var tool = Add(name);
+        tool.CloseAfterGames = true;
+        return tool;
+    }
+
+    private ToolEntry Add(string name, string target = @"C:\Tools\tool.exe", bool start = true, string appId = "")
+    {
+        var tool = new ToolEntry { Id = Guid.NewGuid().ToString("N"), Name = name, TargetPath = target, AppId = appId, StartWithGames = start };
+        _tools.Add(tool);
+        return tool;
+    }
+
+    [Fact]
+    public void StartsEachTickedProgram_AndRemembersWhatItStarted()
+    {
+        var afterburner = Add("MSI Afterburner", @"C:\Tools\MSIAfterburner.exe");
+        Add("Vortex", @"C:\Tools\Vortex.exe", start: false);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Equal(["MSI Afterburner"], _started);
+        Assert.Equal([afterburner.Id], _service.Remembered);
+        Assert.Empty(_failures);
+    }
+
+    [Fact]
+    public void AlreadyRunning_IsLeftAlone_AndNotRemembered()
+    {
+        Add("MSI Afterburner", @"C:\Tools\MSIAfterburner.exe");
+        _service.FindRunningCopy = _ => 4242;
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Empty(_started);
+        Assert.Empty(_service.Remembered);
+        Assert.Empty(_announced);
+    }
+
+    [Fact]
+    public void ToolsPageOff_StartsNothing()
+    {
+        Add("MSI Afterburner");
+        _enabled = false;
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Empty(_started);
+    }
+
+    [Fact]
+    public void ScriptOrStoreApp_NeverStarts_EvenWhenTicked()
+    {
+        // tools.json is user-editable: Edit Tool never saves the tick on these, but a file can.
+        Add("Backup", @"C:\Tools\backup.ps1");
+        Add("Xbox", target: "", appId: "Microsoft.GamingApp_8wekyb3d8bbwe!Microsoft.Xbox.App");
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Empty(_started);
+        Assert.Empty(_failures);
+    }
+
+    [Fact]
+    public void MissingProgram_IsReported_AndNotStarted()
+    {
+        Add("MSI Afterburner", @"C:\Tools\MSIAfterburner.exe");
+        _service.FileExists = _ => false;
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Empty(_started);
+        var message = Assert.Single(_failures);
+        Assert.Contains("\"MSI Afterburner\" wasn't started with the game because its file doesn't exist", message);
+    }
+
+    [Fact]
+    public void DeclinedAdministratorPrompt_IsNotReported()
+    {
+        Add("MSI Afterburner");
+        _service.StartProcess = _ => throw new Win32Exception(ToolLauncherService.ErrorCancelled);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Empty(_failures);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void AnyOtherFailure_IsReported_AndTheNextToolStillStarts()
+    {
+        Add("Broken");
+        Add("SimHub", @"C:\Tools\SimHubWPF.exe");
+        _service.StartProcess = tool =>
+        {
+            if (tool.Name == "Broken") throw new Win32Exception(2, "The system cannot find the file specified");
+            _started.Add(tool.Name);
+            return Process.GetCurrentProcess();
+        };
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Equal(["SimHub"], _started);
+        Assert.Contains("\"Broken\" didn't start with the game", Assert.Single(_failures));
+    }
+
+    [Fact]
+    public void AGameStartedFromALink_StartsItsTools_ButDoesNotRememberThem()
+    {
+        Add("MSI Afterburner");
+
+        _service.StartForGame(Game, remember: false);
+
+        Assert.Equal(["MSI Afterburner"], _started);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void Starting_NamesEachTool_ThenNull()
+    {
+        Add("MSI Afterburner");
+        Add("SimHub");
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Equal(["MSI Afterburner", "SimHub", null], _announced);
+    }
+
+    // ------------------------------------------------------------------ waiting before the game
+
+    private ToolEntry AddWaiting(string name, int seconds)
+    {
+        var tool = Add(name);
+        tool.WaitBeforeGame = true;
+        tool.WaitBeforeGameSeconds = seconds;
+        return tool;
+    }
+
+    [Fact]
+    public void Wait_HoldsTheGameBack_WithThePopupNamingTheTool()
+    {
+        AddWaiting("MSI Afterburner", 7);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Equal(["popup MSI Afterburner", "popup MSI Afterburner", "wait 7s", "popup done"], _events);
+    }
+
+    [Fact]
+    public void Wait_SeveralTools_IsTheLongest_NotTheSum()
+    {
+        AddWaiting("MSI Afterburner", 5);
+        AddWaiting("SimHub", 8);
+        Add("TrackIR");
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Equal(["wait 8s"], _events.Where(e => e.StartsWith("wait", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void Wait_NotWhenTheToolWasAlreadyRunning()
+    {
+        AddWaiting("MSI Afterburner", 7);
+        _service.FindRunningCopy = _ => 4242;
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Empty(_events);
+    }
+
+    [Fact]
+    public void Wait_NotWhenThePromptWasDeclined()
+    {
+        AddWaiting("MSI Afterburner", 7);
+        _service.StartProcess = _ => throw new Win32Exception(ToolLauncherService.ErrorCancelled);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.DoesNotContain(_events, e => e.StartsWith("wait", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Wait_ClockMovedBackWhileStarting_IsStillAtMostAMinute()
+    {
+        AddWaiting("MSI Afterburner", 7);
+        int reads = 0;
+        // Read once when the tool starts, then ten minutes earlier: a time sync just after boot.
+        _service.UtcNow = () => reads++ == 0 ? _now : _now.AddMinutes(-10);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Contains("wait 60s", _events);
+    }
+
+    [Fact]
+    public void Wait_FromAHandEditedFile_IsKeptWithinAMinute()
+    {
+        AddWaiting("MSI Afterburner", 100000);
+
+        _service.StartForGame(Game, remember: true);
+
+        Assert.Contains("wait 60s", _events);
+    }
+
+    [Fact]
+    public void FindRunningCopyOf_MatchesByPath_NotByName()
+    {
+        string name = "TTCompanion" + Guid.NewGuid().ToString("N")[..8];
+        string running = CopyPing(Path.Combine(_root, "a"), name);
+        string sameNameElsewhere = CopyPing(Path.Combine(_root, "b"), name);
+
+        using var process = Process.Start(new ProcessStartInfo(running, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        try
+        {
+            Assert.Equal(process.Id, CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = running }));
+            Assert.Null(CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = sameNameElsewhere }));
+        }
+        finally
+        {
+            process.Kill();
+            process.WaitForExit(5000);
+        }
+    }
+
+    /// <summary>
+    /// A tool that runs something through a shared program (javaw.exe -jar tracker.jar) is running only
+    /// when a copy was started with its arguments - not whenever any copy of the program is.
+    /// </summary>
+    [Fact]
+    public void FindRunningCopyOf_WithArguments_OnlyACopyStartedWithThem()
+    {
+        string exe = CopyPing(Path.Combine(_root, "c"), "TTCompanion" + Guid.NewGuid().ToString("N")[..8]);
+        using var process = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        try
+        {
+            Assert.Equal(process.Id, CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = exe, Arguments = "-n 120 127.0.0.1" }));
+            Assert.Equal(process.Id, CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = exe, Arguments = " -N  120 127.0.0.1 " }));
+            Assert.Null(CompanionToolService.FindRunningCopyOf(new ToolEntry { TargetPath = exe, Arguments = "-n 60 127.0.0.1" }));
+        }
+        finally
+        {
+            process.Kill();
+            process.WaitForExit(5000);
+        }
+    }
+
+    [Theory]
+    [InlineData("\"C:\\Program Files\\Java\\bin\\javaw.exe\" -jar tracker.jar", "-jar tracker.jar")]
+    [InlineData("C:\\Tools\\ping.exe -n 5 host", "-n 5 host")]
+    [InlineData("\"C:\\Tools\\MSIAfterburner.exe\"", "")]
+    [InlineData("C:\\Tools\\MSIAfterburner.exe", "")]
+    public void ArgumentsOf_IsWhatFollowsTheProgram(string commandLine, string expected) =>
+        Assert.Equal(expected, ProcessPathResolver.ArgumentsOf(commandLine));
+
+    // ------------------------------------------------------------------ closing after the last game
+
+    [Fact]
+    public void AfterTheLastGame_EndsTheCopyItStarted()
+    {
+        var tool = AddClosing("SimHub");
+        _service.StartProcess = StartPing;
+        _service.EndCopy = CompanionToolService.EndNormally;
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+
+        // No window to ask, so it is ended once the grace period is over.
+        Assert.True(_watchers[tool.Id].WaitForExit(5000), "the copy started for the game should have been ended");
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void NotSetToClose_IsLeftRunning_AndForgotten()
+    {
+        var tool = Add("SimHub");
+        _service.StartProcess = StartPing;
+        _service.EndCopy = CompanionToolService.EndNormally;
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.False(_watchers[tool.Id].HasExited);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void WhileAGameIsRunningOrLaunching_NothingCloses()
+    {
+        var tool = AddClosing("SimHub");
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => false);
+
+        Assert.Empty(_ended);
+        Assert.Equal([tool.Id], _service.Remembered);
+    }
+
+    [Fact]
+    public void ACopyItDidNotStart_IsNeverClosed()
+    {
+        AddClosing("SimHub");
+        _service.FindRunningCopy = _ => 4242;
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.Empty(_ended);
+    }
+
+    [Fact]
+    public void ARemovedTool_IsLeftRunning()
+    {
+        var tool = AddClosing("SimHub");
+        _service.StartForGame(Game, remember: true);
+        _tools.Remove(tool);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.Empty(_ended);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void ACopyThatAlreadyClosed_IsForgottenQuietly()
+    {
+        var tool = AddClosing("SimHub");
+        _service.StartProcess = StartPing;
+        _service.StartForGame(Game, remember: true);
+        _watchers[tool.Id].Kill();
+        _watchers[tool.Id].WaitForExit(5000);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.Empty(_ended);
+        Assert.Empty(_service.Remembered);
+    }
+
+    /// <summary>
+    /// Afterburner starts RTSS as it starts up; closing Afterburner alone left RTSS running. Here the
+    /// tool is a Command Prompt that starts a ping, and closing the tool ends the ping too.
+    /// </summary>
+    [Fact]
+    public void Closing_AlsoEndsWhatTheToolStartedAsItStartedUp()
+    {
+        var tool = AddClosing("SimHub");
+        string childName = "TTChild" + Guid.NewGuid().ToString("N")[..8];
+        string child = CopyPing(Path.Combine(_root, "child"), childName);
+        _service.StartProcess = t =>
+        {
+            var cmd = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"), $"/d /c \"\"{child}\" -n 120 127.0.0.1\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            })!;
+            var watcher = Process.GetProcessById(cmd.Id);
+            _ = watcher.Handle;
+            _watchers[t.Id] = watcher;
+            _toKill.Add(watcher);
+            return cmd;
+        };
+        _service.EndCopy = CompanionToolService.EndNormally;
+        _service.FindStartedBy = CompanionToolService.StartedAsItStartedUp;
+        _service.StartForGame(Game, remember: true);
+        Assert.True(WaitUntil(() => Process.GetProcessesByName(childName).Length == 1), "the tool should have started its child");
+        var started = Process.GetProcessesByName(childName)[0];
+        _ = started.Handle;
+        _toKill.Add(started);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.True(_watchers[tool.Id].WaitForExit(5000), "the tool should have been ended");
+        Assert.True(started.WaitForExit(5000), "what the tool started should have been ended with it");
+    }
+
+    [Theory]
+    [InlineData(-1, false)]   // older than its "parent": the child of an earlier process with the same id
+    [InlineData(0, true)]
+    [InlineData(5, true)]     // RTSS, a few seconds after Afterburner
+    [InlineData(30, true)]
+    [InlineData(31, false)]   // opened from the tool later, like a browser for a link
+    public void IsStartupChild_WithinTheWindowAndNeverBeforeItsParent(int secondsAfterParent, bool expected)
+    {
+        var parent = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(expected, ProcessTree.IsStartupChild(parent, parent.AddSeconds(secondsAfterParent), parent + CompanionToolService.StartupWindow));
+    }
+
+    /// <summary>
+    /// A browser a tool opened comes with renderer processes of its own. Turning down the browser must
+    /// leave those out too, or closing the tool would kill the renderers of a browser left open. Here a
+    /// Command Prompt starts PowerShell, which starts a ping: turn down PowerShell and the ping goes too.
+    /// </summary>
+    [Fact]
+    public void StartupDescendants_AChildTurnedDown_TakesEverythingUnderItWithIt()
+    {
+        string pingName = "TTNested" + Guid.NewGuid().ToString("N")[..8];
+        string ping = CopyPing(Path.Combine(_root, "nested"), pingName);
+        string powershell = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");
+        // /s strips exactly the outer pair of quotes, leaving the inner ones for PowerShell.
+        var outer = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+            $"/d /s /c \"\"{powershell}\" -NoProfile -NonInteractive -Command \"& '{ping}' -n 120 127.0.0.1\"\"")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true
+        })!;
+        _toKill.Add(outer);
+        Assert.True(WaitUntil(() => Process.GetProcessesByName(pingName).Length == 1, 20000), "the ping should have started under PowerShell");
+
+        using var root = HeldProcess.Open(outer.Id, "cmd")!;
+        var everything = ProcessTree.StartupDescendants(root, CompanionToolService.StartupWindow, _ => true);
+        // Cleaned up by what was found under this test's own Command Prompt - never by name, which
+        // would reach the PowerShell of a test running alongside this one.
+        foreach (var p in everything)
+        {
+            try { _toKill.Add(Process.GetProcessById(p.Id)); }
+            catch (ArgumentException) { /* it has already exited */ }
+        }
+        var withoutPowerShell = ProcessTree.StartupDescendants(root, CompanionToolService.StartupWindow,
+            p => !p.Name.StartsWith("powershell", StringComparison.OrdinalIgnoreCase));
+        try
+        {
+            Assert.Contains(everything, p => p.Name.StartsWith(pingName, StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(withoutPowerShell, p => p.Name.StartsWith(pingName, StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(withoutPowerShell, p => p.Name.StartsWith("powershell", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            foreach (var p in everything.Concat(withoutPowerShell)) p.Dispose();
+        }
+    }
+
+    private static bool WaitUntil(Func<bool> condition, int timeoutMs = 5000)
+    {
+        var watch = Stopwatch.StartNew();
+        while (watch.ElapsedMilliseconds < timeoutMs)
+        {
+            if (condition()) return true;
+            Thread.Sleep(50);
+        }
+        return condition();
+    }
+
+    // ------------------------------------------------------------------ games TrayTrigger isn't following
+
+    [Fact]
+    public void AGameStartedFromALink_KeepsTheToolsOpen()
+    {
+        AddClosing("MSI Afterburner");
+        _service.StartForGame(Game, remember: true);
+
+        _service.KeepOpenFor(new GameEntry { Id = "g2", Name = "Some link" });
+        _service.CloseIfIdle(() => true);
+
+        Assert.Empty(_service.Remembered);
+        Assert.Empty(_ended);
+    }
+
+    [Fact]
+    public void AnUntrackedGameRunning_ClosingWaitsForIt_ThenCloses()
+    {
+        AddClosing("MSI Afterburner");
+        bool gameRunning = true;
+        IReadOnlySet<int>? ignored = null;
+        _service.OtherGameRunning = ours =>
+        {
+            ignored = ours;
+            return gameRunning ? "'Elden Ring' (Steam says it's running)" : null;
+        };
+        var scheduled = new List<(TimeSpan Delay, Action Action)>();
+        _service.Schedule = (delay, action) => scheduled.Add((delay, action));
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+        _service.CloseIfIdle(() => true);   // a second end while waiting doesn't schedule a second look
+
+        Assert.Empty(_ended);
+        var recheck = Assert.Single(scheduled);
+        Assert.Equal(TimeSpan.FromSeconds(30), recheck.Delay);
+        // The tool's own process is left out, in case it lives in a game's folder.
+        Assert.Contains(Environment.ProcessId, ignored!);
+
+        gameRunning = false;
+        recheck.Action();
+
+        Assert.Equal(["MSI Afterburner"], _ended);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void FindUntrackedRunningGame_SeesAProcessFromTheGamesFolder_ButNotTheToolsOwn()
+    {
+        string folder = Path.Combine(_root, "Some Game");
+        string exe = CopyPing(folder, "TTGame" + Guid.NewGuid().ToString("N")[..8]);
+        var game = new GameEntry { Id = "outside", Name = "Some Game", ExecutablePath = exe, WorkingDirectory = folder };
+        var storage = new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"));
+        var launcher = new ProcessLauncherService(
+            storage, new PerformanceProfileService(storage), new GameScriptService(),
+            new SteamScannerService(), new GogScannerService(), new EaScannerService(),
+            new EpicScannerService(), new UbisoftScannerService(), new XboxScannerService(), new BattleNetScannerService());
+
+        Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>(), _ => true));
+
+        using var process = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        try
+        {
+            // Named for the log, so a tester's log says what kept the tools open.
+            string? found = launcher.FindUntrackedRunningGame([game], new HashSet<int>(), _ => true);
+            Assert.NotNull(found);
+            Assert.Contains("'Some Game'", found);
+            Assert.Contains($"PID {process.Id}", found);
+            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int> { process.Id }, _ => true));
+
+            // Something left running in the folder with no window showing isn't the game being played.
+            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>(), _ => false));
+            // And this one really has none, so the real check agrees.
+            Assert.Null(launcher.FindUntrackedRunningGame([game], new HashSet<int>()));
+        }
+        finally
+        {
+            process.Kill();
+            process.WaitForExit(5000);
+        }
+    }
+
+    [Fact]
+    public void OneToolFailingToClose_DoesNotStopTheOthers()
+    {
+        AddClosing("SimHub");
+        AddClosing("TrackIR");
+        int calls = 0;
+        _service.EndCopy = (_, _) =>
+        {
+            if (calls++ == 0) throw new Win32Exception(6, "The handle is invalid");
+            _ended.Add("second");
+            return CompanionToolService.EndResult.Ended;
+        };
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.Equal(["second"], _ended);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void RunningAsAdministrator_AsksOnce_AndNoIsFinal()
+    {
+        AddClosing("MSI Afterburner");
+        _service.EndCopy = (_, _) => CompanionToolService.EndResult.NeedsAdministrator;
+        int asked = 0;
+        _service.EndCopyAsAdministrator = (_, _) =>
+        {
+            asked++;
+            return false; // the prompt was declined
+        };
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+        _service.CloseIfIdle(() => true);
+
+        Assert.Equal(1, asked);
+        Assert.Equal([("MSI Afterburner", true), ("MSI Afterburner", false)], _elevatedClosing);
+        Assert.Empty(_service.Remembered);
+    }
+
+    [Fact]
+    public void RunningAsAdministrator_ClosedWithPermission()
+    {
+        AddClosing("MSI Afterburner");
+        _service.EndCopy = (_, _) => CompanionToolService.EndResult.NeedsAdministrator;
+        _service.EndCopyAsAdministrator = (_, _) => true;
+        _service.StartForGame(Game, remember: true);
+
+        _service.CloseIfIdle(() => true);
+
+        Assert.Equal([("MSI Afterburner", true), ("MSI Afterburner", false)], _elevatedClosing);
+    }
+
+    private static string CopyPing(string folder, string name)
+    {
+        Directory.CreateDirectory(folder);
+        string path = Path.Combine(folder, name + ".exe");
+        File.Copy(Path.Combine(Environment.SystemDirectory, "PING.EXE"), path);
+        return path;
+    }
+}

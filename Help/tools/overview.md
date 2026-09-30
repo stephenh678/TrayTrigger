@@ -39,7 +39,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 ## Categories, favorites and sorting
 
 - Tools have their own categories, separate from game categories. Set one with Change Category... or in Edit Tool; the picker suggests the categories your tools already use.
-- The tabs are All Tools, Favorites, then each category A to Z. A category tab disappears when its last tool leaves it.
+- The tabs are All Tools, Favorites, With Games while a tool starts with games, then each category A to Z. A category tab disappears when its last tool leaves it, and With Games when no tool starts with games any more. "With Games" can't be a category name, so a tool given it goes to Uncategorized.
 - Click the star on a tool to make it a favorite.
 - Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category, program path or Store app ID.
 - Three views: Large Icons, Small Icons and List. The page remembers the view, sort and tab you last used.
@@ -68,6 +68,12 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - Programs that always need admin, like MSI Afterburner, get that prompt even with the box unticked.
 - If you decline the prompt, the tool just stays closed. Nothing else is shown.
 
+## Starting with your games
+
+- Tick "Start when I launch a game" in Edit Tool and the tool starts just before any game TrayTrigger launches, unless it's already running. Tick "Close it when the game exits" too and the copy TrayTrigger started is closed again once your last game has closed.
+- A tool that starts with games shows the Library's controller icon on its card, and is listed on the With Games tab.
+- The Starting tools with your games topic has the details, including the permission prompts for a program that runs as administrator.
+
 ## Hotkeys
 
 - Give a tool a global hotkey in Edit Tool. It's recorded the same way as a game's, and a combination a game, the window hotkey or another app already uses is refused.
@@ -80,6 +86,6 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Turning Tools off
 
-Unticking "Enable Tools" hides the Tools page and the tray submenu and turns off tool hotkeys. Your tools are kept in tools.json next to your game library, so turning it back on brings every tool back as it was. Resetting settings to defaults turns Tools off but never deletes your tools.
+Unticking "Enable Tools" hides the Tools page and the tray submenu, turns off tool hotkeys, and stops tools starting with your games. Your tools are kept in tools.json next to your game library, so turning it back on brings every tool back as it was. Resetting settings to defaults turns Tools off but never deletes your tools.
 
 > Removing a tool only removes TrayTrigger's shortcut to it. The program itself is never touched.

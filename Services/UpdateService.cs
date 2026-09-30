@@ -36,17 +36,15 @@ public class UpdateCheckResult
     public UpdateStatus Status { get; }
     public GitHubReleaseInfo? LatestRelease { get; }
     public string? ErrorMessage { get; }
-    public Version CurrentVersion { get; }
 
     public bool IsUpdateAvailable => Status == UpdateStatus.UpdateAvailable;
     public bool IsUpToDate => Status == UpdateStatus.UpToDate;
 
-    public UpdateCheckResult(UpdateStatus status, GitHubReleaseInfo? latestRelease, string? errorMessage, Version currentVersion)
+    public UpdateCheckResult(UpdateStatus status, GitHubReleaseInfo? latestRelease, string? errorMessage)
     {
         Status = status;
         LatestRelease = latestRelease;
         ErrorMessage = errorMessage;
-        CurrentVersion = currentVersion;
     }
 }
 
@@ -82,8 +80,6 @@ public class UpdateService
             return SemanticVersion.TryParse(info) ?? SemanticVersion.FromVersion(CurrentVersion);
         }
     }
-
-    public static bool IsPrereleaseBuild => CurrentSemVer.IsPrerelease;
 
     /// <summary>
     /// Whether this check should consider pre-releases. The setting turns it on, and so does
@@ -194,15 +190,14 @@ public class UpdateService
                 return new UpdateCheckResult(
                     UpdateStatus.NoReleasesFound,
                     null,
-                    $"No GitHub releases found for '{targetRepo}'. Once published, updates will appear here.",
-                    CurrentVersion);
+                    $"No GitHub releases found for '{targetRepo}'. Once published, updates will appear here.");
             }
 
             if (!response.IsSuccessStatusCode)
             {
                 string statusMsg = $"GitHub API returned {(int)response.StatusCode} {response.ReasonPhrase}";
                 LoggingService.Warn("Update", statusMsg);
-                return new UpdateCheckResult(UpdateStatus.Error, null, statusMsg, CurrentVersion);
+                return new UpdateCheckResult(UpdateStatus.Error, null, statusMsg);
             }
 
             string json = await response.Content.ReadAsStringAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -213,7 +208,7 @@ public class UpdateService
                 var list = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListGitHubReleaseInfo);
                 if (list == null)
                 {
-                    return new UpdateCheckResult(UpdateStatus.Error, null, "Failed to parse release list from GitHub.", CurrentVersion);
+                    return new UpdateCheckResult(UpdateStatus.Error, null, "Failed to parse release list from GitHub.");
                 }
                 if (list.Count == 0)
                 {
@@ -221,8 +216,7 @@ public class UpdateService
                     return new UpdateCheckResult(
                         UpdateStatus.NoReleasesFound,
                         null,
-                        $"No GitHub releases found for '{targetRepo}'. Once published, updates will appear here.",
-                        CurrentVersion);
+                        $"No GitHub releases found for '{targetRepo}'. Once published, updates will appear here.");
                 }
                 release = SelectLatest(list, includePrerelease: true);
             }
@@ -233,7 +227,7 @@ public class UpdateService
 
             if (release == null || string.IsNullOrWhiteSpace(release.TagName))
             {
-                return new UpdateCheckResult(UpdateStatus.Error, null, "Failed to parse release information from GitHub.", CurrentVersion);
+                return new UpdateCheckResult(UpdateStatus.Error, null, "Failed to parse release information from GitHub.");
             }
 
             var remoteVersion = release.SemVer;
@@ -241,7 +235,7 @@ public class UpdateService
             if (remoteVersion != null && remoteVersion > current)
             {
                 LoggingService.Info("Update", $"New release detected: {release.TagName} (Current: {CurrentVersionDisplay}, prerelease={release.Prerelease})");
-                return new UpdateCheckResult(UpdateStatus.UpdateAvailable, release, null, CurrentVersion);
+                return new UpdateCheckResult(UpdateStatus.UpdateAvailable, release, null);
             }
 
             // Saying "up to date, latest is v1.4.0" while running 1.4.1-beta.1 reads as though the
@@ -255,22 +249,22 @@ public class UpdateService
                 LoggingService.Info("Update", $"App is up to date. Latest release on GitHub is {release.TagName}.");
             }
 
-            return new UpdateCheckResult(UpdateStatus.UpToDate, release, null, CurrentVersion);
+            return new UpdateCheckResult(UpdateStatus.UpToDate, release, null);
         }
         catch (HttpRequestException ex)
         {
             LoggingService.Warn("Update", $"Network error checking for updates: {ex.Message}");
-            return new UpdateCheckResult(UpdateStatus.Error, null, "Network connection issue: Unable to reach GitHub.", CurrentVersion);
+            return new UpdateCheckResult(UpdateStatus.Error, null, "Network connection issue: Unable to reach GitHub.");
         }
         catch (TaskCanceledException)
         {
             LoggingService.Warn("Update", "Update check timed out.");
-            return new UpdateCheckResult(UpdateStatus.Error, null, "Connection timed out while checking for updates.", CurrentVersion);
+            return new UpdateCheckResult(UpdateStatus.Error, null, "Connection timed out while checking for updates.");
         }
         catch (Exception ex)
         {
             LoggingService.Error("Update", "Unexpected error during update check", ex);
-            return new UpdateCheckResult(UpdateStatus.Error, null, $"Update check failed: {ex.Message}", CurrentVersion);
+            return new UpdateCheckResult(UpdateStatus.Error, null, $"Update check failed: {ex.Message}");
         }
     }
 
