@@ -6,7 +6,8 @@ using TrayTrigger.ViewModels;
 namespace TrayTrigger.Tests;
 
 /// <summary>
-/// System › Performance Profiles' "New games start on".
+/// System › Performance Profiles' "New games start on", and the library's "Favorites First (Recent)"
+/// sort.
 /// </summary>
 public class NewGameProfileAndSortTests : IDisposable
 {
@@ -102,5 +103,33 @@ public class NewGameProfileAndSortTests : IDisposable
         Assert.Equal(PerformanceProfileMode.Aggressive, storage.LoadSettings().NewGameProfile);
         Assert.Equal(PerformanceProfileMode.Optimized, library.Games.Single().Game.PerformanceProfile);
         Assert.True(system.NewGameProfileIsAggressive);
+    });
+
+    [Fact]
+    public void FavoritesFirstRecent_PutsFavoritesFirst_EachByLastPlayed_NeverPlayedLastAlphabetically() => WpfTestHost.Run(() =>
+    {
+        var now = new DateTime(2026, 10, 1, 12, 0, 0);
+        var (library, _) = NewLibrary(Offline(PerformanceProfileMode.Optimized),
+            new GameEntry { Name = "Fav old", IsFavorite = true, LastPlayed = now.AddDays(-30) },
+            new GameEntry { Name = "Other new", LastPlayed = now },
+            new GameEntry { Name = "Fav new", IsFavorite = true, LastPlayed = now.AddDays(-1) },
+            new GameEntry { Name = "Fav never B", IsFavorite = true },
+            new GameEntry { Name = "Fav never A", IsFavorite = true },
+            new GameEntry { Name = "Other old", LastPlayed = now.AddDays(-60) },
+            new GameEntry { Name = "Other never" });
+
+        library.SelectedSortOption = LibraryViewModel.SortFavoritesFirstRecent;
+
+        Assert.Equal(
+            ["Fav new", "Fav old", "Fav never A", "Fav never B", "Other new", "Other old", "Other never"],
+            library.FilteredGames.Cast<GameCardViewModel>().Select(c => c.Name).ToList());
+    });
+
+    [Fact]
+    public void FavoritesFirstRecent_IsOffered_AfterTheOtherFavoritesFirstSorts() => WpfTestHost.Run(() =>
+    {
+        var (library, _) = NewLibrary(Offline(PerformanceProfileMode.Optimized));
+        var options = library.SortOptions.ToList();
+        Assert.Equal(options.IndexOf("Favorites First (Z - A)") + 1, options.IndexOf(LibraryViewModel.SortFavoritesFirstRecent));
     });
 }
