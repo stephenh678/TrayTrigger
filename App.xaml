@@ -8,6 +8,8 @@
         <converters:TabBackgroundConverter x:Key="TabBackgroundConverter"/>
         <converters:TabForegroundConverter x:Key="TabForegroundConverter"/>
         <converters:ScrollEdgeConverter x:Key="ScrollEdgeConverter"/>
+        <converters:AnyTrueConverter x:Key="AnyTrueConverter"/>
+        <converters:PickByFlagConverter x:Key="PickByFlagConverter"/>
 
         <!-- Colors -->
         <Color x:Key="ColorBgDark">#121214</Color>
