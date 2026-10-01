@@ -543,9 +543,10 @@
                                <ColumnDefinition Width="Auto"/>
                            </Grid.ColumnDefinitions>
 
-                           <TextBox AutomationProperties.Name="Search games" x:Name="LibrarySearchTextBox" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                    Style="{StaticResource ModernTextBox}" Margin="0,0,10,0"
-                                    Tag="Search games by title, category, or path..."/>
+                           <!-- The same search box as Settings, About and System, with its clear x;
+                                stretched to fill the bar instead of their fixed 160. -->
+                           <views:SearchBox x:Name="LibrarySearchBox" Grid.Column="0" Width="Auto" Margin="0,0,10,0"
+                                            Text="{Binding SearchText}" Placeholder="Search games by title, category, or path..."/>
 
                            <ComboBox AutomationProperties.Name="Sort order" Grid.Column="1"
                                      ItemsSource="{Binding SortOptions}"

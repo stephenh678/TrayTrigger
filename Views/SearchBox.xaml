@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Width="160">
     <!-- A fixed 160 wide by default: the smallest that fits a "Search settings..." hint beside the
-         clear x, and the same size at any window width on every page that has one. -->
+         clear x, and the same size at any window width on every page that has one beside its tabs.
+         The Library and Tools search bars set Width="Auto" so theirs fills the bar. -->
     <Grid>
         <TextBox x:Name="Box" Style="{StaticResource ModernTextBox}" VerticalAlignment="Stretch"
                  VerticalContentAlignment="Center" Padding="9,5,28,5"/>
