@@ -9,6 +9,7 @@ namespace TrayTrigger.Tests;
 /// System › Performance Profiles' "New games start on", and the library's "Favorites First (Recent)"
 /// sort.
 /// </summary>
+[Collection(InstallIndexCollection.Name)]
 public class NewGameProfileAndSortTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N"));
@@ -77,14 +78,25 @@ public class NewGameProfileAndSortTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(exe)!);
         File.WriteAllBytes(exe, [0x4D, 0x5A]);
 
-        await WpfTestHost.RunAsync(async () =>
+        // Adding a game recaptures the app-wide installed-games index in the background; wait for it
+        // and put the old one back, so no other test in the collection sees this machine's.
+        var indexBefore = InstalledGameIndex.Current;
+        try
         {
-            var (library, import) = NewLibrary(Offline(chosen));
-            await import.AddCandidateAsync(new GameCandidate("Some Game", exe, Path.GetDirectoryName(exe)!, 2));
+            await WpfTestHost.RunAsync(async () =>
+            {
+                var (library, import) = NewLibrary(Offline(chosen));
+                await import.AddCandidateAsync(new GameCandidate("Some Game", exe, Path.GetDirectoryName(exe)!, 2));
+                await library.HeavyStateLoad;
 
-            var added = Assert.Single(library.Games);
-            Assert.Equal(chosen, added.Game.PerformanceProfile);
-        });
+                var added = Assert.Single(library.Games);
+                Assert.Equal(chosen, added.Game.PerformanceProfile);
+            });
+        }
+        finally
+        {
+            InstalledGameIndex.Current = indexBefore;
+        }
     }
 
     /// <summary>The choice is for games added from now on: one already in the library keeps its own.</summary>

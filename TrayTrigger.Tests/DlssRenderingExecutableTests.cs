@@ -11,6 +11,7 @@ namespace TrayTrigger.Tests;
 /// Service", while the renderer is bin\x64\Cyberpunk2077.exe under "Cyberpunk 2077". Writing to the
 /// launcher's profile fails silently - no error, no effect.</para>
 /// </summary>
+[Collection(InstallIndexCollection.Name)]
 public class DlssRenderingExecutableTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tt-dlss-" + Guid.NewGuid().ToString("N"));
