@@ -171,6 +171,10 @@ public class AppSettings
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
     public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new();
     public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new();
+    /// <summary>The Performance Profile a game gets when it's added to the library - by a scan, Add
+    /// Game, Add Folder or a drop. Games already in the library keep their own. Set on the System
+    /// page's Performance Profiles tab.</summary>
+    public PerformanceProfileMode NewGameProfile { get; set; } = PerformanceProfileMode.Optimized;
 
     /// <summary>
     /// What a permanent System &amp; Performance tweak found on the machine before it was applied,

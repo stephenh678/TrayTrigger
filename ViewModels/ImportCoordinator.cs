@@ -133,15 +133,16 @@ public class ImportCoordinator : ViewModelBase
     // Shared tail of every import pipeline (file drop, folder scan, batch import, Steam import):
     // cache the icon, then enrich from Steam metadata. See L-12.
     //
-    // PerformanceProfile is set explicitly here rather than relying on GameEntry's own default:
-    // this method only ever runs for a game newly added through the app. An existing game loaded
-    // from an older games.json (from before Performance Profiles existed) has no serialized value
-    // for that property and must fall back to GameEntry's class default instead - which stays Off,
-    // so upgrading never silently opts already-installed games into system tweaks.
+    // PerformanceProfile is set explicitly here - to the System page's "New games start on" choice -
+    // rather than relying on GameEntry's own default: this method only ever runs for a game newly
+    // added through the app. An existing game loaded from an older games.json (from before
+    // Performance Profiles existed) has no serialized value for that property and must fall back to
+    // GameEntry's class default instead - which stays Off, so upgrading never silently opts
+    // already-installed games into system tweaks.
     private async Task FinalizeNewEntryAsync(GameEntry entry, string iconSourcePath)
     {
         entry.IconPath = _iconExtractorService.ExtractAndCacheIcon(entry.Id, iconSourcePath, entry.Name);
-        entry.PerformanceProfile = PerformanceProfileMode.Optimized;
+        entry.PerformanceProfile = _settings.NewGameProfile;
         await _library.EnrichGameWithSteamMetadataAsync(entry);
         // Stamp it like EnrichLibraryAsync does, or the next startup re-searches every game this
         // import just looked up and couldn't match (Xbox, Battle.net titles not on Steam). Only when a

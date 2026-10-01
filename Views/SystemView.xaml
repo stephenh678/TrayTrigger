@@ -624,6 +624,24 @@
                                        FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="New games start on" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="The profile a game gets when it's added to the library. Games already there keep theirs: change one in Edit Game, or several at once from their right-click menu."
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ComboBox Grid.Column="1" AutomationProperties.Name="Profile for new games"
+                                          ItemsSource="{Binding NewGameProfileOptions}" SelectedItem="{Binding NewGameProfile}"
+                                          Style="{StaticResource ModernComboBox}" Width="140" VerticalAlignment="Center"/>
+                            </Grid>
+                            <TextBlock Text="With its default tweaks, Aggressive asks for administrator permission when each game starts and again when it closes."
+                                       Visibility="{Binding NewGameProfileIsAggressive, Converter={StaticResource BoolToVis}}"
+                                       FontSize="11" Foreground="{StaticResource BrushWarning}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
