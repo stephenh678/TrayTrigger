@@ -502,15 +502,7 @@ public partial class App
                             var focused = System.Windows.Input.Keyboard.FocusedElement as FrameworkElement;
                             string what = focused == null ? "(nothing)" : $"{focused.GetType().Name} '{System.Windows.Automation.AutomationProperties.GetName(focused)}' {(focused as ContentControl)?.Content as string}";
                             focusLog.AppendLine($"{pressed:00} {keys[pressed - 1]}: {what}");
-                            // Not CaptureVisualBitmap: that focuses the window, which would move focus.
-                            var content = (FrameworkElement)_mainWindow.Content;
-                            var dpi = VisualTreeHelper.GetDpi(content);
-                            var rtb = new RenderTargetBitmap((int)(content.ActualWidth * dpi.DpiScaleX), (int)(content.ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
-                            rtb.Render(_mainWindow);
-                            var encoder = new PngBitmapEncoder();
-                            encoder.Frames.Add(BitmapFrame.Create(rtb));
-                            using var file = File.Create($"{prefix}-{pressed:00}.png");
-                            encoder.Save(file);
+                            SaveWindowContentPng(_mainWindow, $"{prefix}-{pressed:00}.png");
                         }
                         if (pressed >= tabs)
                         {
@@ -622,6 +614,158 @@ public partial class App
                     };
                     open.Start();
                 });
+                return;
+            }
+
+            // --screenshot-poster-details <view mode> <out-prefix>: "Show details on hover" in the given
+            // poster view ("Poster Grid" or "Extra Large"), stepped through its states on the first
+            // card - at rest, keyboard-focused, the setting switched off and back on under it, its
+            // right-click menu open and closed, the same with Animation effects switched off mid-run,
+            // and the setting off for the ordinary lift - as <out-prefix>-NN-<state>.png, with the
+            // card's fade, art zoom and lift values per step in <out-prefix>-log.txt. Everything it
+            // changes is put back before it exits, the window placement included.
+            if ((e.Args[i].Equals("--screenshot-poster-details", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-poster-details", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string viewMode = e.Args[i + 1];
+                string prefix = e.Args[i + 2];
+                var settingsVm = _mainViewModel.SettingsVM;
+                string previousMode = settingsVm.LibraryViewMode;
+                bool previousDetails = settingsVm.PosterDetailsOnHover;
+                bool previousMotion = Views.Motion.IsEnabled;
+                var keptAtRest = settingsVm.PosterDetails;
+                var previousKept = (keptAtRest.LauncherLogo, keptAtRest.Title, keptAtRest.Playtime);
+                // The capture moves and resizes the window, and MainWindow copies its placement into
+                // settings on every move - which the setters below then save. Put the user's back.
+                var placementSettings = settingsVm.Settings;
+                var placement = (placementSettings.MainWindowLeft, placementSettings.MainWindowTop, placementSettings.MainWindowWidth,
+                    placementSettings.MainWindowHeight, placementSettings.MainWindowMaximized);
+                _skipSettingsSaveOnExit = true;
+                var log = new System.Text.StringBuilder();
+                try
+                {
+                    _mainViewModel.CurrentSection = NavSection.Library;
+                    settingsVm.LibraryViewMode = viewMode;
+                    settingsVm.PosterDetailsOnHover = true;
+                    _mainWindow.WindowStartupLocation = WindowStartupLocation.Manual;
+                    _mainWindow.WindowState = WindowState.Normal;
+                    _mainWindow.Left = 0;
+                    _mainWindow.Top = 0;
+                    _mainWindow.Width = 1020;
+                    _mainWindow.Height = 700;
+                    _mainWindow.Show();
+                    _mainWindow.Activate();
+                    var heavyState = _mainViewModel.Library.HeavyStateLoad;
+                    PumpDispatcher(TimeSpan.FromSeconds(10), () => heavyState.IsCompleted);
+                    PumpDispatcher(TimeSpan.FromMilliseconds(800));
+
+                    // A card with poster art, installed if there is one: the art zoom and the dimming
+                    // are what there is to see.
+                    var card = FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible && b.DataContext is GameCardViewModel { ShowPosterArt: true, IsUnavailable: false })
+                        ?? FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible && b.DataContext is GameCardViewModel { ShowPosterArt: true })
+                        ?? FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible);
+                    var cardVm = card?.DataContext as GameCardViewModel;
+                    var fade = card == null ? null : FindVisualChild<FrameworkElement>(card, fe => fe.Name == "DetailsFade");
+                    var shown = card == null ? null : FindVisualChild<FrameworkElement>(card, fe => fe.Name == "DetailsOpacity");
+                    var art = card == null ? null : FindVisualChild<Grid>(card, g => g.Name == "PosterArt");
+                    log.AppendLine($"Motion={Views.Motion.IsEnabled} card='{cardVm?.Name}' poster art={cardVm?.ShowPosterArt}");
+
+                    int step = 0;
+                    void Shot(string state)
+                    {
+                        step++;
+                        double lift = (card?.RenderTransform as ScaleTransform)?.ScaleX ?? double.NaN;
+                        double zoom = (art?.RenderTransform as ScaleTransform)?.ScaleX ?? double.NaN;
+                        log.AppendLine($"{step:00} {state}: active={fade?.Tag} details={shown?.Opacity:0.##} artZoom={zoom:0.###} cardLift={lift:0.###}");
+                        SaveWindowContentPng(_mainWindow, $"{prefix}-{step:00}-{state}.png");
+                    }
+                    void Settle() => PumpDispatcher(TimeSpan.FromMilliseconds(600));
+
+                    Shot("rest");
+                    if (card != null)
+                    {
+                        _mainWindow.Activate();
+                        System.Windows.Input.Keyboard.Focus(card);
+                        Settle();
+                        Shot("focused");
+                        settingsVm.PosterDetailsOnHover = false;
+                        Settle();
+                        Shot("off-focused");
+                        System.Windows.Input.Keyboard.ClearFocus();
+                        Settle();
+                        Shot("off-rest");
+                        settingsVm.PosterDetailsOnHover = true;
+                        Settle();
+                        Shot("on-again-rest");
+                    }
+                    if (cardVm != null)
+                    {
+                        cardVm.IsContextMenuOpen = true;
+                        Settle();
+                        Shot("menu-open");
+                        cardVm.IsContextMenuOpen = false;
+                        Settle();
+                        Shot("menu-closed");
+
+                        // Animation effects switched off mid-run. Read after 60 ms: a fade still
+                        // running would show as a value between 0 and 1.
+                        void Quick() => PumpDispatcher(TimeSpan.FromMilliseconds(60));
+                        Views.Motion.IsEnabled = false;
+                        Quick();
+                        Shot("still-rest");
+                        cardVm.IsContextMenuOpen = true;
+                        Quick();
+                        Shot("still-menu-open");
+                        cardVm.IsContextMenuOpen = false;
+                        Quick();
+                        Shot("still-menu-closed");
+                        Views.Motion.IsEnabled = previousMotion;
+                        Settle();
+                        Shot("motion-back-rest");
+
+                        // The setting off: the old card lift, unchanged.
+                        settingsVm.PosterDetailsOnHover = false;
+                        cardVm.IsContextMenuOpen = true;
+                        Settle();
+                        Shot("normal-menu-open");
+                        cardVm.IsContextMenuOpen = false;
+                        Settle();
+                        Shot("normal-menu-closed");
+
+                        // Details on hover with the logo, title and playtime kept at rest
+                        // (Settings > Library & Art): those stay, everything else waits.
+                        settingsVm.PosterDetailsOnHover = true;
+                        (keptAtRest.LauncherLogo, keptAtRest.Title, keptAtRest.Playtime) = (true, true, true);
+                        Settle();
+                        Shot("kept-rest");
+                        log.AppendLine("   parts: " + string.Join(", ", FindVisualChildren<FrameworkElement>(card!)
+                            .Where(fe => PosterDetailFade.GetPart(fe) != PosterDetailPart.None)
+                            .Select(fe => $"{PosterDetailFade.GetPart(fe)}={fe.Opacity:0.##}")));
+                        System.Windows.Input.Keyboard.Focus(card);
+                        Settle();
+                        Shot("kept-focused");
+                        System.Windows.Input.Keyboard.ClearFocus();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    log.AppendLine(ex.ToString());
+                }
+                finally
+                {
+                    Views.Motion.IsEnabled = previousMotion;
+                    (placementSettings.MainWindowLeft, placementSettings.MainWindowTop, placementSettings.MainWindowWidth,
+                        placementSettings.MainWindowHeight, placementSettings.MainWindowMaximized) = placement;
+                    (keptAtRest.LauncherLogo, keptAtRest.Title, keptAtRest.Playtime) = previousKept;
+                    settingsVm.PosterDetailsOnHover = previousDetails;
+                    settingsVm.LibraryViewMode = previousMode;
+                    // Saved even when neither setter changed anything: the toggles mid-run already
+                    // wrote the capture's placement to disk.
+                    settingsVm.AutoSaveSettings();
+                    File.WriteAllText($"{prefix}-log.txt", log.ToString());
+                }
+                ExitApplication();
                 return;
             }
 
@@ -894,14 +1038,18 @@ public partial class App
                 return;
             }
 
-            // --screenshot-settings-search <out.png> <query>: the card search on the General tab, which
-            // only searches that tab's cards.
+            // --screenshot-settings-search <out.png> <query> [tab]: the card search on the General tab
+            // (or the named one, e.g. Library or All), which only searches that tab's cards.
             if ((e.Args[i].Equals("--screenshot-settings-search", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings-search", StringComparison.OrdinalIgnoreCase)) &&
                 i + 2 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
-                _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.General;
+                // CaptureVisual resizes the window; an exit save would make that the user's placement.
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.SettingsVM.SelectedTab = i + 3 < e.Args.Length && Enum.TryParse<SettingsCategoryTab>(e.Args[i + 3], ignoreCase: true, out var searchTab)
+                    ? searchTab
+                    : SettingsCategoryTab.General;
                 _mainViewModel.CurrentSection = NavSection.Settings;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
@@ -1119,6 +1267,8 @@ public partial class App
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
+                // CaptureVisual resizes the window; an exit save would make that the user's placement.
+                _skipSettingsSaveOnExit = true;
                 _mainViewModel.CurrentSection = NavSection.Library;
                 _mainViewModel.SearchText = "zzzz-no-such-game";
                 _mainWindow.Show();
@@ -3353,6 +3503,22 @@ public partial class App
             if (child is T typed) yield return typed;
             foreach (var descendant in FindVisualChildren<T>(child)) yield return descendant;
         }
+    }
+
+    /// <summary>
+    /// Renders the window's content to a PNG as it stands. Unlike CaptureVisualBitmap it doesn't
+    /// resize, activate or focus the window, so keyboard focus and hover state survive the capture.
+    /// </summary>
+    private static void SaveWindowContentPng(Window window, string targetPng)
+    {
+        var content = (FrameworkElement)window.Content;
+        var dpi = VisualTreeHelper.GetDpi(content);
+        var rtb = new RenderTargetBitmap((int)(content.ActualWidth * dpi.DpiScaleX), (int)(content.ActualHeight * dpi.DpiScaleY), dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        rtb.Render(window);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+        using var file = File.Create(targetPng);
+        encoder.Save(file);
     }
 
     /// <summary>Copies the window's on-screen pixels (including any open popup over it) to a PNG.</summary>
