@@ -687,6 +687,49 @@
                                           Style="{StaticResource ModernComboBox}" Width="140" HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Center"/>
                             </DockPanel>
 
+                            <CheckBox Content="Show details on hover"
+                                      IsChecked="{Binding PosterDetailsOnHover}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
+                            <TextBlock Text="Poster Grid and Extra Large show only each game's artwork until you point at one; then the art zooms in and the rest of its details appear. Choose below what stays on every card. The same setting as the eye button beside the view buttons."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="24,3,0,8" TextWrapping="Wrap"/>
+
+                            <!-- What stays on the card at rest (PosterDetailsViewModel), alphabetically. Greyed out
+                                 while the feature is off; the choices are kept for when it's back on. -->
+                            <StackPanel Margin="24,0,0,12" IsEnabled="{Binding PosterDetailsOnHover}">
+                                <StackPanel.Resources>
+                                    <Style x:Key="PosterDetailsListText" TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Opacity" Value="0.45"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                    <Style TargetType="CheckBox" BasedOn="{StaticResource ModernCheckBox}">
+                                        <Setter Property="FontSize" Value="12"/>
+                                        <Setter Property="Margin" Value="0,0,12,6"/>
+                                    </Style>
+                                </StackPanel.Resources>
+                                <TextBlock Text="Keep on every card, even when you're not pointing at it:" Style="{StaticResource PosterDetailsListText}"
+                                           Foreground="{StaticResource BrushTextPrimary}" FontSize="12" Margin="0,0,0,6"/>
+                                <!-- Flows to as many columns as the card has room for: all nine on one line in a
+                                     wide window, three at the smallest. -->
+                                <WrapPanel Orientation="Horizontal" ItemWidth="150">
+                                    <CheckBox Content="Category" IsChecked="{Binding PosterDetails.Category}"/>
+                                    <CheckBox Content="Favorite star" IsChecked="{Binding PosterDetails.FavoriteStar}"/>
+                                    <CheckBox Content="HIDDEN tag" IsChecked="{Binding PosterDetails.HiddenTag}"/>
+                                    <CheckBox Content="Last played" IsChecked="{Binding PosterDetails.LastPlayed}"/>
+                                    <CheckBox Content="Launcher logo" IsChecked="{Binding PosterDetails.LauncherLogo}"/>
+                                    <CheckBox Content="NOT INSTALLED tag" IsChecked="{Binding PosterDetails.NotInstalledTag}"/>
+                                    <CheckBox Content="PLAYING tag" IsChecked="{Binding PosterDetails.PlayingTag}"/>
+                                    <CheckBox Content="Playtime" IsChecked="{Binding PosterDetails.Playtime}"/>
+                                    <CheckBox Content="Title" IsChecked="{Binding PosterDetails.Title}"/>
+                                </WrapPanel>
+                                <TextBlock Text="Everything else appears when you point at a card, Tab to it or right-click it. The Play button always waits for that, and a game that isn't installed always stays dimmed."
+                                           Style="{StaticResource PosterDetailsListText}"
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+
                             <CheckBox Content="Display vertical poster art on game cards (Steam 600×900)"
                                       IsChecked="{Binding UseVerticalPosterArt}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>

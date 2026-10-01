@@ -19,12 +19,20 @@ namespace TrayTrigger.Tests;
 /// user's library, and on an STA thread because the library view model owns WPF collection views
 /// and the hotkey listener's message-only window.
 /// </summary>
+[Collection(InstallIndexCollection.Name)]
 public class ImportCommitBatchTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N"));
+    private readonly InstalledGameIndex _indexBefore = InstalledGameIndex.Current;
+    private readonly List<LibraryViewModel> _libraries = [];
 
     public void Dispose()
     {
+        // Each commit recaptures the app-wide installed-games index in the background. Let the last
+        // one finish and put the old index back, so the next class in the collection doesn't start
+        // with this machine's.
+        foreach (var library in _libraries) library.HeavyStateLoad.Wait(TimeSpan.FromSeconds(30));
+        InstalledGameIndex.Current = _indexBefore;
         try { Directory.Delete(_root, recursive: true); } catch { }
     }
 
@@ -65,6 +73,7 @@ public class ImportCommitBatchTests : IDisposable
             storage, icons, launcher, new HotkeyManager(), steamMetadata, steamSearch, settings,
             getUseVerticalPosterArt: () => true,
             getSteamGridDbApiKeyOrNull: () => null);
+        _libraries.Add(library);
 
         var import = new ImportCoordinator(
             library, new ShortcutService(), icons, new FolderScannerService(),

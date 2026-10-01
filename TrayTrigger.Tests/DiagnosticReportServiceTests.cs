@@ -11,8 +11,22 @@ public class DiagnosticReportServiceTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "TrayTriggerDiag_" + Guid.NewGuid().ToString("N"));
 
-    public DiagnosticReportServiceTests() => Directory.CreateDirectory(_dir);
-    public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
+    private readonly InstalledGameIndex _indexBefore = InstalledGameIndex.Current;
+
+    // The sample counts below assume nothing is known about what's installed. Another test in the
+    // process may have left this machine's own index in the static (a library load captures one),
+    // so pin it rather than inherit it.
+    public DiagnosticReportServiceTests()
+    {
+        Directory.CreateDirectory(_dir);
+        InstalledGameIndex.Current = InstalledGameIndex.Unknown;
+    }
+
+    public void Dispose()
+    {
+        InstalledGameIndex.Current = _indexBefore;
+        try { Directory.Delete(_dir, true); } catch { }
+    }
 
     private DiagnosticReportService.Inputs SampleInputs(string? logPath = null) => new()
     {

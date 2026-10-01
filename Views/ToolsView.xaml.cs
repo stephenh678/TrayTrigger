@@ -42,11 +42,7 @@ public partial class ToolsView : UserControl
     public void SelectAllTools() => ToolsList.SelectAll();
 
     /// <summary>Puts the caret in the tools search box and selects what is there (Ctrl+F).</summary>
-    public void FocusSearchBox()
-    {
-        ToolsSearchTextBox.Focus();
-        ToolsSearchTextBox.SelectAll();
-    }
+    public void FocusSearchBox() => ToolsSearchBox.FocusBox();
 
     private void OnDragOver(object sender, DragEventArgs e)
     {

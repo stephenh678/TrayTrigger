@@ -100,12 +100,17 @@ public class LibraryViewModel : ViewModelBase
     public ObservableCollection<GameCardViewModel> Games { get; } = new();
     public ObservableCollection<string> Categories { get; } = new();
     public ObservableCollection<CategoryTabItem> CategoryTabs { get; } = new();
+    /// <summary>Favorites, then everything else, each most recently played first; never-played games
+    /// last, alphabetically - "Most Recently Played" within each half.</summary>
+    public const string SortFavoritesFirstRecent = "Favorites First (Recent)";
+
     public ObservableCollection<string> SortOptions { get; } = new()
     {
         "Alphabetical (A - Z)",
         "Alphabetical (Z - A)",
         "Favorites First (A - Z)",
         "Favorites First (Z - A)",
+        SortFavoritesFirstRecent,
         "Most Recently Played",
         "Cumulative Playtime"
     };
@@ -2282,6 +2287,11 @@ public class LibraryViewModel : ViewModelBase
             case "Favorites First (Z - A)":
                 FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
                 FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Descending));
+                break;
+            case SortFavoritesFirstRecent:
+                FilteredGames.SortDescriptions.Add(new SortDescription("Game.IsFavorite", ListSortDirection.Descending));
+                FilteredGames.SortDescriptions.Add(new SortDescription("Game.LastPlayed", ListSortDirection.Descending));
+                FilteredGames.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
                 break;
             case "Most Recently Played":
                 FilteredGames.SortDescriptions.Add(new SortDescription("Game.LastPlayed", ListSortDirection.Descending));

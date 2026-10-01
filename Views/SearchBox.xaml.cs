@@ -6,8 +6,8 @@ using System.Windows.Data;
 namespace TrayTrigger.Views;
 
 /// <summary>
-/// The search box beside a page's tabs (Settings, About): a ModernTextBox with the hotkey box's clear
-/// x inside its right edge. <see cref="Text"/> is the search, bound two-way by default; typing reaches
+/// The search box beside a page's tabs (Settings, About, System) and in the Library and Tools search
+/// bars: a ModernTextBox with the hotkey box's clear x inside its right edge. <see cref="Text"/> is the search, bound two-way by default; typing reaches
 /// it 150 ms after the last keystroke, so a word typed quickly runs one search, while clearing it -
 /// the x, Escape, or the host setting it - is immediate.
 /// </summary>

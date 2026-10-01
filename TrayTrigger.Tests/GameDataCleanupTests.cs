@@ -14,9 +14,12 @@ namespace TrayTrigger.Tests;
 /// files for each test. No other test class touches those two static caches, so redirecting them
 /// here can't race a class running in parallel.
 /// </summary>
+[Collection(InstallIndexCollection.Name)]
 public class GameDataCleanupTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N"));
+    private readonly InstalledGameIndex _indexBefore = InstalledGameIndex.Current;
+    private readonly List<LibraryViewModel> _libraries = [];
     private readonly string _icons;
     private readonly string _covers;
 
@@ -30,6 +33,11 @@ public class GameDataCleanupTests : IDisposable
 
     public void Dispose()
     {
+        // LoadLibrary recaptures the app-wide installed-games index in the background. Let it finish
+        // and put the old index back, so the next class in the collection doesn't start with this
+        // machine's.
+        foreach (var library in _libraries) library.HeavyStateLoad.Wait(TimeSpan.FromSeconds(30));
+        InstalledGameIndex.Current = _indexBefore;
         SteamMetadataService.UseCacheFileForTests(null);
         RawgService.UseCacheFileForTests(null);
         try { Directory.Delete(_root, recursive: true); } catch { }
@@ -208,7 +216,7 @@ public class GameDataCleanupTests : IDisposable
             new EpicScannerService(),
             new UbisoftScannerService(),
             new XboxScannerService(), new BattleNetScannerService());
-        return new LibraryViewModel(
+        var library = new LibraryViewModel(
             storage,
             new IconExtractorService(storage),
             launcher,
@@ -218,6 +226,8 @@ public class GameDataCleanupTests : IDisposable
             new AppSettings(),
             getUseVerticalPosterArt: () => true,
             getSteamGridDbApiKeyOrNull: () => null);
+        _libraries.Add(library);
+        return library;
     }
 
     private GameCardViewModel AddGame(LibraryViewModel library, string name, string? steamAppId = null, LauncherPlatform? importedFrom = null)

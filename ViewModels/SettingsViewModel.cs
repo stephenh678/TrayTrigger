@@ -212,6 +212,7 @@ public class SettingsViewModel : ViewModelBase
     public ICommand ClearLogCommand { get; }
     public ICommand OpenLogFolderCommand { get; }
     public ICommand SetViewModeCommand { get; }
+    public ICommand TogglePosterDetailsOnHoverCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
     public ICommand OpenSteamGridDbSiteCommand { get; }
     public ICommand OpenRawgSiteCommand { get; }
@@ -300,6 +301,8 @@ public class SettingsViewModel : ViewModelBase
         ClearLogCommand = new RelayCommand(ClearLogFile);
         OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
         SetViewModeCommand = new RelayCommand(mode => LibraryViewMode = mode?.ToString() ?? ViewModePosterGrid);
+        TogglePosterDetailsOnHoverCommand = new RelayCommand(() => PosterDetailsOnHover = !PosterDetailsOnHover);
+        PosterDetails = new PosterDetailsViewModel(() => _settings.PosterDetailsAtRest, () => AutoSaveSettings(nameof(PosterDetails)));
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
         OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://www.steamgriddb.com/profile/preferences"));
         OpenRawgSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://rawg.io/apidocs"));
@@ -1057,10 +1060,37 @@ public class SettingsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsExtraLargeView));
                 OnPropertyChanged(nameof(IsIconsView));
                 OnPropertyChanged(nameof(IsListView));
+                OnPropertyChanged(nameof(IsPosterView));
                 AutoSaveSettings();
             }
         }
     }
+
+    /// <summary>Either poster view - the two that <see cref="PosterDetailsOnHover"/> applies to.</summary>
+    public bool IsPosterView => IsGridView || IsExtraLargeView;
+
+    public bool PosterDetailsOnHover
+    {
+        get => _settings.PosterDetailsOnHover;
+        set
+        {
+            if (_settings.PosterDetailsOnHover != value)
+            {
+                _settings.PosterDetailsOnHover = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PosterDetailsOnHoverAccessibleName));
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>Which details stay on a poster card at rest while <see cref="PosterDetailsOnHover"/> is on.</summary>
+    public PosterDetailsViewModel PosterDetails { get; }
+
+    /// <summary>The library toolbar's toggle is a plain Button, which has no on/off state for
+    /// Narrator to read, so the state goes in its name.</summary>
+    public string PosterDetailsOnHoverAccessibleName =>
+        PosterDetailsOnHover ? "Show poster details on hover, on" : "Show poster details on hover, off";
 
     public bool IsGridView
     {
@@ -2066,6 +2096,10 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsExtraLargeView));
         OnPropertyChanged(nameof(IsIconsView));
         OnPropertyChanged(nameof(IsListView));
+        OnPropertyChanged(nameof(IsPosterView));
+        OnPropertyChanged(nameof(PosterDetailsOnHover));
+        OnPropertyChanged(nameof(PosterDetailsOnHoverAccessibleName));
+        PosterDetails.Refresh();
 
         AutoSaveSettings();
         _onTrayMenuSettingChanged?.Invoke();

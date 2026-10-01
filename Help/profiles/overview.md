@@ -2,6 +2,10 @@
 
 A Performance Profile is a set of system changes that apply only while a specific game is running. Assign one per game in Edit Game. When the game launches, the profile is applied; when the game exits, everything is put back exactly as it was.
 
+## New games
+
+A game you add, by Scan for Games, Add Game, Add Folder or a drop, starts on the profile picked in "New games start on" at the top of this page: Optimized unless you change it. Changing it doesn't touch games already in the library. Change one of those in Edit Game, or several at once by selecting them and using Performance Profile in the right-click menu.
+
 ## Optimized versus Aggressive
 
 - Optimized applies the low-risk set: the full-clock power plan and the high-performance GPU preference. Enable HDR and Do Not Disturb are available under Optimized but stay off until you turn them on.

@@ -39,11 +39,7 @@ public partial class LibraryView : UserControl
     public bool IsFilterFlyoutOpen => LibraryFilterPopup.IsOpen;
 
     /// <summary>Puts the caret in the library search box and selects what is there (Ctrl+F).</summary>
-    public void FocusSearchBox()
-    {
-        LibrarySearchTextBox.Focus();
-        LibrarySearchTextBox.SelectAll();
-    }
+    public void FocusSearchBox() => LibrarySearchBox.FocusBox();
 
     /// <summary>
     /// Right-aligns the filter flyout under its button. The panel's width varies with its content

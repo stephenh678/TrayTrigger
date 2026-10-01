@@ -702,7 +702,29 @@ public class SystemViewModel : ViewModelBase
     {
         foreach (var t in OptimizedProfileTweaks) t.NotifyStateChanged();
         foreach (var t in AggressiveProfileTweaks) t.NotifyStateChanged();
+        OnPropertyChanged(nameof(NewGameProfile));
+        OnPropertyChanged(nameof(NewGameProfileIsAggressive));
     }
+
+    public IReadOnlyList<PerformanceProfileMode> NewGameProfileOptions { get; } =
+        [PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive];
+
+    /// <summary>The profile a game gets when it's added to the library. Games already there keep theirs.</summary>
+    public PerformanceProfileMode NewGameProfile
+    {
+        get => _settings.NewGameProfile;
+        set
+        {
+            if (_settings.NewGameProfile == value) return;
+            _settings.NewGameProfile = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(NewGameProfileIsAggressive));
+            _storageService.SaveSettings(_settings);
+        }
+    }
+
+    /// <summary>Aggressive asks for administrator permission at every launch and exit; the card says so.</summary>
+    public bool NewGameProfileIsAggressive => NewGameProfile == PerformanceProfileMode.Aggressive;
 
     public SystemViewModel(SystemInfoService infoService, SystemTweaksService tweaksService, AppSettings settings, StorageService storageService)
     {

@@ -103,6 +103,13 @@ public class AppSettings
     [JsonConverter(typeof(MetadataRefreshIntervalJsonConverter))]
     public MetadataRefreshInterval MetadataRefreshInterval { get; set; } = MetadataRefreshInterval.Every3Days;
     public string LibraryViewMode { get; set; } = "Poster Grid";
+    /// <summary>The poster views (Poster Grid and Extra Large) show only the artwork until a card is
+    /// pointed at, focused or right-clicked; then the art zooms within the card and the badges,
+    /// title and playtime fade in. Off: every card shows them all the time, as before 1.4.7.
+    /// Compact Icons and the Details List ignore it.</summary>
+    public bool PosterDetailsOnHover { get; set; } = false;
+    /// <summary>Which details stay on the card at rest while <see cref="PosterDetailsOnHover"/> is on.</summary>
+    public PosterDetailsAtRest PosterDetailsAtRest { get; set; } = new();
     public bool MinimizeOnGameLaunch { get; set; } = true;
     /// <summary>
     /// The game-scripts feature switch. Shows the Pre-Launch &amp; Post-Exit Scripts card in Edit
@@ -164,6 +171,10 @@ public class AppSettings
     public bool CreateRestorePointBeforeTweaks { get; set; } = true;
     public OptimizedProfileTweakConfig OptimizedProfileTweaks { get; set; } = new();
     public AggressiveProfileTweakConfig AggressiveProfileTweaks { get; set; } = new();
+    /// <summary>The Performance Profile a game gets when it's added to the library - by a scan, Add
+    /// Game, Add Folder or a drop. Games already in the library keep their own. Set on the System
+    /// page's Performance Profiles tab.</summary>
+    public PerformanceProfileMode NewGameProfile { get; set; } = PerformanceProfileMode.Optimized;
 
     /// <summary>
     /// What a permanent System &amp; Performance tweak found on the machine before it was applied,

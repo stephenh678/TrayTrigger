@@ -6,9 +6,11 @@ using TrayTrigger.ViewModels;
 namespace TrayTrigger.Tests;
 
 /// <summary>
-/// Every test class that sets <see cref="InstalledGameIndex.Current"/>. It is one static shared
-/// by the whole app, so two classes swapping it at once would each see the other's index; xunit
-/// runs the members of one collection one after another.
+/// Every test class that sets <see cref="InstalledGameIndex.Current"/> or
+/// <see cref="DlssProbeService.LibraryFolderProvider"/>, directly or through what it builds: an
+/// import recaptures the index, and constructing an ImportCoordinator points the DLSS search at the
+/// real scan locations. Both are statics shared by the whole app, so two classes setting one at once
+/// would each see the other's; xunit runs the members of one collection one after another.
 /// </summary>
 [CollectionDefinition(InstallIndexCollection.Name)]
 public class InstallIndexCollection
