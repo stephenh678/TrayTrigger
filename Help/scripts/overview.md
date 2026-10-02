@@ -84,7 +84,7 @@ Each script field in Edit Game has a Test button. It runs that script right now,
 The examples are real scripts for common gaming chores, written to be read, copied and changed. Each one opens with a comment block covering why you'd want it, how to set it up, how it works and what to change, followed by a "Change these" section of settings.
 
 - Example-WallpaperEnginePause.ps1 pauses and mutes Wallpaper Engine while you play and resumes it afterwards. It needs no Script Arguments.
-- Example-CloseBackgroundApps.ps1 closes the background apps named in Script Arguments, such as OneDrive ms-teams Dropbox, and reopens the ones it closed after the game.
+- Example-CloseBackgroundApps.ps1 closes background apps and reopens the ones it closed after the game. Type "recommended" in Script Arguments to close its recommended list (OneDrive, Dropbox, Google Drive, Creative Cloud, Teams, Slack), name the apps yourself, such as OneDrive ms-teams Dropbox, or both. With Script Arguments empty it does nothing. Tick Run scripts as Administrator and it also pauses Windows Update and Delivery Optimization for the game, and starts them again after.
 - Example-StartCompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, and closes only the ones it started. A program you already had open is left alone.
 - Example-OBSReplayBuffer.ps1 starts OBS in the tray with the replay buffer running and closes it after the game. An OBS you opened yourself is never touched. Script Arguments can name an OBS profile.
 - Example-SaveBackup.ps1 zips the save folder named in Script Arguments, such as "%APPDATA%\EldenRing", before and after you play, and keeps the newest ten backups.

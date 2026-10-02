@@ -319,7 +319,22 @@ public class ScriptLibraryServiceTests : IDisposable
         {
             (@"$ObsExe = Join-Path $env:ProgramFiles 'obs-studio\bin\64bit\obs64.exe'", @"$ObsExe = 'C:\TrayTriggerNoSuchFolder\obs64.exe'"),
         },
+        // With no Script Arguments it closes its recommended list - the OneDrive and Teams of
+        // whoever runs the tests - and, run elevated, stops Windows Update.
+        "Example-CloseBackgroundApps.ps1" => CloseBackgroundAppsList("TrayTriggerNoSuchApp"),
         _ => Array.Empty<(string, string)>(),
+    };
+
+    private const string RecommendedListLine = "$Recommended = @('OneDrive', 'Dropbox', 'GoogleDriveFS', 'Creative Cloud', 'ms-teams', 'Teams', 'slack')";
+
+    /// <summary>Close Background Apps with its recommended list replaced and Windows Update left alone.</summary>
+    private static (string From, string To)[] CloseBackgroundAppsList(string recommended) => new[]
+    {
+        (RecommendedListLine, $"$Recommended = @('{recommended}')"),
+        ("$PauseWindowsUpdate = $true", "$PauseWindowsUpdate = $false"),
+        // The reopened copy would flash a console window during the test run.
+        ("Start-Process -FilePath $path -WorkingDirectory (Split-Path -Parent $path)",
+         "Start-Process -FilePath $path -WorkingDirectory (Split-Path -Parent $path) -WindowStyle Hidden"),
     };
 
     // ------------------------------------------------------------------ Quiet Mode
@@ -331,10 +346,7 @@ public class ScriptLibraryServiceTests : IDisposable
         string name = Path.GetFileNameWithoutExtension(exe);
         using var running = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
 
-        // The reopened copy would flash a console window during the test run.
-        string script = InstallExample("Example-CloseBackgroundApps.ps1",
-            ("Start-Process -FilePath $path -WorkingDirectory (Split-Path -Parent $path)",
-             "Start-Process -FilePath $path -WorkingDirectory (Split-Path -Parent $path) -WindowStyle Hidden"));
+        string script = InstallExample("Example-CloseBackgroundApps.ps1", CloseBackgroundAppsList("TrayTriggerNoSuchApp"));
 
         var protectedOnly = GameScriptService.TestRun(script, Game("explorer"), GameScriptService.PhasePreLaunch, null);
         Assert.True(protectedOnly.Succeeded, Describe(protectedOnly));
@@ -351,6 +363,62 @@ public class ScriptLibraryServiceTests : IDisposable
         Assert.True(post.Succeeded, Describe(post));
         Assert.Contains($"Reopened {name}.", post.Output);
         Assert.Empty(NotesForThisGame());
+    }
+
+    [Theory]
+    [InlineData("recommended")]
+    [InlineData("recommended TrayTriggerNoSuchApp")]
+    public void QuietMode_Recommended_ClosesTheRecommendedList(string scriptArguments)
+    {
+        string exe = CopyPing("TTQuietList");
+        string name = Path.GetFileNameWithoutExtension(exe);
+        using var running = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        string script = InstallExample("Example-CloseBackgroundApps.ps1", CloseBackgroundAppsList(name));
+
+        var pre = GameScriptService.TestRun(script, Game(scriptArguments), GameScriptService.PhasePreLaunch, null);
+        Assert.True(pre.Succeeded, Describe(pre));
+        Assert.True(running.WaitForExit(5000), "the program on the recommended list should have been closed");
+        Assert.Contains($"Ended {name}.", pre.Output);
+        if (scriptArguments != "recommended") Assert.Contains("TrayTriggerNoSuchApp is not running.", pre.Output);
+
+        var post = GameScriptService.TestRun(script, Game(scriptArguments), GameScriptService.PhasePostExit, 3);
+        Assert.True(post.Succeeded, Describe(post));
+        Assert.Contains($"Reopened {name}.", post.Output);
+        Assert.Empty(NotesForThisGame());
+    }
+
+    [Fact]
+    public void QuietMode_WithNoNames_DoesNothing_NotEvenTheRecommendedList()
+    {
+        // Empty Script Arguments did nothing before 1.4.7, and a setup relying on that (a default
+        // script with names on only some games) must not start closing apps after an update.
+        string exe = CopyPing("TTQuietEmpty");
+        string name = Path.GetFileNameWithoutExtension(exe);
+        using var running = Process.Start(new ProcessStartInfo(exe, "-n 120 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true })!;
+        string script = InstallExample("Example-CloseBackgroundApps.ps1", CloseBackgroundAppsList(name));
+
+        var pre = GameScriptService.TestRun(script, Game(), GameScriptService.PhasePreLaunch, null);
+        Assert.True(pre.Succeeded, Describe(pre));
+        Assert.Contains("Nothing named, so nothing was closed", pre.Output);
+        Assert.False(running.WaitForExit(1000), "nothing should have been closed");
+        Assert.Empty(NotesForThisGame());
+        Assert.Empty(Directory.GetFiles(Path.GetTempPath(), $"TrayTrigger-QuietMode-{_gameId}-services.txt"));
+    }
+
+    [Fact]
+    public void QuietMode_NotAdministrator_LeavesWindowsUpdateAlone_AndSaysHowToPauseIt()
+    {
+        // Only meaningful from a test run that isn't elevated; an elevated one would stop the service.
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        if (new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator)) return;
+
+        string script = InstallExample("Example-CloseBackgroundApps.ps1",
+            (RecommendedListLine, "$Recommended = @('TrayTriggerNoSuchApp')"));
+
+        var pre = GameScriptService.TestRun(script, Game("recommended"), GameScriptService.PhasePreLaunch, null);
+        Assert.True(pre.Succeeded, Describe(pre));
+        Assert.Contains("Windows Update left alone", pre.Output);
+        Assert.Empty(Directory.GetFiles(Path.GetTempPath(), $"TrayTrigger-QuietMode-{_gameId}-services.txt"));
     }
 
     // ------------------------------------------------------------------ Companion Apps

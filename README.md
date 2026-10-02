@@ -111,6 +111,7 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 - **Batch editing**: Ctrl+click, Shift+click, or Ctrl+A, then right-click to favorite, hide, re-categorize, set the Performance Profile, CPU Cores, or launch options, refresh art, or remove, with undo.
 - **Drag and drop** an executable or shortcut onto the window to add it. **Batch folder scanner** with executable scoring that filters out uninstallers and launcher stubs. **Icon extraction** from executables, shortcuts, and game folders.
 - **Search Settings, System & Performance, and About** from a box beside their tabs: the cards that mention your words stay, with the words highlighted.
+- **Backup & Restore**: your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake. A restore finds games whose drive letter, user folder or launcher folder changed.
 
 <p align="center">
   <img src="site/assets/library-current.png" width="800" alt="Games library, poster grid view"><br>
@@ -129,7 +130,7 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 - **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, the Xbox app, or Battle.net shut down once the session ends, so they don't stay resident with their overlays and background processes.
 - **Launchers stay minimized** (on by default): Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game shows.
 - **Launch popup** by the tray clock for hotkey and tray launches: the game, what it's waiting on, and the reason if a launch fails, without opening the window.
-- **Global hotkeys** to open the library (Ctrl+Alt+G) and the tray menu (Ctrl+Alt+T), both changeable in Settings, and per-game hotkeys to launch.
+- **Global hotkeys** to open the library (Ctrl+Alt+G), open the tray menu (Ctrl+Alt+T) and suspend the game (Ctrl+Alt+P), all changeable in Settings, and per-game hotkeys to launch.
 - **One-click launch from the tray menu**: Recent, Favorites, and Categories, no window to open.
 
 ### Tools
@@ -156,7 +157,8 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 | **Optimized** | Your custom high-performance power plan and high-performance GPU preference for that game. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers. |
 | **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, and an off-by-default Microsoft Defender exclusion. |
 
-- **CPU Cores**: independently of the tier, pin any game to the performance cores of a hybrid CPU, for older engines and anti-cheat titles that stutter on E-cores.
+- **CPU Cores**: independently of the tier, keep a game on the cores that suit it: the performance cores of a hybrid Intel CPU, for older engines and anti-cheat titles that stutter on E-cores, or the 3D V-Cache CCD of a dual-CCD Ryzen X3D (7950X3D, 9950X3D), found from each CCD's cache size rather than a list of models. Auto picks for whichever PC the game runs on. Set with Windows' CPU Sets, with an optional delay for anti-cheat titles.
+- **Suspend and resume** (Ctrl+Alt+P, or the tray's Now Playing menu): freeze a game where it is for a cutscene you can't pause, with its sound muted and its playtime clock stopped. Games with anti-cheat are never suspended, and nothing is ever left frozen.
 - **Session-scoped**: tweaks apply on launch (through any supported launcher or a direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
 - **Crash-safe**: the snapshot lives on disk. If TrayTrigger or your PC crashes mid-session, the next start restores your pre-game state. A normal shutdown restores the power plan, HDR, and GPU preference immediately.
 - **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
@@ -182,7 +184,7 @@ Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the 
 | Script | What it does |
 |---|---|
 | `Example-WallpaperEnginePause.ps1` | Pauses and mutes Wallpaper Engine while you play, resumes it after. |
-| `Example-CloseBackgroundApps.ps1` | Closes the background apps you name (OneDrive, Teams, Dropbox) and reopens the ones it closed. |
+| `Example-CloseBackgroundApps.ps1` | Closes background apps (a recommended list with "recommended", or the ones you name) and reopens the ones it closed; run as administrator, it also pauses Windows Update for the game. |
 | `Example-StartCompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) and closes only the ones it started. |
 | `Example-OBSReplayBuffer.ps1` | Runs OBS in the tray with the replay buffer on, so a hotkey saves the last minutes of play. |
 | `Example-SaveBackup.ps1` | Zips a save folder before and after you play, keeps the newest ten. |

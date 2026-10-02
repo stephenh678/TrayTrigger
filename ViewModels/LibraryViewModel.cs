@@ -489,6 +489,7 @@ public class LibraryViewModel : ViewModelBase
             deferHeavyInit: deferHeavyInit,
             onCloseGame: CloseGame,
             onForceClose: ForceCloseGame,
+            onToggleSuspend: ToggleSuspend,
             onPrimaryClick: OnCardPrimaryClick,
             onToggleSelect: OnCardToggleSelect,
             onRangeSelect: OnCardRangeSelect,
@@ -500,7 +501,36 @@ public class LibraryViewModel : ViewModelBase
         // Sessions outlive library reloads (a rescan while a game is running), so a fresh card
         // must pick up the live state rather than wait for the next SessionStarted event.
         card.IsPlaying = _launcherService.IsSessionActive(game.Id);
+        card.IsSuspended = _launcherService.IsGameSuspended(game.Id);
         return card;
+    }
+
+    /// <summary>Fired by ProcessLauncherService (background thread) when a game is suspended or resumed.</summary>
+    public void OnSessionSuspendChanged(ActiveGameSession session)
+    {
+        bool suspended = session.IsSuspended;
+        RunOnUiThread(() =>
+        {
+            var card = Games.FirstOrDefault(g => g.Id == session.GameId);
+            if (card != null) card.IsSuspended = suspended;
+        });
+    }
+
+    /// <summary>
+    /// "Suspend Game" / "Resume Game" from a card's menu. Off the UI thread: it lists the game's
+    /// processes and talks to the audio engine.
+    /// </summary>
+    private void ToggleSuspend(GameCardViewModel card)
+    {
+        string gameId = card.Game.Id;
+        bool resume = card.IsSuspended;
+        _ = Task.Run(() =>
+        {
+            var outcome = resume ? _launcherService.ResumeGame(gameId) : _launcherService.SuspendGame(gameId);
+            RunOnUiThread(() => StatusMessage = outcome.Result == ProcessLauncherService.SuspendResult.Suspended
+                ? $"{outcome.Message} Resume it from here or the tray menu."
+                : outcome.Message);
+        });
     }
 
     /// <summary>Fired by ProcessLauncherService (background thread) when a tracked session starts.</summary>
@@ -681,7 +711,11 @@ public class LibraryViewModel : ViewModelBase
         }
     }
     public bool BatchCpuAffinityIsDefault => BatchCpuAffinity == CpuAffinityMode.Default;
+    public bool BatchCpuAffinityIsAuto => BatchCpuAffinity == CpuAffinityMode.Auto;
     public bool BatchCpuAffinityIsPerformanceCores => BatchCpuAffinity == CpuAffinityMode.PerformanceCoresOnly;
+    public bool BatchCpuAffinityIsVCache => BatchCpuAffinity == CpuAffinityMode.VCacheCores;
+    public bool BatchCpuAffinityIsFrequency => BatchCpuAffinity == CpuAffinityMode.FrequencyCores;
+    public bool BatchCpuAffinityIsOneCcd => BatchCpuAffinity == CpuAffinityMode.OneCcd;
 
     /// <summary>Every selected game already runs elevated - the batch menu's check. Mixed selections show no check, and a click turns every game on.</summary>
     public bool BatchAllRunAsAdmin => HasSelection && SelectedCards.All(c => c.Game.RunAsAdmin);
@@ -704,7 +738,11 @@ public class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(BatchProfileIsAggressive));
         OnPropertyChanged(nameof(BatchCpuAffinity));
         OnPropertyChanged(nameof(BatchCpuAffinityIsDefault));
+        OnPropertyChanged(nameof(BatchCpuAffinityIsAuto));
         OnPropertyChanged(nameof(BatchCpuAffinityIsPerformanceCores));
+        OnPropertyChanged(nameof(BatchCpuAffinityIsVCache));
+        OnPropertyChanged(nameof(BatchCpuAffinityIsFrequency));
+        OnPropertyChanged(nameof(BatchCpuAffinityIsOneCcd));
         OnPropertyChanged(nameof(BatchAllRunAsAdmin));
         OnPropertyChanged(nameof(BatchAllCloseLauncher));
     }
@@ -729,7 +767,7 @@ public class LibraryViewModel : ViewModelBase
 
     /// <summary>
     /// Same effect as picking the core mode in Edit Game for each selected game. A game already
-    /// running keeps the affinity it was launched with; the new mode applies from its next launch.
+    /// running keeps the cores it was launched with; the new mode applies from its next launch.
     /// </summary>
     private void BatchSetCpuAffinity(CpuAffinityMode mode)
     {
@@ -741,10 +779,10 @@ public class LibraryViewModel : ViewModelBase
             card.RefreshProperties();
         }
         SaveGamesOnly();
-        LoggingService.Info("Library", $"{cards.Count} game(s) CPU affinity set to {mode} (batch).");
-        StatusMessage = mode == CpuAffinityMode.PerformanceCoresOnly
-            ? $"Set {cards.Count} game(s) to performance cores only"
-            : $"Set {cards.Count} game(s) back to all cores";
+        LoggingService.Info("Library", $"{cards.Count} game(s) CPU cores set to {mode} (batch).");
+        StatusMessage = mode == CpuAffinityMode.Default
+            ? $"Set {cards.Count} game(s) back to all cores"
+            : $"Set CPU Cores of {cards.Count} game(s) to {CpuTopology.MenuLabel(mode)}";
         NotifySelectionChanged();
     }
 

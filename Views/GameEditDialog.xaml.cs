@@ -67,6 +67,7 @@ public partial class GameEditDialog : Window
                 GameEditViewModel.EditField.SteamAppId => SteamAppIdBox,
                 GameEditViewModel.EditField.PreLaunchScript => PreLaunchScriptBox,
                 GameEditViewModel.EditField.PostExitScript => PostExitScriptBox,
+                GameEditViewModel.EditField.CpuCoresDelay => CpuCoresDelayBox,
                 _ => PreLaunchTimeoutBox,
             };
             Dispatcher.BeginInvoke(() =>

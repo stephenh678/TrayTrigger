@@ -17,6 +17,8 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(GitHubReleaseInfo))]
 [JsonSerializable(typeof(List<GitHubReleaseInfo>))]
 [JsonSerializable(typeof(PerformanceProfileSessionSnapshot))]
+[JsonSerializable(typeof(List<SuspendedProcessRecord>))]
+[JsonSerializable(typeof(BackupManifest))]
 [JsonSerializable(typeof(Dictionary<string, SteamAppDetails>))]
 [JsonSerializable(typeof(Dictionary<int, RawgGameDetails>))]
 public partial class AppJsonContext : JsonSerializerContext

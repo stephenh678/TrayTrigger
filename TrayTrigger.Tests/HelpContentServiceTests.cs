@@ -117,6 +117,8 @@ public class HelpContentServiceTests
     [InlineData("tools/overview")]
     [InlineData("tools/start_with_games")]
     [InlineData("troubleshooting/logs")]
+    [InlineData("troubleshooting/backup")]
+    [InlineData("library/suspend")]
     public void EveryLinkedTopic_Exists(string topicId)
     {
         Assert.True(HelpContentService.HasTopic(topicId), $"Help/{topicId}.md is missing");

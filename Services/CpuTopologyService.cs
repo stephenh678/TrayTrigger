@@ -1,16 +1,25 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using Microsoft.Win32.SafeHandles;
 using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
 
 /// <summary>
-/// Hybrid-CPU awareness for the per-game "Performance cores only" affinity option. Uses
-/// GetSystemCpuSetInformation (Windows 10 1709+), whose EfficiencyClass field is how Windows
-/// itself distinguishes P-cores (higher class) from E-cores (lower class) on Intel 12th gen+ and
-/// similar designs. On a homogeneous CPU every logical processor has the same class, so the
-/// "performance" mask is simply every core and the option is a no-op.
+/// The per-game CPU Cores choice (Edit Game › Performance). Reads how the cores are built from
+/// GetSystemCpuSetInformation - EfficiencyClass, which is how Windows itself tells P-cores from
+/// E-cores, and the CPU Set ids - and GetLogicalProcessorInformationEx's L3 caches, whose sizes
+/// find a Ryzen's 3D V-Cache CCD. See <see cref="CpuTopology"/> for what each choice means.
+///
+/// <para>Applied with SetProcessDefaultCpuSets, not a hard affinity mask. CPU Sets are Windows'
+/// soft form of affinity: the scheduler keeps the game's threads on those cores but stays free to
+/// work with power management, and a game that sets its own thread affinity still can. A hard mask
+/// is what crashed some games and what anti-cheat objects to most.</para>
 /// </summary>
 public static partial class CpuTopologyService
 {
@@ -18,16 +27,52 @@ public static partial class CpuTopologyService
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool GetSystemCpuSetInformation(IntPtr information, uint bufferLength, out uint returnedLength, IntPtr process, uint flags);
 
-    // SYSTEM_CPU_SET_INFORMATION layout (Type=0 -> CpuSet union member), from winnt.h.
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetLogicalProcessorInformationEx(int relationshipType, IntPtr buffer, ref uint returnedLength);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetProcessDefaultCpuSets(SafeProcessHandle process, uint[] cpuSetIds, uint cpuSetIdCount);
+
+    // SYSTEM_CPU_SET_INFORMATION (Type 0 = CpuSet), from winnt.h:
+    //   DWORD Size(0), CPU_SET_INFORMATION_TYPE Type(4), then CpuSet: DWORD Id(8), WORD Group(12),
+    //   BYTE LogicalProcessorIndex(14), BYTE CoreIndex(15), BYTE LastLevelCacheIndex(16),
+    //   BYTE NumaNodeIndex(17), BYTE EfficiencyClass(18), ...
     private const int OffsetSize = 0;
     private const int OffsetType = 4;
-    // CpuSet: ULONG Id(8), USHORT Group(12), BYTE LogicalProcessorIndex(14), BYTE CoreIndex(15),
-    //         BYTE LastLevelCacheIndex(16), BYTE NumaNodeIndex(17), BYTE EfficiencyClass(18), ...
+    private const int OffsetId = 8;
     private const int OffsetGroup = 12;
     private const int OffsetLogicalIndex = 14;
+    private const int OffsetCoreIndex = 15;
+    private const int OffsetLastLevelCacheIndex = 16;
     private const int OffsetEfficiencyClass = 18;
 
-    public readonly record struct CpuTopology(bool IsHybrid, int LogicalProcessorCount, int PerformanceCoreCount, ulong PerformanceCoreMask);
+    // SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX: DWORD Relationship(0), DWORD Size(4), then for
+    // RelationCache a CACHE_RELATIONSHIP at 8: BYTE Level(+0), BYTE Associativity(+1), WORD LineSize(+2),
+    // DWORD CacheSize(+4), PROCESSOR_CACHE_TYPE Type(+8), BYTE Reserved[18](+12), WORD GroupCount(+30),
+    // GROUP_AFFINITY GroupMasks[](+32): KAFFINITY Mask, WORD Group, WORD Reserved[3].
+    private const int RelationCache = 2;
+    private const int OffsetCacheLevel = 8;
+    private const int OffsetCacheSize = 12;
+    private const int OffsetCacheGroupCount = 38;
+    private const int OffsetCacheGroupMasks = 40;
+    private static readonly int GroupAffinitySize = IntPtr.Size + 8;
+
+    private const uint ProcessSetLimitedInformation = 0x2000;
+
+    /// <summary>The longest "wait before applying" Edit Game accepts.</summary>
+    public const int MaxDelaySeconds = 300;
+
+    /// <summary>
+    /// After the first pass, how often, and for how long, to look again for processes the game has
+    /// started since - the game a launcher starts when Play is pressed in it, a renderer, a crash
+    /// handler - and keep them on the same cores. CPU Sets aren't passed on to a child process the
+    /// way an affinity mask is, so each one has to be set. Stops early once the game and everything
+    /// it started have exited.
+    /// </summary>
+    private static readonly TimeSpan FollowUpInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan FollowUpWindow = TimeSpan.FromMinutes(10);
 
     private static CpuTopology? _cached;
 
@@ -42,96 +87,309 @@ public static partial class CpuTopologyService
     private static CpuTopology Query()
     {
         int logical = Environment.ProcessorCount;
-        ulong allMask = logical >= 64 ? ulong.MaxValue : (1UL << logical) - 1;
-        var fallback = new CpuTopology(false, logical, logical, allMask);
-
         try
         {
-            GetSystemCpuSetInformation(IntPtr.Zero, 0, out uint needed, IntPtr.Zero, 0);
-            if (needed == 0) return fallback;
-
-            IntPtr buffer = Marshal.AllocHGlobal((int)needed);
-            try
+            var cpus = ReadCpuSets();
+            var caches = ReadL3Caches();
+            var topology = CpuTopology.Build(cpus, caches, logical);
+            if (LoggingService.IsVerboseEnabled)
             {
-                if (!GetSystemCpuSetInformation(buffer, needed, out uint returned, IntPtr.Zero, 0)) return fallback;
-
-                byte maxClass = 0;
-                var entries = new System.Collections.Generic.List<(ushort Group, byte Index, byte Class)>();
-                int offset = 0;
-                while (offset + 4 <= returned)
-                {
-                    int size = Marshal.ReadInt32(buffer, offset + OffsetSize);
-                    if (size <= 0) break;
-                    int type = Marshal.ReadInt32(buffer, offset + OffsetType);
-                    if (type == 0 && offset + OffsetEfficiencyClass < returned)
-                    {
-                        ushort group = (ushort)Marshal.ReadInt16(buffer, offset + OffsetGroup);
-                        byte index = Marshal.ReadByte(buffer, offset + OffsetLogicalIndex);
-                        byte cls = Marshal.ReadByte(buffer, offset + OffsetEfficiencyClass);
-                        entries.Add((group, index, cls));
-                        if (cls > maxClass) maxClass = cls;
-                    }
-                    offset += size;
-                }
-
-                if (entries.Count == 0) return fallback;
-
-                bool hybrid = entries.Exists(e => e.Class != maxClass);
-                ulong mask = 0;
-                int pCount = 0;
-                foreach (var (group, index, cls) in entries)
-                {
-                    // Process affinity masks are per processor group; only group 0 is addressable
-                    // through Process.ProcessorAffinity, which covers every consumer machine.
-                    if (group != 0 || index >= 64) continue;
-                    if (cls == maxClass)
-                    {
-                        mask |= 1UL << index;
-                        pCount++;
-                    }
-                }
-
-                if (mask == 0) return fallback;
-                return new CpuTopology(hybrid, entries.Count, pCount, mask);
+                LoggingService.Verbose("CpuTopology", $"{cpus.Count} CPU Sets, {caches.Count} L3 cache(s) "
+                    + $"({string.Join(", ", caches.Select(c => $"{c.SizeBytes / (1024 * 1024)} MB, group {c.Group} mask 0x{c.Mask:X}"))}); "
+                    + $"layout {topology.Layout}. {topology.Summary}");
             }
-            finally
-            {
-                Marshal.FreeHGlobal(buffer);
-            }
+            return topology;
         }
         catch (Exception ex)
         {
-            LoggingService.Verbose("CpuTopology", $"GetSystemCpuSetInformation failed: {ex.Message}");
-            return fallback;
+            LoggingService.Verbose("CpuTopology", $"Reading the CPU layout failed: {ex.Message}; CPU Cores options are hidden.");
+            return CpuTopology.Unknown(logical);
         }
     }
 
+    private static List<CpuSetEntry> ReadCpuSets()
+    {
+        var entries = new List<CpuSetEntry>();
+        GetSystemCpuSetInformation(IntPtr.Zero, 0, out uint needed, IntPtr.Zero, 0);
+        if (needed == 0)
+        {
+            LoggingService.Verbose("CpuTopology", "GetSystemCpuSetInformation returned nothing.");
+            return entries;
+        }
+
+        IntPtr buffer = Marshal.AllocHGlobal((int)needed);
+        try
+        {
+            if (!GetSystemCpuSetInformation(buffer, needed, out uint returned, IntPtr.Zero, 0))
+            {
+                LoggingService.Verbose("CpuTopology", $"GetSystemCpuSetInformation failed (error {Marshal.GetLastPInvokeError()}).");
+                return entries;
+            }
+
+            int offset = 0;
+            while (offset + 8 <= returned)
+            {
+                int size = Marshal.ReadInt32(buffer, offset + OffsetSize);
+                if (size <= 0) break;
+                int type = Marshal.ReadInt32(buffer, offset + OffsetType);
+                if (type == 0 && offset + OffsetEfficiencyClass < returned)
+                {
+                    entries.Add(new CpuSetEntry(
+                        Id: (uint)Marshal.ReadInt32(buffer, offset + OffsetId),
+                        Group: (ushort)Marshal.ReadInt16(buffer, offset + OffsetGroup),
+                        LogicalIndex: Marshal.ReadByte(buffer, offset + OffsetLogicalIndex),
+                        CoreIndex: Marshal.ReadByte(buffer, offset + OffsetCoreIndex),
+                        LastLevelCacheIndex: Marshal.ReadByte(buffer, offset + OffsetLastLevelCacheIndex),
+                        EfficiencyClass: Marshal.ReadByte(buffer, offset + OffsetEfficiencyClass)));
+                }
+                offset += size;
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+        return entries;
+    }
+
+    private static List<L3CacheInfo> ReadL3Caches()
+    {
+        var caches = new List<L3CacheInfo>();
+        uint length = 0;
+        GetLogicalProcessorInformationEx(RelationCache, IntPtr.Zero, ref length);
+        if (length == 0)
+        {
+            LoggingService.Verbose("CpuTopology", $"GetLogicalProcessorInformationEx gave no cache list (error {Marshal.GetLastPInvokeError()}); V-Cache can't be told apart.");
+            return caches;
+        }
+
+        IntPtr buffer = Marshal.AllocHGlobal((int)length);
+        try
+        {
+            if (!GetLogicalProcessorInformationEx(RelationCache, buffer, ref length))
+            {
+                LoggingService.Verbose("CpuTopology", $"GetLogicalProcessorInformationEx failed (error {Marshal.GetLastPInvokeError()}); V-Cache can't be told apart.");
+                return caches;
+            }
+
+            int offset = 0;
+            while (offset + 8 <= length)
+            {
+                int relationship = Marshal.ReadInt32(buffer, offset);
+                int size = Marshal.ReadInt32(buffer, offset + 4);
+                if (size <= 0) break;
+                if (relationship == RelationCache && Marshal.ReadByte(buffer, offset + OffsetCacheLevel) == 3)
+                {
+                    long cacheSize = (uint)Marshal.ReadInt32(buffer, offset + OffsetCacheSize);
+                    // Windows before 20H2 left GroupCount zero and filled the single GroupMask.
+                    int groupCount = Math.Max(1, (int)(ushort)Marshal.ReadInt16(buffer, offset + OffsetCacheGroupCount));
+                    for (int g = 0; g < groupCount; g++)
+                    {
+                        int at = offset + OffsetCacheGroupMasks + g * GroupAffinitySize;
+                        if (at + GroupAffinitySize > offset + size) break;
+                        ulong mask = (ulong)(long)Marshal.ReadIntPtr(buffer, at);
+                        ushort group = (ushort)Marshal.ReadInt16(buffer, at + IntPtr.Size);
+                        caches.Add(new L3CacheInfo(cacheSize, group, mask));
+                    }
+                }
+                offset += size;
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+        return caches;
+    }
+
     /// <summary>
-    /// Applies the game's affinity choice to its live process. Silent no-op for
-    /// <see cref="CpuAffinityMode.Default"/> and for non-hybrid CPUs, so the option is safe to
-    /// leave on for a library that moves between machines.
+    /// Keeps the game's live process, and every process it starts, on the cores its CPU Cores
+    /// choice names - after the game's "wait before applying" delay, if it has one, for anti-cheat
+    /// titles that refuse a change made while they start. Returns at once; the work runs in the
+    /// background. A choice that does nothing on this CPU is a silent no-op, so the setting is safe
+    /// to leave on for a library that moves between PCs. Nothing to put back afterwards: CPU Sets
+    /// end with the process.
     /// </summary>
-    public static void ApplyAffinity(Process process, GameEntry game)
+    /// <param name="startedByTrayTrigger">
+    /// The process is the one TrayTrigger's own launch started, so the Process object already holds
+    /// the handle the launch returned. Only then is that handle used: asking any other Process object
+    /// for its handle would open a full-access handle to the game and hold it for the whole session,
+    /// which is exactly what anti-cheat looks for.
+    /// </param>
+    public static void ApplyCpuCores(Process process, GameEntry game, bool startedByTrayTrigger = false)
     {
         if (game.CpuAffinity == CpuAffinityMode.Default) return;
 
         var topology = GetTopology();
-        if (!topology.IsHybrid)
+        var cpus = topology.CpusFor(game.CpuAffinity);
+        if (cpus == null)
         {
-            LoggingService.Verbose("CpuTopology", $"'{game.Name}' asks for performance cores only, but this CPU is not hybrid - leaving affinity alone.");
+            LoggingService.Verbose("CpuTopology", $"'{game.Name}' is set to {CpuTopology.MenuLabel(game.CpuAffinity)}, which changes nothing on this PC: {topology.WhyNoEffect(game.CpuAffinity)}. Leaving its cores alone.");
             return;
         }
 
+        int pid;
+        DateTime startedUtc;
         try
         {
-            process.ProcessorAffinity = (IntPtr)(long)topology.PerformanceCoreMask;
-            LoggingService.Info("CpuTopology", $"Pinned '{game.Name}' (PID {process.Id}) to {topology.PerformanceCoreCount} performance cores (mask 0x{topology.PerformanceCoreMask:X}).");
+            pid = process.Id;
+            startedUtc = process.StartTime.ToUniversalTime();
         }
         catch (Exception ex)
         {
-            // Elevated/anti-cheat protected processes refuse PROCESS_SET_INFORMATION from a
-            // normal-integrity caller; log and move on rather than fail the launch.
-            LoggingService.Warn("CpuTopology", $"Could not set affinity for '{game.Name}': {ex.Message}");
+            LoggingService.Warn("CpuTopology", $"Could not set the CPU cores for '{game.Name}': its process could not be read ({ex.Message}).");
+            return;
+        }
+
+        // The handle TrayTrigger launched the game with. A game run as administrator refuses to be
+        // opened by a TrayTrigger that isn't, but the launch handle was granted full rights - the old
+        // affinity mask was set through it - so it is the way in for that one process.
+        SafeProcessHandle? launchHandle = null;
+        if (startedByTrayTrigger)
+        {
+            try { launchHandle = process.SafeHandle; }
+            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException)
+            {
+                // No handle of our own to fall back on: the cores are set by id, as for every other process.
+            }
+        }
+
+        uint[] ids = cpus.Select(c => c.Id).ToArray();
+        string what = Describe(topology, game.CpuAffinity, cpus);
+        int delay = Math.Clamp(game.CpuCoresDelaySeconds, 0, MaxDelaySeconds);
+        string name = game.Name;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (delay > 0)
+                {
+                    LoggingService.Verbose("CpuTopology", $"Waiting {delay}s before keeping '{name}' on {what}.");
+                    await Task.Delay(TimeSpan.FromSeconds(delay)).ConfigureAwait(false);
+                }
+                var done = new HashSet<int>();
+                if (!ApplyToTree(pid, startedUtc, launchHandle, ids, name, what, done, firstPass: true)) return;
+                var until = DateTime.UtcNow + FollowUpWindow;
+                while (DateTime.UtcNow < until)
+                {
+                    await Task.Delay(FollowUpInterval).ConfigureAwait(false);
+                    if (!ApplyToTree(pid, startedUtc, launchHandle, ids, name, what, done, firstPass: false)) return;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("CpuTopology", $"Setting the CPU cores for '{name}' failed: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>"the 8 performance cores (CPUs 0-15)", for the log.</summary>
+    private static string Describe(CpuTopology topology, CpuAffinityMode mode, IReadOnlyList<CpuSetEntry> cpus)
+    {
+        int cores = cpus.Select(c => (c.Group, c.CoreIndex)).Distinct().Count();
+        string kind = topology.Resolve(mode) switch
+        {
+            CpuAffinityMode.PerformanceCoresOnly => "performance cores",
+            CpuAffinityMode.VCacheCores => "3D V-Cache cores",
+            CpuAffinityMode.FrequencyCores => "frequency cores",
+            CpuAffinityMode.OneCcd => "cores of the first CCD",
+            _ => "cores"
+        };
+        string auto = mode == CpuAffinityMode.Auto ? ", picked by Auto" : "";
+        return $"the {cores} {kind} (CPUs {CpuTopology.Ranges(cpus)}){auto}";
+    }
+
+    private enum SetResult { Done, Gone, Refused }
+
+    /// <summary>
+    /// One pass over the game's process and everything it has started. False when there is no
+    /// point in another: the game refused, or it has exited and so has everything it started.
+    /// </summary>
+    private static bool ApplyToTree(int rootPid, DateTime rootStartedUtc, SafeProcessHandle? launchHandle, uint[] ids, string gameName, string what, HashSet<int> done, bool firstPass)
+    {
+        if (!done.Contains(rootPid))
+        {
+            var result = TrySet(rootPid, rootStartedUtc, ids, out string? error, launchHandle);
+            if (result == SetResult.Gone)
+            {
+                LoggingService.Verbose("CpuTopology", $"'{gameName}' (PID {rootPid}) exited before its cores could be set.");
+                return false;
+            }
+            if (result == SetResult.Refused)
+            {
+                LoggingService.Warn("CpuTopology", $"Could not keep '{gameName}' (PID {rootPid}) on {what}: {error}. "
+                    + "A game running as administrator, or protected by anti-cheat, can refuse it; a delay in Edit Game › Performance helps some anti-cheat titles.");
+                return false;
+            }
+            done.Add(rootPid);
+        }
+
+        int children = 0;
+        var descendants = ProcessTree.Descendants(rootPid, rootStartedUtc, "CpuTopology");
+        if (!firstPass && descendants.Count == 0 && !ProcessHandles.IsRunning(rootPid, rootStartedUtc))
+        {
+            LoggingService.Verbose("CpuTopology", $"'{gameName}' (PID {rootPid}) and everything it started have exited; no more looking for new processes.");
+            return false;
+        }
+        foreach (var (pid, childName, started) in descendants)
+        {
+            if (done.Contains(pid)) continue;
+            var result = TrySet(pid, started, ids, out string? error);
+            if (result == SetResult.Done)
+            {
+                done.Add(pid);
+                children++;
+            }
+            else if (result == SetResult.Refused)
+            {
+                // Once, then left alone: a child that refuses now refuses on the follow-up too.
+                done.Add(pid);
+                LoggingService.Verbose("CpuTopology", $"'{gameName}': {childName} (PID {pid}) refused its cores: {error}.");
+            }
+        }
+
+        if (firstPass)
+        {
+            LoggingService.Info("CpuTopology", $"Kept '{gameName}' (PID {rootPid}{(children > 0 ? $" and {children} process(es) it started" : "")}) on {what}.");
+        }
+        else if (children > 0)
+        {
+            LoggingService.Verbose("CpuTopology", $"Kept {children} more process(es) '{gameName}' started since on the same cores.");
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Sets the process's CPU Sets. <paramref name="launchHandle"/>, for the game itself, is tried when
+    /// Windows refuses to open it by id - a game run as administrator.
+    /// </summary>
+    private static SetResult TrySet(int pid, DateTime startedUtc, uint[] ids, out string? error, SafeProcessHandle? launchHandle = null)
+    {
+        var opened = ProcessHandles.OpenSame(pid, startedUtc, ProcessSetLimitedInformation, out var handle, out error);
+        if (opened == ProcessHandles.OpenResult.Gone) return SetResult.Gone;
+        if (opened == ProcessHandles.OpenResult.Refused)
+        {
+            if (launchHandle == null) return SetResult.Refused;
+            try
+            {
+                if (launchHandle.IsClosed || ProcessHandles.HasExited(launchHandle)) return SetResult.Gone;
+                if (SetProcessDefaultCpuSets(launchHandle, ids, (uint)ids.Length)) return SetResult.Done;
+                error = new Win32Exception(Marshal.GetLastPInvokeError()).Message.TrimEnd('.');
+                return SetResult.Refused;
+            }
+            catch (ObjectDisposedException)
+            {
+                // The session ended and closed its handle meanwhile: the game has gone.
+                return SetResult.Gone;
+            }
+        }
+
+        using (handle)
+        {
+            if (SetProcessDefaultCpuSets(handle!, ids, (uint)ids.Length)) return SetResult.Done;
+            error = new Win32Exception(Marshal.GetLastPInvokeError()).Message.TrimEnd('.');
+            return SetResult.Refused;
         }
     }
 }

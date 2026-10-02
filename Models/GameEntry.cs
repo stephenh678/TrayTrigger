@@ -110,11 +110,19 @@ public class GameEntry
     public DlssLastRun? DlssLastRun { get; set; }
 
     /// <summary>
-    /// Which cores the game's process may run on. Independent of the profile tier: on an Intel
-    /// hybrid CPU (12th gen+) some engines and anti-cheat titles run worse when threads land on
-    /// E-cores, and pinning to P-cores is the standard fix. No-op on non-hybrid CPUs.
+    /// Which cores the game's process is kept on (Edit Game › Performance › CPU Cores), with CPU
+    /// Sets. Independent of the profile tier: on an Intel hybrid CPU (12th gen+) some engines and
+    /// anti-cheat titles run worse when threads land on E-cores, and on a dual-CCD Ryzen X3D most
+    /// games want the CCD with the 3D V-Cache. A choice that doesn't fit this PC's CPU does nothing.
+    /// See <see cref="Services.CpuTopology"/>.
     /// </summary>
     public CpuAffinityMode CpuAffinity { get; set; } = CpuAffinityMode.Default;
+
+    /// <summary>
+    /// Seconds to wait after the game starts before <see cref="CpuAffinity"/> is applied, for
+    /// anti-cheat titles that refuse a change made while they start. 0 (the default) applies it at once.
+    /// </summary>
+    public int CpuCoresDelaySeconds { get; set; }
 
     /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
     public string PreLaunchScriptPath { get; set; } = string.Empty;

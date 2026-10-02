@@ -1858,6 +1858,21 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public string SuspendGameHotkey
+    {
+        get => _settings.SuspendGameHotkey;
+        set
+        {
+            if (_settings.SuspendGameHotkey != value)
+            {
+                _settings.SuspendGameHotkey = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+                _onHotkeySettingChanged?.Invoke();
+            }
+        }
+    }
+
     // --- Performance Tweaks ---
 
     public bool CreateRestorePointBeforeTweaks
@@ -2080,6 +2095,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
         OnPropertyChanged(nameof(TrayMenuHotkey));
+        OnPropertyChanged(nameof(SuspendGameHotkey));
         OnPropertyChanged(nameof(EnableGameScripts));
         OnPropertyChanged(nameof(EnableTools));
         OnPropertyChanged(nameof(ShowToolsInTray));
@@ -2105,6 +2121,147 @@ public class SettingsViewModel : ViewModelBase
         _onTrayMenuSettingChanged?.Invoke();
 
         StatusMessage = "Settings restored to recommended defaults.";
+    }
+
+    // --- Backup & Restore (see BackupService) ---
+
+    /// <summary>The game TrayTrigger is following right now, if any. A restore restarts TrayTrigger, so it waits until none is.</summary>
+    public Func<string?>? RunningGameName { get; set; }
+
+    /// <summary>Writes the library and tools to disk, so a backup holds what is on screen.</summary>
+    public Action? FlushData { get; set; }
+
+    /// <summary>A restore is unpacked: TrayTrigger restarts to put it in place.</summary>
+    public event Action? RequestRestart;
+
+    public ICommand BackUpCommand => _backUpCommand ??= new AsyncRelayCommand(BackUpAsync, () => !IsBackupBusy);
+    private ICommand? _backUpCommand;
+    public ICommand RestoreCommand => _restoreCommand ??= new AsyncRelayCommand(RestoreAsync, () => !IsBackupBusy);
+    private ICommand? _restoreCommand;
+
+    private bool _isBackupBusy;
+    public bool IsBackupBusy
+    {
+        get => _isBackupBusy;
+        private set
+        {
+            if (SetProperty(ref _isBackupBusy, value)) CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private void SaveEverything()
+    {
+        FlushData?.Invoke();
+        _storageService.SaveSettings(_settings);
+    }
+
+    private async Task BackUpAsync()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = "Back Up TrayTrigger",
+            FileName = BackupService.DefaultFileName(DateTime.Now),
+            Filter = "TrayTrigger backup (*.zip)|*.zip",
+            DefaultExt = ".zip",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        };
+        if (FileDialogCloak.Show(dialog) != true) return;
+
+        string path = dialog.FileName;
+        IsBackupBusy = true;
+        StatusMessage = "Backing up...";
+        try
+        {
+            SaveEverything();
+            var manifest = await Task.Run(() => new BackupService(_storageService).Create(path));
+            StatusMessage = $"Backed up {manifest.Games} game(s), {manifest.Tools} tool(s), your settings, {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s) to {path}";
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Backup", $"Backing up to '{path}' failed: {ex.Message}", ex);
+            StatusMessage = $"The backup failed: {ex.Message}";
+        }
+        finally
+        {
+            IsBackupBusy = false;
+        }
+    }
+
+    private async Task RestoreAsync()
+    {
+        var owner = WindowHelper.ActiveOwner();
+        if (RunningGameName?.Invoke() is { } running)
+        {
+            ModernDialog.ShowWarning(owner, "Restore from Backup", $"Close {running} first.",
+                "Restoring restarts TrayTrigger, and a game it launched would be left without its Performance Profile put back or its post-exit script run.");
+            return;
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Restore TrayTrigger from a Backup",
+            Filter = "TrayTrigger backup (*.zip)|*.zip|All files (*.*)|*.*",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        };
+        if (FileDialogCloak.Show(dialog) != true) return;
+        string path = dialog.FileName;
+
+        BackupManifest manifest;
+        try
+        {
+            manifest = BackupService.ReadManifest(path);
+        }
+        catch (InvalidDataException ex)
+        {
+            LoggingService.Info("Restore", $"'{path}' wasn't restored: {ex.Message}");
+            ModernDialog.ShowWarning(owner, "Restore from Backup", "This file can't be restored.", ex.Message);
+            return;
+        }
+
+        string from = string.IsNullOrWhiteSpace(manifest.MachineName) ? "" : $" on {manifest.MachineName}";
+        bool confirmed = ModernDialog.Confirm(owner, "Restore from Backup",
+            $"Replace your library, settings, tools and scripts with the backup made {manifest.CreatedUtc.ToLocalTime():MMM d, yyyy h:mm tt}{from}?",
+            $"It holds {manifest.Games} game(s), {manifest.Tools} tool(s), {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s), from TrayTrigger {manifest.AppVersion}. "
+                + $"What you have now is backed up first, to the Backups folder in {_storageService.BaseDirectory}, so you can go back. "
+                + "TrayTrigger restarts to finish. Game saves aren't touched.",
+            confirmText: "Restore and Restart",
+            cancelText: "Cancel");
+        if (!confirmed)
+        {
+            LoggingService.Verbose("Restore", $"Restore from '{path}' cancelled at the confirmation.");
+            return;
+        }
+
+        // Asked again: a game hotkey or the tray can start one while the dialogs are open.
+        if (RunningGameName?.Invoke() is { } startedSince)
+        {
+            ModernDialog.ShowWarning(owner, "Restore from Backup", $"Close {startedSince} first.",
+                "It started while the restore was being chosen. Restoring restarts TrayTrigger, and a game it launched would be left without its Performance Profile put back or its post-exit script run.");
+            return;
+        }
+
+        IsBackupBusy = true;
+        StatusMessage = "Backing up what you have now, then restoring...";
+        try
+        {
+            SaveEverything();
+            await Task.Run(() =>
+            {
+                var service = new BackupService(_storageService);
+                string safety = service.CreateSafetyBackup();
+                service.StageRestore(path, safety);
+            });
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Restore", $"Restoring from '{path}' failed before anything was changed: {ex.Message}", ex);
+            StatusMessage = $"The restore failed, and nothing was changed: {ex.Message}";
+            IsBackupBusy = false;
+            return;
+        }
+
+        LoggingService.Info("Restore", $"Restoring from '{path}'; restarting to finish.");
+        RequestRestart?.Invoke();
     }
 
     private void OpenStorageFolder()

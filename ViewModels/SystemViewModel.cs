@@ -405,6 +405,14 @@ public class SystemViewModel : ViewModelBase
     }
 
     public CpuHardwareInfo Cpu => Report.Cpu;
+
+    /// <summary>
+    /// How the cores are built, as the per-game CPU Cores choice sees them: "Hybrid: 8 performance
+    /// cores and 8 efficiency cores.", or which CCD has the 3D V-Cache. Empty, and hidden, when every
+    /// core is alike.
+    /// </summary>
+    public string CpuCoreLayoutDisplay => CpuTopologyService.GetTopology().Summary;
+    public bool HasCpuCoreLayout => CpuCoreLayoutDisplay.Length > 0;
     public GpuHardwareInfo PrimaryGpu => Report.Gpus.FirstOrDefault() ?? new GpuHardwareInfo();
     public List<GpuHardwareInfo> GpuList => Report.Gpus;
     public RamHardwareInfo Ram => Report.Ram;

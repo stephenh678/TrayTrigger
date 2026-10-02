@@ -537,16 +537,28 @@
                             <Button Style="{StaticResource HelpLinkButton}" Content="How profiles work" Margin="0,0,0,12"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/overview"/>
 
-                            <!-- CPU affinity (hybrid CPUs) - independent of the profile tier -->
-                            <TextBlock Text="CPU Cores (hybrid Intel 12th gen+ / similar)" FontSize="11.5"
-                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <ComboBox AutomationProperties.Name="CPU affinity" ItemsSource="{Binding CpuAffinityOptions}"
-                                      SelectedValue="{Binding CpuAffinity}" SelectedValuePath="Value" DisplayMemberPath="Label"
-                                      Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CpuAffinityHint}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
-                                       TextWrapping="Wrap" Margin="0,0,0,4"/>
-                            <Button AutomationProperties.Name="Learn more about CPU affinity" Style="{StaticResource HelpLinkButton}"
-                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
+                            <!-- CPU Cores - independent of the profile tier. Its options are worked out
+                                 from this PC's CPU (hybrid Intel, Ryzen X3D, multi-CCD Ryzen); on a CPU
+                                 with nothing to choose the whole block is left out. -->
+                            <StackPanel Visibility="{Binding ShowCpuCores, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="CPU Cores" FontSize="11.5"
+                                           Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <ComboBox AutomationProperties.Name="CPU cores" ItemsSource="{Binding CpuAffinityOptions}"
+                                          SelectedValue="{Binding CpuAffinity}" SelectedValuePath="Value" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding CpuAffinityHint}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <DockPanel Margin="0,0,0,4" LastChildFill="True"
+                                           Visibility="{Binding ShowCpuCoresDelay, Converter={StaticResource BoolToVis}}">
+                                    <TextBox x:Name="CpuCoresDelayBox" AutomationProperties.Name="Seconds to wait before setting CPU cores" DockPanel.Dock="Left" Width="64"
+                                             Text="{Binding CpuCoresDelaySeconds, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center"
+                                               Text="seconds to wait after the game starts. 0 sets the cores at once; some anti-cheat titles only accept the change a little later, so try 30 if one refuses it."/>
+                                </DockPanel>
+                                <Button AutomationProperties.Name="Learn more about CPU cores" Style="{StaticResource HelpLinkButton}"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

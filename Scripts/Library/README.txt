@@ -38,10 +38,12 @@ THE EXAMPLES
     Script Arguments:  none
 
   Example-CloseBackgroundApps.ps1
-    Closes background apps you name, such as OneDrive or Teams, before the
-    game and reopens them after it.
-    Script Arguments:  process names
-                       OneDrive ms-teams Dropbox
+    Closes background apps, such as OneDrive or Teams, before the game and
+    reopens them after it. Run as Administrator, it also pauses Windows
+    Update and Delivery Optimization while you play.
+    Script Arguments:  "recommended" for its recommended list, and/or
+                       process names; empty does nothing
+                       recommended Spotify
 
   Example-StartCompanionApps.ps1
     Starts the tools a game needs, such as SimHub or TrackIR, and closes them

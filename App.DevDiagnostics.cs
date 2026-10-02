@@ -1361,6 +1361,8 @@ public partial class App
                 string targetPng = e.Args[i + 2];
                 bool invalid = i + 3 < e.Args.Length && e.Args[i + 3].Equals("invalid", StringComparison.OrdinalIgnoreCase);
                 bool noDlss = i + 3 < e.Args.Length && e.Args[i + 3].Equals("nodlss", StringComparison.OrdinalIgnoreCase);
+                // "autocores": CPU Cores on Auto, so the wait-before-applying box is in the capture.
+                bool autoCores = i + 3 < e.Args.Length && e.Args[i + 3].Equals("autocores", StringComparison.OrdinalIgnoreCase);
                 _skipSettingsSaveOnExit = true;
                 // A copy, so pressing Save for the "invalid" capture can never touch the library.
                 // Prefer a game that actually ships DLSS, so the Performance tab's DLSS card is in
@@ -1382,6 +1384,7 @@ public partial class App
                 if (invalid) editVm.SteamAppId = "not-a-number";
                 // The Performance tab shows the tier summary; Aggressive lists the most.
                 if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
+                if (autoCores) editVm.CpuAffinity = CpuAffinityMode.Auto;
                 editVm.SelectedSection = section;
                 dlg.Show();
                 // The DLSS card loads asynchronously, so a capture taken straight after Show()
@@ -2270,6 +2273,8 @@ public partial class App
             // --screenshot-tray-search / --test-tray-search (App.TraySearchDiagnostics.cs).
             if (TryHandleTraySearchDevArgs(e, i)) return;
             if (TryHandleCloseGameDevArgs(e, i)) return;
+            if (TryHandleSuspendDevArgs(e, i)) return;
+            if (TryHandleRestoreDevArgs(e, i)) return;
 
             // --test-automation-names <out.txt>: controls a screen reader can't name (App.AutomationNameAudit.cs).
             if (e.Args[i].Equals("--test-automation-names", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)

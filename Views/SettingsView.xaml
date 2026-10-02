@@ -308,6 +308,18 @@
                             <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu by the tray icon, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
 
+                            <TextBlock Text="Suspend / Resume Game Hotkey" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                            <views:HotkeyRecorderBox AutomationProperties.Name="Suspend / Resume Game Hotkey" x:Name="SuspendHotkeyBox" Hotkey="{Binding SuspendGameHotkey}" OwnerId="{x:Static services:HotkeyManager.SuspendOwnerId}"
+                                                     ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding Message, ElementName=SuspendHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=SuspendHotkeyBox}"
+                                       Visibility="{Binding HasMessage, ElementName=SuspendHotkeyBox, Converter={StaticResource BoolToVis}}"
+                                       FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            <TextBlock Text="Press it in a game you launched from TrayTrigger to minimize it, freeze it where it is, mute it and stop its playtime clock; press it again to bring it back and carry on (default: Ctrl+Alt+P). For cutscenes you can't pause, or stepping away. The tray menu's Now Playing section does the same. Online games disconnect while suspended, and games protected by anti-cheat (Easy Anti-Cheat, BattlEye and the like) are never suspended."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How Suspend works" Margin="0,4,0,0" HorizontalAlignment="Left"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/suspend"/>
+
                             <!-- Tools: the optional Tools page. Its tray option is under Tray Menu. -->
                             <TextBlock Text="Tools" FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
@@ -1253,7 +1265,29 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 5.3 Reset Settings to Defaults -->
+                    <!-- 5.3 Backup & Restore: TrayTrigger's own data in one .zip (BackupService). -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <DockPanel LastChildFill="True">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="Back Up..." Command="{Binding BackUpCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="12,6" Margin="0,0,6,0"/>
+                                <Button Content="Restore..." Command="{Binding RestoreCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="12,6"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Backup &amp; Restore" FontSize="13.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushTextPrimary}"/>
+                                <TextBlock Text="Saves your game library, settings, tools, scripts and artwork to one .zip file, to move TrayTrigger to a new PC or undo a mistake. Restoring puts them back and finds games whose drive letter or folder changed. Game saves aren't included."
+                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="How backups work" Margin="0,4,0,0" HorizontalAlignment="Left"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/backup"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- 5.4 Reset Settings to Defaults -->
                     <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
                             BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">

@@ -390,6 +390,17 @@
                                                    Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
+                                    <!-- Row 1c: Suspend hotkey - the configured value -->
+                                    <DockPanel Margin="0,0,0,9">
+                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                            <Border Background="{StaticResource BrushKeyCapBackground}" BorderBrush="{StaticResource BrushKeyCapBorder}" BorderThickness="1" CornerRadius="4" Padding="7,2">
+                                                <TextBlock Text="{Binding SettingsVM.SuspendGameHotkey}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Suspend the game you're playing, or resume it - games with anti-cheat excepted (change it in Settings > General)"
+                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </DockPanel>
+
                                     <!-- Row 2: Tray Left-Click -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">

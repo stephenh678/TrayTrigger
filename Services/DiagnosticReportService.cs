@@ -279,8 +279,8 @@ public static class DiagnosticReportService
             }
         }
         var topology = CpuTopologyService.GetTopology();
-        string hybrid = topology.IsHybrid ? $", hybrid ({topology.PerformanceCoreCount} performance cores)" : "";
-        return $"- CPU: {name} ({cores} cores / {logical} threads{hybrid})";
+        string layout = topology.Summary.Length > 0 ? $" {topology.Summary.TrimEnd('.')}" : "";
+        return $"- CPU: {name} ({cores} cores / {logical} threads){layout}";
     }
 
     private static string MemoryLine()

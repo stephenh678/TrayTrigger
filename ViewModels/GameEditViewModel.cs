@@ -142,6 +142,8 @@ public class GameEditViewModel : ViewModelBase
         _hasPlatform = game.IsGogGame || game.IsEaGame || game.IsEpicGame || game.IsUbisoftGame || game.IsXboxGame || game.IsBattleNetGame || (game.IsSteamGame && !string.IsNullOrEmpty(game.SteamAppId));
         _performanceProfile = game.PerformanceProfile;
         _cpuAffinity = game.CpuAffinity;
+        _initialCpuAffinity = game.CpuAffinity;
+        _cpuCoresDelaySeconds = game.CpuCoresDelaySeconds.ToString();
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
         // Not stored on the game: a game "uses the same script" exactly when both paths match.
@@ -210,7 +212,7 @@ public class GameEditViewModel : ViewModelBase
     {
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
-        PerformanceProfile, CpuAffinity,
+        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds,
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -301,37 +303,93 @@ public class GameEditViewModel : ViewModelBase
     public IReadOnlyList<PerformanceProfileMode> PerformanceProfileOptions { get; } =
         new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };
 
-    // --- CPU affinity (hybrid CPUs) ---
+    /// <summary>The dialog's heading: the game being edited, or "New Game" until it has a name.</summary>
+    public string HeadingText => string.IsNullOrWhiteSpace(Name) ? "New Game" : Name.Trim();
+
+    // --- CPU Cores (hybrid Intel, Ryzen X3D and multi-CCD Ryzen) ---
 
     private CpuAffinityMode _cpuAffinity;
     public CpuAffinityMode CpuAffinity
     {
         get => _cpuAffinity;
-        set { _cpuAffinity = value; OnPropertyChanged(); }
+        set
+        {
+            _cpuAffinity = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CpuAffinityHint));
+            OnPropertyChanged(nameof(ShowCpuCoresDelay));
+        }
     }
 
     public sealed record CpuAffinityOption(CpuAffinityMode Value, string Label);
 
-    public IReadOnlyList<CpuAffinityOption> CpuAffinityOptions { get; } = new[]
+    /// <summary>
+    /// How this PC's cores are built. A property so a test can stand in any CPU; the dialog reads
+    /// the real one.
+    /// </summary>
+    internal CpuTopology Topology { get; init; } = CpuTopologyService.GetTopology();
+
+    /// <summary>
+    /// The choices that mean something on this PC, worded for it. A game set to one meant for
+    /// another kind of CPU - a library moved from an Intel PC to a Ryzen - keeps it, listed last
+    /// and labelled as doing nothing here, rather than being changed behind the user's back.
+    /// </summary>
+    public IReadOnlyList<CpuAffinityOption> CpuAffinityOptions
     {
-        new CpuAffinityOption(CpuAffinityMode.Default, "Default (all cores)"),
-        new CpuAffinityOption(CpuAffinityMode.PerformanceCoresOnly, "Performance cores only (hybrid CPUs)")
-    };
+        get
+        {
+            var options = Topology.Options.Select(m => new CpuAffinityOption(m, Topology.OptionLabel(m))).ToList();
+            if (options.Count == 0) options.Add(new CpuAffinityOption(CpuAffinityMode.Default, Topology.OptionLabel(CpuAffinityMode.Default)));
+            if (options.All(o => o.Value != _initialCpuAffinity))
+            {
+                options.Add(new CpuAffinityOption(_initialCpuAffinity, $"{CpuTopology.MenuLabel(_initialCpuAffinity)} (does nothing on this PC)"));
+            }
+            return options;
+        }
+    }
 
-    /// <summary>Tells the user whether the option can do anything on this machine.</summary>
-    /// <summary>The dialog's heading: the game being edited, or "New Game" until it has a name.</summary>
-    public string HeadingText => string.IsNullOrWhiteSpace(Name) ? "New Game" : Name.Trim();
+    /// <summary>The value the dialog opened with, so it stays pickable even when this CPU has no use for it.</summary>
+    private CpuAffinityMode _initialCpuAffinity;
 
+    /// <summary>
+    /// The CPU Cores box is left out on a CPU where there is nothing to choose (every core alike,
+    /// or a single-CCD X3D whose cores all have the cache), unless the game already has a choice.
+    /// </summary>
+    public bool ShowCpuCores => Topology.HasOptions || _initialCpuAffinity != CpuAffinityMode.Default;
+
+    /// <summary>What the chosen CPU Cores option does on this PC, under the box.</summary>
     public string CpuAffinityHint
     {
         get
         {
-            var topology = CpuTopologyService.GetTopology();
-            return topology.IsHybrid
-                ? $"Hybrid CPU ({topology.PerformanceCoreCount} performance cores of {topology.LogicalProcessorCount} logical processors). Pinning helps games that stutter on efficiency cores."
-                : "This CPU has no efficiency cores, so this setting has no effect on this PC.";
+            string layout = Topology.Summary;
+            string? noEffect = Topology.WhyNoEffect(CpuAffinity);
+            string effect = CpuAffinity switch
+            {
+                CpuAffinityMode.Default => "Windows decides which cores the game runs on.",
+                _ when noEffect != null => $"Changes nothing on this PC: {noEffect}.",
+                CpuAffinityMode.Auto => (Topology.Recommended == CpuAffinityMode.VCacheCores ? "Uses the 3D V-Cache cores" : "Uses the performance cores")
+                    + " here, and whatever suits the CPU if your library moves to another PC.",
+                CpuAffinityMode.PerformanceCoresOnly => "Keeps the game off the efficiency cores. Helps games that stutter when a thread lands on one.",
+                CpuAffinityMode.VCacheCores => "Keeps the game on the CCD with the extra cache, which most games run fastest on.",
+                CpuAffinityMode.FrequencyCores => "Keeps the game on the CCD without the extra cache, which clocks higher. For the few games that prefer clock speed.",
+                CpuAffinityMode.OneCcd => "Keeps the game on one CCD, so its threads share one L3 cache.",
+                _ => string.Empty
+            };
+            return layout.Length == 0 ? effect : $"{layout} {effect}";
         }
     }
+
+    private string _cpuCoresDelaySeconds = "0";
+    /// <summary>Seconds to wait after the game starts before its cores are set. Text, so Save can refuse a bad value.</summary>
+    public string CpuCoresDelaySeconds
+    {
+        get => _cpuCoresDelaySeconds;
+        set { _cpuCoresDelaySeconds = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>The delay only matters when the choice changes something.</summary>
+    public bool ShowCpuCoresDelay => CpuAffinity != CpuAffinityMode.Default;
 
     // --- DLSS (read-only; see docs/dlss-plan.md) ---
 
@@ -425,14 +483,17 @@ public class GameEditViewModel : ViewModelBase
     }
 
     /// <summary>The fields Save can reject, so the dialog can bring the right one into view.</summary>
-    public enum EditField { SteamAppId, PreLaunchScript, PostExitScript, PreLaunchTimeout }
+    public enum EditField { SteamAppId, PreLaunchScript, PostExitScript, PreLaunchTimeout, CpuCoresDelay }
 
     /// <summary>Raised when Save refuses a value. The tab has already been switched to show it.</summary>
     public event Action<EditField>? ValidationFailed;
 
-    internal static GameEditSection SectionOf(EditField field) => field == EditField.SteamAppId
-        ? GameEditSection.Identity
-        : GameEditSection.Scripts;
+    internal static GameEditSection SectionOf(EditField field) => field switch
+    {
+        EditField.SteamAppId => GameEditSection.Identity,
+        EditField.CpuCoresDelay => GameEditSection.Performance,
+        _ => GameEditSection.Scripts
+    };
 
     /// <summary>
     /// Puts the refused field on screen: the tab you are on if it already shows it (All shows
@@ -1406,6 +1467,16 @@ public class GameEditViewModel : ViewModelBase
             }
         }
 
+        int cpuCoresDelay = 0;
+        if (!string.IsNullOrWhiteSpace(CpuCoresDelaySeconds) && CpuAffinity != CpuAffinityMode.Default)
+        {
+            if (!int.TryParse(CpuCoresDelaySeconds.Trim(), out cpuCoresDelay) || cpuCoresDelay < 0 || cpuCoresDelay > CpuTopologyService.MaxDelaySeconds)
+            {
+                RejectField(EditField.CpuCoresDelay, $"The wait before setting CPU cores must be a whole number of seconds between 0 and {CpuTopologyService.MaxDelaySeconds}.");
+                return;
+            }
+        }
+
         SourceGame.Name = Name.Trim();
         SourceGame.ExecutablePath = ExecutablePath.Trim();
         SourceGame.Arguments = Arguments?.Trim() ?? string.Empty;
@@ -1443,6 +1514,9 @@ public class GameEditViewModel : ViewModelBase
         }
         SourceGame.PerformanceProfile = PerformanceProfile;
         SourceGame.CpuAffinity = CpuAffinity;
+        // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
+        // to a choice brings the game's own delay back with it.
+        if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;
         SourceGame.PreLaunchScriptPath = PreLaunchScriptPath?.Trim().Trim('"') ?? string.Empty;
         SourceGame.PostExitScriptPath = (UseSameScriptForBoth ? PreLaunchScriptPath : PostExitScriptPath)?.Trim().Trim('"') ?? string.Empty;
         SourceGame.WaitForPreLaunchScript = WaitForPreLaunchScript || AbortLaunchOnScriptFailure;

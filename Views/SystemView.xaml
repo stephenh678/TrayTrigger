@@ -320,6 +320,10 @@
                                     <Run Text="{Binding Cpu.ClockSpeedDisplay, Mode=OneWay}"/>
                                 </TextBlock>
                             </DockPanel>
+                            <!-- What Edit Game's CPU Cores choice works from: P/E cores, or which CCD has the 3D V-Cache. -->
+                            <TextBlock Text="{Binding CpuCoreLayoutDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                       TextWrapping="Wrap" Margin="0,-4,0,8"
+                                       Visibility="{Binding HasCpuCoreLayout, Converter={StaticResource BoolToVis}}"/>
                             <ProgressBar Value="{Binding Cpu.CurrentUsagePercent, Mode=OneWay}" Maximum="100" Height="6" 
                                          Background="#16161B" Foreground="{StaticResource BrushAccent}" BorderThickness="0"/>
                         </StackPanel>

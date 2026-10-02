@@ -48,14 +48,27 @@
                 <MenuItem Header="Aggressive" IsCheckable="True" IsChecked="{Binding BatchProfileIsAggressive, Mode=OneWay}"
                           Command="{Binding BatchSetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Aggressive}"/>
             </MenuItem>
-            <!-- Hidden on a uniform CPU: pinning to performance cores is a documented no-op there,
-                 and an option that cannot do anything is worse than no option. Edit Game Properties
-                 still offers it, with a hint, for a library headed to a hybrid machine. -->
-            <MenuItem Header="CPU Cores" Visibility="{Binding IsHybridCpu, Converter={StaticResource BoolToVis}}">
+            <!-- The items are this PC's CPU Cores choices (CpuCoreMenu): P-cores on a hybrid Intel,
+                 the V-Cache and frequency CCDs on a dual-CCD X3D, one CCD on another multi-CCD Ryzen.
+                 Hidden on a CPU with nothing to choose, where every item would be a no-op. -->
+            <MenuItem Header="CPU Cores" Visibility="{Binding CpuCores.IsVisible, Converter={StaticResource BoolToVis}}">
+                <MenuItem Header="Auto (Recommended)" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsAuto, Mode=OneWay}"
+                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Auto}"
+                          Visibility="{Binding CpuCores.ShowAuto, Converter={StaticResource BoolToVis}}"/>
                 <MenuItem Header="All Cores (Windows default)" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsDefault, Mode=OneWay}"
                           Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Default}"/>
                 <MenuItem Header="Performance Cores Only" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsPerformanceCores, Mode=OneWay}"
-                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"/>
+                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"
+                          Visibility="{Binding CpuCores.ShowPerformanceCores, Converter={StaticResource BoolToVis}}"/>
+                <MenuItem Header="3D V-Cache Cores" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsVCache, Mode=OneWay}"
+                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.VCacheCores}"
+                          Visibility="{Binding CpuCores.ShowVCache, Converter={StaticResource BoolToVis}}"/>
+                <MenuItem Header="Frequency Cores" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsFrequency, Mode=OneWay}"
+                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.FrequencyCores}"
+                          Visibility="{Binding CpuCores.ShowFrequency, Converter={StaticResource BoolToVis}}"/>
+                <MenuItem Header="First CCD Only" IsCheckable="True" IsChecked="{Binding BatchCpuAffinityIsOneCcd, Mode=OneWay}"
+                          Command="{Binding BatchSetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.OneCcd}"
+                          Visibility="{Binding CpuCores.ShowOneCcd, Converter={StaticResource BoolToVis}}"/>
             </MenuItem>
             <!-- Both are all-or-nothing: the check is on only when every selected game already has
                  it (a mixed selection shows none), and a click turns it on for the whole selection. -->
@@ -82,6 +95,21 @@
             </MenuItem>
             <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
                 <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+            </MenuItem>
+            <!-- Suspend / Resume: one item whose wording follows the game's state. -->
+            <MenuItem Header="{Binding SuspendMenuLabel}" Command="{Binding ToggleSuspendCommand}"
+                      ToolTip="Suspend minimizes the game, freezes it where it is and mutes it, and stops its playtime clock until you resume it. Online games disconnect while suspended; games with anti-cheat are never suspended.">
+                <MenuItem.Icon><TextBlock Text="&#xE769;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
             </MenuItem>
             <MenuItem Header="Close Game" Command="{Binding CloseGameCommand}"
                       ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
@@ -156,11 +184,24 @@
                 <MenuItem Header="Aggressive" IsCheckable="True" IsChecked="{Binding ProfileIsAggressive, Mode=OneWay}"
                           Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Aggressive}"/>
             </MenuItem>
-            <MenuItem Header="CPU Cores" Visibility="{Binding IsHybridCpu, Converter={StaticResource BoolToVis}}">
+            <MenuItem Header="CPU Cores" Visibility="{Binding CpuCores.IsVisible, Converter={StaticResource BoolToVis}}">
+                <MenuItem Header="Auto (Recommended)" IsCheckable="True" IsChecked="{Binding CpuAffinityIsAuto, Mode=OneWay}"
+                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Auto}"
+                          Visibility="{Binding CpuCores.ShowAuto, Converter={StaticResource BoolToVis}}"/>
                 <MenuItem Header="All Cores (Windows default)" IsCheckable="True" IsChecked="{Binding CpuAffinityIsDefault, Mode=OneWay}"
                           Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.Default}"/>
                 <MenuItem Header="Performance Cores Only" IsCheckable="True" IsChecked="{Binding CpuAffinityIsPerformanceCores, Mode=OneWay}"
-                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"/>
+                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.PerformanceCoresOnly}"
+                          Visibility="{Binding CpuCores.ShowPerformanceCores, Converter={StaticResource BoolToVis}}"/>
+                <MenuItem Header="3D V-Cache Cores" IsCheckable="True" IsChecked="{Binding CpuAffinityIsVCache, Mode=OneWay}"
+                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.VCacheCores}"
+                          Visibility="{Binding CpuCores.ShowVCache, Converter={StaticResource BoolToVis}}"/>
+                <MenuItem Header="Frequency Cores" IsCheckable="True" IsChecked="{Binding CpuAffinityIsFrequency, Mode=OneWay}"
+                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.FrequencyCores}"
+                          Visibility="{Binding CpuCores.ShowFrequency, Converter={StaticResource BoolToVis}}"/>
+                <MenuItem Header="First CCD Only" IsCheckable="True" IsChecked="{Binding CpuAffinityIsOneCcd, Mode=OneWay}"
+                          Command="{Binding SetCpuAffinityCommand}" CommandParameter="{x:Static models:CpuAffinityMode.OneCcd}"
+                          Visibility="{Binding CpuCores.ShowOneCcd, Converter={StaticResource BoolToVis}}"/>
             </MenuItem>
             <MenuItem Header="Launch Options">
                 <MenuItem Header="Run as Administrator" IsCheckable="True" IsChecked="{Binding RunAsAdmin, Mode=OneWay}"
@@ -1334,7 +1375,7 @@
                                                                                </Style.Triggers>
                                                                            </Style>
                                                                        </Border.Style>
-                                                                       <TextBlock Text="&#9654; PLAYING" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="9.5" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
                                                                    </Border>
                                                                    <!-- Favorite Star - outermost corner -->
                                                                    <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
@@ -1743,7 +1784,7 @@
 
                                                            <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="4,0" Margin="0,0,3,0" HorizontalAlignment="Right">
                                                                <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                               <TextBlock Text="&#9654; PLAYING" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A"/>
+                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A"/>
                                                            </Border>
                                                            <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                    CornerRadius="3" Padding="4,0" HorizontalAlignment="Right">
@@ -1970,7 +2011,7 @@
                                                                   VerticalAlignment="Center"/>
                                                        <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                           <TextBlock Text="&#9654; PLAYING" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
+                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
                                                        <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">

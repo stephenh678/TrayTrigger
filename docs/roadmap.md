@@ -4,6 +4,247 @@ Notes on things discussed but not yet implemented, kept here so they survive bet
 
 ## Open
 
+### Feature research for 1.4.7 and later (owner decided 2026-10-02; items 1-4 built in 1.4.7-beta.3, awaiting the owner's testing)
+
+**Built 2026-10-02** (uncommitted until the owner has tested it). Where each landed:
+
+- 1, Backup and restore: `Services/BackupService.cs`, `Services/BackupPathFixer.cs`, `App.Restore.cs`,
+  Settings › Diagnostics & Storage › Backup & Restore, `Help/troubleshooting/backup.md`.
+- 2, CPU Sets: `Services/CpuTopology.cs` (layout from CPU Sets and L3 sizes, pure),
+  `Services/CpuTopologyService.cs` (reading and applying), `ViewModels/CpuCoreMenu.cs`, Edit Game
+  › Performance, System › Hardware, `Help/profiles/cpu_affinity.md`.
+- 3, Suspend: `Services/ProcessLauncherService.Suspend.cs`, `Services/ProcessSuspender.cs`
+  (NtSuspendProcess and per-process mute), `Services/AntiCheatDetector.cs`, `App.SuspendGame.cs`,
+  the Ctrl+Alt+P hotkey, the tray's Now Playing items, `Help/library/suspend.md`.
+- 4, Background apps: `Scripts/Library/Example-CloseBackgroundApps.ps1` 2.0.
+- Debug-only end-to-end checks: `--test-suspend <out.txt>` and `--test-restore-restart <folder>`.
+- Not yet: the copy of Close Background Apps in
+  [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts), which is its own repo.
+
+Researched against similar apps: Playnite and its most-used extensions, Heroic, Lutris, Project
+OptM, Razer Cortex, Hone, Process Lasso, CPU Set Setter, Nyrna, Borderless Gaming, Ludusavi.
+Demand was judged from GitHub stars, from upvotes on the Playnite and Heroic issue trackers, and
+then from Reddit (see Reddit findings below). Reddit can't be read directly. The web search tool,
+the built-in browser and Claude in Chrome all refuse reddit.com; Chrome was re-tested on 2026-10-02
+and still says "safety restrictions". Reddit also closed self-service API apps on 2025-11-11
+(Responsible Builder Policy), so reddit-mcp-buddy can't search without an approved app. Reddit was
+searched through the gemini-search MCP server (Google Search grounding) instead. The Reddit
+findings are therefore Gemini's summaries of the threads, not first-hand reads, and they include
+no vote counts. Each item below was checked against the code: none of them exists today
+(re-checked 2026-10-02).
+
+**Scope rule from the owner:** TrayTrigger is a launcher. Features that start games from outside
+TrayTrigger (command line, desktop shortcuts, Stream Deck) or detect games started outside it
+are out of scope.
+
+**Owner's decisions (2026-10-02),** numbered in build order. Items 1 to 4 are accepted; item 5
+is declined.
+
+1. **Backup and restore, TrayTrigger's own data only (accepted).** Today only a rolling `.bak`
+   per file exists (`Services/StorageService.cs`). Settings › Backup saves games, settings,
+   tools, scripts and cached art to one file. Restore rescans, re-links games by launcher ID and
+   fixes paths whose drive letter changed. Game saves are out: no save backup and no Ludusavi
+   manifest (see Declined). Playnite's "Library cloud sync" request (22 upvotes) is the same need.
+2. **CPU Cores for AMD X3D, done with CPU Sets (accepted).** Today CPU Cores is
+   `PerformanceCoresOnly` with a hard `ProcessorAffinity` (`Services/CpuTopologyService.cs:127`).
+   There is nothing for dual-CCD X3D (7950X3D, 9950X3D), and hard affinity can crash some games
+   or be blocked by anti-cheat. CPU Set Setter (737 stars) and Game Optimizer (211) use
+   `SetProcessDefaultCpuSets` instead, offer V-Cache CCD and no-SMT masks, and follow child
+   processes. The design:
+   - **Detect the CPU, with no list of models.** `CpuTopologyService` already calls
+     `GetSystemCpuSetInformation` but reads only `EfficiencyClass`. Also read
+     `LastLevelCacheIndex` (offset 16, only in the layout comment today) to group cores by CCD,
+     then read each L3's size with `GetLogicalProcessorInformationEx` (`RelationCache`). On a
+     dual-CCD X3D the CCD with the larger L3 (96 MB against 32 MB) is the V-Cache CCD, so future
+     X3D chips work without an update. The CPU name (`SystemInfoService`) is for display only.
+   - **Offer only what fits this CPU, and recommend one.** Edit Game › Performance lists the
+     options for the detected CPU plus an Auto choice that picks the recommended one:
+
+     | CPU | Options | Auto picks |
+     |---|---|---|
+     | Dual-CCD X3D (7950X3D, 9950X3D) | V-Cache cores, Frequency cores | V-Cache cores |
+     | Single-CCD X3D (7800X3D, 9800X3D) | None: every core shares the cache | n/a |
+     | Dual-CCD without X3D (7950X, 9950X) | One CCD | Default (no change) |
+     | Intel hybrid (12th gen and later) | P-cores only | P-cores only |
+     | Any other CPU | Option hidden | n/a |
+
+     System › Hardware specs shows what was detected, for example "2 CCDs, V-Cache on cores
+     0-15". `CpuAffinityMode` gains Auto, V-Cache, Frequency and One CCD; `PerformanceCoresOnly`
+     stays so existing games keep their setting.
+   - **Apply with CPU Sets,** not `Process.ProcessorAffinity`. CPU Sets are Windows' soft form of
+     affinity. Apply them to the game's whole process tree (`ProcessTree`) so child processes
+     follow.
+   - **An optional delay before applying,** per game, for anti-cheat titles that block an early
+     change. This is Reddit's Process Lasso workaround.
+   - **Leave AMD's driver alone.** TrayTrigger doesn't touch core parking or Game Bar, and a game
+     left on Default is not changed.
+3. **Suspend and resume the running game (accepted).** A hotkey and a Now Playing tray item that
+   freeze the game's process tree (`NtSuspendProcess`), mute it, and stop the playtime clock until
+   resumed. For unpausable cutscenes and stepping away. Nyrna (1.3k stars) does only this;
+   Playnite has it as the PlayState extension. Must refuse games with kernel anti-cheat (EAC,
+   BattlEye) and warn that online games will disconnect. Builds on `ProcessTree` and Close Game.
+   Reddit's pitfalls (below) add two rules: Close Game resumes the game before closing it, and
+   the Now Playing tray item is the way back in, since a suspended game can't be switched to.
+4. **Background apps while you play (accepted as a bundled script, not built into the app).**
+   Today `Example-CloseBackgroundApps.ps1` closes the processes named in Script Arguments and
+   reopens them after; it doesn't need admin. Extend that script:
+   - "recommended" in Script Arguments closes a recommended list, starting from Reddit's:
+     browsers, Discord, RGB and peripheral software, idle launchers. With names given, it closes
+     those too. Empty does nothing, as before (owner, 2026-10-02): bundled scripts update
+     themselves, and a setup relying on "no arguments = no-op" must not start closing apps.
+   - Run as administrator, it also stops Windows Update (`wuauserv`) and Delivery Optimization
+     (`DoSvc`) for the session and starts them again after. Without admin it skips that step and
+     logs why. Windows can start `wuauserv` again by itself, so test that a stop lasts a session.
+   - It reopens or restarts exactly what it closed or stopped, and logs what it did. No RAM
+     cleaning and no "boost" score.
+   - Efficiency mode (EcoQoS) is left out: PowerShell can reach `SetProcessInformation` only
+     through inline C# (`Add-Type`).
+   - Scripts don't get the Performance Profile session's crash recovery. If TrayTrigger or
+     Windows crashes mid-game, closed apps stay closed. The services come back at the next
+     restart, because stopping a service doesn't change its startup type.
+   - The copy in [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts)
+     changes with it.
+5. **Borderless window per game (declined).** Most current games have their own borderless or
+   windowed-fullscreen mode, and TrayTrigger's Optimizations for Windowed Games (DirectFlip
+   Model) tweak already covers those. Special K and Magpie cover older games that lack one. The
+   open-source Borderless Gaming is no longer updated.
+
+**Dropped after the Reddit research:** "Will it run?" in Game Details. Steam's minimum and
+recommended requirements are already fetched (`SteamAppDetails.PcRequirementsMin/Rec`) but only
+shown as text (`GameDetailsViewModel.cs:471`), and the hardware is already known
+(`SystemInfoService`). Comparing them would give "Meets recommended" or "GPU below minimum", as
+Playnite's System Checker extension does. Reddit's experience with Can You Run It says that
+comparison misleads. On top of that, Steam's requirements are free text, and comparing GPUs needs
+a GPU ranking table that must be kept current.
+
+**Reddit findings (2026-10-02, via gemini-search):** These cover r/playnite, r/pcgaming,
+r/OptimizedGaming, r/pcmasterrace, r/Steam and r/buildapc. Most of the X3D discussion is in r/Amd
+and r/AMDHelp, so those two were added. Gemini named its threads for some topics only; the named
+ones are under Sources.
+
+- **Suspend and resume: clear demand.** Redditors keep building this themselves:
+  - a Windows app for unpausable cutscenes, posted to r/pcgaming and later sold on Steam;
+  - Universal Pause Button;
+  - an Xbox Game Bar widget, Suspended N Time, which can also suspend the game when it loses focus;
+  - the Resource Monitor "Suspend process" trick.
+
+  Reported pitfalls: some games crash on resume, Windows shows "Not Responding" while a game is
+  suspended, and a suspended game can't be switched to or closed until it's resumed. Online games
+  disconnect. So Close Game must resume the game first, and the tray item is the way back in.
+- **CPU Sets for X3D: the most specific demand found.** Many 7950X3D and 9950X3D owners report
+  games landing on the wrong CCD even with Game Bar and AMD's V-Cache driver, and fall back to
+  Process Lasso. Their complaints about it match the proposal:
+  - they don't know which cores belong to which CCD;
+  - anti-cheat blocks affinity changes (Denuvo, EA and EAC titles are named);
+  - the workaround is to apply the rule some seconds after launch.
+
+  CPU Sets are preferred over affinity. This supports detecting the V-Cache CCD automatically and
+  adding a delay before the rule is applied.
+- **Background apps: wanted, but boosters are distrusted.** r/pcmasterrace and r/pcgaming call
+  Razer Cortex snake oil or bloat. The complaints:
+  - Auto-Boost freezing the PC after a game closes;
+  - Cortex's own RAM and CPU use;
+  - Booster Prime's bad advice on game settings;
+  - its power plan benchmarking worse than High Performance.
+
+  The same threads recommend closing named apps by hand instead: browsers, Discord, RGB and
+  peripheral software, idle launchers. Windows Update downloading during a game is a frequent
+  stutter complaint. So: named apps only, restore exactly what was closed, and show what was done.
+  No RAM cleaning and no "boost" score.
+- **Borderless window: steady demand.** Borderless Gaming is called a godsend for older and indie
+  games. Its free open-source version stopped being updated when it moved to a paid Steam release,
+  so users switched to No More Border, GoBorderless or Special K. Same caveat as the proposal: the
+  game must be set to windowed mode first.
+- **"Will it run?": the evidence is against it.** r/pcgaming, r/pcmasterrace and r/buildapc
+  threads about Can You Run It agree that comparing hardware with a game's published requirements
+  is unreliable. Requirements are vague or inflated, older high-clock CPUs get over-rated, and VRAM
+  is ignored. Users trust benchmark videos instead. That is the comparison this proposal would make.
+- **Backup and restore: the demand is about paths and saves.** r/playnite threads ask how to change
+  many game paths at once after moving to a new PC, moving a drive, or a drive letter change. The
+  answers are workarounds: the Path Replacer add-on, symlinks, SUBST, or fixing the letter in Disk
+  Management. That is the proposal's re-link step. Playnite 10 has built-in backup and restore and
+  LaunchBox has cloud sync, so TrayTrigger is behind both. Ludusavi's r/pcgaming release threads
+  were well received, and non-Steam games have no cloud saves, so save backup has its own demand.
+  The owner declined it for TrayTrigger.
+- **Complaints about the other apps:**
+  - Playnite: slow startup and UI lag, mostly blamed on themes and extensions; setup with plugins
+    takes time; Fullscreen mode lacks Desktop features.
+  - GOG Galaxy: integrations keep needing a new login; development is slow.
+  - LaunchBox: Big Box is paid; it slows down with large libraries.
+  - Process Lasso: CPU Sets are confusing to set up, anti-cheat blocks it, and the free version
+    nags.
+  - NVIDIA App: the overlay's Game Filters and Photo Mode cost up to 15% FPS, Control Panel
+    features are still missing, and DLSS Override doesn't always apply.
+
+  TrayTrigger already avoids the ones in scope. It reads each launcher's local install records,
+  so there are no logins to expire, and it needs no plugins. It also closes launchers after the
+  game exits and re-applies DLSS Override on every launch.
+- **Already built:** per-game automatic HDR (Optimized › Enable HDR) and closing the EA app,
+  Ubisoft Connect or Epic after the game came up repeatedly, and TrayTrigger has both. Stopping
+  launchers from auto-updating games also came up; that is the launcher's job and out of scope.
+
+**Build order (owner, 2026-10-02):** Backup and restore, CPU Sets for X3D, Suspend and resume,
+then the Background apps script. (Before Reddit the suggested order was Backup, Background apps,
+CPU Sets, Suspend, Borderless, then "Will it run?".)
+
+- **Backup** goes first: it is low risk and protects everything else.
+- **CPU Sets and Suspend** come next: they have the most specific Reddit demand, and people are
+  building their own tools for both. CPU Sets builds on the CPU Cores option. Suspend builds on
+  `ProcessTree` and the tray's Now Playing section.
+- **Background apps** comes last and stays a script. Reddit distrusts boosters, and
+  `Example-CloseBackgroundApps.ps1` already does the core of it.
+
+**Declined by the owner (don't re-propose):** per-game resolution/refresh rate and audio device;
+more NVIDIA driver settings per game (frame cap, Low Latency, V-Sync, power mode); several
+launch options per game; play history, stats and Steam playtime import; launching games from
+outside TrayTrigger or detecting games started outside it; game-save backup, including through
+Ludusavi's manifest (Backup covers TrayTrigger's own data only); a borderless window per game;
+background apps as a built-in feature (it is a bundled script instead).
+
+**Other signals worth keeping:** Heroic's most-upvoted store requests ever are itch.io (100) and Amazon (39), useful for the
+"which launcher next" poll. Issue #12 asked for a Simplified Chinese translation; the app has no
+localization yet.
+
+Sources: [Playnite](https://github.com/JosefNemec/Playnite),
+[PlayniteExtensionsCollection](https://github.com/darklinkpower/PlayniteExtensionsCollection),
+[System Checker](https://github.com/Lacro59/playnite-systemchecker-plugin),
+[Nyrna](https://github.com/Merrit/nyrna),
+[Borderless Gaming](https://github.com/andrewmd5/Borderless-Gaming),
+[CPU Set Setter](https://github.com/SimonvBez/CPUSetSetter),
+[Game Optimizer](https://github.com/charlie754/Game-Optimizer-CPUs-Threads-Optimizer),
+[Project OptM](https://github.com/exaiver2019/ProjectOptM),
+[Hone vs Razer Cortex](https://hone.gg/comparison/razer-cortex),
+[Ludusavi](https://github.com/mtkennerly/ludusavi),
+[Heroic issues](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/issues).
+
+Reddit threads that gemini-search named. The URLs are as Gemini gave them; none were opened, so
+check one before quoting it.
+
+- Suspend:
+  [Pausing game anytime like home button on console](https://www.reddit.com/r/pcgaming/comments/nuv9x0/) (r/pcgaming),
+  [Unpausable cutscenes: I made a Windows application that will pause them](https://www.reddit.com/r/pcgaming/comments/e7529l/) (r/pcgaming),
+  [PSA: You can pause the game ... using UniversalPauseButton](https://www.reddit.com/r/remnantgame/comments/158656d/) (r/remnantgame).
+- X3D (no URLs given): "7950x3D and process lasso", "Process Lasso: CPU sets or Affinities?" and
+  "Is project lasso still needed for the 7950X3D chips?" (r/Amd); "7950X3D - core parking mess"
+  and "AMD Core Parking Issues (9950x3d)" (r/AMDHelp); "7950x3d How to Assign the right CCD in
+  Process Lasso" (r/pcmasterrace).
+- Background apps, Razer Cortex (no URLs given): "Razer cortex bad?", "Razer Cortex Yes Or No??"
+  and "Should I use Razer Cortex Power Plan in Power Settings?" (r/pcmasterrace).
+- Will it run:
+  [Are websites like SystemRequirementsLab and PCbenchmark actually reliable](https://www.reddit.com/r/pcgaming/comments/1ch00r1/) (r/pcgaming),
+  [Anyone else find "Can you run it" slightly inaccurate?](https://www.reddit.com/r/pcmasterrace/comments/2z0vpg/) (r/pcmasterrace),
+  [How accurate is Can you run it?](https://www.reddit.com/r/pcmasterrace/comments/ij777c/) (r/pcmasterrace),
+  [Is systemrequirementslab.com (Can I Run It) accurate?](https://www.reddit.com/r/buildapc/comments/1x1f3r/) (r/buildapc).
+- Backup:
+  [Is there a way to mass change game paths?](https://www.reddit.com/r/playnite/comments/10t4x35/),
+  [How to handle path to external drive?](https://www.reddit.com/r/playnite/comments/hmj8f9/),
+  [Moved my ROMs, is there an easy way of changing their paths?](https://www.reddit.com/r/playnite/comments/s9e53h/) (all r/playnite),
+  [PSA: If Steam ever can't find a game because the drive letter changed](https://www.reddit.com/r/pcmasterrace/comments/8ur97q/) (r/pcmasterrace),
+  [Ludusavi: A new, open source tool for backing up game saves](https://www.reddit.com/r/pcgaming/comments/hndnly/) and
+  [Ludusavi v0.11.0](https://www.reddit.com/r/pcgaming/comments/wu975t/) (r/pcgaming).
+- Borderless, GOG Galaxy, Playnite, LaunchBox and NVIDIA App findings came from Gemini summaries
+  that named no threads.
+
 ### Bundled examples: copy on adopt, not run in place (design only, 2026-09-20)
 
 The bundled scripts do two jobs at once and the jobs disagree. They are reference documentation,
