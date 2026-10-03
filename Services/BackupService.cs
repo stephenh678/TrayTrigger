@@ -74,11 +74,12 @@ public sealed class BackupService
     /// <summary>Writes a backup of what is on disk now to <paramref name="zipPath"/>, replacing any file there.</summary>
     public BackupManifest Create(string zipPath)
     {
-        var files = new List<(string Entry, string Path)>();
+        // Counts: what a file adds to the summary, so one left out of the backup is left out of the count too.
+        var files = new List<(string Entry, string Path, char Counts)>();
         foreach (var name in DataFiles)
         {
             string path = Path.Combine(_storage.BaseDirectory, name);
-            if (File.Exists(path)) files.Add((DataPrefix + name, path));
+            if (File.Exists(path)) files.Add((DataPrefix + name, path, '-'));
         }
 
         string scriptsDir = Path.Combine(_storage.BaseDirectory, "Scripts");
@@ -92,9 +93,10 @@ public sealed class BackupService
             {
                 if (path.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) continue;
                 string relative = Path.GetRelativePath(scriptsDir, path).Replace('\\', '/');
-                files.Add((ScriptsPrefix + relative, path));
                 string fileName = Path.GetFileName(path);
-                if (!bundled.Contains(fileName) && !fileName.EndsWith(ScriptLibraryService.SetAsideSuffix, StringComparison.OrdinalIgnoreCase)) scripts++;
+                bool own = !bundled.Contains(fileName) && !fileName.EndsWith(ScriptLibraryService.SetAsideSuffix, StringComparison.OrdinalIgnoreCase);
+                files.Add((ScriptsPrefix + relative, path, own ? 's' : '-'));
+                if (own) scripts++;
             }
         }
 
@@ -104,7 +106,7 @@ public sealed class BackupService
             if (!Directory.Exists(dir)) continue;
             foreach (var path in Directory.EnumerateFiles(dir))
             {
-                files.Add((prefix + Path.GetFileName(path), path));
+                files.Add((prefix + Path.GetFileName(path), path, 'a'));
                 art++;
             }
         }
@@ -129,16 +131,15 @@ public sealed class BackupService
             using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
             using (var zip = new ZipArchive(stream, ZipArchiveMode.Create))
             {
-                var manifestEntry = zip.CreateEntry(ManifestEntry, CompressionLevel.Optimal);
-                using (var writer = manifestEntry.Open())
-                {
-                    JsonSerializer.Serialize(writer, manifest, AppJsonContext.Default.BackupManifest);
-                }
-
-                foreach (var (entryName, path) in files)
+                foreach (var (entryName, path, counts) in files)
                 {
                     try
                     {
+                        // The file is opened before its entry is made: an entry made first for a file
+                        // that then can't be opened would be written as an empty file (a zip being
+                        // created can't take an entry back), and a restore would put that empty file
+                        // over the real one.
+                        using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                         // Art is already compressed; squeezing it again only costs time.
                         var level = entryName.StartsWith("cache/", StringComparison.Ordinal) ? CompressionLevel.NoCompression : CompressionLevel.Optimal;
                         var entry = zip.CreateEntry(entryName, level);
@@ -146,16 +147,24 @@ public sealed class BackupService
                         // (a copy with no date, a clock set wrong) keeps the zip's default instead.
                         var modified = File.GetLastWriteTime(path);
                         if (modified.Year is >= 1980 and <= 2107) entry.LastWriteTime = modified;
-                        using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                         using var target = entry.Open();
                         source.CopyTo(target);
                     }
-                    catch (IOException ex)
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
                         // One unreadable icon must not cost the whole backup; the library is what matters.
                         if (entryName.StartsWith(DataPrefix, StringComparison.Ordinal) && !entryName.StartsWith(ScriptsPrefix, StringComparison.Ordinal)) throw;
                         LoggingService.Warn("Backup", $"Left '{path}' out of the backup: {ex.Message}");
+                        if (counts == 's') manifest.Scripts--;
+                        else if (counts == 'a') manifest.ArtFiles--;
                     }
+                }
+
+                // Written last, once it is known what went in. It is found by name, not by position.
+                var manifestEntry = zip.CreateEntry(ManifestEntry, CompressionLevel.Optimal);
+                using (var writer = manifestEntry.Open())
+                {
+                    JsonSerializer.Serialize(writer, manifest, AppJsonContext.Default.BackupManifest);
                 }
             }
             File.Move(temp, zipPath, overwrite: true);
@@ -462,14 +471,14 @@ public sealed class BackupService
     {
         string temp = path + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings));
-        File.Move(temp, path, overwrite: true);
+        StorageService.SafeReplaceFile(temp, path);
     }
 
     private static void CopyInto(string source, string target)
     {
         string temp = target + ".tmp";
         File.Copy(source, temp, overwrite: true);
-        File.Move(temp, target, overwrite: true);
+        StorageService.SafeReplaceFile(temp, target);
     }
 
     /// <summary>Copies every file under <paramref name="source"/> into <paramref name="target"/>, replacing same-named ones and leaving the rest. Returns how many.</summary>

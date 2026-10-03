@@ -74,6 +74,16 @@ public class CpuTopologyTests : IDisposable
     }
 
     [Fact]
+    public void PhysicalCores_AreCounted_NotGuessedFromTheThreadCount()
+    {
+        // System > Hardware used to halve the thread count: 12 for a 12900K, 4 for a 9700K.
+        Assert.Equal(16, I9_12900K().PhysicalCoreCount);   // 8 P-cores with two threads, 8 E-cores with one
+        Assert.Equal(8, I7_9700K().PhysicalCoreCount);     // no SMT
+        Assert.Equal(16, R9_7950X3D().PhysicalCoreCount);
+        Assert.Equal(0, CpuTopology.Unknown(8).PhysicalCoreCount);
+    }
+
+    [Fact]
     public void DualCcdX3D_FindsTheVCacheCcdByItsCacheSize()
     {
         var cpu = R9_7950X3D();
@@ -85,6 +95,36 @@ public class CpuTopologyTests : IDisposable
         Assert.Equal(Enumerable.Range(272, 16).Select(i => (uint)i), cpu.CpusFor(CpuAffinityMode.FrequencyCores)!.Select(c => c.Id));
         Assert.Equal(cpu.CpusFor(CpuAffinityMode.VCacheCores), cpu.CpusFor(CpuAffinityMode.Auto));
         Assert.Equal("2 CCDs: 3D V-Cache (96 MB L3) on CPUs 0-15, 32 MB L3 on CPUs 16-31.", cpu.Summary);
+    }
+
+    [Fact]
+    public void DualCcdX3D_WhoseCcdsWindowsRanksAsDifferentClasses_IsStillAnX3D_NotAHybrid()
+    {
+        // Windows can give the two CCDs of a 7950X3D different efficiency classes (the frequency CCD
+        // clocks higher), which would read as P-cores and E-cores. Classes that differ only from one
+        // CCD to the next are no efficiency cores: the V-Cache choices are what fit, and
+        // "performance cores" means nothing here.
+        var cpu = CpuTopology.Build(
+            Cpus(0, 16, efficiencyClass: 0, llc: 0).Concat(Cpus(16, 16, efficiencyClass: 1, llc: 1)).ToList(),
+            [L3(96 * MB, 0, 16), L3(32 * MB, 16, 16)], 32);
+
+        Assert.Equal(CpuCoreLayout.VCacheMultiCcd, cpu.Layout);
+        Assert.False(cpu.IsHybrid);
+        Assert.Equal(96, cpu.VCacheGroup!.L3Megabytes);
+        Assert.Equal(CpuAffinityMode.VCacheCores, cpu.Recommended);
+        Assert.Contains(CpuAffinityMode.VCacheCores, cpu.Options);
+        Assert.DoesNotContain(CpuAffinityMode.PerformanceCoresOnly, cpu.Options);
+        Assert.Null(cpu.CpusFor(CpuAffinityMode.PerformanceCoresOnly));
+        Assert.Equal(16, cpu.CpusFor(CpuAffinityMode.VCacheCores)!.Count);
+
+        // A real hybrid part keeps its P-cores first even with a V-Cache CCD: the classes differ
+        // within a CCD, so there are efficiency cores to keep a game off.
+        var both = CpuTopology.Build(
+            Cpus(0, 12, efficiencyClass: 1, llc: 0).Concat(Cpus(12, 4, efficiencyClass: 0, threadsPerCore: 1, llc: 0))
+                .Concat(Cpus(16, 16, efficiencyClass: 1, llc: 1)).ToList(),
+            [L3(96 * MB, 0, 16), L3(32 * MB, 16, 16)], 32);
+        Assert.Equal(CpuCoreLayout.Hybrid, both.Layout);
+        Assert.True(both.IsHybrid);
     }
 
     [Fact]

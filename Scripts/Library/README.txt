@@ -76,7 +76,7 @@ CHANGING AN EXAMPLE
   settings most people want to adjust. Below it, every step has a comment
   saying what it does.
 
-  Work on a copy. The seven files TrayTrigger put in this folder are its
+  Work on a copy. The files TrayTrigger put in this folder are its
   copy, not yours. Every time TrayTrigger starts, and every time you browse
   or open this folder from it, each one is compared with the copy inside
   TrayTrigger and replaced if it differs. That is how a corrected template
@@ -132,7 +132,7 @@ WRITING YOUR OWN
   scripts as Administrator". None of the examples need it.
 
   The full details, including environment variables and batch file quirks,
-  are in the app: Edit Game > "Script guide & examples".
+  are in the app: Edit Game > "Writing your own".
 
 
 WHEN SOMETHING DOESN'T WORK

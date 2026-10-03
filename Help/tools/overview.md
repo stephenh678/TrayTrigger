@@ -12,17 +12,13 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - A shortcut brings its arguments, working folder and its "Run as administrator" setting with it.
 - Adding a program with the same arguments as a tool you already have asks first. The same program with different arguments is a different tool.
 - Adding a tool while a category tab is selected puts it in that category.
-- Dropping a file on the Tools page never adds it to your game library.
 
 ## Store apps
 
 - Apps from the Microsoft Store, like Xbox or Windows Terminal, can be tools too. Click Browse Apps next to Add Tool (it opens Windows' list of every app in the Start menu, shell:AppsFolder), then drag the app onto the Tools page. A desktop shortcut made by dragging an app out of that folder works too.
-- The name is the app's name as Windows shows it (or the shortcut's file name).
 - A Store app is started the way its Start menu entry starts it. If it's already open, most apps come to the front; apps that allow several windows, like Windows Terminal, open another one.
 - Edit Tool shows the app's ID instead of a program path. Store apps have no working folder or file location and can't run as administrator, so those options aren't shown for them, and a batch Run as Administrator leaves them out.
-- Launch arguments are passed on, though most Store apps ignore them.
 - If the app is uninstalled, the tool shows MISSING. Install it again from the Microsoft Store, or remove the tool.
-- A desktop app dragged from shell:AppsFolder is added as the program its Start menu entry starts, like any other program.
 - Games aren't tools. A Game Pass or Microsoft Store game (or its .exe), or a Steam game's shortcut, dropped here isn't added: Scan for Games puts it in your Library instead.
 
 ## Scripts
@@ -58,7 +54,6 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - A tool gets the same launch notice and launch popup as a game, and starts after the same short delay. The popup settings under Settings > General cover games and tools together.
 - If the tool is already running, its window comes to the front instead of a second copy starting. A tool that only lives in the system tray has no window to show, so you get a short "already running" notice instead.
 - For a tool with arguments, "already running" means the copy TrayTrigger started for that tool. Two tools that share a program, like Command Prompt running two different scripts, each start their own copy.
-- Pressing a tool's hotkey twice in a row doesn't start it twice.
 - If the program has moved or been uninstalled, the tool shows MISSING and launching it offers to locate the program.
 
 ## Run as administrator
@@ -66,7 +61,6 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - Tick "Run as administrator" in Edit Tool for a program that needs admin rights but doesn't ask for them itself.
 - Windows shows its own permission prompt each time. TrayTrigger never answers or skips it.
 - Programs that always need admin, like MSI Afterburner, get that prompt even with the box unticked.
-- If you decline the prompt, the tool just stays closed. Nothing else is shown.
 
 ## Starting with your games
 

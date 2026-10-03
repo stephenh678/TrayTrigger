@@ -222,7 +222,7 @@ public partial class ModernDialog : Window
         var dialog = new ModernDialog(
             "Exit TrayTrigger",
             "Exit or Minimize to Tray?",
-            "Would you like to minimize TrayTrigger to the system tray (keeping your hotkeys and tray menu active), or completely exit the application?",
+            "Minimized, your hotkeys and the tray menu keep working.",
             "Exit App",
             "Cancel",
             DialogIconType.Power);
@@ -321,13 +321,13 @@ public partial class ModernDialog : Window
         {
             (true, false) => (
                 "A free SteamGridDB API key finds poster art Steam doesn't have.",
-                "It's optional and fills in box art for games with no Steam poster. Add it in Settings > Library & Art."),
+                "It's optional and fills in posters for games Steam has none for. Add it in Settings > Library & Art."),
             (false, true) => (
                 "A free RAWG API key adds game info for games that aren't on Steam.",
                 "It's optional and covers Game Pass, Epic exclusives and other non-Steam games. Add it in Settings > Library & Art."),
             _ => (
                 "Two free API keys give your library better poster art and game info.",
-                "SteamGridDB fills in missing box art. RAWG adds details for Game Pass, Epic and other non-Steam games. Both are optional. Add them in Settings > Library & Art."),
+                "SteamGridDB fills in missing posters. RAWG adds details for Game Pass, Epic and other non-Steam games. Both are optional. Add them in Settings > Library & Art."),
         };
 
         return new ModernDialog("Better Art and Game Info", message, detail, "Open Settings", "Not Now", DialogIconType.Info);

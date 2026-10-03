@@ -185,6 +185,38 @@ public class BackupServiceTests : IDisposable
     }
 
     [Fact]
+    public void AnArtFileThatCantBeRead_IsLeftOutOfTheBackup_NotPutInEmpty()
+    {
+        var storage = Storage("pc");
+        string good = Path.Combine(storage.IconsDirectory, "good.png");
+        string locked = Path.Combine(storage.IconsDirectory, "locked.png");
+        File.WriteAllBytes(good, [1, 2, 3]);
+        File.WriteAllBytes(locked, [4, 5, 6]);
+        storage.SaveGames([new GameEntry { Id = "g1", Name = "Hades", IconPath = locked }]);
+        storage.SaveSettings(new AppSettings());
+
+        string zip = Path.Combine(_root, "backup.zip");
+        // Held open by "another program" with no sharing, as an icon being written or scanned can be.
+        BackupManifest manifest;
+        using (new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            manifest = new BackupService(storage).Create(zip);
+        }
+
+        // The summary counts what went in, not what was found.
+        Assert.Equal(1, manifest.ArtFiles);
+        Assert.Equal(1, BackupService.ReadManifest(zip).ArtFiles);
+
+        // The backup was still made, with the rest of the art, and the unreadable file isn't in it
+        // at all: an empty entry for it would be restored over the real file.
+        using var archive = ZipFile.OpenRead(zip);
+        Assert.NotNull(archive.GetEntry("cache/Icons/good.png"));
+        Assert.Equal(3, archive.GetEntry("cache/Icons/good.png")!.Length);
+        Assert.Null(archive.GetEntry("cache/Icons/locked.png"));
+        Assert.NotNull(archive.GetEntry("data/games.json"));
+    }
+
+    [Fact]
     public void ABackupFromANewerTrayTrigger_IsRefused()
     {
         string zip = Path.Combine(_root, "newer.zip");

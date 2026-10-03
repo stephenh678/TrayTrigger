@@ -1948,7 +1948,7 @@ public class SettingsViewModel : ViewModelBase
 
         _onHotkeySettingChanged?.Invoke();
         LoggingService.Info("Settings", "User clicked Save Settings. Settings saved & applied.");
-        StatusMessage = "Settings saved successfully!";
+        StatusMessage = "Settings saved.";
         OnPropertyChanged(nameof(LogFileSizeDisplay));
     }
 
@@ -1961,7 +1961,7 @@ public class SettingsViewModel : ViewModelBase
                 owner,
                 "Reset Settings",
                 "Are you sure you want to reset all settings to their recommended default values?",
-                "Your game library, categories, and custom artwork will remain untouched.",
+                "Your games, tools, scripts, artwork, API keys and scan locations are kept. Tools is switched off until you enable it again.",
                 confirmText: "Reset to Defaults",
                 cancelText: "Cancel");
 

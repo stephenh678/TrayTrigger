@@ -99,7 +99,7 @@
                 <Button Content="UNDO" Command="{Binding UndoRemovalCommand}"
                         Style="{StaticResource ModernAccentButton}" Padding="12,4" Margin="0,0,10,0" VerticalAlignment="Center"/>
                 <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="11" Command="{Binding DismissUndoToastCommand}"
-                        Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center"
+                        Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center" ToolTip="Dismiss"
                         AutomationProperties.Name="Dismiss"/>
             </StackPanel>
         </Border>
@@ -196,7 +196,9 @@
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Window &amp; Tray Icon" FontSize="13.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How the window, tray icon and hotkeys work" Margin="0,0,0,8" HorizontalAlignment="Left"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="general/overview"/>
 
                             <CheckBox Content="Start with Windows" IsChecked="{Binding StartWithWindows}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="13"/>
@@ -423,11 +425,11 @@
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
 
                             <DockPanel LastChildFill="False">
-                                <CheckBox AutomationProperties.Name="Enable Steam Library Integration" IsChecked="{Binding SteamIntegrationEnabled}"
+                                <CheckBox AutomationProperties.Name="Enable Steam library integration" IsChecked="{Binding SteamIntegrationEnabled}"
                                           Style="{StaticResource ModernCheckBox}" FontSize="13"
                                           VerticalAlignment="Center" DockPanel.Dock="Left">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Enable Steam Library Integration" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Enable Steam library integration" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </CheckBox>
                             </DockPanel>
@@ -456,66 +458,66 @@
                                 </StackPanel>
                             </Border>
 
-                            <CheckBox AutomationProperties.Name="Enable GOG Library Integration" IsChecked="{Binding GogIntegrationEnabled}"
+                            <CheckBox AutomationProperties.Name="Enable GOG library integration" IsChecked="{Binding GogIntegrationEnabled}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="13"
                                       Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Enable GOG Library Integration" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enable GOG library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via GOG Galaxy's own install records. No scan location needed."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox AutomationProperties.Name="Enable EA Library Integration" IsChecked="{Binding EaIntegrationEnabled}"
+                            <CheckBox AutomationProperties.Name="Enable EA library integration" IsChecked="{Binding EaIntegrationEnabled}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="13"
                                       Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Enable EA Library Integration" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enable EA library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via the EA app's install manifests. Limitation: only games in EA's default folders (EA Games / Origin Games) are found - a custom install location is not."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox AutomationProperties.Name="Enable Epic Games Library Integration" IsChecked="{Binding EpicIntegrationEnabled}"
+                            <CheckBox AutomationProperties.Name="Enable Epic Games library integration" IsChecked="{Binding EpicIntegrationEnabled}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="13"
                                       Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Enable Epic Games Library Integration" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enable Epic Games library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via the Epic Games Launcher's own install records. No scan location needed."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox AutomationProperties.Name="Enable Ubisoft Connect Library Integration" IsChecked="{Binding UbisoftIntegrationEnabled}"
+                            <CheckBox AutomationProperties.Name="Enable Ubisoft Connect library integration" IsChecked="{Binding UbisoftIntegrationEnabled}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="13"
                                       Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Enable Ubisoft Connect Library Integration" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enable Ubisoft Connect library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via Ubisoft Connect's install records, any location. Limitation: Ubisoft records no title or exe, so both are read from the install folder - occasionally wrong for a game with several executables."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox AutomationProperties.Name="Enable Xbox / PC Game Pass Library Integration" IsChecked="{Binding XboxIntegrationEnabled}"
+                            <CheckBox AutomationProperties.Name="Enable Xbox / PC Game Pass library integration" IsChecked="{Binding XboxIntegrationEnabled}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="13"
                                       Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Enable Xbox / PC Game Pass Library Integration" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enable Xbox / PC Game Pass library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via Windows' own Gaming Services records, so every game installed through the Xbox app is covered, on any drive. Games launch through Windows like the Xbox app does - no direct-exe option. Limitation: only modern (GDK) titles are detected; a few older Microsoft Store games that never moved to the current format are not."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox AutomationProperties.Name="Enable Battle.net Library Integration" IsChecked="{Binding BattleNetIntegrationEnabled}"
+                            <CheckBox AutomationProperties.Name="Enable Battle.net library integration" IsChecked="{Binding BattleNetIntegrationEnabled}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="13"
                                       Margin="0,0,0,4">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Enable Battle.net Library Integration" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Enable Battle.net library integration" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via Blizzard's install records, on any drive. Games launch through Battle.net - no direct-exe option, because Battle.net signs the game in. If Battle.net is closed it's started for you. Limitation: right after Battle.net's own cache is cleared, a newly installed game's launch code can't be read until Battle.net has been opened once."
@@ -745,7 +747,7 @@
                             <CheckBox Content="Display vertical poster art on game cards (Steam 600×900)"
                                       IsChecked="{Binding UseVerticalPosterArt}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                            <TextBlock Text="Shows official high-resolution vertical box artwork on library game cards instead of square icons when available."
+                            <TextBlock Text="Shows each game's poster on its library card instead of a square icon, when one is available."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
@@ -757,14 +759,14 @@
                                 <TextBlock Text="{Binding PosterRefreshStatus}" Foreground="{StaticResource BrushAccentHover}"
                                            FontSize="11.5" VerticalAlignment="Center" Margin="10,0,0,4"/>
                             </StackPanel>
-                            <TextBlock Text="Re-checks every game for better art, including ones that already have a cover."
+                            <TextBlock Text="Re-checks every game for better art, including ones that already have a poster."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="0,4,0,12" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Use SteamGridDB for fallback poster art (optional)"
                                       IsChecked="{Binding UseSteamGridDbArt}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                            <TextBlock Text="Community box art for games Steam has no poster for yet. Needs a free API key."
+                            <TextBlock Text="Community posters for games Steam has none for yet. Needs a free API key."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
 
@@ -827,10 +829,10 @@
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
-                            <CheckBox Content="Include 'Recent' category in tray menu"
+                            <CheckBox Content="Show a Recent section in the tray menu"
                                       IsChecked="{Binding ShowRecentInTray}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                            <TextBlock Text="Adds a 'Recent' section at the top of the tray menu with your last-played games, whether category grouping is on or not."
+                            <TextBlock Text="Your last-played games, at the top of the tray menu, whether category grouping is on or not."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
@@ -838,7 +840,7 @@
                                 <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}"
                                            FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBox AutomationProperties.Name="Max recent games to show" Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
-                                         Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
+                                         Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left" TextAlignment="Center"
                                          PreviewTextInput="NumericTextBox_PreviewTextInput"
                                          DataObject.Pasting="NumericTextBox_Pasting"/>
                             </DockPanel>
@@ -851,10 +853,10 @@
                                           Style="{StaticResource ModernComboBox}" Width="180" HorizontalAlignment="Left"/>
                             </DockPanel>
 
-                            <CheckBox Content="Include 'Favorites' category in tray menu"
+                            <CheckBox Content="Show a Favorites section in the tray menu"
                                       IsChecked="{Binding ShowFavoritesInTray}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                            <TextBlock Text="Adds a 'Favorites' section near the top of the tray menu with your starred games, whether category grouping is on or not. Hidden while you have no favorites."
+                            <TextBlock Text="Your starred games, near the top of the tray menu, whether category grouping is on or not. Hidden while you have no favorites."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
@@ -862,7 +864,7 @@
                                 <TextBlock Text="Max favorites to show:" Foreground="{StaticResource BrushTextSecondary}"
                                            FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBox AutomationProperties.Name="Max favorites to show" Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
-                                         Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left"
+                                         Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left" TextAlignment="Center"
                                          PreviewTextInput="NumericTextBox_PreviewTextInput"
                                          DataObject.Pasting="NumericTextBox_Pasting"/>
                             </DockPanel>
@@ -880,7 +882,7 @@
                                 <CheckBox Content="Show Tools in tray menu"
                                           IsChecked="{Binding ShowToolsInTray}"
                                           Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                                <TextBlock Text="Adds a 'Tools' submenu after your games, with every tool in one list."
+                                <TextBlock Text="Adds a Tools submenu after your games, with every tool in one list."
                                            Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                            Margin="24,3,0,6" TextWrapping="Wrap"/>
 
@@ -893,10 +895,10 @@
                                 </DockPanel>
                             </StackPanel>
 
-                            <CheckBox Content="Group tray context menu by category"
+                            <CheckBox Content="Group the tray menu by category"
                                       IsChecked="{Binding GroupTrayMenuByCategory}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
-                            <TextBlock Text="When enabled, games are shown under category submenus in the right-click tray menu. When disabled, shows a flat list sorted by your preference." 
+                            <TextBlock Text="On: games sit under a submenu for each category. Off: one flat list, in the order chosen below." 
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" 
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
@@ -977,6 +979,9 @@
                             <StackPanel Orientation="Horizontal" Margin="24,0,0,2">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Writing your own"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/writing"/>
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
                                         ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>
@@ -1060,12 +1065,12 @@
                                           IsChecked="{Binding DefaultWaitForPreLaunchScript}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
                                           Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                                 <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
-                                    <TextBox AutomationProperties.Name="Default pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
+                                    <TextBox AutomationProperties.Name="Default pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" TextAlignment="Center" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
                                              Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                                TextWrapping="Wrap" VerticalAlignment="Center"/>
                                 </DockPanel>
-                                <CheckBox Content="Cancel the launch if the default pre-launch script fails (non-zero exit code, timeout, or won't start)"
+                                <CheckBox Content="Cancel the launch if the default pre-launch script fails" ToolTip="Fails means a non-zero exit code, a timeout, or a script that won't start."
                                           IsChecked="{Binding DefaultAbortLaunchOnScriptFailure}" IsEnabled="{Binding HasDefaultPreLaunchScript}"
                                           Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                                 <CheckBox Content="Run default scripts hidden (no console window)"
@@ -1118,7 +1123,7 @@
                             <TextBlock Text="NVIDIA's own two overlays, together: the corner line with the DLSS version, preset letter and render resolution, and, in a game using Frame Generation, the bar across the top with the driver and Streamline versions, the output and motion-vector resolutions, the frame multiplier, refresh rate and the driver profile in use. For checking that an override is in effect, not for leaving on - they draw over every DLSS game until you untick this."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
-                            <Button Style="{StaticResource HelpLinkButton}" Content="About the DLSS Indicator" Margin="24,0,0,2"
+                            <Button Style="{StaticResource HelpLinkButton}" Content="About the DLSS overlays" Margin="24,0,0,2"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="dlss/indicator"/>
 
                             <!-- Only when a change did not work. -->
@@ -1139,7 +1144,7 @@
                             <TextBlock Text="Applies to Apply Performance Preset and Restore Previous Settings on the System &amp; Performance page."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox Content="Create a System Restore Point before applying a preset or reset"
+                            <CheckBox Content="Create a System Restore point before Apply Performance Preset or Restore Previous Settings"
                                       IsChecked="{Binding CreateRestorePointBeforeTweaks}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                             <TextBlock Text="A Windows rollback point in case a bulk change causes problems. Recommended on."
@@ -1185,7 +1190,7 @@
                             <TextBlock Text="Configure diagnostic logging to catch errors and trace execution while troubleshooting issues." 
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox Content="Enable Verbose Logging" 
+                            <CheckBox Content="Enable verbose logging" 
                                       IsChecked="{Binding VerboseLoggingEnabled}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                             <TextBlock Text="Adds detailed traces (launch parameters, scoring, registry checks) to the log. Turn on when reproducing a problem."
@@ -1230,7 +1235,7 @@
                         <StackPanel>
                             <TextBlock Text="Data Storage &amp; Asset Cache" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Local application databases, configurations, and downloaded artwork caches." 
+                            <TextBlock Text="Where TrayTrigger keeps your library, settings and artwork." 
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                             <!-- Roaming: Database & Settings -->
@@ -1242,7 +1247,7 @@
                                                Foreground="{StaticResource BrushTextSecondary}"/>
                                     <TextBlock Text="{Binding StorageDirectoryDisplay}" Foreground="{StaticResource BrushAccentHover}" 
                                                FontSize="11" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
-                                    <TextBlock Text="Contains games.json, settings.json, and atomic .bak recovery backups." 
+                                    <TextBlock Text="Your library and settings (games.json, settings.json), with a backup copy of each." 
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>

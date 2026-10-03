@@ -15,7 +15,7 @@ Turns on Windows' native "Use HDR" display mode for the duration of the session,
 - A display already in HDR before the game launched is left alone, and is left in HDR afterward rather than being forced off.
 - Not every game renders HDR well - one that doesn't can look washed out, over-bright, or have crushed blacks with this on. This is why the tweak defaults off even though it lives under Optimized.
 - Affects every app on that display while the game runs, not just the game itself, since HDR is a system-wide display mode.
-- **Risk if your display uses Windows' "Automatically manage color for apps" (Auto Color Management):** a display already sitting in ACM's "WCG" mode (wide color, short of full HDR - this is common as Windows' own default desktop color mode on 24H2+) is also forced into full HDR while the game runs. Windows' HDR API can only turn a display fully off on restore, not back to WCG specifically, so that display may render in plain SDR after the game closes instead of returning to WCG - until Windows re-negotiates it on its own (e.g. switching to another app, or toggling HDR by hand once in Settings).
+- **If your display uses Windows' "Automatically manage color for apps":** a display in that mode's wide-color state (common on Windows 11 24H2 and later) is also switched to full HDR while the game runs. Windows can only turn HDR fully off again, not back to wide color, so the display may show plain SDR after the game closes. It returns by itself when Windows next re-negotiates the display, or toggle HDR once in Settings.
 
 ## Details
 

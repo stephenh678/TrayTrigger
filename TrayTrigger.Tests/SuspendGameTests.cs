@@ -177,6 +177,28 @@ public class SuspendGameTests : IDisposable
         Assert.False(IsFrozen(ping));
     }
 
+    [Fact]
+    public void AProcessKilledWhileSuspended_IsGone_NotRefused()
+    {
+        // Force Close on a suspended game: the session's end resumes what it froze a moment after
+        // the kill. Windows refuses a suspend/resume handle to a process on its way out, which is
+        // "gone", not a refusal worth a warning in the log.
+        for (int i = 0; i < 5; i++)
+        {
+            var ping = StartPing();
+            var started = ping.StartTime.ToUniversalTime();
+            Assert.Equal(ProcessSuspender.Outcome.Done, ProcessSuspender.Suspend(ping.Id, started, out _));
+
+            ping.Kill();
+            var atOnce = ProcessSuspender.Resume(ping.Id, started, out string? error);
+            Assert.True(atOnce != ProcessSuspender.Outcome.Refused, $"Resume right after the kill was refused: {error}");
+
+            Assert.True(ping.WaitForExit(5000));
+            var after = ProcessSuspender.Resume(ping.Id, started, out error);
+            Assert.True(after == ProcessSuspender.Outcome.Gone, $"Resume after the exit said {after}: {error}");
+        }
+    }
+
     private ProcessLauncherService Launcher(StorageService storage) => new(
         storage, new PerformanceProfileService(storage), new GameScriptService(),
         new SteamScannerService(), new GogScannerService(), new EaScannerService(),

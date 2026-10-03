@@ -4,9 +4,9 @@
 
 ## Launcher Integrations
 
-Each "Enable X Library Integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Epic/Ubisoft's registry entries, EA's install manifests, Windows' Gaming Services records for Xbox / PC Game Pass, Blizzard's install records for Battle.net), so no folder setup is needed.
+Each "Enable X library integration" toggle controls whether a scan looks for that platform's games. Games are found from the launcher's own records (Steam's manifests, GOG/Epic/Ubisoft's registry entries, EA's install manifests, Windows' Gaming Services records for Xbox / PC Game Pass, Blizzard's install records for Battle.net), so no folder setup is needed.
 
-Battle.net games launch through Battle.net, which signs the game in. If Battle.net is closed, TrayTrigger starts it and keeps asking until the game opens. Each game's launch code is read from Battle.net's own data and saved with the game, so no list has to be kept up to date. If the code can't be found (for example, just after Battle.net's cache was cleared), TrayTrigger opens Battle.net's Play tab and tells you to click Play; performance profiles and scripts still apply.
+Battle.net games launch through Battle.net, which signs the game in; if Battle.net is closed, TrayTrigger starts it first. If a game's launch code can't be read (just after Battle.net's cache was cleared, say), TrayTrigger opens Battle.net's Play tab and tells you to click Play; performance profiles and scripts still apply.
 
 - **Steam** is the one platform with several possible library folders. They're detected automatically and listed under the Steam toggle; untick one to skip that library on the next scan, or click "Refresh" to re-detect them (e.g. after adding a library to a new drive in Steam).
 - **EA** can only find games installed to EA's own default install folders. A game moved to a custom location won't be found - see the note under EA's toggle for details.
@@ -15,15 +15,7 @@ Turning an integration off only stops *new* games from that platform being detec
 
 Dropping a game folder or exe onto the Library, or using "Add Folder", also recognizes launcher-owned installs regardless of these toggles: a folder inside a Steam or GOG install is imported as that platform's game, not as a plain local exe.
 
-## Keeping the launcher minimized
-
-"Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon, on by default) asks each launcher that supports it to start quietly, so only the game opens. It works whether or not that launcher's integration toggle is on, because games already in your library keep launching through their launcher either way.
-
-- Steam: when Steam isn't running, it starts minimized to the tray and launches the game in the same step. An open Steam is left as it is; its normal launch doesn't bring its window up.
-- Epic Games Launcher: the launch asks Epic for a silent start.
-- GOG Galaxy: when Galaxy isn't running, it's started in the background with the game, the same way Playnite starts it. When Galaxy is already open, the game's own exe is started instead, so Galaxy isn't involved.
-- The EA app and Ubisoft Connect have no way to start quietly, so their windows are left as they are.
-- Xbox games start through Windows without opening the Xbox app. Battle.net is left alone: its launch keeps re-sending until Battle.net has signed in, and its fallback opens Battle.net's Play tab for you.
+How each launcher is started, and how to keep it out of the way, is under How a game is launched.
 
 ## Scan Locations
 

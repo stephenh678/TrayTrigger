@@ -322,8 +322,11 @@
                             </DockPanel>
                             <!-- What Edit Game's CPU Cores choice works from: P/E cores, or which CCD has the 3D V-Cache. -->
                             <TextBlock Text="{Binding CpuCoreLayoutDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
-                                       TextWrapping="Wrap" Margin="0,-4,0,8"
+                                       TextWrapping="Wrap" Margin="0,-4,0,2"
                                        Visibility="{Binding HasCpuCoreLayout, Converter={StaticResource BoolToVis}}"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="About CPU Cores" Margin="0,0,0,8" HorizontalAlignment="Left"
+                                    Visibility="{Binding HasCpuCoreLayout, Converter={StaticResource BoolToVis}}"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
                             <ProgressBar Value="{Binding Cpu.CurrentUsagePercent, Mode=OneWay}" Maximum="100" Height="6" 
                                          Background="#16161B" Foreground="{StaticResource BrushAccent}" BorderThickness="0"/>
                         </StackPanel>
@@ -535,7 +538,7 @@
                                     <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="12,0,0,0"
                                             VerticalAlignment="Center" DockPanel.Dock="Right"
                                             Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
-                                    <TextBlock Text="System-wide, always on until you reset them. Documented Windows settings only - no registry cleaners."
+                                    <TextBlock Text="System-wide, always on until you restore them. Documented Windows settings only - no registry cleaners."
                                                Foreground="#CCA84E" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </Border>

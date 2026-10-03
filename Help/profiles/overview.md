@@ -8,18 +8,18 @@ A game you add, by Scan for Games, Add Game, Add Folder or a drop, starts on the
 
 ## Optimized versus Aggressive
 
-- Optimized applies the low-risk set: the full-clock power plan and the high-performance GPU preference. Enable HDR and Do Not Disturb are available under Optimized but stay off until you turn them on.
+- Optimized applies the low-risk set: the full-clock power plan and the high-performance GPU preference. Enable HDR, Do Not Disturb and Unmute Speakers are available under Optimized but stay off until you turn them on.
 - Aggressive applies everything in Optimized plus MMCSS scheduling changes, Above Normal process priority, and a 0.5 ms timer resolution request. The Defender exclusion is available under Aggressive but stays off until you turn it on.
 - The toggles on this page control which tweaks each tier includes. Changing one affects every game assigned to that tier.
 - Edit Game lists, under its Performance Profile box, exactly what the chosen tier will change for that game: the tweaks switched on here, one per line, with the ones that ask for administrator permission marked.
-- Separately from the tier, each game can be pinned to performance cores on a hybrid CPU (Edit Game, CPU Cores). See the CPU Cores topic.
+- Separately from the tier, each game can be kept on the cores that suit it (Edit Game, CPU Cores). See the CPU Cores topic.
 
 ## What the badges mean
 
 - ENABLED or DISABLED shows whether that tweak is part of its tier right now. Enabled tweaks apply to every game assigned to the tier the next time one launches; a game already running keeps its current session.
-- OPT-IN marks a tweak with a real trade-off, such as Enable HDR, Do Not Disturb, or the Defender exclusion. It stays off until you turn it on yourself, even for games on that tier.
+- OPT-IN marks a tweak with a real trade-off, such as Enable HDR, Do Not Disturb, Unmute Speakers, or the Defender exclusion. It stays off until you turn it on yourself, even for games on that tier.
 - ADMIN marks a tweak that writes a machine-wide value, so Windows shows a User Account Control prompt the first time it is applied in a session. The ADMIN tweaks are written together, so it is one prompt for all of them when the first game starts and one when the last game ends, however many are switched on. Defender Exclusion is the exception: it changes Windows Defender rather than a machine-wide value, so it asks separately, and once per game rather than once per session.
-- In the library, a green PLAYING badge on a game card means a profile session is active for it; Close Game and Force Close in the card's right-click menu, and beside Launch Game in its Game Details, act on that session.
+- In the library, a green PLAYING badge on a game card means a profile session is active for it. Suspend Game, Close Game and Force Close in the card's right-click menu act on that session, and Close Game and Force Close are beside Launch Game in its Game Details too.
 
 ## Order of events
 
@@ -38,7 +38,7 @@ Machine-wide tweaks such as the power plan are applied by the first game to laun
 - GOG, EA, Epic, Ubisoft, Xbox and Battle.net games launched through their client (or directly) are tracked by watching the game's install folder for its real process, because the exe the client registers is often only a short-lived launcher stub. Every tweak, priority included, applies to them.
 - A bare launcher link, meaning a dropped .url or protocol shortcut with no platform ID behind it, has no exit signal at all, so profiles are not applied for it.
 - Launching a game that is already running never re-applies the profile or re-runs scripts; TrayTrigger just brings its window forward.
-- "Close the launcher after this game exits" (Edit Game, launcher card) shuts the platform client down once the session ends, so it does not stay resident with its overlay and background processes. For Steam it also changes how the client is started: when Steam is not already running, TrayTrigger starts it minimized to the tray and launches the game in the same step, so only the game appears. "Keep game launchers minimized when launching a game" in Settings > General > Window & Tray Icon does the same for every Steam game. If Steam is already open, or both options are off, the game is launched through Steam's normal steam:// link and the client window is left as it was.
+- "Close the launcher after this game exits" (Edit Game, Launch card) shuts the platform client down once the session ends. How a game is launched covers it, and how launchers are kept minimized.
 
 ## Now Playing, Close Game, and Force Close
 

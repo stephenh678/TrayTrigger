@@ -3,7 +3,7 @@ using System;
 namespace TrayTrigger.Models;
 
 /// <summary>
-/// backup.json, the first entry of a TrayTrigger backup (.zip): what the backup holds and where
+/// backup.json, an entry of a TrayTrigger backup (.zip): what the backup holds and where
 /// it was made. The folders are what lets a restore on another PC, or under another Windows
 /// account, point paths that named the old ones at the new ones.
 /// </summary>

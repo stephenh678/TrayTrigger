@@ -162,8 +162,15 @@ public partial class ProcessLauncherService
                     LoggingService.Info("Suspend", $"'{name}' closed while it was being suspended; left running.");
                     return new(SuspendResult.NoSession, $"{name} has closed.", gameId);
                 }
-                string why = refusal ?? "its processes had exited";
-                LoggingService.Warn("Suspend", $"Could not suspend '{name}': {refusedBy ?? "its processes"} refused ({why}); nothing was left suspended.");
+                if (refusedBy == null)
+                {
+                    // Nothing refused: every process found a moment ago had exited by the time it
+                    // was reached. Not Windows' doing, so no advice about administrator rights.
+                    LoggingService.Warn("Suspend", $"Could not suspend '{name}': its processes had exited; nothing was left suspended.");
+                    return new(SuspendResult.NoProcess, $"{name} wasn't suspended: its processes had exited.", gameId);
+                }
+                string why = refusal ?? "access denied";
+                LoggingService.Warn("Suspend", $"Could not suspend '{name}': {refusedBy} refused ({why}); nothing was left suspended.");
                 return new(SuspendResult.Refused,
                     $"{name} wasn't suspended: Windows refused ({why}). A game running as administrator can only be suspended when TrayTrigger runs as administrator too.",
                     gameId);

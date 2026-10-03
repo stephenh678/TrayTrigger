@@ -1197,7 +1197,7 @@ public class GameEditViewModel : ViewModelBase
         string id = SteamAppId?.Trim() ?? string.Empty;
         if (!UrlProtocolHelper.IsValidSteamAppId(id))
         {
-            StatusMessage = "Please enter a valid numeric Steam App ID.";
+            StatusMessage = "Enter a numeric Steam App ID.";
             LoggingService.Warn("GameEdit", $"Invalid Steam AppID '{id}' supplied for manual match.");
             return;
         }
@@ -1257,7 +1257,7 @@ public class GameEditViewModel : ViewModelBase
             if (!string.IsNullOrWhiteSpace(cover))
             {
                 ApplyFetchedCover(cover);
-                StatusMessage = "Poster artwork refreshed successfully!";
+                StatusMessage = "Poster refreshed.";
             }
             else
             {

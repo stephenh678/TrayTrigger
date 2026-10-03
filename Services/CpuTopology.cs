@@ -71,6 +71,11 @@ public sealed class CpuTopology
 
     public int LogicalProcessorCount { get; }
     public IReadOnlyList<CpuSetEntry> Cpus { get; }
+    /// <summary>
+    /// Physical cores, counted from the cores Windows lists rather than guessed from the thread
+    /// count: an i9-12900K's 24 threads are 16 cores, not 12. 0 when nothing could be read.
+    /// </summary>
+    public int PhysicalCoreCount => Cpus.Select(c => (c.Group, c.CoreIndex)).Distinct().Count();
     /// <summary>One entry per L3 cache, in processor order (CCD 0 first).</summary>
     public IReadOnlyList<CpuCacheGroup> CacheGroups { get; }
     public bool IsHybrid { get; }
@@ -247,6 +252,29 @@ public sealed class CpuTopology
 
         bool hybrid = cpus.Select(c => c.EfficiencyClass).Distinct().Count() > 1;
 
+        // The CCD whose L3 is far bigger than the others': 3D V-Cache beside CCDs without it.
+        int standsOut = -1;
+        if (groups.Count >= 2)
+        {
+            long largest = groups.Max(g => g.L3Bytes);
+            var withLargest = groups.Select((g, i) => (g, i)).Where(x => x.g.L3Bytes == largest).ToList();
+            if (largest >= VCacheMinBytes
+                && withLargest.Count == 1
+                && groups.All(g => ReferenceEquals(g, withLargest[0].g) || g.L3Bytes * 2 <= largest))
+            {
+                standsOut = withLargest[0].i;
+            }
+        }
+
+        // A CPU whose efficiency classes differ only from one CCD to the next has no efficiency
+        // cores: Windows is ranking the V-Cache and frequency CCDs of a dual-CCD X3D against each
+        // other, and the X3D choices are what fit it. A hybrid part with a V-Cache CCD and classes
+        // that differ within a CCD would be both; its P-cores come first, as below.
+        if (hybrid && standsOut >= 0 && groups.All(g => g.Cpus.Select(c => c.EfficiencyClass).Distinct().Count() == 1))
+        {
+            hybrid = false;
+        }
+
         int vCache = -1;
         CpuCoreLayout layout;
         if (hybrid)
@@ -257,14 +285,9 @@ public sealed class CpuTopology
         }
         else if (groups.Count >= 2)
         {
-            long largest = groups.Max(g => g.L3Bytes);
-            var withLargest = groups.Select((g, i) => (g, i)).Where(x => x.g.L3Bytes == largest).ToList();
-            bool oneStandsOut = largest >= VCacheMinBytes
-                && withLargest.Count == 1
-                && groups.All(g => ReferenceEquals(g, withLargest[0].g) || g.L3Bytes * 2 <= largest);
-            if (oneStandsOut)
+            if (standsOut >= 0)
             {
-                vCache = withLargest[0].i;
+                vCache = standsOut;
                 layout = CpuCoreLayout.VCacheMultiCcd;
             }
             else

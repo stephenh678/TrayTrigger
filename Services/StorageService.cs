@@ -913,7 +913,8 @@ public class StorageService : IProfileSnapshotStore
         return archivePath;
     }
 
-    private static void SafeReplaceFile(string tempFile, string targetFile)
+    /// <summary>Puts <paramref name="tempFile"/> in place of <paramref name="targetFile"/>, retrying a target briefly locked by an AV scan or backup tool. Shared with <see cref="BackupService"/>.</summary>
+    internal static void SafeReplaceFile(string tempFile, string targetFile)
     {
         for (int i = 0; i < 3; i++)
         {

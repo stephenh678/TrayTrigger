@@ -121,7 +121,7 @@
                                         <TextBlock Text=".NET 10.0" FontSize="10.5" Foreground="#85929E" FontWeight="SemiBold"/>
                                     </Border>
                                 </StackPanel>
-                                <TextBlock Text="Per-game Windows tuning and launch automation, from the tray. Everything reverts when the game exits."
+                                <TextBlock Text="Per-game Windows tuning and launch automation, from the tray. Per-game changes revert when the game exits."
                                            Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
@@ -136,32 +136,34 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                            <Border Grid.Column="0" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="0,0,6,0">
+                            <Border Grid.Column="0" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="0,0,3,6">
                                 <StackPanel>
                                     <TextBlock Text="WINDOWS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                     <TextBlock Text="{Binding OsDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Column="1" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
+                            <Border Grid.Row="1" Grid.Column="0" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="0,0,3,0">
                                 <StackPanel>
                                     <TextBlock Text="RUNTIME" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                     <TextBlock Text="{Binding RuntimeDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Column="2" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
+                            <Border Grid.Row="1" Grid.Column="1" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,0,0">
                                 <StackPanel>
                                     <TextBlock Text="LIBRARY" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                     <TextBlock Text="{Binding TotalGameCountDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Column="3" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="6,0,0,0">
+                            <Border Grid.Row="0" Grid.Column="1" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,0,6">
                                 <StackPanel>
                                     <TextBlock Text="DATA FOLDER" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
                                     <TextBlock Text="{Binding SettingsVM.StorageDirectoryDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"
@@ -196,14 +198,15 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Feature grid: seven tiles in the order the README presents the product and a
-                         session runs - profile, scripts, launch, tweaks, tray, library, hardware. -->
+                    <!-- Feature grid: ten tiles in the order the README presents the product and a
+                         session runs - profile, scripts, launch, tweaks, tray, library, DLSS, tools, backup, hardware. -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -220,7 +223,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Performance Profiles" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Give each game an Optimized or Aggressive tier: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Applied when the game launches, reverted to exactly what it found when it exits, and restored on the next start if anything crashes mid-session."
+                                    <TextBlock Text="Give each game an Optimized or Aggressive tier: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution. Applied when the game launches, reverted to exactly what it found when it exits, and restored on the next start if anything crashes mid-session. CPU Cores keeps a game on the cores that suit it: performance cores on an Intel hybrid, the 3D V-Cache cores on a Ryzen X3D."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
@@ -252,7 +255,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Launcher Control" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam minimized so only the game appears. A second launch brings the running game forward instead of starting a duplicate; Close Game and Force Close are one click away while it runs."
+                                    <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam, GOG Galaxy and Epic quietly so only the game appears. A second launch brings the running game forward instead of starting a duplicate; Suspend, Close Game and Force Close are one click away while it runs."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
@@ -268,7 +271,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Verified, Reversible Windows Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Preset and Restore Previous Settings can take a System Restore Point first."
+                                    <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Performance Preset and Restore Previous Settings can take a System Restore Point first."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
@@ -284,7 +287,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Tray Launcher &amp; Hotkeys" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Lives in the tray: Now Playing, Recent, Favorites and every category one right-click away, with a compact layout for a long library. A global hotkey shows the window, and any game can have its own launch hotkey - recorded from the keys you press, and refused up front if another app already has it."
+                                    <TextBlock Text="Lives in the tray: Now Playing, Recent, Favorites and every category one right-click or Ctrl+Alt+T away, with a search box that launches the top match on Enter. Hotkeys show the window, open the tray menu and suspend the game, and any game can have its own - recorded from the keys you press, and refused up front if another app already has it."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
@@ -300,15 +303,63 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Seven Launchers, One Library" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="A dark, Fluent-style library built to look at home on Windows 11: poster art, rounded cards, no menu bar. Scan for Games reads Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass and Battle.net's own install records, plus any folder you drop on the window. Real titles, Steam metadata and poster art, SteamGridDB and RAWG to fill the gaps, categories, filters, three views and batch editing."
+                                    <TextBlock Text="A dark, Fluent-style library built to look at home on Windows 11: poster art, rounded cards, no menu bar. Scan for Games reads Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass and Battle.net's own install records, plus any folder you drop on the window. Real titles, Steam metadata and poster art, SteamGridDB and RAWG to fill the gaps, categories, filters, four views and batch editing. Games you uninstall stay, greyed out, with their playtime and settings kept."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
 
-                        <!-- 7: Hardware monitoring, full width -->
-                        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,0,10">
+                        <!-- 7: DLSS Override -->
+                        <Border Grid.Row="3" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE950;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="NVIDIA DLSS Override" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Run a game on your GeForce driver&apos;s newer DLSS files instead of the ones it shipped with: Super Resolution, Ray Reconstruction and Frame Generation. Per game, with nothing in the game folder touched, and put back exactly as it was when you switch it off."
+                                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 8: Tools -->
+                        <Border Grid.Row="3" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Tools" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="An optional page for the programs you use alongside games, like MSI Afterburner or DLSS Swapper: launch them from the tray menu or a hotkey, or have them start with your games and close when the last one exits."
+                                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 9: Backup and restore -->
+                        <Border Grid.Row="4" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE777;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Backup &amp; Restore" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake. A restore finds games whose drive letter or folder changed, and backs up what you had first."
+                                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 10: Hardware monitoring -->
+                        <Border Grid.Row="4" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
                                 <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
                                     <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="14"
@@ -360,7 +411,7 @@
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
                                     <TextBlock Text="Keyboard &amp; Mouse Controls" FontSize="13.5" FontWeight="SemiBold" 
                                                Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Convenient hotkeys and mouse actions for lightning-fast library and tray management." 
+                                    <TextBlock Text="What the keys and clicks do." 
                                                Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>
@@ -409,7 +460,7 @@
                                             </Border>
                                             <TextBlock Text=" Tray Icon" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
-                                        <TextBlock Text="Show or hide the TrayTrigger window"
+                                        <TextBlock Text="Show or hide the TrayTrigger window. Double-click always opens it"
                                                    Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                                     </DockPanel>
 
@@ -433,7 +484,7 @@
                                             </Border>
                                             <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
-                                        <TextBlock Text="Open Game Details (store data, playtime, box art). Keyboard: Enter on a focused card; Ctrl+Enter launches"
+                                        <TextBlock Text="Open Game Details (store data, playtime, poster). Keyboard: Enter on a focused card; Ctrl+Enter launches"
                                                    Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
@@ -461,22 +512,29 @@
                                             </Border>
                                             <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
-                                        <TextBlock Text="Play, Details, Favorite, Hide, Close Game / Force Close while playing, edit shortcuts, Steam links, Remove"
+                                        <TextBlock Text="Play, Details, Favorite, Hide; Suspend, Close Game and Force Close while playing; DLSS Override, Performance Profile, CPU Cores and Launch Options; Edit, Steam links, Remove"
                                                    Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 6: Quick Search -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,3,0">
-                                                <TextBlock Text="Ctrl" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                            </Border>
-                                            <TextBlock Text="+" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="7,2">
-                                                <TextBlock Text="F" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="Ctrl+F" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                             </Border>
                                         </StackPanel>
-                                        <TextBlock Text="Focus the search box in the Games Library, Settings or About"
+                                        <TextBlock Text="Focus the search box on any page that has one"
+                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                                    </DockPanel>
+
+                                    <!-- Row 6b: Edit Game's tabs -->
+                                    <DockPanel Margin="0,0,0,9">
+                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="Ctrl+Tab" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Next tab in Edit Game (Ctrl+Shift+Tab goes back)"
                                                    Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                                     </DockPanel>
 
@@ -595,7 +653,7 @@
                             <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
                                 <TextBlock Text="Diagnostics &amp; Storage" FontSize="13.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}"/>
-                                <TextBlock Text="The debug log, verbose logging, data and artwork folders, and Reset Settings live under Settings › Diagnostics &amp; Storage."
+                                <TextBlock Text="The debug log, verbose logging, data and artwork folders, and Reset Settings live under Settings > Diagnostics &amp; Storage."
                                            Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
@@ -616,10 +674,36 @@
                             <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
                                 <TextBlock Text="Community &amp; Open Source" FontSize="13.5" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}"/>
-                                <TextBlock Text="TrayTrigger is open source software. Submit bug reports, suggest features, or explore the documentation on GitHub." 
+                                <TextBlock Text="TrayTrigger is open source. Report a bug or suggest a feature on GitHub." 
                                            Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
+                    </Border>
+
+                    <!-- Card 4: the project's own pages, whatever the update repository is set to. -->
+                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Online" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBlock Text="The website, these help pages online, and where to ask a question or see what changed."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,8" TextWrapping="Wrap"/>
+                            <WrapPanel>
+                                <Button Content="Website" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://stephenh678.github.io/TrayTrigger/"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
+                                <Button Content="Online Help" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger/wiki"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
+                                <Button Content="Ask a Question" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger/discussions"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
+                                <Button Content="What&apos;s New" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger/releases"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
+                                <Button Content="Script Catalog" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger-Scripts"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
+                                <Button Content="Security Policy" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
+                            </WrapPanel>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
 

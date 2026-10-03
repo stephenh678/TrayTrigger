@@ -292,7 +292,7 @@
     <div class="grid grid-4">
       <div class="tile"><div class="step">1 · Before launch</div><p>If enabled, records and applies the game's <strong>Performance Profile</strong>. Runs your <strong>pre-launch script</strong> if you have configured one.</p></div>
       <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears.</p></div>
-      <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past.</p></div>
+      <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past. <strong>Suspend</strong> a game with Ctrl+Alt+P for a cutscene you can't pause and resume it the same way, or use <strong>Close Game</strong> from the tray.</p></div>
       <div class="tile"><div class="step">4 · On exit</div><p>Restores <strong>per-game profile settings</strong> to their previous state. Runs your configured post-exit script and closes the launcher if selected. After a crash, the saved profile state is restored on next start.</p></div>
     </div>
   </div>
@@ -310,8 +310,10 @@
         <ul>
           <li><strong>Seven launchers, one scan.</strong> Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net games arrive with their real titles and launch through their own client. Drop any exe, shortcut, or folder for the rest.</li>
           <li><strong>Artwork and info.</strong> Steam metadata and poster art, with optional SteamGridDB artwork and RAWG details using your own API keys.</li>
-          <li><strong>Three views</strong>: poster grid, large icons, detailed list. Filter by launcher, profile, or state; group by category; edit a whole selection at once, with undo.</li>
-          <li><strong>The tray menu.</strong> Now Playing, Recent, Favorites, and every category one right-click away, with game icons, a compact layout, and a per-game launch hotkey recorded from the keys you press.</li>
+          <li><strong>Four views</strong>: poster grid, extra large, compact icons, details list. Posters can show only their art until you point at one. Filter by launcher, profile, or state; group by category; edit a whole selection at once, with undo.</li>
+          <li><strong>The tray menu.</strong> Now Playing, Recent, Favorites, and every category one right-click away, or Ctrl+Alt+T from anywhere. Type a few letters in its search box and press Enter to launch. Game icons, a compact layout, and a per-game launch hotkey recorded from the keys you press.</li>
+          <li><strong>Uninstalled games stay.</strong> A game you remove from its launcher is greyed out and tagged NOT INSTALLED, with its playtime, hotkey and settings kept for when you reinstall.</li>
+          <li><strong>Backup and restore.</strong> Your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake.</li>
         </ul>
       </div>
       <div class="shot"><img src="assets/library-current.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
@@ -326,8 +328,10 @@
           <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
           <li><strong>Launchers stay minimized</strong>: Steam and GOG Galaxy start in the background and Epic launches silently, so only the game appears.</li>
           <li><strong>Launch popup</strong> by the tray clock for hotkey and tray launches: what the game is waiting on, and the reason if a launch fails.</li>
-          <li><strong>Tools</strong> (optional): launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys.</li>
-          <li><strong>Run as Administrator</strong> per game, <strong>CPU core affinity</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
+          <li><strong>Tools</strong> (optional): launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. A tool can start with your games and close when the last one exits.</li>
+          <li><strong>Run as Administrator</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
+          <li><strong>CPU Cores</strong> per game: performance cores on an Intel hybrid CPU, the 3D V-Cache cores on a Ryzen X3D. Auto picks what fits your CPU.</li>
+          <li><strong>NVIDIA DLSS Override</strong> per game: run a game on your driver's newer DLSS files instead of the ones it shipped with, without touching the game folder.</li>
           <li><strong>Hardware monitoring</strong> in the same window: live CPU and RAM load, GPU, VRAM, displays, drives, and DirectX capability, without a second app.</li>
         </ul>
       </div>
@@ -359,7 +363,7 @@
         <div class="kicker">Pre-Launch and Post-Exit Scripts<span class="badge">advanced, off by default</span></div>
         <h2>Your scripts, before and after every game</h2>
         <ul>
-          <li>Five real-world examples ship with it: <strong>pause Wallpaper Engine</strong>, <strong>Close Background Apps</strong> (close Discord and friends, reopen after), <strong>Start Companion Apps</strong>, <strong>OBS replay buffer</strong>, <strong>Save Backup</strong>.</li>
+          <li>Five real-world examples ship with it: <strong>pause Wallpaper Engine</strong>, <strong>Close Background Apps</strong> (a recommended list or the apps you name, reopened after; as Administrator it also pauses Windows Update), <strong>Start Companion Apps</strong>, <strong>OBS replay buffer</strong>, <strong>Save Backup</strong>.</li>
           <li>Per-game <strong>Script Arguments</strong>, a <strong>Test Run</strong> button with captured output, timeouts, and cancel-the-launch-on-failure.</li>
           <li>Scripts run as you, never elevated unless you choose it. Review scripts before enabling them. Their effects depend on the script; configure a matching post-exit action when cleanup is needed.</li>
           <li>Community scripts live in the <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts</a> catalog, reviewed by pull request.</li>
@@ -382,7 +386,7 @@
         <ul>
           <li><strong>See what changes.</strong> Review the current Windows state and the explanation for each setting.</li>
           <li><strong>Choose what fits.</strong> Results depend on your PC and game; performance improvements are not guaranteed.</li>
-          <li><strong>Revert when you want.</strong> Undo settings individually or use Reset Defaults to restore the state TrayTrigger recorded. Bulk changes can create a System Restore point.</li>
+          <li><strong>Revert when you want.</strong> Undo settings individually or use Restore Previous Settings to restore the state TrayTrigger recorded. Bulk changes can create a System Restore point.</li>
         </ul>
         <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">Explore the tweaks, trade-offs, and restore behavior →</a></p>
       </div>
@@ -406,7 +410,8 @@
     <details open><summary>Is it safe? What does it touch?</summary><p>You choose which profiles, system tweaks, and scripts to enable. Per-game profile settings restore on exit; system-wide tweaks stay applied until you revert them. Scripts run as you unless you choose elevation, and their changes require their own cleanup. Bulk system changes can create a System Restore point first. See <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">SECURITY.md</a> for the full breakdown.</p></details>
     <details><summary>Does it need administrator access?</summary><p>Not to run. A few tweaks write machine-wide settings and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.</p></details>
     <details><summary>Does it phone home?</summary><p>No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), and GitHub Releases (update checks, which you can turn off).</p></details>
-    <details><summary>Can changes be reverted?</summary><p>Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Reset Defaults. Custom scripts are not automatically undone; use a post-exit script for any cleanup they need.</p></details>
+    <details><summary>Can changes be reverted?</summary><p>Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Restore Previous Settings. Custom scripts are not automatically undone; use a post-exit script for any cleanup they need.</p></details>
+    <details><summary>Can I move TrayTrigger to a new PC?</summary><p>Yes. Settings &rsaquo; Diagnostics &amp; Storage &rsaquo; Backup &amp; Restore saves your library, settings, tools, scripts and artwork to one .zip. Restore it on the new PC and TrayTrigger finds your games again through their launchers, or on the new drive when a drive letter changed. Games that aren't installed yet are kept, greyed out. Game saves aren't part of a backup.</p></details>
     <details id="download-trust"><summary>Is the download signed?</summary><p>No. Releases are not code-signed, so Windows SmartScreen may warn the first time you run the installer. Releases are built by GitHub Actions from the public source and published with a SHA-256 checksum file. Verify a download with <code>Get-FileHash</code> in PowerShell and compare it to SHA256SUMS.txt on the release page, then choose More info and Run anyway. See the <a href="https://github.com/stephenh678/TrayTrigger#code-signing">code signing section</a> for details.</p></details>
     <details><summary>Where do I ask a question or report a game that scanned wrong?</summary><p>Questions go to <a href="https://github.com/stephenh678/TrayTrigger/discussions/5">Discussions</a>. Wrong art, name, or launcher goes on the <a href="https://github.com/stephenh678/TrayTrigger/issues/9">scan tracking issue</a>, one comment per game. Bugs get an <a href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">issue</a>.</p></details>
   </div>

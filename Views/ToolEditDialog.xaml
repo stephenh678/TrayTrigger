@@ -100,7 +100,7 @@
                     <StackPanel>
                         <TextBlock Text="Launch" FontSize="12.5" FontWeight="SemiBold"
                                    Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                        <Button Style="{StaticResource HelpLinkButton}" Content="How tools work" Margin="0,0,0,10"
+                        <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" Margin="0,0,0,10"
                                 Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/overview"/>
 
                         <!-- A Store app has no program, folder or elevation to edit: it starts by its app ID, like its Start menu tile. -->
@@ -170,7 +170,7 @@
                                     <CheckBox Content="Wait before starting the game" IsChecked="{Binding WaitBeforeGame}"
                                               Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                                     <DockPanel Margin="22,0,0,8" LastChildFill="True" IsEnabled="{Binding WaitBeforeGame}">
-                                        <TextBox AutomationProperties.Name="Seconds to wait before starting the game" DockPanel.Dock="Left" Width="64"
+                                        <TextBox AutomationProperties.Name="Seconds to wait before starting the game" DockPanel.Dock="Left" Width="64" TextAlignment="Center"
                                                  Text="{Binding WaitBeforeGameSeconds, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="seconds (1-60), for a tool that needs a moment to get ready, like Afterburner's overlay."

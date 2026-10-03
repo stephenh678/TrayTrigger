@@ -2,7 +2,7 @@
 
 ## Where the log is
 
-TrayTrigger writes debug.log to its local cache folder under %LocalAppData%\TrayTrigger. Settings › Diagnostics & Storage shows the exact path and has buttons to open, clear, or reveal it. When the log grows large it is archived as debug.old.log and a fresh one starts.
+TrayTrigger writes debug.log to its local cache folder under %LocalAppData%\TrayTrigger. Settings > Diagnostics & Storage shows the exact path and has buttons to open, clear, or reveal it. When the log grows large it is archived as debug.old.log and a fresh one starts.
 
 ## What is in it
 
@@ -13,14 +13,14 @@ TrayTrigger writes debug.log to its local cache folder under %LocalAppData%\Tray
 
 ## Verbose logging
 
-Turn on Verbose Logging under Settings › Diagnostics & Storage when you are about to reproduce a problem. It adds detailed traces such as launch parameters, title-matching scores, icon extraction steps, and each registry value read. Turn it back off afterwards, since it makes the log much larger.
+Turn on "Enable verbose logging" under Settings > Diagnostics & Storage when you are about to reproduce a problem. It adds detailed traces such as launch parameters, title-matching scores, icon extraction steps, and each registry value read. Turn it back off afterwards, since it makes the log much larger.
 
 Leave it on across the whole session you are reporting, including the launch and exit either side of it. A log with verbose on for only a few seconds rarely contains the moment that matters.
 
 ## Reporting a problem
 
 - Reproduce the issue with verbose logging on, so the log captures it.
-- On the About page, click Copy Diagnostic Info. That puts your Windows build, .NET version, and library statistics on the clipboard.
+- On the About page, click Copy Diagnostic Info. That puts a report on the clipboard: version, Windows build, CPU, GPU and RAM, which launchers are installed, library counts, the settings that matter to bugs, applied tweaks and the last warnings from the log. API keys are never included. Save Report writes the same thing to a file.
 - Open Report an Issue on the About page, describe what you did and what happened, paste the diagnostic info, and attach debug.log.
 
 > The log can contain game paths and titles from your library. Skim it before attaching if that concerns you.

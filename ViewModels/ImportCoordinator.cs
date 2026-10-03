@@ -246,7 +246,7 @@ public class ImportCoordinator : ViewModelBase
 
     /// <summary>
     /// Force-refreshes poster art for every game with a known Steam AppId, bypassing the
-    /// "already has a cover" cache check so a game stuck on the composited-banner fallback
+    /// "already has a poster" cache check so a game stuck on the composited-banner fallback
     /// tier can pick up better art (e.g. after the user adds/enables a SteamGridDB API key).
     /// Unlike <see cref="EnrichLibraryAsync"/>, this ignores existing category/cover state and
     /// always re-fetches, since the whole point is to override a previously-cached poster.
@@ -267,7 +267,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (IsRefreshingAllPosters)
         {
-            Report("A poster refresh is already in progress. Please wait for it to finish.");
+            Report("A poster refresh is already running. Try again when it finishes.");
             return;
         }
 
@@ -422,7 +422,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return;
         }
 
@@ -638,8 +638,8 @@ public class ImportCoordinator : ViewModelBase
             ModernDialog.ShowInfo(
                 owner,
                 "No Games Found",
-                "No game executables found across the dropped folders.",
-                "Please ensure the selected folders contain installed games or executable files.");
+                "No game was found in the folders you dropped.",
+                "Drop the folder a game is installed in, or one that holds several game folders.");
             return;
         }
 
@@ -673,8 +673,8 @@ public class ImportCoordinator : ViewModelBase
                 ModernDialog.ShowInfo(
                     owner,
                     "No Games Found",
-                    $"No game executables found across subfolders in \"{Path.GetFileName(folderPath.TrimEnd('\\', '/'))}\".",
-                    "Please ensure the selected directory contains installed games or executable files.");
+                    $"No game was found in \"{Path.GetFileName(folderPath.TrimEnd('\\', '/'))}\".",
+                    "Pick the folder a game is installed in, or one that holds several game folders.");
                 return;
             }
 
@@ -696,9 +696,9 @@ public class ImportCoordinator : ViewModelBase
             Window? owner = WindowHelper.ActiveOwner();
             ModernDialog.ShowInfo(
                 owner,
-                "No Game Executable Found",
-                $"No game executables found across the folder branch of \"{Path.GetFileName(folderPath.TrimEnd('\\', '/'))}\".",
-                "Please ensure the selected folder contains the installed game files.");
+                "No Games Found",
+                $"No game was found in \"{Path.GetFileName(folderPath.TrimEnd('\\', '/'))}\".",
+                "Pick the folder a game is installed in, or one that holds several game folders.");
             return;
         }
 
@@ -735,7 +735,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -815,7 +815,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -940,7 +940,7 @@ public class ImportCoordinator : ViewModelBase
     {
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return;
         }
 
@@ -969,7 +969,7 @@ public class ImportCoordinator : ViewModelBase
         // duplicate check before the first has committed - adding the same exe twice, unprompted.
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return;
         }
 
@@ -1556,7 +1556,7 @@ public class ImportCoordinator : ViewModelBase
     {
         if (_isScanningForGames)
         {
-            if (!silent) _library.StatusMessage = "A scan is already in progress. Please wait for it to finish.";
+            if (!silent) _library.StatusMessage = "A scan is already running. Try again when it finishes.";
             return;
         }
 
@@ -2208,7 +2208,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -2315,7 +2315,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -2426,7 +2426,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -2533,7 +2533,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -2640,7 +2640,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -2747,7 +2747,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 
@@ -2857,7 +2857,7 @@ public class ImportCoordinator : ViewModelBase
 
         if (_isImportInProgress)
         {
-            _library.StatusMessage = "An import is already in progress. Please wait for it to finish.";
+            _library.StatusMessage = "An import is already running. Try again when it finishes.";
             return 0;
         }
 

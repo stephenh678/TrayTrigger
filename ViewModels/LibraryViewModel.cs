@@ -983,7 +983,7 @@ public class LibraryViewModel : ViewModelBase
             owner,
             "Remove from Library",
             $"Are you sure you want to remove {what} from your library?",
-            "This will only remove the shortcuts from TrayTrigger. Your installed game files will not be deleted.",
+            "This will only remove the shortcuts from TrayTrigger. Your installed game files will not be deleted. You can undo this for 10 seconds.",
             confirmText: cards.Count == 1 ? "Remove" : $"Remove {cards.Count}",
             cancelText: "Cancel");
     };
@@ -1417,7 +1417,7 @@ public class LibraryViewModel : ViewModelBase
             catch (Exception ex)
             {
                 LoggingService.Error("Library", $"Failed to set poster artwork for '{card.Name}' from '{dialog.FileName}'", ex);
-                ModernDialog.ShowWarning(null, "Poster Artwork Error", $"Failed to set poster artwork: {ex.Message}");
+                ModernDialog.ShowWarning(null, "Poster Artwork", "That image couldn't be used as the poster.", ex.Message);
             }
         }
     }
@@ -1722,7 +1722,7 @@ public class LibraryViewModel : ViewModelBase
             owner,
             "Remove from Library",
             $"Are you sure you want to remove \"{card.Name}\" from your library?",
-            "This will only remove the shortcut from TrayTrigger. Your installed game files will not be deleted.",
+            "This will only remove the shortcut from TrayTrigger. Your installed game files will not be deleted. You can undo this for 10 seconds.",
             confirmText: "Remove",
             cancelText: "Cancel");
 
@@ -1991,7 +1991,7 @@ public class LibraryViewModel : ViewModelBase
     /// Deletes what removed games leave behind outside games.json: their cached icon and poster
     /// files (including art they no longer pointed at) and their Steam/RAWG details. The files
     /// are always TrayTrigger-owned copies in the icon/cover cache folders - even "Change
-    /// Icon"/"Change Cover" copy the chosen file in - so a game's installed files or a user's
+    /// Icon"/"Change Poster" copy the chosen file in - so a game's installed files or a user's
     /// original image are never touched. Anything a remaining entry still uses (the same Steam
     /// App ID added twice, a Steam entry plus a local exe entry) is kept; otherwise re-adding the
     /// game would be served cached details pointing at a poster that was just deleted.

@@ -19,7 +19,7 @@ Every tweak on this page is a documented Windows setting that TrayTrigger reads 
 ## Apply Performance Preset and Restore Previous Settings
 
 - Apply Performance Preset turns on every recommended tweak that is not already on, in one pass, with at most one administrator prompt.
-- Restore Previous Settings reverts only the tweaks that are currently applied, putting each back to what TrayTrigger found before it changed it, again with at most one prompt. That is not always the Windows default, which is why it is not called Reset Defaults. Restore Previous on a single tweak row does the same for that one tweak. A power plan or visual-effects state you set yourself is never overwritten.
+- Restore Previous Settings reverts only the tweaks that are currently applied, putting each back to what TrayTrigger found before it changed it, again with at most one prompt. That is not always the Windows default. Restore Previous on a single tweak row does the same for that one tweak. A power plan or visual-effects state you set yourself is never overwritten.
 - A restart is suggested only when a restart-required tweak actually changed in that pass.
 - Both can create a System Restore point first, controlled in Settings under Performance Tweaks. The "Restore point before changes: On/Off" tag at the top of the page shows that preference; the status line at the bottom says afterwards whether a restore point was actually created, skipped, or refused by Windows. Restore points are the safety net if something on your PC behaves differently afterward.
 

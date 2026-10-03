@@ -394,6 +394,7 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="False">
                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=(AutomationProperties.Name)}"/>
                     <Setter Property="Padding" Value="0"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -537,7 +538,11 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                                <!-- Windows already insets the text by the box's Padding. A margin of the same Padding on
+                                     top doubled it: typed text sat twice as far in as the placeholder and as the
+                                     text of a drop-down beside it. Only the vertical half is kept, which is what
+                                     gives the box the height the layouts were built around. -->
+                                <ScrollViewer x:Name="PART_ContentHost" Margin="0,5"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>

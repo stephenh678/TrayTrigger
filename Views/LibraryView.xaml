@@ -175,7 +175,7 @@
             <MenuItem Header="DLSS Override" IsCheckable="True" IsChecked="{Binding DlssOverrideOn, Mode=OneWay}"
                       Command="{Binding ToggleDlssOverrideCommand}"
                       Visibility="{Binding HasNvidiaDriver, Converter={StaticResource BoolToVis}}"
-                      ToolTip="Runs this game on the GeForce driver's DLSS files instead of the older ones it shipped with - NVIDIA's own DLSS Override, for Super Resolution, Ray Reconstruction and Frame Generation. Nothing in the game folder is touched, and unticking puts NVIDIA's settings back. Switching it on searches the game's folder first, so it takes a moment."/>
+                      ToolTip="Runs this game on your GeForce driver's newer DLSS files. Nothing in the game folder is touched; unticking puts NVIDIA's settings back."/>
             <MenuItem Header="Performance Profile">
                 <MenuItem Header="Off" IsCheckable="True" IsChecked="{Binding ProfileIsOff, Mode=OneWay}"
                           Command="{Binding SetProfileCommand}" CommandParameter="{x:Static models:PerformanceProfileMode.Off}"/>
@@ -720,7 +720,6 @@
                                    <Button Command="{Binding SettingsVM.TogglePosterDetailsOnHoverCommand}"
                                            Width="32" Height="30" Padding="0" Cursor="Hand"
                                            IsEnabled="{Binding SettingsVM.IsPosterView}"
-                                           Tag="{Binding SettingsVM.PosterDetailsOnHover}"
                                            ToolTipService.ShowOnDisabled="True"
         AutomationProperties.Name="{Binding SettingsVM.PosterDetailsOnHoverAccessibleName}">
                                        <Button.Style>
@@ -734,8 +733,34 @@
                                                </Style.Triggers>
                                            </Style>
                                        </Button.Style>
-                                       <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
-                                                  Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                       <!-- On is an outline and an accent glyph, not the filled blue of the view buttons
+                                            beside it: filled, it read as a second view being selected. -->
+                                       <Border Width="26" Height="24" CornerRadius="4" BorderThickness="1">
+                                           <Border.Style>
+                                               <Style TargetType="Border">
+                                                   <Setter Property="BorderBrush" Value="Transparent"/>
+                                                   <Style.Triggers>
+                                                       <DataTrigger Binding="{Binding SettingsVM.PosterDetailsOnHover}" Value="True">
+                                                           <Setter Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                           <Setter Property="Background" Value="#1C2E3D"/>
+                                                       </DataTrigger>
+                                                   </Style.Triggers>
+                                               </Style>
+                                           </Border.Style>
+                                           <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center">
+                                               <TextBlock.Style>
+                                                   <Style TargetType="TextBlock">
+                                                       <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                                                       <Style.Triggers>
+                                                           <DataTrigger Binding="{Binding SettingsVM.PosterDetailsOnHover}" Value="True">
+                                                               <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}"/>
+                                                           </DataTrigger>
+                                                       </Style.Triggers>
+                                                   </Style>
+                                               </TextBlock.Style>
+                                           </TextBlock>
+                                       </Border>
                                    </Button>
                                    <Border Width="1" Margin="4,5" Background="{StaticResource BrushBorderDark}"/>
 
@@ -1629,7 +1654,7 @@
                                                            <Button DockPanel.Dock="Left" Command="{Binding ToggleFavoriteCommand}"
                                                                    Width="14" Height="14" Padding="0" Margin="0,0,3,0"
                                                                    Background="Transparent" BorderThickness="0" Cursor="Hand"
-        AutomationProperties.Name="{Binding FavoriteMenuLabel}" VerticalAlignment="Center">
+        AutomationProperties.Name="{Binding FavoriteMenuLabel}" ToolTip="{Binding FavoriteMenuLabel}" VerticalAlignment="Center">
                                                                <Button.Template>
                                                                    <ControlTemplate TargetType="Button">
                                                                        <TextBlock x:Name="StarGlyph" Text="&#xE734;" FontFamily="{StaticResource IconFont}"
@@ -1782,24 +1807,30 @@
                                                                <TextBlock Text="LOCAL" FontSize="9" Foreground="#B8B8CC" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                            </Border>
 
-                                                           <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="4,0" Margin="0,0,3,0" HorizontalAlignment="Right">
-                                                               <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A"/>
-                                                           </Border>
-                                                           <Border Style="{StaticResource UnavailableBadgeBorder}"
-                                                                   CornerRadius="3" Padding="4,0" HorizontalAlignment="Right">
-                                                               <TextBlock Style="{StaticResource UnavailableBadgeText}" FontSize="9"/>
-                                                           </Border>
                                                        </DockPanel>
 
                                                        <!-- Icon -->
-                                                       <Border Grid.Row="1" Width="48" Height="48" CornerRadius="6" 
+                                                       <Border Grid.Row="1" Width="48" Height="48" CornerRadius="6"
                                                                Background="#222228" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                            <Image Source="{Binding IconImage}" Width="42" Height="42"
                                                                   Style="{StaticResource UnavailableDimmedArt}"
                                                                   RenderOptions.BitmapScalingMode="HighQuality"
                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                        </Border>
+
+                                                       <!-- PLAYING, or NOT INSTALLED / MISSING: across the foot of the icon, where the
+                                                            whole tag fits. Beside the star and the launcher pill in the top row there
+                                                            was room for "NOT IN" at best. Only one of the two ever shows. -->
+                                                       <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-3">
+                                                           <Border Background="#E6142A17" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="4,0" HorizontalAlignment="Center">
+                                                               <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A"/>
+                                                           </Border>
+                                                           <Border Style="{StaticResource UnavailableBadgeBorder}"
+                                                                   CornerRadius="3" Padding="4,0" HorizontalAlignment="Center">
+                                                               <TextBlock Style="{StaticResource UnavailableBadgeText}" FontSize="9"/>
+                                                           </Border>
+                                                       </StackPanel>
 
                                                        <!-- Title -->
                                                        <TextBlock Grid.Row="2" Text="{Binding Name}" FontSize="11" 
@@ -2000,15 +2031,14 @@
                                                         its children at their full width, so at a narrow window the title was cut
                                                         mid-word and the badge beside it sliced in half. Docked, each is measured in
                                                         what is left, so the title trims with an ellipsis instead. Same layout otherwise -
-                                                        DockPanel docks to the left by default. -->
-                                                   <DockPanel Grid.Column="1" LastChildFill="False" VerticalAlignment="Center">
+                                                        DockPanel docks to the left by default.
+                                                        The badges are docked right and the title is the last child, so the badges are
+                                                        measured first and always fit, and a long title is what shortens. The panel is
+                                                        left-aligned, so with room to spare the badges still sit beside the title. -->
+                                                   <DockPanel Grid.Column="1" LastChildFill="True" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,10,0">
                                                        <Button Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0"
         AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
-                                                       <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
-                                                                  Foreground="{StaticResource BrushTextPrimary}" 
-                                                                  FontFamily="{StaticResource AppFont}"
-                                                                  TextTrimming="CharacterEllipsis"
-                                                                  VerticalAlignment="Center"/>
+                                                       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                                        <Border Background="#2E1F5E2C" BorderBrush="#4CAF50" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
                                                            <TextBlock Text="{Binding PlayingTagText}" FontSize="9" FontWeight="SemiBold" Foreground="#7FE08A" FontFamily="{StaticResource AppFont}"/>
@@ -2166,6 +2196,12 @@
                                                            <TextBlock Text="HIDDEN" FontSize="9" FontWeight="Bold"
                                                                       Foreground="#B8B8CC" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
+                                                       </StackPanel>
+                                                       <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
+                                                                  Foreground="{StaticResource BrushTextPrimary}"
+                                                                  FontFamily="{StaticResource AppFont}"
+                                                                  TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"
+                                                                  VerticalAlignment="Center"/>
                                                    </DockPanel>
 
                                                    <!-- Category Pill -->
@@ -2314,7 +2350,7 @@
                                    <Button Content="UNDO" Command="{Binding UndoDeleteCommand}"
                                            Style="{StaticResource ModernAccentButton}" Padding="12,4" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                    <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="11" Command="{Binding DismissUndoToastCommand}"
-                                           Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center"
+                                           Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center" ToolTip="Dismiss"
         AutomationProperties.Name="Dismiss"/>
                                </StackPanel>
                            </Border>

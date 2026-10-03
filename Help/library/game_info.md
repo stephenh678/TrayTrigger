@@ -10,7 +10,7 @@ Used for any game linked to a Steam App ID. Steam is the richer source: it alone
 
 RAWG (rawg.io) is a community games database that covers titles Steam doesn't list: Game Pass exclusives, Epic exclusives, Battle.net games such as Hearthstone and StarCraft II, Roblox, Fortnite, console ports and many indies. When enabled, it supplies developer, publisher, release date, synopsis, genres, play modes, Metacritic, an ESRB rating, RAWG's own community rating, and an "Open on RAWG" button to the game's rawg.io page.
 
-- Turn it on in Settings › Library with "Use RAWG for non-Steam game info" and paste a free API key from rawg.io/apidocs.
+- Turn it on in Settings > Library & Art with "Use RAWG for non-Steam game info" and paste a free API key from rawg.io/apidocs.
 - Until RAWG is enabled, the details window has no source switch and every game shows Steam.
 
 ## The Steam | RAWG switch
@@ -25,7 +25,7 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 ## What RAWG adds to the library
 
 - Category. When "Automatically categorize games from store genres" is on, a game Steam cannot categorize gets RAWG's main genre instead: one with no Steam listing, one whose Steam page has been delisted, or one whose Steam page lists no genre. This only fills a game that is still Uncategorized; a category you set yourself is never overwritten. Enabling RAWG runs this pass over the library straight away.
-- Background enrichment. Games with no Steam App ID are matched to RAWG in the background, the same pass that matches Steam games, so categories fill in without opening each game. Right-click › Refresh metadata re-fetches a game's RAWG entry.
+- Background enrichment. Games with no Steam App ID are matched to RAWG in the background, the same pass that matches Steam games, so categories fill in without opening each game. Right-click > Refresh metadata re-fetches a game's RAWG entry.
 - Poster art. RAWG's official title is used as the SteamGridDB search term for games with no Steam poster, which finds art the scanner's folder name often misses.
 - Ambient art. While RAWG is selected, its screenshot is the blurred backdrop behind the poster, and stands in for a game that has no poster at all. It is never saved as the poster.
 
@@ -42,10 +42,10 @@ Both sources are searched by the game's name, and the result whose title is clos
 
 Both sources are saved to disk beside the poster cache, so Game Details opens instantly and works offline. The line above "About the Game" shows when the copy on screen was last fetched, with a Refresh link that fetches it again right away.
 
-- Settings › Library › "Refresh game info" sets how old a saved copy may get before the window quietly fetches a new one in the background. The default is every 3 days. "Every time details open" is the old behaviour; "Never" leaves it to you.
+- Settings > Library & Art > "Refresh game info" sets how old a saved copy may get before the window quietly fetches a new one in the background. The default is every 3 days. "Every time details open" is the old behaviour; "Never" leaves it to you.
 - Steam news, review counts and RAWG ratings change over time, so a longer interval means fewer requests and slightly older numbers. Text, genres and art rarely change.
 - If a background refresh fails (offline, quota, bad key) the saved copy stays on screen.
-- Right-click › Refresh metadata and Change match always fetch fresh info.
+- Right-click > Refresh metadata and Change match always fetch fresh info.
 - "Clear Cached Game Info" under the setting forgets every game's saved details. Posters are kept.
 - Removing a game from the library also deletes its saved details, poster and icon once the ten-second undo has passed. Anything another game in the library still uses, such as a second entry for the same Steam game, is kept.
 

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
              xmlns:views="clr-namespace:TrayTrigger.Views"
+             xmlns:services="clr-namespace:TrayTrigger.Services"
              AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver" KeyDown="OnKeyDown"
              Background="Transparent">
 
@@ -271,6 +272,8 @@
         <!-- 2. Category Tabs & Add Tool -->
         <DockPanel Grid.Row="1" Margin="0,0,0,16">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" VerticalAlignment="Center" Margin="0,0,14,0"
+                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/overview"/>
                 <Button AutomationProperties.Name="Browse Apps" Command="{Binding OpenAppsFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0"
                         ToolTip="Opens Windows' list of every app in the Start menu (shell:AppsFolder). Drag an app from it onto this page to add it, Microsoft Store apps included.">
                     <StackPanel Orientation="Horizontal">
@@ -342,21 +345,21 @@
                     <Button Command="{Binding SetViewModeCommand}" CommandParameter="Large Icons"
                             Width="32" Height="30" Padding="0" Cursor="Hand"
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsLargeIconsView}"
-                            AutomationProperties.Name="Large icons view">
+                            AutomationProperties.Name="Large icons view" ToolTip="Large icons">
                         <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="14"
                                    Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <Button Command="{Binding SetViewModeCommand}" CommandParameter="Small Icons"
                             Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSmallIconsView}"
-                            AutomationProperties.Name="Small icons view">
+                            AutomationProperties.Name="Small icons view" ToolTip="Small icons">
                         <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                    Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <Button Command="{Binding SetViewModeCommand}" CommandParameter="List"
                             Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsListView}"
-                            AutomationProperties.Name="List view">
+                            AutomationProperties.Name="List view" ToolTip="List">
                         <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="13"
                                    Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>

@@ -17,9 +17,9 @@ Each game card can show a vertical poster instead of a square icon. TrayTrigger 
 
 ## Show details on hover
 
-Turn it on with the eye button beside the view buttons above the library, or in Settings › Library & Art. In Poster Grid and Extra Large, each card then shows only its artwork. Point at a card, Tab to it, or right-click it, and the art zooms in while its badges, title, playtime and Play button appear. The card itself stays the same size.
+Turn it on with the eye button beside the view buttons above the library, or in Settings > Library & Art. In Poster Grid and Extra Large, each card then shows only its artwork. Point at a card, Tab to it, or right-click it, and the art zooms in while its badges, title, playtime and Play button appear. The card itself stays the same size.
 
-- Choose what stays on every card under the checkbox in Settings › Library & Art: the launcher logo, category, HIDDEN, PLAYING and NOT INSTALLED (or MISSING) tags, a favorite's star, the title, playtime and last played date. Anything ticked stays on screen, and the rest waits for the pointer. Out of the box only the PLAYING tag stays.
+- Choose what stays on every card under the checkbox in Settings > Library & Art: the launcher logo, category, HIDDEN, PLAYING and NOT INSTALLED (or MISSING) tags, a favorite's star, the title, playtime and last played date. Anything ticked stays on screen, and the rest waits for the pointer. Out of the box only the PLAYING tag stays.
 - A game that isn't installed always stays dimmed, and the Play button always waits until you point at the card.
 - A game with no poster keeps its icon and name, since there's no art to recognize it by.
 - Favorite a game from its right-click menu. In this mode the star on the card isn't a Tab stop, because it only shows while the card has focus.
@@ -31,6 +31,6 @@ Re-checks every game, including ones that already have a cover. Use it after a g
 
 ## Where art is stored
 
-Downloaded posters and extracted icons are cached under the local app data folder shown in Settings › Diagnostics & Storage. Clearing the cache forces everything to download again.
+Downloaded posters and extracted icons are cached under the local app data folder shown in Settings > Diagnostics & Storage. Clearing the cache forces everything to download again.
 
-> SteamGridDB needs a free API key from steamgriddb.com. The key is stored in your settings file and only sent to SteamGridDB.
+> SteamGridDB needs a free API key from steamgriddb.com. The key is stored encrypted in your settings file and only sent to SteamGridDB.

@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Edit Game"
         Height="675" Width="820"
-        MinHeight="600" MinWidth="760"
+        MinHeight="670" MinWidth="760"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Background="{StaticResource BrushDialogBg}"
@@ -139,7 +139,7 @@
                             <Button Grid.Column="2" Command="{Binding RefreshPosterCommand}"
                                     Style="{StaticResource ModernGhostButton}" Padding="6,4" FontSize="11"
 
-                                    AutomationProperties.Name="Refresh poster">
+                                    AutomationProperties.Name="Refresh poster" ToolTip="Fetch this game's poster again">
                                 <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"/>
                             </Button>
                         </Grid>
@@ -241,7 +241,13 @@
                                 </StackPanel>
                             </DockPanel>
                             <TextBox AutomationProperties.Name="Game title" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
+                                     Style="{StaticResource ModernTextBox}" Margin="0,0,0,4"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,14,0"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="How artwork is found"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/artwork"/>
+                            </StackPanel>
 
                             <!-- Category -->
                             <TextBlock Text="Category (choose existing or type a custom tag)" FontSize="11.5" 
@@ -268,7 +274,7 @@
                                         <TextBlock Text="Keeps local launch target" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                                    DockPanel.Dock="Right" HorizontalAlignment="Right"/>
                                     </DockPanel>
-                                    <TextBlock Text="Enrich this game with high-res vertical box art, Steam reviews, specs, and news. Linking an App ID does not require Steam to run."
+                                    <TextBlock Text="Gives this game its Steam poster, reviews, specs and news. Linking an App ID does not require Steam to run."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -550,7 +556,7 @@
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
                                 <DockPanel Margin="0,0,0,4" LastChildFill="True"
                                            Visibility="{Binding ShowCpuCoresDelay, Converter={StaticResource BoolToVis}}">
-                                    <TextBox x:Name="CpuCoresDelayBox" AutomationProperties.Name="Seconds to wait before setting CPU cores" DockPanel.Dock="Left" Width="64"
+                                    <TextBox x:Name="CpuCoresDelayBox" AutomationProperties.Name="Seconds to wait before setting CPU cores" DockPanel.Dock="Left" Width="64" TextAlignment="Center"
                                              Text="{Binding CpuCoresDelaySeconds, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                     <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center"
@@ -666,12 +672,13 @@
                                       IsChecked="{Binding WaitForPreLaunchScript}" IsEnabled="{Binding HasPreLaunchScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                             <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasPreLaunchScript}">
-                                <TextBox x:Name="PreLaunchTimeoutBox" AutomationProperties.Name="Pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox x:Name="PreLaunchTimeoutBox" AutomationProperties.Name="Pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" TextAlignment="Center" Text="{Binding PreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding PreLaunchTimeoutHint}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
                                            TextWrapping="Wrap" VerticalAlignment="Center"/>
                             </DockPanel>
-                            <CheckBox Content="Cancel the launch if the pre-launch script fails (non-zero exit code, timeout, or won't start)"
+                            <CheckBox Content="Cancel the launch if the pre-launch script fails"
+                                      ToolTip="Fails means a non-zero exit code, a timeout, or a script that won't start."
                                       IsChecked="{Binding AbortLaunchOnScriptFailure}" IsEnabled="{Binding HasPreLaunchScript}"
                                       Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
                             <CheckBox Content="Run scripts hidden (no console window)"
@@ -703,6 +710,9 @@
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Writing your own"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/writing"/>
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
                                         ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>

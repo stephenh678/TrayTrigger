@@ -314,7 +314,8 @@ public class MainViewModel : ViewModelBase
             try
             {
                 string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
-                Process.Start(new ProcessStartInfo($"https://github.com/{repo}/issues") { UseShellExecute = true });
+                // The template chooser, not the issue list: it is where a report starts.
+                Process.Start(new ProcessStartInfo($"https://github.com/{repo}/issues/new/choose") { UseShellExecute = true });
             }
             catch (Exception ex)
             {

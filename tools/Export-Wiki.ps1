@@ -45,7 +45,8 @@ $sectionOrder = @(
     @{ Key = 'traymenu';        Label = 'Tray Menu' },
     @{ Key = 'tools';           Label = 'Tools' },
     @{ Key = 'scripts';         Label = 'Game Scripts' },
-    @{ Key = 'library';         Label = 'Library & Artwork' },
+    @{ Key = 'library';         Label = 'Library' },
+    @{ Key = 'general';         Label = 'General' },
     @{ Key = 'updates';         Label = 'Updates' },
     @{ Key = 'troubleshooting'; Label = 'Troubleshooting' }
 )

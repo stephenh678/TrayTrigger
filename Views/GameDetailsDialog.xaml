@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
+        xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="Game Details"
         Height="680" Width="820"
@@ -322,6 +323,9 @@
                             <TextBlock Text="Change match" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="Where this info comes from"
+                            VerticalAlignment="Center" Margin="0,0,12,0"
+                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
                     <!-- Cache age for the active source and a manual re-fetch. The window always
                          paints from the disk cache; "Refresh game info" in Settings decides when
                          it re-fetches on its own, and this link does it on demand. -->

@@ -52,7 +52,7 @@
             <Button x:Name="CloseButton" Grid.Row="0" Grid.Column="2" Content="&#xE711;"
                     FontFamily="{StaticResource IconFont}" FontSize="10" Padding="6,4" VerticalAlignment="Top"
                     Style="{StaticResource ModernGhostButton}" Focusable="False"
-                    AutomationProperties.Name="Close" Click="OnCloseClick"/>
+                    AutomationProperties.Name="Close" ToolTip="Close" Click="OnCloseClick"/>
 
             <TextBlock x:Name="DetailText" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" FontSize="11"
                        Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,8,4,0"/>

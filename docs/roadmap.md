@@ -4,9 +4,9 @@ Notes on things discussed but not yet implemented, kept here so they survive bet
 
 ## Open
 
-### Feature research for 1.4.7 and later (owner decided 2026-10-02; items 1-4 built in 1.4.7-beta.3, awaiting the owner's testing)
+### Feature research for 1.4.7 and later (owner decided 2026-10-02; items 1-4 built in 1.4.7-beta.3)
 
-**Built 2026-10-02** (uncommitted until the owner has tested it). Where each landed:
+**Built 2026-10-02**, shipped in 1.4.7-beta.3. Where each landed:
 
 - 1, Backup and restore: `Services/BackupService.cs`, `Services/BackupPathFixer.cs`, `App.Restore.cs`,
   Settings › Diagnostics & Storage › Backup & Restore, `Help/troubleshooting/backup.md`.
@@ -18,8 +18,9 @@ Notes on things discussed but not yet implemented, kept here so they survive bet
   the Ctrl+Alt+P hotkey, the tray's Now Playing items, `Help/library/suspend.md`.
 - 4, Background apps: `Scripts/Library/Example-CloseBackgroundApps.ps1` 2.0.
 - Debug-only end-to-end checks: `--test-suspend <out.txt>` and `--test-restore-restart <folder>`.
-- Not yet: the copy of Close Background Apps in
-  [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts), which is its own repo.
+- The copy of Close Background Apps in
+  [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts) was updated to 2.0 on
+  2026-10-02 (renamed from Quiet Mode there too).
 
 Researched against similar apps: Playnite and its most-used extensions, Heroic, Lutris, Project
 OptM, Razer Cortex, Hone, Process Lasso, CPU Set Setter, Nyrna, Borderless Gaming, Ludusavi.
@@ -201,10 +202,6 @@ outside TrayTrigger or detecting games started outside it; game-save backup, inc
 Ludusavi's manifest (Backup covers TrayTrigger's own data only); a borderless window per game;
 background apps as a built-in feature (it is a bundled script instead).
 
-**Other signals worth keeping:** Heroic's most-upvoted store requests ever are itch.io (100) and Amazon (39), useful for the
-"which launcher next" poll. Issue #12 asked for a Simplified Chinese translation; the app has no
-localization yet.
-
 Sources: [Playnite](https://github.com/JosefNemec/Playnite),
 [PlayniteExtensionsCollection](https://github.com/darklinkpower/PlayniteExtensionsCollection),
 [System Checker](https://github.com/Lacro59/playnite-systemchecker-plugin),
@@ -244,78 +241,6 @@ check one before quoting it.
   [Ludusavi v0.11.0](https://www.reddit.com/r/pcgaming/comments/wu975t/) (r/pcgaming).
 - Borderless, GOG Galaxy, Playnite, LaunchBox and NVIDIA App findings came from Gemini summaries
   that named no threads.
-
-### Bundled examples: copy on adopt, not run in place (design only, 2026-09-20)
-
-The bundled scripts do two jobs at once and the jobs disagree. They are reference documentation,
-which wants to be current, so 1.4.6 made TrayTrigger replace its own copies when it has a newer
-one. They are also runnable, configurable files a game is pointed at directly, which wants them
-never touched - three of them used to tell the reader to edit them in place. 1.4.6 resolves that
-with a notice at the top of each file, a rename to `<name>.previous` when an edited file is
-replaced, and moving the one setting that genuinely varies by PC (where OBS is installed) into
-Script Arguments. That works, but it is machinery around a design problem rather than a fix for
-it.
-
-The fix is the one `CreateFromBlankTemplate` already uses for `_Blank.*`: you never run the
-template, you run a copy named after your game. Extending that to the examples - "Use this
-example" copies `Example-SaveBackup.ps1` to `<Game>-SaveBackup.ps1` and points the game at the
-copy - would make the bundled folder a read-only reference library, leave every script a game
-actually runs owned by the user, and make the notice, the `.previous` rescue and the hash
-manifest all unnecessary. Stronger version: do not materialise them to disk at all, and install
-from an in-app gallery, so the scripts folder only ever holds the user's own files.
-
-Worth doing alongside the catalog installer below, so there is one mechanism rather than two.
-`Scripts/Library/README.txt` and `Help/scripts/overview.md` also duplicate each other today, and
-the Help page is the one that exists before the folder does.
-
-### Community script catalog (design only, 2026-09-11)
-
-A curated catalog of game scripts that advanced users contribute and install from inside
-TrayTrigger. Decided against any in-app upload: a script runs with the installing user's full
-privileges (and the card offers an Administrator option), so distributing strangers' uploads
-without review is not acceptable, and upload needs a backend with auth, abuse handling and
-takedowns. A GitHub repository with pull-request review gives provenance, review and hosting for
-free. **Review is the security control; hashes only prove the file is what the reviewer approved.**
-
-**Catalog repository**: [stephenh678/TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts), scaffolded 2026-09-12 with the five bundled examples, `script.json` manifests, a generated `catalog.json` with SHA-256 per file, PR validation, and the review checklist in its CONTRIBUTING. Remaining below is the design it implements:
-
-- One folder per script: the script file(s) plus a `script.json` with `name`, `description`,
-  `author`, `phase` (`prelaunch`, `postexit`, `both`), `needsAdmin` (bool, must be justified in
-  the PR), `scriptArguments` (what the script expects in Script Arguments), `version`, and
-  `dependencies` (free text: "OpenRGB installed", "AudioDeviceCmdlets module").
-- A GitHub Action regenerates `catalog.json` on merge to `main`: every entry above plus a
-  SHA-256 per file. Contributors never hand-write hashes and cannot forge them.
-- `CONTRIBUTING.md` with the PR checklist: uses only the documented positional arguments and
-  Script Arguments (see `Scripts/Library/README.txt` in this repo for the contract); no
-  downloads, no network calls, no `Invoke-Expression`, no module installs; nothing destructive
-  uncommented (closing only processes the user named or the script itself started); `needsAdmin` absent or
-  justified; tested with Test Run in both phases; comments explain every action. The repo owner
-  reviews every PR.
-- The first entries are this repo's bundled examples, in the same format, so the manifest code
-  is written once. The audio-device switcher that was cut from 1.4.0 (needs the AudioDeviceCmdlets
-  module) is the first catalog-only candidate, because the catalog can declare the dependency.
-
-**In the app** (1.4.x):
-
-- Browse from Settings › Launch & Performance (a "Community scripts..." button) and from the
-  scripts card in Edit Game. Fetch `catalog.json` from the repo's raw `main` (or a release asset),
-  reusing `UpdateService`'s HttpClient, timeout and `FindExpectedSha256` / `ComputeSha256Async`
-  patterns (`Services/UpdateService.cs`).
-- Every entry shows name, author, phase, needs-admin, dependencies and the **full source** before
-  install. Install downloads into `%AppData%\TrayTrigger\Scripts\Community\<name>\`, verifies
-  every file's SHA-256 against the catalog, refuses on mismatch, and records the installed hash
-  and version in a small `installed.json`.
-- Never auto-updated. The browser shows "newer version in catalog" and "modified locally" (installed
-  hash vs file hash) and lets the user re-install explicitly, which overwrites only with consent.
-- A trust banner on the browser: community scripts run as you; read them before installing. Same
-  text in `SECURITY.md`.
-- "Share your script" opens the catalog repo's contributing guide in the browser. No upload code.
-- Disclose the new network call (one GET of the catalog, plus one per installed file, only on
-  user action) in `SECURITY.md` and the README's privacy/network section, next to the existing
-  update-check disclosure.
-- Ratings, comments and download counts stay on GitHub (stars, issues). Nothing in-app until the
-  catalog is large enough to need it.
-
 ## Shipped
 
 ### 1.4.0: scripts for advanced users (2026-09-11)

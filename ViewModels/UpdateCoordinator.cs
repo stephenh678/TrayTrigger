@@ -134,7 +134,7 @@ public class UpdateCoordinator : ViewModelBase
                         owner,
                         "Check for Updates",
                         "TrayTrigger is Up to Date",
-                        $"You are currently running the latest version ({UpdateService.CurrentVersionDisplay}). No updates are available.");
+                        $"You're on the latest version ({UpdateService.CurrentVersionDisplay}).");
                 }
             }
             else if (result.Status == UpdateStatus.NoReleasesFound)
@@ -150,7 +150,7 @@ public class UpdateCoordinator : ViewModelBase
                         owner,
                         "Check for Updates",
                         "No Releases Found on GitHub",
-                        $"No published releases were found for repository '{repo}'. Once you create a release on GitHub, updates will appear here.");
+                        $"No releases were found for '{repo}'. Check the repository under Settings > General > Updates.");
                 }
             }
             else
