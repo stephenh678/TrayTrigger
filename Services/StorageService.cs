@@ -667,6 +667,56 @@ public class StorageService : IProfileSnapshotStore
         }
     }
 
+    // --- Suspended games -----------------------------------------------------------------------
+    // Every process Suspend has frozen and not yet resumed. Kept on disk so a TrayTrigger that stops
+    // while a game is suspended can resume it on its next start - nothing else would.
+
+    private readonly Lock _suspendedLock = new();
+    private string SuspendedFilePath => Path.Combine(_baseDirectory, "suspended-games.json");
+
+    /// <summary>What a previous run left suspended. Empty when nothing is.</summary>
+    public List<SuspendedProcessRecord> LoadSuspendedProcesses()
+    {
+        lock (_suspendedLock)
+        {
+            if (!File.Exists(SuspendedFilePath)) return new List<SuspendedProcessRecord>();
+            try
+            {
+                var records = JsonSerializer.Deserialize(File.ReadAllText(SuspendedFilePath), AppJsonContext.Default.ListSuspendedProcessRecord);
+                return records?.Where(r => r != null).ToList() ?? new List<SuspendedProcessRecord>();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn("Storage", $"Failed to read '{SuspendedFilePath}': {ex.Message}");
+                return new List<SuspendedProcessRecord>();
+            }
+        }
+    }
+
+    /// <summary>Writes the list, or deletes the file when it is empty.</summary>
+    public void SaveSuspendedProcesses(IReadOnlyCollection<SuspendedProcessRecord> records)
+    {
+        lock (_suspendedLock)
+        {
+            try
+            {
+                if (records.Count == 0)
+                {
+                    if (File.Exists(SuspendedFilePath)) File.Delete(SuspendedFilePath);
+                    return;
+                }
+                EnsureDirectories();
+                string tempFile = SuspendedFilePath + ".tmp";
+                File.WriteAllText(tempFile, JsonSerializer.Serialize(records.ToList(), AppJsonContext.Default.ListSuspendedProcessRecord));
+                SafeReplaceFile(tempFile, SuspendedFilePath);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error("Storage", $"Error saving '{SuspendedFilePath}': {ex.Message}", ex);
+            }
+        }
+    }
+
     private readonly Lock _profileSessionLock = new();
 
     /// <summary>Null if no Performance Profile session is currently recorded (none active, or already restored).</summary>
@@ -784,6 +834,26 @@ public class StorageService : IProfileSnapshotStore
         return EncryptApiKey(field, plainKey);
     }
 
+    /// <summary>
+    /// Whether a key as settings.json stores it can be read back here. Keys are encrypted for one
+    /// Windows account (DPAPI), so a backup restored on another PC or account can't read them. An
+    /// empty or plain-text (pre-encryption) value always can.
+    /// </summary>
+    internal static bool CanDecryptStoredKey(string? storedKey)
+    {
+        if (string.IsNullOrEmpty(storedKey) || !storedKey.StartsWith(EncryptedApiKeyPrefix, StringComparison.Ordinal)) return true;
+        try
+        {
+            ProtectedData.Unprotect(Convert.FromBase64String(storedKey[EncryptedApiKeyPrefix.Length..]), null, DataProtectionScope.CurrentUser);
+            return true;
+        }
+        catch (Exception ex) when (ex is CryptographicException or FormatException)
+        {
+            // The answer is the point: this account can't read it. The caller says what it does about that.
+            return false;
+        }
+    }
+
     private static string EncryptApiKey(ApiKeyField field, string plainKey)
     {
         if (string.IsNullOrEmpty(plainKey)) return string.Empty;
@@ -843,7 +913,8 @@ public class StorageService : IProfileSnapshotStore
         return archivePath;
     }
 
-    private static void SafeReplaceFile(string tempFile, string targetFile)
+    /// <summary>Puts <paramref name="tempFile"/> in place of <paramref name="targetFile"/>, retrying a target briefly locked by an AV scan or backup tool. Shared with <see cref="BackupService"/>.</summary>
+    internal static void SafeReplaceFile(string tempFile, string targetFile)
     {
         for (int i = 0; i < 3; i++)
         {

@@ -19,8 +19,9 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 ## Now Playing
 
 - While a game is tracked (its Performance Profile applied, a post-exit script pending) a Now Playing section appears at the very top with the game and how long it has been running.
-- Each entry opens a small submenu: Close Game asks the game to quit, and the profile is put back and the post-exit script runs once it has; Force Close Game kills the game's process instead. Anything unsaved in the game is lost on a force close.
-- The same two actions are on the game's right-click menu in the library, and in its Game Details, while it shows the PLAYING badge.
+- Each entry opens a small submenu: Suspend Game freezes the game where it is until you choose Resume Game (see Suspend and resume a game); Close Game asks the game to quit, and the profile is put back and the post-exit script runs once it has; Force Close Game kills the game's process instead. Anything unsaved in the game is lost on a force close.
+- A suspended game shows "suspended" in place of its playtime, which doesn't count up while it's suspended.
+- The same actions are on the game's right-click menu in the library while it shows the PLAYING badge, and Close Game and Force Close are in its Game Details.
 
 ## Recent and Favorites
 

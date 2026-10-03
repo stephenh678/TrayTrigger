@@ -1,6 +1,13 @@
-# The beta channel
+# Updates and the beta channel
 
-TrayTrigger updates itself from GitHub Releases. Stable releases go to everyone. Beta releases are marked as pre-releases on GitHub and are only offered to people who opt in here.
+TrayTrigger updates itself from GitHub Releases. Stable releases go to everyone. Beta releases are marked as pre-releases on GitHub and are only offered to people who opt in.
+
+## How updates work
+
+- With "Automatically check for updates on startup" on, TrayTrigger asks GitHub for the latest release a few seconds after it starts and once a day while it runs. Check for Updates Now does it on demand.
+- When there is a newer version, a dialog shows what changed. Download & Install fetches the installer and runs it; Remind Me Later asks again another day.
+- A download is only installed when it matches the release's checksum file and that file carries TrayTrigger's signature, so a tampered release is refused.
+- Nothing is sent but the request for the release list. Untick the option to stop the checks altogether.
 
 ## What you get
 
@@ -11,12 +18,12 @@ TrayTrigger updates itself from GitHub Releases. Stable releases go to everyone.
 ## How versions are chosen
 
 - With the toggle on, TrayTrigger looks at every release and offers the highest version, beta or stable.
-- With the toggle off, it asks GitHub for the latest stable release only, and betas are invisible — unless the build you are running is itself a beta, in which case later betas are always offered regardless of the toggle. Otherwise a tester who installed a beta by hand would be stranded on it: GitHub keeps pre-releases out of "latest", so the only build ever offered would be the older stable, which loses the comparison and reports "up to date" forever.
+- With the toggle off, it asks GitHub for the latest stable release only, and betas are invisible - unless the build you are running is itself a beta, in which case later betas are still offered, so a beta installed by hand is never stranded.
 - A stable release always outranks its own betas. When v1.3.0 ships, everyone on any v1.3.0 beta is offered it, toggle on or off.
 
 ## Joining from a build you installed by hand
 
-Installing a beta's Setup.exe does not tick the toggle for you. The build still follows later betas, as above, so you stay current either way — but tick it anyway if you want the beta channel to survive you moving back to a stable release later.
+Installing a beta's Setup.exe does not tick the toggle for you. The build still follows later betas, as above, so you stay current either way - but tick it anyway if you want the beta channel to survive you moving back to a stable release later.
 
 ## Leaving the beta channel
 

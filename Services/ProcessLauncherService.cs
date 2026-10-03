@@ -58,6 +58,40 @@ public sealed class ActiveGameSession
     public Process? Process { get; internal set; }
     public bool CanForceClose => Process != null || GameStarted;
 
+    /// <summary>True while Suspend has the game frozen. The playtime clock is stopped meanwhile.</summary>
+    public bool IsSuspended { get; internal set; }
+    /// <summary>When the current suspension began; meaningful only while <see cref="IsSuspended"/>.</summary>
+    internal DateTime SuspendedAtUtc { get; set; }
+    /// <summary>Every earlier suspension's length added up, so playtime leaves it out.</summary>
+    internal TimeSpan SuspendedTotal { get; set; }
+    /// <summary>The processes the current suspension froze, so exactly those are resumed. Guarded by the launcher's suspend lock.</summary>
+    internal List<SuspendedProcessRecord> SuspendedProcesses { get; } = new();
+    /// <summary>The windows the current suspension minimized, restored when Resume brings the game back. Guarded like <see cref="SuspendedProcesses"/>.</summary>
+    internal List<IntPtr> MinimizedWindows { get; } = new();
+
+    /// <summary>
+    /// How long the game has been played at <paramref name="nowUtc"/>: since it started, less the
+    /// time it spent suspended, the current suspension included.
+    /// </summary>
+    public TimeSpan PlayedTime(DateTime nowUtc)
+    {
+        if (!GameStarted) return TimeSpan.Zero;
+        var paused = SuspendedTotal + (IsSuspended ? nowUtc - SuspendedAtUtc : TimeSpan.Zero);
+        var played = nowUtc - StartedAtUtc - paused;
+        return played < TimeSpan.Zero ? TimeSpan.Zero : played;
+    }
+
+    /// <summary>
+    /// For a post-exit script run at TrayTrigger's shutdown, which works its playtime out from a
+    /// start time: when the game would have started had it never been suspended. Null until it starts.
+    /// </summary>
+    internal DateTime? PlaytimeStartUtc()
+    {
+        if (!GameStarted) return null;
+        var now = DateTime.UtcNow;
+        return now - PlayedTime(now);
+    }
+
     internal Action? CancelTracking;
     internal int Finished;
     /// <summary>Close Game or Force Close asked the game to quit, so its exit is final: not a
@@ -274,6 +308,9 @@ public partial class ProcessLauncherService
             // Final, like Close Game's: the exit must not be taken for a launcher stub, whose
             // hand-off would also dispose the handle while Kill is still using it.
             session.CloseRequested = true;
+            // Unmuted before it dies: Windows keeps an app's mute in the Volume Mixer for its next
+            // run, and a game killed while TrayTrigger had it muted would start silent next time.
+            if (session.IsSuspended) UnmuteSuspended(session);
             TerminateSessionProcesses(session);
         }
 
@@ -322,6 +359,9 @@ public partial class ProcessLauncherService
             FinishSession(session, gameRan: false, "closed by user before the game started");
             return CloseGameResult.EndedBeforeStart;
         }
+
+        // A frozen game can't answer its close button. Thawed first, it quits the usual way.
+        if (session.IsSuspended) ResumeGame(gameId, bringToFront: false);
 
         session.CloseRequested = true;
         bool asked = false;
@@ -426,9 +466,7 @@ public partial class ProcessLauncherService
             }
         }
 
-        string? installDir = session.Route == LaunchRoute.Steam
-            ? (UrlProtocolHelper.IsValidSteamAppId(session.Game.SteamAppId) ? _steamScannerService.FindInstallDirForAppId(session.Game.SteamAppId!) : null)
-            : ResolveTrackedInstallDir(session.Game);
+        string? installDir = SessionInstallDir(session);
         if (string.IsNullOrWhiteSpace(installDir))
         {
             LoggingService.Verbose("Launcher", $"'{session.Game.Name}': no install folder is known, so its processes can only be found through the one that was started.");
@@ -706,13 +744,18 @@ public partial class ProcessLauncherService
             }
         }
 
+        // A session can end with its game still frozen: the user chose Close Game or Force Close,
+        // or "ended" a session whose game is still running. Nothing would ever resume it after this.
+        // Always asked, under the suspend lock: a suspend still finishing on another thread is seen.
+        ResumeForSessionEnd(session);
+
         var game = session.Game;
         long minutes = 0;
         try
         {
             if (gameRan)
             {
-                TimeSpan played = DateTime.UtcNow - session.StartedAtUtc;
+                TimeSpan played = session.PlayedTime(DateTime.UtcNow);
                 minutes = (long)Math.Max(0, Math.Round(played.TotalMinutes));
                 if (minutes > 0)
                 {
@@ -836,7 +879,7 @@ public partial class ProcessLauncherService
 
             try { session.CancelTracking?.Invoke(); } catch (Exception ex) { LoggingService.Swallowed("Launcher", ex, "cancelling the session's tracking"); }
 
-            long minutes = (long)Math.Max(0, Math.Round((DateTime.UtcNow - session.StartedAtUtc).TotalMinutes));
+            long minutes = (long)Math.Max(0, Math.Round(session.PlayedTime(DateTime.UtcNow).TotalMinutes));
             if (minutes <= 0) continue;
 
             session.Game.CumulativePlaytimeMinutes += minutes;
@@ -945,6 +988,12 @@ public partial class ProcessLauncherService
             }
             if (inFlight != null)
             {
+                // Play on a game that is suspended means "back to it": resumed, then brought forward.
+                if (inFlight.IsSuspended)
+                {
+                    LoggingService.Info("Launcher", $"'{game.Name}' is suspended; Play resumes it.");
+                    ResumeGame(game.Id);
+                }
                 IntPtr hWnd = IntPtr.Zero;
                 try { hWnd = inFlight.Process?.MainWindowHandle ?? IntPtr.Zero; } catch { /* the process has already exited */ }
                 if (hWnd != IntPtr.Zero) ActivateWindow(hWnd);
@@ -1257,7 +1306,7 @@ public partial class ProcessLauncherService
 
         // Registered up front (not on the Running flip) so a TrayTrigger exit during Steam's
         // own startup still runs the post-exit script on shutdown.
-        _scriptService.TrackPostExit(game, () => session.GameStarted ? session.StartedAtUtc : null);
+        _scriptService.TrackPostExit(game, session.PlaytimeStartUtc);
 
         Poller? poller = null;
         poller = new Poller(SteamSessionPollInterval, () =>
@@ -1314,7 +1363,7 @@ public partial class ProcessLauncherService
                         session.Process = proc;
                         LoggingService.Verbose("Launcher", $"Found Steam game process for '{game.Name}' (PID {proc.Id}).");
                         _performanceProfileService.OnGameProcessStarted(game, proc);
-                        CpuTopologyService.ApplyAffinity(proc, game);
+                        CpuTopologyService.ApplyCpuCores(proc, game);
                         WaitForWindowAndActivate(session, proc);
                         StartDlssObservation(session, proc);
                     }
@@ -1477,8 +1526,10 @@ public partial class ProcessLauncherService
         try
         {
             _performanceProfileService.OnGameProcessStarted(game, process);
-            CpuTopologyService.ApplyAffinity(process, game);
-            _scriptService.TrackPostExit(game, () => session.GameStarted ? session.StartedAtUtc : null);
+            // Only a direct launch hands over the process it started (allowStubHandoff); a process
+            // found under the install folder was opened by id, and has no launch handle.
+            CpuTopologyService.ApplyCpuCores(process, game, startedByTrayTrigger: allowStubHandoff);
+            _scriptService.TrackPostExit(game, session.PlaytimeStartUtc);
 
             // Subscribe before enabling, not after: EnableRaisingEvents can fire Exited on a
             // thread-pool thread almost immediately for a process that already exited.

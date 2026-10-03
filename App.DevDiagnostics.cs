@@ -440,7 +440,7 @@ public partial class App
                     TagName = "v1.1.0",
                     Name = "TrayTrigger v1.1.0 - Windows Setup & Auto-Update Engine",
                     Body = "### Highlights:\n• Automated GitHub release detection and self-upgrade workflow\n• Modern Windows Installer with custom directory and startup options\n• Seamless tray minimize and performance improvements",
-                    HtmlUrl = "https://github.com/Steph/TrayTrigger/releases/tag/v1.1.0",
+                    HtmlUrl = "https://github.com/stephenh678/TrayTrigger/releases/tag/v1.1.0",
                     Assets = new List<GitHubReleaseAsset>
                     {
                         new() { Name = "TrayTrigger-v1.1.0-Setup.exe", Size = 26588200 },
@@ -1361,6 +1361,8 @@ public partial class App
                 string targetPng = e.Args[i + 2];
                 bool invalid = i + 3 < e.Args.Length && e.Args[i + 3].Equals("invalid", StringComparison.OrdinalIgnoreCase);
                 bool noDlss = i + 3 < e.Args.Length && e.Args[i + 3].Equals("nodlss", StringComparison.OrdinalIgnoreCase);
+                // "autocores": CPU Cores on Auto, so the wait-before-applying box is in the capture.
+                bool autoCores = i + 3 < e.Args.Length && e.Args[i + 3].Equals("autocores", StringComparison.OrdinalIgnoreCase);
                 _skipSettingsSaveOnExit = true;
                 // A copy, so pressing Save for the "invalid" capture can never touch the library.
                 // Prefer a game that actually ships DLSS, so the Performance tab's DLSS card is in
@@ -1382,6 +1384,7 @@ public partial class App
                 if (invalid) editVm.SteamAppId = "not-a-number";
                 // The Performance tab shows the tier summary; Aggressive lists the most.
                 if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
+                if (autoCores) editVm.CpuAffinity = CpuAffinityMode.Auto;
                 editVm.SelectedSection = section;
                 dlg.Show();
                 // The DLSS card loads asynchronously, so a capture taken straight after Show()
@@ -1486,8 +1489,8 @@ public partial class App
                 string targetPng = e.Args[i + 1];
                 var dialog = new ModernDialog(
                     "Exit TrayTrigger",
-                    "Close or minimize TrayTrigger?",
-                    "Would you like to minimize TrayTrigger to the system tray (keeping your hotkeys and tray menu active), or completely exit the application?",
+                    "Exit or Minimize to Tray?",
+                    "Minimized, your hotkeys and the tray menu keep working.",
                     "Exit App",
                     "Cancel",
                     DialogIconType.Power);
@@ -2270,6 +2273,8 @@ public partial class App
             // --screenshot-tray-search / --test-tray-search (App.TraySearchDiagnostics.cs).
             if (TryHandleTraySearchDevArgs(e, i)) return;
             if (TryHandleCloseGameDevArgs(e, i)) return;
+            if (TryHandleSuspendDevArgs(e, i)) return;
+            if (TryHandleRestoreDevArgs(e, i)) return;
 
             // --test-automation-names <out.txt>: controls a screen reader can't name (App.AutomationNameAudit.cs).
             if (e.Args[i].Equals("--test-automation-names", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
@@ -2489,8 +2494,12 @@ public partial class App
                 _mainViewModel.Games.Add(_mainViewModel.CreateCardViewModel(g3));
                 _mainViewModel.RebuildCategories();
 
-                if (_mainViewModel.CategoryTabs.Count != 4)
-                    throw new Exception($"Expected 4 category tabs, got {_mainViewModel.CategoryTabs.Count}");
+                // By name, not by count: All and Favorites are always there, then one per category.
+                // A count alone broke when Favorites became a tab, and said nothing about which was extra.
+                string[] expectedTabs = [LibraryConstants.AllCategory, LibraryConstants.FavoritesCategory, "Action", "RPG", "Steam"];
+                var actualTabs = _mainViewModel.CategoryTabs.Select(t => t.Name).ToList();
+                if (!actualTabs.OrderBy(n => n, StringComparer.Ordinal).SequenceEqual(expectedTabs.OrderBy(n => n, StringComparer.Ordinal)))
+                    throw new Exception($"Expected category tabs {string.Join(", ", expectedTabs)}; got {string.Join(", ", actualTabs)}");
 
                 var allTab = _mainViewModel.CategoryTabs.FirstOrDefault(t => t.Name == "All");
                 var rpgTab = _mainViewModel.CategoryTabs.FirstOrDefault(t => t.Name == "RPG");
@@ -2697,6 +2706,8 @@ public partial class App
 
                 var realMenu = (ContextMenu)_mainWindow.LibraryPage.FindResource("GameItemContextMenu");
                 var panel = new StackPanel { DataContext = sampleCard };
+                // As the real ContextMenu does, so every item shares one icon column.
+                Grid.SetIsSharedSizeScope(panel, true);
                 var menuItems = realMenu.Items.OfType<UIElement>().ToList();
                 realMenu.Items.Clear();
                 foreach (var item in menuItems)

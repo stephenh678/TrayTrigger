@@ -14,6 +14,7 @@ public partial class HotkeyManager : IDisposable
     private const int MANAGE_WINDOW_HOTKEY_ID = 1;
     private const int PROBE_HOTKEY_ID = 2;
     private const int TRAY_MENU_HOTKEY_ID = 3;
+    private const int SUSPEND_HOTKEY_ID = 4;
     private const int GAME_HOTKEY_BASE_ID = 1000;
     private const int TOOL_HOTKEY_BASE_ID = 5000;
 
@@ -29,6 +30,8 @@ public partial class HotkeyManager : IDisposable
     public const string ManageOwnerId = "__manage__";
     /// <summary>The owner id the open-tray-menu hotkey is registered under.</summary>
     public const string TrayMenuOwnerId = "__traymenu__";
+    /// <summary>The owner id the suspend/resume-game hotkey is registered under.</summary>
+    public const string SuspendOwnerId = "__suspend__";
 
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -45,10 +48,13 @@ public partial class HotkeyManager : IDisposable
     private readonly Dictionary<(uint Mod, uint Vk), (string OwnerId, string OwnerName)> _owners = new();
     private bool _isManageHotkeyRegistered;
     private bool _isTrayMenuHotkeyRegistered;
+    private bool _isSuspendHotkeyRegistered;
 
     public event Action? ManageHotkeyTriggered;
     /// <summary>The open-tray-menu hotkey was pressed.</summary>
     public event Action? TrayMenuHotkeyTriggered;
+    /// <summary>The suspend/resume-game hotkey was pressed.</summary>
+    public event Action? SuspendHotkeyTriggered;
     public event Action<string>? GameHotkeyTriggered;
     /// <summary>A tool's hotkey was pressed; carries the tool's id.</summary>
     public event Action<string>? ToolHotkeyTriggered;
@@ -88,6 +94,12 @@ public partial class HotkeyManager : IDisposable
                 TrayMenuHotkeyTriggered?.Invoke();
                 handled = true;
             }
+            else if (id == SUSPEND_HOTKEY_ID)
+            {
+                LoggingService.Info("HotkeyManager", "Suspend/resume-game hotkey triggered.");
+                SuspendHotkeyTriggered?.Invoke();
+                handled = true;
+            }
             else if (_registeredHotkeys.TryGetValue(id, out HotkeyBinding? binding))
             {
                 LoggingService.Info("HotkeyManager", $"Hotkey triggered for {KindLabel(binding.Kind)} id '{binding.OwnerId}'.");
@@ -113,9 +125,10 @@ public partial class HotkeyManager : IDisposable
     /// and a tool share a combo the game keeps it and the tool's is logged as not registered.
     /// <paramref name="reserved"/> (tool hotkeys while Tools is off) are not registered with Windows,
     /// but count as taken for <see cref="CheckAvailability"/>, so a game can't claim one meanwhile.
-    /// Returns the launch bindings that could not be registered.
+    /// Returns the launch bindings that could not be registered. The suspend hotkey (1.4.7, default
+    /// Ctrl+Alt+P) goes after the tray-menu one and gives way the same way.
     /// </summary>
-    public IReadOnlyList<HotkeyBinding> RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, IEnumerable<HotkeyBinding>? reserved = null, string? trayMenuHotkeyStr = null)
+    public IReadOnlyList<HotkeyBinding> RegisterHotkeys(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, IEnumerable<HotkeyBinding>? reserved = null, string? trayMenuHotkeyStr = null, string? suspendHotkeyStr = null)
     {
         var failed = new List<HotkeyBinding>();
         try
@@ -134,21 +147,22 @@ public partial class HotkeyManager : IDisposable
                     }
                 }
             }
-            _isTrayMenuHotkeyRegistered = RegisterTrayMenuHotkey(trayMenuHotkeyStr);
+            _isTrayMenuHotkeyRegistered = RegisterGivingWay(TRAY_MENU_HOTKEY_ID, trayMenuHotkeyStr, TrayMenuOwnerId, "the open tray menu hotkey");
+            _isSuspendHotkeyRegistered = RegisterGivingWay(SUSPEND_HOTKEY_ID, suspendHotkeyStr, SuspendOwnerId, "the suspend game hotkey");
         }
         return failed;
     }
 
-    /// <summary>The tray-menu hotkey, unless a game or tool (registered or reserved) already holds it.</summary>
-    private bool RegisterTrayMenuHotkey(string? hotkeyStr)
+    /// <summary>One of TrayTrigger's later hotkeys, unless a game, tool or earlier hotkey (registered or reserved) already holds it.</summary>
+    private bool RegisterGivingWay(int id, string? hotkeyStr, string ownerId, string ownerName)
     {
         if (!string.IsNullOrWhiteSpace(hotkeyStr) && ParseHotkey(hotkeyStr, out uint mod, out uint vk)
             && _owners.TryGetValue((mod, vk), out var holder))
         {
-            LoggingService.Warn("HotkeyManager", $"The open tray menu hotkey '{hotkeyStr}' is not registered: {holder.OwnerName} already uses it. Choose another in Settings > General.");
+            LoggingService.Warn("HotkeyManager", $"{char.ToUpperInvariant(ownerName[0])}{ownerName[1..]} '{hotkeyStr}' is not registered: {holder.OwnerName} already uses it. Choose another in Settings > General.");
             return false;
         }
-        return RegisterAppHotkey(TRAY_MENU_HOTKEY_ID, hotkeyStr, TrayMenuOwnerId, "the open tray menu hotkey");
+        return RegisterAppHotkey(id, hotkeyStr, ownerId, ownerName);
     }
 
     private void RegisterCore(string globalManageHotkeyStr, IEnumerable<HotkeyBinding> bindings, List<HotkeyBinding> failed)
@@ -247,6 +261,11 @@ public partial class HotkeyManager : IDisposable
             UnregisterHotKey(_hwndSource.Handle, TRAY_MENU_HOTKEY_ID);
             _isTrayMenuHotkeyRegistered = false;
         }
+        if (_isSuspendHotkeyRegistered)
+        {
+            UnregisterHotKey(_hwndSource.Handle, SUSPEND_HOTKEY_ID);
+            _isSuspendHotkeyRegistered = false;
+        }
 
         int unregisteredCount = _registeredHotkeys.Count;
         foreach (var id in _registeredHotkeys.Keys)
@@ -287,6 +306,7 @@ public partial class HotkeyManager : IDisposable
             {
                 ManageOwnerId => "Already used to show and hide the TrayTrigger window.",
                 TrayMenuOwnerId => "Already used to open the tray menu.",
+                SuspendOwnerId => "Already used to suspend and resume the game.",
                 _ => $"Already used to launch {owner.OwnerName}.",
             };
             return false;

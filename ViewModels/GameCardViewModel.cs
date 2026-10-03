@@ -78,12 +78,14 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onToggleSelect = null,
         Action<GameCardViewModel>? onRangeSelect = null,
         Action<GameCardViewModel>? onQuickSettingChanged = null,
-        Action<GameCardViewModel>? onToggleDlssOverride = null)
+        Action<GameCardViewModel>? onToggleDlssOverride = null,
+        Action<GameCardViewModel>? onToggleSuspend = null)
     {
         _onQuickSettingChanged = onQuickSettingChanged;
         _onToggleDlssOverride = onToggleDlssOverride;
         _onCloseGame = onCloseGame;
         _onForceClose = onForceClose;
+        ToggleSuspendCommand = new RelayCommand(() => onToggleSuspend?.Invoke(this), () => onToggleSuspend != null);
         _onPrimaryClick = onPrimaryClick;
         _onToggleSelect = onToggleSelect;
         _onRangeSelect = onRangeSelect;
@@ -388,9 +390,38 @@ public class GameCardViewModel : ViewModelBase
             if (_isPlaying != value)
             {
                 _isPlaying = value;
+                if (!value) _isSuspended = false;
                 OnPropertyChanged();
+                NotifySuspendState();
             }
         }
+    }
+
+    /// <summary>True while Suspend has the game frozen. The PLAYING tag reads PAUSED, and the menu offers Resume.</summary>
+    public bool IsSuspended
+    {
+        get => _isSuspended;
+        set
+        {
+            if (_isSuspended == value) return;
+            _isSuspended = value;
+            NotifySuspendState();
+        }
+    }
+    private bool _isSuspended;
+
+    /// <summary>The playing tag's text: PAUSED while the game is suspended.</summary>
+    public string PlayingTagText => IsSuspended ? "‖ PAUSED" : "▶ PLAYING";
+
+    /// <summary>The right-click menu's Suspend / Resume item.</summary>
+    public string SuspendMenuLabel => IsSuspended ? "Resume Game" : "Suspend Game";
+    public ICommand ToggleSuspendCommand { get; }
+
+    private void NotifySuspendState()
+    {
+        OnPropertyChanged(nameof(IsSuspended));
+        OnPropertyChanged(nameof(PlayingTagText));
+        OnPropertyChanged(nameof(SuspendMenuLabel));
     }
 
     public ICommand CloseGameCommand { get; }
@@ -467,7 +498,11 @@ public class GameCardViewModel : ViewModelBase
     public bool ProfileIsOptimized => Game.PerformanceProfile == PerformanceProfileMode.Optimized;
     public bool ProfileIsAggressive => Game.PerformanceProfile == PerformanceProfileMode.Aggressive;
     public bool CpuAffinityIsDefault => Game.CpuAffinity == CpuAffinityMode.Default;
+    public bool CpuAffinityIsAuto => Game.CpuAffinity == CpuAffinityMode.Auto;
     public bool CpuAffinityIsPerformanceCores => Game.CpuAffinity == CpuAffinityMode.PerformanceCoresOnly;
+    public bool CpuAffinityIsVCache => Game.CpuAffinity == CpuAffinityMode.VCacheCores;
+    public bool CpuAffinityIsFrequency => Game.CpuAffinity == CpuAffinityMode.FrequencyCores;
+    public bool CpuAffinityIsOneCcd => Game.CpuAffinity == CpuAffinityMode.OneCcd;
     public bool RunAsAdmin => Game.RunAsAdmin;
     public bool CloseLauncherOnExit => Game.CloseLauncherOnExit;
 
@@ -479,16 +514,13 @@ public class GameCardViewModel : ViewModelBase
     public bool HasLauncherToClose => LibraryFilterViewModel.PlatformOf(Game) != null;
 
     /// <summary>
-    /// Whether this machine has a hybrid (P-core/E-core) CPU. The core-pinning submenu is hidden
-    /// elsewhere: on a uniform CPU "Performance Cores Only" is a documented no-op, and an option
-    /// that cannot do anything is worse than no option. Edit Game Properties still offers it with
-    /// a hint, for a library that will move to a hybrid machine. The topology is read once per
-    /// process and cached, so this is free per card.
+    /// Which CPU Cores items the menu shows on this PC - see <see cref="CpuCoreMenu"/>. The topology
+    /// is read once per process and cached, so this is free per card.
     /// </summary>
-    public bool IsHybridCpu => CpuTopologyService.GetTopology().IsHybrid;
+    public CpuCoreMenu CpuCores => CpuCoreMenu.ForThisPc;
 
     /// <summary>
-    /// Read once per process, like <see cref="IsHybridCpu"/>: it is a registry open, the menu asks
+    /// Read once per process, like <see cref="CpuCores"/>: it is a registry open, the menu asks
     /// every time it is shown, and a driver does not appear while the app is running.
     /// </summary>
     private static readonly Lazy<bool> HasNvidiaDriverOnThisPc = new(SystemTweaksService.HasNvidiaNgx);
@@ -527,7 +559,11 @@ public class GameCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(ProfileIsOptimized));
         OnPropertyChanged(nameof(ProfileIsAggressive));
         OnPropertyChanged(nameof(CpuAffinityIsDefault));
+        OnPropertyChanged(nameof(CpuAffinityIsAuto));
         OnPropertyChanged(nameof(CpuAffinityIsPerformanceCores));
+        OnPropertyChanged(nameof(CpuAffinityIsVCache));
+        OnPropertyChanged(nameof(CpuAffinityIsFrequency));
+        OnPropertyChanged(nameof(CpuAffinityIsOneCcd));
         OnPropertyChanged(nameof(RunAsAdmin));
         OnPropertyChanged(nameof(CloseLauncherOnExit));
         OnPropertyChanged(nameof(HasLauncherToClose));

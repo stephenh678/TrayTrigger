@@ -1,9 +1,75 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
 namespace TrayTrigger.Services;
+
+/// <summary>
+/// Opening a process by id, but only while it is still the process that started at a known moment:
+/// an id is given to a new program as soon as the old one exits, and CPU Cores and Suspend must never
+/// act on a stranger. Shared by <see cref="CpuTopologyService"/> and <see cref="ProcessSuspender"/>.
+/// </summary>
+internal static partial class ProcessHandles
+{
+    private const uint QueryLimitedInformation = 0x1000;
+    private const uint StillActive = 259;
+
+    internal enum OpenResult { Opened, Gone, Refused }
+
+    /// <summary>
+    /// Opens <paramref name="pid"/> with <paramref name="access"/> (and limited query rights) when it
+    /// started at <paramref name="startedUtc"/>. Gone: no such process any more, or the id belongs to a
+    /// newer one. Refused: Windows said no - a process running as administrator, or protected - with
+    /// the reason in <paramref name="error"/>. The caller disposes the handle.
+    /// </summary>
+    internal static OpenResult OpenSame(int pid, DateTime startedUtc, uint access, out SafeProcessHandle? handle, out string? error)
+    {
+        handle = null;
+        error = null;
+        var opened = OpenProcess(access | QueryLimitedInformation, false, (uint)pid);
+        if (opened.IsInvalid)
+        {
+            int code = Marshal.GetLastPInvokeError();
+            opened.Dispose();
+            // 87 (invalid parameter) is what OpenProcess says for an id no process has any more.
+            if (code == 87) return OpenResult.Gone;
+            error = new Win32Exception(code).Message.TrimEnd('.');
+            return OpenResult.Refused;
+        }
+
+        if (!GetProcessTimes(opened, out long created, out _, out _, out _)
+            || Math.Abs((DateTime.FromFileTimeUtc(created) - startedUtc).TotalSeconds) > 1)
+        {
+            opened.Dispose();
+            return OpenResult.Gone;
+        }
+        handle = opened;
+        return OpenResult.Opened;
+    }
+
+    /// <summary>The process has exited, though something still holds a handle to it.</summary>
+    internal static bool HasExited(SafeProcessHandle handle) => GetExitCodeProcess(handle, out uint code) && code != StillActive;
+
+    /// <summary>The process is still running and is still the one that started at <paramref name="startedUtc"/>.</summary>
+    internal static bool IsRunning(int pid, DateTime startedUtc)
+    {
+        if (OpenSame(pid, startedUtc, 0, out var handle, out _) != OpenResult.Opened) return false;
+        using (handle) return !HasExited(handle!);
+    }
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial SafeProcessHandle OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint processId);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetProcessTimes(SafeProcessHandle process, out long creation, out long exit, out long kernel, out long user);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetExitCodeProcess(SafeProcessHandle process, out uint exitCode);
+}
 
 /// <summary>
 /// A process held open by handle, for everything a tool's close reaches: while it's held its id can't
@@ -74,7 +140,7 @@ internal static partial class ProcessTree
     public static List<HeldProcess> StartupDescendants(HeldProcess root, TimeSpan window, Func<HeldProcess, bool> keep)
     {
         var found = new List<HeldProcess>();
-        var everyone = Snapshot();
+        var everyone = Snapshot("Tools", "only the tool itself will be closed");
         DateTime latest = root.StartedUtc + window;
         var seen = new HashSet<int> { root.Id };
         var parents = new Queue<HeldProcess>();
@@ -95,6 +161,36 @@ internal static partial class ProcessTree
                 }
                 found.Add(child);
                 parents.Enqueue(child);
+            }
+        }
+        return found;
+    }
+
+    /// <summary>
+    /// Every process <paramref name="rootPid"/> started, whenever it started it, and theirs in turn:
+    /// a game's crash handler, its renderer, the real game a launcher stub hands off to. Each is
+    /// checked to be younger than its parent, so a process that took over an old parent's id isn't
+    /// counted. Nothing is held open; a caller that acts on one opens it again and checks
+    /// <c>StartedUtc</c>.
+    /// </summary>
+    public static List<(int Pid, string Name, DateTime StartedUtc)> Descendants(int rootPid, DateTime rootStartedUtc, string logCategory)
+    {
+        var found = new List<(int Pid, string Name, DateTime StartedUtc)>();
+        var everyone = Snapshot(logCategory, "its child processes are left out");
+        var seen = new HashSet<int> { rootPid };
+        var parents = new Queue<(int Pid, DateTime StartedUtc)>();
+        parents.Enqueue((rootPid, rootStartedUtc));
+
+        while (parents.Count > 0)
+        {
+            var parent = parents.Dequeue();
+            foreach (var (pid, entry) in everyone)
+            {
+                if (entry.ParentId != parent.Pid || !seen.Add(pid)) continue;
+                using var child = HeldProcess.Open(pid, entry.Name);
+                if (child == null || child.StartedUtc < parent.StartedUtc) continue;
+                found.Add((pid, entry.Name, child.StartedUtc));
+                parents.Enqueue((pid, child.StartedUtc));
             }
         }
         return found;
@@ -126,13 +222,13 @@ internal static partial class ProcessTree
     }
 
     /// <summary>Every process's parent id and file name, at one moment. Empty when Windows won't give the list.</summary>
-    private static unsafe Dictionary<int, (int ParentId, string Name)> Snapshot()
+    private static unsafe Dictionary<int, (int ParentId, string Name)> Snapshot(string logCategory, string consequence)
     {
         var result = new Dictionary<int, (int ParentId, string Name)>();
         IntPtr snapshot = CreateToolhelp32Snapshot(SnapProcesses, 0);
         if (snapshot == InvalidHandle || snapshot == IntPtr.Zero)
         {
-            LoggingService.Verbose("Tools", $"Couldn't list running processes (error {Marshal.GetLastPInvokeError()}); only the tool itself will be closed.");
+            LoggingService.Verbose(logCategory, $"Couldn't list running processes (error {Marshal.GetLastPInvokeError()}); {consequence}.");
             return result;
         }
         try

@@ -21,6 +21,16 @@ Shown at the top of the card for a platform game; a Local game has none.
 - **Close the launcher after this game exits** - when the session ends, the client (Steam, GOG Galaxy, EA app, Epic, Ubisoft Connect, the Xbox app, or Battle.net) is closed, so it doesn't stay resident with its overlay and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows. "Keep game launchers minimized when launching a game" in Settings > General > Window & Tray Icon does this for every game.
 - **Launch through the Steam client** - offered for a Local game that has a Steam App ID. Ticking it makes the entry a Steam game, launched with `steam://rungameid/`, and the options above take over. Leave it off for a standalone game that merely shares a Steam listing.
 
+## Keeping the launcher minimized
+
+"Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon, on by default) asks each launcher that supports it to start quietly, so only the game opens.
+
+- Steam: when Steam isn't running, it starts minimized to the tray and launches the game in the same step. An open Steam is left as it is.
+- Epic Games Launcher: the launch asks Epic for a silent start.
+- GOG Galaxy: when Galaxy isn't running, it's started in the background with the game. When Galaxy is already open, the game's own exe is started instead.
+- The EA app and Ubisoft Connect have no way to start quietly, so their windows are left as they are.
+- Xbox games start through Windows without opening the Xbox app. Battle.net is left alone, because it has to sign in before the game can start.
+
 ## Executable / Shortcut Target
 
 The file or link to run for a Local game, and the file the icon comes from for every game. For a platform game, editing it changes nothing about the launch unless you also turn on "launch this executable directly" (above). If the file goes missing the card shows a MISSING badge and the right-click menu offers Locate Executable.
@@ -57,7 +67,7 @@ Starts a direct launch through UAC, so you get the prompt each time. It sits wit
 Click the box and press the keys. The combination is recorded from what you press, not typed, so it is always spelled the same way and always registers.
 
 - Ctrl, Alt or Shift plus a key, or a function key (F1-F24) on its own. Win+ anything is reserved by Windows.
-- A combination another game, the show/hide window hotkey, or another program already uses is refused with the reason.
+- A combination another game or tool, one of TrayTrigger's own hotkeys, or another program already uses is refused with the reason.
 - Shortcuts Windows needs for itself (Alt+F4, Alt+Tab, Ctrl+Esc and the like) are refused.
 - A single modifier plus a letter or digit - Ctrl+S - is warned about, because a global hotkey takes that shortcut away from every app while TrayTrigger runs. Press it again to use it anyway; Ctrl+Alt+S or Ctrl+Shift+S is the usual choice.
 - Escape keeps the old value; Backspace, Delete or the × clears it.

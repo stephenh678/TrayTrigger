@@ -17,7 +17,8 @@ The filter button sits beside the sort box in the library toolbar, under the sta
 **Status**
 - Never played / Played at least once - what is still in the backlog.
 - Favorite - the same set as the Favorites tab, available here so you can combine it with the others.
-- Executable missing - everything that needs relocating after a drive letter change or a reinstall.
+- Executable missing - games you added yourself whose file has moved, after a drive letter change or a reinstall.
+- Not installed - launcher games their launcher no longer has.
 - Has a hotkey - what your keyboard shortcuts are currently bound to.
 - Has launch scripts - which games run a pre-launch or post-exit script.
 - Runs as administrator - which games raise a UAC prompt when you start them.

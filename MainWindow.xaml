@@ -42,7 +42,7 @@
                 <!-- Brand & Toggle Header -->
                 <DockPanel Grid.Row="0" Margin="0,0,0,12">
                     <Button Command="{Binding ToggleSidebarCommand}" Style="{StaticResource ModernGhostButton}" 
-                            Height="38" Width="48" Padding="0" AutomationProperties.Name="{Binding SidebarToggleName}" DockPanel.Dock="Left"
+                            Height="38" Width="48" Padding="0" AutomationProperties.Name="{Binding SidebarToggleName}" ToolTip="{Binding SidebarToggleName}" DockPanel.Dock="Left"
                             HorizontalContentAlignment="Center">
                         <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="15" 
                                    Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -288,7 +288,7 @@
                     <TextBlock Text="{Binding LaunchToastMessage}" Foreground="{StaticResource BrushTextPrimary}"
                                FontSize="13" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
                     <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="11" Command="{Binding DismissLaunchToastCommand}"
-                            Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center"
+                            Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center" ToolTip="Dismiss"
  AutomationProperties.Name="Dismiss"/>
                 </StackPanel>
             </Border>

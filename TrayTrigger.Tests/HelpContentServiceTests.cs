@@ -1,3 +1,4 @@
+using System.IO;
 using TrayTrigger.Services;
 
 namespace TrayTrigger.Tests;
@@ -117,9 +118,43 @@ public class HelpContentServiceTests
     [InlineData("tools/overview")]
     [InlineData("tools/start_with_games")]
     [InlineData("troubleshooting/logs")]
+    [InlineData("troubleshooting/backup")]
+    [InlineData("library/suspend")]
+    [InlineData("library/select_mode")]
+    [InlineData("library/filtering")]
+    [InlineData("general/overview")]
+    [InlineData("scripts/writing")]
     public void EveryLinkedTopic_Exists(string topicId)
     {
         Assert.True(HelpContentService.HasTopic(topicId), $"Help/{topicId}.md is missing");
+    }
+
+    /// <summary>
+    /// Every "Learn more" link in the views opens a page that exists. Read from the XAML itself, so
+    /// a link added to a view is covered without anyone remembering to list it above.
+    /// </summary>
+    [Fact]
+    public void EveryTopicLinkedFromAView_Exists()
+    {
+        string? root = AppContext.BaseDirectory;
+        while (root != null && !File.Exists(Path.Combine(root, "TrayTrigger.csproj"))) root = Path.GetDirectoryName(root);
+        Assert.True(root != null, "The repository root (TrayTrigger.csproj) was not found above the test output folder.");
+
+        // A help link's parameter is the only CommandParameter shaped "section/name" in lower case.
+        var parameter = new System.Text.RegularExpressions.Regex("CommandParameter=\"(?<id>[a-z_]+/[a-z_]+)\"");
+        int links = 0;
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(root!, "Views"), "*.xaml"))
+        {
+            string xaml = File.ReadAllText(file);
+            if (!xaml.Contains("HelpCommands.ShowTopic", StringComparison.Ordinal)) continue;
+            foreach (System.Text.RegularExpressions.Match match in parameter.Matches(xaml))
+            {
+                links++;
+                string topicId = match.Groups["id"].Value;
+                Assert.True(HelpContentService.HasTopic(topicId), $"{Path.GetFileName(file)} links to Help/{topicId}.md, which is missing");
+            }
+        }
+        Assert.True(links >= 25, $"Only {links} help links were found in the views; the search is probably broken.");
     }
 
     [Fact]
@@ -128,7 +163,7 @@ public class HelpContentServiceTests
         var index = HelpContentService.GetIndex();
 
         Assert.Equal(
-            new[] { "tweaks", "profiles", "dlss", "scanner", "traymenu", "tools", "scripts", "library", "updates", "troubleshooting" },
+            new[] { "tweaks", "profiles", "dlss", "scanner", "traymenu", "tools", "scripts", "library", "general", "updates", "troubleshooting" },
             index.Select(g => g.Section).ToArray());
 
         var tweaks = index.First(g => g.Section == "tweaks");

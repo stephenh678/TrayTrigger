@@ -2,6 +2,8 @@
 
 Attach your own script or program to a game and TrayTrigger runs it just before the game starts and again after it exits. Use it for anything TrayTrigger does not do itself: closing Discord, switching audio output, setting an RGB profile, remapping a controller, starting a recorder.
 
+This page covers using scripts. Writing your own script covers the arguments a script receives and the batch and PowerShell details.
+
 ## Supported file types
 
 - .bat and .cmd, run through cmd.exe.
@@ -25,89 +27,54 @@ Attach your own script or program to a game and TrayTrigger runs it just before 
 - Cancel the launch if the pre-launch script fails treats the script as a precondition: a non-zero exit code, a timeout, or a script that will not start cancels the launch and rolls the Performance Profile back. Turning this on also turns on waiting. Off by default; a failing script is logged and the game launches anyway.
 - Run scripts hidden suppresses the console window. A hidden script's output is captured into the TrayTrigger log instead (see Troubleshooting).
 - Run scripts as Administrator elevates through UAC, so expect a prompt on every launch.
+- Script Arguments is free text handed to both scripts, such as a save folder or the apps to close. It is how one script serves many games.
 
-## The scripts folder, blank templates and examples
+## Example scripts
 
-TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there, and it is where "New script..." writes. When game scripts are enabled, TrayTrigger puts these files there:
+Five examples ship with TrayTrigger. Each is one file that handles both phases: in Edit Game, choose it as the pre-launch script and tick "Use the same script for pre-launch and post-exit". Each opens with a comment block covering why you'd want it, how to set it up and what to change.
 
-- _Blank.ps1 and _Blank.bat: empty templates with a phase branch and every argument already read for you. "New script..." next to each path box copies one of these to a name you choose, fills the path, and opens it for editing.
-- Five example scripts, described under Example scripts below.
-- README.txt: a quick start, the examples, and how to write and share your own scripts.
+- Example-WallpaperEnginePause.ps1 pauses and mutes Wallpaper Engine while you play and resumes it afterwards. It needs no Script Arguments.
+- Example-CloseBackgroundApps.ps1 closes background apps and reopens the ones it closed after the game. Type "recommended" in Script Arguments to close its recommended list (OneDrive, Dropbox, Google Drive, Creative Cloud, Teams, Slack), name the apps yourself, such as OneDrive ms-teams Dropbox, or both. With Script Arguments empty it does nothing. Tick Run scripts as Administrator and it also pauses Windows Update and Delivery Optimization for the game, and starts them again after.
+- Example-StartCompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, and closes only the ones it started. A program you already had open is left alone.
+- Example-OBSReplayBuffer.ps1 starts OBS in the tray with the replay buffer running and closes it after the game. An OBS you opened yourself is never touched. Script Arguments can give the path to OBS, when it isn't in Program Files, and an OBS profile.
+- Example-SaveBackup.ps1 zips the save folder named in Script Arguments, such as "%APPDATA%\EldenRing", before and after you play, and keeps the newest ten backups.
 
-These seven files are TrayTrigger's copy, not yours. Whenever TrayTrigger starts, and whenever you browse or open the folder from it, each one is compared with the copy inside this version and replaced if it differs - that is how a corrected template or a better example reaches a folder you already have. Nothing is written when they match, so an ordinary start changes nothing.
+## The scripts folder
 
-It also means an edit you make to one of them is undone the next time TrayTrigger starts, not just when you update it. Your version is not thrown away: before the fresh copy is written, the file you changed is renamed alongside it with ".previous" on the end, and nothing touches it afterwards. A file kept that way is no longer the one your game runs, though, so move what you changed into a copy of your own.
+TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there. When game scripts are enabled, TrayTrigger puts the five examples there with _Blank.ps1, _Blank.bat and a README.txt.
 
-Work on a copy from the start: "New script..." makes one under a name you choose, or copy the file in Explorer and rename it. A file TrayTrigger did not put there is never touched. Settings that differ from one PC to the next - where a program is installed, which apps to close - belong in Script Arguments rather than in the file, so they survive.
+These files are TrayTrigger's copy, not yours. Whenever TrayTrigger starts, or you open the folder from it, each one is compared with the copy inside this version and replaced if it differs, which is how a corrected example reaches you. An edit you make to one is therefore undone at the next start. Your version is kept beside it with ".previous" on the end, but it is no longer the file your game runs.
 
-Every example is one file that handles both phases. In Edit Game, choose it as the pre-launch script and tick "Use the same script for pre-launch and post-exit". For the Settings defaults, set the same file in both boxes. "Open in editor" next to a path box opens that script in Notepad or whatever you have associated with editing that type; it never runs it.
+Work on a copy: "New script..." next to each path box copies a blank template to a name you choose, fills the path, and opens it for editing. A file TrayTrigger did not put there is never touched. Settings that differ from one PC to the next - where a program is installed, which apps to close - belong in Script Arguments rather than in the file.
 
-## Community scripts
-
-Scripts other people have written and shared live in the TrayTrigger-Scripts catalog on GitHub: https://github.com/stephenh678/TrayTrigger-Scripts. Every script there was read by a maintainer before it was listed, and the catalog records a SHA-256 for each file so a download can be checked against what was reviewed. That is a review, not a guarantee: a script runs as you, so open it and read it before you attach it.
-
-"Browse community scripts" on the scripts card (in Settings and in Edit Game) opens the catalog in your browser. To use one today, download its folder into your scripts folder and browse to it in Edit Game, the same as the bundled examples. To share yours, open a pull request on the catalog repository; its CONTRIBUTING file has the manifest format and the review checklist. Installing from inside TrayTrigger, with the hash check, is planned.
+"Open in editor" next to a path box opens that script in Notepad or whatever you have associated with editing that type; it never runs it.
 
 ## Default scripts for every game
 
-Settings › Launch & Performance can hold a default pre-launch script and a default post-exit script. They run for any game that has no script of its own for that phase, so one "close Discord, restart it afterwards" pair covers the whole library without touching each game.
+Settings > Launch & Performance can hold a default pre-launch script and a default post-exit script. They run for any game that has no script of its own for that phase, so one "close Discord, restart it afterwards" pair covers the whole library without touching each game.
 
 - Resolution is per phase. A game with its own pre-launch script but no post-exit script runs its own pre-launch and the default post-exit.
-- A game's own script always wins over the default for that phase.
-- Any game can opt out of both defaults with "Don't run the default scripts for this game" in Edit Game. It is off for every game, including games added before this option existed, so the defaults apply everywhere the moment you set them.
+- Any game can opt out of both defaults with "Don't run the default scripts for this game" in Edit Game.
 - The defaults have their own wait, timeout, cancel-on-failure, hidden, and Administrator options. Those apply whenever a default script runs; a game's own options apply only to its own scripts.
 - Each game's Script Arguments are passed to the default scripts too. That is how one generic default is parameterised per game.
-- "Run the default scripts" is off by default, like the feature itself, and it sits under the master "Enable scripts" switch: that one switch is what guarantees no script runs for any game while it is off, so the defaults cannot run without it. Nothing in the defaults block runs until it is ticked, and unticking it later pauses the defaults without clearing their paths or options; Edit Game says so either way. The Enable game scripts switch gates the defaults as well: while it is off, nothing runs.
+- "Run the default scripts" is off by default and sits under the "Enable game scripts" switch, so nothing runs while either is off. Unticking it pauses the defaults without clearing their paths or options.
 - Edit Game shows which defaults apply to the game you are editing and why, and the defaults have their own Test buttons in Settings that run them with placeholder game values.
-
-## Script arguments
-
-The Script Arguments box in Edit Game is free text appended after the five built-in arguments, for both scripts. It is how one generic script serves many games: the script reads a save folder or a profile name from there instead of having it edited in.
-
-- They start at %6 in a batch file and at $args[5] in PowerShell. In a PowerShell param block, declare the built-in five and then a [Parameter(ValueFromRemainingArguments)] array for the rest.
-- For .bat and .cmd the text is passed exactly as typed, and cmd.exe parses it. Quote a value that contains spaces. An unbalanced double quote will break cmd's parsing of the whole command line, so keep quotes paired.
-- For .ps1, .exe and .com the text is split into separate arguments with the usual Windows rules: spaces separate, double quotes group, a backslash before a quote escapes it. "C:\My Saves" arrives as one argument with no quotes.
-- Test Run passes them too, so the result dialog shows exactly what the script will see.
 
 ## Testing a script
 
 Each script field in Edit Game has a Test button. It runs that script right now, the way TrayTrigger will at launch, and shows the exit code and everything the script printed.
 
-- The test uses the values currently typed in Edit Game (name, exe, script path), not the last saved ones, so you can test before you save.
+- The test uses the values currently typed in Edit Game (name, exe, script path, Script Arguments), not the last saved ones, so you can test before you save.
 - Pre-launch tests pass the phase prelaunch; post-exit tests pass postexit with a playtime of 0.
 - The test always runs hidden and without elevation so its output can be captured, and it is stopped after 30 seconds. A real run is never stopped.
 - If the game is set to run scripts as Administrator or visibly, the result dialog says so: the real run will differ in exactly that way.
-- The Test button ignores the Settings kill-switch. Clicking it is an explicit request to run the script once.
+- The Test button works even while "Enable game scripts" is off. Clicking it is an explicit request to run the script once.
 
-## Example scripts
+## Community scripts
 
-The examples are real scripts for common gaming chores, written to be read, copied and changed. Each one opens with a comment block covering why you'd want it, how to set it up, how it works and what to change, followed by a "Change these" section of settings.
+Scripts other people have written and shared live in the TrayTrigger-Scripts catalog on GitHub: https://github.com/stephenh678/TrayTrigger-Scripts. Every script there was read by a maintainer before it was listed. That is a review, not a guarantee: a script runs as you, so open it and read it before you attach it.
 
-- Example-WallpaperEnginePause.ps1 pauses and mutes Wallpaper Engine while you play and resumes it afterwards. It needs no Script Arguments.
-- Example-CloseBackgroundApps.ps1 closes the background apps named in Script Arguments, such as OneDrive ms-teams Dropbox, and reopens the ones it closed after the game.
-- Example-StartCompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, and closes only the ones it started. A program you already had open is left alone.
-- Example-OBSReplayBuffer.ps1 starts OBS in the tray with the replay buffer running and closes it after the game. An OBS you opened yourself is never touched. Script Arguments can name an OBS profile.
-- Example-SaveBackup.ps1 zips the save folder named in Script Arguments, such as "%APPDATA%\EldenRing", before and after you play, and keeps the newest ten backups.
-
-A script doesn't have to be long. This batch file is a complete pre-launch script that closes Discord:
-
-- @echo off
-- taskkill /im Discord.exe /f
-
-## Optional: reading the game info
-
-Every script works as-is; nothing here is required. If one script should behave differently per game, TrayTrigger passes these details, which the script is free to ignore.
-
-- Arguments, in order: phase (prelaunch or postexit), game name, game exe path, game ID, playtime in minutes. In a batch file those are %1 to %5; in PowerShell, $args[0] to $args[4]. Use %~2 to strip the quotes around a name with spaces. Playtime is empty on pre-launch, so the position never shifts between phases, and is the minute count on post-exit (for every tracked launch type, including Steam).
-- Environment variables: TRAYTRIGGER_PHASE, TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_ID, TRAYTRIGGER_GAME_EXE, and after exit TRAYTRIGGER_PLAYTIME_MINUTES (minutes the game actually ran, for every tracked launch type including Steam).
-
-> Environment variables are not set when running as Administrator, because Windows cannot pass a custom environment through a UAC launch. Elevated scripts should read the arguments instead; the game ID and playtime are passed as arguments 4 and 5 for exactly this reason.
-
-> For .bat/.cmd scripts, percent signs are removed from the game name, executable path and game ID arguments (%2, %3, %4) because cmd.exe would otherwise expand something like "%TEMP%" before your script sees it. The exact values are always available in TRAYTRIGGER_GAME_NAME, TRAYTRIGGER_GAME_EXE and TRAYTRIGGER_GAME_ID. A .bat or .cmd script whose own path contains a % sign isn't run, for the same reason.
-
-> For .ps1 scripts, leading dashes are removed from the game name argument, because PowerShell would read "-Name" as a parameter rather than a value. The exact name is in TRAYTRIGGER_GAME_NAME.
-
-> Batch gotcha: never put the playtime argument directly before a redirect. cmd reads `echo %~5> log.txt` as a handle redirect when playtime is a single digit and writes nothing. Add a space or brackets: `echo [%~5] > log.txt`.
+"Browse community scripts" on the scripts card (in Settings and in Edit Game) opens the catalog in your browser. To use one, download its folder into your scripts folder and browse to it in Edit Game. To share yours, open a pull request on the catalog repository; its CONTRIBUTING file has the checklist.
 
 ## Troubleshooting
 

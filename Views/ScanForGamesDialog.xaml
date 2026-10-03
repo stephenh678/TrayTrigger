@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TrayTrigger.ViewModels"
+        xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="New Games Found"
         Height="580" Width="680"
@@ -127,6 +128,8 @@
                        Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
                        VerticalAlignment="Center" DockPanel.Dock="Left"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                <Button Style="{StaticResource HelpLinkButton}" Content="How scanning works" VerticalAlignment="Center" Margin="0,0,14,0"
+                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
                 <Button Content="_Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource ModernGhostButton}" Margin="0,0,8,0"/>
                 <!-- "Add", not "Install": this adds library entries, it installs nothing. -->

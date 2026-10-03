@@ -35,7 +35,7 @@
 
                 <!-- Title & Version Row -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="Update Available!" FontSize="15" FontWeight="SemiBold" 
+                    <TextBlock Text="Update Available" FontSize="15" FontWeight="SemiBold" 
                                Foreground="{StaticResource BrushTextPrimary}"/>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">

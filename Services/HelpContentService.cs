@@ -78,7 +78,8 @@ public static class HelpContentService
         ("traymenu", "Tray Menu"),
         ("tools", "Tools"),
         ("scripts", "Game Scripts"),
-        ("library", "Library & Artwork"),
+        ("library", "Library"),
+        ("general", "General"),
         ("updates", "Updates"),
         ("troubleshooting", "Troubleshooting"),
     };

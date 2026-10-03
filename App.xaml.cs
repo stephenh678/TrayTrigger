@@ -90,6 +90,9 @@ public partial class App : Application
 
         LoggingService.EnsureLogFileExists();
         _storageService = new StorageService();
+        // Started by RestartApplication: the TrayTrigger that started this one still holds the
+        // single-instance mutex, and is still writing its settings on the way out.
+        WaitForPreviousInstanceToExit(e.Args);
         AppSettings startupSettings;
         try
         {
@@ -221,6 +224,15 @@ public partial class App : Application
             {
                 Log($"Mutex error: {ex}");
             }
+
+            // A restore unpacked by the last run goes in place now: this is the only instance, and
+            // nothing has read the library yet. The settings read above were the old ones.
+            if (BackupService.HasPendingRestore(_storageService.BaseDirectory))
+            {
+                _restoreResult = new BackupService(_storageService).ApplyPendingRestore();
+                startupSettings = _storageService.LoadSettings();
+                LoggingService.Initialize(startupSettings.VerboseLoggingEnabled);
+            }
         }
 
         // Setup background listener for wake-up events
@@ -297,6 +309,12 @@ public partial class App : Application
             _ = Task.Run(() => scriptLibrary.EnsureInstalled());
         }
         _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService);
+        // A game left frozen by Suspend when TrayTrigger last stopped without exiting has nothing
+        // else that will ever resume it. Same screenshot-run exception as the profile recovery.
+        if (!isScreenshot)
+        {
+            _launcherService.ResumeLeftSuspended();
+        }
         _hotkeyManager = new HotkeyManager();
         _startupManager = new StartupManager();
         _startupManager.ReconcilePath();
@@ -355,6 +373,7 @@ public partial class App : Application
         // Global Hotkey Trigger
         _hotkeyManager.ManageHotkeyTriggered += OnManageHotkeyTriggered;
         _hotkeyManager.TrayMenuHotkeyTriggered += OnTrayMenuHotkeyTriggered;
+        _hotkeyManager.SuspendHotkeyTriggered += OnSuspendHotkeyTriggered;
 
         // Auto-refresh tray menu when games change
         _mainViewModel.LibraryUpdated += UpdateTrayContextMenu;
@@ -364,6 +383,7 @@ public partial class App : Application
         // Steam" - for as long as the game runs, because nothing else re-reads GameStarted.
         _launcherService.SessionGameStarted += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
         _launcherService.SessionEnded += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
+        _launcherService.SessionSuspendChanged += _ => { UpdateTrayContextMenu(); UpdateTrayToolTip(); };
 
         // The launch popup: what a game hotkey or tray-menu launch shows while the window is out of
         // sight. The launcher raises its events on background threads.
@@ -436,6 +456,7 @@ public partial class App : Application
             LoggingService.Info("App", $"Windows session ending ({args.ReasonSessionEnding}); restoring active Performance Profile state.");
             try
             {
+                _launcherService?.ResumeAllOnShutdown();
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
                 _launcherService?.RecordPlaytimeOnShutdown();
@@ -453,6 +474,7 @@ public partial class App : Application
             }
         };
         _mainViewModel.RequestExitApplication += ExitApplication;
+        _mainViewModel.SettingsVM.RequestRestart += RestartApplication;
         _mainViewModel.RequestTrayNotification += (title, message) => _trayIcon?.ShowNotification(title, message);
 
         // Setup Taskbar Tray Icon
@@ -476,6 +498,13 @@ public partial class App : Application
         {
             Log("Showing MainWindow...");
             ShowMainWindow();
+        }
+
+        if (_restoreResult != null)
+        {
+            var result = _restoreResult;
+            _restoreResult = null;
+            Dispatcher.BeginInvoke(() => ShowRestoreResult(result), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         Log("OnStartup completed successfully.");
@@ -615,9 +644,11 @@ public partial class App : Application
         else if (sessions.Count == 1)
         {
             var session = sessions[0];
-            text = session.GameStarted
-                ? $"Playing {session.Game.Name} · {FormatPlayingElapsed(now.ToUniversalTime() - session.StartedAtUtc)}"
-                : $"Starting {session.Game.Name} via {session.PlatformLabel}";
+            text = !session.GameStarted
+                ? $"Starting {session.Game.Name} via {session.PlatformLabel}"
+                : session.IsSuspended
+                    ? $"Suspended: {session.Game.Name} · {FormatPlayingElapsed(session.PlayedTime(now.ToUniversalTime()))}"
+                    : $"Playing {session.Game.Name} · {FormatPlayingElapsed(session.PlayedTime(now.ToUniversalTime()))}";
         }
         else
         {
@@ -677,9 +708,11 @@ public partial class App : Application
                     foreach (var session in activeSessions)
                     {
                         var card = games.FirstOrDefault(g => g.Id == session.GameId);
-                        string elapsed = session.GameStarted
-                            ? $"{Math.Max(0, (DateTime.UtcNow - session.StartedAtUtc).TotalMinutes):0}m"
-                            : $"starting via {session.PlatformLabel}";
+                        string elapsed = !session.GameStarted
+                            ? $"starting via {session.PlatformLabel}"
+                            : session.IsSuspended
+                                ? "suspended"
+                                : $"{session.PlayedTime(DateTime.UtcNow).TotalMinutes:0}m";
                         var sessionItem = card != null
                             ? CreateGameMenuItem(card)
                             : new MenuItem { Header = session.Game.Name, Style = TrayItemStyle };
@@ -690,6 +723,20 @@ public partial class App : Application
 
                         string gameId = session.GameId;
                         string gameName = session.Game.Name;
+                        // Suspend / Resume first: the tray is the way back to a suspended game, which
+                        // can't be switched to while it's frozen.
+                        if (session.IsSuspended)
+                        {
+                            var resume = CreateNavMenuItem("Resume Game", "", () => ResumeFromTray(gameId), (Brush)FindResource("BrushAccentHover"));
+                            resume.ToolTip = "Unfreezes the game where it stopped, unmutes it and brings it back to the front. Its playtime clock starts again.";
+                            sessionItem.Items.Add(resume);
+                        }
+                        else if (session.GameStarted)
+                        {
+                            var suspend = CreateNavMenuItem("Suspend Game", "", () => SuspendFromTray(gameId));
+                            suspend.ToolTip = "Minimizes the game, freezes it where it is and mutes it, and stops its playtime clock until you resume it. Online games disconnect; games with anti-cheat are never suspended.";
+                            sessionItem.Items.Add(suspend);
+                        }
                         var closeGame = CreateNavMenuItem("Close Game", "", () => CloseGameFromTray(gameId, gameName));
                         closeGame.ToolTip = "Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.";
                         sessionItem.Items.Add(closeGame);
@@ -1319,6 +1366,8 @@ public partial class App : Application
 
         try
         {
+            // First: a game left frozen would stay frozen, with no tray icon left to resume it.
+            _launcherService?.ResumeAllOnShutdown();
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
             _launcherService?.RecordPlaytimeOnShutdown();

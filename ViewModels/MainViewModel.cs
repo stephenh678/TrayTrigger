@@ -210,6 +210,11 @@ public class MainViewModel : ViewModelBase
             onProfileTweaksReset: () => SystemVM?.RefreshProfileTweakToggles()
         );
 
+        // Backup & Restore: a backup is taken from disk, so the library is written first (tools are
+        // written on every change already), and a restore waits for no game to be running.
+        SettingsVM.FlushData = () => Library.SaveGamesOnly("BackUp", "SettingsViewModel");
+        SettingsVM.RunningGameName = () => _launcherService.GetActiveSessions().FirstOrDefault()?.Game.Name;
+
         Library.RequestEditGameDialog += card => RequestEditGameDialog?.Invoke(card);
         Library.RequestQuickRename += card => RequestQuickRename?.Invoke(card);
         Library.RequestQuickCategory += card => RequestQuickCategory?.Invoke(card);
@@ -309,7 +314,8 @@ public class MainViewModel : ViewModelBase
             try
             {
                 string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
-                Process.Start(new ProcessStartInfo($"https://github.com/{repo}/issues") { UseShellExecute = true });
+                // The template chooser, not the issue list: it is where a report starts.
+                Process.Start(new ProcessStartInfo($"https://github.com/{repo}/issues/new/choose") { UseShellExecute = true });
             }
             catch (Exception ex)
             {
@@ -357,6 +363,7 @@ public class MainViewModel : ViewModelBase
         _launcherService.GameUpdated += Library.OnGameUpdatedFromLauncher;
         _launcherService.SessionStarted += Library.OnSessionStarted;
         _launcherService.SessionEnded += Library.OnSessionEnded;
+        _launcherService.SessionSuspendChanged += Library.OnSessionSuspendChanged;
         // A launch that needs the user after it was dispatched (Battle.net couldn't find the game's
         // launch code, or the game never started) - raised on a background thread.
         // With the window out of sight the launch popup carries it; otherwise the tray does.
@@ -742,14 +749,17 @@ public class MainViewModel : ViewModelBase
     public bool BatchAllRunAsAdmin => Library.BatchAllRunAsAdmin;
     public bool BatchAllCloseLauncher => Library.BatchAllCloseLauncher;
     public bool BatchCpuAffinityIsDefault => Library.BatchCpuAffinityIsDefault;
+    public bool BatchCpuAffinityIsAuto => Library.BatchCpuAffinityIsAuto;
     public bool BatchCpuAffinityIsPerformanceCores => Library.BatchCpuAffinityIsPerformanceCores;
+    public bool BatchCpuAffinityIsVCache => Library.BatchCpuAffinityIsVCache;
+    public bool BatchCpuAffinityIsFrequency => Library.BatchCpuAffinityIsFrequency;
+    public bool BatchCpuAffinityIsOneCcd => Library.BatchCpuAffinityIsOneCcd;
 
     /// <summary>
-    /// Whether this machine has a hybrid (P-core/E-core) CPU. The core-pinning menu items are
-    /// hidden elsewhere: on a uniform CPU "Performance Cores Only" is a documented no-op, and an
-    /// option that cannot do anything is worse than no option.
+    /// Which CPU Cores items the batch menu shows on this PC. The submenu is hidden on a CPU with
+    /// nothing to choose, where every item would be a no-op. See <see cref="CpuCoreMenu"/>.
     /// </summary>
-    public bool IsHybridCpu => Services.CpuTopologyService.GetTopology().IsHybrid;
+    public CpuCoreMenu CpuCores => CpuCoreMenu.ForThisPc;
 
     public void LoadLibrary() => Library.LoadLibrary();
     public GameCardViewModel CreateCardViewModel(GameEntry game, bool deferHeavyInit = false) => Library.CreateCardViewModel(game, deferHeavyInit);
@@ -917,7 +927,8 @@ public class MainViewModel : ViewModelBase
             _settings.GlobalManageHotkey,
             toolsOn ? Library.HotkeyBindings.Concat(Tools.HotkeyBindings) : Library.HotkeyBindings,
             reserved: toolsOn ? null : Tools.HotkeyBindings,
-            trayMenuHotkeyStr: _settings.TrayMenuHotkey);
+            trayMenuHotkeyStr: _settings.TrayMenuHotkey,
+            suspendHotkeyStr: _settings.SuspendGameHotkey);
 
         var failedTools = failed.Where(b => b.Kind == HotkeyOwnerKind.Tool).ToList();
         string? warning = failedTools.Count switch

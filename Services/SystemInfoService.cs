@@ -192,8 +192,11 @@ public partial class SystemInfoService
                 if (count > 0)
                 {
                     cpu.LogicalProcessors = count;
-                    // On consumer desktop gaming CPUs, SMT typically doubles threads
-                    cpu.PhysicalCores = Math.Max(1, count > 4 && count % 2 == 0 ? count / 2 : count);
+                    // The cores Windows itself lists. Halving the thread count is only a fallback for
+                    // when that can't be read: it is wrong for a hybrid CPU (a 12900K's 24 threads
+                    // are 16 cores) and for one without SMT (a 9700K's 8 threads are 8 cores).
+                    int listed = CpuTopologyService.GetTopology().PhysicalCoreCount;
+                    cpu.PhysicalCores = listed > 0 ? listed : Math.Max(1, count > 4 && count % 2 == 0 ? count / 2 : count);
                 }
             }
         }
