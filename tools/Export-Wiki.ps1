@@ -186,6 +186,8 @@ $homePage.Add("**[Download the latest release](https://github.com/$Repo/releases
 $homePage.Add('')
 $homePage.Add('This wiki is the reference for every setting, tweak and profile option in the app. Each page is the same text the app shows when you click **Learn more**, so what you read here is exactly what the app does.')
 $homePage.Add('')
+$homePage.Add('**New in 1.5.0: [Activity & History](Activity-&-History).** A bell at the bottom of the sidebar shows the games you played, every change to a profile or tweak, and anything that didn''t go to plan, with a one-click fix for a setting a profile couldn''t put back.')
+$homePage.Add('')
 foreach ($g in $groups) {
     $homePage.Add("## $($g.Label)")
     $homePage.Add('')
