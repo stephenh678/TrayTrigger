@@ -293,7 +293,7 @@
       <div class="tile"><div class="step">1 · Before launch</div><p>If enabled, records and applies the game's <strong>Performance Profile</strong>. Runs your <strong>pre-launch script</strong> if you have configured one.</p></div>
       <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears.</p></div>
       <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past. <strong>Suspend</strong> a game with Ctrl+Alt+P for a cutscene you can't pause and resume it the same way, or use <strong>Close Game</strong> from the tray.</p></div>
-      <div class="tile"><div class="step">4 · On exit</div><p>Restores <strong>per-game profile settings</strong> to their previous state. Runs your configured post-exit script and closes the launcher if selected. After a crash, the saved profile state is restored on next start.</p></div>
+      <div class="tile"><div class="step">4 · On exit</div><p>Restores <strong>per-game profile settings</strong> to their previous state, checks each one took, and notes the session in <strong>Activity &amp; History</strong>. Runs your configured post-exit script and closes the launcher if selected. After a crash, the saved profile state is restored on next start.</p></div>
     </div>
   </div>
 </section>
@@ -391,6 +391,20 @@
         <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">Explore the tweaks, trade-offs, and restore behavior →</a></p>
       </div>
       <div class="shot"><img src="assets/system-tweaks.png" alt="Performance Tweaks page: recommended optimizations active, each with its real Windows state and a Revert to Default button"></div>
+    </div>
+    <div class="pillar" id="activity">
+      <div>
+        <div class="kicker">Activity &amp; History · New in 1.5.0</div>
+        <h2>Know what changed, and what didn't go to plan</h2>
+        <p class="muted">A bell at the bottom of the sidebar opens a plain-language record of your sessions, kept for 90 days. Nothing interrupts a game: one notification after your last game sums up anything that went wrong.</p>
+        <ul>
+          <li><strong>Every session and change.</strong> The games you played and for how long, the profile put back afterwards, games you added, and every change to a profile, CPU Cores, DLSS Override or Windows tweak.</li>
+          <li><strong>Problems stand out.</strong> Each row has a badge: CRITICAL when your PC was left changed, PROBLEM when a script or tool didn't do what you asked, then CHANGE and ACTIVITY. A repeat is one row with a count.</li>
+          <li><strong>One click to put it right.</strong> A setting a profile couldn't put back waits under Needs Attention with <strong>Restore Previous</strong>, and is marked FIXED once it's back. A red dot on the bell and a line in the tray say when something needs you.</li>
+        </ul>
+        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Activity-%26-History">How Activity &amp; History works →</a></p>
+      </div>
+      <div class="shot"><img loading="lazy" src="assets/activity-history.png" width="1168" height="884" alt="Activity and History page: a power plan that wasn't put back under Needs Attention with a Restore Previous button, and recent entries badged Critical, Problem, Change and Activity, one marked Fixed"></div>
     </div>
   </div>
 </section>
