@@ -304,8 +304,8 @@ public class SettingsViewModel : ViewModelBase
         TogglePosterDetailsOnHoverCommand = new RelayCommand(() => PosterDetailsOnHover = !PosterDetailsOnHover);
         PosterDetails = new PosterDetailsViewModel(() => _settings.PosterDetailsAtRest, () => AutoSaveSettings(nameof(PosterDetails)));
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
-        OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://www.steamgriddb.com/profile/preferences"));
-        OpenRawgSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://rawg.io/apidocs"));
+        OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute(SteamGridDbService.KeyPageUrl));
+        OpenRawgSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute(RawgService.KeyPageUrl));
         ClearMetadataCacheCommand = new RelayCommand(() =>
         {
             SteamMetadataService.ClearCache();
@@ -337,21 +337,15 @@ public class SettingsViewModel : ViewModelBase
             if (param is IgnoredGamePathRowViewModel row) RemoveIgnoredGamePath(row);
         });
         RebuildIgnoredGamePathRows();
-        RefreshAllPostersCommand = new AsyncRelayCommand(async () =>
-        {
-            if (_onRequestRefreshAllPosters == null || IsRefreshingAllPosters)
-                return;
+        RefreshAllPostersCommand = new AsyncRelayCommand(RefreshAllPostersAsync);
 
-            IsRefreshingAllPosters = true;
-            try
-            {
-                await _onRequestRefreshAllPosters(new Progress<string>(msg => PosterRefreshStatus = msg));
-            }
-            finally
-            {
-                IsRefreshingAllPosters = false;
-            }
-        });
+        SteamGridDbKeyCheck = new ApiKeyCheckViewModel("SteamGridDB", () => _settings.SteamGridDbApiKey, SteamGridDbService.CheckApiKeyAsync);
+        SteamGridDbKeyCheck.KeyAccepted += OnSteamGridDbKeyAccepted;
+        RawgKeyCheck = new ApiKeyCheckViewModel("RAWG", () => _settings.RawgApiKey, RawgService.CheckApiKeyAsync);
+        RawgKeyCheck.KeyAccepted += OnRawgKeyAccepted;
+        // A key already saved and switched on has done its catching up; only a new one needs to.
+        _steamGridDbKeyCaughtUp = SteamGridDbApiKeyOrNull;
+        _rawgKeyCaughtUp = RawgApiKeyOrNull;
         CheckUpdatesInSettingsCommand = new AsyncRelayCommand(async () =>
         {
             if (_onCheckForUpdates != null)
@@ -970,7 +964,7 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    // --- Game Titles & Metadata Detection ---
+    // --- Game Titles & Categories, Art & Info Sources ---
 
     public bool SearchOfficialTitleOnline
     {
@@ -1141,6 +1135,9 @@ public class SettingsViewModel : ViewModelBase
                 _settings.UseSteamGridDbArt = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
+                // Switched on with a key already there: check it, and catch up once it works.
+                if (value)
+                    SteamGridDbKeyCheck.ScheduleCheck();
             }
         }
     }
@@ -1150,13 +1147,25 @@ public class SettingsViewModel : ViewModelBase
         get => _settings.SteamGridDbApiKey;
         set
         {
+            // Trimmed: a key copied off a web page often brings a space or line break with it,
+            // which the service then rejects as a wrong key.
+            value = value?.Trim() ?? string.Empty;
             if (_settings.SteamGridDbApiKey != value)
             {
-                _settings.SteamGridDbApiKey = value ?? string.Empty;
+                bool wasBlank = string.IsNullOrEmpty(_settings.SteamGridDbApiKey);
+                _settings.SteamGridDbApiKey = value;
                 // See the note in RawgApiKey: an explicit edit wins over a preserved ciphertext.
                 _storageService.NoteApiKeyEdited(StorageService.ApiKeyField.SteamGridDb);
                 OnPropertyChanged();
+                // Pasting a key is the clearest way to say "use it": tick the switch with it, so a
+                // key isn't left sitting unused behind an unticked box.
+                if (wasBlank && value.Length > 0 && !_settings.UseSteamGridDbArt)
+                {
+                    _settings.UseSteamGridDbArt = true;
+                    OnPropertyChanged(nameof(UseSteamGridDbArt));
+                }
                 AutoSaveSettings();
+                SteamGridDbKeyCheck.ScheduleCheck();
             }
         }
     }
@@ -1168,12 +1177,11 @@ public class SettingsViewModel : ViewModelBase
         {
             if (_settings.UseRawgMetadata != value)
             {
-                bool wasUsable = RawgApiKeyOrNull != null;
                 _settings.UseRawgMetadata = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
-                if (!wasUsable && RawgApiKeyOrNull != null)
-                    RequestRawgEnrichment();
+                if (value)
+                    RawgKeyCheck.ScheduleCheck();
             }
         }
     }
@@ -1183,27 +1191,84 @@ public class SettingsViewModel : ViewModelBase
         get => _settings.RawgApiKey;
         set
         {
+            value = value?.Trim() ?? string.Empty;
             if (_settings.RawgApiKey != value)
             {
-                bool wasUsable = RawgApiKeyOrNull != null;
-                _settings.RawgApiKey = value ?? string.Empty;
+                bool wasBlank = string.IsNullOrEmpty(_settings.RawgApiKey);
+                _settings.RawgApiKey = value;
                 // The user owns the field now: if an undecryptable value was being preserved for
                 // it, this replaces it - including a deliberate clear.
                 _storageService.NoteApiKeyEdited(StorageService.ApiKeyField.Rawg);
                 OnPropertyChanged();
+                if (wasBlank && value.Length > 0 && !_settings.UseRawgMetadata)
+                {
+                    _settings.UseRawgMetadata = true;
+                    OnPropertyChanged(nameof(UseRawgMetadata));
+                }
                 AutoSaveSettings();
-                if (!wasUsable && RawgApiKeyOrNull != null)
-                    RequestRawgEnrichment();
+                RawgKeyCheck.ScheduleCheck();
             }
         }
     }
 
-    /// <summary>RAWG just became usable (toggled on with a key, or a key typed while on): give
-    /// the still-uncategorised non-Steam games a pass now rather than after the retry interval.</summary>
-    private void RequestRawgEnrichment()
+    /// <summary>Whether the SteamGridDB key works - the line under its key box.</summary>
+    public ApiKeyCheckViewModel SteamGridDbKeyCheck { get; }
+
+    /// <summary>Whether the RAWG key works - the line under its key box.</summary>
+    public ApiKeyCheckViewModel RawgKeyCheck { get; }
+
+    // The last key each source caught the library up with, so checking the same key again
+    // doesn't start another pass over every game.
+    private string? _steamGridDbKeyCaughtUp;
+    private string? _rawgKeyCaughtUp;
+
+    /// <summary>
+    /// A SteamGridDB key that works, and is switched on: give the games already in the library the
+    /// posters it can find, as Refresh All Game Posters would. Without this a key added after the
+    /// first scan changed nothing until that button was found. Runs on a confirmed key rather than
+    /// on the edit, so a key typed by hand doesn't start a pass on its first character.
+    /// </summary>
+    private void OnSteamGridDbKeyAccepted(string key)
     {
-        if (_settings.AutoCategorizeFromSteam)
-            _ = _onRequestEnrichLibrary?.Invoke(true);
+        if (SteamGridDbApiKeyOrNull != key || _steamGridDbKeyCaughtUp == key)
+            return;
+        _steamGridDbKeyCaughtUp = key;
+        if (!_settings.UseVerticalPosterArt)
+            return;
+
+        LoggingService.Info("Settings", "SteamGridDB key confirmed; filling in posters for the library.");
+        _ = RefreshAllPostersAsync();
+    }
+
+    /// <summary>
+    /// A RAWG key that works, and is switched on: match the games Steam doesn't list now, rather
+    /// than after the retry interval. Their categories fill in when auto-categorize is on, and
+    /// either way RAWG's title for each becomes the SteamGridDB poster search.
+    /// </summary>
+    private void OnRawgKeyAccepted(string key)
+    {
+        if (RawgApiKeyOrNull != key || _rawgKeyCaughtUp == key)
+            return;
+        _rawgKeyCaughtUp = key;
+
+        LoggingService.Info("Settings", "RAWG key confirmed; matching the library's non-Steam games.");
+        _ = _onRequestEnrichLibrary?.Invoke(true);
+    }
+
+    private async Task RefreshAllPostersAsync()
+    {
+        if (_onRequestRefreshAllPosters == null || IsRefreshingAllPosters)
+            return;
+
+        IsRefreshingAllPosters = true;
+        try
+        {
+            await _onRequestRefreshAllPosters(new Progress<string>(msg => PosterRefreshStatus = msg));
+        }
+        finally
+        {
+            IsRefreshingAllPosters = false;
+        }
     }
 
     /// <summary>The RAWG key when the feature is enabled and a key is set, else null - the details
@@ -1961,7 +2026,7 @@ public class SettingsViewModel : ViewModelBase
                 owner,
                 "Reset Settings",
                 "Are you sure you want to reset all settings to their recommended default values?",
-                "Your games, tools, scripts, artwork, API keys and scan locations are kept. Tools is switched off until you enable it again.",
+                "Your games, tools, scripts, artwork, API keys and scan locations are kept.",
                 confirmText: "Reset to Defaults",
                 cancelText: "Cancel");
 
@@ -1995,6 +2060,9 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
             nameof(AppSettings.RawgApiKey),
+            // With the keys: a kept key that reset switched off isn't kept in any way that matters.
+            nameof(AppSettings.UseSteamGridDbArt),
+            nameof(AppSettings.UseRawgMetadata),
             // Manually-curated, not a "preference" in the dialog's sense - same bucket as the
             // library/categories/artwork the confirmation text already promises to leave alone.
             nameof(AppSettings.ScanLocations),
@@ -2022,6 +2090,7 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.HasSeenWelcomePrompt),
             nameof(AppSettings.HasSeenMetadataSourcesReminder),
             nameof(AppSettings.HasSeenTrayHideNotice),
+            nameof(AppSettings.HasTurnedOnToolsFor148),
             // Describes the machine (what a tweak found before it was applied), not a preference.
             nameof(AppSettings.TweakPriorState),
         };

@@ -32,6 +32,7 @@ public partial class GameDetailsDialog : Window
         {
             WindowThemeService.CenterOverOwner(this);
             Activate();
+            _ = _viewModel.LoadInstallDriveAsync();
         };
     }
 

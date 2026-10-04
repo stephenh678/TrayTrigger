@@ -315,6 +315,34 @@ public class GameDetailsViewModel : ViewModelBase
     public bool HasPublishers => !string.IsNullOrWhiteSpace(Publishers);
     public string ReleaseDate => IsRawgActive ? RawgService.FormatReleaseDate(_rawgDetails?.ReleaseDate) : (_details?.ReleaseDate ?? string.Empty);
     public bool HasReleaseDate => !string.IsNullOrWhiteSpace(ReleaseDate);
+
+    private string _installDrive = "";
+    /// <summary>"E: · NVMe SSD": the drive the game is installed on and its type. Empty until read,
+    /// and for a game with no local folder.</summary>
+    public string InstallDrive
+    {
+        get => _installDrive;
+        private set
+        {
+            if (SetProperty(ref _installDrive, value))
+                OnPropertyChanged(nameof(HasInstallDrive));
+        }
+    }
+    public bool HasInstallDrive => InstallDrive.Length > 0;
+
+    /// <summary>Reads the drive off the UI thread: the drive types come from WMI the first time.</summary>
+    public async Task LoadInstallDriveAsync()
+    {
+        try
+        {
+            var game = Game;
+            InstallDrive = await Task.Run(() => SystemInfoService.GameDriveDisplay(game)) ?? "";
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("GameDetails", $"Couldn't read the install drive of '{Game.Name}': {ex.Message}");
+        }
+    }
     public string ShortDescription
     {
         get

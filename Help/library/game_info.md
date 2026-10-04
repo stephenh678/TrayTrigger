@@ -10,7 +10,7 @@ Used for any game linked to a Steam App ID. Steam is the richer source: it alone
 
 RAWG (rawg.io) is a community games database that covers titles Steam doesn't list: Game Pass exclusives, Epic exclusives, Battle.net games such as Hearthstone and StarCraft II, Roblox, Fortnite, console ports and many indies. When enabled, it supplies developer, publisher, release date, synopsis, genres, play modes, Metacritic, an ESRB rating, RAWG's own community rating, and an "Open on RAWG" button to the game's rawg.io page.
 
-- Turn it on in Settings > Library & Art with "Use RAWG for non-Steam game info" and paste a free API key from rawg.io/apidocs.
+- Paste a free API key into the RAWG box in Settings > Library & Art, or in the Welcome when TrayTrigger first opens. Pasting it switches "Use RAWG for non-Steam game info" on. See SteamGridDB and RAWG keys.
 - Until RAWG is enabled, the details window has no source switch and every game shows Steam.
 
 ## The Steam | RAWG switch
@@ -24,7 +24,7 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 
 ## What RAWG adds to the library
 
-- Category. When "Automatically categorize games from store genres" is on, a game Steam cannot categorize gets RAWG's main genre instead: one with no Steam listing, one whose Steam page has been delisted, or one whose Steam page lists no genre. This only fills a game that is still Uncategorized; a category you set yourself is never overwritten. Enabling RAWG runs this pass over the library straight away.
+- Category. When "Automatically categorize games from store genres" is on, a game Steam cannot categorize gets RAWG's main genre instead: one with no Steam listing, one whose Steam page has been delisted, or one whose Steam page lists no genre. This only fills a game that is still Uncategorized; a category you set yourself is never overwritten. A new RAWG key runs this pass over the library as soon as it checks out.
 - Background enrichment. Games with no Steam App ID are matched to RAWG in the background, the same pass that matches Steam games, so categories fill in without opening each game. Right-click > Refresh metadata re-fetches a game's RAWG entry.
 - Poster art. RAWG's official title is used as the SteamGridDB search term for games with no Steam poster, which finds art the scanner's folder name often misses.
 - Ambient art. While RAWG is selected, its screenshot is the blurred backdrop behind the poster, and stands in for a game that has no poster at all. It is never saved as the poster.

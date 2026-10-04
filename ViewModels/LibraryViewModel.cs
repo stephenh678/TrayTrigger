@@ -676,6 +676,10 @@ public class LibraryViewModel : ViewModelBase
     public ICommand BatchRunAsAdminCommand => _cmdBatchRunAsAdminCommand ??= new RelayCommand(BatchToggleRunAsAdmin);
     private ICommand? _cmdBatchCloseLauncherCommand;
     public ICommand BatchCloseLauncherCommand => _cmdBatchCloseLauncherCommand ??= new RelayCommand(BatchToggleCloseLauncher);
+    private ICommand? _cmdBatchDlssOverrideCommand;
+    /// <summary>The batch menu's DLSS Override; refuses a second click while a batch is running.</summary>
+    public ICommand BatchDlssOverrideCommand => _cmdBatchDlssOverrideCommand ??= new RelayCommand(
+        () => _ = BatchToggleDlssOverrideAsync(), () => !_isBatchDlssRunning);
     private ICommand? _cmdBatchSetCpuAffinityCommand;
     /// <summary>Parameter: a <see cref="CpuAffinityMode"/> (from the batch menu's radio items).</summary>
     public ICommand BatchSetCpuAffinityCommand => _cmdBatchSetCpuAffinityCommand ??= new RelayCommand(p =>
@@ -721,6 +725,8 @@ public class LibraryViewModel : ViewModelBase
     public bool BatchAllRunAsAdmin => HasSelection && SelectedCards.All(c => c.Game.RunAsAdmin);
     /// <summary>Every selected game already closes its launcher on exit.</summary>
     public bool BatchAllCloseLauncher => HasSelection && SelectedCards.All(c => c.Game.CloseLauncherOnExit);
+    /// <summary>Every selected game already has the DLSS Override on - the batch menu's check.</summary>
+    public bool BatchAllDlssOverrideOn => HasSelection && SelectedCards.All(c => c.DlssOverrideOn);
 
     private void NotifySelectionChanged()
     {
@@ -745,6 +751,7 @@ public class LibraryViewModel : ViewModelBase
         OnPropertyChanged(nameof(BatchCpuAffinityIsOneCcd));
         OnPropertyChanged(nameof(BatchAllRunAsAdmin));
         OnPropertyChanged(nameof(BatchAllCloseLauncher));
+        OnPropertyChanged(nameof(BatchAllDlssOverrideOn));
     }
 
     /// <summary>Same effect as picking the tier in Edit Game for each selected game. A game that
@@ -2047,15 +2054,37 @@ public class LibraryViewModel : ViewModelBase
     private async Task ToggleDlssOverrideAsync(GameCardViewModel card)
     {
         if (card.IsDlssOverrideBusy) return;
-        var game = card.Game;
         bool turningOn = !card.DlssOverrideOn;
+        StatusMessage = turningOn
+            ? $"Looking for DLSS in {card.Name}..."
+            : $"Restoring NVIDIA's settings for {card.Name}...";
+
+        var (_, line) = await SetDlssOverrideAsync(card, turningOn).ConfigureAwait(true);
+        StatusMessage = line;
+    }
+
+    /// <summary>What switching one game's DLSS Override came to, for the batch summary.</summary>
+    internal enum DlssChange
+    {
+        /// <summary>The game ended up in the state asked for.</summary>
+        Done,
+        /// <summary>Turning on, and the game ships no DLSS.</summary>
+        NotAvailable,
+        /// <summary>The driver refused, or something threw: the game is not in the state asked for.</summary>
+        Failed
+    }
+
+    /// <summary>
+    /// Switches one game's override and returns what happened, with the status-bar line the
+    /// single-game menu shows for it. Shared by that menu and the batch menu, so a selection gets
+    /// exactly what each game would have got on its own.
+    /// </summary>
+    private async Task<(DlssChange Outcome, string Line)> SetDlssOverrideAsync(GameCardViewModel card, bool turnOn)
+    {
+        var game = card.Game;
         card.IsDlssOverrideBusy = true;
         try
         {
-            StatusMessage = turningOn
-                ? $"Looking for DLSS in {card.Name}..."
-                : $"Restoring NVIDIA's settings for {card.Name}...";
-
             // The live record list, mutated in place and saved through persist - exactly how the
             // Edit Game dialog hands it over, so both routes leave the same thing on disk.
             var dlss = new DlssCardViewModel(
@@ -2067,31 +2096,122 @@ public class LibraryViewModel : ViewModelBase
 
             // Most games ship no DLSS. Say so rather than leaving a tick that quietly refuses:
             // the same sentence the card in Edit Game shows, so the two never disagree.
-            if (turningOn && !dlss.CanEnable)
-            {
-                StatusMessage = $"{card.Name}: {DlssCardViewModel.NotAvailableLine}";
-                return;
-            }
+            if (turnOn && !dlss.CanEnable)
+                return (DlssChange.NotAvailable, $"{card.Name}: {DlssCardViewModel.NotAvailableLine}");
 
-            await dlss.SetOverrideAsync(turningOn).ConfigureAwait(true);
+            await dlss.SetOverrideAsync(turnOn).ConfigureAwait(true);
 
             card.NotifyDlssOverrideChanged();
-            StatusMessage = dlss.Status is { Length: > 0 } problem
+            var outcome = card.DlssOverrideOn == turnOn ? DlssChange.Done : DlssChange.Failed;
+            string line = dlss.Status is { Length: > 0 } problem
                 ? $"{card.Name}: {problem}"
                 : card.DlssOverrideOn
                     ? $"DLSS Override is on for {card.Name}."
                     : $"DLSS Override is off for {card.Name}; NVIDIA's settings are back as they were.";
+            return (outcome, line);
         }
         catch (Exception ex)
         {
             LoggingService.Error("Dlss", $"Switching the DLSS Override for '{game.Name}' from the card menu failed: {ex.Message}", ex);
-            StatusMessage = $"{card.Name}: the DLSS Override could not be changed - see the log.";
+            return (DlssChange.Failed, $"{card.Name}: the DLSS Override could not be changed - see the log.");
         }
         finally
         {
             card.IsDlssOverrideBusy = false;
             card.NotifyDlssOverrideChanged();
         }
+    }
+
+    private bool _isBatchDlssRunning;
+
+    /// <summary>
+    /// The batch menu's DLSS Override. All-or-nothing like the other batch toggles: a mixed
+    /// selection turns it on for every game, and only a selection where every game already has it
+    /// turns it off - <see cref="BatchAllDlssOverrideOn"/> is the check mark, so what the click
+    /// will do is on screen first.
+    ///
+    /// <para>One game at a time, through the same <see cref="SetDlssOverrideAsync"/> the
+    /// single-game menu uses: turning it on searches each game's folder, and the status bar says
+    /// which game it is on and how far through it is, as the batch metadata refresh does. Games
+    /// already in the asked-for state are skipped, and so is a game that isn't installed when
+    /// turning on, since there is no folder to search. The closing line says what didn't change
+    /// and why: no DLSS in the game, not installed, or the driver refused.</para>
+    /// </summary>
+    public async Task BatchToggleDlssOverrideAsync()
+    {
+        var cards = SelectedCards;
+        if (cards.Count == 0 || _isBatchDlssRunning) return;
+
+        bool turnOn = !BatchAllDlssOverrideOn;
+        // A game being switched from its own menu right now is left to that.
+        var todo = cards.Where(c => c.DlssOverrideOn != turnOn && !c.IsDlssOverrideBusy).ToList();
+        var notInstalled = turnOn ? todo.Where(c => c.IsUnavailable).ToList() : new List<GameCardViewModel>();
+        todo = todo.Except(notInstalled).ToList();
+        int alreadyThere = cards.Count - todo.Count - notInstalled.Count;
+
+        _isBatchDlssRunning = true;
+        CommandManager.InvalidateRequerySuggested();
+        var noDlss = new List<string>();
+        var failed = new List<string>();
+        int changed = 0;
+        try
+        {
+            for (int i = 0; i < todo.Count; i++)
+            {
+                var card = todo[i];
+                StatusMessage = turnOn
+                    ? $"Turning on DLSS Override ({i + 1} of {todo.Count}): looking for DLSS in {card.Name}..."
+                    : $"Turning off DLSS Override ({i + 1} of {todo.Count}): restoring NVIDIA's settings for {card.Name}...";
+
+                var (outcome, line) = await SetDlssOverrideAsync(card, turnOn).ConfigureAwait(true);
+                switch (outcome)
+                {
+                    case DlssChange.Done: changed++; break;
+                    case DlssChange.NotAvailable: noDlss.Add(card.Name); break;
+                    default:
+                        failed.Add(card.Name);
+                        LoggingService.Warn("Dlss", $"Batch DLSS Override: {line}");
+                        break;
+                }
+            }
+        }
+        finally
+        {
+            _isBatchDlssRunning = false;
+            CommandManager.InvalidateRequerySuggested();
+            NotifySelectionChanged();
+        }
+
+        LoggingService.Info("Dlss", $"Batch DLSS Override {(turnOn ? "on" : "off")}: {changed} changed, {alreadyThere} already {(turnOn ? "on" : "off")}, {noDlss.Count} without DLSS, {notInstalled.Count} not installed, {failed.Count} failed.");
+        StatusMessage = BatchDlssSummary(turnOn, changed, alreadyThere, noDlss, notInstalled.Select(c => c.Name).ToList(), failed);
+    }
+
+    /// <summary>The status-bar line a batch DLSS Override ends on: what changed, then each reason
+    /// some games didn't, naming up to three of them.</summary>
+    internal static string BatchDlssSummary(bool turnOn, int changed, int alreadyThere,
+        IReadOnlyList<string> noDlss, IReadOnlyList<string> notInstalled, IReadOnlyList<string> failed)
+    {
+        static string Games(int n) => n == 1 ? "1 game" : $"{n} games";
+        static string Names(IReadOnlyList<string> names) => names.Count <= 3
+            ? string.Join(", ", names)
+            : $"{string.Join(", ", names.Take(3))} and {names.Count - 3} more";
+
+        var parts = new List<string>();
+        if (changed > 0)
+            parts.Add(turnOn
+                ? $"DLSS Override is on for {Games(changed)}."
+                : $"DLSS Override is off for {Games(changed)}; NVIDIA's settings are back as they were.");
+        else if (alreadyThere == 0)
+            parts.Add(turnOn ? "DLSS Override wasn't turned on for any game." : "DLSS Override wasn't turned off for any game.");
+        if (alreadyThere > 0)
+            parts.Add($"{Games(alreadyThere)} already had it {(turnOn ? "on" : "off")}.");
+        if (noDlss.Count > 0)
+            parts.Add($"No DLSS in {Names(noDlss)}.");
+        if (notInstalled.Count > 0)
+            parts.Add($"Not installed: {Names(notInstalled)}.");
+        if (failed.Count > 0)
+            parts.Add($"Couldn't change {Names(failed)} - see the log.");
+        return string.Join(" ", parts);
     }
 
     /// <summary>Puts every game's DLSS Override back and returns a line for the status bar.</summary>

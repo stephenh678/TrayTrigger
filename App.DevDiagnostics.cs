@@ -1279,14 +1279,18 @@ public partial class App
                 return;
             }
 
-            // --screenshot-welcome <out.png>: the first-run Welcome dialog.
+            // --screenshot-welcome <out.png> [games]: the first-run Welcome dialog, on its keys step,
+            // or on its second step with "games". Built with no settings behind it, so the key
+            // boxes show their placeholders and never this PC's real keys.
             if ((e.Args[i].Equals("--screenshot-welcome", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-welcome", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
             {
                 string targetPng = e.Args[i + 1];
                 var dlg = new WelcomeDialog();
-                CaptureVisual(dlg, 560, 620, targetPng);
+                if (i + 2 < e.Args.Length && e.Args[i + 2].Equals("games", StringComparison.OrdinalIgnoreCase))
+                    dlg.ShowGamesStep();
+                CaptureVisual(dlg, 560, 720, targetPng);
                 ExitApplication();
                 return;
             }

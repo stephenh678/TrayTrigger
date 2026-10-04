@@ -27,10 +27,10 @@ Turn it on with the eye button beside the view buttons above the library, or in 
 
 ## Refresh All Game Posters
 
-Re-checks every game, including ones that already have a cover. Use it after a game you added before release has launched on Steam, or after enabling SteamGridDB.
+Re-checks every game, including ones that already have a cover. Use it after a game you added before release has launched on Steam. Games with no Steam listing and no poster are searched on SteamGridDB by name. A new SteamGridDB key runs it for you as soon as the key checks out.
 
 ## Where art is stored
 
 Downloaded posters and extracted icons are cached under the local app data folder shown in Settings > Diagnostics & Storage. Clearing the cache forces everything to download again.
 
-> SteamGridDB needs a free API key from steamgriddb.com. The key is stored encrypted in your settings file and only sent to SteamGridDB.
+> SteamGridDB needs a free API key from steamgriddb.com; see SteamGridDB and RAWG keys for getting one. The key is stored encrypted in your settings file and only sent to SteamGridDB.

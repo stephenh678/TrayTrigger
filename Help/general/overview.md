@@ -1,6 +1,6 @@
 # The window, the tray icon and hotkeys
 
-TrayTrigger lives in the system tray. The window is for setting things up; day to day, the tray icon and hotkeys are all you need. These options are under Settings > General.
+TrayTrigger lives in the system tray. The window is for setting things up; day to day, the tray icon and hotkeys are all you need. These options are under Settings > General, apart from the three about launching a game, which are under Settings > Launch & Performance > Launching Games.
 
 ## Closing and exiting
 
@@ -13,15 +13,20 @@ TrayTrigger lives in the system tray. The window is for setting things up; day t
 
 - **Start with Windows** starts TrayTrigger when you sign in.
 - **Start minimized to tray**, under it, starts it as a tray icon with no window when it starts with Windows.
+
+## Launching a game
+
+These three are under Settings > Launch & Performance > Launching Games.
+
 - **Minimize to system tray when launching a game** hides the window as a game starts, so it never covers the game.
 - **Keep game launchers minimized when launching a game** asks Steam, GOG Galaxy and Epic to start quietly, so only the game opens. See How a game is launched.
+- **Show a launch popup by the tray icon** shows a small popup by the clock when a game is started from the tray or a hotkey: what it is waiting for, and the reason if the launch fails. See How the tray menu works.
 
 ## The tray icon
 
 - Left-click shows or hides the window, and right-click opens the menu. With **Left-click on the tray icon opens the game menu** on, both clicks open the menu. Double-click always opens the window.
 - Pointing at the icon shows what is playing, or the hotkey that shows the window when nothing is.
 - Windows may tuck the icon into the hidden overflow. **Always show icon in tray** asks Windows 11 to keep it on the taskbar; Windows decides. Dragging the icon from the overflow onto the taskbar always works.
-- **Show a launch popup by the tray icon** shows a small popup by the clock when a game is started from the tray or a hotkey: what it is waiting for, and the reason if the launch fails. See How the tray menu works.
 
 ## TrayTrigger's own hotkeys
 

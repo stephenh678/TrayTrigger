@@ -198,6 +198,16 @@ public sealed class CpuTopology
         _ => string.Empty
     };
 
+    /// <summary>
+    /// Why there's no CPU Cores choice, for a CPU whose layout is worth describing but offers none:
+    /// a single-CCD X3D such as the 7800X3D or 9800X3D. Without it, System › Hardware described the
+    /// cache and linked to "About CPU Cores" while the option was missing from Edit Game and the
+    /// game menu, which read as a fault. Empty whenever there is a choice, or nothing to describe.
+    /// </summary>
+    public string NoChoiceNote => Options.Count == 0 && Layout == CpuCoreLayout.VCacheSingleCcd
+        ? "Every core already has the cache, so games run on the right cores as they are: Edit Game and the game menu have no CPU Cores choice on this PC."
+        : string.Empty;
+
     /// <summary>"0-15" or "0-7, 16-23": logical processor numbers as Task Manager counts them.</summary>
     internal static string Ranges(IEnumerable<CpuSetEntry> cpus)
     {

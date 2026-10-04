@@ -14,11 +14,14 @@ public readonly record struct NamedGridArt(byte[] Bytes, string MatchedName);
 /// <summary>
 /// Optional community art source (steamgriddb.com) for vertical "grid" poster art, used when
 /// Steam's own official library art isn't available for a game yet (e.g. new/upcoming titles).
-/// Requires a free user-supplied API key from https://www.steamgriddb.com/profile/preferences.
+/// Requires a free user-supplied API key from https://www.steamgriddb.com/profile/preferences/api.
 /// </summary>
 public class SteamGridDbService
 {
     private const string BaseUrl = "https://www.steamgriddb.com/api/v2";
+
+    /// <summary>Where a signed-in user finds their API key - the "Get free key" buttons open it.</summary>
+    public const string KeyPageUrl = "https://www.steamgriddb.com/profile/preferences/api";
 
     // No client-wide Timeout: it would also cap the grid image download below, which needs
     // longer than the JSON lookup call. Each call applies its own per-request timeout instead.
@@ -42,6 +45,38 @@ public class SteamGridDbService
         var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(timeout);
         return cts;
+    }
+
+    /// <summary>
+    /// Asks SteamGridDB whether <paramref name="apiKey"/> works, with the cheapest authenticated
+    /// call there is: a name autocomplete. A wrong key, including one in the wrong format, is
+    /// answered with 401 before any search runs.
+    /// </summary>
+    public static async Task<ApiKeyCheckResult> CheckApiKeyAsync(string apiKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return ApiKeyCheckResult.Rejected;
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/search/autocomplete/portal");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim());
+
+            using var timeoutCts = LinkedTimeoutCts(ct, JsonCallTimeout);
+            using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token).ConfigureAwait(false);
+            var result = ApiKeyCheck.FromStatus(response.StatusCode);
+            LoggingService.Info("SteamGridDb", $"API key check: {result} (HTTP {(int)response.StatusCode}).");
+            return result;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SteamGridDb", $"API key check couldn't reach SteamGridDB: {ex.Message}");
+            return ApiKeyCheckResult.Unreachable;
+        }
     }
 
     /// <summary>

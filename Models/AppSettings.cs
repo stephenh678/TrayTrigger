@@ -127,10 +127,12 @@ public class AppSettings
     public ScriptDefaults ScriptDefaults { get; set; } = new();
     /// <summary>
     /// The Tools feature switch: a sidebar page of saved program shortcuts (DLSS Swapper, Vortex,
-    /// Afterburner). Off by default. While off, the page, the tray submenu and tool hotkeys are gone,
-    /// but tools.json is kept, so turning it back on restores every tool.
+    /// Afterburner). On by default since 1.4.8, when tools gained "Start when I launch a game" and
+    /// became part of playing rather than an extra, and switched on once for existing installs too
+    /// (see <see cref="ApplyOneTimeUpgrades"/>). While off, the page, the tray submenu and tool
+    /// hotkeys are gone, but tools.json is kept, so turning it back on restores every tool.
     /// </summary>
-    public bool EnableTools { get; set; } = false;
+    public bool EnableTools { get; set; } = true;
     /// <summary>A "Tools" submenu in the tray menu, after the games. Off by default; only applies while <see cref="EnableTools"/> is on.</summary>
     public bool ShowToolsInTray { get; set; } = false;
     /// <summary>A search box as the first row of the tray menu (UX-16): type to filter games (and
@@ -163,6 +165,31 @@ public class AppSettings
     /// <summary>One-time tray balloon shown the first time the window is hidden via its title-bar
     /// X, so a new user learns TrayTrigger is still running in the tray.</summary>
     public bool HasSeenTrayHideNotice { get; set; } = false;
+    /// <summary>Set once 1.4.8's one-time "Tools on for everyone" has run on this settings file -
+    /// see <see cref="ApplyOneTimeUpgrades"/>. After that, Tools stays however the user leaves it.</summary>
+    public bool HasTurnedOnToolsFor148 { get; set; } = false;
+
+    /// <summary>
+    /// The changes a release makes once to a settings file it finds, run at startup. Returns true
+    /// when anything changed, so the caller saves.
+    ///
+    /// <para>1.4.8: Tools on. It had been off by default, so a saved "off" mostly meant nobody had
+    /// chosen; since tools can now start with a game, the page is switched on once for everyone. A
+    /// user who turns it off again keeps it off: the flag means this never runs a second time.</para>
+    /// </summary>
+    public bool ApplyOneTimeUpgrades()
+    {
+        if (HasTurnedOnToolsFor148)
+            return false;
+
+        HasTurnedOnToolsFor148 = true;
+        bool wasOff = !EnableTools;
+        EnableTools = true;
+        LoggingService.Info("Settings", wasOff
+            ? "1.4.8 upgrade: turned Tools on (it was off; Settings > General turns it off again)."
+            : "1.4.8 upgrade: Tools was already on.");
+        return true;
+    }
     /// <summary>
     /// Gates the one-time "Game Launchers Found" prompt (see ImportCoordinator.ScanForGamesAsync)
     /// to the first time the user explicitly presses "Scan for Games" - set the moment that first

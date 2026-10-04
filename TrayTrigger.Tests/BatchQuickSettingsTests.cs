@@ -311,6 +311,103 @@ vngx_dlss.dll", "310.1.0") }
         Assert.Equal(library.Games[0].HasNvidiaDriver, library.Games[1].HasNvidiaDriver);
     });
 
+    // Distinct exe names: the driver keeps one profile per executable name, and three games all
+    // called game.exe would share it.
+    private static GameEntry DlssGame(string name) => new() { Name = name, ExecutablePath = $@"C:\Games\{name}\{name}.exe" };
+
+    /// <summary>
+    /// A mixed selection turns it on for every game, through the same per-game path as the
+    /// single-game menu, so each game that has DLSS ends up holding its own records. A game with no
+    /// DLSS is skipped and named, not counted as done.
+    /// </summary>
+    [Fact]
+    public async Task BatchDlssOverride_TurnsItOnForEachGameWithDlss_AndNamesTheRest()
+    {
+        await WpfTestHost.RunAsync(async () =>
+        {
+            var (library, _) = NewLibrary(DlssGame("Alpha"), DlssGame("Bravo"), DlssGame("Charlie"));
+            library.DlssOverrides = new DlssOverrideService(new Fakes.FakeDrsBackend());
+            library.DlssProbe = (exe, _) => exe.Contains("Charlie") ? WithoutDlss() : WithDlss();
+            MarkInstalled(library);
+            SelectAll(library);
+            Assert.False(library.BatchAllDlssOverrideOn);
+
+            await library.BatchToggleDlssOverrideAsync();
+
+            Assert.True(library.Games[0].DlssOverrideOn, library.StatusMessage);
+            Assert.True(library.Games[1].DlssOverrideOn);
+            Assert.False(library.Games[2].DlssOverrideOn);
+            Assert.Empty(library.Games[2].Game.DlssSettings);
+            Assert.Contains("on for 2 games", library.StatusMessage);
+            Assert.Contains("No DLSS in Charlie", library.StatusMessage);
+            // Charlie can't have it, so the selection as a whole still isn't "all on".
+            Assert.False(library.BatchAllDlssOverrideOn);
+            Assert.All(library.Games, c => Assert.False(c.IsDlssOverrideBusy));
+        });
+    }
+
+    /// <summary>Only a selection where every game has it turns it off, and off puts the records back.</summary>
+    [Fact]
+    public async Task BatchDlssOverride_AllOn_TurnsEveryGameOff()
+    {
+        await WpfTestHost.RunAsync(async () =>
+        {
+            var (library, _) = NewLibrary(DlssGame("Alpha"), DlssGame("Bravo"));
+            library.DlssOverrides = new DlssOverrideService(new Fakes.FakeDrsBackend());
+            library.DlssProbe = (_, _) => WithDlss();
+            MarkInstalled(library);
+            SelectAll(library);
+
+            await library.BatchToggleDlssOverrideAsync();
+            Assert.True(library.BatchAllDlssOverrideOn, library.StatusMessage);
+
+            await library.BatchToggleDlssOverrideAsync();
+
+            Assert.All(library.Games, c => Assert.False(c.DlssOverrideOn));
+            Assert.All(library.Games, c => Assert.Empty(c.Game.DlssSettings));
+            Assert.Contains("off for 2 games", library.StatusMessage);
+        });
+    }
+
+    // The test games' paths are made up, so their cards start out as not installed.
+    private static void MarkInstalled(LibraryViewModel library)
+    {
+        foreach (var card in library.Games) card.Availability = GameAvailability.Available;
+    }
+
+    /// <summary>A game that isn't installed has no folder to search: turning on skips it and says so.</summary>
+    [Fact]
+    public async Task BatchDlssOverride_SkipsGamesThatArentInstalled()
+    {
+        await WpfTestHost.RunAsync(async () =>
+        {
+            var (library, _) = NewLibrary(DlssGame("Alpha"), DlssGame("Bravo"));
+            library.DlssOverrides = new DlssOverrideService(new Fakes.FakeDrsBackend());
+            library.DlssProbe = (_, _) => WithDlss();
+            library.Games[0].Availability = GameAvailability.Available;
+            library.Games[1].Availability = GameAvailability.NotInstalled;
+            SelectAll(library);
+
+            await library.BatchToggleDlssOverrideAsync();
+
+            Assert.True(library.Games[0].DlssOverrideOn);
+            Assert.False(library.Games[1].DlssOverrideOn);
+            Assert.Empty(library.Games[1].Game.DlssSettings);
+            Assert.Contains("Not installed: Bravo", library.StatusMessage);
+        });
+    }
+
+    [Fact]
+    public void BatchDlssSummary_SaysWhatChangedAndWhyTheRestDidNot()
+    {
+        Assert.Equal("DLSS Override is on for 1 game.",
+            LibraryViewModel.BatchDlssSummary(true, 1, 0, [], [], []));
+        Assert.Equal("DLSS Override is on for 2 games. 1 game already had it on. No DLSS in A, B, C and 2 more. Not installed: D. Couldn't change E - see the log.",
+            LibraryViewModel.BatchDlssSummary(true, 2, 1, ["A", "B", "C", "X", "Y"], ["D"], ["E"]));
+        Assert.Equal("DLSS Override wasn't turned on for any game. No DLSS in A.",
+            LibraryViewModel.BatchDlssSummary(true, 0, 0, ["A"], [], []));
+    }
+
     private static async Task WaitWhileBusy(GameCardViewModel card)
     {
         // The command starts the work and returns; the toggle clears the flag in its finally.

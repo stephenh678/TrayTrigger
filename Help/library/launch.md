@@ -18,12 +18,12 @@ Shown at the top of the card for a platform game; a Local game has none.
 
 - **Imported from / Linked to** - which platform record the entry is tied to and the id the launcher knows it by. Convert to Local game drops the link and turns the entry into a plain exe launch.
 - **Launch this executable directly** - for GOG, EA, Epic, Ubisoft and Steam entries: bypass the client and run the executable below, with the arguments and Run as Administrator from the fields below applied. You lose whatever the client provides (sign-in, cloud saves, overlay). Not offered for Xbox (a GDK exe can't run outside its package) or Battle.net (the game needs the sign-in token only the client passes).
-- **Close the launcher after this game exits** - when the session ends, the client (Steam, GOG Galaxy, EA app, Epic, Ubisoft Connect, the Xbox app, or Battle.net) is closed, so it doesn't stay resident with its overlay and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows. "Keep game launchers minimized when launching a game" in Settings > General > Window & Tray Icon does this for every game.
+- **Close the launcher after this game exits** - when the session ends, the client (Steam, GOG Galaxy, EA app, Epic, Ubisoft Connect, the Xbox app, or Battle.net) is closed, so it doesn't stay resident with its overlay and background processes. For Steam, TrayTrigger also starts the client minimized to the tray when it has to open it, so only the game shows. "Keep game launchers minimized when launching a game" in Settings > Launch & Performance > Launching Games does this for every game.
 - **Launch through the Steam client** - offered for a Local game that has a Steam App ID. Ticking it makes the entry a Steam game, launched with `steam://rungameid/`, and the options above take over. Leave it off for a standalone game that merely shares a Steam listing.
 
 ## Keeping the launcher minimized
 
-"Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon, on by default) asks each launcher that supports it to start quietly, so only the game opens.
+"Keep game launchers minimized when launching a game" (Settings > Launch & Performance > Launching Games, on by default) asks each launcher that supports it to start quietly, so only the game opens.
 
 - Steam: when Steam isn't running, it starts minimized to the tray and launches the game in the same step. An open Steam is left as it is.
 - Epic Games Launcher: the launch asks Epic for a silent start.
