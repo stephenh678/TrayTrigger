@@ -18,6 +18,13 @@ public class AppSettingsDefaultsTests
         Assert.False(settings.UseSteamGridDbArt);
     }
 
+    /// <summary>The tray menu starts compact (1.5.0), so a long library fits without scrolling.</summary>
+    [Fact]
+    public void CompactTrayMenu_DefaultsToOn()
+    {
+        Assert.True(new AppSettings().CompactTrayMenu);
+    }
+
     /// <summary>
     /// Every tweak that changes something the user can see or hear outside the game is opt-in, so
     /// picking a profile tier never has a surprise attached. Picking Optimized must not start

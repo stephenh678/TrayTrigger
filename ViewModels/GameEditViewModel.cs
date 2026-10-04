@@ -1533,8 +1533,13 @@ public class GameEditViewModel : ViewModelBase
         if (SourceGame.PerformanceProfile != PerformanceProfile)
         {
             LoggingService.Info("GameEdit", $"'{SourceGame.Name}' Performance Profile changed: {SourceGame.PerformanceProfile} -> {PerformanceProfile}.");
+            PerformanceActivity.GameChanged(SourceGame, SourceGame.PerformanceProfile, PerformanceProfile);
         }
         SourceGame.PerformanceProfile = PerformanceProfile;
+        if (SourceGame.CpuAffinity != CpuAffinity)
+        {
+            PerformanceActivity.GameChanged(SourceGame, SourceGame.CpuAffinity, CpuAffinity);
+        }
         SourceGame.CpuAffinity = CpuAffinity;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.

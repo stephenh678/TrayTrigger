@@ -150,14 +150,18 @@ public class GameCardViewModel : ViewModelBase
         SetProfileCommand = new RelayCommand(p =>
         {
             if (p is not PerformanceProfileMode mode || Game.PerformanceProfile == mode) return;
+            var was = Game.PerformanceProfile;
             Game.PerformanceProfile = mode;
+            PerformanceActivity.GameChanged(Game, was, mode);
             NotifyQuickSettingsChanged();
             _onQuickSettingChanged?.Invoke(this);
         });
         SetCpuAffinityCommand = new RelayCommand(p =>
         {
             if (p is not CpuAffinityMode mode || Game.CpuAffinity == mode) return;
+            var was = Game.CpuAffinity;
             Game.CpuAffinity = mode;
+            PerformanceActivity.GameChanged(Game, was, mode);
             NotifyQuickSettingsChanged();
             _onQuickSettingChanged?.Invoke(this);
         });

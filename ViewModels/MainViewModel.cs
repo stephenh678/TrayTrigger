@@ -26,7 +26,10 @@ public enum NavSection
     Settings,
     About,
     System,
-    Tools
+    Tools,
+    /// <summary>Activity &amp; History, from the bell at the bottom of the sidebar. Last, so the
+    /// values before it keep their numbers.</summary>
+    Activity
 }
 
 public enum AboutSubSection
@@ -59,6 +62,9 @@ public class MainViewModel : ViewModelBase
     private readonly SystemTweaksService _systemTweaksService;
 
     public SystemViewModel SystemVM { get; }
+    /// <summary>Activity &amp; History. Uses <see cref="ActivityService.Current"/>, or a history kept
+    /// only in memory when there is none (a capture or test run).</summary>
+    public ActivityViewModel ActivityVM { get; }
     public SettingsViewModel SettingsVM { get; }
     public UpdateCoordinator Update { get; }
     public LibraryViewModel Library { get; }
@@ -261,6 +267,9 @@ public class MainViewModel : ViewModelBase
         SettingsVM.Dlss = new DlssSettingsViewModel(_systemTweaksService,
             () => Library.DlssOverrideGameCount, () => Library.RestoreAllDlssOverrides());
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
+        ActivityVM = new ActivityViewModel(
+            ActivityService.Current ?? new ActivityService(_storageService.BaseDirectory, readOnly: true),
+            isOnScreen: () => CurrentSection == NavSection.Activity && IsWindowActive?.Invoke() == true);
         // A snapshot taken on the UI thread; the per-drive count then runs off it.
         SystemVM.GetLibraryGames = () => Library.Games.Select(card => card.Game).ToList();
 
@@ -289,6 +298,7 @@ public class MainViewModel : ViewModelBase
             CurrentSection = NavSection.Settings;
         });
         SelectAboutCommand = new RelayCommand(() => CurrentSection = NavSection.About);
+        SelectActivityCommand = new RelayCommand(() => CurrentSection = NavSection.Activity);
         SelectAboutAllTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.All);
         SelectAboutOverviewTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Overview);
         SelectAboutFeaturesTabCommand = new RelayCommand(() => CurrentAboutSection = AboutSubSection.Features);
@@ -303,8 +313,7 @@ public class MainViewModel : ViewModelBase
         {
             try
             {
-                string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
-                Process.Start(new ProcessStartInfo($"https://github.com/{repo}") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo($"https://github.com/{UpdateService.Repository}") { UseShellExecute = true });
             }
             catch (Exception ex)
             {
@@ -315,9 +324,8 @@ public class MainViewModel : ViewModelBase
         {
             try
             {
-                string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
                 // The template chooser, not the issue list: it is where a report starts.
-                Process.Start(new ProcessStartInfo($"https://github.com/{repo}/issues/new/choose") { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo($"https://github.com/{UpdateService.Repository}/issues/new/choose") { UseShellExecute = true });
             }
             catch (Exception ex)
             {
@@ -396,10 +404,24 @@ public class MainViewModel : ViewModelBase
         {
             string warning = string.Join(" ", new[] { _storageService.SettingsLoadWarning, _storageService.GamesLoadWarning, _storageService.ToolsLoadWarning?.Trim() }
                 .Where(w => w != null));
+            // Said once in the dialog; kept in Activity & History too, where a report can find it.
+            RecordDataFileProblem("Your settings file couldn't be read", _storageService.SettingsLoadWarning, "settings");
+            RecordDataFileProblem("Your game library file couldn't be read", _storageService.GamesLoadWarning, "games");
+            RecordDataFileProblem("Your tools file couldn't be read", _storageService.ToolsLoadWarning, "tools");
             ModernDialog.ShowWarning(null, "Data File Recovered", warning);
         }
 
         Update.StartBackgroundChecks();
+    }
+
+    /// <summary>The Activity &amp; History group for a data file that couldn't be read. The startup
+    /// dialog has already said so, so these aren't notified again.</summary>
+    public const string DataFileActivityKeyPrefix = "storage.unreadable|";
+
+    private static void RecordDataFileProblem(string text, string? warning, string file)
+    {
+        if (warning == null) return;
+        ActivityService.Add(ActivityLevel.Problem, text, detail: warning.Trim(), groupKey: DataFileActivityKeyPrefix + file);
     }
 
     // --- NAVIGATION PROPERTIES ---
@@ -420,6 +442,8 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsSettingsView));
                 OnPropertyChanged(nameof(IsAboutView));
                 OnPropertyChanged(nameof(IsToolsView));
+                OnPropertyChanged(nameof(IsActivityView));
+                if (_currentSection == NavSection.Activity) ActivityVM.MarkViewed();
 
                 if (_currentSection == NavSection.System)
                 {
@@ -451,6 +475,11 @@ public class MainViewModel : ViewModelBase
     public bool IsSettingsView => CurrentSection == NavSection.Settings;
     public bool IsAboutView => CurrentSection == NavSection.About;
     public bool IsToolsView => CurrentSection == NavSection.Tools;
+    public bool IsActivityView => CurrentSection == NavSection.Activity;
+    public ICommand SelectActivityCommand { get; }
+    /// <summary>Whether the main window is visible and in front. Set by App; Activity &amp; History
+    /// treats what arrives while it's on screen as seen.</summary>
+    public Func<bool>? IsWindowActive { get; set; }
     /// <summary>Settings > General "Enable Tools": the sidebar button, the page, and (with its own option) the tray submenu.</summary>
     public bool IsToolsEnabled => _settings.EnableTools;
     public ToolsViewModel Tools { get; }

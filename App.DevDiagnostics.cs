@@ -396,7 +396,7 @@ public partial class App
                 }
 
                 // 3. Test GitHub query (graceful 404 handling if repo not yet published)
-                var result = Task.Run(() => UpdateService.Instance.CheckForUpdatesAsync("Steph/TrayTrigger")).GetAwaiter().GetResult();
+                var result = Task.Run(() => UpdateService.Instance.CheckForUpdatesAsync()).GetAwaiter().GetResult();
                 LogOut($"[TEST-UPDATER] CheckForUpdates result: Status={result.Status}, ErrorMessage={result.ErrorMessage ?? "(none)"}");
 
                 // 4. Test Settings bindings
@@ -958,6 +958,95 @@ public partial class App
                 string targetPng = e.Args[i + 1];
                 _mainViewModel.SettingsVM.SelectedTab = SettingsCategoryTab.Library;
                 _mainViewModel.CurrentSection = NavSection.Settings;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --test-activity <out.txt>: Activity & History's live wiring in the real app, against the
+            // capture run's in-memory history: a problem lights the dot, leads the tray tooltip, adds
+            // the tray menu's first row, becomes one notification once no game is running (and
+            // clicking it is routed to the page), and opening the page clears what was seen.
+            if (e.Args[i].Equals("--test-activity", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                var results = new List<string>();
+                bool ok = true;
+                void Check(bool condition, string what) { results.Add($"{(condition ? "PASS" : "FAIL")} {what}"); ok &= condition; }
+                _skipSettingsSaveOnExit = true;
+                try
+                {
+                    InitializeTrayIcon();
+                    InitializeActivityNotifications();
+                    var activity = ActivityService.Current!;
+                    Check(activity.AttentionCount == 0, "nothing needs attention at the start");
+
+                    activity.Record(ActivityLevel.Problem, "Test Game: post-exit script failed (exit code 1)", subject: "Test Game", groupKey: "test.script");
+                    PumpDispatcher(TimeSpan.FromMilliseconds(500));
+                    Check(_mainViewModel.ActivityVM.HasAttention, "the bell's dot is lit");
+                    Check(_trayIcon?.ToolTipText?.StartsWith("1 thing needs attention") == true, $"the tray tooltip leads with it ('{_trayIcon?.ToolTipText?.Split('\n')[0]}')");
+                    // First after the search box, which stays the menu's first row so typing still works.
+                    var rows = _trayIcon?.ContextMenu?.Items.OfType<System.Windows.Controls.MenuItem>().ToList() ?? [];
+                    int attentionAt = rows.FindIndex(r => r.Header is string h && h.Contains("1 thing needs attention"));
+                    bool firstAfterSearch = attentionAt == 0 || (attentionAt == 1 && rows[0] is TraySearchRow);
+                    Check(firstAfterSearch, $"the tray menu's first row under the search box says so (at {attentionAt})");
+
+                    bool toastShown = false;
+                    PumpDispatcher(ActivityToastGather + TimeSpan.FromSeconds(2), () => toastShown = _lastToastOpensActivity);
+                    Check(toastShown, "one notification after the gather window, with no game running");
+
+                    _mainViewModel.CurrentSection = NavSection.Activity;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(500));
+                    Check(activity.AttentionCount == 0, "opening the page marks the problem seen");
+                    Check(!_mainViewModel.ActivityVM.HasAttention, "the dot goes out");
+                    Check(_trayIcon?.ToolTipText?.Contains("need") != true, "the tooltip line goes");
+                    Check(_mainViewModel.ActivityVM.Groups.Any(g => g.Text.StartsWith("Test Game")), "the entry stays in the history");
+                }
+                catch (Exception ex)
+                {
+                    Check(false, $"threw: {ex}");
+                }
+                File.WriteAllLines(outFile, results.Prepend(ok ? "[TEST-ACTIVITY-SUCCESS]" : "[TEST-ACTIVITY-FAILURE]"));
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-activity <out.png> [empty] [expanded]: Activity & History with sample entries
+            // and a NEEDS ATTENTION item, recorded into the capture run's in-memory history (a capture
+            // run never writes activity.json). "empty" shows the page with nothing recorded.
+            if ((e.Args[i].Equals("--screenshot-activity", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-activity", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                bool empty = e.Args.Skip(i + 2).Any(a => a.Equals("empty", StringComparison.OrdinalIgnoreCase));
+                bool expanded = e.Args.Skip(i + 2).Any(a => a.Equals("expanded", StringComparison.OrdinalIgnoreCase));
+                _skipSettingsSaveOnExit = true;
+                if (!empty && ActivityService.Current is { } activity)
+                {
+                    activity.Record(ActivityLevel.Activity, "Updated to 1.5.0", detail: "From 1.4.8.");
+                    var fixedSample = activity.Record(ActivityLevel.Critical, "Hades: couldn't put back Windows' multimedia scheduler settings", subject: "Hades",
+                        detail: "Restore Previous on this page tries again. Windows Settings can also change them back by hand.", groupKey: "sample.fixed");
+                    activity.MarkFixed([fixedSample.Id]);
+                    activity.Record(ActivityLevel.Activity, "The startup scan found 3 new games", detail: "Add them with Scan for Games on the Library page.");
+                    activity.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades", detail: "From 18:02 to 18:50.", groupKey: "played|hades");
+                    activity.Record(ActivityLevel.Change, "Played Elden Ring · 2h 17m · Aggressive profile put back", subject: "Elden Ring",
+                        detail: "From 20:14 to 22:31. The profile's changes were put back when it closed.", groupKey: "played|er");
+                    for (int n = 0; n < 7; n++)
+                        activity.Record(ActivityLevel.Problem, "Elden Ring: post-exit script failed (exit code 1)", subject: "Elden Ring",
+                            detail: "close-apps.ps1. Test it from Edit Game; what it printed is in the log.", groupKey: "script.postexit|er");
+                    activity.Record(ActivityLevel.Critical, "Elden Ring: couldn't put back the power plan", detail: "Restore Previous on this page tries again.",
+                        groupKey: PerformanceProfileService.UnrestoredActivityKey);
+                    activity.SetState(new AttentionItem(PerformanceProfileService.UnrestoredActivityKey, "The power plan wasn't put back",
+                        "A Performance Profile changed it for a game and couldn't change it back afterwards.", "Restore Previous", () => { }, IsCritical: true));
+                }
+                _mainViewModel.ActivityVM.Refresh();
+                if (expanded && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Count > 1) is { } repeated) repeated.IsExpanded = true;
+                // Not through CurrentSection's setter alone: opening the page marks everything seen,
+                // and the capture is meant to show the dot as a user would find it.
+                _mainViewModel.CurrentSection = NavSection.Activity;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 CaptureVisual(_mainWindow, 960, 750, targetPng);

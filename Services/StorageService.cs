@@ -730,11 +730,33 @@ public class StorageService : IProfileSnapshotStore
                 string json = File.ReadAllText(_profileSessionFilePath);
                 return JsonSerializer.Deserialize(json, AppJsonContext.Default.PerformanceProfileSessionSnapshot);
             }
+            catch (JsonException ex)
+            {
+                // Damaged, not just busy: nothing can be restored from it. Kept as a copy for a bug
+                // report; "" when even the copy failed, so nobody is told it was kept.
+                LoggingService.Warn("Storage", $"'{_profileSessionFilePath}' is damaged: {ex.Message}");
+                string copy = ArchiveCorruptFile(_profileSessionFilePath);
+                _unreadableProfileSnapshotCopy = File.Exists(copy) ? copy : string.Empty;
+                return null;
+            }
             catch (Exception ex)
             {
+                // Locked or unreadable for now: left where it is, so the next start tries again.
                 LoggingService.Warn("Storage", $"Failed to read '{_profileSessionFilePath}': {ex.Message}");
                 return null;
             }
+        }
+    }
+
+    private string? _unreadableProfileSnapshotCopy;
+
+    public string? TakeUnreadableProfileSessionSnapshot()
+    {
+        lock (_profileSessionLock)
+        {
+            var copy = _unreadableProfileSnapshotCopy;
+            _unreadableProfileSnapshotCopy = null;
+            return copy;
         }
     }
 

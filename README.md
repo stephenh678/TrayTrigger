@@ -110,6 +110,7 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 - **Drag and drop** an executable or shortcut onto the window to add it. **Batch folder scanner** with executable scoring that filters out uninstallers and launcher stubs. **Icon extraction** from executables, shortcuts, and game folders.
 - **Search Settings, System & Performance, and About** from a box beside their tabs: the cards that mention your words stay, with the words highlighted.
 - **Backup & Restore**: your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake. A restore finds games whose drive letter, user folder or launcher folder changed.
+- **Activity & History**: a bell at the bottom of the sidebar opens a plain-language record of the games you played and for how long, games you added, every change to a Performance Profile, CPU Cores, DLSS Override or System tweak, and anything that didn't go to plan. Each row has a badge (CRITICAL, PROBLEM, CHANGE, ACTIVITY), and a setting a profile couldn't put back gets a Restore Previous button, then a FIXED badge once it's back. One notification after your last game sums up anything that went wrong; nothing interrupts a game.
 
 <p align="center">
   <img src="site/assets/library-current.png" width="800" alt="Games library, poster grid view"><br>
@@ -245,7 +246,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.4.7-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.5.0-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
 

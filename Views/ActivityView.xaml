@@ -1,0 +1,288 @@
+<UserControl x:Class="TrayTrigger.Views.ActivityView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:TrayTrigger.Views"
+             xmlns:services="clr-namespace:TrayTrigger.Services"
+             KeyDown="OnKeyDown"
+             Background="Transparent">
+
+    <!-- Activity & History, opened from the bell at the bottom of the sidebar. The same anatomy as
+         Tools and System & Performance: header with status top right, segmented tabs, the library's
+         search box, blue uppercase section labels, rows inside cards. Quiet on purpose: one card with
+         one row when something is wrong, plain rows for the history, tags only where a row needs
+         flagging (CRITICAL, "7 TIMES"), as sparingly as MISSING. See docs/roadmap.md. -->
+    <UserControl.Resources>
+        <Style x:Key="ActivityCard" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource BrushSurfaceDark}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushBorderDark}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="CriticalTag" TargetType="Border">
+            <Setter Property="Background" Value="#DA3633"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="6,1.5"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="CountTag" TargetType="Border">
+            <Setter Property="Background" Value="#3D2F14"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="6,1.5"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- A NEEDS ATTENTION row: not clickable itself (its button is), so no hover highlight. -->
+        <Style x:Key="AttentionRow" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#252530"/>
+            <Setter Property="BorderThickness" Value="0,1,0,0"/>
+            <Setter Property="Padding" Value="2,10"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                    <Setter Property="BorderThickness" Value="0"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A history row: the whole row toggles its details, by click or by Enter or Space once
+             tabbed to. A divider above every row but the first. -->
+        <Style x:Key="HistoryRow" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#252530"/>
+            <Setter Property="BorderThickness" Value="0,1,0,0"/>
+            <Setter Property="Padding" Value="2,9"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                    <Setter Property="BorderThickness" Value="0"/>
+                </DataTrigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#14FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Tabs -->
+            <RowDefinition Height="Auto"/> <!-- Search -->
+            <RowDefinition Height="*"/>    <!-- Content -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" VerticalAlignment="Center" Margin="0,0,5,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="&#xE73E;"/>
+                            <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAttention}" Value="True">
+                                    <Setter Property="Text" Value="&#xE7BA;"/>
+                                    <Setter Property="Foreground" Value="{StaticResource BrushDanger}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding HeaderStatus}" FontSize="11.5" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAttention}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource BrushDanger}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Activity &amp; History" FontSize="20" Foreground="{StaticResource BrushTextPrimary}"
+                           FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
+                <TextBlock Text="What needs your attention, and what TrayTrigger changed and put back"
+                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
+                           FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- 2. Tabs -->
+        <DockPanel Grid.Row="1" Margin="0,0,0,16">
+            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="How Activity &amp; History works" VerticalAlignment="Center"
+                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="general/activity"/>
+            <Border Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
+                    BorderThickness="1" CornerRadius="6" Padding="3" Margin="0,0,16,0"
+                    HorizontalAlignment="Left" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="All" Command="{Binding SelectTabCommand}" CommandParameter="All"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}" Margin="0,0,2,0"/>
+                    <Button Content="Problems" Command="{Binding SelectTabCommand}" CommandParameter="Problems"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsProblemsTab}" Margin="0,0,2,0"/>
+                    <Button Content="Changes" Command="{Binding SelectTabCommand}" CommandParameter="Changes"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsChangesTab}" Margin="0,0,2,0"/>
+                    <Button Content="Activity" Command="{Binding SelectTabCommand}" CommandParameter="Activity"
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsActivityTab}"/>
+                </StackPanel>
+            </Border>
+        </DockPanel>
+
+        <!-- 3. Search -->
+        <views:SearchBox x:Name="ActivitySearchBox" Grid.Row="2" Width="Auto" Margin="0,0,0,14"
+                         Text="{Binding SearchText}" Placeholder="Search activity by game, tool, or what happened..."/>
+
+        <!-- 4. Content -->
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,6,0">
+
+                <!-- NEEDS ATTENTION: only when something is wrong now. -->
+                <StackPanel Visibility="{Binding ShowNeedsAttention, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
+                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
+                                   Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="NEEDS ATTENTION" Style="{StaticResource SectionLabel}"/>
+                    </StackPanel>
+                    <Border Style="{StaticResource ActivityCard}">
+                        <ItemsControl ItemsSource="{Binding NeedsAttention}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource AttentionRow}">
+                                        <DockPanel LastChildFill="True">
+                                            <Button DockPanel.Dock="Right" Content="{Binding ActionLabel}" Command="{Binding FixCommand}"
+                                                    Style="{StaticResource ModernOutlineButton}" Padding="10,5" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                    Visibility="{Binding HasAction, Converter={StaticResource BoolToVis}}"/>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Text}" FontSize="13" Foreground="{StaticResource BrushTextPrimary}"
+                                                               FontFamily="{StaticResource AppFont}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                    <Border Style="{StaticResource CriticalTag}" Visibility="{Binding IsCritical, Converter={StaticResource BoolToVis}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xEA39;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="#FFFFFF" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                            <TextBlock Text="CRITICAL" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                                           FontFamily="{StaticResource AppFont}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                </StackPanel>
+
+                <!-- RECENT -->
+                <StackPanel Visibility="{Binding ShowRecent, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
+                        <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
+                                   Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="RECENT" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Text="·  last 90 days" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <Border Style="{StaticResource ActivityCard}">
+                        <ItemsControl ItemsSource="{Binding Groups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource HistoryRow}" AutomationProperties.Name="{Binding AccessibleName}"
+                                            Focusable="True" KeyboardNavigation.IsTabStop="True">
+                                        <Border.InputBindings>
+                                            <MouseBinding Gesture="LeftClick" Command="{Binding ToggleCommand}"/>
+                                            <KeyBinding Key="Enter" Command="{Binding ToggleCommand}"/>
+                                            <KeyBinding Key="Space" Command="{Binding ToggleCommand}"/>
+                                        </Border.InputBindings>
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="True">
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding When}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                                           FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                                <WrapPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Text}" FontSize="13" FontFamily="{StaticResource AppFont}"
+                                                               Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                    <!-- Every row's level, in the System page's badge style. -->
+                                                    <Border Background="{Binding LevelBackground}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding LevelGlyph}" FontFamily="{StaticResource IconFont}" FontSize="9"
+                                                                       Foreground="{Binding LevelForeground}" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                            <TextBlock Text="{Binding LevelTag}" FontSize="9" FontWeight="Bold"
+                                                                       Foreground="{Binding LevelForeground}" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <!-- A Critical entry put right since: green, as OPTIMAL is. -->
+                                                    <Border Background="#238636" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                            Visibility="{Binding IsFixed, Converter={StaticResource BoolToVis}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="#FFFFFF" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                            <TextBlock Text="FIXED" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Style="{StaticResource CountTag}" Visibility="{Binding ShowCountTag, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{Binding CountTag}" FontSize="9" FontWeight="Bold" Foreground="#E8B84E"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding QuietCount}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="6,0,0,0"
+                                                               VerticalAlignment="Center" Visibility="{Binding ShowQuietCount, Converter={StaticResource BoolToVis}}"/>
+                                                </WrapPanel>
+                                            </DockPanel>
+                                            <!-- Expanded: what it means, each time, the log and a copy. Nothing extra until asked. -->
+                                            <StackPanel Margin="0,6,0,0" Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"
+                                                           FontFamily="{StaticResource AppFont}" Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}"/>
+                                                <TextBlock Text="{Binding FixedLabel}" FontSize="11.5" Foreground="#3FB950" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                           FontFamily="{StaticResource AppFont}" Visibility="{Binding IsFixed, Converter={StaticResource BoolToVis}}"/>
+                                                <TextBlock Text="{Binding TimesLabel}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                           FontFamily="{StaticResource AppFont}" Visibility="{Binding ShowTimes, Converter={StaticResource BoolToVis}}"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                    <Button Style="{StaticResource HelpLinkButton}" Content="Show in log" Command="{Binding ShowLogCommand}"/>
+                                                    <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                                    <Button Style="{StaticResource HelpLinkButton}" Content="Copy details" Command="{Binding CopyCommand}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                </StackPanel>
+
+                <!-- Nothing recorded yet -->
+                <StackPanel HorizontalAlignment="Center" Margin="0,60,0,0" Visibility="{Binding ShowNothingYet, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="36"
+                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                    <TextBlock Text="Nothing to show yet" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="TrayTrigger notes here what it changes for your games and puts back, and anything that doesn't go to plan."
+                               FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                </StackPanel>
+
+                <!-- History exists, but this tab and search show none -->
+                <StackPanel HorizontalAlignment="Center" Margin="0,60,0,0" Visibility="{Binding ShowNoMatches, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="36"
+                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                    <TextBlock Text="Nothing matches" FontSize="16" Foreground="{StaticResource BrushTextPrimary}"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Nothing in this tab matches your search. Press Esc to clear the search, or pick another tab."
+                               FontSize="13" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

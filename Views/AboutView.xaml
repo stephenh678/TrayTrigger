@@ -211,6 +211,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <!-- 1: Performance Profiles -->
@@ -368,6 +369,22 @@
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Hardware Monitoring" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
                                     <TextBlock Text="Live CPU and RAM load, plus GPU, VRAM, displays, drives, motherboard, BIOS, OS build and DirectX capability on the System page - so you can sanity-check specs before deciding which profile a game gets."
+                                               FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 11: Activity & History -->
+                        <Border Grid.Row="5" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
+                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Activity &amp; History" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="The bell at the bottom of the sidebar: what TrayTrigger changed for your games and put back, anything that didn't go to plan, and a fix for a setting a profile couldn't put back. One notification after your last game."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>

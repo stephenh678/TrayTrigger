@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using TrayTrigger.Models;
 using TrayTrigger.Services;
 using TrayTrigger.Views;
 
@@ -95,6 +96,8 @@ public partial class App
         }
         detail.Append(safety.TrimStart());
 
+        ActivityService.Add(ActivityLevel.Activity, $"Restored {games} game(s) and {tools} tool(s) from a backup{made}",
+            detail: detail.ToString().Trim(), groupKey: $"backup.restored|{manifest?.CreatedUtc:o}");
         ModernDialog.ShowInfo(owner, "Restore Complete",
             $"Restored {games} game(s) and {tools} tool(s) from the backup{made}.",
             detail.ToString().Trim());

@@ -29,7 +29,3 @@ Installing a beta's Setup.exe does not tick the toggle for you. The build still 
 
 - Turn the toggle off. You keep the beta you have until the next stable release overtakes it, then update as normal. While you are on a beta, later betas keep arriving.
 - To go back to stable immediately, install the current stable release from the GitHub Releases page over the top. Your library and settings are kept.
-
-## The repository field
-
-The repository is where TrayTrigger looks for releases. Leave it at the default unless you are building TrayTrigger yourself from a fork.

@@ -14,7 +14,7 @@ Right-clicking the TrayTrigger tray icon opens a menu built fresh from your libr
 
 - Each game shows its own icon. A game with no icon shows its launcher's logo instead (Steam, GOG, Battle.net and so on); only a local game with no icon gets the generic controller.
 - "Show game icons in the tray menu" turns the icons off for a text-only menu.
-- "Compact tray menu" tightens the rows and shrinks the icons, so a long library fits on screen without scrolling.
+- "Compact tray menu" tightens the rows and shrinks the icons, so a long library fits on screen without scrolling. It's on by default; untick it for roomier rows.
 
 ## Now Playing
 

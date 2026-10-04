@@ -27,6 +27,7 @@ public class SystemTweakViewModel : ViewModelBase
 {
     private readonly SystemTweaksService _service;
     private readonly Action<string> _notifyParent;
+    private readonly Action<SystemTweakViewModel, bool>? _onToggled;
 
     public SystemTweakItem Model { get; }
 
@@ -144,11 +145,12 @@ public class SystemTweakViewModel : ViewModelBase
     public ICommand ToggleCommand { get; }
     public ICommand CustomActionCommand { get; }
 
-    public SystemTweakViewModel(SystemTweakItem model, SystemTweaksService service, Action<string> notifyParent)
+    public SystemTweakViewModel(SystemTweakItem model, SystemTweaksService service, Action<string> notifyParent, Action<SystemTweakViewModel, bool>? onToggled = null)
     {
         Model = model;
         _service = service;
         _notifyParent = notifyParent;
+        _onToggled = onToggled;
         _isOptimal = model.IsOptimal;
         _statusText = model.StatusText;
 
@@ -189,6 +191,7 @@ public class SystemTweakViewModel : ViewModelBase
         if (actualState == targetState)
         {
             _notifyParent($"Toggled '{Name}' to {(targetState ? "Optimal" : "Default")}.");
+            if (changed) _onToggled?.Invoke(this, actualState);
 
             if (RequiresReboot && changed)
             {
@@ -268,6 +271,12 @@ public class ProfileTweakToggleViewModel : ViewModelBase
     public string WhyItMatters { get; }
     public bool IsOptIn { get; }
 
+    /// <summary>"Optimized" or "Aggressive", for its line in Activity &amp; History.</summary>
+    public string Tier { get; internal set; } = string.Empty;
+
+    /// <summary>The value last recorded, so a change made elsewhere (Reset to Defaults) can be told apart.</summary>
+    private bool _recorded;
+
     /// <summary>True when applying this tweak raises a UAC prompt (an HKLM write or an elevated
     /// PowerShell cmdlet). Shown as the same ADMIN badge the permanent tweak rows use.</summary>
     public bool RequiresAdmin { get; }
@@ -301,6 +310,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
         RequiresAdmin = requiresAdmin;
         Note = note;
         ToggleCommand = new RelayCommand(() => IsEnabled = !IsEnabled);
+        _recorded = getter();
     }
 
     public bool IsEnabled
@@ -312,9 +322,20 @@ public class ProfileTweakToggleViewModel : ViewModelBase
             {
                 _setter(value);
                 LoggingService.Info("System", $"Performance Profile tweak '{Name}' {(value ? "enabled" : "disabled")}.");
+                _recorded = value;
+                PerformanceActivity.TierTweakChanged(Tier, Name, value);
                 NotifyStateChanged();
             }
         }
+    }
+
+    /// <summary>When the setting changed elsewhere since it was last recorded: the line for it, once.</summary>
+    internal string? TakeOutsideChange()
+    {
+        bool now = _getter();
+        if (now == _recorded) return null;
+        _recorded = now;
+        return PerformanceActivity.DescribeTierTweakChanged(Tier, Name, now).Text;
     }
 
     /// <summary>Re-reads the live config value into the bindings - for when the underlying
@@ -792,6 +813,15 @@ public class SystemViewModel : ViewModelBase
     /// </summary>
     public void RefreshProfileTweakToggles()
     {
+        // Called after Settings' Reset to Defaults: what it changed in the profiles is recorded.
+        var changes = OptimizedProfileTweaks.Concat(AggressiveProfileTweaks)
+            .Select(t => t.TakeOutsideChange()).OfType<string>().ToList();
+        if (_recordedNewGameProfile != _settings.NewGameProfile)
+        {
+            changes.Add($"Profile for new games: {_recordedNewGameProfile} to {_settings.NewGameProfile}");
+            _recordedNewGameProfile = _settings.NewGameProfile;
+        }
+        PerformanceActivity.ResetToDefaults(changes);
         foreach (var t in OptimizedProfileTweaks) t.NotifyStateChanged();
         foreach (var t in AggressiveProfileTweaks) t.NotifyStateChanged();
         OnPropertyChanged(nameof(NewGameProfile));
@@ -801,6 +831,8 @@ public class SystemViewModel : ViewModelBase
     public IReadOnlyList<PerformanceProfileMode> NewGameProfileOptions { get; } =
         [PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive];
 
+    private PerformanceProfileMode _recordedNewGameProfile;
+
     /// <summary>The profile a game gets when it's added to the library. Games already there keep theirs.</summary>
     public PerformanceProfileMode NewGameProfile
     {
@@ -808,7 +840,10 @@ public class SystemViewModel : ViewModelBase
         set
         {
             if (_settings.NewGameProfile == value) return;
+            var was = _settings.NewGameProfile;
             _settings.NewGameProfile = value;
+            _recordedNewGameProfile = value;
+            PerformanceActivity.NewGameProfileChanged(was, value);
             OnPropertyChanged();
             OnPropertyChanged(nameof(NewGameProfileIsAggressive));
             _storageService.SaveSettings(_settings);
@@ -827,6 +862,9 @@ public class SystemViewModel : ViewModelBase
 
         OptimizedProfileTweaks = BuildOptimizedProfileToggles(_settings.OptimizedProfileTweaks);
         AggressiveProfileTweaks = BuildAggressiveProfileToggles(_settings.AggressiveProfileTweaks);
+        foreach (var t in OptimizedProfileTweaks) t.Tier = nameof(PerformanceProfileMode.Optimized);
+        foreach (var t in AggressiveProfileTweaks) t.Tier = nameof(PerformanceProfileMode.Aggressive);
+        _recordedNewGameProfile = _settings.NewGameProfile;
 
         // A profile toggle announces its own change; its tier's count line and the search follow it.
         foreach (var toggle in OptimizedProfileTweaks)
@@ -946,7 +984,7 @@ public class SystemViewModel : ViewModelBase
             {
                 StatusMessage = msg;
                 NotifyTweakStateChanged();
-            }));
+            }, OnTweakToggled));
         }
         OnPropertyChanged(nameof(TotalTweakCount));
         NotifyTweakStateChanged();
@@ -954,6 +992,78 @@ public class SystemViewModel : ViewModelBase
         OnPropertyChanged(nameof(CpuAndPowerTweaks));
         OnPropertyChanged(nameof(NetworkAndBackgroundTweaks));
         OnPropertyChanged(nameof(SecurityAndAdvancedTweaks));
+        ReportTweaksResetSinceApplied();
+    }
+
+    // ---- What TrayTrigger applied, for Activity & History ------------------------------------------
+
+    /// <summary>One tweak switched from its row: remembered, and recorded as a change.</summary>
+    private void OnTweakToggled(SystemTweakViewModel tweak, bool nowOptimal)
+    {
+        UpdateAppliedTweaks([(tweak.Id, nowOptimal)]);
+        ActivityService.Add(ActivityLevel.Change,
+            nowOptimal ? $"Applied the System tweak \"{tweak.Name}\"" : $"Put back \"{tweak.Name}\" to what it was before",
+            groupKey: $"tweak|{tweak.Id}|{nowOptimal}");
+    }
+
+    /// <summary>A preset or Restore Previous Settings: what actually changed, as one entry.</summary>
+    private void RecordBulkTweakChange(Dictionary<string, bool> before, bool applying)
+    {
+        var changed = Tweaks.Where(t => before.TryGetValue(t.Id, out bool was) && was != t.IsOptimal).ToList();
+        if (changed.Count == 0) return;
+        UpdateAppliedTweaks(changed.Select(t => (t.Id, t.IsOptimal)));
+        string names = string.Join(", ", changed.Select(t => t.Name));
+        ActivityService.Add(ActivityLevel.Change,
+            applying ? $"Applied the Performance Preset ({changed.Count} {(changed.Count == 1 ? "setting" : "settings")})"
+                     : $"Restored previous settings ({changed.Count} {(changed.Count == 1 ? "setting" : "settings")})",
+            detail: names);
+    }
+
+    private void UpdateAppliedTweaks(IEnumerable<(string Id, bool Optimal)> changes)
+    {
+        var applied = new HashSet<string>(_settings.TweaksAppliedByTrayTrigger, StringComparer.Ordinal);
+        foreach (var (id, optimal) in changes)
+        {
+            if (optimal) applied.Add(id); else applied.Remove(id);
+        }
+        _settings.TweaksAppliedByTrayTrigger = applied.OrderBy(id => id, StringComparer.Ordinal).ToList();
+        _storageService.SaveSettings(_settings, source: "SystemViewModel.TweaksApplied");
+    }
+
+    /// <summary>
+    /// A tweak TrayTrigger applied that reads back at standard now - a Windows update, usually - is
+    /// reported once and forgotten, rather than kept as something to dismiss: the user may have
+    /// changed it themselves.
+    /// </summary>
+    private void ReportTweaksResetSinceApplied()
+    {
+        if (_settings.TweaksAppliedByTrayTrigger.Count == 0 || Tweaks.Count == 0) return;
+        var reset = Tweaks.Where(t => _settings.TweaksAppliedByTrayTrigger.Contains(t.Id) && t.IsAvailable && !t.IsOptimal).ToList();
+        if (reset.Count == 0) return;
+        UpdateAppliedTweaks(reset.Select(t => (t.Id, false)));
+        ActivityService.Add(ActivityLevel.Problem,
+            reset.Count == 1 ? $"\"{reset[0].Name}\" was changed back since TrayTrigger applied it"
+                             : $"{reset.Count} System tweaks were changed back since TrayTrigger applied them",
+            detail: $"{string.Join(", ", reset.Select(t => t.Name))}. A Windows update usually does this. Optimize them again on the System page.",
+            groupKey: "tweaks.reset");
+    }
+
+    /// <summary>
+    /// The startup check for tweaks Windows changed back: reads them only when TrayTrigger has
+    /// applied some, off the UI thread, and fills the System page's list while it's at it.
+    /// </summary>
+    public async Task CheckAppliedTweaksAsync()
+    {
+        if (_settings.TweaksAppliedByTrayTrigger.Count == 0) return;
+        if (Tweaks.Count == 0)
+        {
+            await LoadTweaksAsync();
+        }
+        else
+        {
+            await RefreshAllTweaksAsync(statusOnDone: null);
+            ReportTweaksResetSinceApplied();
+        }
     }
 
     /// <summary>Re-reads every tweak off the UI thread (GetAllTweaks spawns powercfg and a WMI query).</summary>
@@ -975,7 +1085,13 @@ public class SystemViewModel : ViewModelBase
         if (statusOnDone != null) StatusMessage = statusOnDone;
     }
 
-    private void RefreshAllTweaks() => _ = RefreshAllTweaksAsync();
+    private void RefreshAllTweaks() => _ = RefreshAndCheckTweaksAsync();
+
+    private async Task RefreshAndCheckTweaksAsync()
+    {
+        await RefreshAllTweaksAsync();
+        ReportTweaksResetSinceApplied();
+    }
 
     private Dictionary<string, bool> SnapshotOptimalState() => Tweaks.ToDictionary(t => t.Id, t => t.IsOptimal, StringComparer.Ordinal);
 
@@ -1006,6 +1122,7 @@ public class SystemViewModel : ViewModelBase
             await Task.Run(() => _tweaksService.ApplyRecommendedPerformancePreset());
 
             await RefreshAllTweaksAsync(BulkActionStatus("Recommended Performance Preset applied.", restorePoint));
+            RecordBulkTweakChange(before, applying: true);
         }
         finally
         {
@@ -1046,6 +1163,7 @@ public class SystemViewModel : ViewModelBase
             await Task.Run(() => _tweaksService.ResetToDefaults(ids));
 
             await RefreshAllTweaksAsync(BulkActionStatus("Previous settings restored.", restorePoint));
+            RecordBulkTweakChange(before, applying: false);
         }
         finally
         {

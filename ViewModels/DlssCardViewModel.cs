@@ -84,6 +84,9 @@ public sealed class DlssCardViewModel : ViewModelBase
         RestoreCommand = new AsyncRelayCommand(RestoreAsync, () => CanRestore);
     }
 
+    /// <summary>Records each switch in Activity &amp; History. Off for the batch menu, which records one line.</summary>
+    public bool RecordsActivity { get; init; } = true;
+
     /// <summary>Whether the card's tab is selected. Owned here so the XAML needs one binding.</summary>
     public bool IsOnTab
     {
@@ -284,6 +287,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             _records.AddRange(result.Records);
             ClearDerivedState();
             _persist?.Invoke();
+            RecordSwitch(on: true);
 
             // Success says nothing: the switch is the status. Only a problem gets a line, because
             // then the switch drops back to off and something has to say why.
@@ -303,6 +307,12 @@ public sealed class DlssCardViewModel : ViewModelBase
             IsBusy = false;
             RaiseAll();
         }
+    }
+
+    private void RecordSwitch(bool on)
+    {
+        if (!RecordsActivity) return;
+        PerformanceActivity.DlssChanged([_game ?? new GameEntry { Id = _gameName, Name = _gameName }], on);
     }
 
     private async Task RestoreAsync()
@@ -329,6 +339,7 @@ public sealed class DlssCardViewModel : ViewModelBase
                 _records.AddRange(result.Records);
             ClearDerivedState();
             _persist?.Invoke();
+            if (result.Succeeded) RecordSwitch(on: false);
 
             Status = result.Succeeded ? null : result.Error ?? "NVIDIA would not undo the change.";
 

@@ -257,16 +257,17 @@ public partial class MainWindow : Window
         bool setAllToOptimized = ModernDialog.PromptOptimizedProfileMigration(this);
         if (setAllToOptimized)
         {
-            int migratedCount = 0;
+            var migrated = new List<(GameEntry, PerformanceProfileMode)>();
             foreach (var card in _viewModel.Games)
             {
                 if (card.Game.PerformanceProfile == PerformanceProfileMode.Off)
                 {
                     card.Game.PerformanceProfile = PerformanceProfileMode.Optimized;
-                    migratedCount++;
+                    migrated.Add((card.Game, PerformanceProfileMode.Off));
                 }
             }
-            LoggingService.Info("GameEdit", $"Performance Profile migration prompt: switched {migratedCount} game(s) from Off to Optimized.");
+            LoggingService.Info("GameEdit", $"Performance Profile migration prompt: switched {migrated.Count} game(s) from Off to Optimized.");
+            PerformanceActivity.GamesChanged(migrated, PerformanceProfileMode.Optimized);
             _viewModel.SaveLibrary();
         }
     }

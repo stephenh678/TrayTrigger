@@ -69,8 +69,30 @@ public static class DiagnosticReportService
         sb.AppendLine();
         AppendStorage(sb, inputs);
         sb.AppendLine();
+        AppendActivityProblems(sb, ActivityService.Current);
+        sb.AppendLine();
         AppendLogTail(sb, inputs.LogPath);
         return sb.ToString().TrimEnd() + Environment.NewLine;
+    }
+
+    /// <summary>Activity &amp; History's problems from the last 30 days, in its plain words: what the
+    /// player saw, beside the log's technical tail below.</summary>
+    internal static void AppendActivityProblems(StringBuilder sb, ActivityService? activity)
+    {
+        sb.AppendLine("**Recent problems** (Activity & History, last 30 days)");
+        var lines = activity == null ? null : Safe(() => activity.RecentProblemLines(30), null);
+        if (lines == null)
+        {
+            sb.AppendLine("- Not available.");
+            return;
+        }
+        if (lines.Count == 0)
+        {
+            sb.AppendLine("- None.");
+            return;
+        }
+        foreach (var line in lines.Take(20)) sb.AppendLine($"- {line}");
+        if (lines.Count > 20) sb.AppendLine($"- ...and {lines.Count - 20} more.");
     }
 
     // ------------------------------------------------------------------ sections

@@ -157,7 +157,7 @@ public partial class App : Application
                 // cleanly (saving settings) instead of continuing to run broken.
                 LoggingService.Error("App", "Too many unhandled exceptions in a short window; exiting instead of continuing in a possibly corrupted state.");
                 // Notify before ExitApplication() disposes the tray icon. See L-24.
-                _trayIcon?.ShowNotification("TrayTrigger", "Too many errors occurred; TrayTrigger is closing. Check the log for details.");
+                ShowTrayNotification("TrayTrigger", "Too many errors occurred; TrayTrigger is closing. Check the log for details.");
                 args.Handled = true;
                 ExitApplication();
                 return;
@@ -165,8 +165,18 @@ public partial class App : Application
 
             // Keep the tray app alive after an isolated exception rather than letting WPF
             // terminate the process - but a silently swallowed exception is invisible to the
-            // user, so surface it as a non-modal toast instead of only the log file. See L-24.
-            _trayIcon?.ShowNotification("TrayTrigger", "An error was logged. The app is still running - check the log if something looks wrong.");
+            // user, so it goes in Activity & History, whose notification says so once no game is
+            // running. See L-24. Without the history (very early in startup) the old toast stands in.
+            if (ActivityService.Current != null)
+            {
+                ActivityService.Add(ActivityLevel.Problem, "Something went wrong inside TrayTrigger; it's still running",
+                    detail: $"{args.Exception.GetType().Name}: {args.Exception.Message}. Show in log has the details.",
+                    groupKey: $"app.error|{args.Exception.GetType().Name}");
+            }
+            else
+            {
+                ShowTrayNotification("TrayTrigger", "An error was logged. The app is still running - check the log if something looks wrong.");
+            }
             args.Handled = true;
         };
 
@@ -285,6 +295,10 @@ public partial class App : Application
         // settings.json from disk on every profile apply and restore - twice per game launch, on
         // the launch hot path - and used the on-disk copy, so a toggle not yet flushed was
         // ignored. Falls back to startupSettings for the window before the ViewModel exists.
+        // Activity & History, before anything that records into it (crash recovery, resuming a
+        // suspended game). A capture run reads the history but writes none of it.
+        ActivityService.Current = new ActivityService(_storageService.BaseDirectory, readOnly: isScreenshot);
+        if (!isScreenshot) NoteVersionChange(startupSettings);
         _performanceProfileService = new PerformanceProfileService(
             _storageService,
             () => _mainViewModel?.Settings ?? startupSettings,
@@ -475,11 +489,12 @@ public partial class App : Application
         };
         _mainViewModel.RequestExitApplication += ExitApplication;
         _mainViewModel.SettingsVM.RequestRestart += RestartApplication;
-        _mainViewModel.RequestTrayNotification += (title, message) => _trayIcon?.ShowNotification(title, message);
+        _mainViewModel.RequestTrayNotification += (title, message) => ShowTrayNotification(title, message);
 
         // Setup Taskbar Tray Icon
         Log("Initializing Tray Icon...");
         InitializeTrayIcon();
+        InitializeActivityNotifications();
 
         // Explorer only re-reads an icon's NotifyIconSettings entry when the icon is registered,
         // so a freshly written "always show" flag takes effect only after the icon is re-added.
@@ -617,7 +632,7 @@ public partial class App : Application
             try
             {
                 var sessions = _launcherService?.GetActiveSessions() ?? [];
-                _trayIcon.ToolTipText = BuildTrayToolTipText(sessions, DateTime.Now, _mainViewModel?.Settings.GlobalManageHotkey);
+                _trayIcon.ToolTipText = BuildTrayToolTipText(sessions, DateTime.Now, _mainViewModel?.Settings.GlobalManageHotkey, ActivityService.Current?.AttentionCount ?? 0);
 
                 // The timer exists only to age the elapsed time, so it runs only while something is
                 // actually playing (a session still starting has no elapsed time to age yet).
@@ -647,7 +662,7 @@ public partial class App : Application
     /// what brings <see cref="UpdateTrayToolTip"/> back once it is, and without that subscription
     /// this text is painted once at dispatch and never replaced.
     /// </summary>
-    internal static string BuildTrayToolTipText(IReadOnlyList<ActiveGameSession> sessions, DateTime now, string? windowHotkey = null)
+    internal static string BuildTrayToolTipText(IReadOnlyList<ActiveGameSession> sessions, DateTime now, string? windowHotkey = null, int attentionCount = 0)
     {
         string text;
 
@@ -670,6 +685,12 @@ public partial class App : Application
         else
         {
             text = $"Playing {sessions.Count} games · {string.Join(", ", sessions.Select(s => s.Game.Name))}";
+        }
+
+        // First, so truncation never cuts it: the tray is where a hidden window says something needs you.
+        if (attentionCount > 0)
+        {
+            text = (attentionCount == 1 ? "1 thing needs attention" : $"{attentionCount} things need attention") + "\n" + text;
         }
 
         return text.Length > MaxTrayToolTipLength
@@ -700,6 +721,13 @@ public partial class App : Application
             }
 
             var menu = new ContextMenu();
+
+            // Activity & History first, while something needs attention: the one row that is about TrayTrigger itself.
+            if (AttentionMenuRow() is { } attention)
+            {
+                menu.Items.Add(CreateNavMenuItem(attention.Header, "", attention.OnClick, (Brush)FindResource("BrushDanger")));
+                menu.Items.Add(new Separator());
+            }
 
             var games = _mainViewModel.Games.Where(g => !g.Game.IsHidden).ToList();
 
@@ -1305,6 +1333,8 @@ public partial class App : Application
                 window.Topmost = true;
                 window.Topmost = false;
                 window.Focus();
+                // Coming back to a window left on Activity & History: what's on it has now been seen.
+                if (_mainViewModel?.IsActivityView == true) _mainViewModel.ActivityVM.MarkViewed();
             });
         }
         catch (Exception ex)
@@ -1353,7 +1383,7 @@ public partial class App : Application
             var result = _launcherService.CloseGameNow(gameId);
             if (result is ProcessLauncherService.CloseGameResult.StillRunning or ProcessLauncherService.CloseGameResult.CouldNotAsk)
             {
-                Dispatcher.BeginInvoke(() => _trayIcon?.ShowNotification("TrayTrigger", LibraryViewModel.DescribeCloseGame(result, gameName)));
+                Dispatcher.BeginInvoke(() => ShowTrayNotification("TrayTrigger", LibraryViewModel.DescribeCloseGame(result, gameName)));
             }
         });
     }

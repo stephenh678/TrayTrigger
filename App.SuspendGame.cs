@@ -48,7 +48,7 @@ public partial class App
         Dispatcher.BeginInvoke(() =>
         {
             LoggingService.Shown("Tray notification", message);
-            _trayIcon?.ShowNotification("TrayTrigger", message);
+            ShowTrayNotification("TrayTrigger", message);
         });
     }
 }

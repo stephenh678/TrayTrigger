@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using TrayTrigger.Models;
 
 namespace TrayTrigger.Services;
 
@@ -214,6 +215,7 @@ public class ScriptLibraryService
                 manifest.Remove(name);
                 changed = true;
                 LoggingService.Info("Scripts", $"Removed {name}, which is no longer included with TrayTrigger: {target}");
+                ActivityService.Add(ActivityLevel.Activity, $"Removed the example script {name}, which TrayTrigger no longer includes", groupKey: $"scripts.retired|{name}");
             }
             catch (Exception ex)
             {
@@ -310,6 +312,9 @@ public class ScriptLibraryService
 
             File.Move(target, kept);
             LoggingService.Info("Scripts", $"{Path.GetFileName(target)} had been edited. Your version is kept as {Path.GetFileName(kept)}; TrayTrigger's copy replaces it.");
+            ActivityService.Add(ActivityLevel.Problem, $"Your edit of {Path.GetFileName(target)} was moved aside as {Path.GetFileName(kept)}",
+                detail: "TrayTrigger replaces its own example scripts with each update. Copy your changes into a script of your own; New script... in Edit Game makes one.",
+                groupKey: $"scripts.setaside|{Path.GetFileName(target)}");
             return true;
         }
         catch (Exception ex)

@@ -14,6 +14,10 @@ public interface IProfileSnapshotStore
     PerformanceProfileSessionSnapshot? LoadProfileSessionSnapshot();
     void SaveProfileSessionSnapshot(PerformanceProfileSessionSnapshot snapshot);
     void DeleteProfileSessionSnapshot();
+
+    /// <summary>After <see cref="LoadProfileSessionSnapshot"/> returned null for a damaged snapshot,
+    /// once: where a copy of it was kept, or "" when the copy failed. Null when there was none.</summary>
+    string? TakeUnreadableProfileSessionSnapshot() => null;
 }
 
 /// <summary>
@@ -67,6 +71,38 @@ public class PerformanceProfileService
     private readonly HashSet<string> _activeSessionKeys = new();
     private PerformanceProfileSessionSnapshot? _snapshot;
 
+    /// <summary>Who each session is for, for the Activity &amp; History line its restore writes.</summary>
+    private readonly Dictionary<string, (string Name, PerformanceProfileMode Mode, DateTime StartedUtc)> _sessionInfo = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// What a restore couldn't put back, and how to try again. Filled while a restore runs and kept
+    /// until a retry succeeds, as the Critical NEEDS ATTENTION item in Activity &amp; History. Only
+    /// in memory: a restore that fails at exit is a history entry, and what crash recovery owns is
+    /// still in the snapshot.
+    /// </summary>
+    private readonly List<(string What, Func<bool> Retry)> _unrestored = new();
+
+    /// <summary>The Critical entries this run recorded for what's in <see cref="_unrestored"/>: the
+    /// ones Restore Previous marks FIXED when everything is back - never an earlier run's, which it
+    /// didn't retry.</summary>
+    private readonly List<string> _unrestoredEntryIds = new();
+
+    /// <summary>The Activity &amp; History key for "something wasn't put back": the state and the
+    /// entries that announce it share it, so they count once.</summary>
+    public const string UnrestoredActivityKey = "profile.unrestored";
+
+    /// <summary>What isn't back the way it was, for the state's text and tests.</summary>
+    public IReadOnlyList<string> UnrestoredItems
+    {
+        get { lock (_lock) return _unrestored.Select(u => u.What).ToList(); }
+    }
+
+    private void NoteUnrestored(string what, Func<bool> retry)
+    {
+        lock (_lock) _unrestored.Add((what, retry));
+        LoggingService.Warn("PerformanceProfile", $"Could not put back {what}.");
+    }
+
     public PerformanceProfileService(StorageService storageService)
         : this(storageService, () => storageService.LoadSettings(), new WindowsTweakBackend())
     {
@@ -85,11 +121,38 @@ public class PerformanceProfileService
         get { lock (_lock) { return _activeSessionKeys.ToArray(); } }
     }
 
+    public const string UnreadableSnapshotActivityKey = "profile.snapshot.unreadable";
+
+    /// <summary>
+    /// The record of what a profile changed was there but damaged: nothing can be put back from it,
+    /// and treating it as "nothing to restore" would leave the PC changed with nobody told. Critical,
+    /// with what to check by hand. Removed once reported, so it's said once; a copy is kept.
+    /// </summary>
+    private void ReportUnreadableSnapshot()
+    {
+        if (_store.TakeUnreadableProfileSessionSnapshot() is not { } copy) return;
+        bool kept = copy.Length > 0;
+        // Removed only once a copy is safe; without one it stays, and is reported again next start.
+        if (kept) _store.DeleteProfileSessionSnapshot();
+        LoggingService.Error("PerformanceProfile", "The crash-recovery snapshot is damaged; nothing was restored from it."
+                                                   + (kept ? $" A copy was kept at '{copy}'." : " It could not be copied, so it was left in place."));
+        ActivityService.Add(ActivityLevel.Critical,
+            "Couldn't read what a Performance Profile changed, so it may not all have been put back",
+            detail: "TrayTrigger closed during a game and its record of the changes was damaged. Check the power plan "
+                    + "(Control Panel > Power Options), HDR, and any Defender exclusion for the game."
+                    + (kept ? $" A copy of the record was kept at {copy}." : string.Empty),
+            groupKey: UnreadableSnapshotActivityKey);
+    }
+
     /// <summary>Call once at startup, before anything else could touch these same registry values.</summary>
     public void RecoverFromCrashIfNeeded()
     {
         var snapshot = _store.LoadProfileSessionSnapshot();
-        if (snapshot == null) return;
+        if (snapshot == null)
+        {
+            ReportUnreadableSnapshot();
+            return;
+        }
 
         LoggingService.Warn("PerformanceProfile", "Found a leftover profile session snapshot from a previous run (likely an abnormal exit) - restoring pre-profile system state.");
 
@@ -100,13 +163,124 @@ public class PerformanceProfileService
             LoggingService.Warn("PerformanceProfile", $"Ignoring invalid entry in the crash-recovery snapshot: {problem}");
         }
 
+        int before;
+        lock (_lock) before = _unrestored.Count;
         RestoreGlobalTweaks(snapshot, skipElevated: false);
         foreach (var perGame in snapshot.PerGameSnapshots)
         {
             RestorePerGameTweaks(perGame);
         }
         _store.DeleteProfileSessionSnapshot();
+
+        List<string> failed;
+        lock (_lock) failed = _unrestored.Skip(before).Select(u => u.What).ToList();
+        if (failed.Count > 0)
+        {
+            ReportUnrestored(failed, gameName: null);
+        }
+        else
+        {
+            ActivityService.Add(ActivityLevel.Change,
+                "Put back the settings a Performance Profile had changed when TrayTrigger last stopped",
+                detail: "TrayTrigger or Windows closed while a game was running, so the profile was put back at this start.");
+        }
     }
+
+    /// <summary>
+    /// Tells Activity &amp; History what a restore couldn't put back: a Critical entry now, and the
+    /// NEEDS ATTENTION item, with Restore Previous to try again, until a retry succeeds.
+    /// </summary>
+    private void ReportUnrestored(IReadOnlyList<string> justFailed, string? gameName)
+    {
+        string what = JoinList(justFailed);
+        var entry = ActivityService.Add(ActivityLevel.Critical,
+            gameName == null ? $"Couldn't put back {what}" : $"{gameName}: couldn't put back {what}",
+            subject: gameName,
+            detail: $"Restore Previous on this page tries again. Windows Settings can also change {ItOrThem(justFailed)} back by hand.",
+            groupKey: UnrestoredActivityKey);
+        if (entry != null) lock (_lock) _unrestoredEntryIds.Add(entry.Id);
+        PublishUnrestoredState();
+    }
+
+    private void PublishUnrestoredState()
+    {
+        List<string> all;
+        lock (_lock) all = _unrestored.Select(u => u.What).Distinct().ToList();
+        if (all.Count == 0)
+        {
+            ActivityService.Current?.ClearState(UnrestoredActivityKey);
+            return;
+        }
+        string it = ItOrThem(all);
+        bool plural = it == "them";
+        ActivityService.Current?.SetState(new AttentionItem(
+            UnrestoredActivityKey,
+            $"{Capitalize(JoinList(all))} {(plural ? "weren't" : "wasn't")} put back",
+            $"A Performance Profile changed {it} for a game and couldn't change {it} back afterwards.",
+            "Restore Previous",
+            () => _ = System.Threading.Tasks.Task.Run(RetryUnrestored),
+            IsCritical: true));
+    }
+
+    /// <summary>
+    /// Restore Previous on the NEEDS ATTENTION item: tries each thing that wasn't put back again.
+    /// Off the UI thread - a Windows setting can need an administrator prompt. Returns true when
+    /// everything is back.
+    /// </summary>
+    public bool RetryUnrestored()
+    {
+        List<(string What, Func<bool> Retry)> pending;
+        lock (_lock)
+        {
+            pending = _unrestored.ToList();
+            _unrestored.Clear();
+        }
+        var fixedNow = new List<string>();
+        foreach (var item in pending)
+        {
+            bool ok;
+            try { ok = item.Retry(); }
+            catch (Exception ex) { LoggingService.Warn("PerformanceProfile", $"Retrying {item.What} failed: {ex.Message}"); ok = false; }
+            if (ok) fixedNow.Add(item.What);
+            else lock (_lock) _unrestored.Add(item);
+        }
+        int stillLeft;
+        List<string> reported = new();
+        lock (_lock)
+        {
+            stillLeft = _unrestored.Count;
+            if (stillLeft == 0)
+            {
+                reported = _unrestoredEntryIds.ToList();
+                _unrestoredEntryIds.Clear();
+            }
+        }
+        if (fixedNow.Count > 0 && stillLeft == 0)
+        {
+            // Everything is back: the Critical entries that reported it get FIXED rather than a row of their own.
+            ActivityService.Current?.MarkFixed(reported);
+        }
+        else if (fixedNow.Count > 0)
+        {
+            // Some of it: say what, since the entries can't be marked FIXED yet.
+            ActivityService.Add(ActivityLevel.Change, $"Put back {JoinList(fixedNow)}", groupKey: $"{UnrestoredActivityKey}.fixed");
+        }
+        PublishUnrestoredState();
+        lock (_lock) return _unrestored.Count == 0;
+    }
+
+    private static string JoinList(IReadOnlyList<string> items) => items.Count switch
+    {
+        0 => string.Empty,
+        1 => items[0],
+        2 => $"{items[0]} and {items[1]}",
+        _ => $"{string.Join(", ", items.Take(items.Count - 1))} and {items[^1]}",
+    };
+
+    private static string Capitalize(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    /// <summary>"them" for several things, or one plural on its own ("settings", "notifications"); "it" otherwise.</summary>
+    private static string ItOrThem(IReadOnlyList<string> items) => items.Count > 1 || items[0].EndsWith('s') ? "them" : "it";
 
     // ------------------------------------------------------------------------------------------
     // SESSION LIFECYCLE - the launcher calls these in this exact order:
@@ -177,6 +351,7 @@ public class PerformanceProfileService
             }
 
             _activeSessionKeys.Add(game.Id);
+            _sessionInfo[game.Id] = (game.Name, game.PerformanceProfile, DateTime.UtcNow);
             LoggingService.Info("PerformanceProfile", $"Applied {game.PerformanceProfile} profile for '{game.Name}' (pre-launch).");
             return true;
         }
@@ -302,12 +477,22 @@ public class PerformanceProfileService
     /// immediately; machine-wide tweaks are only restored once every tracked session has ended.
     /// Returns true if a tracked session was actually ended by this call.
     /// </summary>
-    public bool EndGameSession(string gameId)
+    public bool EndGameSession(string gameId) => EndGameSession(gameId, out _);
+
+    /// <param name="putBack">The profile's mode when it was applied and everything was put back,
+    /// for the game's "Played" line in Activity &amp; History; null otherwise. What couldn't be put
+    /// back is reported here, as Critical.</param>
+    public bool EndGameSession(string gameId, out PerformanceProfileMode? putBack)
     {
+        putBack = null;
+        (string Name, PerformanceProfileMode Mode, DateTime StartedUtc) info;
+        List<string> failed;
         lock (_lock)
         {
             if (!_activeSessionKeys.Remove(gameId)) return false;
+            _sessionInfo.Remove(gameId, out info);
             if (_snapshot == null) return true;
+            int before = _unrestored.Count;
 
             var perGame = _snapshot.PerGameSnapshots.FirstOrDefault(p => p.GameId == gameId);
             if (perGame != null)
@@ -327,8 +512,20 @@ public class PerformanceProfileService
             {
                 _store.SaveProfileSessionSnapshot(_snapshot);
             }
-            return true;
+            failed = _unrestored.Skip(before).Select(u => u.What).ToList();
         }
+
+        // Outside the lock: recording raises events the UI listens to.
+        string name = info.Name ?? "A game";
+        if (failed.Count > 0)
+        {
+            ReportUnrestored(failed, name);
+        }
+        else
+        {
+            putBack = info.Mode;
+        }
+        return true;
     }
 
     /// <summary>
@@ -342,14 +539,32 @@ public class PerformanceProfileService
     /// </summary>
     public void RestoreActiveSessionOnShutdown(bool skipElevated = false)
     {
+        List<string> failed;
         lock (_lock)
         {
             if (_snapshot == null) return;
+            int before = _unrestored.Count;
+            RestoreActiveSessionOnShutdownLocked(_snapshot, skipElevated);
+            failed = _unrestored.Skip(before).Select(u => u.What).ToList();
+            _sessionInfo.Clear();
+        }
+        // An entry for next time: nothing is left to retry it once TrayTrigger has gone.
+        if (failed.Count > 0)
+        {
+            // Not "play the game again": a new session would take the changed state as the one to put back.
+            ActivityService.Add(ActivityLevel.Critical, $"Couldn't put back {JoinList(failed)} when TrayTrigger closed",
+                detail: $"TrayTrigger can't try again once it has closed. Change {ItOrThem(failed)} back by hand in Windows Settings; Show in log has the details.",
+                groupKey: UnrestoredActivityKey);
+        }
+    }
 
+    private void RestoreActiveSessionOnShutdownLocked(PerformanceProfileSessionSnapshot snapshot, bool skipElevated)
+    {
+        {
             bool deferElevated = skipElevated && !_backend.IsElevated;
 
-            RestoreGlobalTweaks(_snapshot, deferElevated);
-            foreach (var perGame in _snapshot.PerGameSnapshots.ToList())
+            RestoreGlobalTweaks(snapshot, deferElevated);
+            foreach (var perGame in snapshot.PerGameSnapshots.ToList())
             {
                 RestoreGpuPreference(perGame);
                 if (!deferElevated)
@@ -358,16 +573,16 @@ public class PerformanceProfileService
                 }
                 else if (!perGame.DefenderExclusionCaptured || perGame.DefenderExclusionWasPreExisting)
                 {
-                    _snapshot.PerGameSnapshots.Remove(perGame);
+                    snapshot.PerGameSnapshots.Remove(perGame);
                 }
             }
 
-            bool anythingDeferred = deferElevated && (_snapshot.SystemResponsivenessCaptured || _snapshot.SchedulingCategoryCaptured || _snapshot.PerGameSnapshots.Count > 0);
+            bool anythingDeferred = deferElevated && (snapshot.SystemResponsivenessCaptured || snapshot.SchedulingCategoryCaptured || snapshot.PerGameSnapshots.Count > 0);
 
             _activeSessionKeys.Clear();
             if (anythingDeferred)
             {
-                _store.SaveProfileSessionSnapshot(_snapshot);
+                _store.SaveProfileSessionSnapshot(snapshot);
                 LoggingService.Info("PerformanceProfile", "Restored the non-elevated parts of the active profile at shutdown; elevated tweaks will be restored on next start.");
             }
             else
@@ -423,8 +638,33 @@ public class PerformanceProfileService
             LoggingService.Warn("PerformanceProfile", $"Power Plan: not restoring - captured scheme id '{snapshot.PreviousPowerSchemeGuid}' is not a GUID.");
             return;
         }
-        _backend.SetActivePowerScheme(snapshot.PreviousPowerSchemeGuid);
-        LoggingService.Verbose("PerformanceProfile", $"Power Plan: restored active scheme to {snapshot.PreviousPowerSchemeGuid}.");
+        string previous = snapshot.PreviousPowerSchemeGuid;
+        if (SetPowerSchemeAndCheck(previous))
+        {
+            LoggingService.Verbose("PerformanceProfile", $"Power Plan: restored active scheme to {previous}.");
+        }
+        else
+        {
+            NoteUnrestored("the power plan", () => SetPowerSchemeAndCheck(previous));
+        }
+    }
+
+    /// <summary>Sets the scheme and reads it back: powercfg reports nothing useful on failure, and a
+    /// deleted scheme or a policy can leave the old one active.</summary>
+    private bool SetPowerSchemeAndCheck(string schemeGuid)
+    {
+        try
+        {
+            _backend.SetActivePowerScheme(schemeGuid);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("PerformanceProfile", $"Power Plan: setting {schemeGuid} failed: {ex.Message}");
+            return false;
+        }
+        string? now = _backend.GetActivePowerSchemeGuid();
+        // An unreadable scheme isn't evidence of a failure; only a different one is.
+        return now == null || string.Equals(now, schemeGuid, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -563,6 +803,8 @@ public class PerformanceProfileService
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"RestoreDoNotDisturb failed: {ex.Message}");
+            int? previous = snapshot.PreviousToastsEnabled;
+            NoteUnrestored("Windows notifications", () => { _backend.SetToastsEnabled(previous); return true; });
         }
     }
 
@@ -613,8 +855,15 @@ public class PerformanceProfileService
             // Following the user's current device is the lesser surprise: they moved the sound
             // somewhere on purpose, and re-muting a device they have since walked away from would
             // leave the one they are listening to in a state TrayTrigger never saw.
-            _backend.SetDefaultPlaybackMuted(snapshot.PreviousPlaybackMuted);
-            LoggingService.Info("PerformanceProfile", $"Unmute audio: playback device restored to {(snapshot.PreviousPlaybackMuted ? "muted" : "unmuted")}.");
+            bool previous = snapshot.PreviousPlaybackMuted;
+            if (_backend.SetDefaultPlaybackMuted(previous))
+            {
+                LoggingService.Info("PerformanceProfile", $"Unmute audio: playback device restored to {(previous ? "muted" : "unmuted")}.");
+            }
+            else
+            {
+                NoteUnrestored("the speakers' mute", () => _backend.SetDefaultPlaybackMuted(previous));
+            }
         }
         catch (Exception ex)
         {
@@ -665,9 +914,10 @@ public class PerformanceProfileService
         snapshot.SystemResponsivenessCaptured = false;
         snapshot.SchedulingCategoryCaptured = false;
 
-        if (hklmChanges.Count > 0)
+        if (hklmChanges.Count > 0 && !_backend.ApplyHklmChanges(hklmChanges))
         {
-            _backend.ApplyHklmChanges(hklmChanges);
+            var entries = hklmChanges.ToList();
+            NoteUnrestored("Windows' multimedia scheduler settings", () => _backend.ApplyHklmChanges(entries));
         }
     }
 
@@ -739,6 +989,11 @@ public class PerformanceProfileService
 
             var adapterId = new HdrControlService.LUID { LowPart = s.AdapterIdLowPart, HighPart = s.AdapterIdHighPart };
             bool ok = _backend.SetDisplayHdrEnabled(adapterId, s.TargetId, false);
+            if (!ok)
+            {
+                uint targetId = s.TargetId;
+                NoteUnrestored("HDR on a display", () => _backend.SetDisplayHdrEnabled(adapterId, targetId, false));
+            }
 
             // Name the mode the display goes back to, not just the HDR bit. "HDR state to Off"
             // read as though a display that had been in WCG was being dropped to plain SDR; it
@@ -791,6 +1046,14 @@ public class PerformanceProfileService
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"RestoreGpuPreference failed: {ex.Message}");
+            string path = snapshot.GpuPreferenceExecutablePath;
+            string? previous = snapshot.PreviousGpuPreferenceValue;
+            NoteUnrestored($"the GPU preference for {Path.GetFileName(path)}", () =>
+            {
+                if (previous != null) _backend.SetGpuPreference(path, previous);
+                else _backend.DeleteGpuPreference(path);
+                return true;
+            });
         }
         finally
         {
@@ -861,14 +1124,24 @@ public class PerformanceProfileService
         snapshot.DefenderExclusionCaptured = false;
         if (snapshot.DefenderExclusionWasPreExisting) return;
 
+        string path = snapshot.DefenderExclusionPath;
+        bool removed;
         try
         {
-            _backend.RemoveDefenderExclusion(snapshot.DefenderExclusionPath);
-            LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: removed '{snapshot.DefenderExclusionPath}'.");
+            removed = _backend.RemoveDefenderExclusion(path);
         }
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"RestoreDefenderExclusion failed: {ex.Message}");
+            removed = false;
+        }
+        if (removed)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: removed '{path}'.");
+        }
+        else
+        {
+            NoteUnrestored($"the Defender exclusion for {Path.GetFileName(path)}", () => _backend.RemoveDefenderExclusion(path));
         }
     }
 }

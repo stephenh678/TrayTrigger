@@ -346,19 +346,25 @@ public partial class ProcessLauncherService
         var unmute = new HashSet<int>();
         foreach (var group in records.GroupBy(r => r.GameId))
         {
-            int resumed = 0;
+            int resumed = 0, refused = 0;
             foreach (var record in group)
             {
                 var result = ProcessSuspender.Resume(record.ProcessId, record.StartedUtc, out string? error);
                 if (result == ProcessSuspender.Outcome.Done) resumed++;
-                else if (result == ProcessSuspender.Outcome.Refused) LoggingService.Warn("Suspend", $"Could not resume PID {record.ProcessId} of '{record.GameName}', left suspended when TrayTrigger last stopped: {error}.");
+                else if (result == ProcessSuspender.Outcome.Refused)
+                {
+                    refused++;
+                    LoggingService.Warn("Suspend", $"Could not resume PID {record.ProcessId} of '{record.GameName}', left suspended when TrayTrigger last stopped: {error}.");
+                }
                 if (record.Muted && result == ProcessSuspender.Outcome.Done) unmute.Add(record.ProcessId);
             }
             string name = group.First().GameName;
+            if (refused > 0) RecordStillFrozen(name, group.Key);
             if (resumed > 0)
             {
                 games.Add(name);
                 LoggingService.Info("Suspend", $"Resumed '{name}' ({resumed} process(es)), left suspended when TrayTrigger last stopped.");
+                ActivityService.Add(ActivityLevel.Change, $"Resumed {name}, left suspended when TrayTrigger last stopped", subject: name);
             }
             else
             {
@@ -397,18 +403,29 @@ public partial class ProcessLauncherService
         if (pids.Count > 0) ProcessAudioMuter.Unmute(pids);
     }
 
+    /// <summary>A game Windows wouldn't let TrayTrigger wake: it stays frozen until it's ended. A Problem, once per try.</summary>
+    private static void RecordStillFrozen(string name, string gameId) =>
+        ActivityService.Add(ActivityLevel.Problem, $"{name}: couldn't resume it after it was suspended, so it's still frozen",
+            subject: name, detail: "End it in Task Manager. Nothing else on the PC is affected.",
+            groupKey: $"suspend.resume|{gameId}");
+
     /// <summary>Resumes and unmutes the session's processes and restarts its playtime clock. Holds <see cref="_suspendLock"/>.</summary>
     private void ResumeProcesses(ActiveGameSession session, string why)
     {
-        int resumed = 0;
+        int resumed = 0, refused = 0;
         var unmute = new HashSet<int>();
         foreach (var record in session.SuspendedProcesses)
         {
             var result = ProcessSuspender.Resume(record.ProcessId, record.StartedUtc, out string? error);
             if (result == ProcessSuspender.Outcome.Done) resumed++;
-            else if (result == ProcessSuspender.Outcome.Refused) LoggingService.Warn("Suspend", $"Could not resume PID {record.ProcessId} of '{session.Game.Name}': {error}.");
+            else if (result == ProcessSuspender.Outcome.Refused)
+            {
+                refused++;
+                LoggingService.Warn("Suspend", $"Could not resume PID {record.ProcessId} of '{session.Game.Name}': {error}.");
+            }
             if (record.Muted) unmute.Add(record.ProcessId);
         }
+        if (refused > 0) RecordStillFrozen(session.Game.Name, session.GameId);
         if (unmute.Count > 0) ProcessAudioMuter.Unmute(unmute);
 
         var paused = DateTime.UtcNow - session.SuspendedAtUtc;

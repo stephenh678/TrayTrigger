@@ -757,21 +757,6 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    public string GitHubRepository
-    {
-        get => string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository;
-        set
-        {
-            string clean = string.IsNullOrWhiteSpace(value) ? "stephenh678/TrayTrigger" : value.Trim();
-            if (_settings.GitHubRepository != clean)
-            {
-                _settings.GitHubRepository = clean;
-                OnPropertyChanged();
-                AutoSaveSettings();
-            }
-        }
-    }
-
     // Update checking itself lives in MainViewModel (the single implementation, per L-10);
     // this just displays that status and triggers it via the callbacks passed at construction.
     public string UpdateStatusText => _getUpdateStatusText?.Invoke() ?? string.Empty;
@@ -1496,6 +1481,21 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>"Notify me when a scan finds new games": a toast as well as the Activity &amp; History line.</summary>
+    public bool NotifyWhenScanAddsGames
+    {
+        get => _settings.NotifyWhenScanAddsGames;
+        set
+        {
+            if (_settings.NotifyWhenScanAddsGames != value)
+            {
+                _settings.NotifyWhenScanAddsGames = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     // --- Global Manage Hotkey ---
 
     // --- Tools ---
@@ -2111,8 +2111,11 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.HasSeenMetadataSourcesReminder),
             nameof(AppSettings.HasSeenTrayHideNotice),
             nameof(AppSettings.HasTurnedOnToolsFor148),
+            nameof(AppSettings.HasTurnedOnCompactTrayFor149),
             // Describes the machine (what a tweak found before it was applied), not a preference.
             nameof(AppSettings.TweakPriorState),
+            nameof(AppSettings.TweaksAppliedByTrayTrigger),
+            nameof(AppSettings.LastRunVersion),
         };
         foreach (var prop in typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -2172,6 +2175,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(MetadataRefreshOption));
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
+        OnPropertyChanged(nameof(NotifyWhenScanAddsGames));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
         OnPropertyChanged(nameof(KeepLaunchersMinimized));
         OnPropertyChanged(nameof(ShowLaunchPopup));
@@ -2181,7 +2185,6 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(TrayLeftClickOpensMenu));
         OnPropertyChanged(nameof(AutoCheckForUpdates));
         OnPropertyChanged(nameof(IncludePrereleaseUpdates));
-        OnPropertyChanged(nameof(GitHubRepository));
         OnPropertyChanged(nameof(GlobalManageHotkey));
         OnPropertyChanged(nameof(TrayMenuHotkey));
         OnPropertyChanged(nameof(SuspendGameHotkey));
