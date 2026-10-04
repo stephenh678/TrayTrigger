@@ -51,6 +51,23 @@ public class SuspendGameTests : IDisposable
         return threads.Count > 0 && threads.All(t => t.ThreadState == ThreadState.Wait && t.WaitReason == ThreadWaitReason.Suspended);
     }
 
+    /// <summary>
+    /// Waits up to a second for the process to reach the state asked for. Suspending raises each
+    /// thread's suspend count at once, but a thread that's running stops only at its next trip into
+    /// the kernel, so its state can read "Running" for a moment after Suspend returns. On a busy CI
+    /// runner that moment was long enough to fail the check now and then.
+    /// </summary>
+    private static bool BecomesFrozen(Process process, bool frozen)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(1);
+        while (IsFrozen(process) != frozen)
+        {
+            if (DateTime.UtcNow > deadline) return false;
+            Thread.Sleep(20);
+        }
+        return true;
+    }
+
     private static ActiveGameSession Session(string name = "Elden Ring") => new(new GameEntry { Name = name }, LaunchRoute.DirectExe);
 
     // ------------------------------------------------------------------ playtime and the tray
@@ -162,10 +179,10 @@ public class SuspendGameTests : IDisposable
         var started = ping.StartTime.ToUniversalTime();
 
         Assert.Equal(ProcessSuspender.Outcome.Done, ProcessSuspender.Suspend(ping.Id, started, out _));
-        Assert.True(IsFrozen(ping));
+        Assert.True(BecomesFrozen(ping, frozen: true));
 
         Assert.Equal(ProcessSuspender.Outcome.Done, ProcessSuspender.Resume(ping.Id, started, out _));
-        Assert.False(IsFrozen(ping));
+        Assert.True(BecomesFrozen(ping, frozen: false));
     }
 
     [Fact]
