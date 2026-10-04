@@ -260,42 +260,123 @@
                     <!-- Each spec card carries its own IsSpecsLoaded rule instead of sharing a wrapper
                          panel, so the card search sees them as separate cards. -->
 
-                    <!-- 1. Graphics Card (GPU) -->
+                    <!-- 1. Graphics: every GPU, dedicated first (GpuCardViewModel). A laptop, or a desktop
+                         with the processor's own graphics on, has two, and which a game lands on matters.
+                         The pill is the live load once the GPU counters have two readings, the VRAM size
+                         until then. NVIDIA's driver check asks NVIDIA's site only when clicked; AMD and
+                         Intel publish nothing to ask, so theirs opens their driver page. -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                <Border DockPanel.Dock="Right" Style="{StaticResource SpecStaticPill}">
-                                    <TextBlock Text="{Binding PrimaryGpu.VramGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB VRAM'}"/>
-                                </Border>
-                                <TextBlock Text="Graphics Card (GPU)" FontSize="13.5" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                            <TextBlock Text="{Binding PrimaryGpu.ModelName}" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <DockPanel>
-                                <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}">
-                                    <Run Text="{Binding PrimaryGpu.DriverVersion, Mode=OneWay, StringFormat='Driver: {0}'}"/>
-                                    <Run Text="{Binding PrimaryGpu.DriverDate, Mode=OneWay, StringFormat=' ({0})'}"/>
-                                </TextBlock>
-                            </DockPanel>
+                            <TextBlock Text="Graphics (GPU)" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                            <ItemsControl ItemsSource="{Binding GpuCards}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,12">
+                                            <DockPanel LastChildFill="True" Margin="0,0,0,3">
+                                                <!-- Live load in the CPU card's live style; the VRAM size, static, until the first reading. -->
+                                                <Grid DockPanel.Dock="Right" VerticalAlignment="Center">
+                                                    <Border Style="{StaticResource SpecLivePill}"
+                                                            Visibility="{Binding IsLive, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{Binding PillText}"/>
+                                                    </Border>
+                                                    <Border Style="{StaticResource SpecStaticPill}"
+                                                            Visibility="{Binding IsNotLive, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{Binding PillText}"/>
+                                                    </Border>
+                                                </Grid>
+                                                <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Border Style="{StaticResource SpecStaticPill}" Padding="5,1" Margin="6,0,0,0"
+                                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding KindLabel}" FontSize="10"/>
+                                                </Border>
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding DetailLine}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
+                                            <!-- Fewer PCIe lanes than the card supports: the wrong slot, or one sharing
+                                                 its lanes with an M.2 drive. Width only - the speed drops at idle. -->
+                                            <TextBlock Text="{Binding PcieWarning}" FontSize="11" Foreground="{StaticResource BrushWarning}"
+                                                       TextWrapping="Wrap" Margin="0,2,0,4"
+                                                       Visibility="{Binding IsPcieNarrowed, Converter={StaticResource BoolToVis}}"/>
+                                            <DockPanel LastChildFill="True">
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                                            Visibility="{Binding HasDriverCheck, Converter={StaticResource BoolToVis}}">
+                                                    <Button Content="Get Driver" Command="{Binding GetDriverCommand}"
+                                                            Visibility="{Binding ShowGetDriver, Converter={StaticResource BoolToVis}}"
+                                                            Style="{StaticResource ModernAccentButton}" Padding="10,3" Margin="0,0,6,0"/>
+                                                    <Button Content="{Binding CheckButtonText}" Command="{Binding CheckDriverCommand}"
+                                                            ToolTip="{Binding CheckButtonToolTip}"
+                                                            Style="{StaticResource ModernOutlineButton}" Padding="10,3"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding DriverLine}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                                           VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,10,0"/>
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding CheckMessage}" FontSize="11.5" TextWrapping="Wrap" Margin="0,5,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasCheckMessage}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding CheckState}" Value="UpToDate">
+                                                                <Setter Property="Foreground" Value="#7FE08A"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding CheckState}" Value="NewerAvailable">
+                                                                <Setter Property="Foreground" Value="{StaticResource BrushWarning}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <ProgressBar Value="{Binding LoadPercent, Mode=OneWay}" Maximum="100" Height="6" Margin="0,8,0,0"
+                                                         Background="#16161B" Foreground="{StaticResource BrushAccent}" BorderThickness="0"
+                                                         Visibility="{Binding IsLive, Converter={StaticResource BoolToVis}}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
 
-                    <!-- 2. Displays & Refresh Rate -->
+                    <!-- 2. Displays: each screen by the monitor's own name, its mode, HDR, and a warning
+                         when it runs below the fastest refresh rate it offers at that resolution - the
+                         display's counterpart of the XMP/EXPO note on the memory card. -->
                     <Border Style="{StaticResource SettingsCard}" Visibility="{Binding IsSpecsLoaded, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                            <DockPanel LastChildFill="True" Margin="0,0,0,6">
                                 <Border DockPanel.Dock="Right" Style="{StaticResource SpecStaticPill}">
                                     <TextBlock Text="{Binding PrimaryDisplay.RefreshRateHz, Mode=OneWay, StringFormat='{}{0} Hz'}"/>
                                 </Border>
-                                <TextBlock Text="Displays &amp; Refresh Rate" FontSize="13.5" FontWeight="SemiBold" 
+                                <TextBlock Text="Displays &amp; Refresh Rate" FontSize="13.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             </DockPanel>
-                            <TextBlock Text="{Binding PrimaryDisplay.ResolutionDisplay, Mode=OneWay, StringFormat='Primary Display: {0}'}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <ItemsControl ItemsSource="{Binding SecondaryDisplays}" Visibility="{Binding HasMultipleDisplays, Converter={StaticResource BoolToVis}}" Margin="0,2,0,0">
+                            <ItemsControl ItemsSource="{Binding Displays}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding ResolutionDisplay, StringFormat='• Additional: {0}'}" FontSize="11" 
-                                                   Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0"/>
+                                        <StackPanel Margin="0,0,0,8">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding ModeDisplay}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
+                                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                <Border Style="{StaticResource SpecStaticPill}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                        Visibility="{Binding HasHdr, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="{Binding HdrDisplay}" FontSize="10"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding DeviceName}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,1,0,0"/>
+                                            <DockPanel Margin="0,4,0,0" LastChildFill="True"
+                                                       Visibility="{Binding IsBelowMaxRefresh, Converter={StaticResource BoolToVis}}">
+                                                <Button DockPanel.Dock="Right" Content="Display Settings..."
+                                                        Command="{Binding DataContext.OpenAdvancedDisplaySettingsCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        Style="{StaticResource ModernOutlineButton}" Padding="10,3" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                                <TextBlock Text="{Binding RefreshWarning}" FontSize="11" Foreground="{StaticResource BrushWarning}"
+                                                           TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                            </DockPanel>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -378,6 +459,10 @@
                                                         Visibility="{Binding HasMediaTypeInfo, Converter={StaticResource BoolToVis}}">
                                                     <TextBlock Text="{Binding MediaTypeDisplay}" FontSize="10"/>
                                                 </Border>
+                                                <!-- How many library games are installed here. -->
+                                                <TextBlock Text="{Binding GameCountDisplay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                                           Margin="8,0,0,0" VerticalAlignment="Center" DockPanel.Dock="Left"
+                                                           Visibility="{Binding HasGameCount, Converter={StaticResource BoolToVis}}"/>
                                             </DockPanel>
                                             <ProgressBar Value="{Binding UsagePercent, Mode=OneWay}" Maximum="100" Height="6"
                                                          Background="{StaticResource BrushPillBackground}" BorderThickness="0">
@@ -394,6 +479,9 @@
                                                     </Style>
                                                 </ProgressBar.Style>
                                             </ProgressBar>
+                                            <TextBlock Text="{Binding HddGamesNote}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                                       TextWrapping="Wrap" Margin="0,4,0,0"
+                                                       Visibility="{Binding HasGamesOnHdd, Converter={StaticResource BoolToVis}}"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

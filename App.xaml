@@ -282,6 +282,32 @@
         <!-- Help Link: the inline "Learn more" text link that opens a HelpDialog topic. Plain accent
              text, underline on hover, no chrome - sits under a control's one-line hint. Use with
              Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="section/topic". -->
+        <!-- The "Key works" line under a SteamGridDB or RAWG key box, bound to an
+             ApiKeyCheckViewModel. Shared by Settings and the Welcome dialog. -->
+        <Style x:Key="ApiKeyCheckStatusText" TargetType="TextBlock">
+            <Setter Property="Text" Value="{Binding Message}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,5,0,0"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasMessage}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Valid">
+                    <Setter Property="Foreground" Value="#7FE08A"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Rejected">
+                    <Setter Property="Foreground" Value="{StaticResource BrushDanger}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Unreachable">
+                    <Setter Property="Foreground" Value="{StaticResource BrushWarning}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="HelpLinkButton" TargetType="Button">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="11"/>

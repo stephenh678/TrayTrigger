@@ -313,27 +313,21 @@ public partial class SystemInfoService
                     if (string.IsNullOrWhiteSpace(desc) || desc.Contains("Basic Display", StringComparison.OrdinalIgnoreCase))
                         continue;
 
+                    string windowsVersion = cardKey.GetValue("DriverVersion") as string ?? "";
+                    string driverDate = cardKey.GetValue("DriverDate") as string ?? "Unknown";
+                    var vendor = VendorFromName(desc);
                     var gpu = new GpuHardwareInfo
                     {
                         ModelName = desc,
-                        DriverVersion = cardKey.GetValue("DriverVersion") as string ?? "Unknown",
-                        DriverDate = cardKey.GetValue("DriverDate") as string ?? "Unknown"
+                        DriverKey = subName,
+                        Vendor = vendor,
+                        WindowsDriverVersion = windowsVersion,
+                        // NVIDIA's numbering only applies to NVIDIA: the same arithmetic turns
+                        // Intel's 31.0.101.5382 into "153.82".
+                        DriverVersion = VendorDriverVersion(vendor, windowsVersion, cardKey.GetValue("RadeonSoftwareVersion") as string),
+                        DriverDate = driverDate,
+                        DriverDateValue = ParseDriverDate(driverDate)
                     };
-
-                    // Clean driver version for NVIDIA (e.g. 31.0.15.5186 -> 551.86). NVIDIA's
-                    // numbering only: the same arithmetic turns Intel's 31.0.101.5382 into "153.82".
-                    if (desc.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) && gpu.DriverVersion.Contains('.'))
-                    {
-                        var parts = gpu.DriverVersion.Split('.');
-                        if (parts.Length >= 4 && parts[^2].Length >= 1)
-                        {
-                            string lastTwo = parts[^2] + parts[^1];
-                            if (lastTwo.Length >= 5)
-                            {
-                                gpu.DriverVersion = $"{lastTwo[^5..^2]}.{lastTwo[^2..]}";
-                            }
-                        }
-                    }
 
                     // VRAM detection
                     object? vramBytes = cardKey.GetValue("HardwareInformation.qwMemorySize");
@@ -351,7 +345,7 @@ public partial class SystemInfoService
                         gpu.VramGigabytes = Math.Round((uint)iBytes / (1024.0 * 1024.0 * 1024.0), 1);
                     }
 
-                    gpu.IsDedicated = !desc.Contains("Intel", StringComparison.OrdinalIgnoreCase) || desc.Contains("Arc", StringComparison.OrdinalIgnoreCase);
+                    gpu.IsDedicated = !IsIntegratedGpu(vendor, desc);
 
                     list.Add(gpu);
                 }
@@ -365,6 +359,11 @@ public partial class SystemInfoService
         if (list.Count == 0)
         {
             list.Add(new GpuHardwareInfo { ModelName = "Primary Graphics Adapter", VramGigabytes = 0 });
+        }
+        else
+        {
+            MatchDxgiAdapters(list);
+            ReadPcieLinks(list);
         }
 
         // Order dedicated GPUs first
@@ -441,6 +440,18 @@ public partial class SystemInfoService
 
     private List<DisplayHardwareInfo> GetDisplays()
     {
+        // Monitor names, the fastest rate each screen offers and HDR first; the plain mode query
+        // below is the fallback when the display configuration can't be read.
+        try
+        {
+            if (GetDisplaysFromDisplayConfig() is { } detailed)
+                return detailed;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("SystemInfo", $"Display configuration query failed, using the basic display list: {ex.Message}");
+        }
+
         var list = new List<DisplayHardwareInfo>();
 
         try
@@ -505,6 +516,8 @@ public partial class SystemInfoService
     {
         var list = new List<DriveStorageInfo>();
         var mediaTypeByLetter = GetDriveLetterMediaTypes();
+        if (mediaTypeByLetter.Count > 0)
+            RememberDriveMediaTypes(mediaTypeByLetter);
 
         try
         {
@@ -636,17 +649,6 @@ public partial class SystemInfoService
                 {
                     info.WindowsEdition = info.WindowsEdition.Replace("Windows 10", "Windows 11");
                 }
-            }
-
-            // Game Mode status
-            using var gameBarKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar");
-            if (gameBarKey != null)
-            {
-                var val = gameBarKey.GetValue("AllowAutoGameMode");
-                // Preserve the original "absent = active" default, but use a type check instead
-                // of an unsafe cast: a non-DWORD value here would otherwise throw and abandon
-                // ActivePowerPlan/LastBootTime below, in the same try block. See L-22.
-                info.IsGameModeActive = val is not int i || i != 0;
             }
 
             // Power plan

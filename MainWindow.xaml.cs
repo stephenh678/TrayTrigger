@@ -53,12 +53,9 @@ public partial class MainWindow : Window
         {
             LoggingService.Verbose("MainWindow", "Loaded.");
             if (SuppressOneTimePrompts) return;
-            // Read before the Welcome prompt marks itself seen: a brand-new install gets the
-            // SteamGridDB / RAWG tip inside the Welcome dialog instead of a second popup.
-            bool isFreshInstall = !_viewModel.SettingsVM.Settings.HasSeenWelcomePrompt;
             MaybeShowWelcomePrompt();
             MaybeShowPerformanceProfileMigrationPrompt();
-            MaybeShowMetadataSourcesReminder(isFreshInstall);
+            MaybeShowMetadataSourcesReminder();
         };
 
         _viewModel.RequestScanResultsPicker += OnRequestScanResultsPicker;
@@ -221,9 +218,12 @@ public partial class MainWindow : Window
             return;
 
         settingsVm.Settings.HasSeenWelcomePrompt = true;
+        // The Welcome's first step asks for the SteamGridDB and RAWG keys itself, so the reminder
+        // for users upgrading from before they existed has nothing left to say on this PC.
+        settingsVm.Settings.HasSeenMetadataSourcesReminder = true;
         settingsVm.AutoSaveSettings();
 
-        var welcome = new WelcomeDialog { Owner = this };
+        var welcome = new WelcomeDialog(settingsVm) { Owner = this };
         welcome.ShowDialog();
 
         // "Scan for Games" straight from the welcome: the single most useful first step for
@@ -274,10 +274,11 @@ public partial class MainWindow : Window
     /// <summary>
     /// One-time reminder (gated like the prompts above) that SteamGridDB poster art and RAWG game
     /// info are available, for users upgrading to 1.4.0 who never turned them on. Names only the
-    /// sources that aren't already enabled with a key, and is skipped when both are, and on a
-    /// fresh install, whose Welcome dialog already mentions them.
+    /// sources that aren't already enabled with a key, and is skipped when both are. A fresh
+    /// install never sees it: <see cref="MaybeShowWelcomePrompt"/> marks it seen, because the
+    /// Welcome asks for both keys on its first step.
     /// </summary>
-    private void MaybeShowMetadataSourcesReminder(bool isFreshInstall)
+    private void MaybeShowMetadataSourcesReminder()
     {
         var settingsVm = _viewModel.SettingsVM;
         var settings = settingsVm.Settings;
@@ -289,7 +290,7 @@ public partial class MainWindow : Window
 
         bool needsSteamGridDb = !settings.UseSteamGridDbArt || string.IsNullOrWhiteSpace(settings.SteamGridDbApiKey);
         bool needsRawg = !settings.UseRawgMetadata || string.IsNullOrWhiteSpace(settings.RawgApiKey);
-        if (isFreshInstall || (!needsSteamGridDb && !needsRawg))
+        if (!needsSteamGridDb && !needsRawg)
             return;
 
         LoggingService.Info("MainWindow", $"Showing the SteamGridDB / RAWG reminder (SteamGridDB set up: {!needsSteamGridDb}, RAWG set up: {!needsRawg}).");

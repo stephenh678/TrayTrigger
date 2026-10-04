@@ -261,6 +261,8 @@ public class MainViewModel : ViewModelBase
         SettingsVM.Dlss = new DlssSettingsViewModel(_systemTweaksService,
             () => Library.DlssOverrideGameCount, () => Library.RestoreAllDlssOverrides());
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
+        // A snapshot taken on the UI thread; the per-drive count then runs off it.
+        SystemVM.GetLibraryGames = () => Library.Games.Select(card => card.Game).ToList();
 
         // Navigation Commands
         ToggleSidebarCommand = new RelayCommand(() => IsSidebarExpanded = !IsSidebarExpanded);
@@ -327,7 +329,7 @@ public class MainViewModel : ViewModelBase
             try
             {
                 Clipboard.SetText(BuildDiagnosticReport());
-                Library.StatusMessage = "Diagnostic report copied to the clipboard.";
+                ReportDiagnosticsStatus("Diagnostic report copied to the clipboard.");
             }
             catch (Exception ex)
             {
@@ -347,7 +349,7 @@ public class MainViewModel : ViewModelBase
                 };
                 if (FileDialogCloak.Show(dialog) != true) return;
                 System.IO.File.WriteAllText(dialog.FileName, BuildDiagnosticReport());
-                Library.StatusMessage = $"Diagnostic report saved to {dialog.FileName}";
+                ReportDiagnosticsStatus($"Diagnostic report saved to {dialog.FileName}");
             }
             catch (Exception ex)
             {
@@ -358,7 +360,6 @@ public class MainViewModel : ViewModelBase
 
         OpenSettingsCommand = new RelayCommand(OpenSettings);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
-        OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute("https://www.steamgriddb.com/profile/preferences"));
 
         _launcherService.GameUpdated += Library.OnGameUpdatedFromLauncher;
         _launcherService.SessionStarted += Library.OnSessionStarted;
@@ -534,6 +535,14 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenGitHubCommand { get; }
     public ICommand OpenGitHubIssuesCommand { get; }
     public ICommand CopySystemInfoCommand { get; }
+
+    /// <summary>The report buttons are on About and on Settings > Diagnostics &amp; Storage, and
+    /// each page has its own status line: say it on both, so whichever is showing has it.</summary>
+    private void ReportDiagnosticsStatus(string message)
+    {
+        Library.StatusMessage = message;
+        SettingsVM.StatusMessage = message;
+    }
     public ICommand SaveDiagnosticReportCommand { get; }
 
     /// <summary>
@@ -715,7 +724,6 @@ public class MainViewModel : ViewModelBase
     public ICommand RefreshAllPostersCommand => Import.RefreshAllPostersCommand;
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
-    public ICommand OpenSteamGridDbSiteCommand { get; }
     public ICommand RefreshCategoriesCommand => Library.RefreshCategoriesCommand;
     public ICommand UndoDeleteCommand => Library.UndoDeleteCommand;
     public ICommand DismissUndoToastCommand => Library.DismissUndoToastCommand;
@@ -748,6 +756,11 @@ public class MainViewModel : ViewModelBase
     public ICommand BatchSetCpuAffinityCommand => Library.BatchSetCpuAffinityCommand;
     public bool BatchAllRunAsAdmin => Library.BatchAllRunAsAdmin;
     public bool BatchAllCloseLauncher => Library.BatchAllCloseLauncher;
+    public ICommand BatchDlssOverrideCommand => Library.BatchDlssOverrideCommand;
+    public bool BatchAllDlssOverrideOn => Library.BatchAllDlssOverrideOn;
+    /// <summary>Hides the batch menu's DLSS Override on a PC with no NVIDIA driver, as the
+    /// single-game menu hides its own.</summary>
+    public bool HasNvidiaDriver => GameCardViewModel.NvidiaDriverPresent;
     public bool BatchCpuAffinityIsDefault => Library.BatchCpuAffinityIsDefault;
     public bool BatchCpuAffinityIsAuto => Library.BatchCpuAffinityIsAuto;
     public bool BatchCpuAffinityIsPerformanceCores => Library.BatchCpuAffinityIsPerformanceCores;

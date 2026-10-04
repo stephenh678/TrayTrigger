@@ -326,6 +326,10 @@ public partial class App : Application
         // Counts real sessions only, for the status bar's hotkey hint (UX-14e); saved with the
         // rest of the settings on exit.
         if (!isScreenshot) startupSettings.SessionsStarted++;
+        // One-time changes this release makes to an existing settings file. Not for a capture run,
+        // which must not write settings.json.
+        if (!isScreenshot && startupSettings.ApplyOneTimeUpgrades())
+            _storageService.SaveSettings(startupSettings);
 
         _mainViewModel = new MainViewModel(
             _storageService,
@@ -438,7 +442,7 @@ public partial class App : Application
         };
         _launcherService.CompanionTools = companionTools;
 
-        // "Keep game launchers minimized when launching a game" (Settings > General > Window & Tray Icon).
+        // "Keep game launchers minimized when launching a game" (Settings > Launch & Performance > Launching Games).
         _launcherService.KeepLaunchersMinimized = () => _mainViewModel?.Settings.KeepLaunchersMinimized == true;
         // The pre-launch DLSS reapply can mark a game conflicted, and the in-session observer
         // records what loaded; both must survive a restart. Marshalled to the UI thread because

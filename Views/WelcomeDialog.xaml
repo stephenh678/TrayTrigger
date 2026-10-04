@@ -3,22 +3,40 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="Welcome to TrayTrigger"
-        Width="520" SizeToContent="Height"
+        Width="560" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Background="{StaticResource BrushDialogBg}"
         Foreground="{StaticResource BrushTextPrimary}"
         FontFamily="{StaticResource AppFont}">
 
+    <Window.Resources>
+        <!-- One key row: what the site gives you, its key box, Check and Get Free Key, then the
+             Check result. DataContext is SettingsViewModel, so the keys save, switch their source
+             on and check themselves exactly as they do in Settings > Library & Art. -->
+        <Style x:Key="KeyRowTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+        </Style>
+        <Style x:Key="KeyRowDescription" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="LineHeight" Value="17"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+            <Setter Property="Margin" Value="0,2,0,8"/>
+        </Style>
+    </Window.Resources>
+
     <Border BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="0,1,0,0">
         <Grid Margin="24,20,24,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
                 <RowDefinition Height="Auto"/> <!-- Divider -->
-                <RowDefinition Height="Auto"/> <!-- Body -->
-                <RowDefinition Height="Auto"/> <!-- Footer -->
+                <RowDefinition Height="Auto"/> <!-- Step 1 or step 2 -->
             </Grid.RowDefinitions>
 
             <!-- Header: same icon badge + breadcrumb + title layout as the in-app Help window -->
@@ -35,7 +53,7 @@
                        RenderOptions.BitmapScalingMode="HighQuality"/>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="GETTING STARTED" FontSize="11" FontWeight="Bold"
+                    <TextBlock x:Name="StepText" Text="GETTING STARTED · STEP 1 OF 2" FontSize="11" FontWeight="Bold"
                                Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,3"/>
                     <!-- The wordmark: "Trigger" in the logo's blue. Runs on one line, so no space creeps in. -->
                     <TextBlock FontSize="15" FontWeight="SemiBold"
@@ -45,57 +63,133 @@
 
             <Border Grid.Row="1" Height="1" Background="{StaticResource BrushBorderDark}" Margin="0,0,0,12"/>
 
-            <!-- Body: one sentence, then three things. Box art sources and the help index are left
-                 to the empty library and Settings, which already point at them. -->
-            <StackPanel Grid.Row="2" Margin="0,0,0,16">
+            <!-- Step 1: the two optional keys, asked for before any game is added because posters
+                 and info are fetched as each game is imported. -->
+            <StackPanel x:Name="KeysStep" Grid.Row="2">
                 <TextBlock FontSize="13" LineHeight="19" TextWrapping="Wrap"
-                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,12"
-                           Text="Add your installed games, then launch them from the tray."/>
+                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"
+                           Text="Better art and game info, before you add your games (optional)."/>
+                <TextBlock FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                           Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,14"
+                           Text="Steam's posters and game info need no setup. Two free sites fill in what Steam doesn't have, each with a key from a free account: click Get Free Key, sign in, then copy the key and paste it here."/>
 
-                <Grid Margin="6,0,0,5">
+                <!-- SteamGridDB -->
+                <TextBlock Style="{StaticResource KeyRowTitle}" Text="SteamGridDB: poster art"/>
+                <TextBlock Style="{StaticResource KeyRowDescription}"
+                           Text="Community posters for games Steam has none for: new releases, indies, Game Pass and other non-Steam games."/>
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
-                               Margin="0,0,8,0" VerticalAlignment="Top"/>
-                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Scan for Games finds what Steam, GOG, EA, Epic, Ubisoft, Xbox and Battle.net have installed, or drag a game's exe, shortcut or folder onto this window."/>
+                    <TextBox x:Name="SteamGridDbKeyBox" Grid.Column="0" AutomationProperties.Name="SteamGridDB API key"
+                             Text="{Binding SteamGridDbApiKey, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+                             Tag="Paste your SteamGridDB API key here..."/>
+                    <Button Grid.Column="1" Content="Check" Command="{Binding SteamGridDbKeyCheck.CheckCommand}"
+                            AutomationProperties.Name="Check the SteamGridDB API key"
+                            Style="{StaticResource ModernOutlineButton}" Padding="10,5" Margin="0,0,8,0"/>
+                    <Button Grid.Column="2" Content="_Get Free Key..."
+                            Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="{x:Static services:SteamGridDbService.KeyPageUrl}"
+                            AutomationProperties.Name="Get a free SteamGridDB key"
+                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                 </Grid>
+                <TextBlock DataContext="{Binding SteamGridDbKeyCheck}" Style="{StaticResource ApiKeyCheckStatusText}"/>
 
-                <Grid Margin="6,0,0,5">
+                <!-- RAWG -->
+                <TextBlock Style="{StaticResource KeyRowTitle}" Text="RAWG: game info" Margin="0,16,0,0"/>
+                <TextBlock Style="{StaticResource KeyRowDescription}"
+                           Text="Developer, release date, synopsis and genre for games that aren't on Steam, such as Game Pass and Epic exclusives."/>
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
-                               Margin="0,0,8,0" VerticalAlignment="Top"/>
-                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Launch from the tray icon or a hotkey, even with this window closed."/>
+                    <TextBox Grid.Column="0" AutomationProperties.Name="RAWG API key"
+                             Text="{Binding RawgApiKey, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ModernTextBox}" Margin="0,0,8,0"
+                             Tag="Paste your RAWG API key here..."/>
+                    <Button Grid.Column="1" Content="Check" Command="{Binding RawgKeyCheck.CheckCommand}"
+                            AutomationProperties.Name="Check the RAWG API key"
+                            Style="{StaticResource ModernOutlineButton}" Padding="10,5" Margin="0,0,8,0"/>
+                    <Button Grid.Column="2" Content="Get Free Key..."
+                            Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="{x:Static services:RawgService.KeyPageUrl}"
+                            AutomationProperties.Name="Get a free RAWG key"
+                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                 </Grid>
+                <TextBlock DataContext="{Binding RawgKeyCheck}" Style="{StaticResource ApiKeyCheckStatusText}"/>
 
-                <Grid Margin="6,0,0,0">
+                <Grid Margin="0,18,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
-                               Margin="0,0,8,0" VerticalAlignment="Top"/>
-                    <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextSecondary}"
-                               Text="Games you add get the low-risk Optimized performance profile while they run, put back when they exit. Choose Off or Aggressive for any game in Edit Game."/>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock FontSize="11.5" TextWrapping="Wrap" Foreground="{StaticResource BrushTextMuted}"
+                                   Text="Leave them blank to skip. You can add them later in Settings &gt; Library &amp; Art."/>
+                        <Button Style="{StaticResource HelpLinkButton}" Content="More about the keys" Margin="0,3,0,0"
+                                Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/api_keys"/>
+                    </StackPanel>
+                    <Button x:Name="NextButton" Grid.Column="1" Content="_Next" Style="{StaticResource ModernAccentButton}" Padding="16,6"
+                            VerticalAlignment="Bottom" IsDefault="True" Click="OnNextClick"/>
                 </Grid>
             </StackPanel>
 
-            <!-- Footer -->
-            <DockPanel Grid.Row="3" LastChildFill="False">
-                <Button Content="_Scan for Games" Style="{StaticResource ModernAccentButton}" Padding="16,6"
-                        DockPanel.Dock="Right" IsDefault="True" Click="OnScanClick"/>
-                <Button Content="S_kip for now" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
-                        DockPanel.Dock="Right" IsCancel="True" Click="OnSkipClick"/>
-            </DockPanel>
+            <!-- Step 2: one sentence, then three things, then Scan. -->
+            <StackPanel x:Name="GamesStep" Grid.Row="2" Visibility="Collapsed">
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock FontSize="13" LineHeight="19" TextWrapping="Wrap"
+                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,12"
+                               Text="Add your installed games, then launch them from the tray."/>
+
+                    <Grid Margin="6,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                                   Margin="0,0,8,0" VerticalAlignment="Top"/>
+                        <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   Text="Scan for Games finds what Steam, GOG, EA, Epic, Ubisoft, Xbox and Battle.net have installed, or drag a game's exe, shortcut or folder onto this window."/>
+                    </Grid>
+
+                    <Grid Margin="6,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                                   Margin="0,0,8,0" VerticalAlignment="Top"/>
+                        <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   Text="Launch from the tray icon or a hotkey, even with this window closed."/>
+                    </Grid>
+
+                    <Grid Margin="6,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                                   Margin="0,0,8,0" VerticalAlignment="Top"/>
+                        <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   Text="Games you add get the low-risk Optimized performance profile while they run, put back when they exit. Choose Off or Aggressive for any game in Edit Game."/>
+                    </Grid>
+                </StackPanel>
+
+                <DockPanel LastChildFill="False">
+                    <Button Content="_Back" Style="{StaticResource ModernOutlineButton}" Padding="16,6"
+                            DockPanel.Dock="Left" Click="OnBackClick"/>
+                    <Button x:Name="ScanButton" Content="_Scan for Games" Style="{StaticResource ModernAccentButton}" Padding="16,6"
+                            DockPanel.Dock="Right" Click="OnScanClick"/>
+                    <Button Content="S_kip for now" Style="{StaticResource ModernOutlineButton}" Padding="16,6" Margin="0,0,8,0"
+                            DockPanel.Dock="Right" Click="OnSkipClick"/>
+                </DockPanel>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>

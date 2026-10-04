@@ -124,6 +124,7 @@ public class HelpContentServiceTests
     [InlineData("library/filtering")]
     [InlineData("general/overview")]
     [InlineData("scripts/writing")]
+    [InlineData("library/api_keys")]
     public void EveryLinkedTopic_Exists(string topicId)
     {
         Assert.True(HelpContentService.HasTopic(topicId), $"Help/{topicId}.md is missing");

@@ -55,6 +55,10 @@ public class RawgService
 {
     private const string BaseUrl = "https://api.rawg.io/api";
 
+    /// <summary>RAWG's API page, whose "Get API Key" button leads to the key after signing in -
+    /// the "Get free key" buttons open it.</summary>
+    public const string KeyPageUrl = "https://rawg.io/apidocs";
+
     private static readonly HttpClient HttpClient = new(new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(15)
@@ -94,6 +98,35 @@ public class RawgService
     private static readonly Dictionary<string, double> NoMatchCache = new(StringComparer.OrdinalIgnoreCase);
 
     // ------------------------------------------------------------------ lookups
+
+    /// <summary>
+    /// Asks RAWG whether <paramref name="apiKey"/> works with a one-result game list. RAWG answers
+    /// an unknown key with 401. The request counts against the key's monthly quota, so this runs
+    /// only when the user enters or checks a key, never in the background.
+    /// </summary>
+    public static async Task<ApiKeyCheckResult> CheckApiKeyAsync(string apiKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return ApiKeyCheckResult.Rejected;
+
+        try
+        {
+            string url = $"{BaseUrl}/games?key={Uri.EscapeDataString(apiKey.Trim())}&page_size=1";
+            using var response = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+            var result = ApiKeyCheck.FromStatus(response.StatusCode);
+            LoggingService.Info("Rawg", $"API key check: {result} (HTTP {(int)response.StatusCode}).");
+            return result;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("Rawg", $"API key check couldn't reach RAWG: {ex.Message}");
+            return ApiKeyCheckResult.Unreachable;
+        }
+    }
 
     /// <summary>
     /// Finds a game by name and returns its full RAWG detail. Of the search results, the one whose

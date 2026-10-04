@@ -121,6 +121,11 @@
                             <TextBlock Text="Category:" Width="75" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding Category}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}"/>
                         </DockPanel>
+                        <!-- The drive it loads from: a game on a hard drive loads slower than on an SSD. -->
+                        <DockPanel Margin="0,3,0,0" Visibility="{Binding HasInstallDrive, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Installed on:" Width="75" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding InstallDrive}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}"/>
+                        </DockPanel>
                     </StackPanel>
                 </Grid>
 

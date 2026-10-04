@@ -439,6 +439,9 @@ public sealed class BackupService
             restored.HasSeenMetadataSourcesReminder |= current.HasSeenMetadataSourcesReminder;
             restored.HasSeenTrayHideNotice |= current.HasSeenTrayHideNotice;
             restored.HasSeenLauncherDetectionPrompt |= current.HasSeenLauncherDetectionPrompt;
+            // A backup from before 1.4.8 would otherwise switch Tools back on after the restore,
+            // over an "off" chosen since.
+            restored.HasTurnedOnToolsFor148 |= current.HasTurnedOnToolsFor148;
             restored.SessionsStarted = Math.Max(restored.SessionsStarted, current.SessionsStarted);
         }
 

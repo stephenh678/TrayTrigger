@@ -17,13 +17,61 @@ public class CpuHardwareInfo
             : $"{MaxClockSpeedGhz:0.00} GHz Max Clock";
 }
 
+public enum GpuVendor { Other, Nvidia, Amd, Intel }
+
 public class GpuHardwareInfo
 {
     public string ModelName { get; set; } = "Unknown GPU";
     public double VramGigabytes { get; set; }
+    /// <summary>The version the vendor uses: 617.14 for NVIDIA, the Adrenalin release for AMD,
+    /// Windows' own driver version otherwise.</summary>
     public string DriverVersion { get; set; } = "Unknown";
+    /// <summary>Windows' four-part driver version (32.0.16.1714), whatever the vendor calls it.</summary>
+    public string WindowsDriverVersion { get; set; } = "";
     public string DriverDate { get; set; } = "Unknown";
+    /// <summary>The driver's date, parsed from <see cref="DriverDate"/>; null when it can't be read.</summary>
+    public DateTime? DriverDateValue { get; set; }
     public bool IsDedicated { get; set; } = true;
+    public GpuVendor Vendor { get; set; }
+    /// <summary>The adapter's LUID as DXGI reports it, packed into one value: what Windows' GPU
+    /// performance counters name each adapter by. 0 when it couldn't be matched.</summary>
+    public long AdapterLuid { get; set; }
+    /// <summary>The display-class registry subkey ("0000") the GPU was read from; matches its device.</summary>
+    public string DriverKey { get; set; } = "";
+
+    // The PCIe link, from Windows' device properties; 0 when it couldn't be read (a built-in GPU,
+    // or a laptop's discrete GPU powered down). Generation is Windows' link-speed value: 1 = PCIe
+    // 1.0 (2.5 GT/s) up to 5 = PCIe 5.0 (32 GT/s) and 6 = PCIe 6.0.
+    public int PcieCurrentWidth { get; set; }
+    public int PcieMaxWidth { get; set; }
+    public int PcieCurrentGeneration { get; set; }
+    public int PcieMaxGeneration { get; set; }
+
+    public bool HasPcieLink => PcieCurrentWidth > 0 && PcieMaxWidth > 0;
+
+    /// <summary>
+    /// Fewer lanes than the card supports: x8 for an x16 card means the second slot, or a slot
+    /// sharing lanes with an M.2 drive. Only the width counts - the speed drops whenever the GPU
+    /// idles, so a low speed at the moment of reading means nothing.
+    /// </summary>
+    public bool IsPcieNarrowed => HasPcieLink && PcieCurrentWidth < PcieMaxWidth;
+
+    /// <summary>"PCIe 5.0 x16": the link as it runs now, with what the card supports when a slower
+    /// slot holds it back - informational, as a generation down costs games little.</summary>
+    public string PcieDisplay
+    {
+        get
+        {
+            if (!HasPcieLink) return "";
+            int generation = PcieCurrentGeneration > 0 ? PcieCurrentGeneration : PcieMaxGeneration;
+            string link = generation > 0 ? $"PCIe {generation}.0 x{PcieCurrentWidth}" : $"PCIe x{PcieCurrentWidth}";
+            return PcieMaxGeneration > generation ? $"{link} (card supports PCIe {PcieMaxGeneration}.0)" : link;
+        }
+    }
+
+    public string PcieWarning => IsPcieNarrowed
+        ? $"Running on x{PcieCurrentWidth} of the x{PcieMaxWidth} lanes this card supports. It may be in a second slot, or in one that shares its lanes with an M.2 drive; the motherboard manual says which slot gives x{PcieMaxWidth}."
+        : "";
 }
 
 public class RamHardwareInfo
@@ -52,14 +100,46 @@ public class RamHardwareInfo
 public class DisplayHardwareInfo
 {
     public string DeviceName { get; set; } = "Primary Display";
+    /// <summary>The monitor's own name from its EDID ("LG ULTRAGEAR"); empty for a laptop panel
+    /// or a display that doesn't report one.</summary>
+    public string MonitorName { get; set; } = "";
     public int Width { get; set; }
     public int Height { get; set; }
     public int RefreshRateHz { get; set; }
+    /// <summary>The highest refresh rate this display offers at its current resolution.</summary>
+    public int MaxRefreshRateHz { get; set; }
     public bool IsPrimary { get; set; } = true;
+    public bool HdrSupported { get; set; }
+    public bool HdrEnabled { get; set; }
+
+    /// <summary>The monitor's name when it has one, otherwise "Primary display" / "Display 2".</summary>
+    public string Title => string.IsNullOrWhiteSpace(MonitorName) ? DeviceName : MonitorName;
+
+    /// <summary>
+    /// Running below what the screen can do at this resolution: a 144 Hz monitor left at 60 Hz after
+    /// a driver update or a new cable is the most common reason a fast screen feels slow. A gap of a
+    /// couple of hertz is the 59.94 / 60 or 143.9 / 144 rounding Windows does, not a setting.
+    /// </summary>
+    public bool IsBelowMaxRefresh => RefreshRateHz > 1 && MaxRefreshRateHz - RefreshRateHz >= 3;
+
+    public string RefreshWarning => IsBelowMaxRefresh
+        ? $"Set to {RefreshRateHz} Hz, but this screen offers up to {MaxRefreshRateHz} Hz at {Width} × {Height}. Change it in Windows Settings > Display > Advanced display."
+        : "";
+
+    /// <summary>"HDR on" / "HDR off", or empty for a screen with no HDR mode.</summary>
+    public string HdrDisplay => !HdrSupported ? "" : HdrEnabled ? "HDR on" : "HDR off";
+    public bool HasHdr => HdrSupported;
     /// <summary>"1920 × 1080 @ 144Hz". EnumDisplaySettings reports 0 or 1 for "the default refresh
     /// rate" (remote-desktop and virtual displays), and then the rate is left off.</summary>
     public string ResolutionDisplay =>
         RefreshRateHz > 1 ? $"{Width} × {Height} @ {RefreshRateHz}Hz" : $"{Width} × {Height}";
+
+    /// <summary>"3440 × 1440 · 120 Hz (max 240 Hz)": the rate it runs at and the fastest it offers,
+    /// always both, so a screen below its best shows at a glance.</summary>
+    public string ModeDisplay =>
+        RefreshRateHz <= 1 ? $"{Width} × {Height}"
+        : MaxRefreshRateHz > 1 ? $"{Width} × {Height} · {RefreshRateHz} Hz (max {MaxRefreshRateHz} Hz)"
+        : $"{Width} × {Height} · {RefreshRateHz} Hz";
 }
 
 public class DriveStorageInfo
@@ -77,6 +157,17 @@ public class DriveStorageInfo
         ? $"Local Disk ({DriveLetter})"
         : $"{VolumeLabel} ({DriveLetter})";
     public bool HasMediaTypeInfo => !string.IsNullOrWhiteSpace(MediaTypeDisplay);
+
+    /// <summary>How many games in the library are installed on this drive; -1 when not counted.</summary>
+    public int GameCount { get; set; } = -1;
+    public bool HasGameCount => GameCount > 0;
+    public string GameCountDisplay => GameCount == 1 ? "1 game" : $"{GameCount} games";
+
+    /// <summary>Games on a hard drive load noticeably slower than on an SSD.</summary>
+    public bool HasGamesOnHdd => GameCount > 0 && MediaTypeDisplay == "HDD";
+    public string HddGamesNote => GameCount == 1
+        ? "1 game here is on a hard drive; it loads faster from an SSD."
+        : $"{GameCount} games here are on a hard drive; they load faster from an SSD.";
 }
 
 public class OsEnvironmentInfo
@@ -85,7 +176,6 @@ public class OsEnvironmentInfo
     public string DisplayVersion { get; set; } = "";
     public string BuildNumber { get; set; } = "";
     public string ActivePowerPlan { get; set; } = "Balanced";
-    public bool IsGameModeActive { get; set; } = true;
     public string MotherboardManufacturer { get; set; } = "";
     public string MotherboardModel { get; set; } = "";
     public string BiosVersion { get; set; } = "";

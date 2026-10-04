@@ -388,6 +388,9 @@ public class SystemViewModel : ViewModelBase
         private set
         {
             _report = value;
+            GpuCards.Clear();
+            foreach (var gpu in value.Gpus)
+                GpuCards.Add(new GpuCardViewModel(gpu, _nvidiaDrivers));
             OnPropertyChanged();
             OnPropertyChanged(nameof(Cpu));
             OnPropertyChanged(nameof(PrimaryGpu));
@@ -411,10 +414,89 @@ public class SystemViewModel : ViewModelBase
     /// cores and 8 efficiency cores.", or which CCD has the 3D V-Cache. Empty, and hidden, when every
     /// core is alike.
     /// </summary>
-    public string CpuCoreLayoutDisplay => CpuTopologyService.GetTopology().Summary;
+    public string CpuCoreLayoutDisplay
+    {
+        get
+        {
+            var topology = CpuTopologyService.GetTopology();
+            return topology.NoChoiceNote.Length > 0 ? $"{topology.Summary} {topology.NoChoiceNote}" : topology.Summary;
+        }
+    }
     public bool HasCpuCoreLayout => CpuCoreLayoutDisplay.Length > 0;
     public GpuHardwareInfo PrimaryGpu => Report.Gpus.FirstOrDefault() ?? new GpuHardwareInfo();
     public List<GpuHardwareInfo> GpuList => Report.Gpus;
+
+    /// <summary>Every GPU, dedicated first: a laptop's or a desktop with the CPU's own graphics
+    /// turned on has two, and which one a game lands on matters.</summary>
+    public ObservableCollection<GpuCardViewModel> GpuCards { get; } = new();
+
+    private readonly NvidiaDriverService _nvidiaDrivers = new();
+
+    /// <summary>The library's games, for the Storage card's per-drive counts. Set by the main view model.</summary>
+    public Func<IReadOnlyList<GameEntry>>? GetLibraryGames { get; set; }
+
+    /// <summary>
+    /// Counts the library's games on each drive, off the UI thread (each game's folder is checked on
+    /// disk), so a drive holding games shows how many - and a hard drive holding any says they'd load
+    /// faster from an SSD.
+    /// </summary>
+    private async Task CountGamesPerDriveAsync(SystemHardwareReport report)
+    {
+        var games = GetLibraryGames?.Invoke();
+        if (games == null || report.Drives.Count == 0) return;
+        try
+        {
+            var counts = await Task.Run(() => games
+                .Select(SystemInfoService.GameDriveLetter)
+                .Where(letter => letter != null)
+                .GroupBy(letter => letter!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase));
+            foreach (var drive in report.Drives)
+                drive.GameCount = counts.GetValueOrDefault(drive.DriveLetter);
+            if (ReferenceEquals(report, Report))
+                OnPropertyChanged(nameof(Drives));
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("System", $"Couldn't count games per drive: {ex.Message}");
+        }
+    }
+
+    /// <summary>Created on first use: the counters cost nothing until the specs are on screen.</summary>
+    private GpuTelemetryService? _gpuTelemetry;
+    private bool _isSamplingGpu;
+
+    /// <summary>
+    /// Reads GPU load and video memory off the UI thread and hands each card its own. Cards are
+    /// matched by adapter LUID; with one GPU and one adapter in the counters, they're each other's.
+    /// </summary>
+    private async Task SampleGpusAsync()
+    {
+        if (_isSamplingGpu || GpuCards.Count == 0) return;
+        _isSamplingGpu = true;
+        try
+        {
+            _gpuTelemetry ??= await Task.Run(() => new GpuTelemetryService());
+            var samples = await Task.Run(() => _gpuTelemetry.Sample());
+            if (samples.Count == 0) return;
+
+            foreach (var card in GpuCards)
+            {
+                if (card.Info.AdapterLuid != 0 && samples.TryGetValue(card.Info.AdapterLuid, out var sample))
+                    card.ApplySample(sample);
+            }
+            if (GpuCards.Count == 1 && GpuCards[0].Info.AdapterLuid == 0 && samples.Count == 1)
+                GpuCards[0].ApplySample(samples.Values.First());
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("System", $"GPU telemetry sample failed: {ex.Message}");
+        }
+        finally
+        {
+            _isSamplingGpu = false;
+        }
+    }
     public RamHardwareInfo Ram => Report.Ram;
     public DisplayHardwareInfo PrimaryDisplay => Report.Displays.FirstOrDefault() ?? new DisplayHardwareInfo();
     public List<DisplayHardwareInfo> Displays => Report.Displays;
@@ -700,6 +782,8 @@ public class SystemViewModel : ViewModelBase
     public ICommand OpenDeviceManagerCommand { get; }
     public ICommand OpenGraphicsSettingsCommand { get; }
     public ICommand OpenDxDiagCommand { get; }
+    /// <summary>Windows Settings > Display > Advanced display, where a screen's refresh rate is chosen.</summary>
+    public ICommand OpenAdvancedDisplaySettingsCommand { get; }
 
     /// <summary>
     /// Refreshes every profile-tweak toggle from the live settings. The toggles read straight
@@ -771,6 +855,7 @@ public class SystemViewModel : ViewModelBase
         OpenDeviceManagerCommand = new RelayCommand(() => SafeLaunchProcess("devmgmt.msc"));
         OpenGraphicsSettingsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:display-advancedgraphics"));
         OpenDxDiagCommand = new RelayCommand(() => SafeLaunchProcess("dxdiag.exe"));
+        OpenAdvancedDisplaySettingsCommand = new RelayCommand(() => SafeLaunchProcess("ms-settings:display-advanced"));
 
         // Setup background telemetry ticker (every 3 seconds)
         _telemetryTimer = new DispatcherTimer
@@ -817,6 +902,7 @@ public class SystemViewModel : ViewModelBase
                 Ram.UsagePercent = ram.UsagePercent;
                 OnPropertyChanged(nameof(Ram));
             }
+            _ = SampleGpusAsync();
         }
         catch
         {
@@ -830,8 +916,12 @@ public class SystemViewModel : ViewModelBase
         StatusMessage = "Analyzing system hardware...";
         try
         {
-            Report = await _infoService.GetFullHardwareReportAsync();
+            var report = await _infoService.GetFullHardwareReportAsync();
+            await CountGamesPerDriveAsync(report);
+            Report = report;
             _specsRefreshedAt = DateTime.Now;
+            // The load counter is a rate: this first read sets the baseline the next tick measures from.
+            _ = SampleGpusAsync();
             StatusMessage = $"Hardware refreshed at {DateTime.Now:HH:mm:ss}.";
         }
         catch (Exception ex)

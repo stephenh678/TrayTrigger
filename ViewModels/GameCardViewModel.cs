@@ -531,6 +531,9 @@ public class GameCardViewModel : ViewModelBase
     /// </summary>
     public bool HasNvidiaDriver => HasNvidiaDriverOnThisPc.Value;
 
+    /// <summary>The same answer for the batch menu, which has no card to ask.</summary>
+    public static bool NvidiaDriverPresent => HasNvidiaDriverOnThisPc.Value;
+
     /// <summary>
     /// The check mark. On means TrayTrigger holds an override for this game, which is exactly what
     /// the switch in Edit Game > Performance reports, read from the same records. Cheap: no probe,

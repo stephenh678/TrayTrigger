@@ -1,6 +1,6 @@
 # How Tools work
 
-Tools is an optional page for the programs you use alongside your games: DLSS Swapper, Vortex, MSI Afterburner, Discord, a controller mapper. It's off by default. Turn it on with "Enable Tools" under Settings > General, and a Tools button appears in the sidebar under Library.
+Tools is an optional page for the programs you use alongside your games: DLSS Swapper, Vortex, MSI Afterburner, Discord, a controller mapper. It's on by default, as a Tools button in the sidebar under Library, and 1.4.8 switched it on once for everyone upgrading. Turn it off or on with "Enable Tools" under Settings > General.
 
 A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched, and none of the game features apply: no Performance Profile, no scripts, no playtime and no launcher detection.
 
@@ -51,7 +51,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 ## Launching
 
 - Double-click a tool, press Enter (or Ctrl+Enter, as for a game) on it, use its hotkey, or pick it from the tray menu.
-- A tool gets the same launch notice and launch popup as a game, and starts after the same short delay. The popup settings under Settings > General cover games and tools together.
+- A tool gets the same launch notice and launch popup as a game, and starts after the same short delay. The popup settings under Settings > Launch & Performance > Launching Games cover games and tools together.
 - If the tool is already running, its window comes to the front instead of a second copy starting. A tool that only lives in the system tray has no window to show, so you get a short "already running" notice instead.
 - For a tool with arguments, "already running" means the copy TrayTrigger started for that tool. Two tools that share a program, like Command Prompt running two different scripts, each start their own copy.
 - If the program has moved or been uninstalled, the tool shows MISSING and launching it offers to locate the program.
@@ -80,6 +80,6 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 
 ## Turning Tools off
 
-Unticking "Enable Tools" hides the Tools page and the tray submenu, turns off tool hotkeys, and stops tools starting with your games. Your tools are kept in tools.json next to your game library, so turning it back on brings every tool back as it was. Resetting settings to defaults turns Tools off but never deletes your tools.
+Unticking "Enable Tools" hides the Tools page and the tray submenu, turns off tool hotkeys, and stops tools starting with your games. Your tools are kept in tools.json next to your game library, so turning it back on brings every tool back as it was. Resetting settings to defaults turns Tools back on and never deletes your tools.
 
 > Removing a tool only removes TrayTrigger's shortcut to it. The program itself is never touched.

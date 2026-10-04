@@ -21,6 +21,7 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(BackupManifest))]
 [JsonSerializable(typeof(Dictionary<string, SteamAppDetails>))]
 [JsonSerializable(typeof(Dictionary<int, RawgGameDetails>))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

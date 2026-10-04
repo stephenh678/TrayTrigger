@@ -259,7 +259,7 @@ public partial class SteamMetadataService
             return null;
 
         string trimmedId = appId.Trim();
-        if (!forceRefresh && TryGetCached(trimmedId, out var cached))
+        if (!forceRefresh && TryGetCached(trimmedId, out var cached) && !PosterSourceLedger.MayImprove(trimmedId, steamGridDbApiKey))
             return cached;
 
         // Serialize all fetch/poster-download work per AppId so two callers enriching
@@ -270,7 +270,21 @@ public partial class SteamMetadataService
         try
         {
             if (!forceRefresh && TryGetCached(trimmedId, out cached))
+            {
+                // The details are fine; only a banner poster cached before there was a SteamGridDB
+                // key gets another look. DownloadAndCachePosterAsync keeps the banner if SteamGridDB
+                // has nothing either.
+                if (cached != null && PosterSourceLedger.MayImprove(trimmedId, steamGridDbApiKey))
+                {
+                    string? better = await DownloadAndCachePosterAsync(trimmedId, cached.HeaderImageUrl ?? cached.CapsuleImageUrl, steamGridDbApiKey, false, cancellationToken).ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(better) && better != cached.CoverImagePath)
+                    {
+                        cached.CoverImagePath = better;
+                        Store(cached);
+                    }
+                }
                 return cached;
+            }
 
             var details = new SteamAppDetails
             {
@@ -569,12 +583,23 @@ public partial class SteamMetadataService
         // The App ID becomes a file name and part of a URL; games.json is user-editable.
         if (!UrlProtocolHelper.IsValidSteamAppId(appId)) return null;
 
+        // The cached poster being looked at again, kept if the second look fails outright.
+        string? keepOnFailure = null;
         try
         {
             string localPath = Path.Combine(CoversDirectory, $"{appId}.jpg");
-            if (!forceRefresh && File.Exists(localPath) && new FileInfo(localPath).Length > 1000)
+            bool hasCached = File.Exists(localPath) && new FileInfo(localPath).Length > 1000;
+            if (!forceRefresh && hasCached && !PosterSourceLedger.MayImprove(appId, steamGridDbApiKey))
             {
                 return localPath;
+            }
+            // A cached banner, or a poster from before sources were recorded, with a SteamGridDB key
+            // to try: tiers 1 and 2 below get one more look, and the banner stays if neither has art.
+            bool upgradingCached = !forceRefresh && hasCached;
+            if (upgradingCached)
+            {
+                keepOnFailure = localPath;
+                LoggingService.Info("SteamMetadata", $"Cached poster for AppId {appId} may be a banner stand-in ({PosterSourceLedger.Get(appId)?.ToString() ?? "source unknown"}); checking Steam and SteamGridDB again.");
             }
 
             // 1. Steam's own official library art first - genuine vertical box art, no
@@ -591,6 +616,7 @@ public partial class SteamMetadataService
             string? officialSaved = await TryDownloadFromUrlsAsync(officialUrls, localPath, ct).ConfigureAwait(false);
             if (officialSaved != null)
             {
+                PosterSourceLedger.Set(appId, PosterSource.Steam);
                 return officialSaved;
             }
 
@@ -602,8 +628,20 @@ public partial class SteamMetadataService
                 if (gridBytes != null && gridBytes.Length > 1000 && IsDecodableImage(gridBytes))
                 {
                     byte[] processed = EnsureVerticalPoster(gridBytes);
-                    return await WritePosterFileSafelyAsync(localPath, processed, ct).ConfigureAwait(false);
+                    string gridSaved = await WritePosterFileSafelyAsync(localPath, processed, ct).ConfigureAwait(false);
+                    PosterSourceLedger.Set(appId, PosterSource.SteamGridDb);
+                    if (upgradingCached)
+                        LoggingService.Info("SteamMetadata", $"Replaced the cached poster for AppId {appId} with SteamGridDB poster art.");
+                    return gridSaved;
                 }
+            }
+
+            var bannerSource = string.IsNullOrWhiteSpace(steamGridDbApiKey) ? PosterSource.Banner : PosterSource.BannerAfterSteamGridDb;
+            if (upgradingCached)
+            {
+                // Neither has a poster: the banner already on disk is as good as it gets.
+                PosterSourceLedger.Set(appId, bannerSource);
+                return localPath;
             }
 
             // 3. Last resort: whatever banner art Steam does have (hero image, then the
@@ -623,6 +661,7 @@ public partial class SteamMetadataService
             string? fallbackSaved = await TryDownloadFromUrlsAsync(fallbackUrls, localPath, ct).ConfigureAwait(false);
             if (fallbackSaved != null)
             {
+                PosterSourceLedger.Set(appId, bannerSource);
                 return fallbackSaved;
             }
         }
@@ -631,7 +670,7 @@ public partial class SteamMetadataService
             LoggingService.Warn("SteamMetadata", $"Error downloading cover for AppId {appId}: {ex.Message}");
         }
 
-        return null;
+        return keepOnFailure;
     }
 
     /// <summary>

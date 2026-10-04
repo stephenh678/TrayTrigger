@@ -250,6 +250,8 @@ public class ImportCoordinator : ViewModelBase
     /// tier can pick up better art (e.g. after the user adds/enables a SteamGridDB API key).
     /// Unlike <see cref="EnrichLibraryAsync"/>, this ignores existing category/cover state and
     /// always re-fetches, since the whole point is to override a previously-cached poster.
+    /// Games with no Steam AppId and no poster are searched on SteamGridDB by name as well. Also
+    /// run by Settings when a new SteamGridDB key is confirmed to work.
     /// </summary>
     /// <param name="progress">
     /// Optional progress/result text sink. StatusMessage alone isn't enough here: this action
@@ -271,10 +273,19 @@ public class ImportCoordinator : ViewModelBase
             return;
         }
 
-        var candidates = _library.Games.Where(card => !string.IsNullOrWhiteSpace(card.Game.SteamAppId)).ToList();
+        // Games with no Steam App ID can only get a poster from SteamGridDB, by name, and only the
+        // ones with none yet: the name search is looser than an App ID, so art already chosen for
+        // such a game (by this search or by hand) is left alone.
+        bool canSearchByName = _settings.UseVerticalPosterArt && !string.IsNullOrWhiteSpace(_getSteamGridDbApiKeyOrNull());
+        var candidates = _library.Games
+            .Where(card => !string.IsNullOrWhiteSpace(card.Game.SteamAppId)
+                           || (canSearchByName && string.IsNullOrWhiteSpace(card.Game.CoverImagePath)))
+            .ToList();
         if (candidates.Count == 0)
         {
-            Report("No games with a linked Steam AppId to refresh.");
+            Report(canSearchByName
+                ? "Every game already has a poster, and none is linked to Steam to re-check."
+                : "No games with a linked Steam AppId to refresh.");
             return;
         }
 
@@ -290,6 +301,20 @@ public class ImportCoordinator : ViewModelBase
                 await throttle.WaitAsync();
                 try
                 {
+                    if (string.IsNullOrWhiteSpace(card.Game.SteamAppId))
+                    {
+                        // RAWG's title for the game searches first when it's matched, as in the
+                        // background pass (LibraryViewModel.EnrichGameWithSteamMetadataAsync).
+                        string? rawgTitle = card.Game.RawgId > 0 && RawgService.TryGetCached(card.Game.RawgId, out var rawg) ? rawg.Name : null;
+                        await _library.TryFetchGridArtByNameAsync(card.Game, rawgTitle);
+                        if (!string.IsNullOrWhiteSpace(card.Game.CoverImagePath))
+                        {
+                            card.RefreshProperties();
+                            Interlocked.Increment(ref updated);
+                        }
+                        return;
+                    }
+
                     string appId = card.Game.SteamAppId!;
                     var details = await _steamMetadataService.GetAppDetailsAsync(appId, _getSteamGridDbApiKeyOrNull(), forceRefresh: true);
                     // DownloadAndCachePosterAsync always writes to the same Covers/{appId}.jpg

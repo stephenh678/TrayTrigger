@@ -156,6 +156,9 @@ public class CpuTopologyTests : IDisposable
         Assert.Null(cpu.CpusFor(CpuAffinityMode.VCacheCores));
         Assert.Equal("every core on this CPU has the 3D V-Cache", cpu.WhyNoEffect(CpuAffinityMode.VCacheCores));
         Assert.Equal("3D V-Cache (96 MB L3) shared by every core.", cpu.Summary);
+        // No choice to offer, so the System page says why the option is missing.
+        Assert.Empty(cpu.Options);
+        Assert.Contains("no CPU Cores choice", cpu.NoChoiceNote);
     }
 
     [Fact]

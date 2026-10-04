@@ -14,12 +14,13 @@ You can expect an initial response within a few days. This is a solo-maintained 
 
 ## Does TrayTrigger collect telemetry or personal data?
 
-No. TrayTrigger does not collect analytics, usage data, or any personal information, and nothing about your library, hardware, or activity is transmitted anywhere.
+No. TrayTrigger does not collect analytics, usage data, or any personal information, and nothing about your library, hardware, or activity is transmitted anywhere, apart from your GPU's model when you ask NVIDIA for a newer driver (below).
 
 The app's only outbound network calls are:
 - **Steam's public APIs** — to fetch metadata (name, description, release date, Metacritic score) for games you've added.
 - **SteamGridDB** — only if you enter your own API key in Settings, to fetch box art/poster images for games you've added. The key is stored encrypted (DPAPI) and only sent to SteamGridDB.
 - **RAWG (rawg.io)** — only if you enable it in Settings with your own API key, to fetch developer, publisher, synopsis and ratings for games that aren't on Steam. The key is stored encrypted (DPAPI) and only sent to RAWG.
+- **NVIDIA's driver service** — only when you press **Check for Newer Driver** on an NVIDIA GPU in System > Hardware Specs, to ask which Game Ready driver is newest for it. The request names your GPU model and nothing else, and TrayTrigger never makes it on its own. NVIDIA's product list is kept for a week so the lookup doesn't fetch it each time.
 - **GitHub Releases** — to check whether a newer version of TrayTrigger is available. Update checks can be turned off in Settings.
 
 No game library contents, hardware telemetry, or usage data are sent as part of any of these calls.
