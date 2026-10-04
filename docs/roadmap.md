@@ -4,6 +4,33 @@ Notes on things discussed but not yet implemented, kept here so they survive bet
 
 ## Open
 
+### Tools started per game (proposed 2026-10-04, parked by the owner)
+
+Today a tool with "Start when I launch a game" starts with every game. Starting SimHub only for
+racing games needs the Example-StartCompanionApps.ps1 script, which is kept for exactly that in
+1.4.8 (reworked to close politely, with an opt-in "force"). The owner found this proposal too
+involved for 1.4.8-beta.2; the per-game script covers it for now.
+
+The design mirrors default scripts (every game, a game's own, an opt-out):
+
+- **Edit Tool:** "Start when I launch a game" gets a choice: with every game (today), or with the
+  games I pick.
+- **Edit Game, a Tools section:** a checkbox per "games I pick" tool ("Start SimHub with this
+  game"); "every game" tools listed as such, with one opt-out, "Don't start tools with this game",
+  like "Don't run the default scripts for this game".
+- **Library batch menu:** select games, right-click, Start with > SimHub; ticked when every selected
+  game has it, as batch DLSS Override is.
+- **Storage:** on the game, like its scripts: `GameEntry` holds the picked tool IDs and the opt-out;
+  `ToolEntry` holds the every-game / games-I-pick choice. A removed tool leaves a stale ID that is
+  ignored and dropped on the next save. Backup & Restore carries both files already.
+- **Starting:** `CompanionToolService.StartForGame` already knows the game, so it filters there.
+  Closing is unchanged (after the last game exits).
+- **Display:** the With Games tab and the controller badge say "With 12 games" for a picked tool.
+- **Then:** retire Example-StartCompanionApps.ps1 through `ScriptLibraryService.RetiredFileNames`.
+
+Considered and dropped: choosing by category. A game has one category, so "Racing" can't also be
+"Favorites", and one racing game filed elsewhere would be missed.
+
 ### Feature research for 1.4.7 and later (owner decided 2026-10-02; items 1-4 built in 1.4.7-beta.3)
 
 **Built 2026-10-02**, shipped in 1.4.7-beta.3. Where each landed:
@@ -18,9 +45,6 @@ Notes on things discussed but not yet implemented, kept here so they survive bet
   the Ctrl+Alt+P hotkey, the tray's Now Playing items, `Help/library/suspend.md`.
 - 4, Background apps: `Scripts/Library/Example-CloseBackgroundApps.ps1` 2.0.
 - Debug-only end-to-end checks: `--test-suspend <out.txt>` and `--test-restore-restart <folder>`.
-- The copy of Close Background Apps in
-  [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts) was updated to 2.0 on
-  2026-10-02 (renamed from Quiet Mode there too).
 
 Researched against similar apps: Playnite and its most-used extensions, Heroic, Lutris, Project
 OptM, Razer Cortex, Hone, Process Lasso, CPU Set Setter, Nyrna, Borderless Gaming, Ludusavi.
@@ -103,8 +127,6 @@ is declined.
    - Scripts don't get the Performance Profile session's crash recovery. If TrayTrigger or
      Windows crashes mid-game, closed apps stay closed. The services come back at the next
      restart, because stopping a service doesn't change its startup type.
-   - The copy in [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts)
-     changes with it.
 5. **Borderless window per game (declined).** Most current games have their own borderless or
    windowed-fullscreen mode, and TrayTrigger's Optimizations for Windowed Games (DirectFlip
    Model) tweak already covers those. Special K and Magpie cover older games that lack one. The
@@ -258,11 +280,11 @@ Decisions made while building it:
   and Start Companion Apps, for what they do), plus the two blank templates and a task-first README
   (`Scripts/Library/`, `Services/ScriptLibraryService.cs`). The breakage risk is handled inside
   the scripts: each is presented as an example to copy, declares its dependencies in a
-  catalog-style header, finds the third-party app at run time or through one setting at the top,
-  and exits 0 with a plain message when the app isn't there. All are PowerShell except the batch
-  template. They are the seed entries for the community catalog. An audio-device switcher and a
-  display-mode changer were considered and left for the catalog: both need a large inline C#
-  block that is hard to learn from.
+  header (Name, Description, Phase, Needs admin, Dependencies, Script Arguments), finds the
+  third-party app at run time or through one setting at the top, and exits 0 with a plain message
+  when the app isn't there. All are PowerShell except the batch template. An audio-device switcher
+  and a display-mode changer were considered and left out: both need a large inline C# block that
+  is hard to learn from.
 - **Two script fields, not one.** A single-script model breaks for the two most common
   attachments: a plain `.exe` that cannot branch on the phase, and different types per phase.
   A dual-phase script is supported by putting the same file in both boxes, which the examples do.

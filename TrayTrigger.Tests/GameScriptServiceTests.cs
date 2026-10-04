@@ -365,6 +365,40 @@ public class GameScriptServiceTests : IDisposable
         Assert.Equal("prelaunch;Game One;g1;Gaming", File.ReadAllText(marker).Trim());
     }
 
+    /// <summary>A game with no Script Arguments of its own runs the defaults with the Default
+    /// Script Arguments - which is what lets one default serve the whole library.</summary>
+    [Fact]
+    public void RunPreLaunch_RunsDefaultScript_WithDefaultArguments_WhenGameHasNoneOfItsOwn()
+    {
+        string marker = Path.Combine(_dir, "defargs.txt");
+        string script = Path.Combine(_dir, "defargs.bat");
+        File.WriteAllText(script, $"@echo %~6;%~7> \"{marker}\"\r\n");
+
+        var defaults = new ScriptDefaults { Enabled = true, PreLaunchScriptPath = script, WaitForPreLaunchScript = true, RunScriptsHidden = true, ScriptArguments = "recommended force" };
+        var result = new GameScriptService(defaults: () => defaults).RunPreLaunch(new GameEntry { Id = "g2", Name = "Game Two", ScriptArguments = "  " });
+
+        Assert.True(result.ProceedWithLaunch);
+        Assert.Equal("recommended;force", File.ReadAllText(marker).Trim());
+    }
+
+    [Fact]
+    public void Resolve_Arguments_GameOwnWinForDefaults_AndDefaultArgumentsNeverReachAGamesOwnScript()
+    {
+        var defaults = Defaults(pre: @"C:\d\def.bat", post: @"C:\d\def.bat");
+        defaults.ScriptArguments = "recommended";
+
+        // No arguments of its own: the defaults get the default arguments.
+        Assert.Equal("recommended", GameScriptService.ResolvePreLaunch(new GameEntry(), defaults)!.Value.Arguments);
+        // Its own arguments replace them, for the defaults too.
+        var withOwn = new GameEntry { ScriptArguments = "Spotify" };
+        Assert.Equal("Spotify", GameScriptService.ResolvePostExit(withOwn, defaults)!.Value.Arguments);
+        // A game's own script with no arguments gets none, not the defaults'.
+        var ownScript = new GameEntry { PreLaunchScriptPath = @"C:\g\own.bat" };
+        Assert.Equal(string.Empty, GameScriptService.ResolvePreLaunch(ownScript, defaults)!.Value.Arguments);
+        // Per phase: the same game's default post-exit still gets the default arguments.
+        Assert.Equal("recommended", GameScriptService.ResolvePostExit(ownScript, defaults)!.Value.Arguments);
+    }
+
     [Fact]
     public void RunPreLaunch_DefaultAbortOnFailure_CancelsLaunch()
     {

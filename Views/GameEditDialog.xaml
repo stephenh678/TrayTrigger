@@ -613,7 +613,7 @@
                             </Grid>
                             <StackPanel Orientation="Horizontal" Margin="0,-6,0,8">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPreLaunchScriptCommand}"
-                                        ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                        ToolTip="Create a new script of your own from the blank template, in the scripts folder, and open it for editing"/>
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPreLaunchScriptCommand}"/>
                             </StackPanel>
@@ -644,7 +644,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewPostExitScriptCommand}"
                                         IsEnabled="{Binding CanEditPostExitScript}"
-                                        ToolTip="Create a new script from the blank template in the scripts folder and open it for editing"/>
+                                        ToolTip="Create a new script of your own from the blank template, in the scripts folder, and open it for editing"/>
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditPostExitScriptCommand}"/>
                             </StackPanel>
@@ -656,8 +656,8 @@
                             <TextBlock Text="Script Arguments (optional, passed to both scripts)" FontSize="11.5"
                                        Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <TextBox AutomationProperties.Name="Extra script arguments" Text="{Binding ScriptArguments, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ModernTextBox}" IsEnabled="{Binding HasAnyScript}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Added after the built-in arguments (phase, name, exe, game ID, playtime), so they start at %6 in a batch file or $args[5] in PowerShell. Quote a value that contains spaces."
+                                     Style="{StaticResource ModernTextBox}" IsEnabled="{Binding CanEditScriptArguments}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Added after the built-in arguments (phase, name, exe, game ID, playtime), so they start at %6 in a batch file or $args[5] in PowerShell. Quote a value that contains spaces. Also passed to the default scripts, in place of the Default Script Arguments from Settings."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                             <Border Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1" CornerRadius="6" Padding="10,6" Margin="0,0,0,10"
@@ -715,11 +715,7 @@
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/writing"/>
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
-                                        ToolTip="Blank templates, five example scripts to copy and adapt, and a README with a quick start"/>
-                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
-                                <Button Style="{StaticResource HelpLinkButton}" Content="Browse community scripts"
-                                        Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="{x:Static services:HelpCommands.ScriptCatalogUrl}"
-                                        ToolTip="Opens the TrayTrigger-Scripts catalog on GitHub in your browser. Scripts there are reviewed before listing; read one before you attach it."/>
+                                        ToolTip="Example scripts to copy and adapt, and a README with a quick start and how to write your own"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>

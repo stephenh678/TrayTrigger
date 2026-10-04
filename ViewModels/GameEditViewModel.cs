@@ -516,6 +516,7 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasPreLaunchScript));
             OnPropertyChanged(nameof(HasAnyScript));
+            OnPropertyChanged(nameof(CanEditScriptArguments));
             OnPropertyChanged(nameof(DefaultScriptsSummary));
             // Typing, Browse and "New script..." all land here, so the post-exit box follows along.
             if (_useSameScriptForBoth) PostExitScriptPath = value;
@@ -531,6 +532,7 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasPostExitScript));
             OnPropertyChanged(nameof(HasAnyScript));
+            OnPropertyChanged(nameof(CanEditScriptArguments));
             OnPropertyChanged(nameof(DefaultScriptsSummary));
         }
     }
@@ -630,8 +632,17 @@ public class GameEditViewModel : ViewModelBase
     public string ScriptArguments
     {
         get => _scriptArguments;
-        set { _scriptArguments = value; OnPropertyChanged(); }
+        set { _scriptArguments = value; OnPropertyChanged(); OnPropertyChanged(nameof(DefaultScriptsSummary)); }
     }
+
+    /// <summary>
+    /// Script Arguments mean something whenever a script runs for this game: its own, or a
+    /// Settings default it hasn't opted out of. Gating on its own scripts only left a game that
+    /// relies on the defaults with no way to pass them anything.
+    /// </summary>
+    public bool CanEditScriptArguments => HasAnyScript || DefaultsRunForThisGame;
+
+    private bool DefaultsRunForThisGame => _scriptDefaults is { Enabled: true, HasAny: true } && !SkipDefaultScripts;
 
     // --- Settings default scripts, as they apply to this game ---
 
@@ -642,7 +653,7 @@ public class GameEditViewModel : ViewModelBase
     public bool SkipDefaultScripts
     {
         get => _skipDefaultScripts;
-        set { _skipDefaultScripts = value; OnPropertyChanged(); OnPropertyChanged(nameof(DefaultScriptsSummary)); }
+        set { _skipDefaultScripts = value; OnPropertyChanged(); OnPropertyChanged(nameof(DefaultScriptsSummary)); OnPropertyChanged(nameof(CanEditScriptArguments)); }
     }
 
     /// <summary>
@@ -666,6 +677,17 @@ public class GameEditViewModel : ViewModelBase
             if (_scriptDefaults.HasPostExitScript)
             {
                 lines.Add(DescribeDefault("post-exit", _scriptDefaults.PostExitScriptPath, HasPostExitScript));
+            }
+            bool aDefaultRuns = !SkipDefaultScripts
+                && ((_scriptDefaults.HasPreLaunchScript && !HasPreLaunchScript) || (_scriptDefaults.HasPostExitScript && !HasPostExitScript));
+            if (aDefaultRuns)
+            {
+                // Mirrors GameScriptService.DefaultScriptArguments, for what is typed right now.
+                lines.Add(!string.IsNullOrWhiteSpace(ScriptArguments)
+                    ? "The default scripts get this game's Script Arguments."
+                    : string.IsNullOrWhiteSpace(_scriptDefaults.ScriptArguments)
+                        ? "The default scripts get no Script Arguments."
+                        : $"The default scripts get the Default Script Arguments from Settings: {_scriptDefaults.ScriptArguments.Trim()}");
             }
             return string.Join("\n", lines);
 

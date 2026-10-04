@@ -12,9 +12,6 @@ namespace TrayTrigger.Services;
 /// </summary>
 public static class HelpCommands
 {
-    /// <summary>The community script catalog. Opened from the scripts cards in Settings and Edit Game.</summary>
-    public const string ScriptCatalogUrl = "https://github.com/stephenh678/TrayTrigger-Scripts";
-
     public static ICommand ShowTopic { get; } = new RelayCommand(p =>
     {
         if (p is string topicId && !string.IsNullOrWhiteSpace(topicId))

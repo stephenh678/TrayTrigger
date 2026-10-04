@@ -299,15 +299,6 @@ public partial class App : Application
         _gameScriptService = new GameScriptService(
             () => (_mainViewModel?.Settings ?? startupSettings).EnableGameScripts,
             () => (_mainViewModel?.Settings ?? startupSettings).ScriptDefaults);
-        // Blank templates, examples and README land in the scripts folder once the feature is on,
-        // and a stale one is replaced with this build's copy, so a correction to a template or an
-        // example reaches a folder that already exists. The user's own scripts are not bundled
-        // names and are never touched. Off the UI thread: file I/O.
-        if (startupSettings.EnableGameScripts)
-        {
-            var scriptLibrary = new ScriptLibraryService(_storageService.BaseDirectory);
-            _ = Task.Run(() => scriptLibrary.EnsureInstalled());
-        }
         _launcherService = new ProcessLauncherService(_storageService, _performanceProfileService, _gameScriptService, _steamScannerService, _gogScannerService, _eaScannerService, _epicScannerService, _ubisoftScannerService, _xboxScannerService, _battleNetScannerService);
         // A game left frozen by Suspend when TrayTrigger last stopped without exiting has nothing
         // else that will ever resume it. Same screenshot-run exception as the profile recovery.
@@ -354,6 +345,19 @@ public partial class App : Application
         // launch us. Reconciling only when the Settings page opened left that stored value stale
         // until the user happened to go there.
         _mainViewModel.SettingsVM.ReconcileStartWithWindows();
+
+        // The examples and README land in the scripts folder once the feature is on, and a stale
+        // one is replaced with this build's copy, so a correction to an example reaches a folder
+        // that already exists. The user's own scripts are not bundled
+        // names and are never touched. After the library and tools load, so an example this build
+        // no longer ships is kept while anything still runs it. Off the UI thread: file I/O.
+        if (startupSettings.EnableGameScripts)
+        {
+            var scriptLibrary = new ScriptLibraryService(_storageService.BaseDirectory);
+            // A capture run's library is not the user's, so it must not decide what is unused.
+            var scriptsInUse = isScreenshot ? null : ScriptPathsInUse(_mainViewModel, startupSettings);
+            _ = Task.Run(() => scriptLibrary.EnsureInstalled(scriptsInUse));
+        }
 
         // Constructing MainWindow initializes WPF's D3D render stack (GPU driver DLLs load
         // immediately) even if it's never shown, so skip it when starting minimized to the tray -
@@ -432,14 +436,6 @@ public partial class App : Application
                 Dispatcher.BeginInvoke(() => _launchPopup?.EndClosing(tool.Id));
             }
         };
-        // A library game started outside TrayTrigger keeps the tools open until it closes. The library
-        // belongs to the UI thread; closing runs in the background, so it's read there.
-        companionTools.OtherGameRunning = ignore =>
-        {
-            var games = Dispatcher.Invoke(() => _mainViewModel?.Library.Games.Select(c => c.Game).ToList(),
-                System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
-            return games == null ? null : _launcherService.FindUntrackedRunningGame(games, ignore);
-        };
         _launcherService.CompanionTools = companionTools;
 
         // "Keep game launchers minimized when launching a game" (Settings > Launch & Performance > Launching Games).
@@ -514,6 +510,23 @@ public partial class App : Application
         Log("OnStartup completed successfully.");
     }
 
+    /// <summary>Every script path something could run: each game's, the defaults, and each tool's
+    /// target. Read on the UI thread, which owns the library and tools collections.</summary>
+    private static List<string> ScriptPathsInUse(MainViewModel vm, AppSettings settings)
+    {
+        var paths = new List<string>
+        {
+            settings.ScriptDefaults.PreLaunchScriptPath,
+            settings.ScriptDefaults.PostExitScriptPath,
+        };
+        foreach (var card in vm.Library.Games)
+        {
+            paths.Add(card.Game.PreLaunchScriptPath);
+            paths.Add(card.Game.PostExitScriptPath);
+        }
+        foreach (var tool in vm.Tools.ToolsSnapshot) paths.Add(tool.TargetPath);
+        return paths;
+    }
 
     private void InitializeTrayIcon()
     {

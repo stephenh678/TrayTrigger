@@ -50,7 +50,7 @@
   <img src="Assets/LauncherLogos/battlenet.png" height="40" alt="Battle.net" title="Battle.net">&nbsp;&nbsp;
   <img src="Assets/LauncherLogos/local_games.png" height="40" alt="Local games" title="Any executable or shortcut">
   <br>
-  <sub>Scans all seven, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></sub>
+  <sub>Scans all seven, plus anything you drop on the window.</sub>
 </p>
 
 ---
@@ -70,8 +70,6 @@
   <img src="Assets/social-preview.png" alt="TrayTrigger: launchers that close themselves, per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks">
 </p>
 
-<!-- HERO GIF: Assets/screenshots/tweaks-apply-revert.gif goes here once recorded. -->
-
 ---
 
 ## From launch to exit, handled
@@ -80,14 +78,14 @@ A launcher's job ends when the game is running. TrayTrigger is what happens arou
 
 | When | What TrayTrigger does |
 |---|---|
-| **Before launch** | Snapshots your current settings. Applies the game's **Performance Profile**: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your **pre-launch script**: pause Wallpaper Engine, start the OBS replay buffer, close Discord, back up saves. |
+| **Before launch** | Snapshots your current settings. Applies the game's **Performance Profile**: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your **pre-launch script**: close OneDrive, start SimHub. |
 | **On launch** | Starts the game with your **launch arguments**, as Administrator if you asked, through its own launcher (Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net) or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears. |
 | **While playing** | Stays a tray icon. A launch from a hotkey or the tray menu shows a small card by the clock with what the game is waiting on (Battle.net signing in, say) until it starts. The tooltip and the tray menu's *Now Playing* section show what's running. |
 | **On exit** | Restores **per-game profile settings to their previous state**. Runs your **post-exit script**. Closes the launcher if you told it to. Crash-safe: if TrayTrigger or Windows dies mid-game, the snapshot is restored on next start. |
 
 ### Why not just Steam?
 
-Steam launches Steam games. It doesn't change your power plan for one game and put it back after, pause your wallpaper, start your replay buffer, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam. It isn't a replacement for any store or launcher; it's the layer under them.
+Steam launches Steam games. It doesn't change your power plan for one game and put it back after, start the tools a game needs, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam. It isn't a replacement for any store or launcher; it's the layer under them.
 
 ---
 
@@ -179,17 +177,14 @@ Games ship with whatever DLSS version was current when they were built, and ofte
 
 Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
 
-**Five real ones ship with the app**, written to be read, copied, and changed:
+**Real ones ship with the app**, written to be read, copied, and changed:
 
 | Script | What it does |
 |---|---|
-| `Example-WallpaperEnginePause.ps1` | Pauses and mutes Wallpaper Engine while you play, resumes it after. |
-| `Example-CloseBackgroundApps.ps1` | Closes background apps (a recommended list with "recommended", or the ones you name) and reopens the ones it closed; run as administrator, it also pauses Windows Update for the game. |
-| `Example-StartCompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) and closes only the ones it started. |
-| `Example-OBSReplayBuffer.ps1` | Runs OBS in the tray with the replay buffer on, so a hotkey saves the last minutes of play. |
-| `Example-SaveBackup.ps1` | Zips a save folder before and after you play, keeps the newest ten. |
+| `Example-CloseBackgroundApps.ps1` | Asks background apps to close (cloud sync with "recommended", or the ones you name) and reopens the ones that closed; add "force" to end any that won't. |
+| `Example-StartCompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) for the games you pick, and closes only the ones it started. |
 
-These seven files (the five examples, two blank templates and a README) are TrayTrigger's copies, kept up to date as it updates, so a corrected template reaches a folder you already have. Work on a copy - "New script..." makes one named after the game, and a file TrayTrigger did not put there is never touched. If you edit a bundled one anyway, your version is kept beside it as `<name>.previous` rather than lost.
+These files (the examples and a README) are TrayTrigger's copies, kept up to date as it updates, so a corrected example reaches a folder you already have. Work on a copy - "New script..." makes one named after the game, and a file TrayTrigger did not put there is never touched. If you edit a bundled one anyway, your version is kept beside it as `<name>.previous` rather than lost.
 
 A script doesn't have to be long. This is a complete pre-launch script:
 
@@ -200,14 +195,14 @@ taskkill /im Discord.exe /f
 
 **What you get:**
 - **Test Run buttons** next to every script field: runs it now, shows the exit code and output, without launching the game.
-- **Script Arguments** per game, so one generic script serves your whole library (a save folder, a profile name, a list of apps).
+- **Script Arguments** per game, so one generic script serves your whole library (a profile name, a list of apps).
 - **Game info passed in**: phase, game name, exe, game ID, and playtime as arguments, plus `TRAYTRIGGER_*` environment variables.
 - **Wait / timeout / cancel-on-failure**: hold the launch until the script finishes, or treat it as a precondition and abort the launch (and roll back the profile) if it fails.
 - **Hidden or elevated**: suppress the console window with output captured to the log, or run through UAC.
 - **Default scripts** in Settings run for every game that has no script of its own, with a per-game opt-out.
 - **New script...** creates a blank template with every argument already read for you and opens it in your editor.
 
-Scripts are off by default. Nothing runs until you enable them and choose one. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract. Community-contributed scripts live in [TrayTrigger-Scripts](https://github.com/stephenh678/TrayTrigger-Scripts), reviewed before listing.
+Scripts are off by default. Nothing runs until you enable them and choose one. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract.
 
 ---
 
@@ -222,8 +217,6 @@ Windows set up for games, and an eye on the hardware running them.
 ### Performance Tweaks
 
 System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
-
-<!-- GIF: Assets/screenshots/tweaks-apply-revert.gif (Apply Performance Preset → badges flip → Restore Previous Settings) -->
 
 See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Restore Previous Settings**. Bulk changes can create a System Restore point.
 
@@ -340,19 +333,6 @@ Because the installer has no publisher certificate, Windows SmartScreen may show
 **How releases are built.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners; nothing is built on a developer machine. Each release publishes `TrayTrigger-v*-Setup.exe`, the portable `.zip`, a `SHA256SUMS.txt` covering both, and a signature of that file, `SHA256SUMS.txt.sig`. The in-app updater refuses an installer that doesn't match, or a checksum file that isn't signed by a TrayTrigger release key.
 
 **Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), RAWG (game info for non-Steam titles, only if you enter your own API key), NVIDIA's driver service (only when you press Check for Newer Driver, and naming only your GPU model), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
-
-## Star History
-
-If TrayTrigger saved you a click, an alt-tab, or a settings hunt, a star helps other people find it.
-
-<p align="center">
-  <a href="https://star-history.com/#stephenh678/TrayTrigger&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=stephenh678/TrayTrigger&type=Date&theme=dark">
-      <img src="https://api.star-history.com/svg?repos=stephenh678/TrayTrigger&type=Date" alt="Star history chart" width="600">
-    </picture>
-  </a>
-</p>
 
 ## License
 

@@ -55,7 +55,7 @@ public class GameScriptService
     /// <summary>
     /// Default upper bound on how long a "wait for it" pre-launch script can hold up the game
     /// launch. Short, because a slow script is never killed - the game just starts without it -
-    /// and a script that needs longer (zipping a large save) gets a higher value per game.
+    /// and a script that needs longer gets a higher value per game.
     /// </summary>
     public static readonly TimeSpan DefaultPreLaunchWaitTimeout = TimeSpan.FromSeconds(10);
     public const int MinPreLaunchTimeoutSeconds = 1;
@@ -90,9 +90,18 @@ public class GameScriptService
     /// <summary>
     /// The script that will actually run for one phase of one game, after the Settings defaults
     /// have been applied. <see cref="IsDefault"/> says which side it came from, for logging and
-    /// for the Edit Game summary.
+    /// for the Edit Game summary. <see cref="Arguments"/> is the free text it gets after the five
+    /// positional arguments; see <see cref="DefaultScriptArguments"/>.
     /// </summary>
-    public readonly record struct EffectiveScript(string Path, bool Wait, int TimeoutSeconds, bool AbortOnFailure, bool Hidden, bool Elevated, bool IsDefault);
+    public readonly record struct EffectiveScript(string Path, bool Wait, int TimeoutSeconds, bool AbortOnFailure, bool Hidden, bool Elevated, bool IsDefault, string Arguments = "");
+
+    /// <summary>
+    /// What a default script gets as Script Arguments: the game's own when it has some, so one
+    /// game can still differ, and the Settings defaults' otherwise. A game's own script only ever
+    /// gets the game's.
+    /// </summary>
+    public static string DefaultScriptArguments(GameEntry game, ScriptDefaults defaults) =>
+        string.IsNullOrWhiteSpace(game.ScriptArguments) ? defaults.ScriptArguments ?? string.Empty : game.ScriptArguments;
 
     /// <summary>
     /// Per-phase resolution: the game's own pre-launch script if it has one; otherwise the
@@ -103,11 +112,11 @@ public class GameScriptService
     {
         if (!string.IsNullOrWhiteSpace(game.PreLaunchScriptPath))
         {
-            return new EffectiveScript(game.PreLaunchScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false);
+            return new EffectiveScript(game.PreLaunchScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false, game.ScriptArguments);
         }
         if (defaults is { Enabled: true } && !game.SkipDefaultScripts && defaults.HasPreLaunchScript)
         {
-            return new EffectiveScript(defaults.PreLaunchScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true);
+            return new EffectiveScript(defaults.PreLaunchScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true, DefaultScriptArguments(game, defaults));
         }
         return null;
     }
@@ -117,11 +126,11 @@ public class GameScriptService
     {
         if (!string.IsNullOrWhiteSpace(game.PostExitScriptPath))
         {
-            return new EffectiveScript(game.PostExitScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false);
+            return new EffectiveScript(game.PostExitScriptPath, game.WaitForPreLaunchScript, game.PreLaunchScriptTimeoutSeconds, game.AbortLaunchOnScriptFailure, game.RunScriptsHidden, game.RunScriptsAsAdmin, IsDefault: false, game.ScriptArguments);
         }
         if (defaults is { Enabled: true } && !game.SkipDefaultScripts && defaults.HasPostExitScript)
         {
-            return new EffectiveScript(defaults.PostExitScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true);
+            return new EffectiveScript(defaults.PostExitScriptPath, defaults.WaitForPreLaunchScript, defaults.PreLaunchScriptTimeoutSeconds, defaults.AbortLaunchOnScriptFailure, defaults.RunScriptsHidden, defaults.RunScriptsAsAdmin, IsDefault: true, DefaultScriptArguments(game, defaults));
         }
         return null;
     }
@@ -178,7 +187,7 @@ public class GameScriptService
             return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script has an unsupported file type") : PreLaunchScriptResult.Proceed;
         }
 
-        var psi = BuildStartInfo(path, game, PhasePreLaunch, script.Value.Hidden, script.Value.Elevated, playedMinutes: null);
+        var psi = BuildStartInfo(path, game, PhasePreLaunch, script.Value.Hidden, script.Value.Elevated, playedMinutes: null, script.Value.Arguments);
         if (psi == null)
         {
             LoggingService.Warn("GameScript", $"{label} for '{game.Name}' not found: {path}");
@@ -297,7 +306,7 @@ public class GameScriptService
             return;
         }
 
-        var psi = BuildStartInfo(path, game, PhasePostExit, script.Value.Hidden, script.Value.Elevated, playedMinutes);
+        var psi = BuildStartInfo(path, game, PhasePostExit, script.Value.Hidden, script.Value.Elevated, playedMinutes, script.Value.Arguments);
         if (psi == null)
         {
             LoggingService.Warn("GameScript", $"{label} for '{game.Name}' not found: {path}");
@@ -515,6 +524,8 @@ public class GameScriptService
     /// <summary>
     /// Builds the process start info for a script. Returns null if the script file doesn't exist
     /// or has an unsupported extension. Pure and side-effect free so it can be unit tested.
+    /// <paramref name="scriptArguments"/> is the free text after the positional arguments; null
+    /// means the game's own (<see cref="EffectiveScript.Arguments"/> decides it for a launch).
     /// </summary>
     internal static ProcessStartInfo? BuildStartInfo(
         string scriptPath,
@@ -522,8 +533,10 @@ public class GameScriptService
         string phase,
         bool hidden,
         bool elevated,
-        long? playedMinutes)
+        long? playedMinutes,
+        string? scriptArguments = null)
     {
+        string extraArguments = scriptArguments ?? game.ScriptArguments;
         string path = scriptPath.Trim().Trim('"');
         if (!IsSupportedScript(path) || !File.Exists(path))
         {
@@ -586,9 +599,9 @@ public class GameScriptService
                 // The game's own script arguments go in raw: a batch author writes cmd syntax and
                 // expects cmd to parse it (%~6, quoted spans, even redirections). Their quoting is
                 // their responsibility - the help page says an unbalanced quote will break parsing.
-                if (!string.IsNullOrWhiteSpace(game.ScriptArguments))
+                if (!string.IsNullOrWhiteSpace(extraArguments))
                 {
-                    psi.Arguments += " " + game.ScriptArguments.Trim();
+                    psi.Arguments += " " + extraArguments.Trim();
                 }
                 psi.Arguments += "\"";
                 break;
@@ -632,8 +645,8 @@ public class GameScriptService
             psi.ArgumentList.Add(playtimeArg);
             // PowerShell and executables receive discrete argv entries, so the free text is split
             // the way Windows itself would split a command line, then each token is re-quoted by
-            // the runtime. "C:\My Saves" arrives as one argument.
-            foreach (string token in SplitScriptArguments(game.ScriptArguments))
+            // the runtime. "C:\My Tools" arrives as one argument.
+            foreach (string token in SplitScriptArguments(extraArguments))
             {
                 psi.ArgumentList.Add(token);
             }
