@@ -27,25 +27,22 @@ This page covers using scripts. Writing your own script covers the arguments a s
 - Cancel the launch if the pre-launch script fails treats the script as a precondition: a non-zero exit code, a timeout, or a script that will not start cancels the launch and rolls the Performance Profile back. Turning this on also turns on waiting. Off by default; a failing script is logged and the game launches anyway.
 - Run scripts hidden suppresses the console window. A hidden script's output is captured into the TrayTrigger log instead (see Troubleshooting).
 - Run scripts as Administrator elevates through UAC, so expect a prompt on every launch.
-- Script Arguments is free text handed to both scripts, such as a save folder or the apps to close. It is how one script serves many games.
+- Script Arguments is free text handed to both scripts, such as the apps to close or the programs to start. It is how one script serves many games.
 
 ## Example scripts
 
-Five examples ship with TrayTrigger. Each is one file that handles both phases: in Edit Game, choose it as the pre-launch script and tick "Use the same script for pre-launch and post-exit". Each opens with a comment block covering why you'd want it, how to set it up and what to change.
+These examples ship with TrayTrigger. Each is one file that handles both phases: in Edit Game, choose it as the pre-launch script and tick "Use the same script for pre-launch and post-exit". Each opens with a comment block covering why you'd want it, how to set it up and what to change.
 
-- Example-WallpaperEnginePause.ps1 pauses and mutes Wallpaper Engine while you play and resumes it afterwards. It needs no Script Arguments.
-- Example-CloseBackgroundApps.ps1 closes background apps and reopens the ones it closed after the game. Type "recommended" in Script Arguments to close its recommended list (OneDrive, Dropbox, Google Drive, Creative Cloud, Teams, Slack), name the apps yourself, such as OneDrive ms-teams Dropbox, or both. With Script Arguments empty it does nothing. Tick Run scripts as Administrator and it also pauses Windows Update and Delivery Optimization for the game, and starts them again after.
-- Example-StartCompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, and closes only the ones it started. A program you already had open is left alone.
-- Example-OBSReplayBuffer.ps1 starts OBS in the tray with the replay buffer running and closes it after the game. An OBS you opened yourself is never touched. Script Arguments can give the path to OBS, when it isn't in Program Files, and an OBS profile.
-- Example-SaveBackup.ps1 zips the save folder named in Script Arguments, such as "%APPDATA%\EldenRing", before and after you play, and keeps the newest ten backups.
+- Example-CloseBackgroundApps.ps1 asks background apps to close before the game and reopens the ones that closed after it. Type "recommended" in Script Arguments to close its recommended list (OneDrive, Dropbox and Google Drive), name the apps yourself, such as OneDrive Spotify, or both. An app that ignores the request is left running; add "force", anywhere in Script Arguments, to end it instead. With Script Arguments empty it does nothing. RGB and hardware monitoring software (Armoury Crate, iCUE, NZXT CAM, Razer Synapse, MSI Center) is a common cause of stutter, but closing it rarely helps, because the part that reads your sensors runs as a Windows service: turn off its monitoring features instead.
+- Example-StartCompanionApps.ps1 starts the programs whose paths are in Script Arguments, such as SimHub or TrackIR, for the games you choose it for, and asks only the ones it started to close after the game. A program you already had open is left alone, and one that won't close is left running unless you add "force". For a program you want with every game, use Tools instead: tick "Start when I launch a game" in Edit Tool. Tools can also close a program that runs as Administrator, which a script can't.
 
 ## The scripts folder
 
-TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there. When game scripts are enabled, TrayTrigger puts the five examples there with _Blank.ps1, _Blank.bat and a README.txt.
+TrayTrigger keeps a scripts folder at %AppData%\TrayTrigger\Scripts. Open it from the Settings card or from the scripts card in Edit Game. The Browse buttons start there. When game scripts are enabled, TrayTrigger puts the examples there with a README.txt, which also covers writing your own.
 
 These files are TrayTrigger's copy, not yours. Whenever TrayTrigger starts, or you open the folder from it, each one is compared with the copy inside this version and replaced if it differs, which is how a corrected example reaches you. An edit you make to one is therefore undone at the next start. Your version is kept beside it with ".previous" on the end, but it is no longer the file your game runs.
 
-Work on a copy: "New script..." next to each path box copies a blank template to a name you choose, fills the path, and opens it for editing. A file TrayTrigger did not put there is never touched. Settings that differ from one PC to the next - where a program is installed, which apps to close - belong in Script Arguments rather than in the file.
+Work on your own file: "New script..." next to each path box creates one from a blank template under a name you choose, fills the path, and opens it for editing. A file TrayTrigger did not put there is never touched. Settings that differ from one PC to the next - where a program is installed, which apps to close - belong in Script Arguments rather than in the file.
 
 "Open in editor" next to a path box opens that script in Notepad or whatever you have associated with editing that type; it never runs it.
 
@@ -56,9 +53,9 @@ Settings > Launch & Performance can hold a default pre-launch script and a defau
 - Resolution is per phase. A game with its own pre-launch script but no post-exit script runs its own pre-launch and the default post-exit.
 - Any game can opt out of both defaults with "Don't run the default scripts for this game" in Edit Game.
 - The defaults have their own wait, timeout, cancel-on-failure, hidden, and Administrator options. Those apply whenever a default script runs; a game's own options apply only to its own scripts.
-- Each game's Script Arguments are passed to the default scripts too. That is how one generic default is parameterised per game.
+- The defaults have their own Default Script Arguments, used for every game whose Script Arguments in Edit Game are empty. A game with Script Arguments of its own passes those to the defaults instead, so one game can differ. Type "recommended" there to run Close Background Apps for every game. Default Script Arguments are never passed to a game's own script.
 - "Run the default scripts" is off by default and sits under the "Enable game scripts" switch, so nothing runs while either is off. Unticking it pauses the defaults without clearing their paths or options.
-- Edit Game shows which defaults apply to the game you are editing and why, and the defaults have their own Test buttons in Settings that run them with placeholder game values.
+- Edit Game shows which defaults apply to the game you are editing and why, and the defaults have their own Test buttons in Settings that run them with placeholder game values and the Default Script Arguments.
 
 ## Testing a script
 
@@ -70,11 +67,9 @@ Each script field in Edit Game has a Test button. It runs that script right now,
 - If the game is set to run scripts as Administrator or visibly, the result dialog says so: the real run will differ in exactly that way.
 - The Test button works even while "Enable game scripts" is off. Clicking it is an explicit request to run the script once.
 
-## Community scripts
+## Sharing scripts
 
-Scripts other people have written and shared live in the TrayTrigger-Scripts catalog on GitHub: https://github.com/stephenh678/TrayTrigger-Scripts. Every script there was read by a maintainer before it was listed. That is a review, not a guarantee: a script runs as you, so open it and read it before you attach it.
-
-"Browse community scripts" on the scripts card (in Settings and in Edit Game) opens the catalog in your browser. To use one, download its folder into your scripts folder and browse to it in Edit Game. To share yours, open a pull request on the catalog repository; its CONTRIBUTING file has the checklist.
+To share a script you wrote, post it in Show and tell in TrayTrigger's Discussions on GitHub: https://github.com/stephenh678/TrayTrigger/discussions/7. Scripts posted there are not reviewed by TrayTrigger. A script runs as you, so read one before you attach it.
 
 ## Troubleshooting
 

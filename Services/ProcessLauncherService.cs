@@ -805,45 +805,6 @@ public partial class ProcessLauncherService
         CloseCompanionToolsIfIdle();
     }
 
-    /// <summary>
-    /// One of <paramref name="games"/> that is running without TrayTrigger following it - started from
-    /// Steam or its own launcher, say - described for the log, or null. A Steam game by Steam's own
-    /// "running" flag; any other by a process from its folder that has a window showing, leaving out
-    /// known helpers and the processes in <paramref name="ignore"/> (the tools themselves, which may
-    /// live in a game's folder). The window is what tells a game being played from something left in
-    /// its folder in the background, which would otherwise hold the tools open for good; a game's own
-    /// launcher left open still counts, and they close once it does. A game started from a bare link
-    /// has neither, and can't be seen.
-    /// </summary>
-    internal string? FindUntrackedRunningGame(IReadOnlyList<GameEntry> games, IReadOnlySet<int> ignore, Func<int, bool>? hasVisibleWindow = null)
-    {
-        hasVisibleWindow ??= ProcessPathResolver.HasVisibleWindow;
-        List<(int Pid, string Path)>? running = null;
-        foreach (var game in games)
-        {
-            if (game.IsSteamGame && !string.IsNullOrWhiteSpace(game.SteamAppId) && ReadSteamRunningFlag(game.SteamAppId))
-            {
-                return $"'{game.Name}' (Steam says it's running)";
-            }
-
-            string dir = ResolveTrackedInstallDir(game);
-            if (ProcessPathResolver.IsUnsafeProcessFolder(dir, out _)) continue;
-            string prefix = ProcessPathResolver.NormalizeDirectory(dir);
-            running ??= ProcessPathResolver.RunningProcessPaths();
-            foreach (var (pid, path) in running)
-            {
-                if (ignore.Contains(pid) || !path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || ProcessPathResolver.IsKnownHelperProcess(path)) continue;
-                if (!hasVisibleWindow(pid))
-                {
-                    LoggingService.Verbose("Launcher", $"Not counting {path} (PID {pid}) as '{game.Name}' running: it has no window showing.");
-                    continue;
-                }
-                return $"'{game.Name}' ({path}, PID {pid})";
-            }
-        }
-        return null;
-    }
-
     /// <summary>No game is running or being launched: the time to close the tools started with games.</summary>
     private bool IsIdle()
     {
@@ -1128,10 +1089,8 @@ public partial class ProcessLauncherService
             return false;
         }
 
-        // No exit to wait for either, so what starts here is left running, and so is anything started
-        // for an earlier game: nothing can say when this one is done with it.
+        // No exit to wait for either, so what starts here is left running.
         CompanionTools?.StartForGame(game, remember: false);
-        CompanionTools?.KeepOpenFor(game);
 
         LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");
         Process.Start(new ProcessStartInfo(game.ExecutablePath) { UseShellExecute = true });

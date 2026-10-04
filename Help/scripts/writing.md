@@ -5,7 +5,7 @@ A script doesn't have to be long. This batch file is a complete pre-launch scrip
 - @echo off
 - taskkill /im Discord.exe /f
 
-Start from a copy: "New script..." next to a script box in Edit Game copies a blank template (_Blank.ps1 or _Blank.bat) to a name you choose and opens it for editing. The templates already read every value below and branch on the phase. Pre-Launch and Post-Exit Scripts covers the options, the examples and the Test button.
+Start from a template: "New script..." next to a script box in Edit Game creates a script from a blank template, PowerShell or batch depending on the name you choose, and opens it for editing. The template already reads every value below and branches on the phase, and the script is yours: TrayTrigger never changes it. README.txt in the scripts folder has the same reference as this page. Pre-Launch and Post-Exit Scripts covers the options, the examples and the Test button.
 
 ## What a script is given
 
@@ -19,11 +19,11 @@ Every script works as-is; nothing here is required. If one script should behave 
 
 ## Script Arguments
 
-The Script Arguments box in Edit Game is free text appended after the five built-in arguments, for both scripts. It is how one generic script serves many games: the script reads a save folder or a profile name from there instead of having it edited in.
+The Script Arguments box in Edit Game is free text appended after the five built-in arguments, for both scripts. It is how one generic script serves many games: the script reads a profile name or a list of apps from there instead of having it edited in.
 
 - They start at %6 in a batch file and at $args[5] in PowerShell. In a PowerShell param block, declare the built-in five and then a [Parameter(ValueFromRemainingArguments)] array for the rest.
 - For .bat and .cmd the text is passed exactly as typed, and cmd.exe parses it. Quote a value that contains spaces. An unbalanced double quote will break cmd's parsing of the whole command line, so keep quotes paired.
-- For .ps1, .exe and .com the text is split into separate arguments with the usual Windows rules: spaces separate, double quotes group, a backslash before a quote escapes it. "C:\My Saves" arrives as one argument with no quotes.
+- For .ps1, .exe and .com the text is split into separate arguments with the usual Windows rules: spaces separate, double quotes group, a backslash before a quote escapes it. "C:\My Tools" arrives as one argument with no quotes.
 - Test passes them too, so the result dialog shows exactly what the script will see.
 
 ## Passing something from before to after
@@ -44,4 +44,4 @@ Exit code 0 means success. A non-zero exit code only stops the game from startin
 
 ## Sharing a script
 
-The community catalog is at https://github.com/stephenh678/TrayTrigger-Scripts. To have a script ready for it: start with the same header the examples use, use only the five values and Script Arguments, make no downloads or network calls, close only programs the user named or your script started, put back whatever you change, and test both phases.
+Post a script you want to share in Show and tell in TrayTrigger's Discussions: https://github.com/stephenh678/TrayTrigger/discussions/7. A script others can trust starts with the same header the examples use, uses only the five values and Script Arguments, makes no downloads or network calls, closes only programs the user named or the script started, puts back whatever it changes, and has been tested in both phases.

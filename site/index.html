@@ -251,7 +251,7 @@
       <img src="assets/battlenet.png" alt="Battle.net" title="Battle.net">
       <img src="assets/local_games.png" alt="Local games" title="Any executable or shortcut">
     </div>
-    <p class="dim" style="font-size:14px">Scans all seven, plus anything you drop on the window. <a href="https://github.com/stephenh678/TrayTrigger/discussions/6">Vote on which launcher comes next.</a></p>
+    <p class="dim" style="font-size:14px">Scans all seven, plus anything you drop on the window.</p>
 
     <div class="hero-showcase">
       <figure class="card library-card"><div class="capture-label"><span class="status-dot"></span> YOUR LIBRARY, TOGETHER</div><img src="assets/library-current.png" width="1382" height="1052" alt="TrayTrigger library with favorites, launcher badges, and Scan for Games"><figcaption>Find your favorites across launchers.</figcaption></figure>
@@ -328,11 +328,11 @@
           <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
           <li><strong>Launchers stay minimized</strong>: Steam and GOG Galaxy start in the background and Epic launches silently, so only the game appears.</li>
           <li><strong>Launch popup</strong> by the tray clock for hotkey and tray launches: what the game is waiting on, and the reason if a launch fails.</li>
-          <li><strong>Tools</strong> (optional): launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. A tool can start with your games and close when the last one exits.</li>
+          <li><strong>Tools</strong>: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. A tool can start with your games and close when the last one exits.</li>
           <li><strong>Run as Administrator</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
           <li><strong>CPU Cores</strong> per game: performance cores on an Intel hybrid CPU, the 3D V-Cache cores on a Ryzen X3D. Auto picks what fits your CPU.</li>
-          <li><strong>NVIDIA DLSS Override</strong> per game: run a game on your driver's newer DLSS files instead of the ones it shipped with, without touching the game folder.</li>
-          <li><strong>Hardware monitoring</strong> in the same window: live CPU and RAM load, GPU, VRAM, displays, drives, and DirectX capability, without a second app.</li>
+          <li><strong>NVIDIA DLSS Override</strong> per game: run a game on your driver's newer DLSS files instead of the ones it shipped with, without touching the game folder. Select several games to switch it for all of them.</li>
+          <li><strong>Hardware monitoring</strong> in the same window: live CPU, RAM and GPU load, VRAM, displays, drives, and DirectX capability, without a second app. It warns about what slows a game down, like a screen left below its fastest refresh rate, a GPU on fewer PCIe lanes than it supports, or games on a hard drive, and checks for a newer NVIDIA driver when you ask.</li>
         </ul>
       </div>
       <div class="shot"><img src="assets/edit-launch.png" alt="Edit Game: the Launch card with launcher options, target, working directory, and arguments"></div>
@@ -363,10 +363,9 @@
         <div class="kicker">Pre-Launch and Post-Exit Scripts<span class="badge">advanced, off by default</span></div>
         <h2>Your scripts, before and after every game</h2>
         <ul>
-          <li>Five real-world examples ship with it: <strong>pause Wallpaper Engine</strong>, <strong>Close Background Apps</strong> (a recommended list or the apps you name, reopened after; as Administrator it also pauses Windows Update), <strong>Start Companion Apps</strong>, <strong>OBS replay buffer</strong>, <strong>Save Backup</strong>.</li>
+          <li>Real-world examples ship with it: <strong>Close Background Apps</strong> (cloud sync or the apps you name, reopened after) and <strong>Start Companion Apps</strong>.</li>
           <li>Per-game <strong>Script Arguments</strong>, a <strong>Test Run</strong> button with captured output, timeouts, and cancel-the-launch-on-failure.</li>
           <li>Scripts run as you, never elevated unless you choose it. Review scripts before enabling them. Their effects depend on the script; configure a matching post-exit action when cleanup is needed.</li>
-          <li>Community scripts live in the <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts</a> catalog, reviewed by pull request.</li>
         </ul>
 
       </div>
@@ -445,7 +444,6 @@
     <a href="https://github.com/stephenh678/TrayTrigger">GitHub</a>
     <a href="https://github.com/stephenh678/TrayTrigger/wiki">Wiki</a>
     <a href="https://github.com/stephenh678/TrayTrigger/discussions">Discussions</a>
-    <a href="https://github.com/stephenh678/TrayTrigger-Scripts">Script catalog</a>
     <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">Security</a>
   </div>
 </footer>

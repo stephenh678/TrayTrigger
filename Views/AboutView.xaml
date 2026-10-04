@@ -239,7 +239,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Attach your own .bat, .cmd, .ps1 or .exe to any game, or set defaults for all of them: pause Wallpaper Engine, start the OBS replay buffer, close Discord, back up saves. Test Run buttons, per-game arguments, wait and cancel-on-failure, and five real examples ship with the app."
+                                    <TextBlock Text="Attach your own .bat, .cmd, .ps1 or .exe to any game, or set defaults for all of them: close OneDrive, start SimHub for your racing games. Test Run buttons, per-game arguments, wait and cancel-on-failure, and real examples ship with the app."
                                                FontSize="11" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
@@ -697,8 +697,6 @@
                                 <Button Content="Ask a Question" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger/discussions"
                                         Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
                                 <Button Content="What&apos;s New" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger/releases"
-                                        Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
-                                <Button Content="Script Catalog" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger-Scripts"
                                         Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>
                                 <Button Content="Security Policy" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md"
                                         Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>

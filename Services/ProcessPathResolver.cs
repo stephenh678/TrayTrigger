@@ -345,41 +345,6 @@ public static partial class ProcessPathResolver
         return matching;
     }
 
-    /// <summary>
-    /// The path of every one of the signed-in user's processes that can be read, TrayTrigger's own
-    /// left out - read once, for a check that looks at many folders at a time.
-    /// </summary>
-    public static List<(int Pid, string Path)> RunningProcessPaths()
-    {
-        var result = new List<(int Pid, string Path)>();
-        Process[] all;
-        try { all = Process.GetProcesses(); }
-        catch (Exception ex) { LoggingService.Swallowed("ProcessPathResolver", ex, "listing running processes"); return result; }
-
-        int ownPid = Environment.ProcessId;
-        int ownSession;
-        try { using var self = Process.GetCurrentProcess(); ownSession = self.SessionId; }
-        catch (Exception ex) { LoggingService.Swallowed("ProcessPathResolver", ex, "reading this session's id"); ownSession = -1; }
-
-        foreach (var proc in all)
-        {
-            try
-            {
-                if (proc.Id == ownPid || proc.Id <= 4 || proc.SessionId != ownSession) continue;
-                if (GetProcessPath(proc.Id) is { } path) result.Add((proc.Id, path));
-            }
-            catch
-            {
-                // It exited while being read.
-            }
-            finally
-            {
-                proc.Dispose();
-            }
-        }
-        return result;
-    }
-
     /// <summary>Every top-level window the process owns, shown or not.</summary>
     public static List<IntPtr> TopLevelWindows(int pid)
     {

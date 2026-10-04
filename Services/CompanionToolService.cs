@@ -99,24 +99,6 @@ public sealed partial class CompanionToolService
     internal Func<IReadOnlyList<HeldProcess>, TimeSpan, bool> EndCopyAsAdministrator { get; set; } = EndElevated;
 
     /// <summary>
-    /// A library game TrayTrigger isn't following that is running (started from Steam, say), described
-    /// for the log, or null when there's none; the given processes - the tools' own - don't count.
-    /// Closing waits for it. Set by App; unset, nothing is waited for.
-    /// </summary>
-    public Func<IReadOnlySet<int>, string?>? OtherGameRunning { get; set; }
-
-    /// <summary>How often closing looks again while such a game is running.</summary>
-    internal TimeSpan RecheckInterval { get; set; } = TimeSpan.FromSeconds(30);
-
-    /// <summary>Runs an action once, after a delay. Replaced in tests.</summary>
-    internal Action<TimeSpan, Action> Schedule { get; set; } =
-        (delay, action) => _ = Task.Delay(delay).ContinueWith(_ => action(), TaskScheduler.Default);
-
-    private bool _recheckScheduled;
-    /// <summary>The game closing is waiting for, as last logged: logged again only when it changes.</summary>
-    private string? _waitingFor;
-
-    /// <summary>
     /// A tool running as administrator is about to be closed (true), which takes Windows' permission,
     /// then the prompt has been answered (false). The prompt names Windows PowerShell rather than the
     /// tool, so the launch popup says what it is for.
@@ -263,26 +245,6 @@ public sealed partial class CompanionToolService
                 LoggingService.Verbose("Tools", "A game is running or being launched, so the tools started with games stay open.");
                 return;
             }
-            if (OtherGameStillRunning() is { } game)
-            {
-                if (game != _waitingFor)
-                {
-                    _waitingFor = game;
-                    LoggingService.Info("Tools", $"{game} is still running without TrayTrigger following it, so the tools started with games stay open until it closes.");
-                }
-                if (!_recheckScheduled)
-                {
-                    _recheckScheduled = true;
-                    Schedule(RecheckInterval, () =>
-                    {
-                        lock (_gate) { _recheckScheduled = false; }
-                        CloseIfIdle(isIdle);
-                    });
-                }
-                return;
-            }
-            _waitingFor = null;
-
             var tools = _tools();
             foreach (var (id, process) in _started.ToList())
             {
@@ -306,40 +268,6 @@ public sealed partial class CompanionToolService
         }
     }
 
-    /// <summary>
-    /// Asked under the gate. A check that fails counts as no game running: the tools then close as they
-    /// would have before this check existed.
-    /// </summary>
-    private string? OtherGameStillRunning()
-    {
-        if (OtherGameRunning == null) return null;
-        try
-        {
-            var ours = _started.Values.Select(SafeId).OfType<int>().ToHashSet();
-            return OtherGameRunning(ours);
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Swallowed("Tools", ex, "checking for a game TrayTrigger isn't following");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// A game TrayTrigger can't follow to its exit - started from a link - is running, so nothing can
-    /// say when it's done with the tools started for earlier games: they're left open and forgotten.
-    /// </summary>
-    public void KeepOpenFor(GameEntry game)
-    {
-        lock (_gate)
-        {
-            if (_started.Count == 0) return;
-            LoggingService.Info("Tools", $"'{game.Name}' was started from a link, which TrayTrigger can't follow to its exit, so the {_started.Count} tool(s) started with games stay open.");
-            foreach (var process in _started.Values) process.Dispose();
-            _started.Clear();
-            _waitingFor = null;
-        }
-    }
 
     private void Close(ToolEntry? tool, Process process)
     {

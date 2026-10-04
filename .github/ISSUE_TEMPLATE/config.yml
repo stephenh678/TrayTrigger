@@ -7,8 +7,8 @@ contact_links:
     url: https://github.com/stephenh678/TrayTrigger/issues/9
     about: One comment per game on the tracking issue; fixes ship in batches.
   - name: Share a launch script
-    url: https://github.com/stephenh678/TrayTrigger-Scripts
-    about: Pre-launch and post-exit scripts go to the community catalog repo by pull request.
+    url: https://github.com/stephenh678/TrayTrigger/discussions/7
+    about: Post a pre-launch or post-exit script you wrote in Show and tell, for others to read and adapt.
   - name: Report a security issue
     url: https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md
     about: Please don't file security reports as public issues.

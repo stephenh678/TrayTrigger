@@ -1570,7 +1570,7 @@ public class SettingsViewModel : ViewModelBase
                 _settings.EnableGameScripts = value;
                 OnPropertyChanged();
                 AutoSaveSettings();
-                // First time on: put the blank templates, examples and README where Browse will land.
+                // First time on: put the examples and README where Browse will land.
                 if (value) _ = Task.Run(() => ScriptLibrary.EnsureInstalled());
             }
         }
@@ -1627,6 +1627,22 @@ public class SettingsViewModel : ViewModelBase
                 _settings.ScriptDefaults.PostExitScriptPath = v;
                 OnPropertyChanged();
                 NotifyDefaultScriptsChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
+    /// <summary>Script Arguments for the defaults, used for any game whose own are blank.</summary>
+    public string DefaultScriptArguments
+    {
+        get => _settings.ScriptDefaults.ScriptArguments;
+        set
+        {
+            string v = value ?? string.Empty;
+            if (_settings.ScriptDefaults.ScriptArguments != v)
+            {
+                _settings.ScriptDefaults.ScriptArguments = v;
+                OnPropertyChanged();
                 AutoSaveSettings();
             }
         }
@@ -1772,6 +1788,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(DefaultScriptsEnabled));
         OnPropertyChanged(nameof(DefaultPreLaunchScriptPath));
         OnPropertyChanged(nameof(DefaultPostExitScriptPath));
+        OnPropertyChanged(nameof(DefaultScriptArguments));
         OnPropertyChanged(nameof(HasDefaultPreLaunchScript));
         OnPropertyChanged(nameof(HasDefaultPostExitScript));
         OnPropertyChanged(nameof(HasAnyDefaultScript));
@@ -1865,7 +1882,9 @@ public class SettingsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(path) || IsTestingDefaultScript) return;
 
         const string probeName = "Default Script Test";
-        var probe = new GameEntry { Id = "default", Name = probeName, ExecutablePath = string.Empty };
+        // The default Script Arguments, as a game with none of its own would pass them.
+        string arguments = DefaultScriptArguments.Trim();
+        var probe = new GameEntry { Id = "default", Name = probeName, ExecutablePath = string.Empty, ScriptArguments = arguments };
         string phase = isPreLaunch ? GameScriptService.PhasePreLaunch : GameScriptService.PhasePostExit;
         long? playtime = isPreLaunch ? null : 0;
 
@@ -1876,7 +1895,8 @@ public class SettingsViewModel : ViewModelBase
             var result = await Task.Run(() => GameScriptService.TestRun(path, probe, phase, playtime));
             StatusMessage = string.Empty;
             var report = new ScriptTestReport(isPreLaunch, path, result, DefaultRunScriptsAsAdmin, DefaultRunScriptsHidden,
-                ProbeDescription: $"placeholder values (name \"{probeName}\", game ID \"default\", empty exe, no script arguments)");
+                ProbeDescription: $"placeholder values (name \"{probeName}\", game ID \"default\", empty exe) and " +
+                    (arguments.Length == 0 ? "no script arguments" : $"the default script arguments \"{arguments}\""));
             new ScriptTestResultDialog(report).ShowDialog();
         }
         finally
