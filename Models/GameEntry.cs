@@ -168,6 +168,13 @@ public class GameEntry
     /// </summary>
     public bool SkipDefaultScripts { get; set; }
 
+    /// <summary>
+    /// Whether the game was installed when TrayTrigger last checked, so a change can be noted once
+    /// in Activity &amp; History ("no longer installed", "installed again"). Null until first checked,
+    /// which is recorded without an entry - so an upgrade doesn't report every uninstalled game.
+    /// </summary>
+    public bool? LastKnownInstalled { get; set; }
+
     [JsonIgnore]
     public bool HasScripts => !string.IsNullOrWhiteSpace(PreLaunchScriptPath) || !string.IsNullOrWhiteSpace(PostExitScriptPath);
 

@@ -77,8 +77,7 @@ public class UpdateCoordinator : ViewModelBase
                 UpdateStatusBrush = accentBrush;
             }
 
-            string repo = string.IsNullOrWhiteSpace(_settings.GitHubRepository) ? "stephenh678/TrayTrigger" : _settings.GitHubRepository.Trim();
-            var result = await UpdateService.Instance.CheckForUpdatesAsync(repo, _settings.IncludePrereleaseUpdates);
+            var result = await UpdateService.Instance.CheckForUpdatesAsync(_settings.IncludePrereleaseUpdates);
 
             if (result.IsUpdateAvailable && result.LatestRelease != null)
             {
@@ -150,7 +149,7 @@ public class UpdateCoordinator : ViewModelBase
                         owner,
                         "Check for Updates",
                         "No Releases Found on GitHub",
-                        $"No releases were found for '{repo}'. Check the repository under Settings > General > Updates.");
+                        $"GitHub returned no releases for {UpdateService.Repository}. Try again later, or check the Releases page on GitHub.");
                 }
             }
             else

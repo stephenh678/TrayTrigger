@@ -147,6 +147,8 @@ public sealed partial class CompanionToolService
                     {
                         LoggingService.Warn("Tools", $"Not starting '{tool.Name}' with '{game.Name}': {problem} ('{tool.TargetPath}').");
                         Report($"\"{tool.Name}\" wasn't started with the game because {problem}.");
+                        ActivityService.Add(ActivityLevel.Problem, $"{tool.Name} wasn't started with {game.Name}", subject: tool.Name,
+                            detail: $"Because {problem}. Check it in Edit Tool.", groupKey: $"tool.start|{tool.Id}");
                         continue;
                     }
 
@@ -224,6 +226,8 @@ public sealed partial class CompanionToolService
         {
             LoggingService.Warn("Tools", $"Could not start '{tool.Name}' with '{game.Name}': {ex.Message}");
             Report($"\"{tool.Name}\" didn't start with the game: {ex.Message}");
+            ActivityService.Add(ActivityLevel.Problem, $"{tool.Name} didn't start with {game.Name}", subject: tool.Name,
+                detail: ex.Message, groupKey: $"tool.start|{tool.Id}");
             return false;
         }
     }
@@ -318,11 +322,15 @@ public sealed partial class CompanionToolService
             string also = startedBy.Count > 0 ? $" and {startedBy.Count} program(s) it started" : string.Empty;
             if (result == EndResult.Ended)
             {
+                // Not in Activity & History: the tool doing what it was set to do; only failures are.
                 LoggingService.Info("Tools", $"Closed '{tool.Name}' (PID {pid}){also}, started with games.");
             }
             else
             {
                 LoggingService.Warn("Tools", $"'{tool.Name}' (PID {pid}){also} still running after TrayTrigger tried to close it.");
+                ActivityService.Add(ActivityLevel.Problem, $"{tool.Name} couldn't be closed after your game", subject: tool.Name,
+                    detail: "It's still running. Close it yourself; if it runs as administrator, allow the prompt next time.",
+                    groupKey: $"tool.close|{tool.Id}");
             }
         }
         finally

@@ -41,6 +41,9 @@ public class ImportCoordinator : ViewModelBase
     private readonly Func<string?> _getSteamGridDbApiKeyOrNull;
 
     private const int MaxConcurrentEnrichments = 4;
+    /// <summary>The Activity &amp; History group for "the startup scan found games" - what the
+    /// "Notify me when a scan finds new games" toast keys on.</summary>
+    public const string ScanFoundActivityKey = "scan.found";
     private static readonly TimeSpan EnrichmentRetryInterval = TimeSpan.FromDays(7);
 
     // Reentrancy guards: these async operations all add to / enrich the shared Games
@@ -174,6 +177,7 @@ public class ImportCoordinator : ViewModelBase
             var card = _library.CreateCardViewModel(entry, deferHeavyInit: true);
             _library.Games.Add(card);
             cards.Add(card);
+            _addedSinceRecorded.Add(entry);
         }
         _library.LoadCardHeavyStateInBackground(cards);
 
@@ -207,10 +211,44 @@ public class ImportCoordinator : ViewModelBase
 
         _library.SaveLibrary();
         _library.UpdateHotkeys();
+        RecordAddedGames();
     }
 
     private int _commitBatchDepth;
     private bool _commitBatchPending;
+    /// <summary>Games committed since the last "Added" entry: one entry per import, so a scan
+    /// that imports from several launchers back to back is one line, not one per launcher.</summary>
+    private readonly List<GameEntry> _addedSinceRecorded = new();
+
+    /// <summary>A quiet Activity line for the games just added - no notification, no dot.</summary>
+    private void RecordAddedGames()
+    {
+        if (_addedSinceRecorded.Count == 0) return;
+        var added = _addedSinceRecorded.ToList();
+        _addedSinceRecorded.Clear();
+        var (text, detail) = DescribeAddedGames(added);
+        // Its own group each time: two imports are two things that happened, not one repeated.
+        ActivityService.Add(ActivityLevel.Activity, text, detail: detail,
+            groupKey: $"library.added|{DateTime.UtcNow.Ticks}");
+    }
+
+    /// <summary>"Added Elden Ring and Hades (Steam)"; past three names, a count, with every name in the detail.</summary>
+    internal static (string Text, string Detail) DescribeAddedGames(IReadOnlyList<GameEntry> added)
+    {
+        var names = added.Select(g => g.Name).ToList();
+        string who = names.Count switch
+        {
+            1 => names[0],
+            2 => $"{names[0]} and {names[1]}",
+            3 => $"{names[0]}, {names[1]} and {names[2]}",
+            _ => $"{names.Count} games",
+        };
+        var platforms = added.Select(DiagnosticReportService.PlatformOf).Distinct().ToList();
+        string from = platforms.Count == 1 ? $" ({platforms[0]})" : "";
+        string detail = string.Join(Environment.NewLine,
+            added.Select(g => $"{g.Name} - {DiagnosticReportService.PlatformOf(g)}"));
+        return ($"Added {who}{from}", detail);
+    }
 
     /// <summary>
     /// Coalesces the saves and hotkey rebuilds of every commit made inside the returned scope
@@ -241,6 +279,7 @@ public class ImportCoordinator : ViewModelBase
             _owner._commitBatchPending = false;
             _owner._library.SaveLibrary();
             _owner._library.UpdateHotkeys();
+            _owner.RecordAddedGames();
         }
     }
 
@@ -1852,7 +1891,15 @@ public class ImportCoordinator : ViewModelBase
                 return;
             }
 
-            _library.StatusMessage = $"Found {steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + folderCandidates.Count} new game(s).";
+            int foundCount = steamGames.Count + gogGames.Count + eaGames.Count + epicGames.Count + ubisoftGames.Count + xboxGames.Count + battleNetGames.Count + folderCandidates.Count;
+            _library.StatusMessage = $"Found {foundCount} new game(s).";
+            // Only the scan TrayTrigger ran by itself: a scan the user started shows its results.
+            if (silent)
+            {
+                ActivityService.Add(ActivityLevel.Activity,
+                    $"The startup scan found {foundCount} new {(foundCount == 1 ? "game" : "games")}",
+                    detail: "Add them with Scan for Games on the Library page.", groupKey: ScanFoundActivityKey);
+            }
             RequestScanResultsPicker?.Invoke(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, folderCandidates);
         }
         finally

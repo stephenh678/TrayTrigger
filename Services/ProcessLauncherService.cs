@@ -679,6 +679,10 @@ public partial class ProcessLauncherService
         });
     }
 
+    /// <summary>Games whose DLSS problem has been noted in Activity &amp; History this run. Another app's
+    /// change, or a refusing driver, stays that way launch after launch; once a run is enough.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _dlssProblemNoted = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Puts the DLSS settings back if something reverted them since they were applied - NVIDIA App
     /// reverts overrides on games it does not list, whenever it starts. Does nothing for a game
@@ -698,15 +702,24 @@ public partial class ProcessLauncherService
                 // Something else has set these since. Nothing is written - not this launch, and not
                 // the next, for as long as it stays that way. The card's switch reads off.
                 LoggingService.Info("Launcher", $"DLSS settings for '{game.Name}' were changed by something else; TrayTrigger left them alone.");
+                if (_dlssProblemNoted.TryAdd(game.Id, 0))
+                    ActivityService.Add(ActivityLevel.Problem, $"{game.Name}: DLSS Override was changed by another app, so TrayTrigger left it alone",
+                        subject: game.Name, detail: "NVIDIA App or another tool set it since. Switch DLSS Override off and on in Edit Game to take it back.",
+                        groupKey: $"dlss.foreign|{game.Id}");
             }
             else if (!result.Succeeded)
             {
                 LoggingService.Warn("Launcher", $"Could not re-apply DLSS settings for '{game.Name}': {result.Error ?? "the driver refused"}.");
+                if (_dlssProblemNoted.TryAdd(game.Id, 0))
+                    ActivityService.Add(ActivityLevel.Problem, $"{game.Name}: the NVIDIA driver refused DLSS Override",
+                        subject: game.Name, detail: result.Error, groupKey: $"dlss.refused|{game.Id}");
             }
             else if (!result.WasAlreadyCorrect)
             {
                 // Recreating a profile marks the records, so undo can remove it again.
                 PersistLibrary?.Invoke();
+                _dlssProblemNoted.TryRemove(game.Id, out _);
+                // Upkeep doing its job: logged, not in Activity & History.
                 LoggingService.Info("Launcher", $"Re-applied DLSS settings for '{game.Name}' before launch.");
             }
         }
@@ -774,13 +787,21 @@ public partial class ProcessLauncherService
             LoggingService.Error("Launcher", $"Error updating playtime for '{game.Name}': {ex.Message}");
         }
 
+        PerformanceProfileMode? profilePutBack = null;
         try
         {
-            _performanceProfileService.EndGameSession(game.Id);
+            _performanceProfileService.EndGameSession(game.Id, out profilePutBack);
         }
         catch (Exception ex)
         {
             LoggingService.Error("Launcher", $"Error restoring profile for '{game.Name}': {ex.Message}", ex);
+        }
+        if (gameRan)
+        {
+            var (text, detail) = DescribePlaySession(game.Name, minutes, profilePutBack, session.StartedAtUtc, DateTime.UtcNow);
+            // One row per game, its times listed when opened: a history, not a log of every launch.
+            ActivityService.Add(profilePutBack != null ? ActivityLevel.Change : ActivityLevel.Activity, text,
+                subject: game.Name, detail: detail, groupKey: $"played|{game.Id}");
         }
 
         if (gameRan)
@@ -803,6 +824,22 @@ public partial class ProcessLauncherService
         }
 
         CloseCompanionToolsIfIdle();
+    }
+
+    /// <summary>A game's "Played" line: how long, and the profile put back when it had one.</summary>
+    internal static (string Text, string Detail) DescribePlaySession(string name, long minutes,
+        PerformanceProfileMode? profilePutBack, DateTime startedUtc, DateTime endedUtc)
+    {
+        string length = minutes < 1 ? "under a minute"
+            : minutes < 60 ? $"{minutes}m"
+            : minutes % 60 == 0 ? $"{minutes / 60}h" : $"{minutes / 60}h {minutes % 60}m";
+        string text = $"Played {name} · {length}";
+        if (profilePutBack is { } mode) text += $" · {mode} profile put back";
+        string detail = startedUtc == default
+            ? string.Empty
+            : $"From {startedUtc.ToLocalTime():HH:mm} to {endedUtc.ToLocalTime():HH:mm}."
+              + (profilePutBack != null ? " The profile's changes were put back when it closed." : string.Empty);
+        return (text, detail);
     }
 
     /// <summary>No game is running or being launched: the time to close the tools started with games.</summary>
@@ -845,6 +882,9 @@ public partial class ProcessLauncherService
 
             session.Game.CumulativePlaytimeMinutes += minutes;
             LoggingService.Info("Launcher", $"'{session.Game.Name}' is still running at exit. +{minutes}m playtime recorded.");
+            var (text, _) = DescribePlaySession(session.Game.Name, minutes, null, default, default);
+            ActivityService.Add(ActivityLevel.Activity, $"{text} · still running when TrayTrigger closed", subject: session.Game.Name,
+                groupKey: $"played|{session.GameId}");
             try { GameUpdated?.Invoke(session.Game); }
             catch (Exception ex) { LoggingService.Warn("Launcher", $"Could not save playtime for '{session.Game.Name}' at exit: {ex.Message}"); }
         }

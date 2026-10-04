@@ -19,6 +19,9 @@ public class PerformanceProfileServiceTests : IDisposable
         public PerformanceProfileSessionSnapshot? LoadProfileSessionSnapshot() => OnDisk;
         public void SaveProfileSessionSnapshot(PerformanceProfileSessionSnapshot snapshot) { OnDisk = snapshot; Saves++; }
         public void DeleteProfileSessionSnapshot() { OnDisk = null; Deletes++; }
+        /// <summary>Models a snapshot file that was there but couldn't be read.</summary>
+        public string? UnreadableCopy;
+        public string? TakeUnreadableProfileSessionSnapshot() { var c = UnreadableCopy; UnreadableCopy = null; return c; }
     }
 
     private sealed class FakeBackend : ISystemTweakBackend
@@ -32,7 +35,9 @@ public class PerformanceProfileServiceTests : IDisposable
 
         public string? GetActivePowerSchemeGuid() => ActiveScheme;
         public bool ActivateUltimatePowerPlan() { ActiveScheme = "ultimate"; Log.Add("power:ultimate"); return true; }
-        public void SetActivePowerScheme(string schemeGuid) { ActiveScheme = schemeGuid; Log.Add("power:" + schemeGuid); }
+        /// <summary>Models a power plan Windows won't switch back to (deleted, or held by a policy).</summary>
+        public bool RefusePowerScheme;
+        public void SetActivePowerScheme(string schemeGuid) { if (RefusePowerScheme) return; ActiveScheme = schemeGuid; Log.Add("power:" + schemeGuid); }
 
         public int? ReadHklmDword(string subKey, string valueName) => Hklm.GetValueOrDefault(subKey + "|" + valueName) as int?;
         public string? ReadHklmString(string subKey, string valueName) => Hklm.GetValueOrDefault(subKey + "|" + valueName) as string;
@@ -137,6 +142,41 @@ public class PerformanceProfileServiceTests : IDisposable
 
     private GameEntry Game(string id, string exe, PerformanceProfileMode mode) =>
         new() { Id = id, Name = id, ExecutablePath = exe, PerformanceProfile = mode };
+
+    /// <summary>
+    /// A power plan Windows won't switch back to is noticed, not assumed restored: it's what the
+    /// Critical NEEDS ATTENTION item in Activity &amp; History reports, and Restore Previous retries it.
+    /// </summary>
+    [Fact]
+    public void Restore_ThatDoesNotTakeEffect_IsRemembered_UntilARetrySucceeds()
+    {
+        var game = Game("g", _exeA, PerformanceProfileMode.Optimized);
+        Assert.True(_service.BeginGameSession(game));
+        _backend.RefusePowerScheme = true;
+
+        Assert.True(_service.EndGameSession("g"));
+
+        Assert.Equal("ultimate", _backend.ActiveScheme);
+        Assert.Equal(["the power plan"], _service.UnrestoredItems);
+
+        // Still refused: kept for the next try.
+        Assert.False(_service.RetryUnrestored());
+        Assert.Equal(["the power plan"], _service.UnrestoredItems);
+
+        _backend.RefusePowerScheme = false;
+        Assert.True(_service.RetryUnrestored());
+        Assert.Equal("381b4222-f694-41f0-9685-ff5bb260df2e", _backend.ActiveScheme);
+        Assert.Empty(_service.UnrestoredItems);
+    }
+
+    /// <summary>A restore that worked leaves nothing behind to report.</summary>
+    [Fact]
+    public void Restore_ThatWorks_LeavesNothingUnrestored()
+    {
+        Assert.True(_service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.True(_service.EndGameSession("g"));
+        Assert.Empty(_service.UnrestoredItems);
+    }
 
     [Fact]
     public void Off_AppliesNothing()
@@ -681,5 +721,35 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.DoesNotContain(_backend.Log, l => l.StartsWith("hklm:"));
         Assert.DoesNotContain(_backend.Log, l => l.StartsWith("defender:"));
         Assert.Null(_store.OnDisk); // the poisoned file is still consumed so it can't be replayed
+    }
+    /// <summary>The game's "Played" line in Activity &amp; History names the profile only when
+    /// everything was put back; what wasn't is reported on its own, as Critical.</summary>
+    [Fact]
+    public void EndGameSession_ReportsTheModePutBack_OnlyWhenEverythingWas()
+    {
+        Assert.True(_service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.True(_service.EndGameSession("g", out var putBack));
+        Assert.Equal(PerformanceProfileMode.Optimized, putBack);
+
+        Assert.True(_service.BeginGameSession(Game("h", _exeA, PerformanceProfileMode.Optimized)));
+        _backend.RefusePowerScheme = true;
+        Assert.True(_service.EndGameSession("h", out var notPutBack));
+        Assert.Null(notPutBack);
+    }
+    /// <summary>A damaged crash-recovery record is reported (Critical) and removed once a copy is
+    /// safe, so it's said once; without a copy it stays, rather than being lost.</summary>
+    [Fact]
+    public void UnreadableSnapshot_IsRemovedOnceReported_OnlyWhenACopyWasKept()
+    {
+        _store.UnreadableCopy = "profile-session.json.corrupt-1";
+        _service.RecoverFromCrashIfNeeded();
+        Assert.Equal(1, _store.Deletes);
+
+        _service.RecoverFromCrashIfNeeded();
+        Assert.Equal(1, _store.Deletes);
+
+        _store.UnreadableCopy = string.Empty;
+        _service.RecoverFromCrashIfNeeded();
+        Assert.Equal(1, _store.Deletes);
     }
 }

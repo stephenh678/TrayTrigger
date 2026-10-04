@@ -425,6 +425,8 @@ public sealed class BackupService
     internal static bool MergeMachineSettings(AppSettings restored, AppSettings? current, Func<string, bool> canDecrypt)
     {
         restored.TweakPriorState = current?.TweakPriorState ?? new Dictionary<string, string>();
+        restored.TweaksAppliedByTrayTrigger = current?.TweaksAppliedByTrayTrigger ?? new List<string>();
+        restored.LastRunVersion = current?.LastRunVersion ?? string.Empty;
         restored.MainWindowLeft = current?.MainWindowLeft;
         restored.MainWindowTop = current?.MainWindowTop;
         restored.MainWindowWidth = current?.MainWindowWidth;
@@ -442,6 +444,8 @@ public sealed class BackupService
             // A backup from before 1.4.8 would otherwise switch Tools back on after the restore,
             // over an "off" chosen since.
             restored.HasTurnedOnToolsFor148 |= current.HasTurnedOnToolsFor148;
+            // And one from before 1.5.0 would switch the compact tray menu back on.
+            restored.HasTurnedOnCompactTrayFor149 |= current.HasTurnedOnCompactTrayFor149;
             restored.SessionsStarted = Math.Max(restored.SessionsStarted, current.SessionsStarted);
         }
 

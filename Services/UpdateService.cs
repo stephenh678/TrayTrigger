@@ -110,31 +110,12 @@ public class UpdateService
             new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
     }
 
-    public const string DefaultRepository = "stephenh678/TrayTrigger";
-
     /// <summary>
-    /// The "owner/name" to check, or <see cref="DefaultRepository"/> when the setting is blank or
-    /// isn't that shape. settings.json is user-editable and the value is interpolated into the
-    /// API URL, so anything else ("../..", a query string, a full URL) never reaches it.
+    /// TrayTrigger's GitHub repository: where updates are published, and where About's repository
+    /// and issue links go. Fixed, not a setting: an editable value only ever served to stop
+    /// updates arriving or point a user somewhere else, and a fork builds its own binary anyway.
     /// </summary>
-    internal static string NormalizeRepository(string? repository)
-    {
-        if (string.IsNullOrWhiteSpace(repository)) return DefaultRepository;
-
-        string trimmed = repository.Trim();
-        string[] parts = trimmed.Split('/');
-        if (parts.Length == 2 && IsRepositorySegment(parts[0]) && IsRepositorySegment(parts[1]))
-        {
-            return trimmed;
-        }
-
-        LoggingService.Warn("Update", $"Ignoring malformed update repository '{trimmed}'; using {DefaultRepository}.");
-        return DefaultRepository;
-
-        static bool IsRepositorySegment(string s) =>
-            s.Length is > 0 and <= 100 && s != "." && s != ".." &&
-            s.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
-    }
+    public const string Repository = "stephenh678/TrayTrigger";
 
     /// <summary>
     /// Picks the newest installable release from a list, honouring SemVer pre-release ordering.
@@ -164,14 +145,14 @@ public class UpdateService
     }
 
     /// <summary>
-    /// Checks GitHub for the latest release in the specified repository (e.g. "stephenh678/TrayTrigger").
+    /// Checks <see cref="Repository"/> on GitHub for the latest release.
     /// When <paramref name="includePrerelease"/> is true, the full releases list is consulted and
     /// the newest version wins even if it is flagged as a pre-release; otherwise GitHub's
     /// /releases/latest endpoint is used, which already excludes pre-releases and drafts.
     /// </summary>
-    public async Task<UpdateCheckResult> CheckForUpdatesAsync(string? repository, bool includePrerelease = false)
+    public async Task<UpdateCheckResult> CheckForUpdatesAsync(bool includePrerelease = false)
     {
-        string targetRepo = NormalizeRepository(repository);
+        const string targetRepo = Repository;
         includePrerelease = ShouldIncludePrerelease(includePrerelease, CurrentSemVer);
 
         try

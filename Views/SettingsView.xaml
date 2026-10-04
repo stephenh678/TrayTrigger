@@ -351,12 +351,6 @@
                             <Button Style="{StaticResource HelpLinkButton}" Content="About the beta channel" Margin="24,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
 
-                            <TextBlock Text="GitHub Repository (owner/repo):" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                            <TextBox AutomationProperties.Name="GitHub repository" Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ModernTextBox}" Width="240" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                            <TextBlock Text="The public GitHub repository where TrayTrigger release packages and tags are published (default: stephenh678/TrayTrigger)."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11" TextWrapping="Wrap"/>
-
                             <TextBlock Text="{Binding UpdateStatusText}" FontSize="11.5" Foreground="{StaticResource BrushAccentHover}"
                                        Margin="0,8,0,0">
                                 <TextBlock.Style>
@@ -536,7 +530,13 @@
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                             <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens, covering the launchers above and your Scan Locations - only interrupts you with the New Games Found picker if it actually finds something new. A game you have uninstalled is greyed out and tagged either way: that check runs at startup whether this is on or not."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="11"
-                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
+                                       Margin="24,3,0,8" TextWrapping="Wrap"/>
+                            <CheckBox Content="Notify me when a scan finds new games"
+                                      IsChecked="{Binding NotifyWhenScanAddsGames}" IsEnabled="{Binding AutoScanForGamesOnStartup}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="24,0,0,0"/>
+                            <TextBlock Text="A notification by the tray clock as well as the line in Activity &amp; History, so you hear about it even when TrayTrigger starts in the tray. Off by default."
+                                       Foreground="{StaticResource BrushTextMuted}" FontSize="11"
+                                       Margin="48,3,0,12" TextWrapping="Wrap"/>
 
                             <!-- Scan Locations manager (manual folders only - Steam's own libraries are listed
                                  under the Steam integration toggle above) -->

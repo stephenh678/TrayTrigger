@@ -184,6 +184,7 @@ public class GameScriptService
         if (!IsSupportedScript(path))
         {
             LoggingService.Warn("GameScript", $"{label} for '{game.Name}' has an unsupported type and was skipped: {path} (supported: {string.Join(", ", SupportedExtensions)})");
+            RecordScriptProblem(game, script.Value, PhasePreLaunch, "isn't a type TrayTrigger can run", abortOnFailure);
             return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script has an unsupported file type") : PreLaunchScriptResult.Proceed;
         }
 
@@ -191,6 +192,7 @@ public class GameScriptService
         if (psi == null)
         {
             LoggingService.Warn("GameScript", $"{label} for '{game.Name}' not found: {path}");
+            RecordScriptProblem(game, script.Value, PhasePreLaunch, "wasn't found", abortOnFailure);
             return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script file was not found") : PreLaunchScriptResult.Proceed;
         }
 
@@ -202,6 +204,7 @@ public class GameScriptService
             if (process == null)
             {
                 LoggingService.Warn("GameScript", $"{label} for '{game.Name}' did not start.");
+                RecordScriptProblem(game, script.Value, PhasePreLaunch, "didn't start", abortOnFailure);
                 return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script did not start") : PreLaunchScriptResult.Proceed;
             }
 
@@ -209,7 +212,11 @@ public class GameScriptService
 
             if (!wait)
             {
-                DisposeOnExit(process);
+                var effective = script.Value;
+                DisposeOnExit(process, code =>
+                {
+                    if (code != 0) RecordScriptProblem(game, effective, PhasePreLaunch, $"failed (exit code {code})", cancelledLaunch: false);
+                });
                 process = null;
                 return PreLaunchScriptResult.Proceed;
             }
@@ -225,6 +232,7 @@ public class GameScriptService
                 if (exitCode != 0)
                 {
                     LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' exited with code {exitCode}{(abortOnFailure ? "; cancelling the launch." : "; launching anyway.")}");
+                    RecordScriptProblem(game, script.Value, PhasePreLaunch, $"failed (exit code {exitCode})", abortOnFailure);
                     return abortOnFailure ? PreLaunchScriptResult.Abort($"the pre-launch script exited with code {exitCode}") : PreLaunchScriptResult.Proceed;
                 }
 
@@ -233,6 +241,10 @@ public class GameScriptService
             }
 
             LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' is still running after {timeout.TotalSeconds:0}s; {(abortOnFailure ? "cancelling the launch." : "launching the game without waiting further.")}");
+            // Only when it cost the launch: a script that just takes longer than the wait, with the
+            // game started anyway, is working as set up and would otherwise be a problem every launch.
+            if (abortOnFailure)
+                RecordScriptProblem(game, script.Value, PhasePreLaunch, $"was still running after {timeout.TotalSeconds:0} seconds", cancelledLaunch: true);
             DisposeOnExit(process);
             process = null;
             return abortOnFailure
@@ -243,6 +255,8 @@ public class GameScriptService
         {
             // Includes the user cancelling a UAC prompt (Win32Exception 1223) for elevated scripts.
             LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' failed: {ex.Message}");
+            if (ex is not System.ComponentModel.Win32Exception { NativeErrorCode: 1223 })
+                RecordScriptProblem(game, script.Value, PhasePreLaunch, "couldn't run", abortOnFailure);
             return abortOnFailure ? PreLaunchScriptResult.Abort($"the pre-launch script failed to run ({ex.Message})") : PreLaunchScriptResult.Proceed;
         }
         finally
@@ -300,9 +314,11 @@ public class GameScriptService
             return;
         }
 
+        var effective = script.Value;
         if (!IsSupportedScript(path))
         {
             LoggingService.Warn("GameScript", $"{label} for '{game.Name}' has an unsupported type and was skipped: {path} (supported: {string.Join(", ", SupportedExtensions)})");
+            RecordScriptProblem(game, effective, PhasePostExit, "isn't a type TrayTrigger can run", cancelledLaunch: false);
             return;
         }
 
@@ -310,6 +326,7 @@ public class GameScriptService
         if (psi == null)
         {
             LoggingService.Warn("GameScript", $"{label} for '{game.Name}' not found: {path}");
+            RecordScriptProblem(game, effective, PhasePostExit, "wasn't found", cancelledLaunch: false);
             return;
         }
 
@@ -320,15 +337,37 @@ public class GameScriptService
             if (process == null)
             {
                 LoggingService.Warn("GameScript", $"{label} for '{game.Name}' did not start.");
+                RecordScriptProblem(game, effective, PhasePostExit, "didn't start", cancelledLaunch: false);
                 return;
             }
             AttachOutputLogging(process, psi, game, PhasePostExit);
-            DisposeOnExit(process);
+            DisposeOnExit(process, code =>
+            {
+                if (code != 0) RecordScriptProblem(game, effective, PhasePostExit, $"failed (exit code {code})", cancelledLaunch: false);
+            });
         }
         catch (Exception ex)
         {
             LoggingService.Warn("GameScript", $"Post-exit script for '{game.Name}' failed: {ex.Message}");
+            if (ex is not System.ComponentModel.Win32Exception { NativeErrorCode: 1223 })
+                RecordScriptProblem(game, effective, PhasePostExit, "couldn't run", cancelledLaunch: false);
         }
+    }
+
+    /// <summary>
+    /// A script that didn't do its job, for Activity &amp; History. Grouped per game and phase, so a
+    /// script that fails every time is one row with a count. A cancelled administrator prompt is the
+    /// user's own choice and isn't recorded.
+    /// </summary>
+    private static void RecordScriptProblem(GameEntry game, EffectiveScript script, string phase, string what, bool cancelledLaunch)
+    {
+        string phaseLabel = phase == PhasePreLaunch ? "pre-launch" : "post-exit";
+        string which = script.IsDefault ? $"default {phaseLabel}" : phaseLabel;
+        string text = $"{game.Name}: {which} script {what}{(cancelledLaunch ? "; the launch was cancelled" : string.Empty)}";
+        string file = Path.GetFileName(script.Path.Trim().Trim('"'));
+        ActivityService.Add(ActivityLevel.Problem, text, subject: game.Name,
+            detail: $"{file}. Test it from {(script.IsDefault ? "Settings > Launch & Performance" : "Edit Game")}; what it printed is in the log.",
+            groupKey: $"script.{phase}|{game.Id}");
     }
 
     /// <summary>
@@ -487,30 +526,35 @@ public class GameScriptService
     /// <summary>
     /// Keeps the Process object (and therefore its redirected pipes) alive until the script exits,
     /// then logs the exit code and disposes it. Disposing early would close the script's stdout
-    /// and make a chatty script die with a broken pipe.
+    /// and make a chatty script die with a broken pipe. <paramref name="onExitCode"/>, when given,
+    /// is told the exit code once, if it can be read (an elevated script's often can't).
     /// </summary>
-    private static void DisposeOnExit(Process process)
+    private static void DisposeOnExit(Process process, Action<int>? onExitCode = null)
     {
+        int reported = 0;
+        void Report(Process p)
+        {
+            int code;
+            try { code = p.ExitCode; }
+            catch { return; /* disposed, or an elevated process this one may not query */ }
+            LoggingService.Verbose("GameScript", $"Script process exited with code {code}.");
+            if (onExitCode != null && Interlocked.Exchange(ref reported, 1) == 0) onExitCode(code);
+        }
+
         try
         {
             process.EnableRaisingEvents = true;
             process.Exited += (s, _) =>
             {
                 if (s is not Process p) return;
-                try
-                {
-                    LoggingService.Verbose("GameScript", $"Script process {p.Id} exited with code {p.ExitCode}.");
-                }
-                catch { /* the exit code of a process already disposed is not worth a line */ }
-                finally
-                {
-                    p.Dispose();
-                }
+                try { Report(p); }
+                finally { p.Dispose(); }
             };
             if (process.HasExited)
             {
                 // Exited may already have fired (or never will if it raced EnableRaisingEvents);
-                // disposing twice is harmless.
+                // reporting is once-only and disposing twice is harmless.
+                Report(process);
                 process.Dispose();
             }
         }

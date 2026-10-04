@@ -400,6 +400,7 @@ public class LibraryViewModel : ViewModelBase
                 {
                     card.ApplyHeavyState(availability, icon, iconWriteTimeUtc, cover, coverWriteTimeUtc);
                 }
+                NoteAvailabilityChanges(results.Select(r => (r.Card, r.Availability)));
 
                 // A saved "Executable missing" / "Not installed" tick was applied while every card
                 // still read Available, so the filter has to run again now that it's known.
@@ -415,6 +416,43 @@ public class LibraryViewModel : ViewModelBase
                 NotifyLibraryUpdated();
             });
         });
+    }
+
+    /// <summary>
+    /// Notes in Activity &amp; History the games that stopped being installed, or came back, since
+    /// TrayTrigger last looked - one line each way per pass. A game never checked before is only
+    /// remembered, so the first run after an update doesn't list every game already uninstalled.
+    /// On the UI thread, which owns the library.
+    /// </summary>
+    internal void NoteAvailabilityChanges(IEnumerable<(GameCardViewModel Card, GameAvailability Availability)> results)
+    {
+        var lost = new List<string>();
+        var found = new List<string>();
+        bool changed = false;
+        foreach (var (card, availability) in results)
+        {
+            bool installed = availability == GameAvailability.Available;
+            bool? was = card.Game.LastKnownInstalled;
+            if (was == installed) continue;
+            card.Game.LastKnownInstalled = installed;
+            // A first value rides along with the next save; only a real change is worth a write.
+            if (was == null) continue;
+            changed = true;
+            if (!card.Game.IsHidden) (installed ? found : lost).Add(card.Game.Name);
+        }
+        if (lost.Count > 0)
+        {
+            ActivityService.Add(ActivityLevel.Activity,
+                lost.Count == 1 ? $"{lost[0]} is no longer installed" : $"{lost.Count} games are no longer installed",
+                detail: $"{string.Join(", ", lost)}. They're kept in the library, greyed out, with their playtime and settings.");
+        }
+        if (found.Count > 0)
+        {
+            ActivityService.Add(ActivityLevel.Activity,
+                found.Count == 1 ? $"{found[0]} is installed again" : $"{found.Count} games are installed again",
+                detail: string.Join(", ", found));
+        }
+        if (changed) SaveGamesOnly();
     }
 
     /// <summary>
@@ -438,6 +476,7 @@ public class LibraryViewModel : ViewModelBase
                 Application.Current?.Dispatcher.Invoke(() =>
                 {
                     foreach (var (card, availability) in results) card.Availability = availability;
+                    NoteAvailabilityChanges(results.Select(r => (r.Card, r.Availability)));
 
                     if (Filter.HasActiveFilters)
                     {
@@ -761,13 +800,16 @@ public class LibraryViewModel : ViewModelBase
     {
         var cards = SelectedCards;
         if (cards.Count == 0) return;
+        var changed = new List<(GameEntry, PerformanceProfileMode)>();
         foreach (var card in cards)
         {
+            if (card.Game.PerformanceProfile != mode) changed.Add((card.Game, card.Game.PerformanceProfile));
             card.Game.PerformanceProfile = mode;
             card.RefreshProperties();
         }
         SaveGamesOnly();
         LoggingService.Info("Library", $"{cards.Count} game(s) performance profile set to {mode} (batch).");
+        PerformanceActivity.GamesChanged(changed, mode);
         StatusMessage = $"Set Performance Profile of {cards.Count} game(s) to {mode}";
         NotifySelectionChanged();
     }
@@ -780,13 +822,16 @@ public class LibraryViewModel : ViewModelBase
     {
         var cards = SelectedCards;
         if (cards.Count == 0) return;
+        var changed = new List<(GameEntry, CpuAffinityMode)>();
         foreach (var card in cards)
         {
+            if (card.Game.CpuAffinity != mode) changed.Add((card.Game, card.Game.CpuAffinity));
             card.Game.CpuAffinity = mode;
             card.RefreshProperties();
         }
         SaveGamesOnly();
         LoggingService.Info("Library", $"{cards.Count} game(s) CPU cores set to {mode} (batch).");
+        PerformanceActivity.GamesChanged(changed, mode);
         StatusMessage = mode == CpuAffinityMode.Default
             ? $"Set {cards.Count} game(s) back to all cores"
             : $"Set CPU Cores of {cards.Count} game(s) to {CpuTopology.MenuLabel(mode)}";
@@ -2079,7 +2124,8 @@ public class LibraryViewModel : ViewModelBase
     /// single-game menu shows for it. Shared by that menu and the batch menu, so a selection gets
     /// exactly what each game would have got on its own.
     /// </summary>
-    private async Task<(DlssChange Outcome, string Line)> SetDlssOverrideAsync(GameCardViewModel card, bool turnOn)
+    /// <param name="recordActivity">False from the batch menu, which records one line for all its games.</param>
+    private async Task<(DlssChange Outcome, string Line)> SetDlssOverrideAsync(GameCardViewModel card, bool turnOn, bool recordActivity = true)
     {
         var game = card.Game;
         card.IsDlssOverrideBusy = true;
@@ -2090,7 +2136,10 @@ public class LibraryViewModel : ViewModelBase
             var dlss = new DlssCardViewModel(
                 game.ExecutablePath, game.Name, game.DlssSettings,
                 // A lambda, not a method group: SaveGamesOnly takes caller-info arguments.
-                persist: () => SaveGamesOnly(), overrides: DlssOverrides, probe: DlssProbe, game: game);
+                persist: () => SaveGamesOnly(), overrides: DlssOverrides, probe: DlssProbe, game: game)
+            {
+                RecordsActivity = recordActivity,
+            };
 
             await dlss.LoadAsync().ConfigureAwait(true);
 
@@ -2153,6 +2202,7 @@ public class LibraryViewModel : ViewModelBase
         CommandManager.InvalidateRequerySuggested();
         var noDlss = new List<string>();
         var failed = new List<string>();
+        var changedGames = new List<GameEntry>();
         int changed = 0;
         try
         {
@@ -2163,10 +2213,10 @@ public class LibraryViewModel : ViewModelBase
                     ? $"Turning on DLSS Override ({i + 1} of {todo.Count}): looking for DLSS in {card.Name}..."
                     : $"Turning off DLSS Override ({i + 1} of {todo.Count}): restoring NVIDIA's settings for {card.Name}...";
 
-                var (outcome, line) = await SetDlssOverrideAsync(card, turnOn).ConfigureAwait(true);
+                var (outcome, line) = await SetDlssOverrideAsync(card, turnOn, recordActivity: false).ConfigureAwait(true);
                 switch (outcome)
                 {
-                    case DlssChange.Done: changed++; break;
+                    case DlssChange.Done: changed++; changedGames.Add(card.Game); break;
                     case DlssChange.NotAvailable: noDlss.Add(card.Name); break;
                     default:
                         failed.Add(card.Name);
@@ -2182,6 +2232,7 @@ public class LibraryViewModel : ViewModelBase
             NotifySelectionChanged();
         }
 
+        PerformanceActivity.DlssChanged(changedGames, turnOn);
         LoggingService.Info("Dlss", $"Batch DLSS Override {(turnOn ? "on" : "off")}: {changed} changed, {alreadyThere} already {(turnOn ? "on" : "off")}, {noDlss.Count} without DLSS, {notInstalled.Count} not installed, {failed.Count} failed.");
         StatusMessage = BatchDlssSummary(turnOn, changed, alreadyThere, noDlss, notInstalled.Select(c => c.Name).ToList(), failed);
     }
@@ -2222,6 +2273,10 @@ public class LibraryViewModel : ViewModelBase
 
         SaveGamesOnly();
         string games = result.Games == 1 ? "1 game" : $"{result.Games} games";
+        int putBack = result.Games - result.Failed;
+        if (putBack > 0)
+            ActivityService.Add(ActivityLevel.Change, $"Restore All turned DLSS Override off for {(putBack == 1 ? "1 game" : $"{putBack} games")}",
+                detail: "NVIDIA's settings are back as they were.", groupKey: $"dlss.restoreall|{DateTime.UtcNow.Ticks}");
         return result.Failed == 0
             ? $"DLSS Override put back for {games}."
             : $"DLSS Override put back for {result.Games - result.Failed} of {games}. The rest could not be changed - see the log.";
@@ -2267,6 +2322,10 @@ public class LibraryViewModel : ViewModelBase
                     string why = undone.Error ?? failed.FirstOrDefault()?.Error ?? "the driver refused";
                     string ids = string.Join(", ", undone.Records.Select(r => $"0x{r.SettingId:X8}"));
                     LoggingService.Warn("Library", $"Could not put back the DLSS override for removed game '{game.Name}' ({why}). Still set on profile '{records[0].ProfileName}' for {records[0].ApplicationName}: {ids}.");
+                    ActivityService.Add(ActivityLevel.Problem, $"{game.Name}: DLSS Override couldn't be put back when it was removed",
+                        subject: game.Name,
+                        detail: $"NVIDIA's settings for it stay changed, and TrayTrigger no longer has the record to undo them. NVIDIA App can reset the game's profile ({records[0].ProfileName}).",
+                        groupKey: $"dlss.removed|{game.Id}");
                 }
                 else
                 {

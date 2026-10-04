@@ -4,6 +4,173 @@ Notes on things discussed but not yet implemented, kept here so they survive bet
 
 ## Open
 
+### Notifications and Activity & History (owner's design, built 2026-10-04, released in 1.5.0)
+
+**As built.** `Services/ActivityService.cs` (the history in `activity.json`, live states, grouping),
+`ViewModels/ActivityViewModel.cs` and `Views/ActivityView.xaml` (the page), `App.Activity.cs` (the
+after-game notification, tooltip line, tray menu row, toast click, startup tweak check),
+`Help/general/activity.md`. Debug checks: `--screenshot-activity <png> [empty] [expanded]` and
+`--test-activity <txt>`. Where it differs from the design below, and why:
+- **One live state in v1:** a profile setting that couldn't be put back (Critical, Restore Previous
+  retries it; `PerformanceProfileService` now reads the power plan back and checks each restore's
+  result). A System tweak Windows changed back is a one-time Problem entry instead of a state
+  (`AppSettings.TweaksAppliedByTrayTrigger`): the user may have changed it on purpose, and a state
+  would keep the dot lit with nothing to dismiss it. Display refresh rate, PCIe lanes, games on a
+  hard drive and not-installed games stay on their own pages, for the same reason - often
+  deliberate or permanent.
+- **Not installed / installed again** are Activity entries per pass (`GameEntry.LastKnownInstalled`;
+  a first check after an update only remembers, so nothing floods).
+- **A scan "finds", it doesn't "add":** Scan for Games always ends in the picker, so the entry is
+  "The startup scan found N new games" and the setting is "Notify me when a scan finds new games",
+  under "Automatically scan on startup".
+- **Games the user adds are recorded** (owner's call after testing the beta): an empty History
+  right after adding games looked broken. One quiet Activity line per import ("Added Elden Ring
+  and Hades (Steam)"), no toast, no dot - an exception to "not recorded: what the user just did".
+- **Play sessions are recorded** (owner's call): "Played Elden Ring · 2h 17m", merged with the
+  profile line ("· Aggressive profile put back", level Change) so one game exit is one row, and
+  grouped per game (`played|{gameId}`) so the page stays a history, not a log of every launch.
+  The owner's rule: a history of important activities, not a logfile, and alerts on critical things.
+- **Tools closing as set aren't recorded** (owner's call, by that rule): only a tool that didn't
+  start or couldn't be closed is, as a Problem.
+- **Posters and categories found aren't recorded** (owner's call): background housekeeping,
+  visible in the Library.
+- **DLSS Override set again before launch isn't recorded** (owner's call): upkeep. Another app's
+  change, or the driver refusing it, is a Problem.
+- **Every Performance Profile and tweak change is recorded** (owner's call): a game's profile, CPU
+  Cores and DLSS Override (Edit Game, card menu, batch; DLSS's Restore All), a tier's tweak on the System page, the new-game profile, and what Reset to
+  Defaults changed in them (`PerformanceActivity`), alongside System tweaks applied or restored. These
+  decide what TrayTrigger changes on the PC, so they're history even when the user made them.
+- **Every row has a level badge** (owner's choice, mockup option C): the System page's badge style,
+  CRITICAL solid red like OPTIMAL, PROBLEM amber like RESTART, CHANGE blue, ACTIVITY grey like
+  OPT-IN, each with an icon. Replaces "an uppercase tag only where something needs flagging": with
+  more entries the user couldn't tell them apart, and solid-versus-tinted keeps CRITICAL standing out.
+- **FIXED** (owner's call): when Restore Previous puts everything back, the Critical entries get a
+  green FIXED badge (`ActivityEntry.FixedUtc`, `ActivityService.MarkFixed`) and stop lighting the
+  bell, instead of a separate "Put back" row; a partial fix still records what was put back. By
+  entry: only the Critical entries this run reported, never an earlier run's that Restore Previous
+  didn't retry, and a row with one still unfixed shows no FIXED.
+- **More Critical and Problem entries** (owner's call): a damaged crash-recovery snapshot is Critical
+  (it was read as "nothing to restore" and only logged); a game that couldn't be resumed, DLSS
+  Override not put back when a game was removed, and an unreadable settings/library/tools file are
+  Problems.
+- **Tray menu row** sits first under the search box, which stays the first row so typing works.
+- **Existing toasts:** "An error was logged" became a Problem entry; Suspend's and Close Game's
+  stay immediate, being the answer to something the user just did.
+
+**The gap.** Outside the Debug/verbose log, TrayTrigger tells the user things through channels
+that are gone or unseen when it matters: the status bar line (overwritten, and invisible while the
+window is hidden, which is most of the time during a game), the launch popup (launch only), tray
+toasts (Windows suppresses them in fullscreen games and under Do Not Disturb, which TrayTrigger's
+own profile can turn on) and dialogs (wrong mid-game). The log has roughly 290 Warn/Error calls
+written for diagnosis, not for players. TrayTrigger is more than a launcher - profiles, system
+tweaks, tools, scripts, hardware checks - so problems don't all belong to one game, and nobody
+should have to visit Library, Tools and System to find out whether something is wrong.
+
+**Two kinds of thing, handled differently.**
+- **States: wrong right now.** Power plan still High Performance after a game, a tweak Windows
+  reset, a display below its fastest refresh rate, a newer GPU driver, a game not installed. Worked
+  out live from the app's state, never stored as a message: shown until fixed, gone by itself when
+  fixed. Nothing to dismiss.
+- **Events: happened once.** A post-exit script failed at 21:04, a tool didn't start, a profile was
+  applied and restored, a scan added games. Recorded in History.
+
+**One place: a bell at the bottom of the sidebar, with Exit.** Below the sidebar's bottom divider,
+grouped with the power button as the tooling area, apart from the five sections (which are places
+to go). It does two jobs:
+1. **Notification.** A small red dot, like the Library filter button's dot, while anything needs
+   the user: a current state, or a problem recorded since the page was last opened. Shown with the
+   sidebar collapsed. It is the only indicator: no dots on the other sections, one place to learn.
+   The count is in the page header, not on the bell.
+2. **The way into History.** Clicking it opens the page.
+
+**The page: "Activity & History"**, built to the same anatomy as Tools, System & Performance and
+Settings (mocked up 2026-10-04, checked against screenshots of the current pages):
+- **Header:** the title, a muted one-line subtitle ("What needs your attention, and what
+  TrayTrigger changed and put back"), and status text at the top right like every page has ("5
+  tools", "Saved in real time"): "1 needs attention" in red, or "No actions needed" with a check.
+- **Tab strip:** All / Problems / Changes / Activity, the same segmented control as the other pages.
+- **Search:** the full-width search box the Library and Tools pages use ("Search activity by game,
+  tool, or what happened...").
+- **Section labels** in the blue uppercase style with an icon, as on System: "NEEDS ATTENTION",
+  "RECENT · last 90 days".
+- **Rows inside cards** with dividers, as System groups its tweaks. No loose rows on the page.
+- **NEEDS ATTENTION** only when something is wrong: the current states, one row each, with its fix
+  button in the existing outline style ("Restore Previous", "Open Display Settings", "Edit Game",
+  "Get Driver"). Gone when empty; the header then says "No actions needed".
+- **RECENT:** newest first, one plain line per entry and its time ("Today 22:31"). An uppercase tag
+  only where something needs flagging, used as sparingly as MISSING or NOT INSTALLED: CRITICAL on a
+  state, a count ("7 TIMES") on a repeated problem. Everything else is plain text.
+- **Clicking a row** expands it: each time it happened, "Show in log", and Copy details. Nothing
+  extra shows until asked.
+- **Nothing to manage.** No unread state per entry, no dismiss, no clear: opening the page clears
+  the dot's "since last opened" part, states clear themselves when fixed, and entries go by
+  themselves after about 90 days. Included in Copy Diagnostic Info and Save Report as "Recent
+  problems", which is why the page has no copy-everything button of its own.
+
+**Toasts.** Never during a game. After the last game exits, one toast for anything serious ("Elden
+Ring's post-exit script failed", "The power plan couldn't be put back"), clicking it opens Activity & History.
+The tray icon's tooltip gets a line, "2 things need attention", and the tray menu a first row while
+there are some, opening the page. One setting only: **"Notify me when a scan adds games"**, a toast
+as well as the History entry, the startup scan included.
+
+**Levels.** Critical (the PC was left changed), Problem (something didn't do what you asked),
+Change (what TrayTrigger changed and put back - the record that makes "puts back what it changed"
+checkable), Activity (what it did on its own in the background). Not recorded: the result of
+something the user just did and is looking at (a scan they started, a setting they changed).
+
+**Events, checked against the code (2026-10-04).** *There* = already detected; *Partly* /
+*Logged only* / *Needs* = what's missing.
+
+States:
+- A profile tweak not restored. *Partly:* `PerformanceProfileService` restores per tweak and
+  logs; the restore methods need to report a failure upward.
+- Elevated tweaks left for the next start (Windows shutdown, no prompt possible). *There:*
+  `anythingDeferred`.
+- A system tweak no longer in the state TrayTrigger left it. *There:* the System page reads each
+  tweak's real state.
+- Display below its fastest refresh rate, GPU on fewer PCIe lanes, games on a hard drive. *There:*
+  the 1.4.8 hardware warnings.
+- Newer NVIDIA driver. *There, on request only:* the check runs when the user clicks.
+- Games NOT INSTALLED or MISSING. *There:* `GameAvailability`.
+
+Problems:
+- A pre-launch script that failed or timed out, own or default. *There:* `PreLaunchScriptResult`.
+- A post-exit script that failed. *Logged only:* the result needs surfacing.
+- A tool that didn't start with a game. *There:* `CompanionToolService.StartFailed` (a declined
+  administrator prompt deliberately isn't reported).
+- A tool that couldn't be closed. *There:* `EndResult.StillRunning`.
+- DLSS Override refused or conflicting. *There:* `DlssOverrideService`.
+- An edited example script set aside as `.previous`. *Logged only:* `ScriptLibraryService.SetAside`.
+- The existing "An error was logged" toast (`App.xaml.cs`, L-24).
+
+Changes:
+- Profile applied and restored, per game. *There:* `BeginGameSession` / `EndGameSession`.
+- Crash recovery restored settings at startup. *There:* `RecoverFromCrashIfNeeded`.
+- A game left suspended, resumed at startup. *There:* `ResumeLeftSuspended`.
+- System tweaks applied or reverted from the System page. *There.*
+- Tools started and closed with games. *There.*
+
+Activity:
+- The startup scan added games. *Needs* the scan to return what it added.
+- Games tagged not installed or found again since last time. *Needs* the last known state stored.
+- Posters or game info caught up after a key was added. *There.*
+- Playtime recorded for a game still running at exit. *There:* `RecordPlaytimeOnShutdown`.
+- An example script retired. *Logged only:* `RetireDropped`.
+- A backup restored. *There:* the restore result.
+- Updated to a new version. *Needs* the last-run version stored.
+
+**Existing toasts to route through it:** Suspend's messages, Close Game's result, the error toast
+and `MainViewModel.RequestTrayNotification`.
+
+**Cost.** A medium feature: the history store, the Activity & History page (list, search, tabs, grouping),
+the live status for the top of the page and the dot, the after-game toast, and recording at 12
+to 15 places, shared by History and the toasts - one system, not two. The risk is scope creep; the
+rules above (no per-entry state, chosen events, states derived not stored) are what hold it.
+
+**Considered and dropped:** an inbox with read/unread and dismiss per entry (a habit users must
+keep up, or a badge they learn to ignore), status dots on every sidebar section (more places to
+look), and a slide-in panel (no such surface exists in TrayTrigger; Activity & History is a page, built like the others).
+
 ### Tools started per game (proposed 2026-10-04, parked by the owner)
 
 Today a tool with "Start when I launch a game" starts with every game. Starting SimHub only for

@@ -77,8 +77,9 @@ public class AppSettings
     public string TrayMenuSortOption { get; set; } = "Alphabetical (A - Z)";
     /// <summary>Game icons (or the launcher's logo when a game has none) beside each game in the tray menu.</summary>
     public bool ShowTrayMenuIcons { get; set; } = true;
-    /// <summary>Tighter rows and smaller icons in the tray menu, for a long library.</summary>
-    public bool CompactTrayMenu { get; set; } = false;
+    /// <summary>Tighter rows and smaller icons in the tray menu, for a long library. On by default
+    /// from 1.5.0, for new installs and Reset to Defaults.</summary>
+    public bool CompactTrayMenu { get; set; } = true;
     /// <summary>Left-click on the tray icon opens the game menu instead of showing or hiding the window. Double-click always opens the window.</summary>
     public bool TrayLeftClickOpensMenu { get; set; } = false;
     /// <summary>A small always-on-top popup near the tray while a game launches from a hotkey or the tray menu with
@@ -150,7 +151,6 @@ public class AppSettings
     public string LastToolsCategoryTab { get; set; } = LibraryConstants.AllCategory;
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
-    public string GitHubRepository { get; set; } = "stephenh678/TrayTrigger";
     public bool HasSeenPerformanceProfileMigrationPrompt { get; set; } = false;
     /// <summary>Gates the one-time "Welcome to TrayTrigger" dialog to the first time the main
     /// window is actually shown on a fresh install - see MainWindow.MaybeShowWelcomePrompt.</summary>
@@ -168,27 +168,49 @@ public class AppSettings
     /// <summary>Set once 1.4.8's one-time "Tools on for everyone" has run on this settings file -
     /// see <see cref="ApplyOneTimeUpgrades"/>. After that, Tools stays however the user leaves it.</summary>
     public bool HasTurnedOnToolsFor148 { get; set; } = false;
+    /// <summary>Set once 1.5.0's one-time "compact tray menu for everyone" has run on this settings
+    /// file - see <see cref="ApplyOneTimeUpgrades"/>. Named while 1.5.0 was still 1.4.9; the name
+    /// stays, since it is the key saved in settings.json.</summary>
+    public bool HasTurnedOnCompactTrayFor149 { get; set; } = false;
 
     /// <summary>
     /// The changes a release makes once to a settings file it finds, run at startup. Returns true
-    /// when anything changed, so the caller saves.
+    /// when anything changed, so the caller saves. Each has its own flag, so each runs once and a
+    /// user who changes the setting back afterwards keeps their choice.
     ///
     /// <para>1.4.8: Tools on. It had been off by default, so a saved "off" mostly meant nobody had
-    /// chosen; since tools can now start with a game, the page is switched on once for everyone. A
-    /// user who turns it off again keeps it off: the flag means this never runs a second time.</para>
+    /// chosen; since tools can now start with a game, the page is switched on once for everyone.</para>
+    ///
+    /// <para>1.5.0: compact tray menu on. It had been off by default, and every settings file saves
+    /// the value, so a saved "off" is mostly the old default too.</para>
     /// </summary>
     public bool ApplyOneTimeUpgrades()
     {
-        if (HasTurnedOnToolsFor148)
-            return false;
+        bool changed = false;
 
-        HasTurnedOnToolsFor148 = true;
-        bool wasOff = !EnableTools;
-        EnableTools = true;
-        LoggingService.Info("Settings", wasOff
-            ? "1.4.8 upgrade: turned Tools on (it was off; Settings > General turns it off again)."
-            : "1.4.8 upgrade: Tools was already on.");
-        return true;
+        if (!HasTurnedOnToolsFor148)
+        {
+            HasTurnedOnToolsFor148 = true;
+            bool wasOff = !EnableTools;
+            EnableTools = true;
+            LoggingService.Info("Settings", wasOff
+                ? "1.4.8 upgrade: turned Tools on (it was off; Settings > General turns it off again)."
+                : "1.4.8 upgrade: Tools was already on.");
+            changed = true;
+        }
+
+        if (!HasTurnedOnCompactTrayFor149)
+        {
+            HasTurnedOnCompactTrayFor149 = true;
+            bool wasOff = !CompactTrayMenu;
+            CompactTrayMenu = true;
+            LoggingService.Info("Settings", wasOff
+                ? "1.5.0 upgrade: turned the compact tray menu on (it was off; Settings > Tray Menu turns it off again)."
+                : "1.5.0 upgrade: the compact tray menu was already on.");
+            changed = true;
+        }
+
+        return changed;
     }
     /// <summary>
     /// Gates the one-time "Game Launchers Found" prompt (see ImportCoordinator.ScanForGamesAsync)
@@ -214,5 +236,19 @@ public class AppSettings
     /// "Reset settings to defaults" on purpose: it describes the machine, not a preference.
     /// </summary>
     public Dictionary<string, string> TweakPriorState { get; set; } = new();
+
+    /// <summary>
+    /// The System &amp; Performance tweaks TrayTrigger itself switched to optimal, by id. One of these
+    /// found back at standard - a Windows update, usually - is reported once in Activity &amp;
+    /// History and dropped from here. Describes the machine, like <see cref="TweakPriorState"/>.
+    /// </summary>
+    public List<string> TweaksAppliedByTrayTrigger { get; set; } = new();
+
+    /// <summary>"Notify me when a scan adds games": a toast as well as the Activity &amp; History
+    /// entry, the startup scan included. The only notification setting.</summary>
+    public bool NotifyWhenScanAddsGames { get; set; } = false;
+
+    /// <summary>The version that last ran, so an update can be noted once in Activity &amp; History.</summary>
+    public string LastRunVersion { get; set; } = string.Empty;
 }
 

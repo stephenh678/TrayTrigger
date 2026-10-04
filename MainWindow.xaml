@@ -230,9 +230,46 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- Bottom Actions: Exit TrayTrigger -->
+                    <!-- Bottom Actions: Activity & History, then Exit TrayTrigger -->
                     <StackPanel Grid.Row="1" VerticalAlignment="Bottom">
                         <Separator Background="{StaticResource BrushSidebarDivider}" Margin="2,0,2,8"/>
+                        <!-- The bell: a red dot while something needs attention, and the way into Activity & History.
+                             The only indicator in the sidebar; the count is in the page header. -->
+                        <Button Command="{Binding SelectActivityCommand}" Margin="0,0,0,6"
+                                AutomationProperties.Name="{Binding ActivityVM.HeaderStatus, StringFormat='Activity and History, {0}'}"
+                                ToolTip="{Binding ActivityVM.HeaderStatus, StringFormat='Activity &amp; History · {0}'}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsActivityView}" Value="True">
+                                            <Setter Property="Background" Value="#1C2E3D"/>
+                                            <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <DockPanel LastChildFill="True" VerticalAlignment="Center">
+                                <Grid Width="26" Height="20" DockPanel.Dock="Left">
+                                    <TextBlock Text="&#xEA8F;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="16"
+                                               TextAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse Width="8" Height="8" Fill="{StaticResource BrushDanger}" Stroke="{StaticResource BrushSurfaceDark}" StrokeThickness="1"
+                                             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,2,0"
+                                             Visibility="{Binding ActivityVM.HasAttention, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                                <TextBlock Text="Activity" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </DockPanel>
+                        </Button>
                         <Button Command="{Binding ExitApplicationCommand}" AutomationProperties.Name="Exit TrayTrigger" Style="{StaticResource SidebarNavButton}">
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
                                 <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="16" 
@@ -381,6 +418,24 @@
                 </Grid.Style>
 
                 <views:ToolsView x:Name="ToolsPage" DataContext="{Binding Tools}"/>
+            </Grid>
+
+            <!-- ========================================================== -->
+            <!-- ACTIVITY & HISTORY VIEW                                    -->
+            <!-- ========================================================== -->
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsActivityView}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <views:ActivityView x:Name="ActivityPage" DataContext="{Binding ActivityVM}"/>
             </Grid>
 
         </Grid>
