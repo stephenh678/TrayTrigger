@@ -43,6 +43,12 @@ public interface IDrsSession : IDisposable
     /// </summary>
     DrsProfileHandle? FindProfileForExecutable(string exePathOrFileName, out string? error);
 
+    /// <summary>
+    /// The Global profile, which every game inherits from unless its own profile says otherwise.
+    /// Null with <paramref name="error"/> when the driver would not hand it over.
+    /// </summary>
+    DrsProfileHandle? GetGlobalProfile(out string? error);
+
     /// <summary>Creates a profile for an executable NVIDIA does not know about.</summary>
     DrsProfileHandle? CreateProfileForExecutable(string profileName, string exeFileName, out string? error);
 
@@ -79,6 +85,24 @@ public sealed record DrsProfileHandle(IntPtr Handle, string Name, bool IsPredefi
 /// <summary>One setting as the driver reports it, reduced to what the ownership record needs.</summary>
 public sealed record DrsSettingReading(uint Value, DlssSettingOrigin Origin);
 
+/// <summary>
+/// A machine with no NVIDIA driver, as far as callers can tell: every setting is unknown and no
+/// session opens. What <see cref="PerformanceProfileService"/> gets when nothing better is passed,
+/// so a test that runs a game session can never write to the real driver of the PC it runs on.
+/// </summary>
+public sealed class NoDrsBackend : IDrsBackend
+{
+    public static readonly NoDrsBackend Instance = new();
+
+    public string? GetSettingName(uint settingId) => null;
+
+    public IDrsSession? OpenSession(out string? error)
+    {
+        error = "No NVIDIA driver.";
+        return null;
+    }
+}
+
 /// <summary>Production <see cref="IDrsBackend"/> - thin pass-throughs to <see cref="NvApi"/>, no logic.</summary>
 public sealed class NvApiDrsBackend : IDrsBackend
 {
@@ -98,6 +122,12 @@ public sealed class NvApiDrsBackend : IDrsBackend
             if (info != null) return new DrsProfileHandle(handle, info.ProfileName, info.IsPredefined);
             if (session.LastStatus == NvApi.StatusExecutableNotFound) error = null;
             return null;
+        }
+
+        public DrsProfileHandle? GetGlobalProfile(out string? error)
+        {
+            var info = session.GetGlobalProfile(out IntPtr handle, out error);
+            return info == null ? null : new DrsProfileHandle(handle, info.ProfileName, info.IsPredefined);
         }
 
         public DrsProfileHandle? CreateProfileForExecutable(string profileName, string exeFileName, out string? error)

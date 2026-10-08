@@ -97,6 +97,22 @@ public partial class SystemInfoService
 
     private const int ENUM_CURRENT_SETTINGS = -1;
 
+    /// <summary>
+    /// The primary display's refresh rate right now, or null when Windows reports none (0 and 1
+    /// both mean "the hardware's default" to EnumDisplaySettings). One call, for the launch path.
+    /// </summary>
+    public static int? PrimaryRefreshHz()
+    {
+        try
+        {
+            var mode = new DEVMODEW { dmSize = (ushort)Marshal.SizeOf<DEVMODEW>() };
+            if (EnumDisplaySettingsW(null, ENUM_CURRENT_SETTINGS, ref mode) && mode.dmDisplayFrequency > 1)
+                return (int)mode.dmDisplayFrequency;
+        }
+        catch (Exception ex) { LoggingService.Swallowed("SystemInfo", ex, "reading the primary display's refresh rate"); }
+        return null;
+    }
+
     private readonly Lock _cpuSampleLock = new();
     private long _lastIdleTime;
     private long _lastKernelTime;

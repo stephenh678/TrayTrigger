@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace TrayTrigger.Models;
 
@@ -68,6 +70,53 @@ public class GpuHardwareInfo
             return PcieMaxGeneration > generation ? $"{link} (card supports PCIe {PcieMaxGeneration}.0)" : link;
         }
     }
+
+    /// <summary>The GPU's biggest memory window (BAR), in bytes; 0 when it couldn't be read.</summary>
+    public long LargestBarBytes { get; set; }
+
+    /// <summary>A GPU's biggest window without Resizable BAR: the PCI default the CPU sees VRAM through.</summary>
+    internal const long LegacyBarBytes = 256L * 1024 * 1024;
+
+    /// <summary>
+    /// Whether the card can do Resizable BAR at all, going by its name: a GeForce RTX 30 series or
+    /// later, a Radeon RX 5000 series or later, or an Intel Arc. For an older card the 256 MB
+    /// window is all there will ever be, and no BIOS setting changes that. A name this doesn't
+    /// recognise counts as "can't", so the worst a new naming scheme does is leave a warning out.
+    /// </summary>
+    internal bool SupportsResizableBar => Vendor switch
+    {
+        // "Quadro RTX 4000" is a 20-series card under a number that reads as a later one.
+        GpuVendor.Nvidia => !ModelName.Contains("Quadro", StringComparison.OrdinalIgnoreCase) && SeriesNumber("RTX") >= 3000,
+        GpuVendor.Amd => SeriesNumber("RX") >= 5000,
+        GpuVendor.Intel => ModelName.Contains("Arc", StringComparison.OrdinalIgnoreCase),
+        _ => false
+    };
+
+    /// <summary>The four digits after a family name: 5080 for "GeForce RTX 5080", 0 for "RX 580" or "RTX A4000".</summary>
+    private int SeriesNumber(string family)
+    {
+        var match = Regex.Match(ModelName, $@"\b{family}\s*(\d{{4}})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return match.Success ? int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) : 0;
+    }
+
+    /// <summary>
+    /// Whether Resizable BAR (AMD's Smart Access Memory) is on: the CPU reaches the card's whole
+    /// memory at once rather than through a 256 MB window. Null when it can't be told - a built-in
+    /// GPU, which shares system memory, a card with no more memory than the window, or no reading -
+    /// and for a 256 MB window on a card that can't do Resizable BAR, where "off" would send
+    /// someone to the BIOS for nothing.
+    /// </summary>
+    public bool? ResizableBarEnabled =>
+        !IsDedicated || LargestBarBytes <= 0 || (VramGigabytes > 0 && VramGigabytes <= 0.25) ? null
+        : LargestBarBytes > LegacyBarBytes ? true
+        : SupportsResizableBar ? false
+        : null;
+
+    public string ResizableBarWarning => ResizableBarEnabled == false
+        ? "Resizable BAR is off, so the CPU reaches this card's memory through a 256 MB window. Turning on Above 4G Decoding and Re-Size BAR Support in the BIOS"
+          + (Vendor == GpuVendor.Amd ? " (AMD calls it Smart Access Memory)" : "")
+          + " is worth a few percent on average, and far more in some games. It needs Windows to start in UEFI mode, with CSM off."
+        : "";
 
     public string PcieWarning => IsPcieNarrowed
         ? $"Running on x{PcieCurrentWidth} of the x{PcieMaxWidth} lanes this card supports. It may be in a second slot, or in one that shares its lanes with an M.2 drive; the motherboard manual says which slot gives x{PcieMaxWidth}."
