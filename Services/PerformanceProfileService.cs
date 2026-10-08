@@ -28,8 +28,9 @@ public interface IProfileSnapshotStore
 /// the capture/apply/restore orchestration.
 ///
 /// Two kinds of tweak, two lifetimes:
-/// - Machine-wide singletons (Power Plan, HDR, System Responsiveness, MMCSS Scheduling Category):
-///   only the first tracked session captures/applies them ("first wins" - see
+/// - Machine-wide singletons (Power Plan, HDR, System Responsiveness, MMCSS Scheduling Category,
+///   the NVIDIA Global-profile settings): only the first tracked session captures/applies them
+///   ("first wins" - see
 ///   <see cref="BeginGameSession"/>), and only the last tracked session ending restores them.
 /// - Per-executable tweaks (GPU Preference, Defender Exclusion): independent per game, applied and
 ///   restored on that specific game's own session regardless of other sessions still running.
@@ -67,6 +68,7 @@ public class PerformanceProfileService
     /// </summary>
     internal AppSettings CurrentSettingsForTests => _settingsProvider();
     private readonly ISystemTweakBackend _backend;
+    private readonly IDrsBackend _drs;
     private readonly Lock _lock = new();
     private readonly HashSet<string> _activeSessionKeys = new();
     private PerformanceProfileSessionSnapshot? _snapshot;
@@ -78,9 +80,10 @@ public class PerformanceProfileService
     /// What a restore couldn't put back, and how to try again. Filled while a restore runs and kept
     /// until a retry succeeds, as the Critical NEEDS ATTENTION item in Activity &amp; History. Only
     /// in memory: a restore that fails at exit is a history entry, and what crash recovery owns is
-    /// still in the snapshot.
+    /// still in the snapshot. Key is the snapshot record behind an entry, when it has one: an NVIDIA
+    /// setting is tried again without being asked, and its entry goes once its record has.
     /// </summary>
-    private readonly List<(string What, Func<bool> Retry)> _unrestored = new();
+    private readonly List<(string What, Func<bool> Retry, object? Key)> _unrestored = new();
 
     /// <summary>The Critical entries this run recorded for what's in <see cref="_unrestored"/>: the
     /// ones Restore Previous marks FIXED when everything is back - never an earlier run's, which it
@@ -97,23 +100,62 @@ public class PerformanceProfileService
         get { lock (_lock) return _unrestored.Select(u => u.What).ToList(); }
     }
 
-    private void NoteUnrestored(string what, Func<bool> retry)
+    private void NoteUnrestored(string what, Func<bool> retry, object? key = null)
     {
-        lock (_lock) _unrestored.Add((what, retry));
+        lock (_lock) _unrestored.Add((what, retry, key));
         LoggingService.Warn("PerformanceProfile", $"Could not put back {what}.");
     }
 
+    /// <summary>For view-model tests that need a service but never run a session. No NVIDIA access.</summary>
     public PerformanceProfileService(StorageService storageService)
         : this(storageService, () => storageService.LoadSettings(), new WindowsTweakBackend())
     {
     }
 
-    public PerformanceProfileService(IProfileSnapshotStore store, Func<AppSettings> settingsProvider, ISystemTweakBackend backend)
+    /// <param name="drs">The NVIDIA driver settings, for the Optimized profile's NVIDIA tweaks. Left
+    /// out, there is no NVIDIA driver as far as this service knows (<see cref="NoDrsBackend"/>), so a
+    /// test session can't write to the real driver of the PC running it. App passes the real one.</param>
+    public PerformanceProfileService(IProfileSnapshotStore store, Func<AppSettings> settingsProvider, ISystemTweakBackend backend, IDrsBackend? drs = null)
     {
         _store = store;
         _settingsProvider = settingsProvider;
         _backend = backend;
+        _drs = drs ?? NoDrsBackend.Instance;
     }
+
+    /// <summary>PREFERRED_PSTATE_ID in NVIDIA's NvApiDriverSettings.h: "Power management mode".</summary>
+    internal const uint NvPowerModeSettingId = 0x1057EB71;
+    /// <summary>PREFERRED_PSTATE_PREFER_MAX: "Prefer maximum performance".</summary>
+    internal const uint NvPowerModePreferMax = 1;
+    /// <summary>FRL_FPS_ID: "Max Frame Rate" in the Control Panel, 0 for off.</summary>
+    internal const uint NvFrameCapSettingId = 0x10835002;
+    /// <summary>The highest cap the driver accepts (FRL_FPS_MAX).</summary>
+    internal const uint NvFrameCapMax = 1023;
+    /// <summary>The slowest primary display the frame cap is set for: a 60 Hz one, which Windows calls 59 when it runs at 59.94.</summary>
+    internal const int MinFrameCapRefreshHz = 59;
+    /// <summary>"rBAR - Feature", the switch NVIDIA sets to 1 on the games it approves. Hidden: the driver doesn't name it.</summary>
+    internal const uint NvResizableBarSettingId = 0x000F00BA;
+
+    /// <summary>
+    /// Every NVIDIA setting a session may write, what restore calls it, and the only values a
+    /// session writes - which is all a crash-recovery record read back from disk may claim.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<uint, (string What, Func<uint, bool> IsValidWritten)> NvidiaSessionSettings =
+        new Dictionary<uint, (string, Func<uint, bool>)>
+        {
+            [NvPowerModeSettingId] = ("the NVIDIA power management mode", v => v == NvPowerModePreferMax),
+            [NvFrameCapSettingId] = ("the NVIDIA frame rate limit", v => v is >= 1 and <= NvFrameCapMax),
+            [NvResizableBarSettingId] = ("the NVIDIA Resizable BAR setting", v => v == 1),
+        };
+
+    /// <summary>
+    /// The cap for a refresh rate: refresh - refresh^2 / 3600, rounded down. The formula NVIDIA's
+    /// Reflex uses for its own automatic cap with G-SYNC: 59 at 60 Hz, 138 at 144, 157 at 165, 224
+    /// at 240, 324 at 360. Far enough under the refresh rate that frame-time variation doesn't
+    /// push frames past it and out of the variable refresh range.
+    /// </summary>
+    internal static uint FrameCapFor(int refreshHz) =>
+        (uint)Math.Floor(refreshHz - refreshHz * (double)refreshHz / 3600.0);
 
     /// <summary>Game IDs with a profile currently applied - for UI "Playing" state and tests.</summary>
     public IReadOnlyCollection<string> ActiveSessionGameIds
@@ -170,7 +212,19 @@ public class PerformanceProfileService
         {
             RestorePerGameTweaks(perGame);
         }
-        _store.DeleteProfileSessionSnapshot();
+        if (snapshot.NvidiaSettings.Count > 0)
+        {
+            // An NVIDIA setting that couldn't be put back stays on record (see RestoreNvidiaSettings).
+            // Adopted as this run's snapshot, so a game started now records into it rather than
+            // writing a new file over it.
+            snapshot.PerGameSnapshots.Clear();
+            lock (_lock) _snapshot ??= snapshot;
+            _store.SaveProfileSessionSnapshot(snapshot);
+        }
+        else
+        {
+            _store.DeleteProfileSessionSnapshot();
+        }
 
         List<string> failed;
         lock (_lock) failed = _unrestored.Skip(before).Select(u => u.What).ToList();
@@ -193,10 +247,14 @@ public class PerformanceProfileService
     private void ReportUnrestored(IReadOnlyList<string> justFailed, string? gameName)
     {
         string what = JoinList(justFailed);
+        // An NVIDIA setting isn't in Windows Settings, and Resizable BAR isn't in NVIDIA's own apps either.
+        bool nvidiaOnly = justFailed.All(w => NvidiaSessionSettings.Values.Any(s => s.What == w));
         var entry = ActivityService.Add(ActivityLevel.Critical,
             gameName == null ? $"Couldn't put back {what}" : $"{gameName}: couldn't put back {what}",
             subject: gameName,
-            detail: $"Restore Previous on this page tries again. Windows Settings can also change {ItOrThem(justFailed)} back by hand.",
+            detail: nvidiaOnly
+                ? "Restore Previous on this page tries again. So does TrayTrigger, when the next game ends and the next time it starts."
+                : $"Restore Previous on this page tries again. Windows Settings can also change {ItOrThem(justFailed)} back by hand.",
             groupKey: UnrestoredActivityKey);
         if (entry != null) lock (_lock) _unrestoredEntryIds.Add(entry.Id);
         PublishUnrestoredState();
@@ -229,7 +287,7 @@ public class PerformanceProfileService
     /// </summary>
     public bool RetryUnrestored()
     {
-        List<(string What, Func<bool> Retry)> pending;
+        List<(string What, Func<bool> Retry, object? Key)> pending;
         lock (_lock)
         {
             pending = _unrestored.ToList();
@@ -244,6 +302,16 @@ public class PerformanceProfileService
             if (ok) fixedNow.Add(item.What);
             else lock (_lock) _unrestored.Add(item);
         }
+        ReportPutBack(fixedNow);
+        lock (_lock) return _unrestored.Count == 0;
+    }
+
+    /// <summary>
+    /// Tells Activity &amp; History that something a restore couldn't put back is back now, by
+    /// Restore Previous or by a later restore getting to it.
+    /// </summary>
+    private void ReportPutBack(IReadOnlyList<string> fixedNow)
+    {
         int stillLeft;
         List<string> reported = new();
         lock (_lock)
@@ -266,7 +334,22 @@ public class PerformanceProfileService
             ActivityService.Add(ActivityLevel.Change, $"Put back {JoinList(fixedNow)}", groupKey: $"{UnrestoredActivityKey}.fixed");
         }
         PublishUnrestoredState();
-        lock (_lock) return _unrestored.Count == 0;
+    }
+
+    /// <summary>
+    /// Drops what was noted for an NVIDIA setting whose record is no longer pending: a later restore
+    /// put it back, or found it changed by someone else, so there is nothing left to offer Restore
+    /// Previous for. Returns what was dropped. Call with the lock held, and only after the newly
+    /// failed have been read off the end of the list.
+    /// </summary>
+    private List<string> TakeSettledNvidiaEntries(List<NvidiaSettingSnapshot> stillPending)
+    {
+        bool Settled((string What, Func<bool> Retry, object? Key) entry) =>
+            entry.Key is NvidiaSettingSnapshot record && !stillPending.Contains(record);
+
+        var settled = _unrestored.Where(Settled).Select(u => u.What).Distinct().ToList();
+        if (settled.Count > 0) _unrestored.RemoveAll(Settled);
+        return settled;
     }
 
     private static string JoinList(IReadOnlyList<string> items) => items.Count switch
@@ -359,7 +442,8 @@ public class PerformanceProfileService
 
     private static bool IsEmpty(PerformanceProfileSessionSnapshot s) =>
         s.PerGameSnapshots.Count == 0 && !s.PowerPlanCaptured && !s.SystemResponsivenessCaptured
-        && !s.SchedulingCategoryCaptured && !s.HdrCaptured && !s.ToastsCaptured && !s.TimerResolutionRequested;
+        && !s.SchedulingCategoryCaptured && !s.HdrCaptured && !s.ToastsCaptured && !s.TimerResolutionRequested
+        && s.NvidiaSettings.Count == 0;
 
     /// <summary>
     /// POST-START phase. Applies the tweaks that need the actual game process. These need no
@@ -371,6 +455,11 @@ public class PerformanceProfileService
         if (game.PerformanceProfile == PerformanceProfileMode.Off) return;
 
         var settings = _settingsProvider();
+        if (settings.OptimizedProfileTweaks.PowerThrottlingExemptEnabled)
+        {
+            ApplyPowerThrottlingExemption(process, game.Name);
+        }
+
         bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
         if (aggressive && settings.AggressiveProfileTweaks.AboveNormalPriorityEnabled)
         {
@@ -436,6 +525,11 @@ public class PerformanceProfileService
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
+            if (ApplyNvidiaSettings(snapshot, settings, aggressive))
+            {
+                applied = true;
+            }
+
             if (aggressive && settings.AggressiveProfileTweaks.TimerResolutionEnabled)
             {
                 ApplyTimerResolution(snapshot);
@@ -487,12 +581,14 @@ public class PerformanceProfileService
         putBack = null;
         (string Name, PerformanceProfileMode Mode, DateTime StartedUtc) info;
         List<string> failed;
+        List<string> settled;
         lock (_lock)
         {
             if (!_activeSessionKeys.Remove(gameId)) return false;
             _sessionInfo.Remove(gameId, out info);
             if (_snapshot == null) return true;
             int before = _unrestored.Count;
+            var snapshot = _snapshot;
 
             var perGame = _snapshot.PerGameSnapshots.FirstOrDefault(p => p.GameId == gameId);
             if (perGame != null)
@@ -504,8 +600,16 @@ public class PerformanceProfileService
             if (_activeSessionKeys.Count == 0)
             {
                 RestoreGlobalTweaks(_snapshot, skipElevated: false);
-                _snapshot = null;
-                _store.DeleteProfileSessionSnapshot();
+                if (_snapshot.NvidiaSettings.Count > 0)
+                {
+                    // An NVIDIA setting that couldn't be put back stays on record (see RestoreNvidiaSettings).
+                    _store.SaveProfileSessionSnapshot(_snapshot);
+                }
+                else
+                {
+                    _snapshot = null;
+                    _store.DeleteProfileSessionSnapshot();
+                }
                 LoggingService.Info("PerformanceProfile", "All tracked game sessions ended; restored pre-profile system state.");
             }
             else
@@ -513,10 +617,16 @@ public class PerformanceProfileService
                 _store.SaveProfileSessionSnapshot(_snapshot);
             }
             failed = _unrestored.Skip(before).Select(u => u.What).ToList();
+            // An NVIDIA setting an earlier session couldn't put back, and this one's end did.
+            settled = TakeSettledNvidiaEntries(snapshot.NvidiaSettings);
         }
 
         // Outside the lock: recording raises events the UI listens to.
         string name = info.Name ?? "A game";
+        if (settled.Count > 0)
+        {
+            ReportPutBack(settled);
+        }
         if (failed.Count > 0)
         {
             ReportUnrestored(failed, name);
@@ -540,13 +650,20 @@ public class PerformanceProfileService
     public void RestoreActiveSessionOnShutdown(bool skipElevated = false)
     {
         List<string> failed;
+        List<string> nextStart;
         lock (_lock)
         {
             if (_snapshot == null) return;
             int before = _unrestored.Count;
-            RestoreActiveSessionOnShutdownLocked(_snapshot, skipElevated);
-            failed = _unrestored.Skip(before).Select(u => u.What).ToList();
+            nextStart = RestoreActiveSessionOnShutdownLocked(_snapshot, skipElevated);
+            failed = _unrestored.Skip(before).Select(u => u.What).Where(w => !nextStart.Contains(w)).ToList();
             _sessionInfo.Clear();
+        }
+        if (nextStart.Count > 0)
+        {
+            ActivityService.Add(ActivityLevel.Problem, $"Couldn't put back {JoinList(nextStart)} when TrayTrigger closed",
+                detail: "TrayTrigger will try again the next time it starts.",
+                groupKey: UnrestoredActivityKey);
         }
         // An entry for next time: nothing is left to retry it once TrayTrigger has gone.
         if (failed.Count > 0)
@@ -558,7 +675,8 @@ public class PerformanceProfileService
         }
     }
 
-    private void RestoreActiveSessionOnShutdownLocked(PerformanceProfileSessionSnapshot snapshot, bool skipElevated)
+    /// <returns>What couldn't be put back and stays in the snapshot for the next start to finish.</returns>
+    private List<string> RestoreActiveSessionOnShutdownLocked(PerformanceProfileSessionSnapshot snapshot, bool skipElevated)
     {
         {
             bool deferElevated = skipElevated && !_backend.IsElevated;
@@ -577,7 +695,11 @@ public class PerformanceProfileService
                 }
             }
 
-            bool anythingDeferred = deferElevated && (snapshot.SystemResponsivenessCaptured || snapshot.SchedulingCategoryCaptured || snapshot.PerGameSnapshots.Count > 0);
+            // NVIDIA settings that couldn't be put back are kept whatever the reason for closing:
+            // nothing else will ever try them again (see RestoreNvidiaSettings).
+            var nextStart = snapshot.NvidiaSettings.Select(r => NvidiaSessionSettings[r.SettingId].What).ToList();
+            bool anythingDeferred = (deferElevated && (snapshot.SystemResponsivenessCaptured || snapshot.SchedulingCategoryCaptured || snapshot.PerGameSnapshots.Count > 0))
+                                    || nextStart.Count > 0;
 
             _activeSessionKeys.Clear();
             if (anythingDeferred)
@@ -591,6 +713,7 @@ public class PerformanceProfileService
                 LoggingService.Info("PerformanceProfile", "Restored pre-profile system state on application exit.");
             }
             _snapshot = null;
+            return nextStart;
         }
     }
 
@@ -899,6 +1022,8 @@ public class PerformanceProfileService
         RestoreUnmuteAudio(snapshot);
         snapshot.PlaybackMuteCaptured = false;
         RestoreTimerResolution(snapshot);
+        // The driver's settings need no administrator rights, so these go back at shutdown too.
+        RestoreNvidiaSettings(snapshot);
 
         if (skipElevated && !_backend.IsElevated)
         {
@@ -918,6 +1043,269 @@ public class PerformanceProfileService
         {
             var entries = hklmChanges.ToList();
             NoteUnrestored("Windows' multimedia scheduler settings", () => _backend.ApplyHklmChanges(entries));
+        }
+    }
+
+    // ---- NVIDIA, on the driver's Global profile --------------------------------------------
+    // Global rather than the game's own profile: it covers every launch path, a Steam game's
+    // included, without TrayTrigger having to know which executable renders, and it leaves the
+    // per-game profiles to DLSS Override. A game whose own profile sets the value keeps its own.
+    // Each is captured and saved to the snapshot before the write, so a crash in between still
+    // leaves a record; restore only acts while the driver still holds what was written.
+
+    /// <summary>One NVIDIA setting a session wants, and when a value already there is the user's to keep.</summary>
+    private sealed record NvidiaWanted(uint SettingId, uint Value, string Label, string Describe, Func<DrsSettingReading?, string?> LeaveAlone);
+
+    /// <summary>
+    /// The session's NVIDIA settings, in one session and one save: a session loads the driver's
+    /// whole database, well over 100 ms, and this runs before the game starts. Each is recorded in
+    /// the snapshot on disk before the database is saved, so a crash during or after the save
+    /// still leaves a record. True when anything was written.
+    /// </summary>
+    private bool ApplyNvidiaSettings(PerformanceProfileSessionSnapshot snapshot, AppSettings settings, bool aggressive)
+    {
+        bool maxPerformance = settings.OptimizedProfileTweaks.NvidiaMaxPerformanceEnabled;
+        bool frameCap = settings.OptimizedProfileTweaks.FrameCapEnabled;
+        bool resizableBar = aggressive && settings.AggressiveProfileTweaks.ResizableBarEnabled;
+        if (!maxPerformance && !frameCap && !resizableBar) return false;
+
+        if (_drs.GetSettingName(NvidiaGlobalSetting.PresenceProbeId) == null)
+        {
+            LoggingService.Verbose("PerformanceProfile", "NVIDIA settings: no NVIDIA driver; nothing to do.");
+            return false;
+        }
+
+        var wanted = new List<NvidiaWanted>(3);
+        if (maxPerformance)
+            wanted.Add(new(NvPowerModeSettingId, NvPowerModePreferMax, "NVIDIA power management", "Prefer maximum performance", _ => null));
+        if (frameCap && FrameCapWanted() is { } cap) wanted.Add(cap);
+        if (resizableBar && ResizableBarWanted() is { } rebar) wanted.Add(rebar);
+        if (wanted.Count == 0) return false;
+
+        var written = new List<(NvidiaSettingSnapshot Record, NvidiaWanted Want)>(wanted.Count);
+        using (var session = _drs.OpenSession(out string? error))
+        {
+            var global = session?.GetGlobalProfile(out error);
+            if (session == null || global == null)
+            {
+                LoggingService.Warn("PerformanceProfile", $"NVIDIA settings: could not open the driver's settings ({error}); left unchanged.");
+                return false;
+            }
+
+            foreach (var want in wanted)
+            {
+                var reading = session.GetSetting(global, want.SettingId, out error);
+                if (error != null)
+                {
+                    // A failed read is not "absent": recording it as such would make undo delete a
+                    // value the user had chosen.
+                    LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not read the driver's setting ({error}); left unchanged.");
+                    continue;
+                }
+                if (reading?.Value == want.Value)
+                {
+                    LoggingService.Verbose("PerformanceProfile", $"{want.Label}: already {want.Describe}; nothing to do.");
+                    continue;
+                }
+                if (want.LeaveAlone(reading) is string reason)
+                {
+                    LoggingService.Verbose("PerformanceProfile", $"{want.Label}: {reason}; left as it is.");
+                    continue;
+                }
+                if (!session.SetSetting(global, want.SettingId, want.Value, out error))
+                {
+                    LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not set {want.Describe}: {error}");
+                    continue;
+                }
+                written.Add((new NvidiaSettingSnapshot { SettingId = want.SettingId, Written = want.Value, Previous = NvidiaGlobalSetting.TokenFor(reading) }, want));
+            }
+            if (written.Count == 0) return false;
+
+            foreach (var (record, _) in written) snapshot.NvidiaSettings.Add(record);
+            _store.SaveProfileSessionSnapshot(snapshot);
+
+            if (!session.Save(out error))
+            {
+                LoggingService.Warn("PerformanceProfile", $"NVIDIA settings: the driver refused to save them ({error}); nothing was changed.");
+                foreach (var (record, _) in written) snapshot.NvidiaSettings.Remove(record);
+                _store.SaveProfileSessionSnapshot(snapshot);
+                return false;
+            }
+        }
+
+        // Read back through a fresh session, since sessions don't merge. A value that reads back
+        // different keeps its record all the same: the save went through, and restore only acts
+        // while the driver still holds what was written.
+        using (var check = _drs.OpenSession(out string? checkError))
+        {
+            var global = check?.GetGlobalProfile(out checkError);
+            foreach (var (record, want) in written)
+            {
+                uint? now = check != null && global != null ? check.GetSetting(global, record.SettingId, out checkError)?.Value : null;
+                if (now == record.Written)
+                    LoggingService.Info("PerformanceProfile", $"{want.Label}: {want.Describe} (was {record.Previous}).");
+                else
+                    LoggingService.Warn("PerformanceProfile", $"{want.Label}: saved, but the driver reads back {now?.ToString() ?? "nothing"}{(checkError != null ? $" ({checkError})" : "")}.");
+            }
+        }
+        return true;
+    }
+
+    private NvidiaWanted? FrameCapWanted()
+    {
+        // 59, not 60: Windows reports a 59.94 Hz mode, which many TVs and monitors run at, as 59.
+        if (_backend.GetPrimaryRefreshHz() is not int refresh || refresh < MinFrameCapRefreshHz)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"Frame cap: the primary display's refresh rate couldn't be read, or is under {MinFrameCapRefreshHz} Hz; no cap set.");
+            return null;
+        }
+        uint cap = Math.Min(FrameCapFor(refresh), NvFrameCapMax);
+        // A cap someone chose - for power, heat or a game that misbehaves uncapped - is theirs.
+        return new(NvFrameCapSettingId, cap, "Frame cap", $"{cap} fps for the primary display's {refresh} Hz",
+            reading => reading?.Value is uint existing && existing != 0 ? $"a Max Frame Rate of {existing} fps is already set" : null);
+    }
+
+    /// <summary>
+    /// "rBAR - Feature" on the Global profile. A game's own profile outranks the Global one, so
+    /// the games NVIDIA tested keep NVIDIA's answer - approved ones stay on, rejected ones
+    /// (Final Fantasy XVI, Delta Force, Hogwarts Legacy...) stay off - and only the games NVIDIA
+    /// never decided on get it. Pointless with Resizable BAR off in the BIOS, so skipped then.
+    /// </summary>
+    private NvidiaWanted? ResizableBarWanted()
+    {
+        if (_backend.IsResizableBarEnabled() == false)
+        {
+            LoggingService.Verbose("PerformanceProfile", "Resizable BAR: off in the BIOS, so there is nothing for the driver to use; not set.");
+            return null;
+        }
+        // Set on the Global profile by the user or another tool, either way: their choice for every game.
+        return new(NvResizableBarSettingId, 1, "Resizable BAR", "on for games NVIDIA hasn't decided on",
+            reading => reading?.Origin == DlssSettingOrigin.UserSet ? $"already set to {reading.Value} on the Global profile" : null);
+    }
+
+    /// <summary>
+    /// Puts back what the session wrote, in one session and one save. Whatever couldn't be put back
+    /// stays in the snapshot, for the next session's end, TrayTrigger's exit or the next start to
+    /// try again - a hidden setting like Resizable BAR can't be changed back by hand without
+    /// Profile Inspector - and is offered as Restore Previous in Activity &amp; History meanwhile.
+    /// </summary>
+    private void RestoreNvidiaSettings(PerformanceProfileSessionSnapshot snapshot)
+    {
+        if (snapshot.NvidiaSettings.Count == 0) return;
+        var failed = PutBackNvidiaSettings(snapshot.NvidiaSettings);
+        snapshot.NvidiaSettings = failed;
+        foreach (var record in failed)
+        {
+            NoteUnrestored(NvidiaSessionSettings[record.SettingId].What, () => RetryNvidiaSetting(snapshot, record), key: record);
+        }
+    }
+
+    /// <summary>
+    /// Restore Previous for one NVIDIA setting. Once it's back its record goes too, from the
+    /// snapshot in memory and on disk: left there, the same value chosen by the user later would
+    /// read as TrayTrigger's own, and be removed at the next game's end.
+    /// </summary>
+    private bool RetryNvidiaSetting(PerformanceProfileSessionSnapshot snapshot, NvidiaSettingSnapshot record)
+    {
+        if (PutBackNvidiaSettings([record]).Count > 0) return false;
+
+        lock (_lock)
+        {
+            // Not this run's snapshot any more (or a record a later restore already settled): nothing on disk to update.
+            if (!snapshot.NvidiaSettings.Remove(record) || !ReferenceEquals(snapshot, _snapshot)) return true;
+
+            if (_activeSessionKeys.Count == 0 && IsEmpty(snapshot))
+            {
+                _snapshot = null;
+                _store.DeleteProfileSessionSnapshot();
+            }
+            else
+            {
+                _store.SaveProfileSessionSnapshot(snapshot);
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The records that couldn't be put back, in the order given. The rest are back, or were
+    /// changed since by someone else and left alone.
+    /// </summary>
+    private List<NvidiaSettingSnapshot> PutBackNvidiaSettings(IReadOnlyList<NvidiaSettingSnapshot> records)
+    {
+        var known = records.Where(r => NvidiaSessionSettings.ContainsKey(r.SettingId)).ToList();
+        if (known.Count == 0) return new List<NvidiaSettingSnapshot>();
+
+        if (_drs.GetSettingName(NvidiaGlobalSetting.PresenceProbeId) == null)
+        {
+            // The NVIDIA driver has gone since (another graphics card, or uninstalled): there is
+            // nothing left holding these values, and keeping them would report a failure every start.
+            LoggingService.Info("PerformanceProfile", $"No NVIDIA driver any more, so {known.Count} NVIDIA setting(s) recorded by an earlier session have nothing to be put back on.");
+            return new List<NvidiaSettingSnapshot>();
+        }
+
+        using var session = _drs.OpenSession(out string? error);
+        var global = session?.GetGlobalProfile(out error);
+        if (session == null || global == null)
+        {
+            LoggingService.Warn("PerformanceProfile", $"Could not open the NVIDIA driver's settings to put them back ({error}).");
+            return known;
+        }
+
+        var failed = new HashSet<NvidiaSettingSnapshot>();
+        var changed = new List<NvidiaSettingSnapshot>();
+        // Last written, first put back.
+        for (int i = known.Count - 1; i >= 0; i--)
+        {
+            var record = known[i];
+            switch (NvidiaGlobalSetting.RestoreIn(session, global, record.SettingId, record.Written, record.Previous, out error))
+            {
+                case NvidiaGlobalSetting.RestoreResult.PutBack:
+                    changed.Add(record);
+                    break;
+                case NvidiaGlobalSetting.RestoreResult.LeftAlone:
+                    break;
+                default:
+                    LoggingService.Warn("PerformanceProfile", $"Restoring {NvidiaSessionSettings[record.SettingId].What} failed: {error}");
+                    failed.Add(record);
+                    break;
+            }
+        }
+
+        if (changed.Count > 0)
+        {
+            if (session.Save(out error))
+            {
+                foreach (var record in changed)
+                    LoggingService.Verbose("PerformanceProfile", $"Restored {NvidiaSessionSettings[record.SettingId].What} (to {record.Previous ?? NvidiaGlobalSetting.AbsentToken}).");
+            }
+            else
+            {
+                LoggingService.Warn("PerformanceProfile", $"The NVIDIA driver refused to save the settings being put back ({error}).");
+                failed.UnionWith(changed);
+            }
+        }
+        return known.Where(failed.Contains).ToList();
+    }
+
+    /// <summary>
+    /// Keeps Windows from throttling the game: EcoQoS lowers a process's clocks and, on a hybrid
+    /// CPU, moves it to the efficiency cores once Windows decides it's in the background - a game
+    /// on a second monitor while you type in Discord, or alt-tabbed. Windows 11 also ignores a
+    /// hidden window's timer requests. No restore: it dies with the process.
+    /// </summary>
+    private void ApplyPowerThrottlingExemption(Process process, string gameName)
+    {
+        try
+        {
+            if (_backend.ExemptFromPowerThrottling(process))
+                LoggingService.Verbose("PerformanceProfile", $"'{gameName}' is exempt from Windows power throttling.");
+            else
+                LoggingService.Info("PerformanceProfile", $"Windows refused to exempt '{gameName}' from power throttling (it may be running as administrator).");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("PerformanceProfile", $"Exempting '{gameName}' from power throttling failed: {ex.Message}");
         }
     }
 
@@ -1223,6 +1611,20 @@ public static class ProfileSnapshotValidator
 
         // A timer request never survives the process that made it - nothing to recover.
         snapshot.TimerResolutionRequested = false;
+
+        // Only settings a session writes, with values a session writes: the written value is what
+        // restore compares against. The previous values are tokens, which read as "absent" when malformed.
+        snapshot.NvidiaSettings ??= new List<NvidiaSettingSnapshot>();
+        foreach (var record in snapshot.NvidiaSettings.ToList())
+        {
+            if (record == null
+                || !PerformanceProfileService.NvidiaSessionSettings.TryGetValue(record.SettingId, out var known)
+                || !known.IsValidWritten(record.Written))
+            {
+                problems.Add(record == null ? "an empty NVIDIA setting record" : $"NVIDIA setting 0x{record.SettingId:X8} = {record.Written} is not one TrayTrigger writes");
+                snapshot.NvidiaSettings.Remove(record!);
+            }
+        }
 
         snapshot.PreviousHdrStates ??= new List<HdrDisplaySnapshot>();
         snapshot.PerGameSnapshots ??= new List<PerGameProfileSnapshot>();

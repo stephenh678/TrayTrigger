@@ -299,6 +299,10 @@
                                             <TextBlock Text="{Binding PcieWarning}" FontSize="11" Foreground="{StaticResource BrushWarning}"
                                                        TextWrapping="Wrap" Margin="0,2,0,4"
                                                        Visibility="{Binding IsPcieNarrowed, Converter={StaticResource BoolToVis}}"/>
+                                            <!-- Resizable BAR off: a BIOS switch, worth a few percent in games that use it. -->
+                                            <TextBlock Text="{Binding ResizableBarWarning}" FontSize="11" Foreground="{StaticResource BrushWarning}"
+                                                       TextWrapping="Wrap" Margin="0,2,0,4"
+                                                       Visibility="{Binding IsResizableBarOff, Converter={StaticResource BoolToVis}}"/>
                                             <DockPanel LastChildFill="True">
                                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
                                                             Visibility="{Binding HasDriverCheck, Converter={StaticResource BoolToVis}}">

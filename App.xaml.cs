@@ -302,12 +302,16 @@ public partial class App : Application
         _performanceProfileService = new PerformanceProfileService(
             _storageService,
             () => _mainViewModel?.Settings ?? startupSettings,
-            new WindowsTweakBackend());
+            new WindowsTweakBackend(),
+            new NvApiDrsBackend());
         // A screenshot run skips the single-instance check, so the snapshot on disk may belong to
         // a game the real instance is running right now - not a crash to recover from.
         if (!isScreenshot)
         {
             _performanceProfileService.RecoverFromCrashIfNeeded();
+            // An Ultimate plan made before 1.5.1 still unparks every core on a dual-CCD Ryzen X3D;
+            // a plan left on all the time may not be applied again for months. Returns at once elsewhere.
+            _ = Task.Run(SystemTweaksService.KeepX3dCoreParkingInExistingPlans);
         }
         // The Settings "Enable game scripts" switch is enforced here, not just in the edit dialog.
         _gameScriptService = new GameScriptService(

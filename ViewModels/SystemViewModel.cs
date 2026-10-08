@@ -631,7 +631,9 @@ public class SystemViewModel : ViewModelBase
         return new ObservableCollection<ProfileTweakToggleViewModel>
         {
             new("\"Ultimate Plan - TrayTrigger\" Power Plan (profile)",
-                "Switches to a full-clock power plan (no core parking, no PCIe/USB power saving) while the game runs, then switches back.",
+                SystemTweaksService.KeepsCoreParking(CpuTopologyService.GetTopology().Layout)
+                    ? "Switches to a full-clock power plan (no PCIe/USB power saving) while the game runs, then switches back. " + SystemTweaksService.X3dCoreParkingNote
+                    : "Switches to a full-clock power plan (no core parking, no PCIe/USB power saving) while the game runs, then switches back.",
                 "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5–15ms to ramp back up and inducing 1% low frame drops when action begins. \"Ultimate Plan - TrayTrigger\" pins the CPU at 100% min/max state with aggressive boost and active cooling, and disables PCIe Link State Power Management and USB selective suspend so the GPU and input devices never stutter through a power-state transition mid-match.",
                 "profiles/power_plan",
                 () => config.PowerPlanEnabled,
@@ -642,6 +644,19 @@ public class SystemViewModel : ViewModelBase
                 "profiles/gpu_preference",
                 () => config.GpuPreferenceEnabled,
                 v => { config.GpuPreferenceEnabled = v; Save(); }),
+            new("NVIDIA: Prefer Maximum Performance",
+                "Sets NVIDIA's power management mode to \"Prefer maximum performance\" while the game runs, then puts back what you had.",
+                "By default the driver lowers the GPU's clocks whenever a scene asks less of it, and raising them again takes a moment - long enough to show up as an uneven frame time when the action picks up again, most often in lighter or CPU-bound games. Prefer maximum performance keeps the clocks up, which steadies the 1% lows; the average frame rate barely moves. It's the Control Panel's own setting, written to the Global profile for the length of the session, so it covers Steam games too, and the GPU idles normally again once you stop playing. A game whose own NVIDIA profile sets a power mode keeps it. If the setting is changed elsewhere during the session, TrayTrigger leaves that change alone at the end.",
+                "profiles/nvidia_max_performance",
+                () => config.NvidiaMaxPerformanceEnabled,
+                v => { config.NvidiaMaxPerformanceEnabled = v; Save(); },
+                note: "NVIDIA GPUs only. Does nothing on AMD or Intel graphics."),
+            new("Exempt the Game From Power Throttling",
+                "Stops Windows from throttling the game's process when it decides the game is in the background.",
+                "Windows' power throttling (EcoQoS) lowers a background process's clock speed and, on an Intel hybrid CPU, moves it onto the efficiency cores. Windows can decide a game is in the background while you're still watching it - on a second monitor while you type in Discord, or alt-tabbed for a moment - and the frame rate drops until you click back. Windows 11 also ignores the timer requests of a window it can't see, which upsets frame pacing in some engines. This opts the game's process out of both, with the documented SetProcessInformation call. Nothing to undo: it ends with the game. A game running as administrator can refuse it; TrayTrigger logs that and carries on.",
+                "profiles/power_throttling",
+                () => config.PowerThrottlingExemptEnabled,
+                v => { config.PowerThrottlingExemptEnabled = v; Save(); }),
             new("Enable HDR",
                 "Turns on Windows' native HDR display mode while the game runs, then reverts every display to its prior setting on exit.",
                 "Uses the same Connecting and Configuring Displays (CCD) API behind Settings > System > Display > HDR - not a registry hack, since HDR is a live per-display color pipeline negotiated with the monitor over EDID rather than a static value. Only touches displays Windows already reports as HDR-capable; a display already in HDR is left alone (and left in HDR on exit) rather than being forced off. A game that doesn't render HDR content well can look washed out or over-bright with this on, so it's your call. Risk: a display currently in Windows' Auto Color Management \"WCG\" mode is also forced to full HDR, but Windows' HDR API can only turn a display fully off on restore, not back to WCG specifically - that display may render in plain SDR after the game closes until Windows re-negotiates WCG on its own (e.g. switching to another app).",
@@ -663,6 +678,14 @@ public class SystemViewModel : ViewModelBase
                 () => config.UnmuteAudioEnabled,
                 v => { config.UnmuteAudioEnabled = v; Save(); },
                 isOptIn: true),
+            new("Frame Cap Just Under Your Refresh Rate",
+                "Caps the frame rate a little under the primary display's refresh rate while the game runs - 138 fps at 144 Hz, 224 at 240 Hz - for a G-SYNC or FreeSync monitor.",
+                "Variable refresh only works while the frame rate stays under the refresh rate. A game that runs past it falls back to V-Sync, with its added input lag, or to tearing. A cap just underneath keeps every frame inside the variable refresh range, and frame times come out more even as well; testing by Blur Busters and NVIDIA found this the lowest-latency way to run G-SYNC. The cap is NVIDIA's own formula, the one Reflex uses: refresh rate minus refresh rate squared over 3600. It's set with the Control Panel's Max Frame Rate on the Global profile, for the length of the session. A Max Frame Rate you set yourself is left alone, and a game with its own cap can still set a lower one. Opt-in because on a screen without variable refresh a cap below the refresh rate judders, and because some competitive players would rather have every frame.",
+                "profiles/frame_cap",
+                () => config.FrameCapEnabled,
+                v => { config.FrameCapEnabled = v; Save(); },
+                isOptIn: true,
+                note: "NVIDIA GPUs only, for a G-SYNC or FreeSync monitor. Uses the primary display's refresh rate."),
         };
     }
 
@@ -708,6 +731,13 @@ public class SystemViewModel : ViewModelBase
                 () => config.TimerResolutionEnabled,
                 v => { config.TimerResolutionEnabled = v; Save(); },
                 note: "Only reaches the game while the permanent \"System Timer Resolution\" tweak (Performance Tweaks tab) is on - turn that on first, then restart once."),
+            new("Resizable BAR for Games NVIDIA Hasn't Decided On",
+                "Turns on NVIDIA's Resizable BAR for the games NVIDIA hasn't tested, while the game runs. Games NVIDIA approved or rejected keep NVIDIA's choice.",
+                "Resizable BAR lets the CPU reach all of the graphics card's memory at once instead of through a 256 MB window. NVIDIA only switches it on for the games it has tested and approved, about 60 of them, and switches it off for the ones it rejected, such as Final Fantasy XVI, Delta Force and Hogwarts Legacy. Every other game gets nothing, though many of them gain: tested gains run from nothing to around 20% (Gears 5) and 46% (Dead Space), averaging a few percent. This sets it on the Global profile for the length of the session. A game's own NVIDIA profile outranks the Global one, so the approved games stay on and the rejected ones stay off; only the undecided games are affected. Some of those may run worse - lower 1% lows or stutter, more often in older games - which is why it's in Aggressive: if a game runs worse, move it to Optimized in Edit Game. Skipped when Resizable BAR is off in the BIOS (Hardware Specs says), and when you've set it on the Global profile yourself.",
+                "profiles/resizable_bar",
+                () => config.ResizableBarEnabled,
+                v => { config.ResizableBarEnabled = v; Save(); },
+                note: "NVIDIA GPUs only, with Resizable BAR on in the BIOS."),
         };
     }
 

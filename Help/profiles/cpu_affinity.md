@@ -21,7 +21,7 @@ On a CPU with nothing to choose - every core alike, or a single-CCD X3D such as 
 
 - Leave it on Default for games that scale across all cores; taking cores away costs them throughput.
 - A game running as administrator, or protected by anti-cheat, can refuse the change. TrayTrigger logs it and the game runs as normal. Some anti-cheat titles refuse it only while they start: set **seconds to wait after the game starts** (try 30) and the change is made then instead.
-- TrayTrigger doesn't touch core parking, Game Bar or AMD's driver. A game left on Default is not changed at all.
+- TrayTrigger doesn't touch Game Bar or AMD's driver, and on a dual-CCD X3D its power plan leaves core parking as Balanced has it, so AMD's driver can still park the frequency CCD. A game left on Default is not changed at all.
 
 ## Details
 

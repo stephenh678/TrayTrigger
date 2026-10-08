@@ -82,6 +82,8 @@ public class HelpContentServiceTests
     [InlineData("mpo_disable")]
     [InlineData("wu_driver_exclude")]
     [InlineData("priority_separation")]
+    [InlineData("nv_shader_cache")]
+    [InlineData("dx_shader_cache")]
     public void EverySystemTweak_HasAHelpTopic(string tweakId)
     {
         // Mirrors the Id values in SystemTweaksService.BuildTweaks. If a tweak is added there,
@@ -105,6 +107,10 @@ public class HelpContentServiceTests
     [InlineData("profiles/timer_resolution")]
     [InlineData("profiles/do_not_disturb")]
     [InlineData("profiles/cpu_affinity")]
+    [InlineData("profiles/nvidia_max_performance")]
+    [InlineData("profiles/power_throttling")]
+    [InlineData("profiles/frame_cap")]
+    [InlineData("profiles/resizable_bar")]
     [InlineData("dlss/override")]
     [InlineData("dlss/indicator")]
     [InlineData("scanner/overview")]

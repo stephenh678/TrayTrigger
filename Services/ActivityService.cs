@@ -33,7 +33,7 @@ public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyLi
 /// <summary>
 /// Activity &amp; History: the plain-language record of what TrayTrigger did and what went wrong,
 /// kept in activity.json beside games.json, and the live list of what needs attention now. See
-/// docs/roadmap.md, "Notifications and Activity &amp; History".
+/// docs/archive/roadmap-2026-10-05.md, "Notifications and Activity &amp; History".
 ///
 /// <para>Events are chosen, never promoted from the log: each is an explicit
 /// <see cref="Record(ActivityLevel, string, string?, string?, string?)"/> at a place in the code

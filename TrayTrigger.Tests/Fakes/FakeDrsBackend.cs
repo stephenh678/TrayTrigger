@@ -20,6 +20,18 @@ public sealed class FakeDrsBackend : IDrsBackend
     /// <summary>Values every profile inherits when it has nothing of its own.</summary>
     public Dictionary<uint, uint> GlobalProfile { get; } = new();
 
+    /// <summary>
+    /// The Global profile as a profile of its own, for the tweaks that write to it (the shader
+    /// cache size). Kept apart from <see cref="GlobalProfile"/>, which only feeds inheritance.
+    /// </summary>
+    public FakeProfile Global { get; } = new() { Name = "Base Profile", IsPredefined = true };
+
+    /// <summary>When set, asking for the Global profile fails with this message.</summary>
+    public string? GlobalError { get; set; }
+
+    /// <summary>The key the Global profile goes under in a session: no executable can have it.</summary>
+    private const string GlobalKey = "|global|";
+
     /// <summary>When set, opening a session fails with this message.</summary>
     public string? OpenError { get; set; }
 
@@ -121,6 +133,21 @@ public sealed class FakeDrsBackend : IDrsBackend
                     HiddenPredefined = new(p.HiddenPredefined)
                 };
             }
+            _profiles[GlobalKey] = new Working
+            {
+                Name = owner.Global.Name,
+                IsPredefined = owner.Global.IsPredefined,
+                Settings = new(owner.Global.Settings),
+                HiddenPredefined = new(owner.Global.HiddenPredefined)
+            };
+        }
+
+        public DrsProfileHandle? GetGlobalProfile(out string? error)
+        {
+            error = _owner.GlobalError;
+            if (error != null) return null;
+            var g = _profiles[GlobalKey];
+            return new DrsProfileHandle(IntPtr.Zero, g.Name, g.IsPredefined);
         }
 
         public DrsProfileHandle? FindProfileForExecutable(string exePathOrFileName, out string? error)
@@ -221,8 +248,15 @@ public sealed class FakeDrsBackend : IDrsBackend
             foreach (string gone in _owner.Profiles.Keys.Where(k => !_profiles.ContainsKey(k)).ToList())
                 _owner.Profiles.Remove(gone);
 
+            var global = _profiles[GlobalKey];
+            _owner.Global.Settings.Clear();
+            foreach (var (id, v) in global.Settings) _owner.Global.Settings[id] = v;
+            _owner.Global.HiddenPredefined.Clear();
+            foreach (var (id, v) in global.HiddenPredefined) _owner.Global.HiddenPredefined[id] = v;
+
             foreach (var (exe, w) in _profiles)
             {
+                if (exe == GlobalKey) continue;
                 // Written back into the same object, so a test holding a profile still sees it.
                 if (!_owner.Profiles.TryGetValue(exe, out var target) || target.Name != w.Name)
                     _owner.Profiles[exe] = target = new FakeProfile { Name = w.Name, IsPredefined = w.IsPredefined };

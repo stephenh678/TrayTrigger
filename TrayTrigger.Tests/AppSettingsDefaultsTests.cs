@@ -37,6 +37,7 @@ public class AppSettingsDefaultsTests
         Assert.False(tweaks.UnmuteAudioEnabled);
         Assert.False(tweaks.HdrEnabled);
         Assert.False(tweaks.DoNotDisturbEnabled);
+        Assert.False(tweaks.FrameCapEnabled);
 
         // ...while the two that are invisible outside the session stay on, which is what Optimized
         // is for.

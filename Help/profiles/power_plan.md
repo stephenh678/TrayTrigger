@@ -2,7 +2,7 @@
 
 ## What it changes
 
-Switches Windows to the "Ultimate Plan - TrayTrigger" power plan when the game launches and back to your previous plan when it exits. The plan keeps the CPU at full clock, disables core parking, and turns off PCIe and USB power saving.
+Switches Windows to the "Ultimate Plan - TrayTrigger" power plan when the game launches and back to your previous plan when it exits. The plan keeps the CPU at full clock, disables core parking, and turns off PCIe and USB power saving. On a dual-CCD Ryzen X3D (7950X3D, 9950X3D, 7900X3D) core parking is left as Balanced has it, because AMD's V-Cache driver parks the cores without the extra cache to keep a game on the ones with it.
 
 ## Why it helps
 

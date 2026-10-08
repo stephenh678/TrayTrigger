@@ -47,10 +47,17 @@ public sealed class GpuCardViewModel : ViewModelBase
     public bool IsPcieNarrowed => Info.IsPcieNarrowed;
     public string PcieWarning => Info.PcieWarning;
 
-    /// <summary>"1.3 GB of 15.9 GB VRAM in use · PCIe 5.0 x16".</summary>
-    public string DetailLine => HasPcie && VramUsageDisplay.Length > 0 ? $"{VramUsageDisplay} · {PcieDisplay}"
-        : HasPcie ? PcieDisplay
-        : VramUsageDisplay;
+    /// <summary>Resizable BAR read as off on a dedicated GPU: the BIOS switch is worth a few percent.</summary>
+    public bool IsResizableBarOff => Info.ResizableBarEnabled == false;
+    public string ResizableBarWarning => Info.ResizableBarWarning;
+
+    /// <summary>"1.3 GB of 15.9 GB VRAM in use · PCIe 5.0 x16 · Resizable BAR on".</summary>
+    public string DetailLine => string.Join(" · ", new[]
+    {
+        VramUsageDisplay,
+        PcieDisplay,
+        Info.ResizableBarEnabled == true ? "Resizable BAR on" : ""
+    }.Where(part => part.Length > 0));
 
     // ---- Live ---------------------------------------------------------------------------------
 

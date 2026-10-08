@@ -12,8 +12,8 @@ namespace TrayTrigger.Services;
 /// <para>Reads are free of consequence; writes are not. Every write goes through
 /// <see cref="Session.SetSetting"/>/<see cref="Session.DeleteSetting"/> and reaches disk only on
 /// <see cref="Session.Save"/>, and callers are expected to have captured the previous value and
-/// its origin first - see <c>DlssOverrideService</c>, which is the only thing that should call
-/// them.</para>
+/// its origin first - see <c>DlssOverrideService</c> and <c>NvidiaGlobalSetting</c>, the only
+/// things that should call them.</para>
 ///
 /// <para>NVAPI ships no import library: every entry point is reached through the single exported
 /// <c>nvapi_QueryInterface</c>, keyed by a published 32-bit function id. An id this driver does not
@@ -37,6 +37,7 @@ public static unsafe partial class NvApi
     private const uint IdDrsCreateProfile           = 0xCC176068;
     private const uint IdDrsDeleteProfile           = 0x17093206;
     private const uint IdDrsRestoreDefaultSetting   = 0x53F0381E;
+    private const uint IdDrsGetCurrentGlobalProfile = 0x617BFF9F;
 
     /// <summary>The two statuses that are answers rather than failures. Everything else is an error.</summary>
     public const int StatusSettingNotFound = -160;
@@ -248,6 +249,15 @@ public static unsafe partial class NvApi
 
         private Session(IntPtr handle) => _handle = handle;
 
+        /// <summary>
+        /// One session at a time in this process. A session is a private copy of the whole database
+        /// and Save writes that copy back, so two open at once - a game's profile being put back on
+        /// one thread while DLSS Override is applied on another - would have the later Save discard
+        /// the earlier one's change. A Monitor, so a thread that already holds a session can open
+        /// another; every caller opens and disposes a session on one thread, with no await between.
+        /// </summary>
+        private static readonly object SessionLock = new();
+
         /// <summary>Opens and loads a session, or returns null with the reason.</summary>
         public static Session? TryOpen(out string? error)
         {
@@ -258,19 +268,31 @@ public static unsafe partial class NvApi
             var load = (delegate* unmanaged[Cdecl]<IntPtr, int>)Lookup(IdDrsLoadSettings);
             if (create == null || load == null) { error = "DRS entry points not exposed by this driver."; return null; }
 
-            IntPtr h;
-            int status = create(&h);
-            if (status != 0) { error = $"NvAPI_DRS_CreateSession: {Describe(status)}"; return null; }
-
-            status = load(h);
-            if (status != 0)
+            Monitor.Enter(SessionLock);
+            bool handedOver = false;
+            try
             {
-                var destroy = (delegate* unmanaged[Cdecl]<IntPtr, int>)Lookup(IdDrsDestroySession);
-                if (destroy != null) destroy(h);
-                error = $"NvAPI_DRS_LoadSettings: {Describe(status)}";
-                return null;
+                IntPtr h;
+                int status = create(&h);
+                if (status != 0) { error = $"NvAPI_DRS_CreateSession: {Describe(status)}"; return null; }
+
+                status = load(h);
+                if (status != 0)
+                {
+                    var destroy = (delegate* unmanaged[Cdecl]<IntPtr, int>)Lookup(IdDrsDestroySession);
+                    if (destroy != null) destroy(h);
+                    error = $"NvAPI_DRS_LoadSettings: {Describe(status)}";
+                    return null;
+                }
+                var session = new Session(h);
+                handedOver = true;
+                return session;
             }
-            return new Session(h);
+            finally
+            {
+                // Released here only when no session came of it; otherwise Dispose releases it.
+                if (!handedOver) Monitor.Exit(SessionLock);
+            }
         }
 
         /// <summary>
@@ -294,6 +316,23 @@ public static unsafe partial class NvApi
             LastStatus = status;
             if (status != 0) { error = Describe(status); return null; }
 
+            profile = h;
+            return DescribeProfile(h, out error);
+        }
+
+        /// <summary>
+        /// The user's Global profile - the layer that applies to every game with no override of its
+        /// own, and what "Manage 3D settings > Global Settings" writes. On current drivers it is
+        /// the one named "Base Profile".
+        /// </summary>
+        public DrsProfileInfo? GetGlobalProfile(out IntPtr profile, out string? error)
+        {
+            profile = IntPtr.Zero;
+            var fn = (delegate* unmanaged[Cdecl]<IntPtr, IntPtr*, int>)Lookup(IdDrsGetCurrentGlobalProfile);
+            if (fn == null) { error = "NvAPI_DRS_GetCurrentGlobalProfile not exposed."; return null; }
+            IntPtr h;
+            int status = fn(_handle, &h);
+            if (status != 0) { error = Describe(status); return null; }
             profile = h;
             return DescribeProfile(h, out error);
         }
@@ -480,10 +519,17 @@ public static unsafe partial class NvApi
         {
             if (_disposed) return;
             _disposed = true;
-            if (_handle == IntPtr.Zero) return;
-            var destroy = (delegate* unmanaged[Cdecl]<IntPtr, int>)Lookup(IdDrsDestroySession);
-            if (destroy != null) destroy(_handle);
-            _handle = IntPtr.Zero;
+            try
+            {
+                if (_handle == IntPtr.Zero) return;
+                var destroy = (delegate* unmanaged[Cdecl]<IntPtr, int>)Lookup(IdDrsDestroySession);
+                if (destroy != null) destroy(_handle);
+                _handle = IntPtr.Zero;
+            }
+            finally
+            {
+                Monitor.Exit(SessionLock);
+            }
         }
     }
 }

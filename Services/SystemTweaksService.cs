@@ -258,6 +258,9 @@ public partial class SystemTweaksService
             IsOptIn = true
         });
 
+        list.Add(BuildNvShaderCacheTweak());
+        list.Add(BuildDxShaderCacheTweak());
+
         // ---------------------------------------------------------------------
         // Category 2: CPU & Scheduling
         // Game Mode thread prioritization and system timer resolution. Power plan, System
@@ -271,7 +274,9 @@ public partial class SystemTweaksService
             Id = "power_plan",
             Name = "\"Ultimate Plan - TrayTrigger\" Power Plan (always on)",
             Category = TweakCategory.CpuAndPower,
-            ShortDescription = "Keeps the CPU at full clock with core parking and PCIe/USB power saving off, all the time - not just during a game session."
+            ShortDescription = (KeepsCoreParking(CpuTopologyService.GetTopology().Layout)
+                    ? "Keeps the CPU at full clock with PCIe/USB power saving off, all the time - not just during a game session. " + X3dCoreParkingNote
+                    : "Keeps the CPU at full clock with core parking and PCIe/USB power saving off, all the time - not just during a game session.")
                 + (SystemInfoService.HasBattery() ? " Laptop detected: this applies on battery too and will cut battery life and raise temperatures." : ""),
             WhyItMatters = "The Windows 'Balanced' plan downclocks cores and parks idle ones during quiet moments, taking 5-15ms to ramp back up. This pins the CPU at 100% min/max state and disables PCIe/USB power-saving states so nothing stutters through a power-state transition. Running this 24/7 (rather than only during a game session via a Performance Profile) trades away idle power savings, heat, and laptop battery life for that headroom at all times, so it's off by default.",
             IsOptimal = ultimatePlanActive,
@@ -527,6 +532,8 @@ public partial class SystemTweaksService
                 "mpo_disable" => SetMpoDisabled(enableOptimal),
                 "wu_driver_exclude" => SetWuDriversExcluded(enableOptimal),
                 "priority_separation" => SetPrioritySeparation(enableOptimal),
+                "nv_shader_cache" => SetNvShaderCacheUnlimited(enableOptimal),
+                "dx_shader_cache" => SetDxShaderCacheKept(enableOptimal),
                 _ => false
             };
 
@@ -571,6 +578,8 @@ public partial class SystemTweaksService
             "wu_driver_exclude" => CheckWuDriversExcluded(),
             "priority_separation" => CheckPrioritySeparationOptimal(),
             "core_isolation" => CheckHvciActive(),
+            "nv_shader_cache" => CheckNvShaderCacheUnlimited(),
+            "dx_shader_cache" => CheckDxShaderCacheKept(),
             _ => false
         };
     }
@@ -601,7 +610,7 @@ public partial class SystemTweaksService
         var recommended = GetAllTweaks().Where(t => t.IsRecommended && !t.IsOptimal).Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
         if (recommended.Count == 0) return;
 
-        foreach (var id in new[] { "mouse_accel", "windowed_opts", "vrr_global", "game_mode", "game_dvr", "game_bar_overlay", "sticky_keys" })
+        foreach (var id in new[] { "mouse_accel", "windowed_opts", "vrr_global", "game_mode", "game_dvr", "game_bar_overlay", "sticky_keys", "nv_shader_cache" })
         {
             if (recommended.Contains(id)) ApplyTweak(id, true);
         }
@@ -612,6 +621,11 @@ public partial class SystemTweaksService
         if (recommended.Contains("telemetry_sweeps")) writes.Add((DataCollectionPolicyKey, "AllowTelemetry", 0, RegistryValueKind.DWord));
         if (recommended.Contains("hags")) writes.Add((GraphicsDriversKey, "HwSchMode", 2, RegistryValueKind.DWord));
         if (recommended.Contains("timer_resolution")) writes.Add((KernelKey, "GlobalTimerResolutionRequests", 1, RegistryValueKind.DWord));
+        if (recommended.Contains("dx_shader_cache"))
+        {
+            CaptureDxShaderCachePrior();
+            writes.Add((DxShaderCacheHandlerKey, AutorunValue, 0, RegistryValueKind.DWord));
+        }
         if (writes.Count > 0)
         {
             bool ok = SetHklmValuesBatch(writes.ToArray());
@@ -632,7 +646,7 @@ public partial class SystemTweaksService
         var ids = tweakIds.ToHashSet(StringComparer.Ordinal);
         if (ids.Count == 0) return;
 
-        foreach (var id in new[] { "mouse_accel", "power_plan", "windowed_opts", "vrr_global", "auto_hdr", "fse_behavior", "game_dvr", "visual_fx", "game_bar_overlay", "sticky_keys" })
+        foreach (var id in new[] { "mouse_accel", "power_plan", "windowed_opts", "vrr_global", "auto_hdr", "fse_behavior", "game_dvr", "visual_fx", "game_bar_overlay", "sticky_keys", "nv_shader_cache" })
         {
             if (ids.Contains(id)) ApplyTweak(id, false);
         }
@@ -652,9 +666,10 @@ public partial class SystemTweaksService
         if (ids.Contains("telemetry_sweeps")) entries.Add(new RegFileEntry(DataCollectionPolicyKey, "AllowTelemetry", null, RegistryValueKind.None, Delete: true));
         if (ids.Contains("mpo_disable")) entries.Add(new RegFileEntry(DwmKey, "OverlayTestMode", null, RegistryValueKind.None, Delete: true));
         if (ids.Contains("wu_driver_exclude")) entries.Add(new RegFileEntry(WindowsUpdatePolicyKey, "ExcludeWUDriversInQualityUpdate", null, RegistryValueKind.None, Delete: true));
+        if (ids.Contains("dx_shader_cache")) entries.Add(RestoreDxShaderCacheEntry());
         if (ids.Contains("priority_separation"))
         {
-            string? prior = TakePrior("priority_separation");
+            string? prior = PeekPrior("priority_separation");
             entries.Add(int.TryParse(prior, out int priorValue)
                 ? new RegFileEntry(PriorityControlKey, "Win32PrioritySeparation", priorValue, RegistryValueKind.DWord, Delete: false)
                 : new RegFileEntry(PriorityControlKey, "Win32PrioritySeparation", 2, RegistryValueKind.DWord, Delete: false));
@@ -672,6 +687,13 @@ public partial class SystemTweaksService
         {
             bool ok = ApplyHklmEntries(entries);
             LoggingService.Info("SystemTweaks", $"Reset: {entries.Count} HKLM change(s) {(ok ? "applied" : "failed - UAC cancelled or reg import error")}.");
+            // The records of what was there go only once it's back: a cancelled administrator
+            // prompt changed nothing, and the next Restore Previous still needs them.
+            if (ok)
+            {
+                if (ids.Contains("dx_shader_cache")) TakePrior("dx_shader_cache");
+                if (ids.Contains("priority_separation")) TakePrior("priority_separation");
+            }
         }
     }
 
@@ -1613,7 +1635,7 @@ public partial class SystemTweaksService
         ("PROCTHROTTLEMIN",  ProcessorSubgroupGuid,  "893dee8e-2bef-41e0-89c6-b55d0929964c", 100), // Minimum processor state: 100%
         ("PROCTHROTTLEMAX",  ProcessorSubgroupGuid,  "bc5038f7-23e0-4960-96da-33abaf5935ec", 100), // Maximum processor state: 100%
         ("SYSCOOLPOL",       ProcessorSubgroupGuid,  "94d3a615-a899-4ac5-ae2b-e4d8f634367f", 1),   // System cooling policy: Active
-        ("CPMINCORES",       ProcessorSubgroupGuid,  "0cc5b647-c1df-4637-891a-dec35c318583", 100), // Core parking: disabled (100% unparked)
+        ("CPMINCORES",       ProcessorSubgroupGuid,  CoreParkingMinCoresGuid,                100), // Core parking: disabled (100% unparked), except on a dual-CCD X3D
         ("PERFBOOSTMODE",    ProcessorSubgroupGuid,  "be337238-0d82-4146-a960-4f3749d470c7", 2),   // Processor performance boost mode: Aggressive
         ("ASPM",             PciExpressSubgroupGuid, "ee12f906-d277-404b-b6da-e5fa1a576df5", 0),   // PCI Express link state power management: Off
         ("USBSELECTSUSPEND", UsbSubgroupGuid,        "48e6b7a6-50f5-4782-a5d4-53bb8f07e226", 0),   // USB selective suspend: Disabled
@@ -1628,9 +1650,17 @@ public partial class SystemTweaksService
     {
         if (!Guid.TryParseExact(schemeGuid, "D", out _)) return false;
 
+        bool keepParking = KeepsCoreParking(CpuTopologyService.GetTopology().Layout);
+
         bool allOk = true;
         foreach (var (name, subgroup, setting, desired) in UltimatePlanSettings)
         {
+            if (keepParking && setting == CoreParkingMinCoresGuid)
+            {
+                allOk &= CopyBalancedCoreParking(schemeGuid);
+                continue;
+            }
+
             // Decide the value up front rather than after a rejection. These are not universal -
             // CPMINCORES is a percentage whose ceiling is a property of the processor, and
             // Dylan's refused 100 on all four passes - and the platform publishes its own limits,
@@ -1669,6 +1699,115 @@ public partial class SystemTweaksService
         }
         return allOk;
     }
+
+    private const string CoreParkingMinCoresGuid = "0cc5b647-c1df-4637-891a-dec35c318583";
+
+    /// <summary>
+    /// A Ryzen with 3D V-Cache on one of two CCDs (7950X3D, 9950X3D, 7900X3D) keeps a game on the
+    /// cache CCD by parking the other one: AMD's V-Cache driver asks Windows to once Game Bar says a
+    /// game is running. A plan that holds every core unparked takes that away, and any game
+    /// TrayTrigger isn't pinning with CPU Cores is free to land on the frequency CCD, where
+    /// cache-hungry games lose the most. On that layout the plan leaves core parking as Balanced
+    /// has it and changes everything else as usual.
+    /// </summary>
+    internal static bool KeepsCoreParking(CpuCoreLayout layout) => layout == CpuCoreLayout.VCacheMultiCcd;
+
+    /// <summary>Said wherever the plan is described, on the PCs where it leaves core parking alone.</summary>
+    internal const string X3dCoreParkingNote =
+        "Core parking stays as Balanced has it: on this Ryzen X3D, AMD's V-Cache driver parks the cores without the extra cache so a game stays on the ones with it.";
+
+    /// <summary>
+    /// Writes Balanced's own core parking values into the plan, plugged in and on battery
+    /// separately, since they can differ. Skipping the write would not do: the plan is a copy of
+    /// Ultimate Performance, which already holds every core unparked.
+    /// </summary>
+    private static bool CopyBalancedCoreParking(string schemeGuid)
+    {
+        var domain = ReadPowerSettingDomain(ProcessorSubgroupGuid, CoreParkingMinCoresGuid);
+        if (domain == null)
+        {
+            LoggingService.Info("SystemTweaks", "Power setting CPMINCORES is not present on this system; skipped.");
+            return true;
+        }
+
+        // Balanced unreadable: the lowest value lets Windows park cores, which is all AMD's driver needs.
+        int fallback = ResolveAcceptableValue(domain.Value, 0) ?? 0;
+        int ac = ReadSchemeValue(BalancedPlanGuid, CoreParkingMinCoresGuid, ac: true) ?? fallback;
+        int dc = ReadSchemeValue(BalancedPlanGuid, CoreParkingMinCoresGuid, ac: false) ?? fallback;
+
+        LoggingService.Info("SystemTweaks", $"Power setting CPMINCORES: kept at Balanced's {ac}% plugged in, {dc}% on battery, so AMD's V-Cache driver can park the frequency CCD while a game runs.");
+
+        bool ok = true;
+        foreach (var (verb, value) in new[] { ("/setacvalueindex", ac), ("/setdcvalueindex", dc) })
+        {
+            if (RunPowercfgChecked($"{verb} {schemeGuid} {ProcessorSubgroupGuid} {CoreParkingMinCoresGuid} {value}")) continue;
+            LoggingService.Warn("SystemTweaks", $"powercfg {verb} CPMINCORES={value} failed, though this system advertises {domain}.");
+            ok = false;
+        }
+        return ok;
+    }
+
+    /// <summary>
+    /// The X3D change reaches a plan whenever it is applied - but a plan left on all the time from
+    /// the System page may not be applied again for months, and one made by an earlier version
+    /// still holds every core unparked. Run once per start, off the UI thread: on a dual-CCD X3D,
+    /// any "Ultimate Plan - TrayTrigger" whose core parking differs from Balanced's gets
+    /// Balanced's now, and is re-activated if it's the active plan so Windows picks the change up.
+    /// Elsewhere it returns at once.
+    /// </summary>
+    internal static void KeepX3dCoreParkingInExistingPlans()
+    {
+        try
+        {
+            if (!KeepsCoreParking(CpuTopologyService.GetTopology().Layout)) return;
+
+            int? balancedAc = ReadSchemeValue(BalancedPlanGuid, CoreParkingMinCoresGuid, ac: true);
+            int? balancedDc = ReadSchemeValue(BalancedPlanGuid, CoreParkingMinCoresGuid, ac: false);
+            string? active = GetActivePowerSchemeGuid();
+            foreach (string plan in FindAllUltimatePlanGuids())
+            {
+                // Balanced unreadable: a plan that still unparks everything is the one to fix.
+                bool differs = balancedAc is int ac && balancedDc is int dc
+                    ? ReadSchemeValue(plan, CoreParkingMinCoresGuid, ac: true) != ac || ReadSchemeValue(plan, CoreParkingMinCoresGuid, ac: false) != dc
+                    : ReadSchemeValue(plan, CoreParkingMinCoresGuid, ac: true) == 100;
+                if (!differs) continue;
+
+                LoggingService.Info("SystemTweaks", $"'{UltimatePlanName}' ({plan}) still holds every core unparked on this Ryzen X3D; giving it Balanced's core parking.");
+                CopyBalancedCoreParking(plan);
+                if (string.Equals(plan, active, StringComparison.OrdinalIgnoreCase)) RunPowercfg($"/setactive {plan}");
+            }
+        }
+        catch (Exception ex) { LoggingService.Warn("SystemTweaks", $"Checking the Ultimate plan's core parking failed: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// One processor setting's value in a power plan, through the power API rather than
+    /// "powercfg /query", which prints nothing for a hidden setting such as CPMINCORES. The API
+    /// returns the effective value, the plan's default included, where the registry holds only overrides.
+    /// </summary>
+    private static int? ReadSchemeValue(string schemeGuid, string settingGuid, bool ac)
+    {
+        try
+        {
+            var scheme = Guid.Parse(schemeGuid);
+            var subgroup = Guid.Parse(ProcessorSubgroupGuid);
+            var setting = Guid.Parse(settingGuid);
+            uint value;
+            uint status = ac
+                ? PowerReadACValueIndex(IntPtr.Zero, in scheme, in subgroup, in setting, out value)
+                : PowerReadDCValueIndex(IntPtr.Zero, in scheme, in subgroup, in setting, out value);
+            if (status == 0) return (int)value;
+            LoggingService.Verbose("SystemTweaks", $"Reading the {(ac ? "AC" : "DC")} value of {settingGuid} in plan {schemeGuid} failed with {status}.");
+        }
+        catch (Exception ex) { LoggingService.Swallowed("SystemTweaks", ex, "reading a power plan value"); }
+        return null;
+    }
+
+    [LibraryImport("powrprof.dll")]
+    private static partial uint PowerReadACValueIndex(IntPtr rootPowerKey, in Guid schemeGuid, in Guid subGroupOfPowerSettingsGuid, in Guid powerSettingGuid, out uint acValueIndex);
+
+    [LibraryImport("powrprof.dll")]
+    private static partial uint PowerReadDCValueIndex(IntPtr rootPowerKey, in Guid schemeGuid, in Guid subGroupOfPowerSettingsGuid, in Guid powerSettingGuid, out uint dcValueIndex);
 
     /// <summary>
     /// What one power setting will accept, as the platform itself publishes it under

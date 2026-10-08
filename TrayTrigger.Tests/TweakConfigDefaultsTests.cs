@@ -17,6 +17,9 @@ public class TweakConfigDefaultsTests
         Assert.False(tweaks.HdrEnabled);
         Assert.False(tweaks.DoNotDisturbEnabled);
         Assert.False(tweaks.UnmuteAudioEnabled);
+        Assert.True(tweaks.NvidiaMaxPerformanceEnabled);
+        Assert.True(tweaks.PowerThrottlingExemptEnabled);
+        Assert.False(tweaks.FrameCapEnabled);
     }
 
     [Fact]
@@ -28,6 +31,7 @@ public class TweakConfigDefaultsTests
         Assert.True(tweaks.AboveNormalPriorityEnabled);
         Assert.True(tweaks.TimerResolutionEnabled);
         Assert.False(tweaks.DefenderExclusionEnabled);
+        Assert.True(tweaks.ResizableBarEnabled);
     }
 
     [Fact]

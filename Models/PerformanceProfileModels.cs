@@ -41,6 +41,27 @@ public class OptimizedProfileTweakConfig
     /// surprise the first time. Opt in and it stops being a surprise.
     /// </summary>
     public bool UnmuteAudioEnabled { get; set; }
+
+    /// <summary>
+    /// NVIDIA's "Power management mode: Prefer maximum performance" on the driver's Global profile
+    /// for the length of the session, so the GPU doesn't drop its clocks in lighter scenes. Does
+    /// nothing without an NVIDIA driver.
+    /// </summary>
+    public bool NvidiaMaxPerformanceEnabled { get; set; } = true;
+
+    /// <summary>
+    /// A frame cap just under the primary display's refresh rate (NVIDIA's Max Frame Rate) for the
+    /// length of the session, to stay inside a G-SYNC/FreeSync range. Defaults to false: on a
+    /// screen without variable refresh a cap below the refresh rate judders, and some players want
+    /// every frame they can get. Never replaces a Max Frame Rate the user set themselves.
+    /// </summary>
+    public bool FrameCapEnabled { get; set; }
+
+    /// <summary>
+    /// Opts the game's process out of Windows' power throttling (EcoQoS) and out of Windows 11
+    /// ignoring its timer requests while its window is hidden. Dies with the process.
+    /// </summary>
+    public bool PowerThrottlingExemptEnabled { get; set; } = true;
 }
 
 /// <summary>
@@ -69,6 +90,14 @@ public class AggressiveProfileTweakConfig
     /// is on; TrayTrigger's own request is released when the last session ends.
     /// </summary>
     public bool TimerResolutionEnabled { get; set; } = true;
+
+    /// <summary>
+    /// NVIDIA Resizable BAR on the Global profile for the length of the session, which reaches only
+    /// the games NVIDIA hasn't decided on: a game's own profile, where NVIDIA records the ones it
+    /// approved or rejected, outranks it. Does nothing without an NVIDIA driver, or with Resizable
+    /// BAR off in the BIOS.
+    /// </summary>
+    public bool ResizableBarEnabled { get; set; } = true;
 }
 
 /// <summary>
@@ -91,6 +120,18 @@ public class PerGameProfileSnapshot
     /// <summary>True if the path was already excluded before we touched it - if so, restoring
     /// must leave it alone rather than removing an exclusion the user (or another tool) set.</summary>
     public bool DefenderExclusionWasPreExisting { get; set; }
+}
+
+/// <summary>
+/// One NVIDIA driver setting a session wrote to the Global profile: which, the value written - which
+/// restore checks is still there before putting anything back - and what was there before, as a
+/// <see cref="Services.NvidiaGlobalSetting"/> token.
+/// </summary>
+public class NvidiaSettingSnapshot
+{
+    public uint SettingId { get; set; }
+    public uint Written { get; set; }
+    public string? Previous { get; set; }
 }
 
 /// <summary>
@@ -157,6 +198,13 @@ public class PerformanceProfileSessionSnapshot
     /// <summary>A timer-resolution request is held by this TrayTrigger process. Nothing to recover
     /// after a crash (the request dies with the process) - tracked so the last session releases it.</summary>
     public bool TimerResolutionRequested { get; set; }
+
+    /// <summary>
+    /// The NVIDIA Global-profile settings this session wrote, in the order written: power
+    /// management mode, frame cap, Resizable BAR. Machine-wide, so first session applies and last
+    /// restores, like the power plan.
+    /// </summary>
+    public List<NvidiaSettingSnapshot> NvidiaSettings { get; set; } = new();
 
     public List<PerGameProfileSnapshot> PerGameSnapshots { get; set; } = new();
 }

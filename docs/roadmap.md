@@ -1,504 +1,298 @@
-# Roadmap / Ideas Backlog
+# Roadmap
 
-Notes on things discussed but not yet implemented, kept here so they survive between sessions.
+Started 2026-10-05. The previous roadmap is at
+[archive/roadmap-2026-10-05.md](archive/roadmap-2026-10-05.md), including what shipped up to 1.5.0.
 
-## Open
+**Nothing below is decided.** The owner asked for the research to be redone without the earlier
+decisions. Declines and the "TrayTrigger is a launcher" scope rule in the archived roadmap are
+history, not constraints, until the owner restates them. This file holds the evidence and a
+proposed roadmap; decisions get recorded here as they are made, with a date.
 
-### Notifications and Activity & History (owner's design, built 2026-10-04, released in 1.5.0)
+## How this was researched (2026-10-05)
 
-**As built.** `Services/ActivityService.cs` (the history in `activity.json`, live states, grouping),
-`ViewModels/ActivityViewModel.cs` and `Views/ActivityView.xaml` (the page), `App.Activity.cs` (the
-after-game notification, tooltip line, tray menu row, toast click, startup tweak check),
-`Help/general/activity.md`. Debug checks: `--screenshot-activity <png> [empty] [expanded]` and
-`--test-activity <txt>`. Where it differs from the design below, and why:
-- **One live state in v1:** a profile setting that couldn't be put back (Critical, Restore Previous
-  retries it; `PerformanceProfileService` now reads the power plan back and checks each restore's
-  result). A System tweak Windows changed back is a one-time Problem entry instead of a state
-  (`AppSettings.TweaksAppliedByTrayTrigger`): the user may have changed it on purpose, and a state
-  would keep the dot lit with nothing to dismiss it. Display refresh rate, PCIe lanes, games on a
-  hard drive and not-installed games stay on their own pages, for the same reason - often
-  deliberate or permanent.
-- **Not installed / installed again** are Activity entries per pass (`GameEntry.LastKnownInstalled`;
-  a first check after an update only remembers, so nothing floods).
-- **A scan "finds", it doesn't "add":** Scan for Games always ends in the picker, so the entry is
-  "The startup scan found N new games" and the setting is "Notify me when a scan finds new games",
-  under "Automatically scan on startup".
-- **Games the user adds are recorded** (owner's call after testing the beta): an empty History
-  right after adding games looked broken. One quiet Activity line per import ("Added Elden Ring
-  and Hades (Steam)"), no toast, no dot - an exception to "not recorded: what the user just did".
-- **Play sessions are recorded** (owner's call): "Played Elden Ring · 2h 17m", merged with the
-  profile line ("· Aggressive profile put back", level Change) so one game exit is one row, and
-  grouped per game (`played|{gameId}`) so the page stays a history, not a log of every launch.
-  The owner's rule: a history of important activities, not a logfile, and alerts on critical things.
-- **Tools closing as set aren't recorded** (owner's call, by that rule): only a tool that didn't
-  start or couldn't be closed is, as a Problem.
-- **Posters and categories found aren't recorded** (owner's call): background housekeeping,
-  visible in the Library.
-- **DLSS Override set again before launch isn't recorded** (owner's call): upkeep. Another app's
-  change, or the driver refusing it, is a Problem.
-- **Every Performance Profile and tweak change is recorded** (owner's call): a game's profile, CPU
-  Cores and DLSS Override (Edit Game, card menu, batch; DLSS's Restore All), a tier's tweak on the System page, the new-game profile, and what Reset to
-  Defaults changed in them (`PerformanceActivity`), alongside System tweaks applied or restored. These
-  decide what TrayTrigger changes on the PC, so they're history even when the user made them.
-- **Every row has a level badge** (owner's choice, mockup option C): the System page's badge style,
-  CRITICAL solid red like OPTIMAL, PROBLEM amber like RESTART, CHANGE blue, ACTIVITY grey like
-  OPT-IN, each with an icon. Replaces "an uppercase tag only where something needs flagging": with
-  more entries the user couldn't tell them apart, and solid-versus-tinted keeps CRITICAL standing out.
-- **FIXED** (owner's call): when Restore Previous puts everything back, the Critical entries get a
-  green FIXED badge (`ActivityEntry.FixedUtc`, `ActivityService.MarkFixed`) and stop lighting the
-  bell, instead of a separate "Put back" row; a partial fix still records what was put back. By
-  entry: only the Critical entries this run reported, never an earlier run's that Restore Previous
-  didn't retry, and a row with one still unfixed shows no FIXED.
-- **More Critical and Problem entries** (owner's call): a damaged crash-recovery snapshot is Critical
-  (it was read as "nothing to restore" and only logged); a game that couldn't be resumed, DLSS
-  Override not put back when a game was removed, and an unreadable settings/library/tools file are
-  Problems.
-- **Tray menu row** sits first under the search box, which stays the first row so typing works.
-- **Existing toasts:** "An error was logged" became a Problem entry; Suspend's and Close Game's
-  stay immediate, being the answer to something the user just did.
+- **Read directly:** the code, GitHub star counts and issue trackers, vendor forums, tech press.
+- **Reddit:** cannot be read directly (web search and both browsers refuse reddit.com). It was
+  searched through the gemini-search MCP server. Those findings are Gemini's summaries of threads,
+  not first-hand reads, and carry no vote counts. Several summaries leaned on YouTube and blog
+  sources rather than Reddit; those are marked "thin" below.
+- **Searches that returned nothing:** refresh rate on its own (3 tries), playtime tracking and
+  stats (2 tries), whether users refuse unsigned tools (1 try, 1 thin retry). No result is not
+  evidence of no demand.
 
-**The gap.** Outside the Debug/verbose log, TrayTrigger tells the user things through channels
-that are gone or unseen when it matters: the status bar line (overwritten, and invisible while the
-window is hidden, which is most of the time during a game), the launch popup (launch only), tray
-toasts (Windows suppresses them in fullscreen games and under Do Not Disturb, which TrayTrigger's
-own profile can turn on) and dialogs (wrong mid-game). The log has roughly 290 Warn/Error calls
-written for diagnosis, not for players. TrayTrigger is more than a launcher - profiles, system
-tweaks, tools, scripts, hardware checks - so problems don't all belong to one game, and nobody
-should have to visit Library, Tools and System to find out whether something is wrong.
+## Demand by GitHub stars (read 2026-10-05)
 
-**Two kinds of thing, handled differently.**
-- **States: wrong right now.** Power plan still High Performance after a game, a tweak Windows
-  reset, a display below its fastest refresh rate, a newer GPU driver, a game not installed. Worked
-  out live from the app's state, never stored as a message: shown until fixed, gone by itself when
-  fixed. Nothing to dismiss.
-- **Events: happened once.** A post-exit script failed at 21:04, a tool didn't start, a profile was
-  applied and restored, a scan added games. Recorded in History.
+Stars measure interest in a job, not in a feature TrayTrigger would build the same way.
 
-**One place: a bell at the bottom of the sidebar, with Exit.** Below the sidebar's bottom divider,
-grouped with the power button as the tooling area, apart from the five sections (which are places
-to go). It does two jobs:
-1. **Notification.** A small red dot, like the Library filter button's dot, while anything needs
-   the user: a current state, or a problem recorded since the page was last opened. Shown with the
-   sidebar collapsed. It is the only indicator: no dots on the other sections, one place to learn.
-   The count is in the page header, not on the bell.
-2. **The way into History.** Clicking it opens the page.
+| Job | Tool | Stars |
+|---|---|---|
+| Windows debloat and tweaks | WinUtil / Win11Debloat / Atlas OS / Optimizer | 63.6k / 58.0k / 21.8k / 18.3k |
+| Game streaming host | Sunshine / Apollo | 41.9k / 11.2k |
+| Fan curves | Fan Control | 21.0k |
+| Laptop and handheld control | G-Helper / Universal x86 Tuning Utility / Handheld Companion | 15.5k / 2.9k / 1.7k |
+| Window scaling | Magpie | 15.3k |
+| Library front end | Playnite / Heroic | 14.1k / 12.3k |
+| Upscaler swap and override | OptiScaler / DLSS Swapper | 11.6k / 7.6k |
+| Audio volume and device | EarTrumpet / SoundSwitch | 11.4k / 3.4k |
+| Monitor brightness | Twinkle Tray | 9.1k |
+| NVIDIA per-game driver settings | NVIDIA Profile Inspector | 7.3k |
+| Borderless window | Borderless Gaming (last push Sept 2025) | 6.6k |
+| Save backup | Ludusavi | 6.4k |
+| Games into Steam as shortcuts | Steam ROM Manager / BoilR | 2.6k / 1.9k |
+| Frame-time measurement | PresentMon / CapFrameX | 2.6k / 1.3k |
+| Suspend a game | Nyrna | 1.3k |
+| Display mode for streaming sessions | ResolutionAutomation / MonitorSwapAutomation | 1.0k / 0.6k |
+| Per-app display, HDR and audio | AutoActions (last release March 2025) | 0.8k |
 
-**The page: "Activity & History"**, built to the same anatomy as Tools, System & Performance and
-Settings (mocked up 2026-10-04, checked against screenshots of the current pages):
-- **Header:** the title, a muted one-line subtitle ("What needs your attention, and what
-  TrayTrigger changed and put back"), and status text at the top right like every page has ("5
-  tools", "Saved in real time"): "1 needs attention" in red, or "No actions needed" with a check.
-- **Tab strip:** All / Problems / Changes / Activity, the same segmented control as the other pages.
-- **Search:** the full-width search box the Library and Tools pages use ("Search activity by game,
-  tool, or what happened...").
-- **Section labels** in the blue uppercase style with an icon, as on System: "NEEDS ATTENTION",
-  "RECENT · last 90 days".
-- **Rows inside cards** with dividers, as System groups its tweaks. No loose rows on the page.
-- **NEEDS ATTENTION** only when something is wrong: the current states, one row each, with its fix
-  button in the existing outline style ("Restore Previous", "Open Display Settings", "Edit Game",
-  "Get Driver"). Gone when empty; the header then says "No actions needed".
-- **RECENT:** newest first, one plain line per entry and its time ("Today 22:31"). An uppercase tag
-  only where something needs flagging, used as sparingly as MISSING or NOT INSTALLED: CRITICAL on a
-  state, a count ("7 TIMES") on a repeated problem. Everything else is plain text.
-- **Clicking a row** expands it: each time it happened, "Show in log", and Copy details. Nothing
-  extra shows until asked.
-- **Nothing to manage.** No unread state per entry, no dismiss, no clear: opening the page clears
-  the dot's "since last opened" part, states clear themselves when fixed, and entries go by
-  themselves after about 90 days. Included in Copy Diagnostic Info and Save Report as "Recent
-  problems", which is why the page has no copy-everything button of its own.
+## Gaps in existing tools, by priority (2026-10-05)
 
-**Toasts.** Never during a game. After the last game exits, one toast for anything serious ("Elden
-Ring's post-exit script failed", "The power plan couldn't be put back"), clicking it opens Activity & History.
-The tray icon's tooltip gets a line, "2 things need attention", and the tray menu a first row while
-there are some, opening the page. One setting only: **"Notify me when a scan adds games"**, a toast
-as well as the History entry, the startup scan included.
+Ranked by how strong the evidence of demand is and how badly existing tools serve the need. This
+is a ranking of gaps, not a build order. The last column maps each gap to the proposed roadmap
+below. As of 2026-10-05 the owner has not decided what to work on next.
 
-**Levels.** Critical (the PC was left changed), Problem (something didn't do what you asked),
-Change (what TrayTrigger changed and put back - the record that makes "puts back what it changed"
-checkable), Activity (what it did on its own in the background). Not recorded: the result of
-something the user just did and is looking at (a scan they started, a setting they changed).
+| # | Gap | Where existing tools fall short | Evidence | TrayTrigger today | Covered by the proposed roadmap? |
+|---|---|---|---|---|---|
+| 1 | Per-game HDR that puts itself back | Windows has no per-game switch. Games leave HDR on after closing. AutoActions is unmaintained and crashes. Special K risks bans. Colour profiles break after a toggle on 24H2/25H2. | Strongest found | Partly: turns HDR on and restores it, but only for games with the option ticked | **Yes.** 1.6: finish per-game HDR (restore after any game, colour-profile fix, Auto HDR per game) |
+| 2 | Settings that apply however the game is started | Each launcher only handles its own games. Automation tools react after the game is running, too late for HDR, resolution or audio. Playnite needs hand-written scripts. | Strong (structural, plus Reddit asks for Stream Deck and shortcut launching) | No: only games started from TrayTrigger | **Yes for Steam, GOG and shortcuts; partly for the rest.** 1.6: launch-in and desktop shortcuts, Steam/GOG wrapper. 2.0: late attach, with a reduced profile, for games started from Epic, EA, Ubisoft, Battle.net or Xbox |
+| 3 | Display and audio set up for a game or a TV, then restored | AutoActions fails to return to native resolution. DisplayFusion is paid. Older NirSoft scripts fail on newer Windows. Sunshine leaves the display changed after a stream. | Strong for resolution, audio device and TV; none found for refresh rate alone | No | **Mostly.** 1.7: display mode per game, audio device per game, Play on the TV with a Sunshine/Apollo recipe. Not covered: turning other monitors off |
+| 4 | Changes that undo themselves, including after a crash | Razer Cortex leaves services stopped and PCs frozen. Process Lasso rules persist and get forgotten. Tweak scripts are permanent. | Strong | Yes: this is the core of the app | **Already filled, and strengthened.** 1.6: "Restore everything now". Engineering track: the snapshot extended to display mode and audio device before 1.7 |
+| 5 | Honesty about anti-cheat | Process Lasso gets blocked or kicked with no explanation. AutoHotkey stops some games launching. OptiScaler and Special K risk bans. Handheld Companion's driver is flagged by Defender. | Strong | Partly: Suspend refuses protected games; nothing reports a blocked change | **Yes.** 1.6: anti-cheat reporting, Vanguard and Ricochet detection, the detector consulted for profiles |
+| 6 | Proof that a tweak helped | Boosters are called placebo. No tool ties FPS and 1% lows to the settings in use. CapFrameX is manual. | Medium: the community insists on 1% lows; demand for automatic comparison is inferred | No | **Partly.** 2.0: FPS and 1% lows per session, only when PresentMon is installed. Not covered: an automatic before-and-after comparison |
+| 7 | One light place for every store, no plugins or logins | Playnite takes 30 seconds to 5 minutes to start with themes and extensions. GOG Galaxy logins expire. Launchers stay running after the game. | Strong | Yes | **Already filled; no new feature.** Engineering track: measured start-up and memory, and the Steam poll replaced by an event |
+| 8 | Per-game GPU driver settings in one place | NVIDIA splits them across two tools, hides some, and they need re-checking after driver updates. AMD users have no safe automation for FSR 4. | Medium (the NVIDIA summary cited mostly YouTube) | Partly: DLSS Override and global NVIDIA settings | **Yes for NVIDIA, no for AMD.** 2.0: per-game NVIDIA settings. AMD parity is cut until it can be tested |
+| 9 | Multi-monitor comfort | The cursor escapes to the second screen. No built-in way to dim other screens. Borderless Gaming is stale. | Medium to strong for the cursor; medium for dimming | No | **Yes.** 1.8: keep the cursor in the game, dim other monitors (both built on the foreground watcher). Not covered: a borderless window per game |
+| 10 | Save backup inside the launcher | Many games have no cloud saves. Ludusavi is a separate tool. GameSave Manager is slow and closed-source. | Medium to strong | No | **Yes, if Ludusavi is installed.** 2.0: save backup through Ludusavi |
+| 11 | Hardware profiles per game | MSI Afterburner can't switch profiles per game. Fan curves live in another tool. | Medium | Partly: Tools start with games, but with the same arguments for every game | **Yes, for tools that take a command-line profile.** 1.7: per-game arguments for Tools |
+| 12 | Power behaviour by battery or mains, without a driver | Handheld Companion needs a flagged kernel driver. Armoury Crate is called bloat. | Medium | No | **Partly.** 1.6: battery rule for profiles. Not covered: TDP control, which is cut |
+| 13 | Core assignment without the confusion | Process Lasso's CPU Sets are hard to set up, and the free version nags. | Medium and shrinking: Process Lasso added a one-click button, and Windows 11 24H2 scheduling improved | Yes | **Already filled; no new feature.** 1.6's anti-cheat reporting will say when a core setting was blocked |
+| 14 | Mute other apps while playing | EarTrumpet and SoundSwitch are manual. | Weak: asserted by Gemini and the Antigravity review, not found in the searches | No | **Yes.** 1.8: mute other apps while the game has focus |
+| 15 | Background apps closed for a game and brought back after | Razer Cortex is distrusted and leaves PCs frozen. Scripts close apps but nothing brings them back after a crash. Windows Update downloads mid-game are a named stutter complaint. | Medium: found in both research rounds; the second leaned on blogs | Partly: a bundled script, with no crash recovery | **Not in the four releases.** See "Additions" below |
 
-**Events, checked against the code (2026-10-04).** *There* = already detected; *Partly* /
-*Logged only* / *Needs* = what's missing.
+Gap 15 was added after the ranking; by evidence it would sit around tenth.
 
-States:
-- A profile tweak not restored. *Partly:* `PerformanceProfileService` restores per tweak and
-  logs; the restore methods need to report a failure upward.
-- Elevated tweaks left for the next start (Windows shutdown, no prompt possible). *There:*
-  `anythingDeferred`.
-- A system tweak no longer in the state TrayTrigger left it. *There:* the System page reads each
-  tweak's real state.
-- Display below its fastest refresh rate, GPU on fewer PCIe lanes, games on a hard drive. *There:*
-  the 1.4.8 hardware warnings.
-- Newer NVIDIA driver. *There, on request only:* the check runs when the user clicks.
-- Games NOT INSTALLED or MISSING. *There:* `GameAvailability`.
+**What the proposed roadmap leaves open**
 
-Problems:
-- A pre-launch script that failed or timed out, own or default. *There:* `PreLaunchScriptResult`.
-- A post-exit script that failed. *Logged only:* the result needs surfacing.
-- A tool that didn't start with a game. *There:* `CompanionToolService.StartFailed` (a declined
-  administrator prompt deliberately isn't reported).
-- A tool that couldn't be closed. *There:* `EndResult.StillRunning`.
-- DLSS Override refused or conflicting. *There:* `DlssOverrideService`.
-- An edited example script set aside as `.previous`. *Logged only:* `ScriptLibraryService.SetAside`.
-- The existing "An error was logged" toast (`App.xaml.cs`, L-24).
+- AMD graphics users (gap 8): nothing until someone can test on AMD hardware.
+- Games started from a non-Steam launcher's own Play button (gap 2): they get only the reduced
+  late-attach profile, and not until 2.0.
+- Turning other monitors off (gap 3).
+- A borderless window per game (gap 9) and built-in background apps (gap 15): not in the four
+  releases, but listed under "Additions" with a suggested place.
+- Before-and-after comparison (gap 6): the numbers are recorded per session; comparing them is
+  left to the user.
+- TDP control (gap 12): cut because it needs a kernel driver.
 
-Changes:
-- Profile applied and restored, per game. *There:* `BeginGameSession` / `EndGameSession`.
-- Crash recovery restored settings at startup. *There:* `RecoverFromCrashIfNeeded`.
-- A game left suspended, resumed at startup. *There:* `ResumeLeftSuspended`.
-- System tweaks applied or reverted from the System page. *There.*
-- Tools started and closed with games. *There.*
+## Proposed roadmap (2026-10-05, awaiting the owner's decisions)
 
-Activity:
-- The startup scan added games. *Needs* the scan to return what it added.
-- Games tagged not installed or found again since last time. *Needs* the last known state stored.
-- Posters or game info caught up after a key was added. *There.*
-- Playtime recorded for a game still running at exit. *There:* `RecordPlaytimeOnShutdown`.
-- An example script retired. *Logged only:* `RetireDropped`.
-- A backup restored. *There:* the restore result.
-- Updated to a new version. *Needs* the last-run version stored.
+Worked out in three rounds between Claude (with the code open) and Gemini (`gemini_ask`,
+gemini-3.1-pro-preview, reasoning only), starting from the research above and a second review the
+owner ran in Antigravity. Both planners agree on everything in this section. It is a proposal:
+several items reverse the archived scope rule, and those are listed under "Decisions for the owner".
 
-**Existing toasts to route through it:** Suspend's messages, Close Game's result, the error toast
-and `MainViewModel.RequestTrayNotification`.
+### The launch model
 
-**Cost.** A medium feature: the history store, the Activity & History page (list, search, tabs, grouping),
-the live status for the top of the page and the dot, the after-game toast, and recording at 12
-to 15 places, shared by History and the toasts - one system, not two. The risk is scope creep; the
-rules above (no per-entry state, chosen events, states derived not stored) are what hold it.
+Today a session exists only for a game started from TrayTrigger's own tray menu, hotkeys or
+window. The proposal is three ways in, in order of preference:
 
-**Considered and dropped:** an inbox with read/unread and dismiss per entry (a habit users must
-keep up, or a badge they learn to ignore), status dots on every sidebar section (more places to
-look), and a slide-in panel (no such surface exists in TrayTrigger; Activity & History is a page, built like the others).
+1. **Launch-in:** `TrayTrigger.exe --launch <game>`, and a "Create desktop shortcut" command that
+   uses it. Covers Stream Deck, Playnite, Big Picture, Sunshine and the Start menu.
+2. **Wrapper for Steam and GOG Galaxy:** `"TrayTrigger.exe" --wrap %command%` as the game's launch
+   option. Steam hands the game's command to TrayTrigger, which applies the profile, starts the
+   game and restores afterwards. This keeps the head start that HDR, display mode and audio device
+   need, for games started from Steam itself.
+   - The wrapper is a second instance that passes the command to the running one over a named
+     pipe, then stays alive until the game exits so Steam shows the game as running.
+   - If the pipe breaks (Steam's Stop button), the running instance restores at once.
+   - TrayTrigger offers "Copy Steam launch option"; it never edits Steam's files.
+   - Epic, EA, Ubisoft, Battle.net and Xbox have no equivalent. They use shortcuts or late attach.
+3. **Late attach (optional, last):** notice a library game that was started elsewhere and attach
+   a reduced profile. Fixed rules:
+   - Off by default; turned on by the user, per game or for all games.
+   - One out-of-context `EVENT_SYSTEM_FOREGROUND` hook. Never `EVENT_OBJECT_CREATE`.
+   - Applies only what is safe on a running game: power plan, CPU Cores, priority, throttling
+     exemption, Do Not Disturb, timer, Tools, mute-others, exit restore, post-exit script.
+   - Never changes HDR, display mode or audio device. Never runs a pre-launch script.
+   - Activity & History says the session was attached late and what was skipped.
 
-### Tools started per game (proposed 2026-10-04, parked by the owner)
+**Refused:** Image File Execution Options (anti-cheats treat a debugger key as tampering), and
+anything needing elevation to watch processes (WMI process traces, kernel ETW).
 
-Today a tool with "Start when I launch a game" starts with every game. Starting SimHub only for
-racing games needs the Example-StartCompanionApps.ps1 script, which is kept for exactly that in
-1.4.8 (reworked to close politely, with an opt-in "force"). The owner found this proposal too
-involved for 1.4.8-beta.2; the per-game script covers it for now.
+### Releases
 
-The design mirrors default scripts (every game, a game's own, an opt-out):
+Sizes are for one developer: S is days, M is a week or two, L is longer.
 
-- **Edit Tool:** "Start when I launch a game" gets a choice: with every game (today), or with the
-  games I pick.
-- **Edit Game, a Tools section:** a checkbox per "games I pick" tool ("Start SimHub with this
-  game"); "every game" tools listed as such, with one opt-out, "Don't start tools with this game",
-  like "Don't run the default scripts for this game".
-- **Library batch menu:** select games, right-click, Start with > SimHub; ticked when every selected
-  game has it, as batch DLSS Override is.
-- **Storage:** on the game, like its scripts: `GameEntry` holds the picked tool IDs and the opt-out;
-  `ToolEntry` holds the every-game / games-I-pick choice. A removed tool leaves a stale ID that is
-  ignored and dropped on the next save. Backup & Restore carries both files already.
-- **Starting:** `CompanionToolService.StartForGame` already knows the game, so it filters there.
-  Closing is unchanged (after the last game exits).
-- **Display:** the With Games tab and the controller badge say "With 12 games" for a picked tool.
-- **Then:** retire Example-StartCompanionApps.ps1 through `ScriptLibraryService.RetiredFileNames`.
+**1.6 "Start anywhere, trust it"**
 
-Considered and dropped: choosing by category. A game has one category, so "Racing" can't also be
-"Favorites", and one racing game filed elsewhere would be missed.
+| Item | Size | Wins users of | Acceptance test on one PC |
+|---|---|---|---|
+| Launch-in and desktop shortcuts | S | Playnite, Stream Deck | A shortcut starts the game with its profile while TrayTrigger is already running, and when it is not. |
+| Steam and GOG wrapper | M | Steam-first players | Start from Steam's Play button: profile applies before the game opens, Steam shows it running, restore happens on exit and on Steam's Stop. |
+| Finish per-game HDR | M | AutoActions, home-made HDR togglers | A game that turns HDR on by itself leaves the display as it was before launch. Colour profile is correct after the toggle on 24H2/25H2. Auto HDR can be set per game. |
+| Anti-cheat reporting | S-M | Process Lasso | An Easy Anti-Cheat game with CPU Cores set: Activity & History names the anti-cheat and the item it blocked. Vanguard and Ricochet are detected. |
+| Restore everything now | S | everyone | Tray item and hotkey put back every setting a session changed, mid-game. |
+| Battery rule for profiles | S | laptop and handheld owners | On battery (faked in tests), the power plan, timer and max-performance items are skipped or stepped down, and the log says so. |
 
-### Feature research for 1.4.7 and later (owner decided 2026-10-02; items 1-4 built in 1.4.7-beta.3)
+**1.7 "Screen and sound"**
 
-**Built 2026-10-02**, shipped in 1.4.7-beta.3. Where each landed:
+| Item | Size | Wins users of | Acceptance test on one PC |
+|---|---|---|---|
+| Display mode per game (resolution and refresh rate as one setting) | M | AutoHotkey + QRes scripts, AutoActions | Game launches at 1080p from a 1440p or 4K desktop; desktop mode returns on exit, after a game crash and after a TrayTrigger crash. Frame cap is worked out from the new rate. |
+| Audio output device per game | M | SoundSwitch, Playnite's audio extension | Game plays through the chosen device from its first sound; the previous default returns on exit. A missing device is reported, not fatal. |
+| Play on the TV, plus a Sunshine and Apollo recipe | M | DisplayFusion, Monitor Profile Switcher, ResolutionAutomation | With two displays: the game opens on the chosen one with its mode, HDR and audio, and everything returns afterwards. Sunshine runs a copied TrayTrigger command and the desk display is restored when the stream ends. |
+| Arguments for Tools, per game | S | MSI Afterburner, Fan Control | A tool starts with a different argument for two games. |
 
-- 1, Backup and restore: `Services/BackupService.cs`, `Services/BackupPathFixer.cs`, `App.Restore.cs`,
-  Settings › Diagnostics & Storage › Backup & Restore, `Help/troubleshooting/backup.md`.
-- 2, CPU Sets: `Services/CpuTopology.cs` (layout from CPU Sets and L3 sizes, pure),
-  `Services/CpuTopologyService.cs` (reading and applying), `ViewModels/CpuCoreMenu.cs`, Edit Game
-  › Performance, System › Hardware, `Help/profiles/cpu_affinity.md`.
-- 3, Suspend: `Services/ProcessLauncherService.Suspend.cs`, `Services/ProcessSuspender.cs`
-  (NtSuspendProcess and per-process mute), `Services/AntiCheatDetector.cs`, `App.SuspendGame.cs`,
-  the Ctrl+Alt+P hotkey, the tray's Now Playing items, `Help/library/suspend.md`.
-- 4, Background apps: `Scripts/Library/Example-CloseBackgroundApps.ps1` 2.0.
-- Debug-only end-to-end checks: `--test-suspend <out.txt>` and `--test-restore-restart <folder>`.
+Turning other monitors off is not in 1.7. It is where AutoActions crashes, and it waits until
+display mode switching has been through a release.
 
-Researched against similar apps: Playnite and its most-used extensions, Heroic, Lutris, Project
-OptM, Razer Cortex, Hone, Process Lasso, CPU Set Setter, Nyrna, Borderless Gaming, Ludusavi.
-Demand was judged from GitHub stars, from upvotes on the Playnite and Heroic issue trackers, and
-then from Reddit (see Reddit findings below). Reddit can't be read directly. The web search tool,
-the built-in browser and Claude in Chrome all refuse reddit.com; Chrome was re-tested on 2026-10-02
-and still says "safety restrictions". Reddit also closed self-service API apps on 2025-11-11
-(Responsible Builder Policy), so reddit-mcp-buddy can't search without an approved app. Reddit was
-searched through the gemini-search MCP server (Google Search grounding) instead. The Reddit
-findings are therefore Gemini's summaries of the threads, not first-hand reads, and they include
-no vote counts. Each item below was checked against the code: none of them exists today
-(re-checked 2026-10-02).
+**1.8 "Focus"**
 
-**Scope rule from the owner:** TrayTrigger is a launcher. Features that start games from outside
-TrayTrigger (command line, desktop shortcuts, Stream Deck) or detect games started outside it
-are out of scope.
+| Item | Size | Wins users of | Acceptance test on one PC |
+|---|---|---|---|
+| Foreground watcher (shared plumbing) | M | n/a | Focus gained and lost by the game is logged correctly through alt-tab, with no measurable CPU use while idle. |
+| Keep the cursor in the game; dim other monitors while it has focus | M | Dual Monitor Tools, Twinkle Tray | With two displays: the cursor cannot leave the game's screen, the other screen dims, and both undo on alt-tab and on exit. |
+| Mute other apps while the game has focus | S | EarTrumpet | A browser playing sound goes silent when the game has focus and returns on alt-tab and on exit. |
 
-**Owner's decisions (2026-10-02),** numbered in build order. Items 1 to 4 are accepted; item 5
-is declined.
+Dimming uses a black window on the other screens, so there is nothing to restore after a crash.
 
-1. **Backup and restore, TrayTrigger's own data only (accepted).** Today only a rolling `.bak`
-   per file exists (`Services/StorageService.cs`). Settings › Backup saves games, settings,
-   tools, scripts and cached art to one file. Restore rescans, re-links games by launcher ID and
-   fixes paths whose drive letter changed. Game saves are out: no save backup and no Ludusavi
-   manifest (see Declined). Playnite's "Library cloud sync" request (22 upvotes) is the same need.
-2. **CPU Cores for AMD X3D, done with CPU Sets (accepted).** Today CPU Cores is
-   `PerformanceCoresOnly` with a hard `ProcessorAffinity` (`Services/CpuTopologyService.cs:127`).
-   There is nothing for dual-CCD X3D (7950X3D, 9950X3D), and hard affinity can crash some games
-   or be blocked by anti-cheat. CPU Set Setter (737 stars) and Game Optimizer (211) use
-   `SetProcessDefaultCpuSets` instead, offer V-Cache CCD and no-SMT masks, and follow child
-   processes. The design:
-   - **Detect the CPU, with no list of models.** `CpuTopologyService` already calls
-     `GetSystemCpuSetInformation` but reads only `EfficiencyClass`. Also read
-     `LastLevelCacheIndex` (offset 16, only in the layout comment today) to group cores by CCD,
-     then read each L3's size with `GetLogicalProcessorInformationEx` (`RelationCache`). On a
-     dual-CCD X3D the CCD with the larger L3 (96 MB against 32 MB) is the V-Cache CCD, so future
-     X3D chips work without an update. The CPU name (`SystemInfoService`) is for display only.
-   - **Offer only what fits this CPU, and recommend one.** Edit Game › Performance lists the
-     options for the detected CPU plus an Auto choice that picks the recommended one:
+**2.0 "Proof and ecosystem"**
 
-     | CPU | Options | Auto picks |
-     |---|---|---|
-     | Dual-CCD X3D (7950X3D, 9950X3D) | V-Cache cores, Frequency cores | V-Cache cores |
-     | Single-CCD X3D (7800X3D, 9800X3D) | None: every core shares the cache | n/a |
-     | Dual-CCD without X3D (7950X, 9950X) | One CCD | Default (no change) |
-     | Intel hybrid (12th gen and later) | P-cores only | P-cores only |
-     | Any other CPU | Option hidden | n/a |
+| Item | Size | Wins users of | Acceptance test on one PC |
+|---|---|---|---|
+| FPS and 1% lows per session, when PresentMon is installed | M | CapFrameX | After a session, Activity & History shows average FPS and 1% lows beside the profile that was active. No elevation. |
+| Per-game NVIDIA driver settings (Low Latency, V-Sync, frame limit, RTX HDR, Smooth Motion) | L | NVIDIA Profile Inspector | Each setting applies for one game and returns to its previous value on Restore, like DLSS Override. |
+| Save backup through Ludusavi | M | GameSave Manager, Playnite + Ludusavi | After exit, Ludusavi backs up that game before the launcher is closed. |
+| Late attach | L | AutoActions, Process Lasso | An Xbox game started from the Start menu gets CPU Cores and the power plan, HDR is left alone, and the log says "attached late". |
+| Controller chord for suspend, close game and restore | S | couch players | L3+R3 (configurable) suspends and resumes the running game. |
+| Launchers in efficiency mode while a game runs | S | Process Lasso | EA app shows as efficiency mode during the game and normal after. |
 
-     System › Hardware specs shows what was detected, for example "2 CCDs, V-Cache on cores
-     0-15". `CpuAffinityMode` gains Auto, V-Cache, Frequency and One CCD; `PerformanceCoresOnly`
-     stays so existing games keep their setting.
-   - **Apply with CPU Sets,** not `Process.ProcessorAffinity`. CPU Sets are Windows' soft form of
-     affinity. Apply them to the game's whole process tree (`ProcessTree`) so child processes
-     follow.
-   - **An optional delay before applying,** per game, for anti-cheat titles that block an early
-     change. This is Reddit's Process Lasso workaround.
-   - **Leave AMD's driver alone.** TrayTrigger doesn't touch core parking or Game Bar, and a game
-     left on Default is not changed.
-3. **Suspend and resume the running game (accepted).** A hotkey and a Now Playing tray item that
-   freeze the game's process tree (`NtSuspendProcess`), mute it, and stop the playtime clock until
-   resumed. For unpausable cutscenes and stepping away. Nyrna (1.3k stars) does only this;
-   Playnite has it as the PlayState extension. Must refuse games with kernel anti-cheat (EAC,
-   BattlEye) and warn that online games will disconnect. Builds on `ProcessTree` and Close Game.
-   Reddit's pitfalls (below) add two rules: Close Game resumes the game before closing it, and
-   the Now Playing tray item is the way back in, since a suspended game can't be switched to.
-4. **Background apps while you play (accepted as a bundled script, not built into the app).**
-   Today `Example-CloseBackgroundApps.ps1` closes the processes named in Script Arguments and
-   reopens them after; it doesn't need admin. Extend that script:
-   - "recommended" in Script Arguments closes a recommended list, starting from Reddit's:
-     browsers, Discord, RGB and peripheral software, idle launchers. With names given, it closes
-     those too. Empty does nothing, as before (owner, 2026-10-02): bundled scripts update
-     themselves, and a setup relying on "no arguments = no-op" must not start closing apps.
-   - Run as administrator, it also stops Windows Update (`wuauserv`) and Delivery Optimization
-     (`DoSvc`) for the session and starts them again after. Without admin it skips that step and
-     logs why. Windows can start `wuauserv` again by itself, so test that a stop lasts a session.
-   - It reopens or restarts exactly what it closed or stopped, and logs what it did. No RAM
-     cleaning and no "boost" score.
-   - Efficiency mode (EcoQoS) is left out: PowerShell can reach `SetProcessInformation` only
-     through inline C# (`Add-Type`).
-   - Scripts don't get the Performance Profile session's crash recovery. If TrayTrigger or
-     Windows crashes mid-game, closed apps stay closed. The services come back at the next
-     restart, because stopping a service doesn't change its startup type.
-5. **Borderless window per game (declined).** Most current games have their own borderless or
-   windowed-fullscreen mode, and TrayTrigger's Optimizations for Windowed Games (DirectFlip
-   Model) tweak already covers those. Special K and Magpie cover older games that lack one. The
-   open-source Borderless Gaming is no longer updated.
+Late attach was moved from 1.8 to 2.0 at Gemini's suggestion: it changes the session state
+machine, so the watcher should first prove itself on the focus features. 2.0 is large and may
+need splitting.
 
-**Dropped after the Reddit research:** "Will it run?" in Game Details. Steam's minimum and
-recommended requirements are already fetched (`SteamAppDetails.PcRequirementsMin/Rec`) but only
-shown as text (`GameDetailsViewModel.cs:471`), and the hardware is already known
-(`SystemInfoService`). Comparing them would give "Meets recommended" or "GPU below minimum", as
-Playnite's System Checker extension does. Reddit's experience with Can You Run It says that
-comparison misleads. On top of that, Steam's requirements are free text, and comparing GPUs needs
-a GPU ranking table that must be kept current.
+**Engineering track (alongside any release)**
 
-**Reddit findings (2026-10-02, via gemini-search):** These cover r/playnite, r/pcgaming,
-r/OptimizedGaming, r/pcmasterrace, r/Steam and r/buildapc. Most of the X3D discussion is in r/Amd
-and r/AMDHelp, so those two were added. Gemini named its threads for some topics only; the named
-ones are under Sources.
+- A debug check that records cold-start time, idle private memory and thread count, so footprint
+  claims are measured.
+- Replace the 2-second Steam registry poll with `RegNotifyChangeKeyValue`.
+- Split `ProcessLauncherService` and `SystemTweaksService` (about 2,000 lines each) by launch
+  route and by tweak family.
+- Before 1.7, extend the session snapshot to hold display mode and audio device, and test
+  restore after a TrayTrigger crash for both. Both planners see leftover state as the biggest
+  risk in this roadmap: a wrong resolution or sound sent to a TV that is off.
 
-- **Suspend and resume: clear demand.** Redditors keep building this themselves:
-  - a Windows app for unpausable cutscenes, posted to r/pcgaming and later sold on Steam;
-  - Universal Pause Button;
-  - an Xbox Game Bar widget, Suspended N Time, which can also suspend the game when it loses focus;
-  - the Resource Monitor "Suspend process" trick.
+**Cut**
 
-  Reported pitfalls: some games crash on resume, Windows shows "Not Responding" while a game is
-  suspended, and a suspended game can't be switched to or closed until it's resumed. Online games
-  disconnect. So Close Game must resume the game first, and the tray item is the way back in.
-- **CPU Sets for X3D: the most specific demand found.** Many 7950X3D and 9950X3D owners report
-  games landing on the wrong CCD even with Game Bar and AMD's V-Cache driver, and fall back to
-  Process Lasso. Their complaints about it match the proposal:
-  - they don't know which cores belong to which CCD;
-  - anti-cheat blocks affinity changes (Denuvo, EA and EAC titles are named);
-  - the workaround is to apply the rule some seconds after launch.
+- A separate Native AOT background agent with the WPF window started on demand. Revisit only if
+  measured idle memory is over 80 MB or cold start is over 3 seconds.
+- TDP control and anything else needing a kernel driver. Anything that injects into a game.
+- A controller overlay or couch interface. Big Picture and Playnite Fullscreen own that, and
+  launch-in lets them start TrayTrigger sessions.
+- Shader pre-warming (not possible from outside a game) and per-game shader cache sizes (the
+  driver setting is global, and 1.5.1 already sets it to Unlimited).
+- Closing a launcher while its game runs (breaks DRM, cloud saves and achievements).
+- Turning monitors off, for now. AMD parity, until someone can test on AMD hardware.
+- Input macros, RAM cleaning, network resets, "boost" scores.
 
-  CPU Sets are preferred over affinity. This supports detecting the V-Cache CCD automatically and
-  adding a delay before the rule is applied.
-- **Background apps: wanted, but boosters are distrusted.** r/pcmasterrace and r/pcgaming call
-  Razer Cortex snake oil or bloat. The complaints:
-  - Auto-Boost freezing the PC after a game closes;
-  - Cortex's own RAM and CPU use;
-  - Booster Prime's bad advice on game settings;
-  - its power plan benchmarking worse than High Performance.
+### Additions (2026-10-05, after the plan above was agreed)
 
-  The same threads recommend closing named apps by hand instead: browsers, Discord, RGB and
-  peripheral software, idle launchers. Windows Update downloading during a game is a frequent
-  stutter complaint. So: named apps only, restore exactly what was closed, and show what was done.
-  No RAM cleaning and no "boost" score.
-- **Borderless window: steady demand.** Borderless Gaming is called a godsend for older and indie
-  games. Its free open-source version stopped being updated when it moved to a paid Steam release,
-  so users switched to No More Border, GoBorderless or Special K. Same caveat as the proposal: the
-  game must be set to windowed mode first.
-- **"Will it run?": the evidence is against it.** r/pcgaming, r/pcmasterrace and r/buildapc
-  threads about Can You Run It agree that comparing hardware with a game's published requirements
-  is unreliable. Requirements are vague or inflated, older high-clock CPUs get over-rated, and VRAM
-  is ignored. Users trust benchmark videos instead. That is the comparison this proposal would make.
-- **Backup and restore: the demand is about paths and saves.** r/playnite threads ask how to change
-  many game paths at once after moving to a new PC, moving a drive, or a drive letter change. The
-  answers are workarounds: the Path Replacer add-on, symlinks, SUBST, or fixing the letter in Disk
-  Management. That is the proposal's re-link step. Playnite 10 has built-in backup and restore and
-  LaunchBox has cloud sync, so TrayTrigger is behind both. Ludusavi's r/pcgaming release threads
-  were well received, and non-Steam games have no cloud saves, so save backup has its own demand.
-  The owner declined it for TrayTrigger.
-- **Complaints about the other apps:**
-  - Playnite: slow startup and UI lag, mostly blamed on themes and extensions; setup with plugins
-    takes time; Fullscreen mode lacks Desktop features.
-  - GOG Galaxy: integrations keep needing a new login; development is slow.
-  - LaunchBox: Big Box is paid; it slows down with large libraries.
-  - Process Lasso: CPU Sets are confusing to set up, anti-cheat blocks it, and the free version
-    nags.
-  - NVIDIA App: the overlay's Game Filters and Photo Mode cost up to 15% FPS, Control Panel
-    features are still missing, and DLSS Override doesn't always apply.
+The owner asked for these to be added after comparing the plan with the archived roadmap. They
+were not part of the discussion with Gemini. The placements are Claude's suggestions.
 
-  TrayTrigger already avoids the ones in scope. It reads each launcher's local install records,
-  so there are no logins to expire, and it needs no plugins. It also closes launchers after the
-  game exits and re-applies DLSS Override on every launch.
-- **Already built:** per-game automatic HDR (Optimized › Enable HDR) and closing the EA app,
-  Ubisoft Connect or Epic after the game came up repeatedly, and TrayTrigger has both. Stopping
-  launchers from auto-updating games also came up; that is the launcher's job and out of scope.
+**From the archived roadmap**
 
-**Build order (owner, 2026-10-02):** Backup and restore, CPU Sets for X3D, Suspend and resume,
-then the Background apps script. (Before Reddit the suggested order was Backup, Background apps,
-CPU Sets, Suspend, Borderless, then "Will it run?".)
+| Item | What it is | Suggested place |
+|---|---|---|
+| Tools started per game | Choose which games a tool starts with, in Edit Tool, Edit Game and the batch menu. The archived roadmap has the full design ("Tools started per game", parked 2026-10-04). | 1.7, merged with "Arguments for Tools, per game": a profile switch for Afterburner needs both. |
+| Background apps while you play, built in | Close the apps the user names and reopen them after, with the session engine's crash recovery. Optionally put apps in efficiency mode instead of closing them, and pause Windows Update and Delivery Optimization for the session (needs administrator rights). Fills gap 15. The bundled script can do none of the three. No RAM cleaning and no "boost" score. | 1.8, beside "mute other apps": both act on other apps for the length of a session. |
+| Borderless window per game | Make a windowed game fill the screen without a border. Steady demand in the archived research; the main open-source tool is stale. Tied to gap 3: borderless-only games are the top reason people want resolution switching. | After 1.8. It can use the foreground watcher. |
+| Library sync between PCs | Playnite's cloud-sync request has 22 upvotes and LaunchBox has it. Backup is a local zip today. | Unplaced. Cheapest form: let Backup write to a folder the user already syncs, and offer to restore when that copy is newer. |
+| Stopping launchers updating games during play | Came up in the archived research and was ruled out under the old scope rule. Never researched. | Unplaced. Research first. |
+| Several launch options per game | Mostly DX11 against DX12 today, done with launch arguments. | Unplaced, small. Fits naturally once `--launch` exists (a shortcut per variant). |
+| Play stats and Steam playtime import | No evidence found in either round. | Leave out unless evidence appears. |
+| "Will it run?" | The archived research found evidence against it. Not re-researched. | Leave out. |
 
-- **Backup** goes first: it is low risk and protects everything else.
-- **CPU Sets and Suspend** come next: they have the most specific Reddit demand, and people are
-  building their own tools for both. CPU Sets builds on the CPU Cores option. Suspend builds on
-  `ProcessTree` and the tray's Now Playing section.
-- **Background apps** comes last and stays a script. Reddit distrusts boosters, and
-  `Example-CloseBackgroundApps.ps1` already does the core of it.
+**From earlier in this review**
 
-**Declined by the owner (don't re-propose):** per-game resolution/refresh rate and audio device;
-more NVIDIA driver settings per game (frame cap, Low Latency, V-Sync, power mode); several
-launch options per game; play history, stats and Steam playtime import; launching games from
-outside TrayTrigger or detecting games started outside it; game-save backup, including through
-Ludusavi's manifest (Backup covers TrayTrigger's own data only); a borderless window per game;
-background apps as a built-in feature (it is a bundled script instead).
+| Item | What it is | Suggested place |
+|---|---|---|
+| Riot and Rockstar scanners | The logos are already bundled, and `docs/adding-a-platform-integration.md` describes the steps. Riot depends on Vanguard detection. | After 1.6's anti-cheat work. |
+| Check the window on a variable-refresh display | Playnite users report stutter from WPF windows with G-Sync or FreeSync, and on hybrid-GPU laptops. TrayTrigger is also WPF. | Engineering track. A test, not a feature; the developer's 240 Hz display can run it. |
+| Tell the people already asking | r/OLED_Gaming threads ask for per-game HDR and accept developer posts for HDR tools. No single tool is recommended for HDR plus closing launchers plus restoring settings. | When 1.6's HDR work ships. |
 
-Sources: [Playnite](https://github.com/JosefNemec/Playnite),
-[PlayniteExtensionsCollection](https://github.com/darklinkpower/PlayniteExtensionsCollection),
-[System Checker](https://github.com/Lacro59/playnite-systemchecker-plugin),
-[Nyrna](https://github.com/Merrit/nyrna),
-[Borderless Gaming](https://github.com/andrewmd5/Borderless-Gaming),
-[CPU Set Setter](https://github.com/SimonvBez/CPUSetSetter),
-[Game Optimizer](https://github.com/charlie754/Game-Optimizer-CPUs-Threads-Optimizer),
-[Project OptM](https://github.com/exaiver2019/ProjectOptM),
-[Hone vs Razer Cortex](https://hone.gg/comparison/razer-cortex),
-[Ludusavi](https://github.com/mtkennerly/ludusavi),
-[Heroic issues](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/issues).
+### Rules every new feature follows
 
-Reddit threads that gemini-search named. The URLs are as Gemini gave them; none were opened, so
-check one before quoting it.
+Set by the owner for Activity & History in 1.5.0 and for Backup & Restore in 1.4.7. Restated here
+because the plan above adds settings and events that must obey them.
 
-- Suspend:
-  [Pausing game anytime like home button on console](https://www.reddit.com/r/pcgaming/comments/nuv9x0/) (r/pcgaming),
-  [Unpausable cutscenes: I made a Windows application that will pause them](https://www.reddit.com/r/pcgaming/comments/e7529l/) (r/pcgaming),
-  [PSA: You can pause the game ... using UniversalPauseButton](https://www.reddit.com/r/remnantgame/comments/158656d/) (r/remnantgame).
-- X3D (no URLs given): "7950x3D and process lasso", "Process Lasso: CPU sets or Affinities?" and
-  "Is project lasso still needed for the 7950X3D chips?" (r/Amd); "7950X3D - core parking mess"
-  and "AMD Core Parking Issues (9950x3d)" (r/AMDHelp); "7950x3d How to Assign the right CCD in
-  Process Lasso" (r/pcmasterrace).
-- Background apps, Razer Cortex (no URLs given): "Razer cortex bad?", "Razer Cortex Yes Or No??"
-  and "Should I use Razer Cortex Power Plan in Power Settings?" (r/pcmasterrace).
-- Will it run:
-  [Are websites like SystemRequirementsLab and PCbenchmark actually reliable](https://www.reddit.com/r/pcgaming/comments/1ch00r1/) (r/pcgaming),
-  [Anyone else find "Can you run it" slightly inaccurate?](https://www.reddit.com/r/pcmasterrace/comments/2z0vpg/) (r/pcmasterrace),
-  [How accurate is Can you run it?](https://www.reddit.com/r/pcmasterrace/comments/ij777c/) (r/pcmasterrace),
-  [Is systemrequirementslab.com (Can I Run It) accurate?](https://www.reddit.com/r/buildapc/comments/1x1f3r/) (r/buildapc).
-- Backup:
-  [Is there a way to mass change game paths?](https://www.reddit.com/r/playnite/comments/10t4x35/),
-  [How to handle path to external drive?](https://www.reddit.com/r/playnite/comments/hmj8f9/),
-  [Moved my ROMs, is there an easy way of changing their paths?](https://www.reddit.com/r/playnite/comments/s9e53h/) (all r/playnite),
-  [PSA: If Steam ever can't find a game because the drive letter changed](https://www.reddit.com/r/pcmasterrace/comments/8ur97q/) (r/pcmasterrace),
-  [Ludusavi: A new, open source tool for backing up game saves](https://www.reddit.com/r/pcgaming/comments/hndnly/) and
-  [Ludusavi v0.11.0](https://www.reddit.com/r/pcgaming/comments/wu975t/) (r/pcgaming).
-- Borderless, GOG Galaxy, Playnite, LaunchBox and NVIDIA App findings came from Gemini summaries
-  that named no threads.
-## Shipped
+- **Activity & History is a history of important activities, not a log file.** One row per game
+  exit. Upkeep and background housekeeping are not recorded.
+- **Nothing interrupts a game.** No notifications while a game runs; one summary after the last
+  game exits.
+- **Anything left changed is a Critical entry with Restore Previous, then FIXED.** This applies to
+  display mode, audio device, HDR, and whatever late attach and the wrapper change.
+- **A change anti-cheat blocked is a Problem entry**, as is a missing audio device or display.
+- **Backup & Restore carries every per-game setting.** A per-game display or audio device will
+  not exist under the same ID on another PC; restore has to say so and ask, as it already fixes
+  drive letters and launcher folders.
 
-### 1.4.0: scripts for advanced users (2026-09-11)
+### What the Antigravity review changed
 
-Decisions made while building it:
+| Its proposal | Verdict | Why |
+|---|---|---|
+| Passive game detection as the top item | Adopted in a narrower form | Its point about how people start games is right. Process-creation events need elevation, and a foreground hook arrives too late for HDR, display mode and audio. The wrapper gets the same result for Steam with no downside; late attach covers the rest with a reduced profile. |
+| Resolution and refresh rate per game | Adopted | 1.7. |
+| Turning secondary monitors off "to save GPU memory and remove stutter" | Replaced | No evidence for that benefit. The evidenced needs are dimming and the cursor escaping, in 1.8. |
+| Controller chord on the Guide button, radial overlay | Reduced | Windows reserves the Guide button. A chord on ordinary buttons for existing actions is in 2.0; the overlay is cut. |
+| TDP automation | Cut | Needs a kernel driver. The battery rule is in 1.6. |
+| Per-game audio device | Adopted | 1.7. It needs an undocumented Windows interface, not the one the review named. |
+| Muting background apps | Adopted | 1.8. Supported API; TrayTrigger already mutes per process for Suspend. |
+| Shader pre-warming and per-game cache policy | Cut | See Cut. |
+| Native AOT, WinUI 3, trimmed WPF | Cut | WPF cannot be trimmed or AOT-compiled; WinUI 3 is not lighter. |
+| Events instead of polling | Adopted in part | `RegNotifyChangeKeyValue` for Steam and one foreground hook. Not `EVENT_OBJECT_CREATE`, which fires for every window on the system. |
+| Frame-time summary after a game | Adopted | 2.0, through PresentMon's service so no elevation is needed. |
+| Supervisor for Lossless Scaling and RTSS | Covered | Tools already start them with a game; per-game arguments in 1.7 complete it. |
 
-- **Positioning.** Scripts stay an advanced, off-by-default feature. 1.4.0 makes them more
-  powerful and easier to debug, not "easy". The release notes should say that.
-- **Real-world examples (decision reversed the same day).** The first cut shipped three
-  Windows-only examples (session CSV log, zip a named folder, close/restart a named program),
-  because templates for third-party apps depend on their install paths and command lines and can
-  read as a TrayTrigger bug when those change. The owner found them hard to follow and not useful,
-  so 1.4.0 ships five real-world examples instead: Wallpaper Engine pause, Quiet Mode, Companion
-  Apps, OBS replay buffer and Save Backup (the first two renamed in 1.4.6 to Close Background Apps
-  and Start Companion Apps, for what they do), plus the two blank templates and a task-first README
-  (`Scripts/Library/`, `Services/ScriptLibraryService.cs`). The breakage risk is handled inside
-  the scripts: each is presented as an example to copy, declares its dependencies in a
-  header (Name, Description, Phase, Needs admin, Dependencies, Script Arguments), finds the
-  third-party app at run time or through one setting at the top, and exits 0 with a plain message
-  when the app isn't there. All are PowerShell except the batch template. An audio-device switcher
-  and a display-mode changer were considered and left out: both need a large inline C# block that
-  is hard to learn from.
-- **Two script fields, not one.** A single-script model breaks for the two most common
-  attachments: a plain `.exe` that cannot branch on the phase, and different types per phase.
-  A dual-phase script is supported by putting the same file in both boxes, which the examples do.
-- **Test Run** uses the values typed in the dialog, ignores the Settings kill-switch, always runs
-  hidden and non-elevated so output can be captured, and kills the process on timeout.
-- **Defaults resolve per phase**, a game's own script always wins, and default scripts receive the
-  game's Script Arguments so one generic default can be parameterised per game.
-- **Batch gotcha found by the tests:** `echo %~5> file` is a handle redirect when playtime is a
-  single digit, and `rem` lines are still parsed by cmd (`%~N` in a comment aborts the script).
-  Both are documented in the help page and the scripts README.
+Two of the review's claims about today's code were wrong and are not repeated here: that
+TrayTrigger carries "zero risk" with anti-cheat (no tool can promise that), and that it handles
+HDR "without tripping" the 24H2 colour quirks (the help page documents one).
 
-### Folder-import launcher detection (2026-09-10)
+### Decisions for the owner
 
-When a game is added via "Add Folder", drag-and-drop (folder, .exe, or .lnk), or "Batch Add
-Games from Folder", the exe path is now checked against each installed platform's own records
-(`Services/PlatformLookupService.cs`) before it becomes a Local entry. On a match the game is
-imported through that platform's normal route (real ID, name, art, launcher-aware launch) instead
-of the generic exe heuristic.
+1. **Launch-in and the wrapper.** They reverse the archived rule that TrayTrigger does not start
+   games from outside itself. Everything in 1.7's TV and streaming work depends on them.
+2. **Late attach.** Build it at all, and if so, how visible to make it. Both planners would keep
+   it off by default and behind the wrapper, so people learn the safer path first.
+3. **The undocumented audio interface.** Changing the default device has no supported API. Every
+   tool that does it uses the same unofficial one. Accept that, or leave audio device out.
+4. **Signing.** Smart App Control blocks unsigned apps with no override. Options: SignPath
+   Foundation (free for open source), Azure Trusted Signing (about $10 a month), or a standard
+   certificate. A Microsoft Store package is not an option: it redirects registry writes, which
+   breaks the system tweaks.
+5. **Test hardware.** The battery rule needs a laptop to confirm, and the TV, cursor and dimming
+   work needs a second display. AMD parity stays cut without an AMD card.
 
-Decisions made while building it, against the open questions that were listed here:
+### To verify before building
 
-- **Blocking was considered and rejected.** Refusing drops from launcher-owned folders needs the
-  same detection code as redirecting, then sends the user to a full "Scan for Games" to add one
-  game they'd just handed us, and can't be complete anyway (see EA below). Redirecting costs the
-  same and gives the right result.
-- **Mixed parent folders** are handled by matching per candidate exe, not per dropped folder, at
-  the three points where a path becomes a `GameEntry` (`HandleFileDropAsync`, `AddCandidateAsync`,
-  `ImportBatchGamesAsync`). `FolderScannerService` is untouched.
-- **Silent, not confirmed.** The status bar says which platform each game went through (e.g.
-  "Added 3 new game(s)! (2 via Steam, 1 via GOG)") and the log records each resolution.
-- **Independent of the integration toggles.** Recognition runs even when a platform's auto-scan is
-  off.
-- **EA custom-location installs** still can't be resolved (inherited `EaScannerService`
-  limitation) and land as Local.
-- A dropped exe that differs from the platform's own registered exe is replaced by the platform's
-  exe. A user who wants a specific alternate exe edits the path in Edit Game *and* ticks "Launch
-  this executable directly" there - the client-launch branches in `ProcessLauncherService`
-  otherwise ignore `ExecutablePath` (see `GameEntry.LaunchDirectly`).
-- A game already in the library as a plain Local entry for the same exe is linked to the platform
-  in place (`ImportCoordinator.UpgradeExistingEntries`) rather than duplicated.
-- Folder-scan candidates are resolved to their platform *before* the batch dialog
-  (`GameCandidate.Platform`), so the preview shows the platform's name and logo, "in library" is
-  judged by platform ID, and Ignore applies to the platform ID - the same identity the scan
-  picker uses.
+- PresentMon's service can be read by a process that is not elevated.
+- Whether TrayTrigger's HDR toggle shows the 24H2/25H2 colour-profile bug.
+- Steam's overlay and playtime tracking behave normally through the wrapper, and what Steam's
+  Stop button does to the wrapper process.
+- GOG Galaxy accepts the wrapper as a custom executable.
 
-### Steam-specific exe-path dedup gap (2026-09-10)
+## What Reddit says about new tools in this space
 
-`ScanForGamesCoreAsync`'s Steam task now applies the same `existingExePaths` fallback as the
-GOG/EA/Epic/Ubisoft tasks, so a Steam game that reached the library without a `SteamAppId` is no
-longer offered again as "new".
+Praised: one place for every store, light on resources, open source, clear about what it changes.
+Criticised: needing elevation without a reason, resource use, feature bloat, ads, and offering
+nothing Playnite doesn't. TrayTrigger's answer to the last one is the session layer, not the
+library.
+
+## Competitor notes
+
+- **Playnite** (14.1k stars): startup of 30 seconds to 5 minutes and 1.5 GB RAM reported with
+  themes and extensions. Playnite 11 alpha (April 2026) stays on WPF and promises better launcher
+  handling, so part of TrayTrigger's gap may close.
+- **Process Lasso:** still recommended for X3D CPUs, but it added a one-click cache-CCD button in
+  March 2026, and some 2026 threads say Windows 11 24H2 scheduling makes it unnecessary.
+- **AutoActions:** praised for per-game HDR; open issues show crashes on monitor changes, a
+  resolution not put back, and exit actions not firing.
+- **Xbox full screen experience:** on all Windows 11 handhelds since November 2025 and reported
+  on desktop PCs from April 2026. It replaces the taskbar and tray and defers startup apps.

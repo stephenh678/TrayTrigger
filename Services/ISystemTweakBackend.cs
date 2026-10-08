@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
 namespace TrayTrigger.Services;
@@ -50,6 +51,19 @@ public interface ISystemTweakBackend
     bool RemoveDefenderExclusion(string exePath);
 
     void SetProcessPriority(Process process, ProcessPriorityClass priority);
+
+    /// <summary>
+    /// Opts the process out of Windows' power throttling (EcoQoS) and out of Windows 11 ignoring
+    /// its timer resolution request while its window is hidden. Dies with the process. False when
+    /// Windows refused, for example for a game running as administrator.
+    /// </summary>
+    bool ExemptFromPowerThrottling(Process process);
+
+    /// <summary>The primary display's refresh rate, or null when it can't be read.</summary>
+    int? GetPrimaryRefreshHz();
+
+    /// <summary>Whether Resizable BAR is on for the NVIDIA card, from its memory windows; null when it can't be told.</summary>
+    bool? IsResizableBarEnabled();
 
     /// <summary>Holds a 0.5 ms system timer request from this process until released. Returns the resolution actually granted (100 ns units), or 0 on failure.</summary>
     uint RequestHighTimerResolution();
@@ -156,6 +170,66 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
         RunElevatedPowerShell($"Remove-MpPreference -ExclusionPath {ElevatedPowerShell.QuoteLiteral(exePath)} -ErrorAction Stop");
 
     public void SetProcessPriority(Process process, ProcessPriorityClass priority) => process.PriorityClass = priority;
+
+    public int? GetPrimaryRefreshHz() => SystemInfoService.PrimaryRefreshHz();
+
+    public bool? IsResizableBarEnabled() => SystemInfoService.NvidiaResizableBarEnabled();
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROCESS_POWER_THROTTLING_STATE
+    {
+        public uint Version;
+        public uint ControlMask;
+        public uint StateMask;
+    }
+
+    private const int ProcessPowerThrottling = 4;   // PROCESS_INFORMATION_CLASS
+    private const uint PowerThrottlingCurrentVersion = 1;
+    private const uint PowerThrottlingExecutionSpeed = 0x1;
+    private const uint PowerThrottlingIgnoreTimerResolution = 0x4;
+    private const uint ProcessSetInformation = 0x0200;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint desiredAccess, bool inheritHandle, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetProcessInformation(IntPtr process, int informationClass, ref PROCESS_POWER_THROTTLING_STATE information, uint size);
+
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr handle);
+
+    /// <summary>
+    /// A bit in ControlMask with the same bit clear in StateMask is "never throttle this" - the
+    /// documented way to opt out, as opposed to leaving it to Windows' heuristics. The timer bit
+    /// is Windows 11's; Windows 10 refuses the whole call with it, so execution speed is asked for
+    /// alone on a second try.
+    /// </summary>
+    public bool ExemptFromPowerThrottling(Process process)
+    {
+        IntPtr handle = OpenProcess(ProcessSetInformation, false, process.Id);
+        if (handle == IntPtr.Zero)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"Power throttling: could not open process {process.Id} (error {Marshal.GetLastWin32Error()}).");
+            return false;
+        }
+        try
+        {
+            foreach (uint mask in new[] { PowerThrottlingExecutionSpeed | PowerThrottlingIgnoreTimerResolution, PowerThrottlingExecutionSpeed })
+            {
+                var state = new PROCESS_POWER_THROTTLING_STATE { Version = PowerThrottlingCurrentVersion, ControlMask = mask, StateMask = 0 };
+                if (SetProcessInformation(handle, ProcessPowerThrottling, ref state, (uint)Marshal.SizeOf<PROCESS_POWER_THROTTLING_STATE>()))
+                    return true;
+                LoggingService.Verbose("PerformanceProfile", $"Power throttling: SetProcessInformation(mask 0x{mask:X}) on process {process.Id} failed (error {Marshal.GetLastWin32Error()}).");
+            }
+            return false;
+        }
+        finally
+        {
+            CloseHandle(handle);
+        }
+    }
 
     // NtSetTimerResolution is the documented-by-usage kernel call behind timeBeginPeriod; it takes
     // 100 ns units, so 5000 = 0.5 ms (the finest most hardware supports). The request is scoped to

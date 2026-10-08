@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using TrayTrigger.Models;
 using TrayTrigger.Services;
+using TrayTrigger.Tests.Fakes;
 
 namespace TrayTrigger.Tests;
 
@@ -94,6 +95,14 @@ public class PerformanceProfileServiceTests : IDisposable
         public bool RemoveDefenderExclusion(string exePath) { if (Defender.Remove(exePath)) ElevatedBatches++; Log.Add("defender:-" + Path.GetFileName(exePath)); return true; }
 
         public void SetProcessPriority(Process process, ProcessPriorityClass priority) => Log.Add("priority:" + priority);
+
+        public bool ExemptFromPowerThrottling(Process process) { Log.Add("throttling:exempt"); return true; }
+
+        public int? PrimaryRefreshHz = 144;
+        public int? GetPrimaryRefreshHz() => PrimaryRefreshHz;
+
+        public bool? ResizableBarOn = true;
+        public bool? IsResizableBarEnabled() => ResizableBarOn;
 
         public bool TimerHeld;
         public uint RequestHighTimerResolution() { TimerHeld = true; Log.Add("timer:request"); return 5000; }
@@ -751,5 +760,463 @@ public class PerformanceProfileServiceTests : IDisposable
         _store.UnreadableCopy = string.Empty;
         _service.RecoverFromCrashIfNeeded();
         Assert.Equal(1, _store.Deletes);
+    }
+
+    // ---- Optimized: NVIDIA settings on the Global profile, and power throttling ----------------
+
+    private const uint PowerMode = PerformanceProfileService.NvPowerModeSettingId;
+    private const uint FrameCap = PerformanceProfileService.NvFrameCapSettingId;
+
+    private PerformanceProfileService WithDriver(FakeDrsBackend driver) => new(_store, () => _settings, _backend, driver);
+
+    [Fact]
+    public void NvidiaMaxPerformance_IsSetForTheSession_AndRemovedAfter()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.Equal((PerformanceProfileService.NvPowerModePreferMax, false), driver.Global.Settings[PowerMode]);
+        Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == PowerMode);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.Empty(service.UnrestoredItems);
+    }
+
+    [Fact]
+    public void NvidiaMaxPerformance_PutsBackAModeTheUserChose()
+    {
+        var driver = new FakeDrsBackend();
+        driver.Global.Settings[PowerMode] = (5, false);   // Optimal power, set by the user
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.True(service.EndGameSession("g"));
+
+        Assert.Equal((5u, false), driver.Global.Settings[PowerMode]);
+    }
+
+    [Fact]
+    public void NvidiaMaxPerformance_AlreadyOn_ChangesAndRecordsNothing()
+    {
+        var driver = new FakeDrsBackend();
+        driver.Global.Settings[PowerMode] = (PerformanceProfileService.NvPowerModePreferMax, false);
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.DoesNotContain(_store.OnDisk!.NvidiaSettings, r => r.SettingId == PowerMode);
+        Assert.Equal(0, driver.SaveCount);
+    }
+
+    [Fact]
+    public void NvidiaMaxPerformance_SwitchedOff_IsNotApplied()
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.NvidiaMaxPerformanceEnabled = false;
+
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+    }
+
+    /// <summary>The service's default: no NVIDIA driver, so a test can't touch the real one.</summary>
+    [Fact]
+    public void NoNvidiaDriver_AppliesNoNvidiaSetting()
+    {
+        Assert.True(_service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.DoesNotContain(_store.OnDisk!.NvidiaSettings, r => r.SettingId == PowerMode);
+    }
+
+    [Fact]
+    public void ChangedDuringTheSession_IsLeftAlone()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        driver.Global.Settings[PowerMode] = (0, false);   // the user picked Normal in the NVIDIA App mid-game
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal((0u, false), driver.Global.Settings[PowerMode]);
+        Assert.Empty(service.UnrestoredItems);
+    }
+
+    [Fact]
+    public void NvidiaRestoreThatFails_IsRemembered_UntilARetrySucceeds()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+
+        driver.SaveError = "refused";
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal(["the NVIDIA power management mode"], service.UnrestoredItems);
+
+        driver.SaveError = null;
+        Assert.True(service.RetryUnrestored());
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+    }
+
+    [Fact]
+    public void NvidiaSettings_AreRecoveredAfterACrash()
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.True(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.True(driver.Global.Settings.ContainsKey(FrameCap));
+
+        // TrayTrigger dies mid-game; the next start finds the snapshot.
+        WithDriver(driver).RecoverFromCrashIfNeeded();
+
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.False(driver.Global.Settings.ContainsKey(FrameCap));
+        Assert.Null(_store.OnDisk);
+    }
+
+    [Fact]
+    public void FrameCap_IsOffUnlessTurnedOn()
+    {
+        var driver = new FakeDrsBackend();
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.False(driver.Global.Settings.ContainsKey(FrameCap));
+    }
+
+    [Fact]
+    public void FrameCap_FollowsThePrimaryDisplay_AndIsRemovedAfter()
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        _backend.PrimaryRefreshHz = 144;
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.Equal((138u, false), driver.Global.Settings[FrameCap]);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.False(driver.Global.Settings.ContainsKey(FrameCap));
+    }
+
+    /// <summary>A Max Frame Rate the user set - for power, heat, or a game that misbehaves uncapped - is theirs.</summary>
+    [Fact]
+    public void FrameCap_LeavesTheUsersOwnCapAlone()
+    {
+        var driver = new FakeDrsBackend();
+        driver.Global.Settings[FrameCap] = (120, false);
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.Equal((120u, false), driver.Global.Settings[FrameCap]);
+        Assert.DoesNotContain(_store.OnDisk!.NvidiaSettings, r => r.SettingId == FrameCap);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal((120u, false), driver.Global.Settings[FrameCap]);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(50)]
+    [InlineData(58)]
+    public void FrameCap_NeedsAReadableRefreshRateOfAtLeast59(int? refresh)
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        _backend.PrimaryRefreshHz = refresh;
+
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.False(driver.Global.Settings.ContainsKey(FrameCap));
+    }
+
+    /// <summary>A 60 Hz screen running at 59.94 Hz, as many TVs do, is 59 to Windows: still capped.</summary>
+    [Fact]
+    public void FrameCap_IsSetForA5994HzDisplay_WhichWindowsReportsAs59()
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        _backend.PrimaryRefreshHz = 59;
+
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.Equal((58u, false), driver.Global.Settings[FrameCap]);
+    }
+
+    [Theory]
+    [InlineData(60, 59u)]
+    [InlineData(144, 138u)]
+    [InlineData(165, 157u)]
+    [InlineData(240, 224u)]
+    [InlineData(360, 324u)]
+    [InlineData(480, 416u)]
+    public void FrameCapFor_IsReflexsFormula(int refresh, uint cap) =>
+        Assert.Equal(cap, PerformanceProfileService.FrameCapFor(refresh));
+
+    /// <summary>The snapshot is user-writable: a cap the driver could never hold is not compared against.</summary>
+    [Fact]
+    public void Sanitize_DropsAnImpossibleFrameCap()
+    {
+        var snapshot = new PerformanceProfileSessionSnapshot();
+        snapshot.NvidiaSettings.Add(new NvidiaSettingSnapshot { SettingId = FrameCap, Written = 5000 });
+        snapshot.NvidiaSettings.Add(new NvidiaSettingSnapshot { SettingId = 0x12345678, Written = 1 });   // not one TrayTrigger writes
+        snapshot.NvidiaSettings.Add(new NvidiaSettingSnapshot { SettingId = PowerMode, Written = 1, Previous = "user:5" });
+        var problems = ProfileSnapshotValidator.Sanitize(snapshot);
+        Assert.Equal(2, problems.Count);
+        Assert.Equal(PowerMode, Assert.Single(snapshot.NvidiaSettings).SettingId);
+    }
+
+    // ---- Aggressive: Resizable BAR for the games NVIDIA hasn't decided on -------------------------
+
+    private const uint Rebar = PerformanceProfileService.NvResizableBarSettingId;
+
+    [Fact]
+    public void ResizableBar_IsOnForAnAggressiveSession_AndRemovedAfter()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.Equal((1u, false), driver.Global.Settings[Rebar]);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+    }
+
+    [Fact]
+    public void ResizableBar_IsNotPartOfOptimized()
+    {
+        var driver = new FakeDrsBackend();
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+    }
+
+    /// <summary>With Resizable BAR off in the BIOS the driver has nothing to use; an unknown reading still tries.</summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(null, true)]
+    public void ResizableBar_FollowsTheBios(bool? biosOn, bool expectWritten)
+    {
+        var driver = new FakeDrsBackend();
+        _backend.ResizableBarOn = biosOn;
+
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.Equal(expectWritten, driver.Global.Settings.ContainsKey(Rebar));
+    }
+
+    /// <summary>Set on the Global profile by the user or another tool: their choice for every game, left alone.</summary>
+    [Fact]
+    public void ResizableBar_LeavesAGlobalChoiceAlone()
+    {
+        var driver = new FakeDrsBackend();
+        driver.Global.Settings[Rebar] = (0, false);
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
+    }
+
+    /// <summary>
+    /// The driver won't name its Resizable BAR settings, so a driver is recognised by a setting it
+    /// does name - and one without even that is no NVIDIA driver at all.
+    /// </summary>
+    [Fact]
+    public void ResizableBar_HiddenSetting_IsStillWritten_WhileTheDriverIsThere()
+    {
+        var driver = new FakeDrsBackend();
+        driver.UnknownSettingIds.Add(Rebar);
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.True(driver.Global.Settings.ContainsKey(Rebar));
+
+        var noDriver = new FakeDrsBackend();
+        noDriver.UnknownSettingIds.UnionWith([Rebar, PowerMode]);
+        WithDriver(noDriver).BeginGameSession(Game("h", _exeB, PerformanceProfileMode.Aggressive));
+        Assert.False(noDriver.Global.Settings.ContainsKey(Rebar));
+    }
+
+    /// <summary>
+    /// A session loads the driver's whole database, well over 100 ms, on the way into a game: all
+    /// three settings go on with one save and come off with one.
+    /// </summary>
+    [Fact]
+    public void NvidiaSettings_GoOnWithOneSave_AndComeOffWithOne()
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.Equal([PowerMode, FrameCap, Rebar], _store.OnDisk!.NvidiaSettings.Select(r => r.SettingId));
+        Assert.Equal(1, driver.SaveCount);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.Empty(driver.Global.Settings);
+        Assert.Equal(2, driver.SaveCount);
+    }
+
+    /// <summary>
+    /// The save went through but the value reads back different: the record stays, since the
+    /// value may be in place after all, and restore only acts while the driver holds it.
+    /// </summary>
+    [Fact]
+    public void NvidiaSetting_ThatReadsBackDifferent_KeepsItsRecord()
+    {
+        var driver = new FakeDrsBackend();
+        driver.AfterSave = () => driver.Global.Settings[PowerMode] = (0, false);
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == PowerMode);
+
+        driver.AfterSave = null;
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal((0u, false), driver.Global.Settings[PowerMode]);   // not ours, so left alone
+        Assert.Empty(service.UnrestoredItems);
+    }
+
+    [Fact]
+    public void NvidiaSettings_TheDriverRefusesToSave_AreNotRecorded()
+    {
+        var driver = new FakeDrsBackend { SaveError = "NVAPI_ERROR (-1)" };
+        _settings.OptimizedProfileTweaks.PowerPlanEnabled = false;
+        _settings.OptimizedProfileTweaks.GpuPreferenceEnabled = false;
+
+        Assert.False(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.True(_store.OnDisk == null || _store.OnDisk.NvidiaSettings.Count == 0);
+    }
+
+    /// <summary>
+    /// An NVIDIA setting that couldn't be put back when the last game ended stays on record, and
+    /// the next session's end puts it back - a hidden setting can't be changed back by hand.
+    /// </summary>
+    [Fact]
+    public void NvidiaSetting_ThatCouldNotBePutBack_IsTriedAgainAtTheNextSessionsEnd()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+
+        driver.SaveError = "refused";
+        Assert.True(service.EndGameSession("g"));
+        Assert.True(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == PowerMode);
+
+        driver.SaveError = null;
+        Assert.True(service.BeginGameSession(Game("h", _exeB, PerformanceProfileMode.Optimized)));
+        Assert.True(service.EndGameSession("h"));
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>Put back by a later session's end: there is nothing left to offer Restore Previous for.</summary>
+    [Fact]
+    public void NvidiaSetting_PutBackAtTheNextSessionsEnd_IsNoLongerUnrestored()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+
+        driver.SaveError = "refused";
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal(["the NVIDIA power management mode"], service.UnrestoredItems);
+
+        driver.SaveError = null;
+        Assert.True(service.BeginGameSession(Game("h", _exeB, PerformanceProfileMode.Optimized)));
+        Assert.True(service.EndGameSession("h"));
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.Empty(service.UnrestoredItems);
+    }
+
+    /// <summary>
+    /// Once Restore Previous has put a setting back, its record goes too. Kept, the same value
+    /// chosen by the user later would be taken for TrayTrigger's own and removed.
+    /// </summary>
+    [Fact]
+    public void NvidiaSetting_PutBackByARetry_LeavesNoRecordBehind()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+
+        driver.SaveError = "refused";
+        Assert.True(service.EndGameSession("g"));
+        driver.SaveError = null;
+        Assert.True(service.RetryUnrestored());
+        Assert.Null(_store.OnDisk);
+
+        // Prefer maximum performance, picked in the NVIDIA App this time.
+        driver.Global.Settings[PowerMode] = (PerformanceProfileService.NvPowerModePreferMax, false);
+        Assert.True(service.BeginGameSession(Game("h", _exeB, PerformanceProfileMode.Optimized)));
+        Assert.True(service.EndGameSession("h"));
+        Assert.Equal((PerformanceProfileService.NvPowerModePreferMax, false), driver.Global.Settings[PowerMode]);
+    }
+
+    /// <summary>Not put back as TrayTrigger closed: kept on disk for the next start to finish.</summary>
+    [Fact]
+    public void NvidiaSetting_ThatCouldNotBePutBackAtExit_IsFinishedAtTheNextStart()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+
+        driver.SaveError = "refused";
+        service.RestoreActiveSessionOnShutdown(skipElevated: true);
+        Assert.NotNull(_store.OnDisk);
+
+        driver.SaveError = null;
+        WithDriver(driver).RecoverFromCrashIfNeeded();
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>Recovery that fails again keeps the record and adopts it, so a game started now doesn't write over it.</summary>
+    [Fact]
+    public void NvidiaSetting_ThatRecoveryCannotPutBack_IsKeptForTheNextSession()
+    {
+        var driver = new FakeDrsBackend();
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));   // then TrayTrigger dies
+
+        driver.SaveError = "refused";
+        var next = WithDriver(driver);
+        next.RecoverFromCrashIfNeeded();
+        Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == PowerMode);
+
+        driver.SaveError = null;
+        Assert.True(next.BeginGameSession(Game("h", _exeB, PerformanceProfileMode.Optimized)));
+        Assert.True(next.EndGameSession("h"));
+        Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+    }
+
+    /// <summary>No NVIDIA driver any more (another graphics card): nothing holds the values, so the records go.</summary>
+    [Fact]
+    public void NvidiaRecords_AreDropped_WhenTheDriverHasGone()
+    {
+        var driver = new FakeDrsBackend();
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));   // then TrayTrigger dies
+
+        var gone = new FakeDrsBackend();
+        gone.UnknownSettingIds.Add(PowerMode);
+        var next = WithDriver(gone);
+        next.RecoverFromCrashIfNeeded();
+
+        Assert.Null(_store.OnDisk);
+        Assert.Empty(next.UnrestoredItems);
+    }
+
+    [Fact]
+    public void PowerThrottlingExemption_IsAppliedToTheGameProcess()
+    {
+        using var process = Process.GetCurrentProcess();
+        _service.OnGameProcessStarted(Game("g", _exeA, PerformanceProfileMode.Optimized), process);
+        Assert.Contains("throttling:exempt", _backend.Log);
+    }
+
+    [Fact]
+    public void PowerThrottlingExemption_NotForOff_NorWhenSwitchedOff()
+    {
+        using var process = Process.GetCurrentProcess();
+        _service.OnGameProcessStarted(Game("g", _exeA, PerformanceProfileMode.Off), process);
+        _settings.OptimizedProfileTweaks.PowerThrottlingExemptEnabled = false;
+        _service.OnGameProcessStarted(Game("h", _exeA, PerformanceProfileMode.Aggressive), process);
+        Assert.DoesNotContain("throttling:exempt", _backend.Log);
     }
 }

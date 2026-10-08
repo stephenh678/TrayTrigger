@@ -153,8 +153,8 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 | Tier | What it does |
 |---|---|
 | **Off** | No per-game tweaks. TrayTrigger just launches the game. |
-| **Optimized** | Your custom high-performance power plan and high-performance GPU preference for that game. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers. |
-| **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, and an off-by-default Microsoft Defender exclusion. |
+| **Optimized** | Your custom high-performance power plan, high-performance GPU preference for that game, NVIDIA's Prefer maximum performance, and an exemption from Windows' power throttling. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers, a frame cap just under your refresh rate. |
+| **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, NVIDIA Resizable BAR for games NVIDIA hasn't decided on, and an off-by-default Microsoft Defender exclusion. |
 
 - **CPU Cores**: independently of the tier, keep a game on the cores that suit it: the performance cores of a hybrid Intel CPU, for older engines and anti-cheat titles that stutter on E-cores, or the 3D V-Cache CCD of a dual-CCD Ryzen X3D (7950X3D, 9950X3D), found from each CCD's cache size rather than a list of models. Auto picks for whichever PC the game runs on. Set with Windows' CPU Sets, with an optional delay for anti-cheat titles.
 - **Suspend and resume** (Ctrl+Alt+P, or the tray's Now Playing menu): freeze a game where it is for a cutscene you can't pause, with its sound muted and its playtime clock stopped. Games with anti-cheat are never suspended, and nothing is ever left frozen.
@@ -217,7 +217,7 @@ Windows set up for games, and an eye on the hardware running them.
 
 ### Performance Tweaks
 
-System-wide settings, separate from the per-game profiles. 20 documented Windows gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
+System-wide settings, separate from the per-game profiles. 22 documented gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
 See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Restore Previous Settings**. Bulk changes can create a System Restore point.
 
