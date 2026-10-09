@@ -649,13 +649,16 @@ public class GameScriptService
             process.Exited += (s, _) =>
             {
                 if (s is not Process p) return;
-                try { Report(p); }
+                // Exited can fire before the last of the script's output has been read; disposing
+                // then would drop it, a "TT:" line included. Bounded, for a child holding the pipes.
+                try { WaitForOutputDrain(p); Report(p); }
                 finally { p.Dispose(); }
             };
             if (process.HasExited)
             {
                 // Exited may already have fired (or never will if it raced EnableRaisingEvents);
                 // reporting is once-only and disposing twice is harmless.
+                WaitForOutputDrain(process);
                 Report(process);
                 process.Dispose();
             }
