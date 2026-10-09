@@ -8,8 +8,10 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
-## 1.5.1
+## 1.5.2
 
+- **HDR, chosen per game** - Edit Game > Performance has a new HDR choice: Profile setting, On for this game or Off for this game. On turns Windows' HDR on when the game launches and back off when it exits, whatever its profile, even Off; Off leaves HDR alone for a game that renders it badly while the rest of your Optimized games still get it. Until now the one Enable HDR switch in the Optimized profile decided for every game on it. Shown when the PC has an HDR-capable display, and a change to it is recorded in Activity & History.
+- **Activity & History, by day** - Recent is now in sections, Today, Yesterday, Earlier this week, Last week, Earlier this month, Last month and Older, the way Outlook and File Explorer group by date, so last night's problem isn't a scroll away from a week of play sessions.
 - **Ryzen 7950X3D and 9950X3D games stay on the cache cores with the Ultimate power plan** - the plan held every core awake, which stops AMD's V-Cache driver from parking the cores without the extra cache, so any game you hadn't set CPU Cores for could land on them and run slower. On a Ryzen with 3D V-Cache on one of its two CCDs, the plan now leaves core parking as the Balanced plan has it and changes everything else as before, whether you use it all the time from the System page or only while a game runs.
 - **NVIDIA Shader Cache: Unlimited** - a new System tweak. When the NVIDIA driver's shader cache is full it deletes the oldest shaders, and a game you come back to compiles them again while you play, with the hitches of a first run. Unlimited keeps them all. Restore Previous puts back the size you had, unless you've changed it since in the NVIDIA App or Control Panel. N/A on AMD and Intel.
 - **Keep the DirectX Shader Cache** - a new System tweak that stops Storage Sense and Windows' automatic Disk Cleanup from deleting the DirectX shader cache, which makes every game rebuild its shaders and stutter as if it were the first run. You can still clear it yourself in Disk Cleanup.
