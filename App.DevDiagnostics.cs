@@ -1490,6 +1490,8 @@ public partial class App
                 bool noDlss = i + 3 < e.Args.Length && e.Args[i + 3].Equals("nodlss", StringComparison.OrdinalIgnoreCase);
                 // "autocores": CPU Cores on Auto, so the wait-before-applying box is in the capture.
                 bool autoCores = i + 3 < e.Args.Length && e.Args[i + 3].Equals("autocores", StringComparison.OrdinalIgnoreCase);
+                // "script": Close Background Apps set for both phases with "recommended", as the site shows it.
+                bool withScript = i + 3 < e.Args.Length && e.Args[i + 3].Equals("script", StringComparison.OrdinalIgnoreCase);
                 _skipSettingsSaveOnExit = true;
                 // A copy, so pressing Save for the "invalid" capture can never touch the library.
                 // Prefer a game that actually ships DLSS, so the Performance tab's DLSS card is in
@@ -1512,6 +1514,12 @@ public partial class App
                 // The Performance tab shows the tier summary; Aggressive lists the most.
                 if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
                 if (autoCores) editVm.CpuAffinity = CpuAffinityMode.Auto;
+                if (withScript)
+                {
+                    editVm.PreLaunchScriptPath = Path.Combine(new ScriptLibraryService(_storageService.BaseDirectory).ScriptsDirectory, "Example-CloseBackgroundApps.ps1");
+                    editVm.UseSameScriptForBoth = true;
+                    editVm.ScriptArguments = "recommended";
+                }
                 editVm.SelectedSection = section;
                 dlg.Show();
                 // The DLSS card loads asynchronously, so a capture taken straight after Show()
