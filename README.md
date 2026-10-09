@@ -202,7 +202,7 @@ Stop-Process -Name Discord -ErrorAction SilentlyContinue
 - **Default scripts** in Settings run for every game that has no script of its own, with a per-game opt-out.
 - **New script...** creates a blank template with every argument already read for you and opens it in your editor.
 
-Scripts are off by default. Nothing runs until you enable them and choose one. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract.
+Nothing runs until you choose a script for a game. To hide scripts altogether, untick "Enable game scripts" in Settings > Launch & Performance. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract.
 
 ---
 
@@ -245,7 +245,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.6.0-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.6.1-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
 

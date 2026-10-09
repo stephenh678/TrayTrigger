@@ -122,8 +122,10 @@ public class AppSettings
     /// game's own scripts, not the <see cref="ScriptDefaults"/> - even one that still has script
     /// paths configured (that game keeps showing the card, with a notice that its scripts are
     /// disabled). See <see cref="Services.GameScriptService"/>.
+    /// On for a new install (1.6.1), so Edit Game shows the Scripts tab from the start: nothing
+    /// runs until a script is chosen for a game. An existing settings.json keeps its own value.
     /// </summary>
-    public bool EnableGameScripts { get; set; } = false;
+    public bool EnableGameScripts { get; set; } = true;
     /// <summary>Scripts that run for every game without one of its own. See <see cref="Models.ScriptDefaults"/>.</summary>
     public ScriptDefaults ScriptDefaults { get; set; } = new();
     /// <summary>

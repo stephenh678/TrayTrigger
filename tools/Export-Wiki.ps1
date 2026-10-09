@@ -188,7 +188,7 @@ $homePage.Add('This wiki is the reference for every setting, tweak and profile o
 $homePage.Add('')
 $homePage.Add('**Want something TrayTrigger doesn''t do before or after a game?** A pre-launch or post-exit script can: see [Writing your own script](Writing-your-own-script) and the ready-made ones in the [TrayTrigger-Scripts catalogue](https://github.com/stephenh678/TrayTrigger-Scripts).')
 $homePage.Add('')
-$homePage.Add('**New in 1.6.0: [Stutter Check](Stutter-Check), [tools that close for your games](Starting-and-closing-tools-with-your-games), and [every launch on the record](Activity-&-History).** Stutter Check runs the checks every "my game stutters" thread tells you to go through, in one click. Edit Tool can close Discord, OneDrive or a browser when a game launches and bring it back after. A game''s Played row in Activity & History now says exactly what TrayTrigger did for that launch, and didn''t.')
+$homePage.Add('**New in 1.6.1: [scripts that say what they did](Writing-your-own-script), and a [catalogue of ready-made ones](https://github.com/stephenh678/TrayTrigger-Scripts).** A line your script prints starting with TT: lands on the game''s Played row in [Activity & History](Activity-&-History) and in the launch popup. New script... in Edit Game starts a PowerShell script of your own, and scripts are on from the start for a new install.')
 $homePage.Add('')
 foreach ($g in $groups) {
     $homePage.Add("## $($g.Label)")

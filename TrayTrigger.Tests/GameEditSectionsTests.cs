@@ -128,6 +128,89 @@ public class GameEditSectionsTests : IDisposable
         Assert.Equal(GameEditSection.Scripts, vm.SelectedSection);
     });
 
+    [Fact]
+    public void RejectedSave_PutsTheReasonUnderTheField_UntilItIsEdited() => Sta(() =>
+    {
+        var vm = Create();
+        vm.SteamAppId = "abc";
+        vm.SaveCommand.Execute(null);
+
+        // Under the field that was refused, and only that one.
+        Assert.Contains("numeric", vm.SteamAppIdError);
+        Assert.Null(vm.PreLaunchScriptError);
+        Assert.Null(vm.PreLaunchTimeoutError);
+
+        vm.SteamAppId = "1245620";
+        Assert.Null(vm.SteamAppIdError);
+    });
+
+    [Fact]
+    public void RejectedSave_MovesTheReasonToTheNextFieldRefused() => Sta(() =>
+    {
+        var vm = Create();
+        vm.PreLaunchScriptPath = Path.Combine(_root, "missing.ps1");
+        vm.SaveCommand.Execute(null);
+        Assert.NotNull(vm.PreLaunchScriptError);
+
+        // Fixed, but now the timeout is wrong: the old message goes, the new one is under the timeout.
+        vm.PreLaunchScriptPath = string.Empty;
+        vm.PreLaunchScriptTimeoutSeconds = "0";
+        vm.SaveCommand.Execute(null);
+        Assert.Null(vm.PreLaunchScriptError);
+        Assert.NotNull(vm.PreLaunchTimeoutError);
+    });
+
+    [Fact]
+    public void RejectedSave_IsAProblemInTheFooter_UntilTheNextMessage() => Sta(() =>
+    {
+        var vm = Create();
+        vm.SteamAppId = "abc";
+        vm.SaveCommand.Execute(null);
+        Assert.True(vm.StatusIsProblem);
+
+        vm.StatusMessage = "Looking up \"Hades\"...";
+        Assert.False(vm.StatusIsProblem);
+    });
+
+    [Theory]
+    [InlineData(@"C:\Games\Hades\Hades.exe", false, "Executable / Shortcut Target")]
+    [InlineData("steam://rungameid/1145360", true, "Launch Link")]
+    public void ALauncherLink_IsLabelledAsOne(string target, bool isLink, string label) => Sta(() =>
+    {
+        var vm = Create(new GameEntry { Name = "Hades", ExecutablePath = target, IsSteamGame = isLink, SteamAppId = "1145360" });
+        Assert.Equal(isLink, vm.IsLinkTarget);
+        Assert.Equal(label, vm.ExecutableLabel);
+        if (isLink) Assert.Contains("Steam", vm.LinkTargetHint);
+        // The App ID has its own box in the Identity card; the platform line doesn't repeat it.
+        if (isLink) Assert.Equal("Linked to Steam", vm.PlatformDescription);
+        // Already launching directly: the hint stops telling you to tick it.
+        if (isLink)
+        {
+            vm.LaunchDirectly = true;
+            Assert.Contains("Browse to the game's .exe", vm.LinkTargetHint);
+        }
+    });
+
+    [Fact]
+    public void ALongProfileSummary_ShowsItsFirstLines_ThenAll() => Sta(() =>
+    {
+        IReadOnlyList<ProfileTweakToggleViewModel> tweaks = Enumerable.Range(1, 9)
+            .Select(n => { bool on = true; return new ProfileTweakToggleViewModel($"Tweak {n}", "d", "w", "profiles/x", () => on, v => on = v); })
+            .ToList();
+        var vm = new GameEditViewModel(new GameEntry { Name = "Hades" }, new[] { "Action" },
+            new IconExtractorService(new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"))),
+            profileTweaks: _ => tweaks);
+        vm.PerformanceProfile = PerformanceProfileMode.Aggressive;
+
+        Assert.True(vm.CanExpandProfileSummary);
+        Assert.Equal(GameEditViewModel.ProfileSummaryCollapsedLines, vm.VisibleProfileSummaryLines.Count);
+        Assert.Equal("Show 5 more", vm.ProfileSummaryToggleText);
+
+        vm.ToggleProfileSummaryCommand.Execute(null);
+        Assert.Equal(9, vm.VisibleProfileSummaryLines.Count);
+        Assert.Equal("Show fewer", vm.ProfileSummaryToggleText);
+    });
+
     [Theory]
     [InlineData("", "", false)]
     [InlineData(@"C:\Games\Hades", "", true)]

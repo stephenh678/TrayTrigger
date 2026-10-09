@@ -3,7 +3,7 @@
   Description:      Closes background apps, such as cloud sync, before a game and
                     reopens them after.
   Author:           TrayTrigger
-  Version:          3.1
+  Version:          3.2
   Phase:            both
   Needs admin:      no
   Dependencies:     none
