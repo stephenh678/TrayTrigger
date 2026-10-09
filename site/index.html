@@ -8,8 +8,8 @@
 <link rel="icon" href="assets/app_icon.png">
 <link rel="canonical" href="https://stephenh678.github.io/TrayTrigger/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="TrayTrigger: Launch. Automate. Play.">
-<meta property="og:description" content="Your games. Your settings. One tray menu. Launch PC games, automate your routine, and restore per-game profile settings on exit. Free for Windows.">
+<meta property="og:title" content="TrayTrigger: per-game Windows settings that put themselves back">
+<meta property="og:description" content="Sets Windows up for the game you're about to play (HDR, power plan, CPU cores, DLSS Override, your own scripts, tools) and puts everything back when you quit. Free, open source, lives in your tray.">
 <meta property="og:image" content="https://stephenh678.github.io/TrayTrigger/assets/social-preview.png">
 <meta property="og:image:width" content="1536">
 <meta property="og:image:height" content="1024">
@@ -191,7 +191,7 @@
   /* The Edit Game captures are cropped to the app window in the files themselves; the frame shows the whole image. */
   .capture { position: relative; width: 100%; overflow: hidden; background: #1d1d26; }
   .crop-profile { aspect-ratio: 1389 / 1059; }
-  .crop-scripts { aspect-ratio: 1384 / 1061; }
+  .crop-scripts { aspect-ratio: 1202 / 983; }
   .capture img { position: absolute; max-width: none; height: auto; border: 0; border-radius: 0; }
   .crop-profile img { width: 100%; left: 0; top: 0; }
   .crop-scripts img { width: 100%; left: 0; top: 0; }
@@ -200,7 +200,7 @@
   .lightbox-content { width: min(1100px, 92vw); }
   .lightbox-content .capture { margin: auto; border-radius: 10px; }
   .lightbox-content .crop-profile { max-width: calc((100dvh - 110px) * 1389 / 1059); }
-  .lightbox-content .crop-scripts { max-width: calc((100dvh - 110px) * 1384 / 1061); }
+  .lightbox-content .crop-scripts { max-width: calc((100dvh - 110px) * 1202 / 983); }
   .lightbox-content .capture img { max-height: none; }
   .lightbox-content > img { margin: auto; }
   @media (max-width: 760px) { .hero-showcase { grid-template-columns: 1fr; gap: 20px; } .hero-showcase .tray-card { max-width: 420px; justify-self: center; } }
@@ -362,7 +362,7 @@
 
     <div class="pillar" id="scripts">
       <div>
-        <div class="kicker">Make it yours<span class="badge">nothing runs until you pick one</span></div>
+        <div class="kicker">Make it yours · New in 1.6.1<span class="badge">nothing runs until you pick one</span></div>
         <h2>If TrayTrigger doesn't do it, your script can</h2>
         <p class="muted">A PowerShell script runs just before any game and again after it, with the game's name, path and minutes played handed to it. Whatever you'd want done around a session, before and after, is a few lines away.</p>
         <ul>
@@ -371,10 +371,10 @@
           <li><strong>On the record.</strong> A script says what it did in its own words, and TrayTrigger puts that on the game's Played row in Activity &amp; History and in the launch popup: "closed OneDrive and Discord".</li>
           <li><strong>As you, by default.</strong> Scripts run as you, or as Administrator through Windows' own prompt when you choose it. Read a script before you attach it; it does what it says, nothing more.</li>
         </ul>
-        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Writing-your-own-script">Writing your own script →</a></p>
+        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger-Scripts/blob/main/HOW-TO-WRITE-A-SCRIPT.md">How to write a TrayTrigger script, step by step →</a> &nbsp;·&nbsp; <a href="https://github.com/stephenh678/TrayTrigger/wiki/Writing-your-own-script">The full reference →</a></p>
 
       </div>
-      <figure class="shot"><div class="capture crop-scripts"><img loading="lazy" src="assets/scripts-current.png" alt="Close Background Apps script configured for pre-launch and post-exit with discord.exe as its argument"></div><figcaption><strong>A routine you can make your own.</strong> Configure the before-and-after actions, test them, and choose whether launch waits for the script.</figcaption></figure>
+      <figure class="shot"><div class="capture crop-scripts"><img loading="lazy" src="assets/scripts-current.png" alt="Edit Game's Scripts tab: Close Background Apps set for before and after the game, with recommended as its Script Arguments"></div><figcaption><strong>Your routine, per game.</strong> Pick a ready-made script or start your own with New script..., test it, and choose whether the game waits for it.</figcaption></figure>
     </div>
   </div>
 </section>
@@ -384,7 +384,7 @@
     <div class="theme-band" aria-hidden="true"><span>Launch.</span><span>Automate.</span><span class="on">Play.</span></div>
     <div class="pillar" id="tweaks">
       <div>
-        <div class="kicker">Performance Tweaks · Stutter Check new in 1.6.0</div>
+        <div class="kicker">Performance Tweaks · Stutter Check</div>
         <h2>Windows, ready for play</h2>
         <p class="muted">Optional Windows settings for display, input, scheduling, and background activity. These are separate from per-game profiles: they stay applied until you revert them.</p>
         <ul>
@@ -399,7 +399,7 @@
     </div>
     <div class="pillar" id="activity">
       <div>
-        <div class="kicker">Activity &amp; History · Every launch on the record, new in 1.6.0</div>
+        <div class="kicker">Activity &amp; History · Every launch on the record</div>
         <h2>Know what changed, and what didn't go to plan</h2>
         <p class="muted">A bell at the bottom of the sidebar opens a plain-language record of your sessions, by day, kept for 30 days, 90 or a year, and cleared when you say. Nothing interrupts a game: one notification after your last game sums up anything that went wrong.</p>
         <ul>
