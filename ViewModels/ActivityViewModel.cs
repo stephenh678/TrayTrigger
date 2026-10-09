@@ -351,6 +351,7 @@ public sealed class ActivityGroupViewModel : ViewModelBase
 /// <summary>One date header on the RECENT list and the rows under it.</summary>
 public sealed class ActivitySectionViewModel(string label, IReadOnlyList<ActivityGroupViewModel> rows)
 {
-    public string Label { get; } = label;
+    /// <summary>Upper case, as the page's and Settings' section labels are.</summary>
+    public string Label { get; } = label.ToUpperInvariant();
     public IReadOnlyList<ActivityGroupViewModel> Rows { get; } = rows;
 }

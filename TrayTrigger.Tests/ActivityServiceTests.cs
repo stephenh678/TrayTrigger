@@ -277,10 +277,10 @@ public class ActivityServiceTests : IDisposable
         var page = new ActivityViewModel(service);
 
         Assert.Equal(2, page.Sections.Count);
-        Assert.Equal("Today", page.Sections[0].Label);
+        Assert.Equal("TODAY", page.Sections[0].Label);
         Assert.Equal("SimHub didn't start", page.Sections[0].Rows.Single().Text);
         Assert.Equal("Played Hades · 1h", page.Sections[1].Rows.Single().Text);
-        Assert.NotEqual("Today", page.Sections[1].Label);
+        Assert.NotEqual("TODAY", page.Sections[1].Label);
     }
 
     [Fact]
