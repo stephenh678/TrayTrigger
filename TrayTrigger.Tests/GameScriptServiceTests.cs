@@ -230,7 +230,8 @@ public class GameScriptServiceTests : IDisposable
 
             Assert.False(result.ProceedWithLaunch);
             Assert.Equal("the pre-launch script said: Afterburner isn't installed at the path in Script Arguments.", result.AbortReason);
-            var problem = Assert.Single(ActivityService.Current.Entries, e => e.Level == ActivityLevel.Problem);
+            // Other test classes run alongside and record into the same static service: only this game's row counts.
+            var problem = Assert.Single(ActivityService.Current.Entries, e => e.Level == ActivityLevel.Problem && e.Subject == "Said");
             Assert.StartsWith("pre.bat said: Afterburner isn't installed at the path in Script Arguments. Test it from Edit Game", problem.Detail);
             Assert.Equal(["pre-launch pre.bat failed (exit code 2), the launch was cancelled", "Afterburner isn't installed at the path in Script Arguments."],
                 LaunchRecord.Peek(game.Id, LaunchRecord.Scripts));
