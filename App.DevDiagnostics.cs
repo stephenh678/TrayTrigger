@@ -856,7 +856,7 @@ public partial class App
                     new ToolEntry { Name = "DLSS Swapper", TargetPath = System.IO.Path.Combine(system, "notepad.exe"), Category = "Graphics", IsFavorite = true, Hotkey = "Ctrl+Alt+D" },
                     new ToolEntry { Name = "MSI Afterburner", TargetPath = System.IO.Path.Combine(system, "calc.exe"), Category = "Graphics", RunAsAdmin = true, StartWithGames = true, CloseAfterGames = true },
                     new ToolEntry { Name = "Vortex", TargetPath = System.IO.Path.Combine(windows, "explorer.exe"), Category = "Mods", IsFavorite = true },
-                    new ToolEntry { Name = "Discord", TargetPath = System.IO.Path.Combine(system, "cmd.exe"), Category = "Chat", StartWithGames = true },
+                    new ToolEntry { Name = "Discord", TargetPath = System.IO.Path.Combine(system, "cmd.exe"), Category = "Chat", CloseForGames = true, ReopenAfterGames = true },
                     new ToolEntry { Name = "Old Trainer", TargetPath = @"C:\Missing\trainer.exe", Category = "Mods" },
                 });
                 _mainViewModel.CurrentSection = NavSection.Tools;
@@ -1031,9 +1031,17 @@ public partial class App
                         detail: "Restore Previous on this page tries again. Windows Settings can also change them back by hand.", groupKey: "sample.fixed");
                     activity.MarkFixed([fixedSample.Id]);
                     activity.Record(ActivityLevel.Activity, "The startup scan found 3 new games", detail: "Add them with Scan for Games on the Library page.");
-                    activity.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades", detail: "From 18:02 to 18:50.", groupKey: "played|hades");
-                    activity.Record(ActivityLevel.Change, "Played Elden Ring · 2h 17m · Aggressive profile put back", subject: "Elden Ring",
-                        detail: "From 20:14 to 22:31. The profile's changes were put back when it closed.", groupKey: "played|er");
+                    activity.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades",
+                        detail: "Played: from 18:02 to 18:50 · launched through Steam.\nProfile: Off · nothing changed.", groupKey: "played|hades");
+                    activity.Record(ActivityLevel.Change, "Played Elden Ring · 2h 17m", subject: "Elden Ring",
+                        detail: "Played: from 20:14 to 22:31 · launched through Steam · Steam closed after.\n"
+                              + "Profile: Aggressive · changed: Ultimate Performance power plan · HDR on · NVIDIA power management: Prefer maximum performance · Windows' multimedia scheduler settings.\n"
+                              + "Skipped: Resizable BAR, off in the BIOS · speakers already unmuted.\n"
+                              + "Put back: everything.\n"
+                              + "Game: kept on the 8 performance cores (CPUs 0-15) · exempt from Windows power throttling · DLSS 310.2.1 from NVIDIA.\n"
+                              + "Scripts: pre-launch Example-CloseBackgroundApps.ps1 ran.\n"
+                              + "Tools: Discord closed, opened again after · MSI Afterburner started, closed after · OneDrive wasn't running, nothing to close.",
+                        groupKey: "played|er");
                     for (int n = 0; n < 7; n++)
                         activity.Record(ActivityLevel.Problem, "Elden Ring: post-exit script failed (exit code 1)", subject: "Elden Ring",
                             detail: "close-apps.ps1. Test it from Edit Game; what it printed is in the log.", groupKey: "script.postexit|er");
@@ -1044,6 +1052,8 @@ public partial class App
                 }
                 _mainViewModel.ActivityVM.Refresh();
                 if (expanded && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Count > 1) is { } repeated) repeated.IsExpanded = true;
+                // And a Played row, for its launch record with the section labels in bold.
+                if (expanded && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Text.StartsWith("Played Elden", StringComparison.Ordinal)) is { } played) played.IsExpanded = true;
                 // Not through CurrentSection's setter alone: opening the page marks everything seen,
                 // and the capture is meant to show the dot as a user would find it.
                 _mainViewModel.CurrentSection = NavSection.Activity;

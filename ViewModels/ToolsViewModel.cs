@@ -262,7 +262,9 @@ public sealed class ToolsViewModel : ViewModelBase
             string display = tab == LibraryConstants.AllCategory ? "All Tools" : tab;
             bool isSelected = string.Equals(tab, _selectedCategory, StringComparison.OrdinalIgnoreCase);
             CategoryTabs.Add(new CategoryTabItem(tab, display, isSelected, name => SelectedCategory = name,
-                isWithGamesTab: tab == ToolCatalog.WithGamesTab));
+                glyph: tab == ToolCatalog.StartWithGamesTab ? ToolCardViewModel.StartsWithGamesGlyph
+                     : tab == ToolCatalog.CloseWithGamesTab ? ToolCardViewModel.ClosesForGamesGlyph
+                     : string.Empty));
         }
         OnPropertyChanged(nameof(SelectedCategory));
     }

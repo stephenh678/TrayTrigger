@@ -142,9 +142,29 @@
             </Border>
         </DockPanel>
 
-        <!-- 3. Search -->
-        <views:SearchBox x:Name="ActivitySearchBox" Grid.Row="2" Width="Auto" Margin="0,0,0,14"
-                         Text="{Binding SearchText}" Placeholder="Search activity by game, tool, or what happened..."/>
+        <!-- 3. Search, how long to keep, and Clear history: the Library's search-and-sort bar, so the two pages read alike. -->
+        <Grid Grid.Row="2" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <views:SearchBox x:Name="ActivitySearchBox" Grid.Column="0" Width="Auto" Margin="0,0,10,0"
+                             Text="{Binding SearchText}" Placeholder="Search activity by game, tool, or what happened..."/>
+            <ComboBox AutomationProperties.Name="Keep history for" Grid.Column="1"
+                      ItemsSource="{Binding RetentionOptions}" SelectedItem="{Binding RetentionOption, Mode=TwoWay}"
+                      Style="{StaticResource ModernComboBox}" Margin="0,0,10,0"
+                      ToolTip="How far back Recent goes. Older entries go by themselves; a shorter window applies at once."/>
+            <!-- The Library's Add Game button, with the trash glyph: the one action on the page that isn't a filter. -->
+            <Button Grid.Column="2" AutomationProperties.Name="Clear History" Command="{Binding ClearHistoryCommand}"
+                    Style="{StaticResource ModernAccentButton}" VerticalAlignment="Center"
+                    ToolTip="Empties Recent after a confirmation. Needs Attention is kept.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Clear History" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
 
         <!-- 4. Content -->
         <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -177,7 +197,7 @@
                                                         </StackPanel>
                                                     </Border>
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                                <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                            FontFamily="{StaticResource AppFont}" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                             </StackPanel>
                                         </DockPanel>
@@ -190,11 +210,12 @@
 
                 <!-- RECENT -->
                 <StackPanel Visibility="{Binding ShowRecent, Converter={StaticResource BoolToVis}}">
+                    <!-- The heading and the window it covers, as the Keep dropdown above has it. -->
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
                         <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
                                    Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="RECENT" Style="{StaticResource SectionLabel}"/>
-                        <TextBlock Text="·  last 90 days" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                        <TextBlock Text="{Binding RecentWindowLabel}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
                     <Border Style="{StaticResource ActivityCard}">
@@ -223,7 +244,7 @@
                                         </Border.InputBindings>
                                         <StackPanel>
                                             <DockPanel LastChildFill="True">
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding When}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding When}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                            FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                                 <WrapPanel VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Text}" FontSize="13" FontFamily="{StaticResource AppFont}"
@@ -254,11 +275,18 @@
                                             </DockPanel>
                                             <!-- Expanded: what it means, each time, the log and a copy. Nothing extra until asked. -->
                                             <StackPanel Margin="0,6,0,0" Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
-                                                <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"
-                                                           FontFamily="{StaticResource AppFont}" Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}"/>
+                                                <!-- One TextBlock per line, so a Played row's section labels (Profile:, Tools:) stand out in bold and the lines breathe. -->
+                                                <ItemsControl ItemsSource="{Binding DetailLines}" Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}" Focusable="False">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock FontSize="12" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"
+                                                                       FontFamily="{StaticResource AppFont}" Margin="0,0,0,3"><Run Text="{Binding Label, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/><Run Text="{Binding Body, Mode=OneWay}"/></TextBlock>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                                 <TextBlock Text="{Binding FixedLabel}" FontSize="11.5" Foreground="#3FB950" TextWrapping="Wrap" Margin="0,4,0,0"
                                                            FontFamily="{StaticResource AppFont}" Visibility="{Binding IsFixed, Converter={StaticResource BoolToVis}}"/>
-                                                <TextBlock Text="{Binding TimesLabel}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                <TextBlock Text="{Binding TimesLabel}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,4,0,0"
                                                            FontFamily="{StaticResource AppFont}" Visibility="{Binding ShowTimes, Converter={StaticResource BoolToVis}}"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                                     <Button Style="{StaticResource HelpLinkButton}" Content="Show in log" Command="{Binding ShowLogCommand}"/>

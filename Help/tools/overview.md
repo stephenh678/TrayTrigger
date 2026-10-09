@@ -35,7 +35,7 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 ## Categories, favorites and sorting
 
 - Tools have their own categories, separate from game categories. Set one with Change Category... or in Edit Tool; the picker suggests the categories your tools already use.
-- The tabs are All Tools, Favorites, With Games while a tool starts with games, then each category A to Z. A category tab disappears when its last tool leaves it, and With Games when no tool starts with games any more. "With Games" can't be a category name, so a tool given it goes to Uncategorized.
+- The tabs are All Tools, Favorites, Start with Games while a tool starts with games, Close with Games while one closes for them, then each category A to Z. A category tab disappears when its last tool leaves it, and the two game tabs when no tool uses them any more. "Start with Games" and "Close with Games" can't be category names, so a tool given one goes to Uncategorized.
 - Click the star on a tool to make it a favorite.
 - Sort the page A to Z, Z to A, or favorites first. Search matches a tool's name, category, program path or Store app ID.
 - Three views: Large Icons, Small Icons and List. The page remembers the view, sort and tab you last used.
@@ -62,11 +62,12 @@ A tool is just a saved shortcut. Nothing is scanned, looked up online or fetched
 - Windows shows its own permission prompt each time. TrayTrigger never answers or skips it.
 - Programs that always need admin, like MSI Afterburner, get that prompt even with the box unticked.
 
-## Starting with your games
+## Starting and closing with your games
 
-- Tick "Start when I launch a game" in Edit Tool and the tool starts just before any game TrayTrigger launches, unless it's already running. Tick "Close it when the game exits" too and the copy TrayTrigger started is closed again once your last game has closed.
-- A tool that starts with games shows the Library's controller icon on its card, and is listed on the With Games tab.
-- The Starting tools with your games topic has the details, including the permission prompts for a program that runs as administrator.
+- Edit Tool asks what to do with the tool when you launch a game: nothing (the default), start it, or close it. Choose "Start it" and the tool starts just before any game TrayTrigger launches, unless it's already running. Tick "Close it when the game exits" too and the copy TrayTrigger started is closed again once your last game has closed.
+- Choose "Close it" and the tool, say Discord or OneDrive, is closed just before any game TrayTrigger launches, so it isn't using memory and the graphics card while you play. Tick "Open it again when the game exits" too and it's started again once your last game has closed, unless you opened it yourself in the meantime.
+- A tool that starts with games shows the Library's controller icon, in blue, on its card and is listed on the Start with Games tab; one that closes for them shows a red power symbol and is on the Close with Games tab.
+- The Starting and closing tools with your games topic has the details, including the permission prompts for a program that runs as administrator.
 
 ## Hotkeys
 

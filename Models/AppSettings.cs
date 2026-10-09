@@ -149,6 +149,12 @@ public class AppSettings
     public string ToolsViewMode { get; set; } = ToolCatalog.ViewLargeIcons;
     /// <summary>The Tools page's selected category tab, kept across restarts like <see cref="LastCategoryFilter"/>.</summary>
     public string LastToolsCategoryTab { get; set; } = LibraryConstants.AllCategory;
+    /// <summary>
+    /// How far back Recent on the Activity &amp; History page goes, set by the Keep dropdown on the
+    /// page: one of <see cref="Services.ActivityService.RetentionChoices"/> (30, 90 or 365 days), 90 by
+    /// default. Any other value in a hand-edited settings.json reads as the default.
+    /// </summary>
+    public int ActivityRetentionDays { get; set; } = ActivityService.DefaultRetentionDays;
     public bool AutoCheckForUpdates { get; set; } = true;
     public bool IncludePrereleaseUpdates { get; set; } = false;
     public bool HasSeenPerformanceProfileMigrationPrompt { get; set; } = false;

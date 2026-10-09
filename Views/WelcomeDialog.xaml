@@ -127,7 +127,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                        <TextBlock FontSize="11.5" TextWrapping="Wrap" Foreground="{StaticResource BrushTextMuted}"
+                        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource BrushTextMuted}"
                                    Text="Leave them blank to skip. You can add them later in Settings &gt; Library &amp; Art."/>
                         <Button Style="{StaticResource HelpLinkButton}" Content="More about the keys" Margin="0,3,0,0"
                                 Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/api_keys"/>

@@ -196,6 +196,49 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Empty(_service.ActiveSessionGameIds);
     }
 
+    /// <summary>The Profile line of the Played row: what was changed, what was skipped and why, and that it was put back.</summary>
+    [Fact]
+    public void Optimized_SaysWhatItChanged_AndThatItPutItBack()
+    {
+        var game = Game("profile-notes", _exeA, PerformanceProfileMode.Optimized);
+        LaunchRecord.Begin(game.Id);
+
+        Assert.True(_service.BeginGameSession(game));
+        Assert.Equal(["Ultimate Performance power plan", "High performance GPU for the game's program"],
+            LaunchRecord.Peek(game.Id, LaunchRecord.Profile).Where(n => !n.Contains("NVIDIA") && !n.Contains("HDR")));
+
+        Assert.True(_service.EndGameSession("profile-notes"));
+        var record = LaunchRecord.Take(game.Id);
+        var profile = Assert.Single(record, r => r.Section == LaunchRecord.Profile).Notes;
+        Assert.Equal("put back: everything", profile[^1]);
+    }
+
+    [Fact]
+    public void Off_SaysNothingChanged()
+    {
+        var game = Game("off-notes", _exeA, PerformanceProfileMode.Off);
+        LaunchRecord.Begin(game.Id);
+
+        Assert.False(_service.BeginGameSession(game));
+
+        Assert.Equal(["nothing changed"], LaunchRecord.Peek(game.Id, LaunchRecord.Profile));
+        LaunchRecord.Take(game.Id);
+    }
+
+    [Fact]
+    public void ARestoreThatFails_IsSaidOnTheProfileLine_BesideTheCriticalRow()
+    {
+        var game = Game("fail-notes", _exeA, PerformanceProfileMode.Optimized);
+        LaunchRecord.Begin(game.Id);
+        Assert.True(_service.BeginGameSession(game));
+        _backend.RefusePowerScheme = true;
+
+        Assert.True(_service.EndGameSession("fail-notes"));
+
+        var profile = Assert.Single(LaunchRecord.Take(game.Id), r => r.Section == LaunchRecord.Profile).Notes;
+        Assert.Equal("put back: everything except the power plan, which couldn't be", profile[^1]);
+    }
+
     [Fact]
     public void Optimized_AppliesPowerPlanAndGpuPreference_ThenRestores()
     {

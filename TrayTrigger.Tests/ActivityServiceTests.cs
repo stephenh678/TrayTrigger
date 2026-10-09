@@ -25,6 +25,131 @@ public class ActivityServiceTests : IDisposable
     private ActivityService Service(bool readOnly = false) => new(_dir, () => _now, readOnly);
 
     [Fact]
+    public void Retention_FollowsTheSetting_AndAppliesAtOnce()
+    {
+        int window = 30;
+        var service = new ActivityService(_dir, () => _now, retentionDays: () => window);
+        service.Record(ActivityLevel.Activity, "a month ago");
+        _now = _now.AddDays(31);
+        service.Record(ActivityLevel.Activity, "today");
+        Assert.DoesNotContain(service.Entries, e => e.Text == "a month ago");
+
+        // Widening keeps what's there; narrowing below what's kept drops it as soon as it's applied.
+        _now = _now.AddDays(40);
+        window = 365;
+        service.ApplyRetention();
+        Assert.Contains(service.Entries, e => e.Text == "today");
+        window = 30;
+        service.ApplyRetention();
+        Assert.Empty(service.Entries);
+        Assert.Equal(30, service.RetentionDays);
+    }
+
+    [Theory]
+    [InlineData(30, 30)]
+    [InlineData(90, 90)]
+    [InlineData(365, 365)]
+    [InlineData(0, 90)]
+    [InlineData(45, 90)]
+    [InlineData(-1, 90)]
+    public void RetentionDays_OutsideTheChoices_IsTheDefault(int stored, int expected) =>
+        Assert.Equal(expected, ActivityService.NormalizeRetentionDays(stored));
+
+    [Fact]
+    public void AmendDetail_RewritesThePhrase_SavesIt_AndIgnoresAMissingEntryOrPhrase()
+    {
+        var service = Service();
+        var row = service.Record(ActivityLevel.Change, "Played Hades · 48m", subject: "Hades", detail: "From 18:00 to 18:48.\nTools: SimHub started, closes after your last game.");
+        int changed = 0;
+        service.Changed += () => changed++;
+
+        service.AmendDetail(row, "SimHub started, closes after your last game", "SimHub started, closed after");
+
+        Assert.Equal("From 18:00 to 18:48.\nTools: SimHub started, closed after.", Service().Entries.Single().Detail);
+        Assert.Equal(1, changed);
+        // Already amended, or gone: nothing to do, nobody told.
+        service.AmendDetail(row, "SimHub started, closes after your last game", "SimHub started, closed after");
+        service.AmendDetail(new ActivityEntry { Id = "missing" }, "a", "b");
+        Assert.Equal(1, changed);
+    }
+
+    [Fact]
+    public void Clear_EmptiesRecent_KeepsNeedsAttention_AndSurvivesARestart()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Change, "Played Hades · 48m", subject: "Hades");
+        service.Record(ActivityLevel.Problem, "A script failed");
+        service.SetState(new AttentionItem("profile.unrestored", "Power plan wasn't put back", "Restore Previous puts it back.", "Restore Previous", () => { }, IsCritical: true));
+        int changed = 0;
+        service.Changed += () => changed++;
+
+        service.Clear();
+
+        Assert.Empty(service.Entries);
+        Assert.Single(service.States);
+        Assert.Equal(1, changed);
+        Assert.Empty(Service().Entries);
+        // Nothing to clear: no save, no notice.
+        service.Clear();
+        Assert.Equal(1, changed);
+    }
+
+    [Fact]
+    public void ClearHistory_AsksFirst_AndOnlyOffersItWhenThereIsSomething()
+    {
+        var service = Service();
+        var page = new ActivityViewModel(service);
+        Assert.False(page.ClearHistoryCommand.CanExecute(null));
+
+        service.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades");
+        Assert.True(page.ClearHistoryCommand.CanExecute(null));
+
+        page.ConfirmClear = () => false;
+        page.ClearHistoryCommand.Execute(null);
+        Assert.Single(service.Entries);
+
+        page.ConfirmClear = () => true;
+        page.ClearHistoryCommand.Execute(null);
+        Assert.Empty(service.Entries);
+        Assert.True(page.ShowNothingYet);
+    }
+
+    [Fact]
+    public void KeepDropdown_SavesTheWindow_PrunesAtOnce_AndTheHeadingFollows()
+    {
+        var settings = new AppSettings();
+        int saved = 0;
+        var service = new ActivityService(_dir, () => _now, retentionDays: () => settings.ActivityRetentionDays);
+        service.Record(ActivityLevel.Activity, "six weeks ago");
+        _now = _now.AddDays(45);
+        service.Record(ActivityLevel.Activity, "today");
+        var page = new ActivityViewModel(service, settings: settings, saveSettings: () => saved++);
+        Assert.Equal(ActivityViewModel.Keep90Days, page.RetentionOption);
+        Assert.Equal("·  last 90 days", page.RecentWindowLabel);
+
+        page.RetentionOption = ActivityViewModel.Keep30Days;
+
+        Assert.Equal(30, settings.ActivityRetentionDays);
+        Assert.Equal(1, saved);
+        Assert.Equal("·  last 30 days", page.RecentWindowLabel);
+        Assert.Equal(["today"], service.Entries.Select(e => e.Text));
+
+        page.RetentionOption = ActivityViewModel.KeepAYear;
+        Assert.Equal(365, settings.ActivityRetentionDays);
+        Assert.Equal("·  last year", page.RecentWindowLabel);
+        // The same choice again: nothing to save.
+        page.RetentionOption = ActivityViewModel.KeepAYear;
+        Assert.Equal(2, saved);
+    }
+
+    [Fact]
+    public void KeepDropdown_ReadsAHandEditedValue_AsTheDefault()
+    {
+        var page = new ActivityViewModel(Service(), settings: new AppSettings { ActivityRetentionDays = 45 });
+        Assert.Equal(ActivityViewModel.Keep90Days, page.RetentionOption);
+    }
+
+    [Fact]
     public void Entries_AreKept_AndComeBackNewestFirst_AfterARestart()
     {
         var service = Service();
@@ -99,7 +224,7 @@ public class ActivityServiceTests : IDisposable
     {
         var service = Service();
         service.Record(ActivityLevel.Activity, "ancient");
-        _now = _now.AddDays(ActivityService.RetentionDays + 1);
+        _now = _now.AddDays(ActivityService.DefaultRetentionDays + 1);
         service.Record(ActivityLevel.Critical, "keep me");
         Assert.DoesNotContain(service.Entries, e => e.Text == "ancient");
 
@@ -339,16 +464,134 @@ public class ActivityServiceTests : IDisposable
     // ------------------------------------------------------------------ play sessions
 
     [Fact]
-    public void PlaySession_IsOneLine_WithTheProfileWhenItHadOne()
+    public void PlaySession_TitleIsTheGameAndTheTimePlayed()
     {
         var start = new DateTime(2026, 10, 4, 18, 0, 0, DateTimeKind.Utc);
 
-        Assert.Equal("Played Hades · 48m",
-            ProcessLauncherService.DescribePlaySession("Hades", 48, null, start, start.AddMinutes(48)).Text);
-        Assert.Equal("Played Elden Ring · 2h 17m · Aggressive profile put back",
-            ProcessLauncherService.DescribePlaySession("Elden Ring", 137, PerformanceProfileMode.Aggressive, start, start.AddMinutes(137)).Text);
-        Assert.Equal("Played Doom · 2h", ProcessLauncherService.DescribePlaySession("Doom", 120, null, start, start).Text);
-        Assert.Equal("Played Doom · under a minute", ProcessLauncherService.DescribePlaySession("Doom", 0, null, start, start).Text);
+        Assert.Equal("Played Hades · 48m", ProcessLauncherService.DescribePlaySession("Hades", 48, PerformanceProfileMode.Off, start, start.AddMinutes(48)).Text);
+        Assert.Equal("Played Elden Ring · 2h 17m", ProcessLauncherService.DescribePlaySession("Elden Ring", 137, PerformanceProfileMode.Aggressive, start, start.AddMinutes(137)).Text);
+        Assert.Equal("Played Doom · 2h", ProcessLauncherService.DescribePlaySession("Doom", 120, PerformanceProfileMode.Off, start, start).Text);
+        Assert.Equal("Played Doom · under a minute", ProcessLauncherService.DescribePlaySession("Doom", 0, PerformanceProfileMode.Off, start, start).Text);
+    }
+
+    /// <summary>The detail is the record of the launch: one line per section, each only when it has something to say.</summary>
+    [Fact]
+    public void PlaySession_DetailIsTheLaunchRecord_OneLinePerSection()
+    {
+        var start = new DateTime(2026, 10, 4, 18, 0, 0, DateTimeKind.Utc);
+        IReadOnlyList<(string, IReadOnlyList<string>)> record =
+        [
+            (LaunchRecord.Launch, ["launched through Steam", "Steam closed after"]),
+            (LaunchRecord.Profile, ["Ultimate Performance power plan", "skipped: HDR, no HDR-capable display", "put back: everything"]),
+            (LaunchRecord.Game, ["kept on the 8 performance cores (CPUs 0-15)", "DLSS 310.2.1 from NVIDIA"]),
+            (LaunchRecord.Scripts, ["pre-launch close-apps.ps1 ran"]),
+            (LaunchRecord.Tools, ["Discord closed, opened again after", "MSI Afterburner started, closed after"]),
+        ];
+
+        var (text, detail) = ProcessLauncherService.DescribePlaySession("Hades", 48, PerformanceProfileMode.Aggressive, start, start.AddMinutes(48), record);
+
+        Assert.Equal("Played Hades · 48m", text);
+        var lines = detail.Split('\n');
+        Assert.Equal(7, lines.Length);
+        Assert.StartsWith("Played: from ", lines[0]);
+        Assert.EndsWith(" · launched through Steam · Steam closed after.", lines[0]);
+        Assert.Equal("Profile: Aggressive · changed: Ultimate Performance power plan.", lines[1]);
+        Assert.Equal("Skipped: HDR, no HDR-capable display.", lines[2]);
+        Assert.Equal("Put back: everything.", lines[3]);
+        Assert.Equal("Game: kept on the 8 performance cores (CPUs 0-15) · DLSS 310.2.1 from NVIDIA.", lines[4]);
+        Assert.Equal("Scripts: pre-launch close-apps.ps1 ran.", lines[5]);
+        Assert.Equal("Tools: Discord closed, opened again after · MSI Afterburner started, closed after.", lines[6]);
+    }
+
+    [Fact]
+    public void PlaySession_WithNothingDone_SaysTheProfileWasOff_AndNoMore()
+    {
+        var start = new DateTime(2026, 10, 4, 18, 0, 0, DateTimeKind.Utc);
+
+        var (_, detail) = ProcessLauncherService.DescribePlaySession("Hades", 48, PerformanceProfileMode.Off, start, start.AddMinutes(48),
+            [(LaunchRecord.Launch, ["launched directly"])]);
+
+        var lines = detail.Split('\n');
+        Assert.Equal(2, lines.Length);
+        Assert.EndsWith(" · launched directly.", lines[0]);
+        Assert.Equal("Profile: Off · nothing changed.", lines[1]);
+
+        // No times (recorded at shutdown) and no record: the profile line stands alone, and says nothing changed.
+        Assert.Equal("Profile: Optimized · nothing changed.", ProcessLauncherService.DescribePlaySession("Hades", 48, PerformanceProfileMode.Optimized, default, default).Detail);
+    }
+
+    [Fact]
+    public void DetailLines_SplitTheSectionLabelsOff_AndLeaveOtherDetailsWhole()
+    {
+        var lines = ActivityGroupViewModel.SplitDetail("Played: from 09:47 to 10:10 · launched through Steam.\nProfile: Off · nothing changed.\nTools: Discord closed.");
+        Assert.Equal([("Played: ", "from 09:47 to 10:10 · launched through Steam."), ("Profile: ", "Off · nothing changed."), ("Tools: ", "Discord closed.")],
+            lines.Select(l => (l.Label, l.Body)));
+        Assert.Equal([("Put back: ", "everything.")], ActivityGroupViewModel.SplitDetail("Put back: everything.").Select(l => (l.Label, l.Body)));
+
+        // A problem row's detail: no label, however it begins, and blank lines dropped.
+        Assert.Equal([("", "close-apps.ps1. Test it from Edit Game; what it printed is in the log.")],
+            ActivityGroupViewModel.SplitDetail("close-apps.ps1. Test it from Edit Game; what it printed is in the log.\n").Select(l => (l.Label, l.Body)));
+        Assert.Equal([("", "Note: this isn't a section.")], ActivityGroupViewModel.SplitDetail("Note: this isn't a section.").Select(l => (l.Label, l.Body)));
+        Assert.Empty(ActivityGroupViewModel.SplitDetail(null));
+    }
+
+    [Fact]
+    public void AppendToLine_AddsToTheLine_OrAddsTheLineInOrder_Once()
+    {
+        var service = Service();
+        var row = service.Record(ActivityLevel.Change, "Played Hades · 48m", subject: "Hades",
+            detail: "Played: from 18:00 to 18:48.\nProfile: Optimized · changed: Ultimate Performance power plan.\nPut back: everything.\nTools: Discord closed.");
+
+        service.AppendToLine(row, LaunchRecord.Game, "kept on the 8 performance cores");
+        service.AppendToLine(row, LaunchRecord.Game, "DLSS 310.2.1 from NVIDIA");
+        service.AppendToLine(row, LaunchRecord.Game, "DLSS 310.2.1 from NVIDIA");
+
+        Assert.Equal("Played: from 18:00 to 18:48.\nProfile: Optimized · changed: Ultimate Performance power plan.\nPut back: everything.\nGame: kept on the 8 performance cores · DLSS 310.2.1 from NVIDIA.\nTools: Discord closed.",
+            Service().Entries.Single().Detail);
+        service.AppendToLine(new ActivityEntry { Id = "gone" }, LaunchRecord.Game, "x");
+    }
+
+    [Fact]
+    public void LaunchRecord_ANoteAfterTheRecordWasTaken_GoesToTheLateHandler()
+    {
+        var late = new List<string>();
+        var previous = LaunchRecord.LateNote;
+        LaunchRecord.LateNote = (g, s, t) => late.Add($"{g}|{s}|{t}");
+        try
+        {
+            LaunchRecord.Begin("late-g1");
+            LaunchRecord.Note("late-g1", LaunchRecord.Game, "in time");
+            LaunchRecord.Take("late-g1");
+            LaunchRecord.Note("late-g1", LaunchRecord.Game, "kept on the cores");
+
+            Assert.Equal(["late-g1|Game|kept on the cores"], late);
+            Assert.Empty(LaunchRecord.Take("late-g1"));
+        }
+        finally
+        {
+            LaunchRecord.LateNote = previous;
+        }
+    }
+
+    [Fact]
+    public void LaunchRecord_CollectsNotesPerGame_InSectionOrder_AndIsTakenOnce()
+    {
+        LaunchRecord.Begin("record-g1");
+        LaunchRecord.Note("record-g1", LaunchRecord.Tools, "Discord closed");
+        LaunchRecord.Note("record-g1", LaunchRecord.Profile, "HDR on");
+        LaunchRecord.Note("record-g1", LaunchRecord.Profile, "HDR on");   // once
+        LaunchRecord.Note("record-g2", LaunchRecord.Profile, "someone else's");
+        Assert.Equal(["HDR on"], LaunchRecord.Peek("record-g1", LaunchRecord.Profile));
+
+        var record = LaunchRecord.Take("record-g1");
+
+        Assert.Equal([LaunchRecord.Profile, LaunchRecord.Tools], record.Select(r => r.Section));
+        Assert.Equal(["Discord closed"], record[1].Notes);
+        Assert.Empty(LaunchRecord.Take("record-g1"));
+        // A new launch starts the record afresh.
+        LaunchRecord.Note("record-g2", LaunchRecord.Tools, "stale");
+        LaunchRecord.Begin("record-g2");
+        Assert.Empty(LaunchRecord.Take("record-g2"));
     }
     // ------------------------------------------------------------------ profile changes
 

@@ -42,10 +42,17 @@ public sealed class ToolCardViewModel : ViewModelBase
     public bool IsScript => ToolCatalog.IsScript(Tool);
     public bool IsFavorite => Tool.IsFavorite;
     public bool RunAsAdmin => Tool.RunAsAdmin && IsProgram;
-    /// <summary>Starts with games (<see cref="ToolEntry.StartWithGames"/>): the card shows the Library's controller icon.</summary>
     public bool StartsWithGames => ToolCatalog.StartsWithGames(Tool);
+    public bool ClosesForGames => ToolCatalog.ClosesForGames(Tool);
+    /// <summary>Starts with games or closes for them: the card shows <see cref="WithGamesGlyph"/>, with <see cref="WithGamesLabel"/> as its tooltip.</summary>
+    public bool IsWithGames => ToolCatalog.IsWithGames(Tool);
+    public string WithGamesLabel => StartsWithGames ? "Starts with games" : ClosesForGames ? "Closes for games" : string.Empty;
+    /// <summary>The Library's controller for a tool that starts with games; the power symbol for one that is closed for them. Also on their tabs.</summary>
+    public const string StartsWithGamesGlyph = "\uE7FC";
+    public const string ClosesForGamesGlyph = "\uE7E8";
+    public string WithGamesGlyph => StartsWithGames ? StartsWithGamesGlyph : ClosesForGames ? ClosesForGamesGlyph : string.Empty;
     /// <summary>What Narrator reads for the card: the controller icon can't be seen, so its meaning is spoken.</summary>
-    public string AccessibleName => StartsWithGames ? $"{Name}, starts with games" : Name;
+    public string AccessibleName => IsWithGames ? $"{Name}, {WithGamesLabel.ToLowerInvariant()}" : Name;
     public string FavoriteMenuLabel => IsFavorite ? "Remove from Favorites" : "Add to Favorites";
     public string HotkeyDisplay => HotkeyManager.Normalize(Tool.Hotkey) ?? string.Empty;
     public bool HasHotkey => HotkeyDisplay.Length > 0;

@@ -112,7 +112,7 @@
                                 <TextBlock Text="{Binding Name}" FontSize="13.5"
                                            Foreground="{StaticResource BrushTextPrimary}"
                                            FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Text="{Binding PathDisplay}" FontSize="11"
+                                <TextBlock Text="{Binding PathDisplay}" FontSize="12"
                                            Foreground="{StaticResource BrushTextMuted}"
                                            TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                             </StackPanel>

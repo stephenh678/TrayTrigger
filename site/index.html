@@ -290,10 +290,10 @@
       <p>Pick a game from the tray. TrayTrigger uses its launcher and the options you selected. Profiles and scripts are optional, so you choose how much to automate.</p>
     </div>
     <div class="grid grid-4">
-      <div class="tile"><div class="step">1 · Before launch</div><p>If enabled, records and applies the game's <strong>Performance Profile</strong>. Runs your <strong>pre-launch script</strong> if you have configured one.</p></div>
+      <div class="tile"><div class="step">1 · Before launch</div><p>If enabled, records and applies the game's <strong>Performance Profile</strong>. Runs your <strong>pre-launch script</strong> if you have configured one, closes the <strong>tools</strong> you'd rather not have running and starts the ones you want with the game.</p></div>
       <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears.</p></div>
       <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past. <strong>Suspend</strong> a game with Ctrl+Alt+P for a cutscene you can't pause and resume it the same way, or use <strong>Close Game</strong> from the tray.</p></div>
-      <div class="tile"><div class="step">4 · On exit</div><p>Restores <strong>per-game profile settings</strong> to their previous state, checks each one took, and notes the session in <strong>Activity &amp; History</strong>. Runs your configured post-exit script and closes the launcher if selected. After a crash, the saved profile state is restored on next start.</p></div>
+      <div class="tile"><div class="step">4 · On exit</div><p>Restores <strong>per-game profile settings</strong> to their previous state, checks each one took, brings back the tools it closed, and writes the whole launch on the game's row in <strong>Activity &amp; History</strong>. Runs your configured post-exit script and closes the launcher if selected. After a crash, the saved profile state is restored on next start.</p></div>
     </div>
   </div>
 </section>
@@ -329,7 +329,7 @@
           <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
           <li><strong>Launchers stay minimized</strong>: Steam and GOG Galaxy start in the background and Epic launches silently, so only the game appears.</li>
           <li><strong>Launch popup</strong> by the tray clock for hotkey and tray launches: what the game is waiting on, and the reason if a launch fails.</li>
-          <li><strong>Tools</strong>: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. A tool can start with your games and close when the last one exits.</li>
+          <li><strong>Tools</strong>: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. A tool can start with your games and close when the last one exits, or be closed for them: Discord, OneDrive or a browser out of the way while you play, and back when you're done.</li>
           <li><strong>Run as Administrator</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
           <li><strong>CPU Cores</strong> per game: performance cores on an Intel hybrid CPU, the 3D V-Cache cores on a Ryzen X3D. Auto picks what fits your CPU.</li>
           <li><strong>NVIDIA DLSS Override</strong> per game: run a game on your driver's newer DLSS files instead of the ones it shipped with, without touching the game folder. Select several games to switch it for all of them.</li>
@@ -351,9 +351,10 @@
         <h2>Tuned for each game, restored on exit</h2>
         <ul>
           <li><strong>Off</strong>: no per-game tweaks. TrayTrigger just launches the game.</li>
-          <li><strong>Optimized</strong>: your custom high-performance power plan and high-performance GPU preference for that game. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers.</li>
-          <li><strong>Aggressive</strong>: everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, and an off-by-default Defender exclusion.</li>
-          <li>Every profile change is recorded and reverted on exit. Set it per game, or in bulk from the library.</li>
+          <li><strong>Optimized</strong>: your custom high-performance power plan, high-performance GPU preference for that game, an NVIDIA GPU kept at full clocks, and the game exempt from Windows' power throttling. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers, and a frame cap just under your refresh rate for G-SYNC and FreeSync monitors.</li>
+          <li><strong>Aggressive</strong>: everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, Resizable BAR for the games NVIDIA never tested, and an off-by-default Defender exclusion.</li>
+          <li><strong>HDR, chosen per game</strong>: on for this game, off for one that renders it badly, or whatever the profile says.</li>
+          <li>Every profile change is recorded and reverted on exit, and the game's Played row in Activity &amp; History says what changed, what was skipped and why, and that it was all put back. Set it per game, or in bulk from the library.</li>
         </ul>
       </div>
       <figure class="shot"><div class="capture crop-profile"><img loading="lazy" src="assets/profile-current.png" alt="Edit Game with the Optimized profile selected and default CPU cores"></div><figcaption><strong>Your settings, per game.</strong> This example pairs the Optimized profile with a dedicated launch hotkey.</figcaption></figure>
@@ -380,31 +381,33 @@
     <div class="theme-band" aria-hidden="true"><span>Launch.</span><span>Automate.</span><span class="on">Play.</span></div>
     <div class="pillar" id="tweaks">
       <div>
-        <div class="kicker">Performance Tweaks</div>
+        <div class="kicker">Performance Tweaks · Stutter Check new in 1.6.0</div>
         <h2>Windows, ready for play</h2>
         <p class="muted">Optional Windows settings for display, input, scheduling, and background activity. These are separate from per-game profiles: they stay applied until you revert them.</p>
         <ul>
-          <li><strong>See what changes.</strong> Review the current Windows state and the explanation for each setting.</li>
+          <li><strong>Stutter Check.</strong> The checks every "my game stutters" thread tells you to go through, run for you in one click: overlay apps, a browser or Discord holding video memory, a monitor below its fastest refresh rate, memory below its rated speed, games on a hard drive, shader caches, Game Mode, the power plan and more. Each row says what it found and what to do. It reports and changes nothing by itself.</li>
+          <li><strong>See what changes.</strong> The Performance Preset card counts the recommended tweaks that are on, and each row shows its real Windows state and the explanation for the setting.</li>
           <li><strong>Choose what fits.</strong> Results depend on your PC and game; performance improvements are not guaranteed.</li>
-          <li><strong>Revert when you want.</strong> Undo settings individually or use Restore Previous Settings to restore the state TrayTrigger recorded. Bulk changes can create a System Restore point.</li>
+          <li><strong>Revert when you want.</strong> Undo settings individually or use Undo Preset to put back what TrayTrigger recorded. Bulk changes can create a System Restore point.</li>
         </ul>
         <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">Explore the tweaks, trade-offs, and restore behavior →</a></p>
       </div>
-      <div class="shot"><img src="assets/system-tweaks.png" alt="Performance Tweaks page: recommended optimizations active, each with its real Windows state and a Revert to Default button"></div>
+      <div class="shot"><img src="assets/system-tweaks.png" width="1168" height="1196" alt="Performance Tweaks page: Stutter Check with 16 checks run, one needing a look, and the Performance Preset card with all 14 preset tweaks applied"></div>
     </div>
     <div class="pillar" id="activity">
       <div>
-        <div class="kicker">Activity &amp; History · New in 1.5.0</div>
+        <div class="kicker">Activity &amp; History · Every launch on the record, new in 1.6.0</div>
         <h2>Know what changed, and what didn't go to plan</h2>
-        <p class="muted">A bell at the bottom of the sidebar opens a plain-language record of your sessions, kept for 90 days. Nothing interrupts a game: one notification after your last game sums up anything that went wrong.</p>
+        <p class="muted">A bell at the bottom of the sidebar opens a plain-language record of your sessions, by day, kept for 30 days, 90 or a year, and cleared when you say. Nothing interrupts a game: one notification after your last game sums up anything that went wrong.</p>
         <ul>
-          <li><strong>Every session and change.</strong> The games you played and for how long, the profile put back afterwards, games you added, and every change to a profile, CPU Cores, DLSS Override or Windows tweak.</li>
+          <li><strong>Every launch, on the record.</strong> Open a game's Played row and it says exactly what TrayTrigger did for that launch, and didn't: when and through which launcher, what the profile changed, skipped and put back, what was done to the game's own process, the scripts that ran, and the tools closed, started or left alone because they were already running.</li>
+          <li><strong>Every session and change.</strong> The games you played and for how long, games you added, and every change to a profile, CPU Cores, DLSS Override or Windows tweak.</li>
           <li><strong>Problems stand out.</strong> Each row has a badge: CRITICAL when your PC was left changed, PROBLEM when a script or tool didn't do what you asked, then CHANGE and ACTIVITY. A repeat is one row with a count.</li>
           <li><strong>One click to put it right.</strong> A setting a profile couldn't put back waits under Needs Attention with <strong>Restore Previous</strong>, and is marked FIXED once it's back. A red dot on the bell and a line in the tray say when something needs you.</li>
         </ul>
         <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Activity-%26-History">How Activity &amp; History works →</a></p>
       </div>
-      <div class="shot"><img loading="lazy" src="assets/activity-history.png" width="1168" height="884" alt="Activity and History page: a power plan that wasn't put back under Needs Attention with a Restore Previous button, and recent entries badged Critical, Problem, Change and Activity, one marked Fixed"></div>
+      <div class="shot"><img loading="lazy" src="assets/activity-history.png" width="1168" height="884" alt="Activity and History page: a power plan that wasn't put back under Needs Attention with a Restore Previous button, a Keep 90 days dropdown and Clear History button, and a Played Elden Ring row opened to show the profile, what was skipped and put back, the game's cores, the script and the tools closed and started for that launch"></div>
     </div>
   </div>
 </section>

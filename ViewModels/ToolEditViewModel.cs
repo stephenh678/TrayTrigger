@@ -10,7 +10,7 @@ using TrayTrigger.Services;
 
 namespace TrayTrigger.ViewModels;
 
-/// <summary>The Edit Tool dialog: name, category, favorite, icon, program, folder, arguments, admin, hotkey, and whether it starts with games.</summary>
+/// <summary>The Edit Tool dialog: name, category, favorite, icon, program, folder, arguments, admin, hotkey, and whether it starts with games or closes for them.</summary>
 public sealed class ToolEditViewModel : ViewModelBase
 {
     private readonly ToolEntry _tool;
@@ -29,6 +29,8 @@ public sealed class ToolEditViewModel : ViewModelBase
     private bool _waitBeforeGame;
     private string _waitBeforeGameSeconds;
     private bool _closeAfterGames;
+    private bool _closeForGames;
+    private bool _reopenAfterGames;
     private string _validationMessage = string.Empty;
     private string? _pendingIconSource;
     private BitmapImage? _iconPreview;
@@ -51,6 +53,8 @@ public sealed class ToolEditViewModel : ViewModelBase
         _waitBeforeGame = tool.WaitBeforeGame;
         _waitBeforeGameSeconds = tool.WaitBeforeGameSeconds.ToString();
         _closeAfterGames = tool.CloseAfterGames;
+        _closeForGames = tool.CloseForGames;
+        _reopenAfterGames = tool.ReopenAfterGames;
         ExistingCategories = categories.ToList();
         _iconPreview = IconExtractorService.LoadBitmapSafely(tool.IconPath, decodePixelWidth: 64);
 
@@ -74,7 +78,7 @@ public sealed class ToolEditViewModel : ViewModelBase
     private string EditState() => string.Join("", new object?[]
     {
         Name, Category, TargetPath, Arguments, WorkingDirectory, Hotkey, RunAsAdmin, HideWindow, IsFavorite,
-        StartWithGames, WaitBeforeGame, WaitBeforeGameSeconds, CloseAfterGames, _pendingIconSource,
+        StartWithGames, WaitBeforeGame, WaitBeforeGameSeconds, CloseAfterGames, CloseForGames, ReopenAfterGames, _pendingIconSource,
     });
 
     public event Action<bool>? RequestClose;
@@ -118,7 +122,50 @@ public sealed class ToolEditViewModel : ViewModelBase
     public bool IsScript => IsProgram && ToolCatalog.IsScriptPath(TargetPath);
     /// <summary>A program, not a script or Store app, so it can start with games (<see cref="ToolCatalog.CanStartWithGames"/>). Follows the path as it's edited.</summary>
     public bool CanStartWithGames => IsProgram && !IsScript;
-    public bool StartWithGames { get => _startWithGames; set => SetProperty(ref _startWithGames, value); }
+    /// <summary>
+    /// "When I launch a game": do nothing (the default), start the tool, or close it. One of three, as
+    /// checkboxes: ticking one clears the others, and clearing an action falls back to Do nothing, which
+    /// can't itself be un-ticked. Each action has its own options beneath it.
+    /// </summary>
+    public bool LeaveAlone
+    {
+        get => !_startWithGames && !_closeForGames;
+        set
+        {
+            if (value)
+            {
+                StartWithGames = false;
+                CloseForGames = false;
+            }
+            // Un-ticking the default, or ticking it when it already is: the box shows it ticked still.
+            OnPropertyChanged(nameof(LeaveAlone));
+        }
+    }
+
+    public bool StartWithGames
+    {
+        get => _startWithGames;
+        set
+        {
+            if (!SetProperty(ref _startWithGames, value)) return;
+            if (value) CloseForGames = false;
+            OnPropertyChanged(nameof(LeaveAlone));
+        }
+    }
+
+    public bool CloseForGames
+    {
+        get => _closeForGames;
+        set
+        {
+            if (!SetProperty(ref _closeForGames, value)) return;
+            if (value) StartWithGames = false;
+            OnPropertyChanged(nameof(LeaveAlone));
+        }
+    }
+
+    /// <summary>Only saved with <see cref="CloseForGames"/>; the dialog disables it otherwise.</summary>
+    public bool ReopenAfterGames { get => _reopenAfterGames; set => SetProperty(ref _reopenAfterGames, value); }
     /// <summary>Only saved with <see cref="StartWithGames"/>, like <see cref="CloseAfterGames"/>; the dialog disables both otherwise.</summary>
     public bool WaitBeforeGame { get => _waitBeforeGame; set => SetProperty(ref _waitBeforeGame, value); }
     /// <summary>Text, as typed: Save checks it only while the wait is on, and blank means the default.</summary>
@@ -234,6 +281,7 @@ public sealed class ToolEditViewModel : ViewModelBase
                 return;
             }
             bool startWithGames = !ToolCatalog.IsScriptPath(target) && StartWithGames;
+            bool closeForGames = !ToolCatalog.IsScriptPath(target) && !startWithGames && CloseForGames;
             if (!TryReadWaitSeconds(startWithGames && WaitBeforeGame, out int waitSeconds)) return;
             targetChanged = !string.Equals(target, _tool.TargetPath, StringComparison.OrdinalIgnoreCase);
 
@@ -245,6 +293,8 @@ public sealed class ToolEditViewModel : ViewModelBase
             _tool.WaitBeforeGame = startWithGames && WaitBeforeGame;
             _tool.WaitBeforeGameSeconds = waitSeconds;
             _tool.CloseAfterGames = startWithGames && CloseAfterGames;
+            _tool.CloseForGames = closeForGames;
+            _tool.ReopenAfterGames = closeForGames && ReopenAfterGames;
         }
 
         _tool.Name = name;
@@ -261,7 +311,7 @@ public sealed class ToolEditViewModel : ViewModelBase
             if (!string.IsNullOrEmpty(cached)) _tool.IconPath = cached;
         }
 
-        LoggingService.Info("Tools", $"Saved tool '{name}' ('{ToolCatalog.LaunchDisplay(_tool)}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}', start with games {_tool.StartWithGames}, wait {(_tool.WaitBeforeGame ? $"{_tool.WaitBeforeGameSeconds}s" : "off")}, close after games {_tool.CloseAfterGames}).");
+        LoggingService.Info("Tools", $"Saved tool '{name}' ('{ToolCatalog.LaunchDisplay(_tool)}', category '{_tool.Category}', run as admin {RunAsAdmin}, hotkey '{_tool.Hotkey}', start with games {_tool.StartWithGames}, wait {(_tool.WaitBeforeGame ? $"{_tool.WaitBeforeGameSeconds}s" : "off")}, close after games {_tool.CloseAfterGames}, close for games {_tool.CloseForGames}{(_tool.ReopenAfterGames ? " and open again" : string.Empty)}).");
         RequestClose?.Invoke(true);
     }
 

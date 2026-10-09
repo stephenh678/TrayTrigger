@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Input;
 using TrayTrigger.Models;
 using TrayTrigger.Services;
+using TrayTrigger.Views;
 
 namespace TrayTrigger.ViewModels;
 
@@ -28,17 +29,81 @@ public sealed class ActivityViewModel : ViewModelBase
     private bool _refreshQueued;
     private readonly System.Windows.Threading.Dispatcher _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
 
-    public ActivityViewModel(ActivityService service, Func<bool>? isOnScreen = null)
+    private readonly AppSettings _settings;
+    private readonly Action _saveSettings;
+
+    /// <param name="settings">Where "Keep 90 days" lives (<see cref="AppSettings.ActivityRetentionDays"/>); a fresh one in tests.</param>
+    /// <param name="saveSettings">Writes settings after the window changes; nothing in tests.</param>
+    public ActivityViewModel(ActivityService service, Func<bool>? isOnScreen = null, AppSettings? settings = null, Action? saveSettings = null)
     {
         _service = service;
         _isOnScreen = isOnScreen ?? (() => false);
+        _settings = settings ?? new AppSettings();
+        _saveSettings = saveSettings ?? (() => { });
         SelectTabCommand = new RelayCommand(p =>
         {
             if (Enum.TryParse(p?.ToString(), out ActivityTab tab)) Tab = tab;
         });
+        ClearHistoryCommand = new RelayCommand(ClearHistory, () => HasAnyEntries);
         _service.Changed += QueueRefresh;
         Refresh();
     }
+
+    /// <summary>Clear history, the button beside the Keep dropdown: asks first, then empties Recent (<see cref="ActivityService.Clear"/>).</summary>
+    public ICommand ClearHistoryCommand { get; }
+
+    // The Keep dropdown beside the search box, where the Library has its sort. The labels map to ActivityService.RetentionChoices.
+    public const string Keep30Days = "Keep 30 days";
+    public const string Keep90Days = "Keep 90 days";
+    public const string KeepAYear = "Keep 1 year";
+
+    public IReadOnlyList<string> RetentionOptions { get; } = [Keep30Days, Keep90Days, KeepAYear];
+
+    /// <summary>How far back Recent goes, saved in Settings; a shorter window applies at once.</summary>
+    public string RetentionOption
+    {
+        get => ActivityService.NormalizeRetentionDays(_settings.ActivityRetentionDays) switch
+        {
+            30 => Keep30Days,
+            365 => KeepAYear,
+            _ => Keep90Days,
+        };
+        set
+        {
+            int days = value switch
+            {
+                Keep30Days => 30,
+                KeepAYear => 365,
+                _ => ActivityService.DefaultRetentionDays,
+            };
+            if (_settings.ActivityRetentionDays == days) return;
+            _settings.ActivityRetentionDays = days;
+            _saveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(RecentWindowLabel));
+            _service.ApplyRetention();
+        }
+    }
+
+    /// <summary>The confirmation Clear history shows. Replaced in tests, where there's no window.</summary>
+    internal Func<bool> ConfirmClear { get; set; } = () => ModernDialog.ConfirmDelete(
+        WindowHelper.ActiveOwner(),
+        "Clear History",
+        "Clear everything under Recent?",
+        "Needs Attention is kept: those are live problems with a fix, not history. This can't be undone.");
+
+    private void ClearHistory()
+    {
+        if (!HasAnyEntries || !ConfirmClear()) return;
+        _service.Clear();
+    }
+
+    /// <summary>"last 90 days", after the RECENT heading: the window the Keep dropdown says.</summary>
+    public string RecentWindowLabel => _service.RetentionDays switch
+    {
+        365 => "·  last year",
+        int days => $"·  last {days} days",
+    };
 
     public ObservableCollection<AttentionItemViewModel> NeedsAttention { get; } = new();
     public ObservableCollection<ActivityGroupViewModel> Groups { get; } = new();
@@ -132,6 +197,7 @@ public sealed class ActivityViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowNeedsAttention));
         OnPropertyChanged(nameof(HasAnyEntries));
         OnPropertyChanged(nameof(ShowNothingYet));
+        OnPropertyChanged(nameof(RecentWindowLabel));
     }
 
     private void RebuildGroups()
@@ -233,6 +299,9 @@ public sealed class AttentionItemViewModel
     public ICommand FixCommand { get; }
 }
 
+/// <summary>One line of a row's detail: the bold label, with its colon and space, and the rest.</summary>
+public sealed record ActivityDetailLine(string Label, string Body);
+
 /// <summary>A RECENT row: one entry, or every time the same thing happened.</summary>
 public sealed class ActivityGroupViewModel : ViewModelBase
 {
@@ -253,6 +322,29 @@ public sealed class ActivityGroupViewModel : ViewModelBase
     public string Text => Group.Latest.Text;
     public string? Detail => Group.Latest.Detail;
     public bool HasDetail => !string.IsNullOrWhiteSpace(Detail);
+    /// <summary>The detail one line at a time, a Played row's section labels ("Profile: ") split off so the view can set them in bold.</summary>
+    public IReadOnlyList<ActivityDetailLine> DetailLines => SplitDetail(Detail);
+
+    /// <summary>The labels a Played row's lines start with; anything else is body text, however it begins.</summary>
+    internal static readonly string[] DetailLabels = ["Played", LaunchRecord.Profile, "Skipped", "Put back", LaunchRecord.Game, LaunchRecord.Scripts, LaunchRecord.Tools];
+
+    internal static IReadOnlyList<ActivityDetailLine> SplitDetail(string? detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail)) return [];
+        var lines = new List<ActivityDetailLine>();
+        foreach (string raw in detail.Split('\n'))
+        {
+            string line = raw.TrimEnd('\r');
+            if (line.Length == 0) continue;
+            int colon = line.IndexOf(": ", StringComparison.Ordinal);
+            string label = colon > 0 ? line[..colon] : string.Empty;
+            if (label.Length > 0 && DetailLabels.Contains(label, StringComparer.Ordinal))
+                lines.Add(new ActivityDetailLine(label + ": ", line[(colon + 2)..]));
+            else
+                lines.Add(new ActivityDetailLine(string.Empty, line));
+        }
+        return lines;
+    }
     public string When { get; }
     /// <summary>The date header this row sits under; see <see cref="ActivityViewModel.SectionFor"/>.</summary>
     public string Section { get; }

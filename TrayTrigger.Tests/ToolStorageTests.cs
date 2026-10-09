@@ -44,7 +44,9 @@ public class ToolStorageTests : IDisposable
             StartWithGames = true,
             WaitBeforeGame = true,
             WaitBeforeGameSeconds = 9,
-            CloseAfterGames = true
+            CloseAfterGames = true,
+            CloseForGames = true,
+            ReopenAfterGames = true
         };
         _storage.SaveTools([tool]);
 

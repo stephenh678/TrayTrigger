@@ -174,6 +174,7 @@ public class GameScriptService
         if (!_isFeatureEnabled())
         {
             LoggingService.Info("GameScript", $"{label} for '{game.Name}' skipped: game scripts are disabled in Settings.");
+            NoteScript(game, script.Value, PhasePreLaunch, "skipped: scripts are off in Settings");
             return PreLaunchScriptResult.Proceed;
         }
 
@@ -213,6 +214,7 @@ public class GameScriptService
             if (!wait)
             {
                 var effective = script.Value;
+                NoteScript(game, effective, PhasePreLaunch, "started, not waited for");
                 DisposeOnExit(process, code =>
                 {
                     if (code != 0) RecordScriptProblem(game, effective, PhasePreLaunch, $"failed (exit code {code})", cancelledLaunch: false);
@@ -237,6 +239,7 @@ public class GameScriptService
                 }
 
                 LoggingService.Verbose("GameScript", $"Pre-launch script for '{game.Name}' completed.");
+                NoteScript(game, script.Value, PhasePreLaunch, "ran");
                 return PreLaunchScriptResult.Proceed;
             }
 
@@ -245,6 +248,8 @@ public class GameScriptService
             // game started anyway, is working as set up and would otherwise be a problem every launch.
             if (abortOnFailure)
                 RecordScriptProblem(game, script.Value, PhasePreLaunch, $"was still running after {timeout.TotalSeconds:0} seconds", cancelledLaunch: true);
+            else
+                NoteScript(game, script.Value, PhasePreLaunch, $"still running after {timeout.TotalSeconds:0}s, the game launched anyway");
             DisposeOnExit(process);
             process = null;
             return abortOnFailure
@@ -257,6 +262,8 @@ public class GameScriptService
             LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' failed: {ex.Message}");
             if (ex is not System.ComponentModel.Win32Exception { NativeErrorCode: 1223 })
                 RecordScriptProblem(game, script.Value, PhasePreLaunch, "couldn't run", abortOnFailure);
+            else
+                NoteScript(game, script.Value, PhasePreLaunch, "wasn't run: the administrator prompt was declined");
             return abortOnFailure ? PreLaunchScriptResult.Abort($"the pre-launch script failed to run ({ex.Message})") : PreLaunchScriptResult.Proceed;
         }
         finally
@@ -311,6 +318,7 @@ public class GameScriptService
         if (!_isFeatureEnabled())
         {
             LoggingService.Info("GameScript", $"{label} for '{game.Name}' skipped: game scripts are disabled in Settings.");
+            NoteScript(game, script.Value, PhasePostExit, "skipped: scripts are off in Settings");
             return;
         }
 
@@ -341,6 +349,7 @@ public class GameScriptService
                 return;
             }
             AttachOutputLogging(process, psi, game, PhasePostExit);
+            NoteScript(game, effective, PhasePostExit, "started");
             DisposeOnExit(process, code =>
             {
                 if (code != 0) RecordScriptProblem(game, effective, PhasePostExit, $"failed (exit code {code})", cancelledLaunch: false);
@@ -351,13 +360,22 @@ public class GameScriptService
             LoggingService.Warn("GameScript", $"Post-exit script for '{game.Name}' failed: {ex.Message}");
             if (ex is not System.ComponentModel.Win32Exception { NativeErrorCode: 1223 })
                 RecordScriptProblem(game, effective, PhasePostExit, "couldn't run", cancelledLaunch: false);
+            else
+                NoteScript(game, effective, PhasePostExit, "wasn't run: the administrator prompt was declined");
         }
+    }
+
+    /// <summary>The Scripts line of the game's Played row: "pre-launch close-apps.ps1 ran".</summary>
+    private static void NoteScript(GameEntry game, EffectiveScript script, string phase, string what)
+    {
+        string phaseLabel = phase == PhasePreLaunch ? "pre-launch" : "post-exit";
+        LaunchRecord.Note(game.Id, LaunchRecord.Scripts, $"{(script.IsDefault ? "default " : string.Empty)}{phaseLabel} {Path.GetFileName(script.Path.Trim().Trim('"'))} {what}");
     }
 
     /// <summary>
     /// A script that didn't do its job, for Activity &amp; History. Grouped per game and phase, so a
     /// script that fails every time is one row with a count. A cancelled administrator prompt is the
-    /// user's own choice and isn't recorded.
+    /// user's own choice and isn't recorded. The Played row's Scripts line says so too.
     /// </summary>
     private static void RecordScriptProblem(GameEntry game, EffectiveScript script, string phase, string what, bool cancelledLaunch)
     {
@@ -365,6 +383,7 @@ public class GameScriptService
         string which = script.IsDefault ? $"default {phaseLabel}" : phaseLabel;
         string text = $"{game.Name}: {which} script {what}{(cancelledLaunch ? "; the launch was cancelled" : string.Empty)}";
         string file = Path.GetFileName(script.Path.Trim().Trim('"'));
+        NoteScript(game, script, phase, what + (cancelledLaunch ? ", the launch was cancelled" : string.Empty));
         ActivityService.Add(ActivityLevel.Problem, text, subject: game.Name,
             detail: $"{file}. Test it from {(script.IsDefault ? "Settings > Launch & Performance" : "Edit Game")}; what it printed is in the log.",
             groupKey: $"script.{phase}|{game.Id}");

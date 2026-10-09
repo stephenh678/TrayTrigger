@@ -47,6 +47,10 @@ public class AppSettingsDefaultsTests
 
     /// <summary>A fresh install starts with nothing filtered out of the library.</summary>
     [Fact]
+    public void ActivityHistory_IsKeptNinetyDays_ByDefault() =>
+        Assert.Equal(90, new AppSettings().ActivityRetentionDays);
+
+    [Fact]
     public void FreshSettings_HaveNoLibraryFilters()
     {
         Assert.Empty(new AppSettings().LibraryFilterKeys);

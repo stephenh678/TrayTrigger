@@ -297,7 +297,8 @@ public partial class App : Application
         // ignored. Falls back to startupSettings for the window before the ViewModel exists.
         // Activity & History, before anything that records into it (crash recovery, resuming a
         // suspended game). A capture run reads the history but writes none of it.
-        ActivityService.Current = new ActivityService(_storageService.BaseDirectory, readOnly: isScreenshot);
+        ActivityService.Current = new ActivityService(_storageService.BaseDirectory, readOnly: isScreenshot,
+            retentionDays: () => (_mainViewModel?.Settings ?? startupSettings).ActivityRetentionDays);
         if (!isScreenshot) NoteVersionChange(startupSettings);
         _performanceProfileService = new PerformanceProfileService(
             _storageService,
@@ -433,14 +434,17 @@ public partial class App : Application
         _launcherService.SessionGameStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnGameStarted(s.GameId));
         _launcherService.SessionEnded += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionEnded(s.GameId));
 
-        // Tools that start with games (Edit Tool). The popup is updated before the tool starts, not
-        // queued, so it already names the tool when Windows' administrator prompt dims the screen;
-        // the timeout keeps a busy UI thread from holding up the launch.
+        // Tools that start with games or close for them (Edit Tool). The popup is updated before the
+        // tool starts or closes, not queued, so it already names the tool when Windows' administrator
+        // prompt dims the screen; the timeout keeps a busy UI thread from holding up the launch.
         var companionTools = new CompanionToolService(
             tools: () => _mainViewModel?.Tools.ToolsSnapshot ?? [],
             isEnabled: () => _mainViewModel?.Settings.EnableTools == true);
         companionTools.Starting += (game, tool) =>
             Dispatcher.Invoke(() => _launchPopup?.OnStartingTool(game.Id, tool?.Name),
+                System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
+        companionTools.Closing += (game, tool) =>
+            Dispatcher.Invoke(() => _launchPopup?.OnClosingTool(game.Id, tool?.Name),
                 System.Windows.Threading.DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(2));
         companionTools.StartFailed += message => Dispatcher.BeginInvoke(() =>
         {
@@ -459,6 +463,8 @@ public partial class App : Application
             }
         };
         _launcherService.CompanionTools = companionTools;
+        // A note that arrives after a game's Played row was written goes onto that row.
+        LaunchRecord.LateNote = _launcherService.NoteOnPlayedRow;
 
         // "Keep game launchers minimized when launching a game" (Settings > Launch & Performance > Launching Games).
         _launcherService.KeepLaunchersMinimized = () => _mainViewModel?.Settings.KeepLaunchersMinimized == true;

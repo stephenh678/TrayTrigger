@@ -65,7 +65,7 @@
                                 </StackPanel>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                        <TextBlock Text="{Binding ShortDescription}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding UnavailableReason}" FontSize="11" Foreground="#E8B84E"
                                    Margin="0,3,0,0" TextWrapping="Wrap"
@@ -120,7 +120,7 @@
                                 <TextBlock Text="{Binding BadgeText}" FontSize="9" FontWeight="Bold" Foreground="{Binding BadgeForeground}"/>
                             </Border>
                         </WrapPanel>
-                        <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                        <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>
@@ -166,7 +166,7 @@
                                 </StackPanel>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding ShortDescription}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                        <TextBlock Text="{Binding ShortDescription}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
                                    Margin="0,3,0,0" TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding Note}" FontSize="11" Foreground="#E8B84E"
                                    Margin="0,3,0,0" TextWrapping="Wrap"
@@ -205,7 +205,7 @@
                         Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"
                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <TextBlock Text="Live Hardware Telemetry" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                <TextBlock Text="Live Hardware Telemetry" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                            FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
             </StackPanel>
 
@@ -267,7 +267,7 @@
                                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                 <TextBlock Text="HARDWARE SPECS" FontSize="11.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding SpecsRefreshedDisplay, StringFormat='·  {0}'}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="{Binding SpecsRefreshedDisplay, StringFormat='·  {0}'}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                            VerticalAlignment="Center" Margin="8,0,0,0"
                                            Visibility="{Binding HasSpecs, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
@@ -320,7 +320,7 @@
                                                     <TextBlock Text="{Binding KindLabel}" FontSize="10"/>
                                                 </Border>
                                             </DockPanel>
-                                            <TextBlock Text="{Binding DetailLine}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
+                                            <TextBlock Text="{Binding DetailLine}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
                                             <!-- Fewer PCIe lanes than the card supports: the wrong slot, or one sharing
                                                  its lanes with an M.2 drive. Width only - the speed drops at idle. -->
                                             <TextBlock Text="{Binding PcieWarning}" FontSize="11" Foreground="{StaticResource BrushWarning}"
@@ -340,7 +340,7 @@
                                                             ToolTip="{Binding CheckButtonToolTip}"
                                                             Style="{StaticResource ModernOutlineButton}" Padding="10,3"/>
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding DriverLine}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                                <TextBlock Text="{Binding DriverLine}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                            VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,10,0"/>
                                             </DockPanel>
                                             <TextBlock Text="{Binding CheckMessage}" FontSize="11.5" TextWrapping="Wrap" Margin="0,5,0,0">
@@ -398,7 +398,7 @@
                                                     <TextBlock Text="{Binding HdrDisplay}" FontSize="10"/>
                                                 </Border>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding DeviceName}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,1,0,0"/>
+                                            <TextBlock Text="{Binding DeviceName}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,1,0,0"/>
                                             <DockPanel Margin="0,4,0,0" LastChildFill="True"
                                                        Visibility="{Binding IsBelowMaxRefresh, Converter={StaticResource BoolToVis}}">
                                                 <Button DockPanel.Dock="Right" Content="Display Settings..."
@@ -426,14 +426,14 @@
                             </DockPanel>
                             <TextBlock Text="{Binding Cpu.ModelName}" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <DockPanel Margin="0,0,0,8">
-                                <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}">
+                                <TextBlock FontSize="12" Foreground="{StaticResource BrushTextMuted}">
                                     <Run Text="{Binding Cpu.PhysicalCores, Mode=OneWay, StringFormat='{}{0} Cores, '}"/>
                                     <Run Text="{Binding Cpu.LogicalProcessors, Mode=OneWay, StringFormat='{}{0} Threads, '}"/>
                                     <Run Text="{Binding Cpu.ClockSpeedDisplay, Mode=OneWay}"/>
                                 </TextBlock>
                             </DockPanel>
                             <!-- What Edit Game's CPU Cores choice works from: P/E cores, or which CCD has the 3D V-Cache. -->
-                            <TextBlock Text="{Binding CpuCoreLayoutDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="{Binding CpuCoreLayoutDisplay, Mode=OneWay}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                        TextWrapping="Wrap" Margin="0,-4,0,2"
                                        Visibility="{Binding HasCpuCoreLayout, Converter={StaticResource BoolToVis}}"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="About CPU Cores" Margin="0,0,0,8" HorizontalAlignment="Left"
@@ -461,7 +461,7 @@
                                     <Run Text="{Binding Ram.TotalGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB)'}"/>
                                 </TextBlock>
                             </DockPanel>
-                            <TextBlock Text="{Binding Ram.SpeedDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="{Binding Ram.SpeedDisplay, Mode=OneWay}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                        Visibility="{Binding Ram.HasSpeedInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8"/>
                             <ProgressBar Value="{Binding Ram.UsagePercent, Mode=OneWay}" Maximum="100" Height="6"
                                          Background="#16161B" Foreground="{StaticResource BrushAccent}" BorderThickness="0"/>
@@ -474,13 +474,13 @@
                             <TextBlock Text="Storage &amp; Gaming Drives" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Fixed drive volumes, available storage capacity, and disk usage." 
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding Drives}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Margin="0,0,0,8">
                                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
-                                                <TextBlock HorizontalAlignment="Right" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource BrushTextSecondary}">
+                                                <TextBlock HorizontalAlignment="Right" DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource BrushTextSecondary}">
                                                     <Run Text="{Binding FreeGigabytes, Mode=OneWay, StringFormat='{}{0:0.#} GB free'}"/>
                                                     <Run Text="{Binding TotalGigabytes, Mode=OneWay, StringFormat=' of {0:0.#} GB'}"/>
                                                 </TextBlock>
@@ -491,7 +491,7 @@
                                                     <TextBlock Text="{Binding MediaTypeDisplay}" FontSize="10"/>
                                                 </Border>
                                                 <!-- How many library games are installed here. -->
-                                                <TextBlock Text="{Binding GameCountDisplay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                                <TextBlock Text="{Binding GameCountDisplay}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                            Margin="8,0,0,0" VerticalAlignment="Center" DockPanel.Dock="Left"
                                                            Visibility="{Binding HasGameCount, Converter={StaticResource BoolToVis}}"/>
                                             </DockPanel>
@@ -510,7 +510,7 @@
                                                     </Style>
                                                 </ProgressBar.Style>
                                             </ProgressBar>
-                                            <TextBlock Text="{Binding HddGamesNote}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                            <TextBlock Text="{Binding HddGamesNote}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                        TextWrapping="Wrap" Margin="0,4,0,0"
                                                        Visibility="{Binding HasGamesOnHdd, Converter={StaticResource BoolToVis}}"/>
                                         </StackPanel>
@@ -531,7 +531,7 @@
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             </DockPanel>
                             <TextBlock Text="{Binding Network.ConnectionType, Mode=OneWay, StringFormat='Connection: {0}'}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding Network.AdapterName, Mode=OneWay, StringFormat='Adapter: {0}'}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"/>
+                            <TextBlock Text="{Binding Network.AdapterName, Mode=OneWay, StringFormat='Adapter: {0}'}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"/>
                         </StackPanel>
                     </Border>
 
@@ -541,12 +541,12 @@
                             <TextBlock Text="Operating System &amp; Power" FontSize="13.5" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="{Binding Os.FullOsTitle}" FontSize="12.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding Os.MotherboardDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="{Binding Os.MotherboardDisplay, Mode=OneWay}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                        Visibility="{Binding Os.HasMotherboardInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding Os.UptimeDisplay, Mode=OneWay}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="{Binding Os.UptimeDisplay, Mode=OneWay}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                        Visibility="{Binding Os.HasUptimeInfo, Converter={StaticResource BoolToVis}}" Margin="0,0,0,2"/>
                             <DockPanel Margin="0,0,0,2">
-                                <TextBlock FontSize="11" Foreground="{StaticResource BrushTextMuted}">
+                                <TextBlock FontSize="12" Foreground="{StaticResource BrushTextMuted}">
                                     <Run Text="{Binding Os.ActivePowerPlan, Mode=OneWay, StringFormat='Power Plan: {0} • '}"/>
                                     <Run Text="{Binding Power.StatusText, Mode=OneWay, StringFormat='Power Status: {0}'}"/>
                                 </TextBlock>
@@ -564,7 +564,7 @@
                                            Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             </DockPanel>
                             <TextBlock Text="Quick access to native Windows diagnostic and hardware management tools." 
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <WrapPanel>
                                 <Button Content="Task Manager" Command="{Binding OpenTaskManagerCommand}" 
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,6" Padding="10,4"/>
@@ -595,7 +595,7 @@
                                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                 <TextBlock Text="PERFORMANCE TWEAKS" FontSize="11.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
-                                <TextBlock Text="·  Always on, system-wide" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="·  Always on, system-wide" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                            VerticalAlignment="Center" Margin="8,0,0,0"/>
                             </StackPanel>
                         </DockPanel>
@@ -617,7 +617,7 @@
                                     <TextBlock Text="Stutter Check" FontSize="13.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}"/>
                                     <TextBlock Text="The things stutter threads tell you to check, checked for you: overlays, other apps' use of the GPU, your display, memory and drives, Windows services, and the tweaks below that matter for stutter."
-                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                               FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                 </StackPanel>
                             </DockPanel>
 
@@ -633,7 +633,7 @@
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding StutterIntroText}" FontSize="13" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextSecondary}"/>
-                                    <TextBlock Text="{Binding StutterIntroSubline}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                    <TextBlock Text="{Binding StutterIntroSubline}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                TextWrapping="Wrap" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>
@@ -648,7 +648,7 @@
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding StutterSummary}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
                                                    Foreground="{StaticResource BrushTextPrimary}"/>
-                                        <TextBlock Text="{Binding StutterSubline}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                        <TextBlock Text="{Binding StutterSubline}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                    TextWrapping="Wrap" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </DockPanel>
@@ -666,7 +666,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,1,12,1" TextWrapping="Wrap">
+                                                    <TextBlock FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,1,12,1" TextWrapping="Wrap">
                                                         <Run Text="&#x2713; " Foreground="#3FB950"/><Run Text="{Binding Mode=OneWay}"/>
                                                     </TextBlock>
                                                 </DataTemplate>
@@ -675,7 +675,7 @@
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="Fix it applies a TrayTrigger tweak you can undo below. Here's how opens the help page for that app. Results are included in Copy Diagnostic Info."
-                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                           FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Stutter Check works" Margin="0,6,0,0" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/stutter_check"/>
@@ -700,7 +700,7 @@
                                     <TextBlock Text="Performance Preset" FontSize="13.5" FontWeight="SemiBold"
                                                Foreground="{StaticResource BrushTextPrimary}"/>
                                     <TextBlock Text="{Binding PresetLeadText}"
-                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                               FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                 </StackPanel>
                             </DockPanel>
                             <DockPanel Margin="0,10,0,6" LastChildFill="True">
@@ -712,9 +712,9 @@
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding PresetScoreDisplay}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
                                                Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="{Binding PresetNotAppliedLine}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"
+                                    <TextBlock Text="{Binding PresetNotAppliedLine}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
                                                TextWrapping="Wrap" Margin="0,2,0,0"/>
-                                    <TextBlock Text="{Binding PresetNotCountedLine}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                    <TextBlock Text="{Binding PresetNotCountedLine}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                                TextWrapping="Wrap" Margin="0,2,0,0"
                                                Visibility="{Binding HasPresetNotCounted, Converter={StaticResource BoolToVis}}"/>
                                 </StackPanel>
@@ -747,7 +747,7 @@
                             <TextBlock Text="{Binding InputAndDisplaySummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="How Windows presents games and reads the mouse."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding InputAndDisplayTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
@@ -760,7 +760,7 @@
                             <TextBlock Text="{Binding CpuAndPowerSummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="How much CPU the game gets."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding CpuAndPowerTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
@@ -773,7 +773,7 @@
                             <TextBlock Text="{Binding NetworkAndBackgroundSummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="What runs behind the game."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding NetworkAndBackgroundTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
@@ -784,7 +784,7 @@
                             <TextBlock Text="Security (status only)" FontSize="15" FontWeight="SemiBold" 
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="Memory Integrity is a real security boundary with a documented cost in some games - the switch stays in Windows Security."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding SecurityAndAdvancedTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
                     </Border>
@@ -802,7 +802,7 @@
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="PERFORMANCE PROFILES" FontSize="11.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
-                            <TextBlock Text="·  Per game, while it runs" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                            <TextBlock Text="·  Per game, while it runs" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                        VerticalAlignment="Center" Margin="8,0,0,0"/>
                         </StackPanel>
                     </Border>
@@ -824,7 +824,7 @@
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
                                     <TextBlock Text="New games start on" FontSize="12.5" Foreground="{StaticResource BrushTextPrimary}"/>
                                     <TextBlock Text="The profile a game gets when it's added to the library. Games already there keep theirs: change one in Edit Game, or several at once from their right-click menu."
-                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                               FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ComboBox Grid.Column="1" AutomationProperties.Name="Profile for new games"
                                           ItemsSource="{Binding NewGameProfileOptions}" SelectedItem="{Binding NewGameProfile}"
@@ -844,7 +844,7 @@
                             <TextBlock Text="{Binding OptimizedProfileSummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="Balanced tweaks that are safe to apply to any game."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding OptimizedProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
                         </StackPanel>
                     </Border>
@@ -857,7 +857,7 @@
                             <TextBlock Text="{Binding AggressiveProfileSummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
                             <TextBlock Text="Everything in Optimized, plus the tweaks below."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding AggressiveProfileTweaks}" ItemTemplate="{StaticResource ProfileTweakToggleTemplate}"/>
                         </StackPanel>
                     </Border>
@@ -910,7 +910,7 @@
 
         <!-- 4. STATUS BAR -->
         <DockPanel Grid.Row="3" Margin="0,10,0,0">
-            <TextBlock Text="{Binding StatusMessage}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" 
+            <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                        FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
         </DockPanel>
 

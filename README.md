@@ -134,7 +134,7 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 
 ### Tools
 
-On by default, and turned off in Settings > General if you don't want it: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys, or have a program start with your games and close again after them. Drop a program, script, shortcut, or Microsoft Store app on the Tools page to add it.
+On by default, and turned off in Settings > General if you don't want it: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys, or have a program start with your games and close again after them, or close Discord or OneDrive when a game launches and bring it back after. Drop a program, script, shortcut, or Microsoft Store app on the Tools page to add it.
 
 ---
 
@@ -246,7 +246,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.5.0-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.6.0-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
 

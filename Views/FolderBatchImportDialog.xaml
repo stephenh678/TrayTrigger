@@ -157,7 +157,7 @@
                                 <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}" 
                                            FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Text="{Binding DisplayPath}" FontSize="11" 
+                                <TextBlock Text="{Binding DisplayPath}" FontSize="12" 
                                            Foreground="{StaticResource BrushTextSecondary}" 
                                            FontFamily="{StaticResource AppFont}"
                                            TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>

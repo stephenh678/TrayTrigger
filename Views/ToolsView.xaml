@@ -75,6 +75,41 @@
             </Style.Triggers>
         </Style>
 
+        <!-- A tool's game icon: the controller in the accent blue for one that starts with games, the power symbol in the Exit App red for one closed for them. -->
+        <Style x:Key="ToolGameGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets, Segoe Fluent Icons"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Text" Value="{Binding WithGamesGlyph}"/>
+            <Setter Property="ToolTip" Value="{Binding WithGamesLabel}"/>
+            <Setter Property="Visibility" Value="{Binding IsWithGames, Converter={StaticResource BoolToVis}}"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ClosesForGames}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource BrushDanger}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- The same colours on the Start with Games and Close with Games tabs, except on the selected tab, where its white text wins. -->
+        <Style x:Key="TabGameGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Text" Value="{Binding Glyph}"/>
+            <Setter Property="Visibility" Value="{Binding HasGlyph, Converter={StaticResource BoolToVis}}"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Glyph}" Value="&#xE7E8;">
+                    <Setter Property="Foreground" Value="{StaticResource BrushDanger}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="ToolMissingBadge" TargetType="Border">
             <Setter Property="Background" Value="#E64A1E14"/>
             <Setter Property="BorderBrush" Value="#E65100"/>
@@ -132,10 +167,8 @@
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
                     </DockPanel>
-                    <!-- Starts with games: centred on the card, so it's in the same place with or without the shield. -->
-                    <TextBlock Grid.Row="0" Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="15"
-                               Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
+                    <!-- Starts with games (controller) or closes for them (power): centred on the card, so it's in the same place with or without the shield. -->
+                    <TextBlock Grid.Row="0" Style="{StaticResource ToolGameGlyph}" HorizontalAlignment="Center"/>
                     <Grid Grid.Row="1" Width="64" Height="64" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Image Source="{Binding IconImage}" Width="64" Height="64" RenderOptions.BitmapScalingMode="HighQuality"/>
                         <TextBlock Style="{StaticResource ToolFallbackGlyph}" FontSize="32"/>
@@ -181,9 +214,7 @@
                         <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="0,0,6,0"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
-                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="15" Margin="0,0,6,0"
-                                   Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
-                                   Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Style="{StaticResource ToolGameGlyph}" Margin="0,0,6,0"/>
                         <Button Template="{StaticResource ToolStarTemplate}" Command="{Binding ToggleFavoriteCommand}"
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                     </StackPanel>
@@ -221,9 +252,7 @@
                                 Width="16" Height="16" Cursor="Hand" AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                         <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
                                    Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="15" Margin="8,0,0,0"
-                                   Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
-                                   Visibility="{Binding StartsWithGames, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Style="{StaticResource ToolGameGlyph}" Margin="8,0,0,0"/>
                         <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="11" Margin="8,0,0,0"
                                    Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"
                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}"/>
@@ -234,9 +263,9 @@
 
                     <TextBlock Grid.Column="2" Text="{Binding Category}" FontSize="12" FontFamily="{StaticResource AppFont}"
                                Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="3" Text="{Binding LaunchDisplay}" FontSize="11.5" FontFamily="{StaticResource AppFont}"
+                    <TextBlock Grid.Column="3" Text="{Binding LaunchDisplay}" FontSize="12" FontFamily="{StaticResource AppFont}"
                                Foreground="{StaticResource BrushTextMuted}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="4" Text="{Binding HotkeyDisplay}" FontSize="11.5" FontFamily="{StaticResource AppFont}"
+                    <TextBlock Grid.Column="4" Text="{Binding HotkeyDisplay}" FontSize="12" FontFamily="{StaticResource AppFont}"
                                Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
@@ -257,7 +286,7 @@
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"
                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <TextBlock Text="{Binding ToolCountDisplay, Mode=OneWay}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                <TextBlock Text="{Binding ToolCountDisplay, Mode=OneWay}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                            FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel VerticalAlignment="Center">
@@ -308,10 +337,7 @@
                                         <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}"
                                                    FontSize="13" Foreground="#FFD700" Margin="0,0,5,0" VerticalAlignment="Center"
                                                    Visibility="{Binding IsFavoritesTab, Converter={StaticResource BoolToVis}}"/>
-                                        <!-- The cards' controller, in the tab's own text colour so it reads selected or not. -->
-                                        <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}"
-                                                   FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center"
-                                                   Visibility="{Binding IsWithGamesTab, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Style="{StaticResource TabGameGlyph}"/>
                                         <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
@@ -386,13 +412,13 @@
                         <ColumnDefinition Width="3*"/>
                         <ColumnDefinition Width="120"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="1" Text="TOOL" FontSize="12" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="12" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="3" Text="PROGRAM" FontSize="12" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="11" FontWeight="SemiBold"
+                    <TextBlock Grid.Column="4" Text="HOTKEY" FontSize="12" FontWeight="SemiBold"
                                Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
                 </Grid>
             </Border>
@@ -540,7 +566,7 @@
         </Grid>
 
         <!-- 5. Status Bar -->
-        <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+        <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                    FontFamily="{StaticResource AppFont}" TextTrimming="CharacterEllipsis" Margin="2,8,0,0"/>
     </Grid>
 </UserControl>

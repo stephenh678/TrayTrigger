@@ -27,7 +27,7 @@
             <!-- The tool's name, live as it is edited; the title bar already says "Edit Tool". -->
             <TextBlock Text="{Binding HeadingText}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="{StaticResource BrushTextPrimary}"/>
             <TextBlock Text="Its name, category and icon, and how the program starts"
-                       FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
+                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
         </StackPanel>
 
         <Rectangle Grid.Row="1" Height="1" Fill="{StaticResource BrushBorderDark}" Margin="0,0,0,14"/>
@@ -71,22 +71,22 @@
                                 </Border>
                                 <Button Content="Change Icon..." Command="{Binding ChangeIconCommand}"
                                         Style="{StaticResource ModernOutlineButton}" Margin="0,8,0,0" Padding="8,4" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding IconNote}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="{Binding IconNote}" FontSize="12" Foreground="{StaticResource BrushTextMuted}"
                                            TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="Name" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Name" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <TextBox AutomationProperties.Name="Tool name" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" Margin="0,0,0,10"/>
 
-                                <TextBlock Text="Category" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Category" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <ComboBox AutomationProperties.Name="Category" ItemsSource="{Binding ExistingCategories}"
                                           Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}"
                                           IsEditable="True"
                                           Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
                                 <TextBlock Text="Tool categories are separate from game categories. Leave it blank for Uncategorized."
-                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                           FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
                                 <CheckBox Content="Favorite" IsChecked="{Binding IsFavorite}" Style="{StaticResource ModernCheckBox}"/>
                             </StackPanel>
@@ -105,15 +105,15 @@
 
                         <!-- A Store app has no program, folder or elevation to edit: it starts by its app ID, like its Start menu tile. -->
                         <StackPanel Visibility="{Binding IsStoreApp, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Store App" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Store App" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                             <TextBox AutomationProperties.Name="App ID" Text="{Binding AppId, Mode=OneWay}" IsReadOnly="True"
                                      Style="{StaticResource ModernTextBox}" Margin="0,0,0,4"/>
                             <TextBlock Text="Windows starts it the way its Start menu entry does. If it's already open, most apps come to the front; ones that allow several windows open another. Store apps can't run as administrator."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                         </StackPanel>
 
                         <StackPanel Visibility="{Binding IsProgram, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Program or Script (.exe, .bat, .cmd, .ps1)" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Program or Script (.exe, .bat, .cmd, .ps1)" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -125,7 +125,7 @@
                                     Style="{StaticResource ModernOutlineButton}"/>
                         </Grid>
 
-                        <TextBlock Text="Working Folder" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Working Folder" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,4">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -137,10 +137,10 @@
                                     Style="{StaticResource ModernOutlineButton}"/>
                         </Grid>
                         <TextBlock Text="Blank uses the program's own folder."
-                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
+                                   FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,10"/>
                         </StackPanel>
 
-                        <TextBlock Text="Launch Arguments (optional)" FontSize="11.5"
+                        <TextBlock Text="Launch Arguments (optional)" FontSize="12"
                                    Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                         <TextBox AutomationProperties.Name="Arguments" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ModernTextBox}" Margin="0,0,0,12"/>
@@ -149,23 +149,28 @@
                             <CheckBox Content="Run as Administrator" IsChecked="{Binding RunAsAdmin}"
                                       Style="{StaticResource ModernCheckBox}"/>
                             <TextBlock Text="Windows asks for permission with its own prompt each time. Programs that always need admin get that prompt even with this off. Declining it just leaves the tool closed."
-                                       FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                       FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
 
                             <StackPanel Visibility="{Binding IsScript, Converter={StaticResource BoolToVis}}">
                                 <CheckBox Content="Hide Window" IsChecked="{Binding HideWindow}"
                                           Style="{StaticResource ModernCheckBox}"/>
                                 <TextBlock Text="Runs the script with no window; what it prints goes to TrayTrigger's log (not when it also runs as administrator). A hidden script that waits for input (pause, Read-Host) keeps running unseen until you end it in Task Manager."
-                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
+                                           FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,12"/>
                             </StackPanel>
 
-                            <!-- A program only: a script has pre-launch scripts, and a Store app can't be told apart when it's already running. -->
+                            <!-- A program only: a script has pre-launch scripts, and a Store app can't be told apart when it's already running.
+                                 One choice of three, in the app's checkboxes: ticking one clears the others, and clearing an action falls back to Do nothing. -->
                             <StackPanel Visibility="{Binding CanStartWithGames, Converter={StaticResource BoolToVis}}">
-                                <CheckBox Content="Start when I launch a game" IsChecked="{Binding StartWithGames}"
-                                          Style="{StaticResource ModernCheckBox}"/>
-                                <TextBlock Text="TrayTrigger starts it just before any game it launches, unless it's already running."
-                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,8"/>
+                                <TextBlock Text="When I launch a game" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <CheckBox Content="Do nothing (default)" IsChecked="{Binding LeaveAlone}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
 
-                                <!-- Both only mean something with Start ticked, so they're greyed out without it. -->
+                                <CheckBox Content="Start it, unless it's already running" IsChecked="{Binding StartWithGames}"
+                                          Style="{StaticResource ModernCheckBox}"/>
+                                <TextBlock Text="Just before any game TrayTrigger launches, for a program like MSI Afterburner or SimHub that you'd otherwise start with Windows."
+                                           FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,8"/>
+
+                                <!-- Both only mean something with Start chosen, so they're greyed out without it. -->
                                 <StackPanel IsEnabled="{Binding StartWithGames}" Margin="22,0,0,0">
                                     <CheckBox Content="Wait before starting the game" IsChecked="{Binding WaitBeforeGame}"
                                               Style="{StaticResource ModernCheckBox}" Margin="0,0,0,6"/>
@@ -174,15 +179,27 @@
                                                  Text="{Binding WaitBeforeGameSeconds, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="seconds (1-60), for a tool that needs a moment to get ready, like Afterburner's overlay."
-                                                   FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                   FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                     </DockPanel>
 
                                     <CheckBox Content="Close it when the game exits" IsChecked="{Binding CloseAfterGames}"
                                               Style="{StaticResource ModernCheckBox}"/>
                                     <TextBlock Text="Only the copy TrayTrigger started, once your last game has closed. One you opened yourself is left running. It's asked to close, and ended if it's still open a few seconds later. Windows asks for permission to close a program running as administrator."
-                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,6"/>
+                                               FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,6"/>
                                 </StackPanel>
-                                <Button AutomationProperties.Name="Learn more about starting tools with games" Style="{StaticResource HelpLinkButton}"
+
+                                <CheckBox Content="Close it, every running copy" IsChecked="{Binding CloseForGames}"
+                                          Style="{StaticResource ModernCheckBox}" Margin="0,6,0,0"/>
+                                <TextBlock Text="Just before any game TrayTrigger launches, so Discord, OneDrive or a browser isn't using memory and the graphics card while you play. It's asked to close, and ended if it's still open a few seconds later; the game waits meanwhile. Windows asks for permission to close a program running as administrator."
+                                           FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,8"/>
+                                <!-- Only means something with Close chosen, so it's greyed out without it. -->
+                                <StackPanel IsEnabled="{Binding CloseForGames}" Margin="22,0,0,0">
+                                    <CheckBox Content="Open it again when the game exits" IsChecked="{Binding ReopenAfterGames}"
+                                              Style="{StaticResource ModernCheckBox}"/>
+                                    <TextBlock Text="Started again once your last game has closed, unless you've opened it yourself in the meantime."
+                                               FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="22,3,0,6"/>
+                                </StackPanel>
+                                <Button AutomationProperties.Name="Learn more about starting and closing tools with games" Style="{StaticResource HelpLinkButton}"
                                         Margin="22,0,0,12"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/start_with_games"/>
                             </StackPanel>
@@ -193,9 +210,9 @@
                                 <views:HotkeyRecorderBox AutomationProperties.Name="Hotkey" x:Name="ToolHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding OwnerId}"
                                                          ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Global Launch Hotkey" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="Global Launch Hotkey" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
                                     <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none."
-                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
+                                               FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                             <TextBlock Text="{Binding Message, ElementName=ToolHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=ToolHotkeyBox}"
