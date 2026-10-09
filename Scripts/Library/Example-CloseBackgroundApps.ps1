@@ -3,7 +3,7 @@
   Description:      Closes background apps, such as cloud sync, before a game and
                     reopens them after.
   Author:           TrayTrigger
-  Version:          3.0
+  Version:          3.1
   Phase:            both
   Needs admin:      no
   Dependencies:     none
@@ -179,7 +179,12 @@ switch ($Phase) {
             $targets += [pscustomobject]@{ Name = $name; Path = $path; Processes = $processes }
         }
 
-        if ($targets.Count -eq 0) { exit 0 }
+        if ($targets.Count -eq 0) {
+            # A "TT:" line is for the player: it goes on the game's Played row in
+            # Activity & History and into the launch popup. The rest is for the log.
+            Write-Output "TT: nothing to close, none of $($names -join ', ') was running"
+            exit 0
+        }
 
         # Ask each one to close. taskkill without /F sends the same close message
         # Windows sends when you sign out, which reaches a tray app's hidden
@@ -203,42 +208,58 @@ switch ($Phase) {
 
         # Note what closed. What didn't is left alone, or ended with "force".
         $closed = @()
+        $closedNames = @()
+        $leftRunning = @()
         foreach ($target in $targets) {
             $left = @($target.Processes | Where-Object { -not $_.HasExited })
             if ($left.Count -eq 0) {
                 Write-Output "Closed $($target.Name)."
                 $closed += $target.Path
+                $closedNames += $target.Name
             }
             elseif ($force) {
                 $left | Stop-Process -Force -ErrorAction SilentlyContinue
                 Write-Output "Ended $($target.Name)."
                 $closed += $target.Path
+                $closedNames += $target.Name
             }
             else {
                 Write-Output "$($target.Name) didn't close when asked, so it was left running. Add force to Script Arguments to end it."
+                $leftRunning += $target.Name
             }
         }
         if ($closed.Count -gt 0) { Set-Content -LiteralPath $note -Value $closed }
+
+        # One line for the player, on the game's Played row and in the launch popup.
+        $summary = @()
+        if ($closedNames.Count -gt 0) { $summary += "closed $($closedNames -join ', ')" }
+        if ($leftRunning.Count -gt 0) { $summary += "$($leftRunning -join ', ') wouldn't close" }
+        Write-Output "TT: $($summary -join '; ')"
     }
 
     'postexit' {
         if (-not (Test-Path -LiteralPath $note)) {
             Write-Output 'This script did not close anything. Nothing to reopen.'
+            Write-Output 'TT: nothing to reopen'
             exit 0
         }
         $paths = @(Get-Content -LiteralPath $note)
         Remove-Item -LiteralPath $note -Force
 
+        $reopened = @()
+        $notReopened = @()
         foreach ($path in $paths) {
             $name = [IO.Path]::GetFileNameWithoutExtension($path)
 
             if (Get-Process -Name $name -ErrorAction SilentlyContinue) {
                 Write-Output "$name is already running again."
+                $reopened += "$name (already running)"
                 continue
             }
             # An app can update itself into a new folder while you play.
             if (-not (Test-Path -LiteralPath $path)) {
                 Write-Output "Can't reopen ${name}: $path no longer exists."
+                $notReopened += $name
                 continue
             }
 
@@ -256,11 +277,18 @@ switch ($Phase) {
                     Start-Process -FilePath $path -WorkingDirectory (Split-Path -Parent $path) -ErrorAction Stop
                 }
                 Write-Output "Reopened $name."
+                $reopened += $name
             }
             catch {
                 Write-Output "Couldn't reopen ${name}: $($_.Exception.Message) Open it yourself from $path"
+                $notReopened += $name
             }
         }
+
+        $summary = @()
+        if ($reopened.Count -gt 0) { $summary += "reopened $($reopened -join ', ')" }
+        if ($notReopened.Count -gt 0) { $summary += "couldn't reopen $($notReopened -join ', ')" }
+        Write-Output "TT: $($summary -join '; ')"
     }
 
     default {

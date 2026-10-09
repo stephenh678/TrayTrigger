@@ -17,7 +17,7 @@ Turns on NVIDIA's own on-screen overlays for DLSS. There are two, and this switc
 
 - For testing, not for leaving on. They draw over the game, and they show in every DLSS game on this PC, not just one, until you turn them off here.
 - Needs administrator rights, because the settings live in a part of the registry shared by all users. No restart is needed; start the game after switching them on.
-- Off until you tick it. It is in Settings > Launch & Performance > NVIDIA DLSS, not among the Performance Tweaks, so Apply Performance Preset and Restore Previous Settings never touch it.
+- Off until you tick it. It is in Settings > Launch & Performance > NVIDIA DLSS, not among the Performance Tweaks, so Apply Performance Preset and Undo Preset never touch it.
 - The top bar only appears in a game that is using Frame Generation. A DLSS game without it shows the corner line alone - that is the game, not a fault.
 - NVIDIA only. On a PC without a GeForce driver that supports DLSS the NVIDIA DLSS card is not shown.
 

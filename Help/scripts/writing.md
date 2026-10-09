@@ -17,6 +17,15 @@ Every script works as-is; nothing here is required. If one script should behave 
 
 > Environment variables are not set when running as Administrator, because Windows cannot pass a custom environment through a UAC launch. Elevated scripts should read the arguments instead; the game ID and playtime are passed as arguments 4 and 5 for exactly this reason.
 
+## Telling the player what you did
+
+A line your script prints that starts with TT: is for the player, not the log. TrayTrigger puts it on the game's Played row in Activity & History, after the script's own "ran", and shows it in the launch popup while the game is still being prepared. Everything else the script prints goes to the log only.
+
+- Write-Output "TT: closed OneDrive and Discord" in PowerShell; echo TT: closed OneDrive and Discord in a batch file. Short, in plain words, as a sentence fragment: it follows "pre-launch close-apps.ps1 ran · ".
+- Up to five TT: lines per run go on the row, each cut at 200 characters, and a repeated line is kept once. Say what you did, not every step.
+- When a script fails (a non-zero exit code), its last TT: line explains the failure on the problem row and, if the launch was cancelled, in the launch popup: "TT: Afterburner isn't installed at the path in Script Arguments" beats "exit code 1".
+- Only a script that runs hidden and not as Administrator is heard: those are the runs whose output TrayTrigger captures. The bundled examples and the New script... templates already do this.
+
 ## Script Arguments
 
 The Script Arguments box in Edit Game is free text appended after the five built-in arguments, for both scripts. It is how one generic script serves many games: the script reads a profile name or a list of apps from there instead of having it edited in.
@@ -42,6 +51,8 @@ Exit code 0 means success. A non-zero exit code only stops the game from startin
 
 > Never put the playtime argument directly before a redirect in a batch file. cmd reads `echo %~5> log.txt` as a handle redirect when playtime is a single digit and writes nothing. Add a space or brackets: `echo [%~5] > log.txt`.
 
-## Sharing a script
+## Getting and sharing scripts
 
-Post a script you want to share in Show and tell in TrayTrigger's Discussions: https://github.com/stephenh678/TrayTrigger/discussions/7. A script others can trust starts with the same header the examples use, uses only the five values and Script Arguments, makes no downloads or network calls, closes only programs the user named or the script started, puts back whatever it changes, and has been tested in both phases.
+Ready-made scripts live in the TrayTrigger-Scripts catalogue on GitHub: https://github.com/stephenh678/TrayTrigger-Scripts. Each is one PowerShell file with the same header as the bundled examples; download it into the scripts folder and choose it in Edit Game. "Get more scripts" beside the script boxes opens the catalogue.
+
+To share one of yours, open a pull request there, or post it in Show and tell in TrayTrigger's Discussions: https://github.com/stephenh678/TrayTrigger/discussions/7. A script others can trust starts with the same header the examples use, uses only the five values and Script Arguments, makes no downloads or network calls, closes only programs the user named or the script started, puts back whatever it changes, says what it did with TT: lines, and has been tested in both phases.

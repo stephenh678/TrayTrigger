@@ -134,6 +134,17 @@ WRITING YOUR OWN
   Whatever the script prints is shown by the Test button, and goes to the
   TrayTrigger log when the script runs hidden.
 
+  A line that starts with "TT:" is for the player: TrayTrigger puts it on
+  the game's Played row in Activity & History, after "ran", and shows it in
+  the launch popup before the game. Say what you did, in a few words:
+
+    Write-Output "TT: closed OneDrive and Discord"
+
+  Up to five such lines per run are kept. When the script fails, its last
+  "TT:" line explains why on the problem row. Only a script that runs hidden
+  and not as Administrator is heard, since that is when its output is
+  captured. Both examples and the templates do this.
+
   Scripts run as you, without Administrator rights, unless you tick "Run
   scripts as Administrator". Neither example needs it.
 
@@ -162,11 +173,20 @@ WHEN SOMETHING DOESN'T WORK
   there to see what a hidden script printed.
 
 
-SHARING YOUR SCRIPT
--------------------
+MORE SCRIPTS, AND SHARING YOURS
+-------------------------------
 
-  Post a script you want to share in Show and tell in TrayTrigger's
-  Discussions on GitHub:
+  Ready-made scripts are in the TrayTrigger-Scripts catalogue on GitHub:
+
+    https://github.com/stephenh678/TrayTrigger-Scripts
+
+  Each is one PowerShell file with the same header as the examples here.
+  Download it into this folder and choose it in Edit Game; its header says
+  what to put in Script Arguments. "Get more scripts" beside the script boxes
+  opens the catalogue.
+
+  To share a script you wrote, open a pull request there, or post it in Show
+  and tell in TrayTrigger's Discussions:
 
     https://github.com/stephenh678/TrayTrigger/discussions/7
 
@@ -179,5 +199,6 @@ SHARING YOUR SCRIPT
       network calls, no Invoke-Expression, no installing modules.
     - Only close programs the user named or that your script started, and
       put back whatever you change.
+    - Say what it did with "TT:" lines, so it shows on the Played row.
     - Explain every step in a comment.
     - Test both phases with the Test buttons.

@@ -197,6 +197,33 @@ public class LaunchPopupCoordinatorTests
     }
 
     [Fact]
+    public void ScriptSaid_IsTheDetailWhileLaunching_UntilAToolStepOrTheDispatch()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnScriptSaid("a", "closed OneDrive and Discord");
+        Assert.Equal("Launching", rig.View.Shown!.Status);
+        Assert.Equal("closed OneDrive and Discord", rig.View.Shown.Detail);
+
+        // Another game's script doesn't show here, and a blank line changes nothing.
+        rig.Popup.OnScriptSaid("b", "something else");
+        rig.Popup.OnScriptSaid("a", "  ");
+        Assert.Equal("closed OneDrive and Discord", rig.View.Shown!.Detail);
+
+        // A tool step is the newer news; when it's over the script's line is back.
+        rig.Popup.OnStartingTool("a", "MSI Afterburner");
+        Assert.Equal("Starting MSI Afterburner first", rig.View.Shown!.Detail);
+        rig.Popup.OnStartingTool("a", null);
+        Assert.Equal("closed OneDrive and Discord", rig.View.Shown!.Detail);
+
+        // Once the game is on its way the popup is about the game again.
+        rig.WaitingForGame = true;
+        rig.Popup.LaunchDispatched("a");
+        Assert.NotEqual("closed OneDrive and Discord", rig.View.Shown!.Detail);
+    }
+
+    [Fact]
     public void ClosingTool_NamesTheToolBeingClosed_ThenTheOneStarting()
     {
         var rig = new Rig();

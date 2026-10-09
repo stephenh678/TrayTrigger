@@ -175,6 +175,87 @@ public class GameScriptServiceTests : IDisposable
         Assert.StartsWith($"/d /s /c \"\"{path}\" ", psi!.Arguments);
     }
 
+    [Theory]
+    [InlineData("TT: closed OneDrive", true, "closed OneDrive")]
+    [InlineData("  tt:   and Discord.  ", true, "and Discord.")]
+    [InlineData("TT:", false, "")]
+    [InlineData("TT: ", false, "")]
+    [InlineData("Closed OneDrive.", false, "")]
+    [InlineData("ATT: no", false, "")]
+    [InlineData(null, false, "")]
+    public void TryParseSaid_TakesOnlyLinesStartingWithThePrefix(string? line, bool said, string expected)
+    {
+        Assert.Equal(said, GameScriptService.TryParseSaid(line, out string text));
+        Assert.Equal(expected, text);
+    }
+
+    [Fact]
+    public void TryParseSaid_CutsALongLine()
+    {
+        Assert.True(GameScriptService.TryParseSaid("TT: " + new string('x', 400), out string text));
+        Assert.Equal(GameScriptService.MaxSaidLength, text.Length);
+        Assert.EndsWith("\u2026", text);
+    }
+
+    [Fact]
+    public void AWaitedScriptsSaidLines_FollowItsRanNote_AndAreRaisedAsItSpeaks()
+    {
+        string path = Path.Combine(_dir, "pre.bat");
+        File.WriteAllText(path, "@echo off\r\necho TT: closed OneDrive\r\necho plain output\r\necho tt: and Discord\r\necho TT: closed OneDrive\r\nexit /b 0\r\n");
+        var game = new GameEntry { Id = "said-g1", Name = "Said", ExecutablePath = @"C:\Games\S\s.exe", PreLaunchScriptPath = path, WaitForPreLaunchScript = true, RunScriptsHidden = true };
+        LaunchRecord.Begin(game.Id);
+        var said = new List<string>();
+        var svc = new GameScriptService();
+        svc.Said += (g, text) => { lock (said) said.Add($"{g.Id}|{text}"); };
+
+        Assert.True(svc.RunPreLaunch(game).ProceedWithLaunch);
+
+        // "ran" first, then what it said, once each; the plain line stays in the log only.
+        Assert.Equal(["pre-launch pre.bat ran", "closed OneDrive", "and Discord"], LaunchRecord.Peek(game.Id, LaunchRecord.Scripts));
+        lock (said) Assert.Equal(["said-g1|closed OneDrive", "said-g1|and Discord", "said-g1|closed OneDrive"], said);
+    }
+
+    [Fact]
+    public void AFailingScriptsLastSaidLine_ExplainsTheProblem_AndTheCancelledLaunch()
+    {
+        string path = Path.Combine(_dir, "pre.bat");
+        File.WriteAllText(path, "@echo off\r\necho TT: Afterburner isn't installed at the path in Script Arguments.\r\nexit /b 2\r\n");
+        var game = new GameEntry { Id = "said-g2", Name = "Said", ExecutablePath = @"C:\Games\S\s.exe", PreLaunchScriptPath = path, WaitForPreLaunchScript = true, AbortLaunchOnScriptFailure = true, RunScriptsHidden = true };
+        LaunchRecord.Begin(game.Id);
+        var previous = ActivityService.Current;
+        ActivityService.Current = new ActivityService(_dir);
+        try
+        {
+            var result = new GameScriptService().RunPreLaunch(game);
+
+            Assert.False(result.ProceedWithLaunch);
+            Assert.Equal("the pre-launch script said: Afterburner isn't installed at the path in Script Arguments.", result.AbortReason);
+            var problem = Assert.Single(ActivityService.Current.Entries, e => e.Level == ActivityLevel.Problem);
+            Assert.StartsWith("pre.bat said: Afterburner isn't installed at the path in Script Arguments. Test it from Edit Game", problem.Detail);
+            Assert.Equal(["pre-launch pre.bat failed (exit code 2), the launch was cancelled", "Afterburner isn't installed at the path in Script Arguments."],
+                LaunchRecord.Peek(game.Id, LaunchRecord.Scripts));
+        }
+        finally
+        {
+            ActivityService.Current = previous;
+        }
+    }
+
+    [Fact]
+    public void APostExitScriptsSaidLines_AreNotedAsTheyCome()
+    {
+        string path = Path.Combine(_dir, "post.bat");
+        File.WriteAllText(path, "@echo off\r\necho TT: backed up the saves\r\nexit /b 0\r\n");
+        var game = new GameEntry { Id = "said-g3", Name = "Said", ExecutablePath = @"C:\Games\S\s.exe", PostExitScriptPath = path, RunScriptsHidden = true };
+        LaunchRecord.Begin(game.Id);
+
+        new GameScriptService().RunPostExit(game, 12);
+
+        var until = DateTime.UtcNow.AddSeconds(5);
+        while (DateTime.UtcNow < until && LaunchRecord.Peek(game.Id, LaunchRecord.Scripts).Count < 2) Thread.Sleep(50);
+        Assert.Equal(["post-exit post.bat started", "backed up the saves"], LaunchRecord.Peek(game.Id, LaunchRecord.Scripts));
+    }
+
     [Fact]
     public void FeatureSwitch_Off_SkipsScripts()
     {

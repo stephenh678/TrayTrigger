@@ -67,12 +67,15 @@ Each script field in Edit Game has a Test button. It runs that script right now,
 - If the game is set to run scripts as Administrator or visibly, the result dialog says so: the real run will differ in exactly that way.
 - The Test button works even while "Enable game scripts" is off. Clicking it is an explicit request to run the script once.
 
-## Sharing scripts
+## More scripts
 
-To share a script you wrote, post it in Show and tell in TrayTrigger's Discussions on GitHub: https://github.com/stephenh678/TrayTrigger/discussions/7. Scripts posted there are not reviewed by TrayTrigger. A script runs as you, so read one before you attach it.
+The TrayTrigger-Scripts catalogue on GitHub has ready-made scripts for the things people ask for most, such as switching the display's refresh rate for one game, changing an MSI Afterburner profile, recording with OBS, or backing up a save folder after you play: https://github.com/stephenh678/TrayTrigger-Scripts. "Get more scripts" beside the script boxes opens it. Download a script into the scripts folder and choose it in Edit Game; its header says what to put in Script Arguments. If TrayTrigger doesn't do something you want before or after a game, a script there, or one you write from the New script... template, probably can.
+
+To share a script you wrote, open a pull request in the catalogue, or post it in Show and tell in TrayTrigger's Discussions: https://github.com/stephenh678/TrayTrigger/discussions/7. A script runs as you, so read one before you attach it.
 
 ## Troubleshooting
 
 - Every script run is written to the TrayTrigger log under the GameScript category: the path, the options, the exit code, and any failure such as file not found or a cancelled UAC prompt.
 - When a script runs hidden (and not as Administrator), everything it prints to stdout and stderr is captured into the same log, prefixed with the game name and phase. Turn on verbose logging in Settings to see stdout; stderr lines are always logged as warnings.
+- A line the script prints starting with TT: is also put on the game's Played row in Activity & History, and shown in the launch popup before the game, so you see what the script did without opening the log. Writing your own script has the details.
 - A script that runs visibly keeps its output in its own console window and nothing is captured.

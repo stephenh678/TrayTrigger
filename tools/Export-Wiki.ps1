@@ -186,6 +186,8 @@ $homePage.Add("**[Download the latest release](https://github.com/$Repo/releases
 $homePage.Add('')
 $homePage.Add('This wiki is the reference for every setting, tweak and profile option in the app. Each page is the same text the app shows when you click **Learn more**, so what you read here is exactly what the app does.')
 $homePage.Add('')
+$homePage.Add('**Want something TrayTrigger doesn''t do before or after a game?** A pre-launch or post-exit script can: see [Writing your own script](Writing-your-own-script) and the ready-made ones in the [TrayTrigger-Scripts catalogue](https://github.com/stephenh678/TrayTrigger-Scripts).')
+$homePage.Add('')
 $homePage.Add('**New in 1.6.0: [Stutter Check](Stutter-Check), [tools that close for your games](Starting-and-closing-tools-with-your-games), and [every launch on the record](Activity-&-History).** Stutter Check runs the checks every "my game stutters" thread tells you to go through, in one click. Edit Tool can close Discord, OneDrive or a browser when a game launches and bring it back after. A game''s Played row in Activity & History now says exactly what TrayTrigger did for that launch, and didn''t.')
 $homePage.Add('')
 foreach ($g in $groups) {

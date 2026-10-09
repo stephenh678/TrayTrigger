@@ -232,7 +232,7 @@
     <div class="tag">Launch. Automate. <span class="accent">Play.</span></div>
     <p class="lead">
       HDR, power plan, CPU cores, DLSS Override, your scripts and tools: chosen per game, applied at launch,
-      <strong>reverted on exit</strong>, and logged so you can see exactly what changed. A tray app, free and open source.
+      <strong>reverted on exit</strong>, and logged so you can see exactly what changed. Anything it doesn't do, a script of yours can. A tray app, free and open source.
     </p>
     <div class="cta">
       <a class="btn primary" id="dl-setup" href="https://github.com/stephenh678/TrayTrigger/releases/latest">⬇ Download for Windows <small id="dl-ver"></small></a>
@@ -362,13 +362,16 @@
 
     <div class="pillar" id="scripts">
       <div>
-        <div class="kicker">Pre-Launch and Post-Exit Scripts<span class="badge">advanced, off by default</span></div>
-        <h2>Your scripts, before and after every game</h2>
+        <div class="kicker">Make it yours<span class="badge">scripts, off by default</span></div>
+        <h2>If TrayTrigger doesn't do it, your script can</h2>
+        <p class="muted">A PowerShell or batch file runs just before any game and again after it, with the game's name, path and minutes played handed to it. Whatever you'd want done around a session, before and after, is a few lines away.</p>
         <ul>
-          <li>Real-world examples ship with it: <strong>Close Background Apps</strong> (cloud sync or the apps you name, reopened after) and <strong>Start Companion Apps</strong>.</li>
-          <li>Per-game <strong>Script Arguments</strong>, a <strong>Test Run</strong> button with captured output, timeouts, and cancel-the-launch-on-failure.</li>
-          <li>Scripts run as you, never elevated unless you choose it. Review scripts before enabling them. Their effects depend on the script; configure a matching post-exit action when cleanup is needed.</li>
+          <li><strong>Ready-made, or your own.</strong> The <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts catalogue</a> has scripts to drop in: switch your display's refresh rate for one game and put it back, change an Afterburner profile, record with OBS, back up a save folder when you quit. <strong>New script...</strong> in Edit Game starts yours from a template.</li>
+          <li><strong>Per game, tested before you trust it.</strong> Per-game <strong>Script Arguments</strong> let one script serve many games. <strong>Test Run</strong> shows exactly what the script saw and printed. Timeouts, and cancel-the-launch-on-failure, when a script is a precondition.</li>
+          <li><strong>On the record.</strong> A script says what it did in its own words, and TrayTrigger puts that on the game's Played row in Activity &amp; History and in the launch popup: "closed OneDrive and Discord".</li>
+          <li><strong>As you, by default.</strong> Scripts run as you, or as Administrator through Windows' own prompt when you choose it. Read a script before you attach it; it does what it says, nothing more.</li>
         </ul>
+        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Writing-your-own-script">Writing your own script →</a></p>
 
       </div>
       <figure class="shot"><div class="capture crop-scripts"><img loading="lazy" src="assets/scripts-current.png" alt="Close Background Apps script configured for pre-launch and post-exit with discord.exe as its argument"></div><figcaption><strong>A routine you can make your own.</strong> Configure the before-and-after actions, test them, and choose whether launch waits for the script.</figcaption></figure>
@@ -424,10 +427,11 @@
 <section id="faq">
   <div class="wrap">
     <div class="section-head"><h2>FAQ</h2></div>
+    <details><summary>TrayTrigger doesn't do something I want. Now what?</summary><p>If it's something to do before or after a game, a script can do it: TrayTrigger runs a PowerShell or batch file of yours at launch and at exit, with the game's details handed in, and shows what it did on the game's row in Activity &amp; History. Start with the <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts catalogue</a>, or New script... in Edit Game. For anything else, ask in <a href="https://github.com/stephenh678/TrayTrigger/discussions">Discussions</a>.</p></details>
     <details open><summary>Is it safe? What does it touch?</summary><p>You choose which profiles, system tweaks, and scripts to enable. Per-game profile settings restore on exit; system-wide tweaks stay applied until you revert them. Scripts run as you unless you choose elevation, and their changes require their own cleanup. Bulk system changes can create a System Restore point first. See <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">SECURITY.md</a> for the full breakdown.</p></details>
     <details><summary>Does it need administrator access?</summary><p>Not to run. A few tweaks write machine-wide settings and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.</p></details>
     <details><summary>Does it phone home?</summary><p>No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).</p></details>
-    <details><summary>Can changes be reverted?</summary><p>Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Restore Previous Settings. Custom scripts are not automatically undone; use a post-exit script for any cleanup they need.</p></details>
+    <details><summary>Can changes be reverted?</summary><p>Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Undo Preset. Custom scripts are not automatically undone; use a post-exit script for any cleanup they need.</p></details>
     <details><summary>Can I move TrayTrigger to a new PC?</summary><p>Yes. Settings &rsaquo; Diagnostics &amp; Storage &rsaquo; Backup &amp; Restore saves your library, settings, tools, scripts and artwork to one .zip. Restore it on the new PC and TrayTrigger finds your games again through their launchers, or on the new drive when a drive letter changed. Games that aren't installed yet are kept, greyed out. Game saves aren't part of a backup.</p></details>
     <details id="download-trust"><summary>Is the download signed?</summary><p>No. Releases are not code-signed, so Windows SmartScreen may warn the first time you run the installer. Releases are built by GitHub Actions from the public source and published with a SHA-256 checksum file. Verify a download with <code>Get-FileHash</code> in PowerShell and compare it to SHA256SUMS.txt on the release page, then choose More info and Run anyway. See the <a href="https://github.com/stephenh678/TrayTrigger#code-signing">code signing section</a> for details.</p></details>
     <details><summary>Where do I ask a question or report a game that scanned wrong?</summary><p>Questions go to <a href="https://github.com/stephenh678/TrayTrigger/discussions/5">Discussions</a>. Wrong art, name, or launcher goes on the <a href="https://github.com/stephenh678/TrayTrigger/issues/9">scan tracking issue</a>, one comment per game. Bugs get an <a href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">issue</a>.</p></details>
