@@ -4,6 +4,16 @@
 
 Turns on Windows' native "Use HDR" display mode for the duration of the session, then puts every display back to whatever it was set to before the game launched.
 
+## Per game
+
+Edit Game > Performance has an **HDR** choice for each game, when the PC has an HDR-capable display:
+
+- **Profile setting** follows this switch, like every other game on the Optimized or Aggressive profile. This is how every game starts out.
+- **On for this game** turns HDR on when that game launches and back off when it exits, whatever its profile - even a game on Off, where HDR is then the only thing the session changes.
+- **Off for this game** leaves HDR alone for a game that looks washed out or over-bright in HDR, while the rest of your games on the profile still get it.
+
+HDR is one setting for the whole PC, so it is decided by the first game you start: a second game started while the first is still running neither adds HDR nor takes it away. A change to a game's HDR choice is recorded in Activity & History.
+
 ## Why it helps
 
 - Some games only render their full HDR color and brightness range when Windows itself is already in HDR mode - if HDR is off system-wide, the game falls back to SDR even if it supports HDR.

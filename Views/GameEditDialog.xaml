@@ -565,6 +565,20 @@
                                 <Button AutomationProperties.Name="Learn more about CPU cores" Style="{StaticResource HelpLinkButton}"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/cpu_affinity"/>
                             </StackPanel>
+
+                            <!-- HDR - per game, overriding the Optimized profile's Enable HDR switch.
+                                 Left out on a PC with no HDR-capable display, unless the game already has a choice. -->
+                            <StackPanel Visibility="{Binding ShowHdr, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="HDR" FontSize="11.5"
+                                           Foreground="{StaticResource BrushTextSecondary}" Margin="0,4,0,4"/>
+                                <ComboBox AutomationProperties.Name="HDR" ItemsSource="{Binding HdrOptions}"
+                                          SelectedValue="{Binding Hdr}" SelectedValuePath="Value" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding HdrHint}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <Button AutomationProperties.Name="Learn more about HDR" Style="{StaticResource HelpLinkButton}"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/hdr"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

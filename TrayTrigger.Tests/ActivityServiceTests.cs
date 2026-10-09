@@ -296,6 +296,10 @@ public class ActivityServiceTests : IDisposable
         var hades = new GameEntry { Id = "h", Name = "Hades" };
         var now = DateTime.UtcNow;
 
+        var hdr = PerformanceActivity.DescribeGamesChanged([(er, HdrMode.ProfileDefault)], HdrMode.On, now);
+        Assert.Equal("Elden Ring's HDR changed from Profile setting to On for this game", hdr.Text);
+        Assert.Equal($"hdr.game|{er.Id}", hdr.GroupKey);
+
         var one = PerformanceActivity.DescribeGamesChanged([(er, PerformanceProfileMode.Off)], PerformanceProfileMode.Aggressive, now);
         Assert.Equal("Elden Ring's profile changed from Off to Aggressive", one.Text);
         Assert.Equal("profile.game|er", one.GroupKey);

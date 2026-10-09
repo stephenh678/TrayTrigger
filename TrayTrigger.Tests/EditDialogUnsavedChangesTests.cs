@@ -60,6 +60,7 @@ public class EditDialogUnsavedChangesTests : IDisposable
     [InlineData("arguments")]
     [InlineData("hidden")]
     [InlineData("profile")]
+    [InlineData("hdr")]
     [InlineData("script")]
     [InlineData("timeout")]
     public void GameEdit_AnyEditedField_IsDirty(string field) => Sta(() =>
@@ -72,10 +73,34 @@ public class EditDialogUnsavedChangesTests : IDisposable
             case "arguments": vm.Arguments = "-skipintro"; break;
             case "hidden": vm.IsHidden = true; break;
             case "profile": vm.PerformanceProfile = PerformanceProfileMode.Optimized; break;
+            case "hdr": vm.Hdr = HdrMode.On; break;
             case "script": vm.PostExitScriptPath = @"C:\Scripts\other.ps1"; break;
             case "timeout": vm.PreLaunchScriptTimeoutSeconds = "45"; break;
         }
         Assert.True(vm.HasUnsavedChanges);
+    });
+
+    /// <summary>
+    /// The HDR box is for PCs with an HDR-capable display, unless the game already carries a
+    /// choice (a library moved from such a PC), which stays visible rather than being silently kept.
+    /// </summary>
+    [Fact]
+    public void GameEdit_HdrBox_ShownWithAnHdrDisplay_OrAnExistingChoice() => Sta(() =>
+    {
+        var none = new GameEditViewModel(SampleGame(), new[] { "Action" }, Icons()) { HdrDisplayPresent = () => false };
+        Assert.False(none.ShowHdr);
+
+        var hdrPc = new GameEditViewModel(SampleGame(), new[] { "Action" }, Icons()) { HdrDisplayPresent = () => true };
+        Assert.True(hdrPc.ShowHdr);
+        Assert.Equal(new[] { "Profile setting", "On for this game", "Off for this game" }, hdrPc.HdrOptions.Select(o => o.Label));
+        Assert.Equal(HdrMode.ProfileDefault, hdrPc.Hdr);
+
+        var game = SampleGame();
+        game.Hdr = HdrMode.Off;
+        var carried = new GameEditViewModel(game, new[] { "Action" }, Icons()) { HdrDisplayPresent = () => false };
+        Assert.True(carried.ShowHdr);
+        Assert.Equal(HdrMode.Off, carried.Hdr);
+        Assert.Contains("left as it is", carried.HdrHint);
     });
 
     [Fact]
