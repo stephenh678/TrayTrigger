@@ -198,7 +198,15 @@
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
                     <Border Style="{StaticResource ActivityCard}">
-                        <ItemsControl ItemsSource="{Binding Groups}">
+                        <!-- Date sections (Today, Yesterday, Earlier this week ...), each with its rows. -->
+                        <ItemsControl ItemsSource="{Binding Sections}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Label}" FontSize="10.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"
+                                                   Margin="0,8,0,4" AutomationProperties.HeadingLevel="Level3"/>
+                        <ItemsControl ItemsSource="{Binding Rows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource HistoryRow}" AutomationProperties.Name="{Binding AccessibleName}"
@@ -255,6 +263,10 @@
                                             </StackPanel>
                                         </StackPanel>
                                     </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

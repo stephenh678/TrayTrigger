@@ -42,6 +42,8 @@ public sealed class ActivityViewModel : ViewModelBase
 
     public ObservableCollection<AttentionItemViewModel> NeedsAttention { get; } = new();
     public ObservableCollection<ActivityGroupViewModel> Groups { get; } = new();
+    /// <summary>The same rows under date headers (Today, Yesterday, Earlier this week ...), newest section first.</summary>
+    public ObservableCollection<ActivitySectionViewModel> Sections { get; } = new();
 
     public ICommand SelectTabCommand { get; }
 
@@ -150,10 +152,17 @@ public sealed class ActivityViewModel : ViewModelBase
         // A row the user opened stays open when a new entry, or the page being seen, rebuilds the list.
         var expanded = Groups.Where(g => g.IsExpanded).Select(g => g.Group.Key).ToHashSet(StringComparer.Ordinal);
         Groups.Clear();
+        Sections.Clear();
         DateTime now = DateTime.Now;
         foreach (var group in ActivityService.Group(entries))
         {
             Groups.Add(new ActivityGroupViewModel(group, now) { IsExpanded = expanded.Contains(group.Key) });
+        }
+        // Rows come newest first and every later section holds strictly older days, so grouping
+        // in order keeps both the sections and the rows within them in date order.
+        foreach (var section in Groups.GroupBy(g => g.Section))
+        {
+            Sections.Add(new ActivitySectionViewModel(section.Key, section.ToList()));
         }
 
         OnPropertyChanged(nameof(ShowNoMatches));
@@ -162,6 +171,30 @@ public sealed class ActivityViewModel : ViewModelBase
 
     private static bool Matches(string? text, string query) =>
         text != null && text.Contains(query, StringComparison.CurrentCultureIgnoreCase);
+
+    /// <summary>
+    /// Which date header a row sits under: the calendar sections Outlook and File Explorer use,
+    /// rather than counts of days. Weeks start on the locale's first day unless a test says
+    /// otherwise. Each later section covers strictly older days than the one before it, which is
+    /// what lets <see cref="RebuildGroups"/> group rows in the order they already come.
+    /// </summary>
+    internal static string SectionFor(DateTime utc, DateTime nowLocal, DayOfWeek? firstDayOfWeek = null)
+    {
+        DateTime day = utc.ToLocalTime().Date;
+        DateTime today = nowLocal.Date;
+        if (day >= today) return "Today";
+        if (day == today.AddDays(-1)) return "Yesterday";
+
+        DayOfWeek first = firstDayOfWeek ?? CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+        DateTime weekStart = today.AddDays(-(((int)today.DayOfWeek - (int)first + 7) % 7));
+        if (day >= weekStart) return "Earlier this week";
+        if (day >= weekStart.AddDays(-7)) return "Last week";
+
+        DateTime monthStart = new(today.Year, today.Month, 1);
+        if (day >= monthStart) return "Earlier this month";
+        if (day >= monthStart.AddMonths(-1)) return "Last month";
+        return "Older";
+    }
 
     /// <summary>"Today 22:31", "Yesterday 09:12", "Mon 18:00", "Sep 28 18:00", "Sep 28 2025".</summary>
     internal static string FormatWhen(DateTime utc, DateTime nowLocal)
@@ -209,6 +242,7 @@ public sealed class ActivityGroupViewModel : ViewModelBase
     {
         Group = group;
         When = ActivityViewModel.FormatWhen(group.Latest.TimeUtc, nowLocal);
+        Section = ActivityViewModel.SectionFor(group.Latest.TimeUtc, nowLocal);
         Times = group.TimesUtc.Select(t => ActivityViewModel.FormatWhen(t, nowLocal)).ToList();
         ToggleCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
         CopyCommand = new RelayCommand(CopyDetails);
@@ -220,6 +254,8 @@ public sealed class ActivityGroupViewModel : ViewModelBase
     public string? Detail => Group.Latest.Detail;
     public bool HasDetail => !string.IsNullOrWhiteSpace(Detail);
     public string When { get; }
+    /// <summary>The date header this row sits under; see <see cref="ActivityViewModel.SectionFor"/>.</summary>
+    public string Section { get; }
     public IReadOnlyList<string> Times { get; }
     public bool IsProblem => Group.Latest.Level >= ActivityLevel.Problem;
     public bool IsCritical => Group.Latest.Level == ActivityLevel.Critical;
@@ -310,4 +346,11 @@ public sealed class ActivityGroupViewModel : ViewModelBase
         try { Clipboard.SetText(DetailsText()); }
         catch (Exception ex) { LoggingService.Warn("Activity", $"Could not copy the entry to the clipboard: {ex.Message}"); }
     }
+}
+
+/// <summary>One date header on the RECENT list and the rows under it.</summary>
+public sealed class ActivitySectionViewModel(string label, IReadOnlyList<ActivityGroupViewModel> rows)
+{
+    public string Label { get; } = label;
+    public IReadOnlyList<ActivityGroupViewModel> Rows { get; } = rows;
 }
