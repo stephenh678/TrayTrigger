@@ -35,6 +35,8 @@ public static class DiagnosticReportService
         public IReadOnlyList<SessionStatus> Sessions { get; init; } = [];
         /// <summary>Names of the System-page tweaks currently applied, or null when the state could not be read.</summary>
         public IReadOnlyList<string>? AppliedTweaks { get; init; }
+        /// <summary>The last Stutter Check's lines (System page); null when none has been run this session.</summary>
+        public IReadOnlyList<string>? StutterCheck { get; init; }
         public string? TrayPromotionStatus { get; init; }
         public string DataDirectory { get; init; } = string.Empty;
         public string CacheDirectory { get; init; } = string.Empty;
@@ -222,6 +224,15 @@ public static class DiagnosticReportService
         else
         {
             sb.AppendLine($"- Applied system tweaks ({inputs.AppliedTweaks.Count}): {string.Join(", ", inputs.AppliedTweaks)}");
+        }
+
+        if (inputs.StutterCheck is { Count: > 0 } stutter)
+        {
+            sb.AppendLine($"- {stutter[0]}");
+            foreach (var line in stutter.Skip(1))
+            {
+                sb.AppendLine($"  - {line}");
+            }
         }
     }
 

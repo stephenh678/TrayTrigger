@@ -97,6 +97,35 @@ public sealed class GpuTelemetryService : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Video memory each process holds right now, by process id, from the "GPU Process Memory"
+    /// counter Task Manager's Details tab uses. A one-off read with its own query, so it doesn't
+    /// disturb the live sampler; empty when the counters aren't available.
+    /// </summary>
+    public static Dictionary<int, long> ReadProcessDedicatedMemory()
+    {
+        var result = new Dictionary<int, long>();
+        IntPtr query = IntPtr.Zero;
+        try
+        {
+            if (PdhOpenQuery(null, IntPtr.Zero, out query) != 0) return result;
+            if (PdhAddEnglishCounter(query, @"\GPU Process Memory(*)\Dedicated Usage", IntPtr.Zero, out IntPtr counter) != 0) return result;
+            if (PdhCollectQueryData(query) != 0) return result;
+            foreach (var (name, bytes) in ReadArray(counter))
+            {
+                var m = Pid.Match(name);
+                if (m.Success && int.TryParse(m.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int pid))
+                    result[pid] = result.GetValueOrDefault(pid) + (long)bytes;
+            }
+        }
+        finally
+        {
+            if (query != IntPtr.Zero) PdhCloseQuery(query);
+        }
+        return result;
+    }
+
+    private static readonly Regex Pid = new(@"^pid_(\d+)_", RegexOptions.CultureInvariant);
     private static readonly Regex Luid = new(@"luid_0x([0-9a-fA-F]+)_0x([0-9a-fA-F]+)", RegexOptions.CultureInvariant);
     private static readonly Regex EngineType = new(@"engtype_([^_]+)$", RegexOptions.CultureInvariant);
 

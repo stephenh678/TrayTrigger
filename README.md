@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <strong>Your games. Your settings. One tray menu.</strong><br>
-  Launch PC games from your Windows system tray and automate your before-and-after routine.<br>
-  Optional per-game profile settings restore when you finish. Free and open source.
+  <strong>Sets Windows up for the game you're about to play, and puts everything back when you quit.</strong><br>
+  HDR, power plan, CPU cores, DLSS Override, your scripts and tools: chosen per game, applied at launch,<br>
+  reverted on exit, and logged so you can see what changed. A tray app. Free and open source.
 </p>
 
 <p align="center">

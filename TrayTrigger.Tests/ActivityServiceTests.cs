@@ -220,6 +220,69 @@ public class ActivityServiceTests : IDisposable
         Assert.StartsWith(expectedStart, ActivityViewModel.FormatWhen(then, nowLocal));
     }
 
+    /// <summary>
+    /// The date headers, with "now" a Thursday evening (2026-10-08) and weeks starting on Sunday,
+    /// so the week began on the 4th and last week ran from Sep 27 to Oct 3.
+    /// </summary>
+    [Theory]
+    [InlineData(2026, 10, 8, "Today")]
+    [InlineData(2026, 10, 7, "Yesterday")]
+    [InlineData(2026, 10, 6, "Earlier this week")]
+    [InlineData(2026, 10, 4, "Earlier this week")]
+    [InlineData(2026, 10, 3, "Last week")]
+    [InlineData(2026, 9, 27, "Last week")]
+    [InlineData(2026, 9, 26, "Last month")]
+    [InlineData(2026, 9, 1, "Last month")]
+    [InlineData(2026, 8, 31, "Older")]
+    public void SectionFor_UsesCalendarHeaders(int y, int m, int d, string expected)
+    {
+        var nowLocal = new DateTime(2026, 10, 8, 21, 0, 0, DateTimeKind.Local);
+        var then = new DateTime(y, m, d, 10, 0, 0, DateTimeKind.Local).ToUniversalTime();
+        Assert.Equal(expected, ActivityViewModel.SectionFor(then, nowLocal, DayOfWeek.Sunday));
+    }
+
+    /// <summary>Later in the month there is room for "Earlier this month" between last week and last month.</summary>
+    [Fact]
+    public void SectionFor_EarlierThisMonth_SitsBetweenLastWeekAndLastMonth()
+    {
+        var nowLocal = new DateTime(2026, 10, 22, 9, 0, 0, DateTimeKind.Local); // a Thursday; week began Oct 18
+        string At(int d) => ActivityViewModel.SectionFor(new DateTime(2026, 10, d, 12, 0, 0, DateTimeKind.Local).ToUniversalTime(), nowLocal, DayOfWeek.Sunday);
+        Assert.Equal("Last week", At(11));
+        Assert.Equal("Earlier this month", At(10));
+        Assert.Equal("Earlier this month", At(1));
+        Assert.Equal("Last month", ActivityViewModel.SectionFor(new DateTime(2026, 9, 30, 12, 0, 0, DateTimeKind.Local).ToUniversalTime(), nowLocal, DayOfWeek.Sunday));
+    }
+
+    /// <summary>On the first day of a week, Yesterday wins over Last week, and Earlier this week is empty.</summary>
+    [Fact]
+    public void SectionFor_OnAMonday_YesterdayBeatsLastWeek()
+    {
+        var nowLocal = new DateTime(2026, 10, 5, 9, 0, 0, DateTimeKind.Local); // Monday, Monday-first week
+        string At(int d) => ActivityViewModel.SectionFor(new DateTime(2026, 10, d, 12, 0, 0, DateTimeKind.Local).ToUniversalTime(), nowLocal, DayOfWeek.Monday);
+        Assert.Equal("Today", At(5));
+        Assert.Equal("Yesterday", At(4));
+        Assert.Equal("Last week", At(3));
+        Assert.Equal("Last week", At(1));
+    }
+
+    /// <summary>The page's sections hold the rows in order, newest section first.</summary>
+    [Fact]
+    public void Page_Sections_GroupTheRowsByDay()
+    {
+        var service = new ActivityService(_dir, () => _now);
+        _now = DateTime.UtcNow.AddDays(-9);
+        service.Record(ActivityLevel.Activity, "Played Hades · 1h");
+        _now = DateTime.UtcNow.AddHours(-1);
+        service.Record(ActivityLevel.Problem, "SimHub didn't start");
+        var page = new ActivityViewModel(service);
+
+        Assert.Equal(2, page.Sections.Count);
+        Assert.Equal("TODAY", page.Sections[0].Label);
+        Assert.Equal("SimHub didn't start", page.Sections[0].Rows.Single().Text);
+        Assert.Equal("Played Hades · 1h", page.Sections[1].Rows.Single().Text);
+        Assert.NotEqual("TODAY", page.Sections[1].Label);
+    }
+
     [Fact]
     public void FormatWhen_OlderThanAYear_ShowsTheDateOnly()
     {
@@ -295,6 +358,10 @@ public class ActivityServiceTests : IDisposable
         var er = new GameEntry { Id = "er", Name = "Elden Ring" };
         var hades = new GameEntry { Id = "h", Name = "Hades" };
         var now = DateTime.UtcNow;
+
+        var hdr = PerformanceActivity.DescribeGamesChanged([(er, HdrMode.ProfileDefault)], HdrMode.On, now);
+        Assert.Equal("Elden Ring's HDR changed from Profile setting to On for this game", hdr.Text);
+        Assert.Equal($"hdr.game|{er.Id}", hdr.GroupKey);
 
         var one = PerformanceActivity.DescribeGamesChanged([(er, PerformanceProfileMode.Off)], PerformanceProfileMode.Aggressive, now);
         Assert.Equal("Elden Ring's profile changed from Off to Aggressive", one.Text);

@@ -604,6 +604,69 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Equal(new[] { "hdr:4355=on", "hdr:4355=off" }, _backend.Log.Where(l => l.StartsWith("hdr:")).ToArray());
     }
 
+    /// <summary>A game's own HDR choice beats the profile's switch, both ways.</summary>
+    [Fact]
+    public void Hdr_GameOff_BeatsProfileOn()
+    {
+        _settings.OptimizedProfileTweaks.HdrEnabled = true;
+        _backend.HdrDisplays.Add(Display(4355, enabled: false));
+        var game = Game("a", _exeA, PerformanceProfileMode.Optimized);
+        game.Hdr = HdrMode.Off;
+
+        _service.BeginGameSession(game);
+        _service.EndGameSession("a");
+
+        Assert.DoesNotContain(_backend.Log, l => l.StartsWith("hdr:"));
+        Assert.Contains("power:ultimate", _backend.Log);
+    }
+
+    [Fact]
+    public void Hdr_GameOn_BeatsProfileOff()
+    {
+        _settings.OptimizedProfileTweaks.HdrEnabled = false;
+        _backend.HdrDisplays.Add(Display(4355, enabled: false));
+        var game = Game("a", _exeA, PerformanceProfileMode.Optimized);
+        game.Hdr = HdrMode.On;
+
+        _service.BeginGameSession(game);
+        Assert.Contains("hdr:4355=on", _backend.Log);
+        _service.EndGameSession("a");
+        Assert.Contains("hdr:4355=off", _backend.Log);
+    }
+
+    /// <summary>
+    /// Profile Off with HDR On is a session of exactly one thing: HDR goes on and comes back, the
+    /// power plan and everything else are never touched, and the Played line reports no profile.
+    /// </summary>
+    [Fact]
+    public void Hdr_GameOn_WithProfileOff_IsAnHdrOnlySession()
+    {
+        _settings.OptimizedProfileTweaks.HdrEnabled = false;
+        _backend.HdrDisplays.Add(Display(4355, enabled: false));
+        var game = Game("a", _exeA, PerformanceProfileMode.Off);
+        game.Hdr = HdrMode.On;
+
+        Assert.True(_service.BeginGameSession(game));
+        Assert.Equal(new[] { "hdr:4355=on" }, _backend.Log.ToArray());
+        Assert.True(_store.OnDisk!.HdrCaptured);
+
+        Assert.True(_service.EndGameSession("a", out var putBack));
+        Assert.Null(putBack);
+        Assert.Equal(new[] { "hdr:4355=on", "hdr:4355=off" }, _backend.Log.ToArray());
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>Profile Off and no HDR choice is still nothing at all.</summary>
+    [Fact]
+    public void Hdr_ProfileOff_WithoutAChoice_AppliesNothing()
+    {
+        _settings.OptimizedProfileTweaks.HdrEnabled = true;
+        _backend.HdrDisplays.Add(Display(4355, enabled: false));
+
+        Assert.False(_service.BeginGameSession(Game("a", _exeA, PerformanceProfileMode.Off)));
+        Assert.Empty(_backend.Log);
+    }
+
     [Fact]
     public void UnmuteAudio_MutedDevice_IsUnmutedThenRemuted()
     {

@@ -198,7 +198,20 @@
                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
                     <Border Style="{StaticResource ActivityCard}">
-                        <ItemsControl ItemsSource="{Binding Groups}">
+                        <!-- Date sections (Today, Yesterday, Earlier this week ...), each with its rows. -->
+                        <ItemsControl ItemsSource="{Binding Sections}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <!-- The date header, in the style of the page and Settings section labels. -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,6" AutomationProperties.HeadingLevel="Level3">
+                                            <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"
+                                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="{Binding Label}" FontSize="11.5" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"
+                                                       FontFamily="{StaticResource AppFont}"/>
+                                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Rows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource HistoryRow}" AutomationProperties.Name="{Binding AccessibleName}"
@@ -255,6 +268,10 @@
                                             </StackPanel>
                                         </StackPanel>
                                     </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

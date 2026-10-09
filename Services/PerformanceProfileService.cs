@@ -396,7 +396,7 @@ public class PerformanceProfileService
     /// </summary>
     public bool BeginGameSession(GameEntry game)
     {
-        if (game.PerformanceProfile == PerformanceProfileMode.Off)
+        if (game.PerformanceProfile == PerformanceProfileMode.Off && game.Hdr != HdrMode.On)
         {
             LoggingService.Verbose("PerformanceProfile", $"'{game.Name}': profile is Off, nothing applied.");
             return false;
@@ -425,7 +425,9 @@ public class PerformanceProfileService
             // ending restores them while this one is still running.
             if (!appliedAnything && isFirstSession)
             {
-                LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
+                LoggingService.Verbose("PerformanceProfile", game.PerformanceProfile == PerformanceProfileMode.Off
+                    ? $"'{game.Name}' asked for HDR with its profile Off, but there was nothing to turn on - nothing to apply."
+                    : $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
                 if (IsEmpty(_snapshot))
                 {
                     _snapshot = null;
@@ -467,25 +469,47 @@ public class PerformanceProfileService
         }
     }
 
+    /// <summary>
+    /// Whether this game's session turns HDR on: the game's own choice when it has one, otherwise
+    /// the Optimized profile's switch. A game on profile Off with HDR On gets HDR and nothing else.
+    /// </summary>
+    internal static bool WantsHdr(GameEntry game, AppSettings settings) => game.Hdr switch
+    {
+        HdrMode.On => true,
+        HdrMode.Off => false,
+        _ => game.PerformanceProfile != PerformanceProfileMode.Off && settings.OptimizedProfileTweaks.HdrEnabled,
+    };
+
     private bool ApplyPreLaunchTweaks(GameEntry game, AppSettings settings, bool isFirstSession, PerformanceProfileSessionSnapshot snapshot)
     {
         bool applied = false;
         bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
+        // Profile Off, HDR On: HDR is the whole session. Nothing below the HDR step applies.
+        bool hdrOnly = game.PerformanceProfile == PerformanceProfileMode.Off;
+
+        // HDR is machine-wide and belongs to the first session; a later game can't add it.
+        if (hdrOnly && !isFirstSession)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' asked for HDR with its profile Off, but another game's session already decided HDR - nothing to apply.");
+            return false;
+        }
 
         // --- Machine-wide (first session only) ---
         if (isFirstSession)
         {
-            if (settings.OptimizedProfileTweaks.PowerPlanEnabled && ApplyPowerPlan(snapshot))
+            if (!hdrOnly && settings.OptimizedProfileTweaks.PowerPlanEnabled && ApplyPowerPlan(snapshot))
             {
                 applied = true;
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
-            if (settings.OptimizedProfileTweaks.HdrEnabled && ApplyHdr(snapshot))
+            if (WantsHdr(game, settings) && ApplyHdr(snapshot))
             {
                 applied = true;
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
+
+            if (hdrOnly) return applied;
 
             // The two HKLM tweaks are captured first and written together, so one administrator
             // prompt covers both. The snapshot is saved before the write for the same reason it
@@ -631,7 +655,7 @@ public class PerformanceProfileService
         {
             ReportUnrestored(failed, name);
         }
-        else
+        else if (info.Mode != PerformanceProfileMode.Off)
         {
             putBack = info.Mode;
         }

@@ -143,6 +143,8 @@ public class GameEditViewModel : ViewModelBase
         _performanceProfile = game.PerformanceProfile;
         _cpuAffinity = game.CpuAffinity;
         _initialCpuAffinity = game.CpuAffinity;
+        _hdr = game.Hdr;
+        _initialHdr = game.Hdr;
         _cpuCoresDelaySeconds = game.CpuCoresDelaySeconds.ToString();
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
@@ -212,7 +214,7 @@ public class GameEditViewModel : ViewModelBase
     {
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
-        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds,
+        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr,
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -290,7 +292,9 @@ public class GameEditViewModel : ViewModelBase
         {
             if (_profileTweaks == null) return Array.Empty<string>();
             if (PerformanceProfile == PerformanceProfileMode.Off)
-                return new[] { "Off: nothing is changed when this game runs." };
+                return new[] { Hdr == HdrMode.On
+                    ? "Off: only HDR is changed when this game runs, from the HDR choice below."
+                    : "Off: nothing is changed when this game runs." };
             var tweaks = _profileTweaks(PerformanceProfile);
             if (tweaks.Count == 0)
                 return new[] { $"Every {PerformanceProfile} tweak is switched off on the System page, so nothing is changed." };
@@ -390,6 +394,53 @@ public class GameEditViewModel : ViewModelBase
 
     /// <summary>The delay only matters when the choice changes something.</summary>
     public bool ShowCpuCoresDelay => CpuAffinity != CpuAffinityMode.Default;
+
+    // --- HDR (per game; overrides the Optimized profile's Enable HDR switch) ---
+
+    private HdrMode _hdr;
+    private HdrMode _initialHdr;
+    public HdrMode Hdr
+    {
+        get => _hdr;
+        set
+        {
+            _hdr = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HdrHint));
+            OnPropertyChanged(nameof(ProfileSummaryLines));
+        }
+    }
+
+    public sealed record HdrOption(HdrMode Value, string Label);
+
+    public IReadOnlyList<HdrOption> HdrOptions { get; } =
+        new[] { HdrMode.ProfileDefault, HdrMode.On, HdrMode.Off }.Select(m => new HdrOption(m, HdrModes.Label(m))).ToList();
+
+    /// <summary>
+    /// Whether this PC has a display Windows can switch to HDR. Read once, lazily, since the
+    /// display API is not free; a test stands in its own answer.
+    /// </summary>
+    private static readonly Lazy<bool> s_hdrDisplayPresent = new(() =>
+    {
+        try { return HdrControlService.GetDisplayStates().Any(s => s.Supported); }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("GameEdit", $"Could not read the displays' HDR support: {ex.Message}");
+            return false;
+        }
+    });
+    internal Func<bool> HdrDisplayPresent { get; init; } = () => s_hdrDisplayPresent.Value;
+
+    /// <summary>The HDR box is left out on a PC with no HDR-capable display, unless the game already has a choice.</summary>
+    public bool ShowHdr => _initialHdr != HdrMode.ProfileDefault || HdrDisplayPresent();
+
+    /// <summary>What the chosen HDR option does, under the box.</summary>
+    public string HdrHint => Hdr switch
+    {
+        HdrMode.On => "Windows' HDR is turned on when this game launches and back off when it exits, whatever its profile - even Off. A display already in HDR is left alone.",
+        HdrMode.Off => "HDR is left as it is for this game, even when the profile would turn it on. For a game that looks washed out or over-bright in HDR.",
+        _ => "Follows the Optimized profile's Enable HDR switch on the System page, like every other game on that profile.",
+    };
 
     // --- DLSS (read-only; see docs/dlss-plan.md) ---
 
@@ -1541,6 +1592,11 @@ public class GameEditViewModel : ViewModelBase
             PerformanceActivity.GameChanged(SourceGame, SourceGame.CpuAffinity, CpuAffinity);
         }
         SourceGame.CpuAffinity = CpuAffinity;
+        if (SourceGame.Hdr != Hdr)
+        {
+            PerformanceActivity.GameChanged(SourceGame, SourceGame.Hdr, Hdr);
+        }
+        SourceGame.Hdr = Hdr;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.
         if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;

@@ -124,6 +124,14 @@ public class GameEntry
     /// </summary>
     public int CpuCoresDelaySeconds { get; set; }
 
+    /// <summary>
+    /// Whether Windows' HDR is turned on for this game (Edit Game › Performance › HDR). Profile
+    /// setting follows the Optimized profile's Enable HDR switch; On and Off decide for this game
+    /// alone, whatever its profile - On works even with the profile Off, as the only thing the
+    /// session then changes. See <see cref="Services.PerformanceProfileService.WantsHdr"/>.
+    /// </summary>
+    public HdrMode Hdr { get; set; } = HdrMode.ProfileDefault;
+
     /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
     public string PreLaunchScriptPath { get; set; } = string.Empty;
     /// <summary>

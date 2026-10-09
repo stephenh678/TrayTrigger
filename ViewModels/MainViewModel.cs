@@ -287,11 +287,6 @@ public class MainViewModel : ViewModelBase
             SettingsVM.SelectedTab = SettingsCategoryTab.Diagnostics;
             CurrentSection = NavSection.Settings;
         });
-        OpenPerformanceSettingsCommand = new RelayCommand(() =>
-        {
-            SettingsVM.SelectedTab = SettingsCategoryTab.PerformanceTweaks;
-            CurrentSection = NavSection.Settings;
-        });
         OpenLibrarySettingsCommand = new RelayCommand(() =>
         {
             SettingsVM.SelectedTab = SettingsCategoryTab.Library;
@@ -448,13 +443,23 @@ public class MainViewModel : ViewModelBase
                 if (_currentSection == NavSection.System)
                 {
                     SystemVM.StartTelemetry();
-                    if (SystemVM.Report.Drives.Count == 0)
+                    // Stutter Check loads the specs and the tweaks as part of its run, so when it is
+                    // due (no result yet, or a stale one, and no game running) it is the one load.
+                    bool gameRunning = _launcherService.GetActiveSessions().Count > 0;
+                    if (SystemViewModel.ShouldRunStutterCheck(SystemVM.LastStutterRunUtc, DateTime.UtcNow, gameRunning, SystemViewModel.StutterCheckMaxAge))
                     {
-                        _ = SystemVM.LoadHardwareSpecsAsync();
+                        _ = SystemVM.RunStutterCheckIfDueAsync(gameRunning);
                     }
-                    if (SystemVM.TotalTweakCount == 0)
+                    else
                     {
-                        _ = SystemVM.LoadTweaksAsync();
+                        if (!SystemVM.HasSpecs)
+                        {
+                            _ = SystemVM.LoadHardwareSpecsAsync();
+                        }
+                        if (SystemVM.TotalTweakCount == 0)
+                        {
+                            _ = SystemVM.LoadTweaksAsync();
+                        }
                     }
                 }
                 else if (prev == NavSection.System)
@@ -523,7 +528,6 @@ public class MainViewModel : ViewModelBase
     public ICommand SelectSettingsCommand { get; }
     public ICommand OpenDiagnosticsSettingsCommand { get; }
     /// <summary>System page's restore-point badge -> Settings > Launch &amp; Performance.</summary>
-    public ICommand OpenPerformanceSettingsCommand { get; }
     /// <summary>Settings › Library &amp; Art, where the SteamGridDB and RAWG keys are entered.</summary>
     public ICommand OpenLibrarySettingsCommand { get; }
     public ICommand SelectAboutCommand { get; }
@@ -618,6 +622,7 @@ public class MainViewModel : ViewModelBase
             Launchers = launchers,
             Sessions = sessions,
             AppliedTweaks = appliedTweaks,
+            StutterCheck = SystemVM.StutterReportLines,
             TrayPromotionStatus = SettingsVM.TrayPromotionStatus,
             DataDirectory = _storageService.BaseDirectory,
             CacheDirectory = _storageService.LocalCacheDirectory,
