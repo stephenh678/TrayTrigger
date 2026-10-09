@@ -39,7 +39,7 @@
                                     <TextBlock Text="{Binding DisplayName}" FontSize="13.5"
                                                FontFamily="{StaticResource AppFont}" Foreground="{StaticResource BrushTextPrimary}"
                                                TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding SubLabel}" FontSize="11"
+                                    <TextBlock Text="{Binding SubLabel}" FontSize="12"
                                                Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0"/>
                                 </StackPanel>
 

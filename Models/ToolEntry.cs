@@ -53,4 +53,17 @@ public class ToolEntry
     /// launched has exited. A copy that was already running is never touched.
     /// </summary>
     public bool CloseAfterGames { get; set; }
+    /// <summary>
+    /// Closed just before a game TrayTrigger launches: every running copy, whoever opened it. For
+    /// Discord, OneDrive or a browser that shouldn't be using memory and the graphics card while a game
+    /// runs. A program only, like <see cref="StartWithGames"/>, and never together with it: Edit Tool
+    /// unticks one when the other is ticked, and Start wins in a hand-edited tools.json
+    /// (<see cref="ToolCatalog.ClosesForGames"/>).
+    /// </summary>
+    public bool CloseForGames { get; set; }
+    /// <summary>
+    /// With <see cref="CloseForGames"/>: a tool TrayTrigger closed is started again once the last game it
+    /// launched has exited, unless it is running again by then.
+    /// </summary>
+    public bool ReopenAfterGames { get; set; }
 }

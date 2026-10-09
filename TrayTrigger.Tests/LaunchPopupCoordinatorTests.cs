@@ -197,6 +197,25 @@ public class LaunchPopupCoordinatorTests
     }
 
     [Fact]
+    public void ClosingTool_NamesTheToolBeingClosed_ThenTheOneStarting()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+
+        rig.Popup.OnClosingTool("a", "Discord");
+        Assert.Equal("Launching", rig.View.Shown!.Status);
+        Assert.Equal("Closing Discord first", rig.View.Shown.Detail);
+
+        rig.Popup.OnClosingTool("a", null);
+        rig.Popup.OnStartingTool("a", "MSI Afterburner");
+        Assert.Equal("Starting MSI Afterburner first", rig.View.Shown!.Detail);
+
+        // Another game's tools don't show on this popup.
+        rig.Popup.OnClosingTool("b", "Slack");
+        Assert.Equal("Starting MSI Afterburner first", rig.View.Shown!.Detail);
+    }
+
+    [Fact]
     public void Closing_SaysWhatThePromptIsFor_UntilItIsAnswered()
     {
         var rig = new Rig();

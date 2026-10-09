@@ -225,6 +225,7 @@ public static partial class CpuTopologyService
         if (cpus == null)
         {
             LoggingService.Verbose("CpuTopology", $"'{game.Name}' is set to {CpuTopology.MenuLabel(game.CpuAffinity)}, which changes nothing on this PC: {topology.WhyNoEffect(game.CpuAffinity)}. Leaving its cores alone.");
+            LaunchRecord.Note(game.Id, LaunchRecord.Game, $"CPU Cores ({CpuTopology.MenuLabel(game.CpuAffinity)}) changes nothing on this PC, cores left alone");
             return;
         }
 
@@ -238,6 +239,7 @@ public static partial class CpuTopologyService
         catch (Exception ex)
         {
             LoggingService.Warn("CpuTopology", $"Could not set the CPU cores for '{game.Name}': its process could not be read ({ex.Message}).");
+            LaunchRecord.Note(game.Id, LaunchRecord.Game, "CPU Cores couldn't be set: the game's process couldn't be read");
             return;
         }
 
@@ -258,6 +260,7 @@ public static partial class CpuTopologyService
         string what = Describe(topology, game.CpuAffinity, cpus);
         int delay = Math.Clamp(game.CpuCoresDelaySeconds, 0, MaxDelaySeconds);
         string name = game.Name;
+        string gameId = game.Id;
 
         _ = Task.Run(async () =>
         {
@@ -269,7 +272,11 @@ public static partial class CpuTopologyService
                     await Task.Delay(TimeSpan.FromSeconds(delay)).ConfigureAwait(false);
                 }
                 var done = new HashSet<int>();
-                if (!ApplyToTree(pid, startedUtc, launchHandle, ids, name, what, done, firstPass: true)) return;
+                bool kept = ApplyToTree(pid, startedUtc, launchHandle, ids, name, what, done, firstPass: true);
+                LaunchRecord.Note(gameId, LaunchRecord.Game, kept
+                    ? $"kept on {what}{(delay > 0 ? $" after {delay}s" : string.Empty)}"
+                    : "CPU Cores couldn't be set (the game refused, or had exited)");
+                if (!kept) return;
                 var until = DateTime.UtcNow + FollowUpWindow;
                 while (DateTime.UtcNow < until)
                 {
@@ -280,6 +287,7 @@ public static partial class CpuTopologyService
             catch (Exception ex)
             {
                 LoggingService.Warn("CpuTopology", $"Setting the CPU cores for '{name}' failed: {ex.Message}");
+                LaunchRecord.Note(gameId, LaunchRecord.Game, "CPU Cores couldn't be set");
             }
         });
     }

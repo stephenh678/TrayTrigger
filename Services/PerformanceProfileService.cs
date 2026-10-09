@@ -106,6 +106,19 @@ public class PerformanceProfileService
         LoggingService.Warn("PerformanceProfile", $"Could not put back {what}.");
     }
 
+    /// <summary>
+    /// The game whose launch is being worked on, so each tweak can say on its Played row what it did
+    /// or why not (<see cref="LaunchRecord"/>). Set for the length of a Begin or End call, under the lock.
+    /// </summary>
+    private string? _noteGameId;
+    private void Note(string text) { if (_noteGameId != null) LaunchRecord.Note(_noteGameId, LaunchRecord.Profile, text); }
+    private void NoteGame(string text) { if (_noteGameId != null) LaunchRecord.Note(_noteGameId, LaunchRecord.Game, text); }
+    /// <summary>A tweak that wasn't applied, and why: the row's Skipped line.</summary>
+    private void Skipped(string text) => Note(LaunchRecord.SkippedPrefix + text);
+
+    /// <summary>What was put back when the session ended, or couldn't be: the row's Put back line.</summary>
+    private static void PutBack(string gameId, string text) => LaunchRecord.Note(gameId, LaunchRecord.Profile, LaunchRecord.PutBackPrefix + text);
+
     /// <summary>For view-model tests that need a service but never run a session. No NVIDIA access.</summary>
     public PerformanceProfileService(StorageService storageService)
         : this(storageService, () => storageService.LoadSettings(), new WindowsTweakBackend())
@@ -399,6 +412,7 @@ public class PerformanceProfileService
         if (game.PerformanceProfile == PerformanceProfileMode.Off && game.Hdr != HdrMode.On)
         {
             LoggingService.Verbose("PerformanceProfile", $"'{game.Name}': profile is Off, nothing applied.");
+            LaunchRecord.Note(game.Id, LaunchRecord.Profile, "nothing changed");
             return false;
         }
 
@@ -415,24 +429,34 @@ public class PerformanceProfileService
 
             _snapshot ??= new PerformanceProfileSessionSnapshot();
 
-            // Persists the snapshot after each individual tweak below (not once at the end),
-            // so a crash mid-sequence still leaves a recovery record for whatever was already
-            // applied instead of leaving mutated system state with nothing on disk to undo it.
-            bool appliedAnything = ApplyPreLaunchTweaks(game, settings, isFirstSession, _snapshot);
-
-            // A later game that adds no per-exe tweaks of its own still relies on the machine-wide
-            // ones the first session applied, so it joins the session: otherwise the first game
-            // ending restores them while this one is still running.
-            if (!appliedAnything && isFirstSession)
+            _noteGameId = game.Id;
+            bool appliedAnything;
+            try
             {
-                LoggingService.Verbose("PerformanceProfile", game.PerformanceProfile == PerformanceProfileMode.Off
-                    ? $"'{game.Name}' asked for HDR with its profile Off, but there was nothing to turn on - nothing to apply."
-                    : $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
-                if (IsEmpty(_snapshot))
+                // Persists the snapshot after each individual tweak below (not once at the end),
+                // so a crash mid-sequence still leaves a recovery record for whatever was already
+                // applied instead of leaving mutated system state with nothing on disk to undo it.
+                appliedAnything = ApplyPreLaunchTweaks(game, settings, isFirstSession, _snapshot);
+
+                // A later game that adds no per-exe tweaks of its own still relies on the machine-wide
+                // ones the first session applied, so it joins the session: otherwise the first game
+                // ending restores them while this one is still running.
+                if (!appliedAnything && isFirstSession)
                 {
-                    _snapshot = null;
+                    LoggingService.Verbose("PerformanceProfile", game.PerformanceProfile == PerformanceProfileMode.Off
+                        ? $"'{game.Name}' asked for HDR with its profile Off, but there was nothing to turn on - nothing to apply."
+                        : $"'{game.Name}' requested {game.PerformanceProfile} but every applicable pre-launch tweak is disabled (or not resolvable for this launch type) - nothing to apply.");
+                    Skipped("every tweak is off, or doesn't apply to this launch");
+                    if (IsEmpty(_snapshot))
+                    {
+                        _snapshot = null;
+                    }
+                    return false;
                 }
-                return false;
+            }
+            finally
+            {
+                _noteGameId = null;
             }
 
             _activeSessionKeys.Add(game.Id);
@@ -457,15 +481,26 @@ public class PerformanceProfileService
         if (game.PerformanceProfile == PerformanceProfileMode.Off) return;
 
         var settings = _settingsProvider();
-        if (settings.OptimizedProfileTweaks.PowerThrottlingExemptEnabled)
+        lock (_lock)
         {
-            ApplyPowerThrottlingExemption(process, game.Name);
-        }
+            _noteGameId = game.Id;
+            try
+            {
+                if (settings.OptimizedProfileTweaks.PowerThrottlingExemptEnabled)
+                {
+                    ApplyPowerThrottlingExemption(process, game.Name);
+                }
 
-        bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
-        if (aggressive && settings.AggressiveProfileTweaks.AboveNormalPriorityEnabled)
-        {
-            ApplyAboveNormalPriority(process, game.Name);
+                bool aggressive = game.PerformanceProfile == PerformanceProfileMode.Aggressive;
+                if (aggressive && settings.AggressiveProfileTweaks.AboveNormalPriorityEnabled)
+                {
+                    ApplyAboveNormalPriority(process, game.Name);
+                }
+            }
+            finally
+            {
+                _noteGameId = null;
+            }
         }
     }
 
@@ -487,12 +522,21 @@ public class PerformanceProfileService
         // Profile Off, HDR On: HDR is the whole session. Nothing below the HDR step applies.
         bool hdrOnly = game.PerformanceProfile == PerformanceProfileMode.Off;
 
+        switch (game.Hdr)
+        {
+            case HdrMode.On: NoteGame("HDR on for this game"); break;
+            case HdrMode.Off: NoteGame("HDR left off for this game"); break;
+        }
+
         // HDR is machine-wide and belongs to the first session; a later game can't add it.
         if (hdrOnly && !isFirstSession)
         {
             LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' asked for HDR with its profile Off, but another game's session already decided HDR - nothing to apply.");
+            Skipped("HDR, as another game's session already decided it");
             return false;
         }
+
+        if (!isFirstSession) Skipped("the machine-wide tweaks, already on for another game's session");
 
         // --- Machine-wide (first session only) ---
         if (isFirstSession)
@@ -532,7 +576,8 @@ public class PerformanceProfileService
 
             if (hklmChanges.Count > 0)
             {
-                _backend.ApplyHklmChanges(hklmChanges);
+                if (_backend.ApplyHklmChanges(hklmChanges)) Note("Windows' multimedia scheduler settings");
+                else Skipped("Windows' multimedia scheduler settings couldn't be set");
             }
 
             if (settings.OptimizedProfileTweaks.DoNotDisturbEnabled)
@@ -573,6 +618,10 @@ public class PerformanceProfileService
             ApplyGpuPreference(perGame, resolvedExePath);
             applied = true;
         }
+        else if (settings.OptimizedProfileTweaks.GpuPreferenceEnabled)
+        {
+            Skipped("GPU preference, the game's program isn't known for this launch type");
+        }
 
         if (aggressive && settings.AggressiveProfileTweaks.DefenderExclusionEnabled && resolvedExePath != null)
         {
@@ -610,7 +659,11 @@ public class PerformanceProfileService
         {
             if (!_activeSessionKeys.Remove(gameId)) return false;
             _sessionInfo.Remove(gameId, out info);
-            if (_snapshot == null) return true;
+            if (_snapshot == null)
+            {
+                PutBack(gameId, "nothing to put back");
+                return true;
+            }
             int before = _unrestored.Count;
             var snapshot = _snapshot;
 
@@ -643,6 +696,10 @@ public class PerformanceProfileService
             failed = _unrestored.Skip(before).Select(u => u.What).ToList();
             // An NVIDIA setting an earlier session couldn't put back, and this one's end did.
             settled = TakeSettledNvidiaEntries(snapshot.NvidiaSettings);
+
+            PutBack(gameId, failed.Count > 0
+                ? $"everything except {JoinList(failed)}, which couldn't be"
+                : _activeSessionKeys.Count == 0 ? "everything" : "the game's own tweaks; the machine-wide ones stay for the game still running");
         }
 
         // Outside the lock: recording raises events the UI listens to.
@@ -762,6 +819,7 @@ public class PerformanceProfileService
         {
             // Nothing to put back afterwards, so switching now would leave the Ultimate plan on for good.
             LoggingService.Warn("PerformanceProfile", "Power Plan: could not read the active scheme, so it was left unchanged.");
+            Skipped("power plan, the active plan couldn't be read");
             return false;
         }
         snapshot.PreviousPowerSchemeGuid = previous;
@@ -770,9 +828,11 @@ public class PerformanceProfileService
         if (!_backend.ActivateUltimatePowerPlan())
         {
             LoggingService.Warn("PerformanceProfile", "Could not create or locate the 'Ultimate Plan - TrayTrigger' power scheme.");
+            Skipped("Ultimate Performance power plan couldn't be set");
             return true;
         }
         LoggingService.Verbose("PerformanceProfile", $"Power Plan: switched active scheme to 'Ultimate Plan - TrayTrigger' (was {snapshot.PreviousPowerSchemeGuid ?? "unknown"}).");
+        Note("Ultimate Performance power plan");
         return true;
     }
 
@@ -932,10 +992,12 @@ public class PerformanceProfileService
             snapshot.ToastsCaptured = true;
             _backend.SetToastsEnabled(0);
             LoggingService.Verbose("PerformanceProfile", $"Do Not Disturb: toasts off (was {snapshot.PreviousToastsEnabled?.ToString() ?? "unset/on"}).");
+            Note("notifications off");
         }
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"ApplyDoNotDisturb failed: {ex.Message}");
+            Skipped("notifications couldn't be turned off");
         }
     }
 
@@ -968,11 +1030,13 @@ public class PerformanceProfileService
             if (muted == null)
             {
                 LoggingService.Verbose("PerformanceProfile", "Unmute audio: no default playback device; nothing to do.");
+                Skipped("unmute, no playback device");
                 return;
             }
             if (muted == false)
             {
                 LoggingService.Verbose("PerformanceProfile", "Unmute audio: playback device is already unmuted.");
+                Skipped("speakers already unmuted");
                 return;
             }
 
@@ -981,10 +1045,12 @@ public class PerformanceProfileService
                 snapshot.PlaybackMuteCaptured = true;
                 snapshot.PreviousPlaybackMuted = true;
                 LoggingService.Info("PerformanceProfile", "Unmute audio: default playback device unmuted for this session.");
+                Note("speakers unmuted");
             }
             else
             {
                 LoggingService.Warn("PerformanceProfile", "Unmute audio: the default playback device refused the change.");
+                Skipped("speakers couldn't be unmuted");
             }
         }
         catch (Exception ex)
@@ -1025,6 +1091,8 @@ public class PerformanceProfileService
         LoggingService.Verbose("PerformanceProfile", granted != 0
             ? $"Timer resolution: requested 0.5 ms, system now at {granted / 10000.0:0.###} ms."
             : "Timer resolution: request failed.");
+        if (granted != 0) Note("0.5 ms timer resolution");
+        else Skipped("timer resolution couldn't be requested");
     }
 
     private void RestoreTimerResolution(PerformanceProfileSessionSnapshot snapshot)
@@ -1096,6 +1164,7 @@ public class PerformanceProfileService
         if (_drs.GetSettingName(NvidiaGlobalSetting.PresenceProbeId) == null)
         {
             LoggingService.Verbose("PerformanceProfile", "NVIDIA settings: no NVIDIA driver; nothing to do.");
+            Skipped("NVIDIA tweaks, no NVIDIA driver");
             return false;
         }
 
@@ -1113,6 +1182,7 @@ public class PerformanceProfileService
             if (session == null || global == null)
             {
                 LoggingService.Warn("PerformanceProfile", $"NVIDIA settings: could not open the driver's settings ({error}); left unchanged.");
+                Skipped("NVIDIA tweaks, the driver's settings couldn't be opened");
                 return false;
             }
 
@@ -1124,21 +1194,25 @@ public class PerformanceProfileService
                     // A failed read is not "absent": recording it as such would make undo delete a
                     // value the user had chosen.
                     LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not read the driver's setting ({error}); left unchanged.");
+                    Skipped($"{want.Label}, the driver's setting couldn't be read");
                     continue;
                 }
                 if (reading?.Value == want.Value)
                 {
                     LoggingService.Verbose("PerformanceProfile", $"{want.Label}: already {want.Describe}; nothing to do.");
+                    Skipped($"{want.Label} already {want.Describe}");
                     continue;
                 }
                 if (want.LeaveAlone(reading) is string reason)
                 {
                     LoggingService.Verbose("PerformanceProfile", $"{want.Label}: {reason}; left as it is.");
+                    Skipped($"{want.Label}, {reason}");
                     continue;
                 }
                 if (!session.SetSetting(global, want.SettingId, want.Value, out error))
                 {
                     LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not set {want.Describe}: {error}");
+                    Skipped($"{want.Label} couldn't be set");
                     continue;
                 }
                 written.Add((new NvidiaSettingSnapshot { SettingId = want.SettingId, Written = want.Value, Previous = NvidiaGlobalSetting.TokenFor(reading) }, want));
@@ -1153,8 +1227,10 @@ public class PerformanceProfileService
                 LoggingService.Warn("PerformanceProfile", $"NVIDIA settings: the driver refused to save them ({error}); nothing was changed.");
                 foreach (var (record, _) in written) snapshot.NvidiaSettings.Remove(record);
                 _store.SaveProfileSessionSnapshot(snapshot);
+                Skipped("NVIDIA tweaks couldn't be saved by the driver");
                 return false;
             }
+            foreach (var (_, want) in written) Note($"{want.Label}: {want.Describe}");
         }
 
         // Read back through a fresh session, since sessions don't merge. A value that reads back
@@ -1181,6 +1257,7 @@ public class PerformanceProfileService
         if (_backend.GetPrimaryRefreshHz() is not int refresh || refresh < MinFrameCapRefreshHz)
         {
             LoggingService.Verbose("PerformanceProfile", $"Frame cap: the primary display's refresh rate couldn't be read, or is under {MinFrameCapRefreshHz} Hz; no cap set.");
+            Skipped($"frame cap, the primary display's refresh rate couldn't be read or is under {MinFrameCapRefreshHz} Hz");
             return null;
         }
         uint cap = Math.Min(FrameCapFor(refresh), NvFrameCapMax);
@@ -1200,6 +1277,7 @@ public class PerformanceProfileService
         if (_backend.IsResizableBarEnabled() == false)
         {
             LoggingService.Verbose("PerformanceProfile", "Resizable BAR: off in the BIOS, so there is nothing for the driver to use; not set.");
+            Skipped("Resizable BAR, off in the BIOS");
             return null;
         }
         // Set on the Global profile by the user or another tool, either way: their choice for every game.
@@ -1323,13 +1401,20 @@ public class PerformanceProfileService
         try
         {
             if (_backend.ExemptFromPowerThrottling(process))
+            {
                 LoggingService.Verbose("PerformanceProfile", $"'{gameName}' is exempt from Windows power throttling.");
+                NoteGame("exempt from Windows power throttling");
+            }
             else
+            {
                 LoggingService.Info("PerformanceProfile", $"Windows refused to exempt '{gameName}' from power throttling (it may be running as administrator).");
+                NoteGame("Windows refused the power throttling exemption (the game may run as administrator)");
+            }
         }
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"Exempting '{gameName}' from power throttling failed: {ex.Message}");
+            NoteGame("the power throttling exemption couldn't be set");
         }
     }
 
@@ -1350,9 +1435,9 @@ public class PerformanceProfileService
         if (states.Count == 0)
         {
             LoggingService.Verbose("PerformanceProfile", "No HDR-capable display detected; skipping Enable HDR.");
+            Skipped("HDR, no HDR-capable display");
             return false;
         }
-
         snapshot.PreviousHdrStates = states.Select(s => new HdrDisplaySnapshot
         {
             AdapterIdLowPart = s.AdapterId.LowPart,
@@ -1366,17 +1451,23 @@ public class PerformanceProfileService
         int wcgCount = states.Count(s => s.IsWcg);
         LoggingService.Info("PerformanceProfile", $"Enable HDR: found {states.Count} HDR-capable display(s) ({states.Count(s => s.Enabled)} already on, {wcgCount} currently in WCG mode and being forced to HDR).");
 
+        int turnedOn = 0, refused = 0;
         foreach (var s in states.Where(s => !s.Enabled))
         {
             if (_backend.SetDisplayHdrEnabled(s.AdapterId, s.TargetId, true))
             {
+                turnedOn++;
                 LoggingService.Info("PerformanceProfile", $"Enabled HDR on display target {s.TargetId}{(s.IsWcg ? " (was in WCG mode)" : "")}.");
             }
             else
             {
+                refused++;
                 LoggingService.Warn("PerformanceProfile", $"Failed to enable HDR on display target {s.TargetId}.");
             }
         }
+        if (refused > 0) Skipped($"HDR couldn't be turned on on {refused} display(s)");
+        else if (turnedOn == 0) Skipped("HDR already on");
+        else Note("HDR on");
 
         return true;
     }
@@ -1432,10 +1523,12 @@ public class PerformanceProfileService
             snapshot.GpuPreferenceCaptured = true;
             _backend.SetGpuPreference(exePath, "GpuPreference=2;");
             LoggingService.Verbose("PerformanceProfile", $"GPU Preference: set 'High performance' for '{exePath}' (was '{snapshot.PreviousGpuPreferenceValue ?? "unset"}').");
+            Note("High performance GPU for the game's program");
         }
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"ApplyGpuPreference failed: {ex.Message}");
+            Skipped("GPU preference couldn't be set");
         }
     }
 
@@ -1486,10 +1579,12 @@ public class PerformanceProfileService
         {
             _backend.SetProcessPriority(process, ProcessPriorityClass.AboveNormal);
             LoggingService.Verbose("PerformanceProfile", $"Set '{gameName}' process priority to Above Normal.");
+            NoteGame("Above Normal priority");
         }
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"Failed to raise process priority for '{gameName}': {ex.Message}");
+            NoteGame("Above Normal priority couldn't be set");
         }
     }
 
@@ -1512,15 +1607,18 @@ public class PerformanceProfileService
             if (added)
             {
                 LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: added '{exePath}'.");
+                Note("Defender exclusion for the game's program");
             }
             else
             {
                 LoggingService.Verbose("PerformanceProfile", $"Defender Exclusion: '{exePath}' was already excluded; leaving as-is.");
+                Skipped("Defender exclusion, already there");
             }
         }
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"ApplyDefenderExclusion failed: {ex.Message}");
+            Skipped("Defender exclusion couldn't be added");
         }
     }
 

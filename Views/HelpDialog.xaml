@@ -55,7 +55,7 @@
 
             <!-- Footer -->
             <DockPanel Grid.Row="3" LastChildFill="False">
-                <TextBlock x:Name="FooterHintText" Text="Esc to close" FontSize="11"
+                <TextBlock x:Name="FooterHintText" Text="Esc to close" FontSize="12"
                            Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                 <Button Content="Close" Style="{StaticResource ModernOutlineButton}" Padding="16,6"
                         DockPanel.Dock="Right" IsCancel="True" Click="OnCloseClick"/>

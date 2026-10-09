@@ -506,7 +506,7 @@
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" 
                                           Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" 
+                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" 
                                           FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                            </StackPanel>
 
@@ -687,7 +687,7 @@
                                                        <DataTemplate DataType="{x:Type vm:LibraryFilterGroup}">
                                                            <StackPanel Margin="0,0,0,10"
                                                                        Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
-                                                               <TextBlock Text="{Binding Title}" FontSize="11" FontWeight="Bold"
+                                                               <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Bold"
                                                                           Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,4"/>
                                                                <ItemsControl ItemsSource="{Binding Options}">
                                                                    <ItemsControl.ItemTemplate>
@@ -1124,12 +1124,12 @@
                                                                            <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                            <ColumnDefinition Width="*"/>
                                                                        </Grid.ColumnDefinitions>
-                                                                       <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11" 
+                                                                       <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="12" 
                                                                                   Foreground="{StaticResource BrushTextSecondary}" 
                                                                                   FontFamily="{StaticResource AppFont}"
                                                                                   TextTrimming="CharacterEllipsis"
                                                                                   views:PosterDetailFade.Part="Playtime"/>
-                                                                       <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11" 
+                                                                       <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="12" 
                                                                                   Foreground="{StaticResource BrushTextMuted}" 
                                                                                   HorizontalAlignment="Right"
                                                                                   TextAlignment="Right"
@@ -1174,11 +1174,11 @@
                                                                        <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                        <ColumnDefinition Width="*"/>
                                                                    </Grid.ColumnDefinitions>
-                                                                   <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="11" 
+                                                                   <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="12" 
                                                                               Foreground="{StaticResource BrushTextSecondary}" 
                                                                               FontFamily="{StaticResource AppFont}"
                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                   <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="11" 
+                                                                   <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="12" 
                                                                               Foreground="{StaticResource BrushTextMuted}" 
                                                                               HorizontalAlignment="Right"
                                                                               TextAlignment="Right"
@@ -1361,7 +1361,7 @@
                                                                                </Style.Triggers>
                                                                            </Style>
                                                                        </Border.Style>
-                                                                       <TextBlock Text="{Binding Category}" FontSize="11"
+                                                                       <TextBlock Text="{Binding Category}" FontSize="12"
                                                                                   Foreground="{StaticResource BrushTextSecondary}"
                                                                                   FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                                    </Border>
@@ -1847,7 +1847,7 @@
 
                                                        <!-- Playtime / Category Subtext -->
                                                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
-                                                           <TextBlock Text="{Binding Category}" FontSize="11"
+                                                           <TextBlock Text="{Binding Category}" FontSize="12"
                                                                       Foreground="{StaticResource BrushTextMuted}"
                                                                       FontFamily="{StaticResource AppFont}"
                                                                       TextTrimming="CharacterEllipsis"/>
@@ -1949,15 +1949,15 @@
                                            <ColumnDefinition Width="125"/> <!-- Last Played -->
                                            <ColumnDefinition Width="90"/>  <!-- Actions -->
                                        </Grid.ColumnDefinitions>
-                                       <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="11" FontWeight="SemiBold" 
+                                       <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="12" FontWeight="SemiBold" 
                                                   Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="11" FontWeight="SemiBold" 
+                                       <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="12" FontWeight="SemiBold" 
                                                   Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="11" FontWeight="SemiBold" 
+                                       <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="12" FontWeight="SemiBold" 
                                                   Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="11" FontWeight="SemiBold" 
+                                       <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="12" FontWeight="SemiBold" 
                                                   Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="11" FontWeight="SemiBold" 
+                                       <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="12" FontWeight="SemiBold" 
                                                   Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}" 
                                                   HorizontalAlignment="Right" Margin="0,0,6,0"/>
                                    </Grid>
@@ -2219,12 +2219,12 @@
                                                    </Border>
 
                                                    <!-- Playtime -->
-                                                   <TextBlock Grid.Column="3" Text="{Binding ListPlaytimeDisplay}" FontSize="11" 
+                                                   <TextBlock Grid.Column="3" Text="{Binding ListPlaytimeDisplay}" FontSize="12" 
                                                               Foreground="{StaticResource BrushTextSecondary}" 
                                                               FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
 
                                                    <!-- Last Played -->
-                                                   <TextBlock Grid.Column="4" Text="{Binding LastPlayedDisplay}" FontSize="11" 
+                                                   <TextBlock Grid.Column="4" Text="{Binding LastPlayedDisplay}" FontSize="12" 
                                                               Foreground="{StaticResource BrushTextMuted}" 
                                                               FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
 
@@ -2373,7 +2373,7 @@
                        <DockPanel Grid.Row="4" Margin="0,14,0,0" LastChildFill="True">
                            <!-- Bound to the configurable hotkey, not hard-coded to Ctrl+Alt+G. -->
                            <!-- Only for the first five sessions (UX-14e); after that the tray tooltip says it. -->
-                           <TextBlock DockPanel.Dock="Right" Text="{Binding SettingsVM.GlobalManageHotkey, StringFormat='Hotkey: {0} to show or hide this window'}" FontSize="11"
+                           <TextBlock DockPanel.Dock="Right" Text="{Binding SettingsVM.GlobalManageHotkey, StringFormat='Hotkey: {0} to show or hide this window'}" FontSize="12"
                                       Visibility="{Binding SettingsVM.ShowHotkeyHint, Converter={StaticResource BoolToVis}}"
                                       Foreground="{StaticResource BrushTextMuted}" Margin="14,0,0,0"
                                       FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>

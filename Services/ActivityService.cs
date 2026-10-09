@@ -39,13 +39,23 @@ public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyLi
 /// <see cref="Record(ActivityLevel, string, string?, string?, string?)"/> at a place in the code
 /// where something meaningful to a player happened. There is no per-entry read state and no
 /// dismiss: opening the page marks everything seen, and entries go by themselves after
-/// <see cref="RetentionDays"/> days or past <see cref="MaxEntries"/>.</para>
+/// <see cref="RetentionDays"/> days (the page's Keep dropdown) or past <see cref="MaxEntries"/>.
+/// Clear history, beside it, empties Recent at once.</para>
 /// </summary>
 public sealed class ActivityService
 {
     public const string FileName = "activity.json";
-    public const int RetentionDays = 90;
+    public const int DefaultRetentionDays = 90;
+    /// <summary>The windows the page's Keep dropdown offers: a month, a season, a year.</summary>
+    public static readonly IReadOnlyList<int> RetentionChoices = [30, 90, 365];
     public const int MaxEntries = 500;
+
+    /// <summary>A stored window, or the default when it isn't one of <see cref="RetentionChoices"/>.</summary>
+    public static int NormalizeRetentionDays(int days) => RetentionChoices.Contains(days) ? days : DefaultRetentionDays;
+
+    /// <summary>How far back Recent goes, read from settings each time so a change applies at once.</summary>
+    public int RetentionDays => NormalizeRetentionDays(_retentionDays());
+    private readonly Func<int> _retentionDays;
 
     /// <summary>The app's instance, set at startup. Null in tests and before startup, when
     /// <see cref="Add"/> does nothing - so a service can record without knowing whether anyone listens.</summary>
@@ -76,12 +86,104 @@ public sealed class ActivityService
     public event Action? Changed;
 
     /// <param name="readOnly">For a capture or test run: reads the history, records in memory, writes nothing.</param>
-    public ActivityService(string baseDirectory, Func<DateTime>? utcNow = null, bool readOnly = false)
+    /// <param name="retentionDays">The window from settings; the default when not given.</param>
+    public ActivityService(string baseDirectory, Func<DateTime>? utcNow = null, bool readOnly = false, Func<int>? retentionDays = null)
     {
         _path = Path.Combine(baseDirectory, FileName);
         _utcNow = utcNow ?? (() => DateTime.UtcNow);
         _readOnly = readOnly;
+        _retentionDays = retentionDays ?? (() => DefaultRetentionDays);
         Load();
+    }
+
+    /// <summary>
+    /// Rewrites part of a row's detail once an outcome it foretold is known: a Played row's Tools line
+    /// says "closes after your last game" until the tool has closed, or hasn't. Nothing happens when the
+    /// entry has gone (cleared, aged out) or the phrase isn't there any more.
+    /// </summary>
+    public void AmendDetail(ActivityEntry row, string from, string to)
+    {
+        bool changed = false;
+        lock (_lock)
+        {
+            var entry = _entries.FirstOrDefault(e => e.Id == row.Id);
+            if (entry?.Detail is { } detail && detail.Contains(from, StringComparison.Ordinal))
+            {
+                entry.Detail = detail.Replace(from, to, StringComparison.Ordinal);
+                changed = true;
+                SaveLocked();
+            }
+        }
+        if (changed) Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Adds a note to one line of a Played row's detail ("Game: ..."), or adds the line, for something
+    /// learned after the row was written. Nothing happens when the entry has gone.
+    /// </summary>
+    public void AppendToLine(ActivityEntry row, string label, string text)
+    {
+        bool changed = false;
+        lock (_lock)
+        {
+            var entry = _entries.FirstOrDefault(e => e.Id == row.Id);
+            if (entry == null) return;
+            var lines = (entry.Detail ?? string.Empty).Split('\n').Where(l => l.Length > 0).ToList();
+            int at = lines.FindIndex(l => l.StartsWith(label + ": ", StringComparison.Ordinal));
+            if (at >= 0)
+            {
+                if (lines[at].Contains(text, StringComparison.Ordinal)) return;
+                lines[at] = lines[at].TrimEnd('.') + " · " + text + ".";
+            }
+            else
+            {
+                // In the row's order: a Game line sits after Profile, before Scripts and Tools.
+                int order = Array.IndexOf(LineOrder, label);
+                int insertAt = lines.Count;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    int o = Array.IndexOf(LineOrder, lines[i].Split(':')[0]);
+                    if (o > order) { insertAt = i; break; }
+                }
+                lines.Insert(insertAt, $"{label}: {text}.");
+            }
+            entry.Detail = string.Join("\n", lines);
+            changed = true;
+            SaveLocked();
+        }
+        if (changed) Changed?.Invoke();
+    }
+
+    private static readonly string[] LineOrder = ["Played", LaunchRecord.Profile, "Skipped", "Put back", LaunchRecord.Game, LaunchRecord.Scripts, LaunchRecord.Tools];
+
+    /// <summary>The window changed: anything now outside it goes, as it would on the next record.</summary>
+    public void ApplyRetention()
+    {
+        bool changed;
+        lock (_lock)
+        {
+            int before = _entries.Count;
+            PruneLocked();
+            changed = _entries.Count != before;
+            if (changed) SaveLocked();
+        }
+        if (changed) Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Clear history: empties Recent. Needs Attention is left alone - those are live problems with a
+    /// fix to apply, not history - and nothing is recorded about the clearing, so the page is empty.
+    /// </summary>
+    public void Clear()
+    {
+        lock (_lock)
+        {
+            if (_entries.Count == 0) return;
+            LoggingService.Info("Activity", $"Activity & History cleared: {_entries.Count} entries.");
+            _entries.Clear();
+            SaveLocked();
+        }
+        Changed?.Invoke();
     }
 
     private readonly bool _readOnly;
@@ -239,7 +341,7 @@ public sealed class ActivityService
 
     private void PruneLocked()
     {
-        DateTime cutoff = _utcNow().AddDays(-RetentionDays);
+        DateTime cutoff = _utcNow().AddDays(-RetentionDays);  // the window as set now
         _entries.RemoveAll(e => e.TimeUtc < cutoff);
         if (_entries.Count > MaxEntries)
         {

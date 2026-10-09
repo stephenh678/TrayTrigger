@@ -78,7 +78,7 @@
                             </Border>
 
                             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0">
-                                <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
+                                <TextBlock Text="{Binding DisplaySize}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" 
                                            HorizontalAlignment="Right"/>
                                 <Border Background="#1C2E3D" CornerRadius="4" Padding="5,1.5" Margin="0,3,0,0"
                                         HorizontalAlignment="Right"
@@ -90,7 +90,7 @@
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Candidate.Name}" FontSize="13.5" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Text="{Binding DisplayPath}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" 
+                                <TextBlock Text="{Binding DisplayPath}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
                                            FontFamily="{StaticResource AppFont}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                             </StackPanel>
                         </DockPanel>

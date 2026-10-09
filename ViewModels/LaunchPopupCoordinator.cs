@@ -113,7 +113,8 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     private LaunchTarget? _target;
     private LaunchPopupKind _kind;
     private string? _platform;
-    private string? _startingTool;
+    /// <summary>"Starting (tool) first" or "Closing (tool) first" while a tool is being dealt with before the game, else null.</summary>
+    private string? _toolStep;
     /// <summary>A failure or notice a tool's closing prompt covered, put back when the prompt is answered. Anything else shown drops it: the newer message wins.</summary>
     private (LaunchTarget Target, LaunchPopupKind Kind, string? Message, string? ActionText, Action? Action)? _setAside;
     private string? _message;
@@ -199,10 +200,18 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     /// A tool that starts with games is being started before this game, or null once they all have.
     /// Its administrator prompt holds up the launch, so the popup says what is being waited on.
     /// </summary>
-    public void OnStartingTool(string id, string? toolName)
+    public void OnStartingTool(string id, string? toolName) => OnToolStep(id, toolName == null ? null : $"Starting {toolName} first");
+
+    /// <summary>
+    /// A tool that closes for games is being closed before this game, or null once they all have. The
+    /// close can take a few seconds, and a prompt when the tool runs as administrator.
+    /// </summary>
+    public void OnClosingTool(string id, string? toolName) => OnToolStep(id, toolName == null ? null : $"Closing {toolName} first");
+
+    private void OnToolStep(string id, string? detail)
     {
         if (!IsProgressFor(id)) return;
-        _startingTool = toolName;
+        _toolStep = detail;
         ArmCap(_target!);
         Render(_kind);
     }
@@ -301,7 +310,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _token++;
         _target = target;
         _platform = null;
-        _startingTool = null;
+        _toolStep = null;
         _setAside = null;
         _message = message;
         _actionText = actionText;
@@ -332,11 +341,11 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
             _ => _message,
         };
 
-        // Until its tools have started the game hasn't been dispatched, so there's nothing else to wait on.
-        if (_startingTool != null && kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting)
+        // Until its tools have been closed and started the game hasn't been dispatched, so there's nothing else to wait on.
+        if (_toolStep != null && kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting)
         {
             status = "Launching";
-            detail = $"Starting {_startingTool} first";
+            detail = _toolStep;
         }
 
         _view.Show(new LaunchPopupContent(kind, _target.Name, status, detail, _iconFor(_target), _actionText));
@@ -383,7 +392,7 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         CancelTimers();
         _token++;
         _target = null;
-        _startingTool = null;
+        _toolStep = null;
         _setAside = null;
         _action = null;
         _view.Hide();

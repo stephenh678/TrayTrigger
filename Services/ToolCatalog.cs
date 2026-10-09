@@ -11,7 +11,7 @@ namespace TrayTrigger.Services;
 /// The Tools section's rules with no UI or disk access, so they are unit-testable: sort options,
 /// view modes, category tabs, search, which tab a new tool lands in, and which targets may become
 /// a tool. Categories follow <see cref="LibraryConstants.NormalizeCategory"/> like games do, with the
-/// With Games tab's name reserved too (<see cref="NormalizeCategory"/>), and the set of tool
+/// two game tabs' names reserved too (<see cref="NormalizeCategory"/>), and the set of tool
 /// categories is built only from tools.
 /// </summary>
 public static class ToolCatalog
@@ -85,21 +85,62 @@ public static class ToolCatalog
     /// </summary>
     public static bool CanStartWithGames(ToolEntry tool) => !IsStoreApp(tool) && !IsScript(tool);
 
-    /// <summary>Ticked to start with games, and able to: what the card's controller icon and the With Games tab show.</summary>
+    /// <summary>Ticked to start with games, and able to (<see cref="CanStartWithGames"/>).</summary>
     public static bool StartsWithGames(ToolEntry tool) => tool.StartWithGames && CanStartWithGames(tool);
 
-    /// <summary>The Tools page's tab for the tools that start with games, shown only while at least one does.</summary>
-    public const string WithGamesTab = "With Games";
+    /// <summary>
+    /// Ticked to close for games, and able to: a program that doesn't also start with games. Edit Tool
+    /// never saves both; in a hand-edited tools.json Start wins, since closing a tool and then starting
+    /// it again for the same game would be pointless.
+    /// </summary>
+    public static bool ClosesForGames(ToolEntry tool) => tool.CloseForGames && !tool.StartWithGames && CanStartWithGames(tool);
+
+    /// <summary>Starts with games or closes for them: the tools with a game icon on their card and a game tab of their own.</summary>
+    public static bool IsWithGames(ToolEntry tool) => StartsWithGames(tool) || ClosesForGames(tool);
 
     /// <summary>
-    /// A tool's category: <see cref="LibraryConstants.NormalizeCategory"/>, with the With Games tab's name
-    /// reserved as well, so no category can be taken for the tab. Game categories may still use it.
+    /// A Squirrel-installed app (Discord, Slack, GitHub Desktop): its Start menu shortcut runs the
+    /// Update.exe in the app's folder with --processStart "App.exe", which starts the app from a
+    /// versioned app-x.y.z folder beside it and exits. Finding the app running means looking for that
+    /// program under that folder, not for Update.exe. The folder and the program's name, or null for
+    /// any other tool.
+    /// </summary>
+    public static (string Folder, string ProcessName)? SquirrelApp(ToolEntry tool)
+    {
+        if (IsStoreApp(tool)) return null;
+        string target = tool.TargetPath?.Trim() ?? string.Empty;
+        if (!string.Equals(Path.GetFileName(target), "Update.exe", StringComparison.OrdinalIgnoreCase)) return null;
+        var match = SquirrelProcessStart.Match(tool.Arguments ?? string.Empty);
+        if (!match.Success) return null;
+        string? folder = Path.GetDirectoryName(target);
+        if (string.IsNullOrEmpty(folder)) return null;
+        string name = match.Groups["app"].Value;
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return null;
+        return (folder, Path.GetFileNameWithoutExtension(name));
+    }
+
+    /// <summary>--processStart App.exe, --processStart=App.exe, --processStart "App Name.exe", or Squirrel's --processStartAndWait.</summary>
+    private static readonly Regex SquirrelProcessStart = new(
+        @"--processStart(?:AndWait)?(?:=|\s+)(?:""(?<app>[^""]+)""|(?<app>\S+))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>The Tools page's tabs for the tools that start with games and the tools that close for them, each shown only while at least one does.</summary>
+    public const string StartWithGamesTab = "Start with Games";
+    public const string CloseWithGamesTab = "Close with Games";
+
+    /// <summary>
+    /// A tool's category: <see cref="LibraryConstants.NormalizeCategory"/>, with the two game tabs' names
+    /// reserved as well, so no category can be taken for a tab. Game categories may still use them.
     /// </summary>
     public static string NormalizeCategory(string? category)
     {
         string normalized = LibraryConstants.NormalizeCategory(category);
-        return string.Equals(normalized, WithGamesTab, StringComparison.OrdinalIgnoreCase) ? LibraryConstants.Uncategorized : normalized;
+        return IsGameTab(normalized) ? LibraryConstants.Uncategorized : normalized;
     }
+
+    private static bool IsGameTab(string? name) =>
+        string.Equals(name, StartWithGamesTab, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, CloseWithGamesTab, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>"Wait before starting the game": the seconds it starts at, and the range Edit Tool accepts.</summary>
     public const int DefaultWaitSeconds = 5;
@@ -189,8 +230,7 @@ public static class ToolCatalog
              .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
              .ToList();
 
-    /// <summary>The Tools page's tabs: All, Favorites, then each category A to Z.</summary>
-    /// <summary>All Tools, Favorites, With Games while a tool starts with games, then each category A to Z.</summary>
+    /// <summary>All Tools, Favorites, Start with Games while a tool starts with games, Close with Games while one closes for them, then each category A to Z.</summary>
     public static IReadOnlyList<string> TabsFor(IEnumerable<ToolEntry> tools)
     {
         var list = tools as IReadOnlyCollection<ToolEntry> ?? tools.ToList();
@@ -198,7 +238,8 @@ public static class ToolCatalog
         [
             LibraryConstants.AllCategory,
             LibraryConstants.FavoritesCategory,
-            .. list.Any(StartsWithGames) ? [WithGamesTab] : Array.Empty<string>(),
+            .. list.Any(StartsWithGames) ? [StartWithGamesTab] : Array.Empty<string>(),
+            .. list.Any(ClosesForGames) ? [CloseWithGamesTab] : Array.Empty<string>(),
             .. CategoriesOf(list),
         ];
     }
@@ -207,7 +248,8 @@ public static class ToolCatalog
     {
         if (string.IsNullOrWhiteSpace(tab) || string.Equals(tab, LibraryConstants.AllCategory, StringComparison.OrdinalIgnoreCase)) return true;
         if (string.Equals(tab, LibraryConstants.FavoritesCategory, StringComparison.OrdinalIgnoreCase)) return tool.IsFavorite;
-        if (string.Equals(tab, WithGamesTab, StringComparison.OrdinalIgnoreCase)) return StartsWithGames(tool);
+        if (string.Equals(tab, StartWithGamesTab, StringComparison.OrdinalIgnoreCase)) return StartsWithGames(tool);
+        if (string.Equals(tab, CloseWithGamesTab, StringComparison.OrdinalIgnoreCase)) return ClosesForGames(tool);
         return string.Equals(NormalizeCategory(tool.Category), tab, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -228,8 +228,23 @@ public partial class ProcessLauncherService
     /// </summary>
     public DlssOverrideService DlssOverrides { get; set; } = new();
 
-    /// <summary>Tools that start with games (Edit Tool). Set by App; unset in tests, where none start.</summary>
+    /// <summary>Tools that start with games or close for them (Edit Tool). Set by App; unset in tests, where none do.</summary>
     public CompanionToolService? CompanionTools { get; set; }
+
+    /// <summary>
+    /// The Played row written for each game's last session, so a note that arrives after it (CPU Cores
+    /// after its wait, DLSS seen late in a short session) is added to the row's line rather than lost.
+    /// </summary>
+    private readonly Dictionary<string, ActivityEntry> _playedRows = new(StringComparer.Ordinal);
+    private readonly Lock _playedRowsLock = new();
+
+    /// <summary>Set as <see cref="LaunchRecord.LateNote"/> by App: adds a late note to the game's Played row.</summary>
+    public void NoteOnPlayedRow(string gameId, string section, string text)
+    {
+        ActivityEntry? row;
+        lock (_playedRowsLock) { if (!_playedRows.TryGetValue(gameId, out row)) return; }
+        ActivityService.Current?.AppendToLine(row, section, text);
+    }
 
     /// <summary>The Epic launch link. "silent=true" asks the launcher not to show its window.</summary>
     internal static string BuildEpicLaunchUrl(string appName, bool silent) =>
@@ -531,6 +546,11 @@ public partial class ProcessLauncherService
     private ActiveGameSession? BeginSession(GameEntry game, LaunchRoute route, out string? abortReason)
     {
         abortReason = null;
+        // The Played row's record starts here: everything done for this launch is noted under the game's id.
+        LaunchRecord.Begin(game.Id);
+        LaunchRecord.Note(game.Id, LaunchRecord.Launch, LaunchRouter.ClientPlatformFor(route) == null
+            ? "launched directly"
+            : $"launched through {LaunchRouter.PlatformLabelFor(route)}");
         var session = new ActiveGameSession(game, route);
         lock (_sessionsLock)
         {
@@ -552,8 +572,8 @@ public partial class ProcessLauncherService
             return null;
         }
 
-        // After the script, so a launch it cancels starts nothing; before the game, so a tool's
-        // administrator prompt is answered before the game can go full screen over it.
+        // After the script, so a launch it cancels closes and starts nothing; before the game, so a
+        // tool's administrator prompt is answered before the game can go full screen over it.
         CompanionTools?.StartForGame(game, remember: true);
 
         // Guarded like SessionGameStarted and SessionEnded: a subscriber's failure must not turn
@@ -654,13 +674,16 @@ public partial class ProcessLauncherService
             {
                 game.DlssLastRun = lastRun;
                 PersistLibrary?.Invoke();
-                LoggingService.Info("Dlss", $"'{game.Name}' loaded DLSS {string.Join(", ", lastRun.FromNvidia.Select(v => v + " from NVIDIA").Concat(lastRun.FromGame.Select(v => v + " from the game's own files")))}.");
+                string loaded = string.Join(", ", lastRun.FromNvidia.Select(v => v + " from NVIDIA").Concat(lastRun.FromGame.Select(v => v + " from the game's own files")));
+                LoggingService.Info("Dlss", $"'{game.Name}' loaded DLSS {loaded}.");
+                LaunchRecord.Note(game.Id, LaunchRecord.Game, $"DLSS {loaded}");
             }
             else
             {
                 // Once per launch, and only for a game with the override on: it is the one thing
                 // that says why the card has no Last run line.
                 LoggingService.Info("Dlss", $"'{game.Name}': no DLSS runtime seen in {SafeProcessName(target)} after {ticks} look(s){(exited ? " - the process had exited" : "")}. {note}");
+                LaunchRecord.Note(game.Id, LaunchRecord.Game, "DLSS Override is on, but no DLSS was seen loading");
             }
 
             // Only this poller's own registration: a stub handoff starts a second one under the
@@ -798,14 +821,6 @@ public partial class ProcessLauncherService
         }
         if (gameRan)
         {
-            var (text, detail) = DescribePlaySession(game.Name, minutes, profilePutBack, session.StartedAtUtc, DateTime.UtcNow);
-            // One row per game, its times listed when opened: a history, not a log of every launch.
-            ActivityService.Add(profilePutBack != null ? ActivityLevel.Change : ActivityLevel.Activity, text,
-                subject: game.Name, detail: detail, groupKey: $"played|{game.Id}");
-        }
-
-        if (gameRan)
-        {
             _scriptService.RunPostExit(game, minutes);
         }
         else
@@ -821,41 +836,88 @@ public partial class ProcessLauncherService
         if (gameRan && game.CloseLauncherOnExit && LaunchRouter.ClientPlatformFor(session.Route) is LauncherPlatform platform)
         {
             LauncherClientCloser.Close(platform, _steamScannerService.GetSteamInstallPath());
+            LaunchRecord.Note(game.Id, LaunchRecord.Launch, $"{LaunchRouter.PlatformLabelFor(session.Route)} closed after");
+        }
+
+        // The row goes last, once the post-exit script and the launcher have had their say. Taken
+        // whether or not the game ran, so a failed launch's notes don't end up on the next one's row.
+        var record = LaunchRecord.Take(game.Id);
+        if (gameRan)
+        {
+            var (text, detail) = DescribePlaySession(game.Name, minutes, game.PerformanceProfile, session.StartedAtUtc, DateTime.UtcNow, record);
+            // One row per game, its times listed when opened: a history, not a log of every launch.
+            var row = ActivityService.Add(profilePutBack != null ? ActivityLevel.Change : ActivityLevel.Activity, text,
+                subject: game.Name, detail: detail, groupKey: $"played|{game.Id}");
+            // Before CloseCompanionToolsIfIdle below: what the Tools line still foretells is written on this row once it's known.
+            CompanionTools?.AttachPlayedRow(game.Id, row);
+            if (row != null) lock (_playedRowsLock) _playedRows[game.Id] = row;
         }
 
         CloseCompanionToolsIfIdle();
     }
 
-    /// <summary>A game's "Played" line: how long, and the profile put back when it had one.</summary>
+    /// <summary>
+    /// The game's Played row: a one-line title with the time played, and a detail that is the record
+    /// of the launch, one line per section - when and through what, what the profile changed and put
+    /// back (and skipped), what was done to the game's own process, the scripts, the tools - each
+    /// only when it has something to say. The transparency promise, on the row people open.
+    /// </summary>
+    /// <param name="record">What was noted for this launch, from <see cref="LaunchRecord.Take"/>.</param>
     internal static (string Text, string Detail) DescribePlaySession(string name, long minutes,
-        PerformanceProfileMode? profilePutBack, DateTime startedUtc, DateTime endedUtc)
+        PerformanceProfileMode profile, DateTime startedUtc, DateTime endedUtc,
+        IReadOnlyList<(string Section, IReadOnlyList<string> Notes)>? record = null)
     {
         string length = minutes < 1 ? "under a minute"
             : minutes < 60 ? $"{minutes}m"
             : minutes % 60 == 0 ? $"{minutes / 60}h" : $"{minutes / 60}h {minutes % 60}m";
         string text = $"Played {name} · {length}";
-        if (profilePutBack is { } mode) text += $" · {mode} profile put back";
-        string detail = startedUtc == default
-            ? string.Empty
-            : $"From {startedUtc.ToLocalTime():HH:mm} to {endedUtc.ToLocalTime():HH:mm}."
-              + (profilePutBack != null ? " The profile's changes were put back when it closed." : string.Empty);
-        return (text, detail);
+
+        var notes = (record ?? []).ToDictionary(r => r.Section, r => r.Notes, StringComparer.Ordinal);
+        var lines = new List<string>(5);
+
+        // "Played: from 09:47 to 10:10 · launched through Steam · Steam closed after." Each line starts
+        // with its label and a colon, which the page sets in bold.
+        var launch = new List<string>(3);
+        if (startedUtc != default) launch.Add($"from {startedUtc.ToLocalTime():HH:mm} to {endedUtc.ToLocalTime():HH:mm}");
+        if (notes.TryGetValue(LaunchRecord.Launch, out var launchNotes)) launch.AddRange(launchNotes);
+        if (launch.Count > 0) lines.Add("Played: " + string.Join(" · ", launch) + ".");
+
+        // What changed, what didn't and whether it was undone, each on its own line:
+        // "Profile: Aggressive · changed: Ultimate Performance power plan · HDR on."
+        // "Skipped: Resizable BAR, off in the BIOS · speakers already unmuted."
+        // "Put back: everything."
+        var profileNotes = notes.TryGetValue(LaunchRecord.Profile, out var p) ? p : [];
+        var changedNotes = profileNotes.Where(n => !n.StartsWith(LaunchRecord.SkippedPrefix, StringComparison.Ordinal) && !n.StartsWith(LaunchRecord.PutBackPrefix, StringComparison.Ordinal) && n != "nothing changed").ToList();
+        var skipped = profileNotes.Where(n => n.StartsWith(LaunchRecord.SkippedPrefix, StringComparison.Ordinal)).Select(n => n[LaunchRecord.SkippedPrefix.Length..]).ToList();
+        var putBack = profileNotes.Where(n => n.StartsWith(LaunchRecord.PutBackPrefix, StringComparison.Ordinal)).Select(n => n[LaunchRecord.PutBackPrefix.Length..]).ToList();
+        lines.Add(changedNotes.Count > 0
+            ? $"Profile: {profile} · changed: {string.Join(" · ", changedNotes)}."
+            : $"Profile: {profile} · nothing changed.");
+        if (skipped.Count > 0) lines.Add($"Skipped: {string.Join(" · ", skipped)}.");
+        if (putBack.Count > 0) lines.Add($"Put back: {string.Join(" · ", putBack)}.");
+
+        foreach (string section in new[] { LaunchRecord.Game, LaunchRecord.Scripts, LaunchRecord.Tools })
+        {
+            if (notes.TryGetValue(section, out var items) && items.Count > 0) lines.Add($"{section}: {string.Join(" · ", items)}.");
+        }
+        return (text, string.Join("\n", lines));
     }
 
-    /// <summary>No game is running or being launched: the time to close the tools started with games.</summary>
+    /// <summary>No game is running or being launched: the time to close the tools started with games, and open again the ones closed for them.</summary>
     private bool IsIdle()
     {
         lock (_sessionsLock) { return _sessions.Count == 0 && _launchesInProgress.Count == 0; }
     }
 
     /// <summary>
-    /// After the last game, closes the tools started with games that are set to close. Called when a
-    /// session ends and when a launch attempt ends, since a launch that failed after starting its tools
-    /// ends its session while its own launch still counts as in progress.
+    /// After the last game, closes the tools started with games that are set to close, and opens again
+    /// the tools closed for games that are set to come back. Called when a session ends and when a
+    /// launch attempt ends, since a launch that failed after starting its tools ends its session while
+    /// its own launch still counts as in progress.
     /// </summary>
     private void CloseCompanionToolsIfIdle()
     {
-        if (CompanionTools is { } tools && IsIdle()) _ = tools.CloseWhenIdleAsync(IsIdle);
+        if (CompanionTools is { } tools && IsIdle()) _ = tools.AfterLastGameAsync(IsIdle);
     }
 
     /// <summary>
@@ -882,7 +944,7 @@ public partial class ProcessLauncherService
 
             session.Game.CumulativePlaytimeMinutes += minutes;
             LoggingService.Info("Launcher", $"'{session.Game.Name}' is still running at exit. +{minutes}m playtime recorded.");
-            var (text, _) = DescribePlaySession(session.Game.Name, minutes, null, default, default);
+            var (text, _) = DescribePlaySession(session.Game.Name, minutes, session.Game.PerformanceProfile, default, default);
             ActivityService.Add(ActivityLevel.Activity, $"{text} · still running when TrayTrigger closed", subject: session.Game.Name,
                 groupKey: $"played|{session.GameId}");
             try { GameUpdated?.Invoke(session.Game); }
@@ -1119,6 +1181,8 @@ public partial class ProcessLauncherService
     private bool LaunchProtocolUrl(GameEntry game, out string? errorMessage)
     {
         errorMessage = null;
+        // No session, so no Played row takes these notes; begun anyway so they don't land on the next launch's.
+        LaunchRecord.Begin(game.Id);
 
         // Pre-launch only: there's no process handle or running flag to detect the exit, so
         // neither a Performance Profile nor a post-exit script can be honoured for these.
@@ -1129,7 +1193,7 @@ public partial class ProcessLauncherService
             return false;
         }
 
-        // No exit to wait for either, so what starts here is left running.
+        // No exit to wait for either, so what starts here is left running, and what closes stays closed.
         CompanionTools?.StartForGame(game, remember: false);
 
         LoggingService.Verbose("Launcher", $"Launching protocol URL: {game.ExecutablePath}");

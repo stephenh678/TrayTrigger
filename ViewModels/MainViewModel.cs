@@ -269,7 +269,9 @@ public class MainViewModel : ViewModelBase
         SystemVM = new SystemViewModel(_systemInfoService, _systemTweaksService, _settings, _storageService);
         ActivityVM = new ActivityViewModel(
             ActivityService.Current ?? new ActivityService(_storageService.BaseDirectory, readOnly: true),
-            isOnScreen: () => CurrentSection == NavSection.Activity && IsWindowActive?.Invoke() == true);
+            isOnScreen: () => CurrentSection == NavSection.Activity && IsWindowActive?.Invoke() == true,
+            settings: _settings,
+            saveSettings: () => _storageService.SaveSettings(_settings, source: "ActivityViewModel.Retention"));
         // A snapshot taken on the UI thread; the per-drive count then runs off it.
         SystemVM.GetLibraryGames = () => Library.Games.Select(card => card.Game).ToList();
 
