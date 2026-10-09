@@ -94,6 +94,8 @@ public class SystemTweakViewModel : ViewModelBase
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(StatusBadgeText));
                 OnPropertyChanged(nameof(StatusBadgeColor));
+                OnPropertyChanged(nameof(StatusBadgeForeground));
+                OnPropertyChanged(nameof(IsNotApplied));
                 OnPropertyChanged(nameof(ActionButtonText));
                 OnPropertyChanged(nameof(AccessibleStatus));
             }
@@ -118,10 +120,14 @@ public class SystemTweakViewModel : ViewModelBase
     // security feature is off. Unavailable rows show a grey N/A badge.
     public string StatusBadgeText => IsInformational ? (IsOptimal ? "ON" : "OFF")
         : !IsAvailable ? "N/A"
-        : IsOptimal ? "OPTIMAL" : "STANDARD";
+        : IsOptimal ? "OPTIMAL" : IsRecommended ? "NOT APPLIED" : "STANDARD";
     public string StatusBadgeColor => IsInformational ? "#2F5F8F"
         : !IsAvailable ? "#4A4A55"
-        : IsOptimal ? "#238636" : "#6E6E7A";
+        : IsOptimal ? "#238636" : IsRecommended ? "#3D2F14" : "#6E6E7A";
+    /// <summary>A recommended tweak that is off gets the amber badge (RESTART's colours), so it is the row you see first.</summary>
+    public string StatusBadgeForeground => IsNotApplied ? "#E8B84E" : "#FFFFFF";
+    /// <summary>Part of the preset and currently off: what Apply Performance Preset would change.</summary>
+    public bool IsNotApplied => IsRecommended && !IsOptimal;
     // "Restore Previous", not "Revert to Default": it puts back the value TrayTrigger found before
     // it changed it, which is not always the Windows default (Help/tweaks/overview.md).
     public string ActionButtonText => IsBusy ? "Working..." : IsOptimal ? "Restore Previous" : "Optimize";
@@ -162,7 +168,7 @@ public class SystemTweakViewModel : ViewModelBase
     /// Applies the toggle off the UI thread: an HKLM tweak is an elevated reg import behind a UAC
     /// prompt with a two-minute ceiling, and the window must keep painting meanwhile.
     /// </summary>
-    private async Task ExecuteToggleAsync()
+    internal async Task ExecuteToggleAsync()
     {
         if (IsBusy) return;
         bool targetState = !IsOptimal;
@@ -374,8 +380,6 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ShowSpecsSection));
                 OnPropertyChanged(nameof(ShowTweaksSection));
                 OnPropertyChanged(nameof(ShowGameProfilesSection));
-                OnPropertyChanged(nameof(RestorePointBadgeText));
-                OnPropertyChanged(nameof(RestorePointBadgeColor));
                 OnPropertyChanged(nameof(SearchScope));
             }
         }
@@ -533,8 +537,22 @@ public class SystemViewModel : ViewModelBase
     // Recommended rows first, opt-in rows after, so each card reads in the order the
     // "N / M Recommended" score counts them. OrderBy is stable: definition order is kept
     // within each half.
+    /// <summary>
+    /// Rows in the order someone scanning for what to do wants them: the recommended tweaks that
+    /// are off first, then the applied ones, then opt-in, with tweaks this PC can't use last. The
+    /// order is taken when the list loads and after a refresh or a preset, not after each click,
+    /// so a row doesn't jump away from under the button that was just pressed.
+    /// </summary>
     private IEnumerable<SystemTweakViewModel> ForCategory(TweakCategory category) =>
-        Tweaks.Where(t => t.Category == category).OrderBy(t => t.IsOptIn ? 1 : 0);
+        Tweaks.Where(t => t.Category == category).OrderBy(SortKey);
+
+    internal static int SortKey(SystemTweakViewModel t) => SortKey(t.IsRecommended, t.IsOptimal, t.IsOptIn, t.IsAvailable, t.IsInformational);
+
+    internal static int SortKey(bool recommended, bool optimal, bool optIn, bool available, bool informational) =>
+        !available && !informational ? 3
+        : recommended && !optimal ? 0
+        : recommended ? 1
+        : 2;
 
     public IEnumerable<SystemTweakViewModel> InputAndDisplayTweaks => ForCategory(TweakCategory.InputAndDisplay);
     public IEnumerable<SystemTweakViewModel> CpuAndPowerTweaks => ForCategory(TweakCategory.CpuAndPower);
@@ -547,7 +565,29 @@ public class SystemViewModel : ViewModelBase
     private string GroupSummary(TweakCategory category)
     {
         var tweaks = ForCategory(category).ToList();
-        return $"{Plural(tweaks.Count, "tweak")} · {tweaks.Count(t => t.IsOptimal)} optimal";
+        return GroupSummaryText(
+            tweaks.Count(t => t.IsNotApplied),
+            tweaks.Count(t => !t.IsAvailable && !t.IsInformational),
+            tweaks.Count(t => t.IsRecommended),
+            tweaks.Count(t => t.IsOptIn && t.IsAvailable));
+    }
+
+    /// <summary>
+    /// "1 of 7 preset tweaks not applied · 3 opt-in", or "all 7 preset tweaks applied · 3 opt-in":
+    /// the same word, preset, as the card above and the PRESET tag on each row, so the counts
+    /// visibly add up.
+    /// </summary>
+    internal static string GroupSummaryText(int notApplied, int notAvailable, int recommended, int optIn)
+    {
+        var parts = new List<string>();
+        if (recommended > 0)
+        {
+            string noun = recommended == 1 ? "preset tweak" : "preset tweaks";
+            parts.Add(notApplied > 0 ? $"{notApplied} of {recommended} {noun} not applied" : $"all {recommended} {noun} applied");
+        }
+        if (notAvailable > 0) parts.Add($"{notAvailable} n/a");
+        if (optIn > 0) parts.Add($"{optIn} opt-in");
+        return string.Join(" · ", parts);
     }
 
     private static string ProfileSummary(IReadOnlyCollection<ProfileTweakToggleViewModel> toggles) =>
@@ -575,6 +615,13 @@ public class SystemViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(OptimalTweakCount));
         OnPropertyChanged(nameof(TweaksOptimizationScoreDisplay));
+        OnPropertyChanged(nameof(PresetRingText));
+        OnPropertyChanged(nameof(PresetRingColor));
+        OnPropertyChanged(nameof(PresetScoreDisplay));
+        OnPropertyChanged(nameof(PresetNotAppliedLine));
+        OnPropertyChanged(nameof(PresetNotCountedLine));
+        OnPropertyChanged(nameof(PresetLeadText));
+        OnPropertyChanged(nameof(HasPresetNotCounted));
         OnPropertyChanged(nameof(InputAndDisplaySummary));
         OnPropertyChanged(nameof(CpuAndPowerSummary));
         OnPropertyChanged(nameof(NetworkAndBackgroundSummary));
@@ -591,11 +638,51 @@ public class SystemViewModel : ViewModelBase
     public string TweaksOptimizationScoreDisplay =>
         $"{OptimalTweakCount} / {TotalTweakCount} Recommended Optimizations Active" + (OptInActiveCount > 0 ? $"  ·  {OptInActiveCount} opt-in on" : "");
 
-    // Restore Point Protection status - read-only here; configured in Settings > Performance Tweaks.
-    // A preference, not a result: whether a restore point is attempted before a preset or restore.
-    // What actually happened is reported in the status line afterwards (see RestorePointNote).
-    public string RestorePointBadgeText => _settings.CreateRestorePointBeforeTweaks ? "Restore point before changes: On" : "Restore point before changes: Off";
-    public string RestorePointBadgeColor => _settings.CreateRestorePointBeforeTweaks ? "#238636" : "#6E6E7A";
+    // The Performance Preset card: the score as a ring, which recommended tweaks are off and what
+    // applying them will ask for, and which ones this PC can't use and so aren't counted.
+    public string PresetRingText => $"{OptimalTweakCount}/{TotalTweakCount}";
+    /// <summary>Both cards' rings follow one rule: green when nothing is left to do, amber when something is.</summary>
+    public string PresetRingColor => RingColor(allGood: TotalTweakCount == 0 || OptimalTweakCount == TotalTweakCount);
+    internal static string RingColor(bool allGood) => allGood ? "#238636" : "#E8B84E";
+    public string PresetScoreDisplay => PresetScoreText(OptimalTweakCount, TotalTweakCount);
+    public string PresetNotAppliedLine => PresetNotAppliedText(
+        Tweaks.Where(t => t.IsNotApplied).Select(t => (t.Name, t.RequiresAdmin, t.RequiresReboot)).ToList());
+    public string PresetNotCountedLine => PresetNotCountedText(
+        Tweaks.Where(t => !t.IsAvailable && t.CanToggle && !t.IsOptIn && !t.IsInformational).Select(t => (t.Name, t.UnavailableReason)).ToList());
+    public bool HasPresetNotCounted => PresetNotCountedLine.Length > 0;
+
+    internal static string PresetScoreText(int applied, int total) =>
+        total == 0 ? "No preset tweak applies to this PC"
+        : applied == total ? $"All {total} preset tweaks applied"
+        : $"{applied} of {total} preset tweaks applied";
+
+    /// <summary>The card's lead names the count and the tag, so "which tweaks" is answered by scanning for PRESET.</summary>
+    public string PresetLeadText => TotalTweakCount == 0
+        ? "The tweaks below marked PRESET, applied together. None applies to this PC."
+        : $"The {TotalTweakCount} tweaks below marked PRESET, applied together. Opt-in tweaks aren't part of it; switch them on below if you want them.";
+
+    /// <summary>
+    /// "Not applied: HAGS and Game Bar Captures. Apply turns on both; HAGS asks for administrator
+    /// permission and needs a restart." People decline a UAC prompt they weren't told to expect.
+    /// </summary>
+    internal static string PresetNotAppliedText(IReadOnlyList<(string Name, bool Admin, bool Reboot)> missing)
+    {
+        if (missing.Count == 0) return "Every preset tweak is on. Undo Preset puts them all back to what TrayTrigger found.";
+        string apply = missing.Count == 1 ? "Apply turns it on" : missing.Count == 2 ? "Apply turns on both" : $"Apply turns on all {missing.Count}";
+        string line = $"Not applied: {StutterCheckService.JoinNames(missing.Select(m => m.Name).ToList())}. {apply}";
+        var notes = missing.Where(m => m.Admin || m.Reboot)
+            .Select(m => m.Name + " " + (m.Admin && m.Reboot ? "asks for administrator permission and needs a restart" : m.Admin ? "asks for administrator permission" : "needs a restart"))
+            .ToList();
+        return notes.Count == 0 ? line + "." : line + "; " + string.Join("; ", notes) + ".";
+    }
+
+    /// <summary>"Not counted: Variable Refresh Rate for Windowed Games: No VRR display found." Empty when every recommended tweak is usable.</summary>
+    internal static string PresetNotCountedText(IReadOnlyList<(string Name, string Reason)> unavailable)
+    {
+        if (unavailable.Count == 0) return "";
+        return "Not counted: " + string.Join(" ", unavailable.Select(u =>
+            string.IsNullOrWhiteSpace(u.Reason) ? u.Name + "." : $"{u.Name}: {u.Reason.Trim().TrimEnd('.')}."));
+    }
 
     // Game-Level Performance Profiles: per-game Optimized/Aggressive tweak sets (see
     // GameEditDialog). Aggressive always applies every tweak Optimized has enabled, plus its own
@@ -788,7 +875,6 @@ public class SystemViewModel : ViewModelBase
                 _isLoadingSpecs = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsSpecsLoaded));
-                OnPropertyChanged(nameof(SpecsRefreshedDisplay));
                 OnPropertyChanged(nameof(SearchScope));
             }
         }
@@ -798,10 +884,8 @@ public class SystemViewModel : ViewModelBase
     public bool IsSpecsLoaded => !IsLoadingSpecs;
 
     private DateTime? _specsRefreshedAt;
-    /// <summary>"Last read 14:02:11" beside the Refresh Specs button; empty while loading, when the
-    /// placeholder card already says "Detecting hardware…".</summary>
-    public string SpecsRefreshedDisplay => IsLoadingSpecs ? ""
-        : _specsRefreshedAt is DateTime t ? $"Last read {t:HH:mm:ss}" : "";
+    /// <summary>"Last read 14:02:11" in the Hardware Specs heading; empty, and hidden with <see cref="HasSpecs"/>, until the first read.</summary>
+    public string SpecsRefreshedDisplay => _specsRefreshedAt is DateTime t ? $"Last read {t:HH:mm:ss}" : "";
 
     private string _statusMessage = "Ready";
     public string StatusMessage
@@ -824,9 +908,230 @@ public class SystemViewModel : ViewModelBase
     public ICommand SelectTweaksTabCommand { get; }
     public ICommand SelectGameProfilesTabCommand { get; }
     public ICommand RefreshSpecsCommand { get; }
-    public ICommand RefreshTweaksCommand { get; }
     public ICommand ApplyRecommendedPresetCommand { get; }
     public ICommand ResetDefaultsCommand { get; }
+
+    // --- Stutter Check (Services/StutterCheckService) ---
+
+    private StutterCheckReport? _stutterReport;
+    private bool _isRunningStutterCheck;
+    private bool _stutterRanAtStartup;
+
+    /// <summary>A result older than this is re-read when the System page opens.</summary>
+    internal static readonly TimeSpan StutterCheckMaxAge = TimeSpan.FromMinutes(10);
+
+    public ObservableCollection<StutterCheckRowViewModel> StutterRows { get; } = new();
+    public bool HasStutterReport => _stutterReport != null;
+    public bool ShowStutterIntro => _stutterReport == null;
+    /// <summary>Before the first result: what's happening, or that nothing has run yet.</summary>
+    public string StutterIntroText => IsRunningStutterCheck
+        ? "Checking this PC"
+        : "Not checked yet";
+    public string StutterIntroSubline => IsRunningStutterCheck
+        ? "A second or two · nothing here changes by itself."
+        : "Run Stutter Check reads everything in a second or two and changes nothing by itself.";
+    public string StutterSummary => _stutterReport?.Summary ?? "";
+    public int StutterTotalCount => _stutterReport?.Items.Count ?? 0;
+    /// <summary>"12/13": checks that are fine over checks run, the way the preset ring reads applied over total.</summary>
+    public string StutterRingText => _stutterReport == null ? "" : $"{_stutterReport.FineCount}/{_stutterReport.Items.Count}";
+    public string StutterRingColor => RingColor(allGood: _stutterReport == null || _stutterReport.NeedsLookCount + _stutterReport.CanFixCount == 0);
+    public string StutterSubline => _stutterReport == null ? ""
+        : (_stutterRanAtStartup
+            ? $"Checked at startup, {_stutterReport.RanAt:t}"
+            : $"Checked {ActivityViewModel.FormatWhen(_stutterReport.RanAt.ToUniversalTime(), DateTime.Now)}")
+          + $" · {Math.Max(0.1, _stutterReport.Took.TotalSeconds):0.0} s · nothing here changes by itself.";
+    /// <summary>The checks that passed, in two columns under the rows that didn't; always shown.</summary>
+    public IReadOnlyList<string> StutterFineTitles => _stutterReport?.Fine.Select(i => i.Title).ToList() ?? [];
+    public bool HasStutterFine => (_stutterReport?.FineCount ?? 0) > 0;
+    public string StutterFineHeading => _stutterReport == null ? ""
+        : _stutterReport.FineCount == _stutterReport.Items.Count ? "Every check is fine"
+        : $"{_stutterReport.FineCount} of {_stutterReport.Items.Count} checks fine";
+
+    /// <summary>
+    /// Whether a run is due: never while a game is running (nothing interrupts a game), and
+    /// otherwise when there is no result yet or the last one is older than <paramref name="maxAge"/>.
+    /// </summary>
+    internal static bool ShouldRunStutterCheck(DateTime? lastRunUtc, DateTime nowUtc, bool gameRunning, TimeSpan maxAge) =>
+        !gameRunning && (lastRunUtc == null || nowUtc - lastRunUtc.Value >= maxAge);
+
+    /// <summary>
+    /// Runs the check when it is due (see <see cref="ShouldRunStutterCheck"/>): a few seconds after
+    /// startup, and when the System page opens on a stale result. <paramref name="atStartup"/> is
+    /// what the subline says afterwards.
+    /// </summary>
+    public async Task RunStutterCheckIfDueAsync(bool gameRunning, bool atStartup = false)
+    {
+        if (!ShouldRunStutterCheck(_stutterReport?.RanAt.ToUniversalTime(), DateTime.UtcNow, gameRunning, StutterCheckMaxAge)) return;
+        await RunStutterCheckAsync();
+        _stutterRanAtStartup = atStartup && _stutterReport != null;
+        OnPropertyChanged(nameof(StutterSubline));
+    }
+    public bool IsRunningStutterCheck
+    {
+        get => _isRunningStutterCheck;
+        private set
+        {
+            if (SetProperty(ref _isRunningStutterCheck, value))
+            {
+                OnPropertyChanged(nameof(StutterRunButtonText));
+                OnPropertyChanged(nameof(StutterIntroText));
+                OnPropertyChanged(nameof(StutterIntroSubline));
+            }
+        }
+    }
+    public string StutterRunButtonText => IsRunningStutterCheck ? "Checking..." : HasStutterReport ? "Run Again" : "Run Stutter Check";
+    /// <summary>When the last check ran, for the "is it due" decision; null until one has.</summary>
+    public DateTime? LastStutterRunUtc => _stutterReport?.RanAt.ToUniversalTime();
+    /// <summary>The last run's lines, for Copy Diagnostic Info; null until a check has been run.</summary>
+    public IReadOnlyList<string>? StutterReportLines => _stutterReport?.ToLines();
+
+    public ICommand RunStutterCheckCommand { get; }
+    public ICommand CopyStutterResultsCommand { get; }
+
+    /// <summary>
+    /// Run Again, the heading's Refresh and the capture mode: re-reads every tweak and the probes
+    /// off the UI thread, evaluates, and says the result in the status line. The hardware report
+    /// is read only when there is none yet; the Hardware Specs heading's Refresh is what re-detects.
+    /// </summary>
+    public Task RunStutterCheckAsync() => RunStutterCheckAsync(afterAction: false);
+
+    /// <summary>A re-check was asked for while a run was in flight; that run may have read the tweaks before the action.</summary>
+    private bool _stutterRerunWanted;
+
+    /// <summary>
+    /// <paramref name="afterAction"/> is the re-check after Fix it, Apply Performance Preset or
+    /// Undo Preset: the action read the tweaks back itself and the status line says what it did
+    /// (the restore point's fate, for one), so neither is redone here.
+    /// </summary>
+    private async Task RunStutterCheckAsync(bool afterAction)
+    {
+        if (IsRunningStutterCheck)
+        {
+            if (afterAction) _stutterRerunWanted = true;
+            return;
+        }
+        IsRunningStutterCheck = true;
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            if (Tweaks.Count == 0) await LoadTweaksAsync();
+            else if (!afterAction)
+            {
+                await RefreshAllTweaksAsync(statusOnDone: null);
+                ReportTweaksResetSinceApplied();
+            }
+            if (!HasSpecs) await LoadHardwareSpecsAsync();
+
+            var hardware = Report;
+            var tweaks = Tweaks.Select(t => new SystemTweakItem
+            {
+                Id = t.Id, Name = t.Name, IsOptimal = t.IsOptimal, IsAvailable = t.IsAvailable,
+                IsOptIn = t.IsOptIn, IsInformational = t.IsInformational, CanToggle = t.CanToggle,
+            }).ToList();
+            bool profilePowerPlan = _settings.OptimizedProfileTweaks.PowerPlanEnabled;
+            string windowsDrive = System.IO.Path.GetPathRoot(Environment.SystemDirectory)?.TrimEnd('\\') ?? "";
+
+            var inputs = await Task.Run(async () =>
+            {
+                // The indexer sample sleeps for most of a run; the other probes read meanwhile.
+                var search = Task.Run(() => StutterProbes.SearchIndexerBusy());
+                var overlays = StutterProbes.RunningOverlayApps();
+                var apps = StutterProbes.AppAccelerationStates();
+                var apo = StutterProbes.IntelApo(hardware.Cpu.ModelName);
+                var (indexerBusy, indexerCpu) = await search;
+                return new StutterCheckInputs
+                {
+                    Hardware = hardware,
+                    WindowsDriveLetter = windowsDrive,
+                    Tweaks = tweaks,
+                    ProfileSwitchesPowerPlan = profilePowerPlan,
+                    OverlayApps = overlays,
+                    Apps = apps,
+                    SearchIndexerBusy = indexerBusy,
+                    SearchIndexerCpuPercent = indexerCpu,
+                    IntelApo = apo,
+                };
+            });
+
+            _stutterReport = StutterCheckService.Run(inputs, DateTime.Now, sw.Elapsed);
+            _stutterRanAtStartup = false;
+            StutterRows.Clear();
+            foreach (var item in _stutterReport.Attention)
+                StutterRows.Add(new StutterCheckRowViewModel(item, OnStutterAction));
+            LoggingService.Info("StutterCheck", _stutterReport.Summary + " (" + string.Join("; ", _stutterReport.Attention.Select(i => i.Title)) + ")");
+            if (!afterAction) StatusMessage = "Stutter Check: " + _stutterReport.Summary + ".";
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("StutterCheck", $"Stutter Check failed: {ex.Message}");
+            if (!afterAction) StatusMessage = "Stutter Check couldn't finish; the log has the details.";
+        }
+        finally
+        {
+            IsRunningStutterCheck = false;
+            OnPropertyChanged(nameof(HasStutterReport));
+            OnPropertyChanged(nameof(ShowStutterIntro));
+            OnPropertyChanged(nameof(StutterSummary));
+            OnPropertyChanged(nameof(StutterTotalCount));
+            OnPropertyChanged(nameof(StutterRingText));
+            OnPropertyChanged(nameof(StutterRingColor));
+            OnPropertyChanged(nameof(StutterSubline));
+            OnPropertyChanged(nameof(StutterFineTitles));
+            OnPropertyChanged(nameof(HasStutterFine));
+            OnPropertyChanged(nameof(StutterFineHeading));
+            OnPropertyChanged(nameof(StutterRunButtonText));
+            OnPropertyChanged(nameof(StutterIntroText));
+            OnPropertyChanged(nameof(StutterIntroSubline));
+            OnPropertyChanged(nameof(SearchScope));
+        }
+        if (_stutterRerunWanted)
+        {
+            _stutterRerunWanted = false;
+            await RunStutterCheckAsync(afterAction: true);
+        }
+    }
+
+    /// <summary>Fix it applies the named tweak the same way its own button does, prompt and all, then checks again.</summary>
+    private async void OnStutterAction(StutterCheckItem item)
+    {
+        try
+        {
+            switch (item.Action)
+            {
+                case StutterAction.HelpTopic:
+                    HelpCommands.ShowTopic.Execute(item.ActionArg);
+                    break;
+                case StutterAction.OpenSetting:
+                    SafeLaunchProcess(item.ActionArg);
+                    break;
+                case StutterAction.ApplyTweak:
+                    var tweak = Tweaks.FirstOrDefault(t => t.Id == item.ActionArg);
+                    if (tweak == null || tweak.IsOptimal || !tweak.CanExecuteToggle) return;
+                    await tweak.ExecuteToggleAsync();
+                    await RunStutterCheckAsync(afterAction: true);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("StutterCheck", $"The action for \"{item.Title}\" failed: {ex.Message}");
+        }
+    }
+
+    private void CopyStutterResults()
+    {
+        if (_stutterReport == null) return;
+        try
+        {
+            System.Windows.Clipboard.SetText(_stutterReport.ToText());
+            StatusMessage = "Stutter Check results copied.";
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("StutterCheck", $"Could not copy the results: {ex.Message}");
+        }
+    }
+
 
     // Quick Tools Commands
     public ICommand OpenTaskManagerCommand { get; }
@@ -914,10 +1219,11 @@ public class SystemViewModel : ViewModelBase
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
         SelectTweaksTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.PerformanceTweaks);
         SelectGameProfilesTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.GameProfiles);
-        RefreshSpecsCommand = new AsyncRelayCommand(async () => await LoadHardwareSpecsAsync());
-        RefreshTweaksCommand = new RelayCommand(RefreshAllTweaks);
+        RefreshSpecsCommand = new AsyncRelayCommand(LoadHardwareSpecsAsync, () => CanRefreshSpecs);
         ApplyRecommendedPresetCommand = new AsyncRelayCommand(ExecuteApplyPresetAsync, () => CanRunBulkAction);
         ResetDefaultsCommand = new AsyncRelayCommand(ExecuteResetDefaultsAsync, () => CanRunBulkAction);
+        RunStutterCheckCommand = new AsyncRelayCommand(RunStutterCheckAsync, () => !IsRunningStutterCheck && CanRunBulkAction);
+        CopyStutterResultsCommand = new RelayCommand(CopyStutterResults);
 
         OpenTaskManagerCommand = new RelayCommand(() => SafeLaunchProcess("taskmgr.exe"));
         OpenDeviceManagerCommand = new RelayCommand(() => SafeLaunchProcess("devmgmt.msc"));
@@ -978,16 +1284,50 @@ public class SystemViewModel : ViewModelBase
         }
     }
 
+    /// <summary>A hardware report has been read at least once this session.</summary>
+    public bool HasSpecs => _specsRefreshedAt != null;
+
+    private Task? _specsLoad;
+    /// <summary>The heading's Refresh: one read at a time.</summary>
+    public bool CanRefreshSpecs => _specsLoad is not { IsCompleted: false };
+
+    /// <summary>Reads the hardware report. A call while a read is in flight waits for that one instead of starting another.</summary>
     public async Task LoadHardwareSpecsAsync()
     {
-        IsLoadingSpecs = true;
-        StatusMessage = "Analyzing system hardware...";
+        if (_specsLoad is { IsCompleted: false })
+        {
+            await _specsLoad;
+            return;
+        }
+        _specsLoad = LoadHardwareSpecsCoreAsync();
+        OnPropertyChanged(nameof(CanRefreshSpecs));
+        try
+        {
+            await _specsLoad;
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(CanRefreshSpecs));
+        }
+    }
+
+    private async Task LoadHardwareSpecsCoreAsync()
+    {
+        // The "Detecting hardware" placeholder stands in for the cards only while there are no
+        // cards yet. A re-detect keeps the cards up and swaps the values in when it finishes, so
+        // nothing below them moves.
+        IsLoadingSpecs = !HasSpecs;
+        StatusMessage = HasSpecs ? "Refreshing hardware specs..." : "Analyzing system hardware...";
         try
         {
             var report = await _infoService.GetFullHardwareReportAsync();
             await CountGamesPerDriveAsync(report);
             Report = report;
             _specsRefreshedAt = DateTime.Now;
+            OnPropertyChanged(nameof(HasSpecs));
+            OnPropertyChanged(nameof(SpecsRefreshedDisplay));
+            // The cards' text changed under any search in progress.
+            OnPropertyChanged(nameof(SearchScope));
             // The load counter is a rate: this first read sets the baseline the next tick measures from.
             _ = SampleGpusAsync();
             StatusMessage = $"Hardware refreshed at {DateTime.Now:HH:mm:ss}.";
@@ -1003,7 +1343,15 @@ public class SystemViewModel : ViewModelBase
         }
     }
 
-    public async Task LoadTweaksAsync()
+    private Task? _tweaksLoad;
+    /// <summary>Builds the rows. A call while a load is in flight shares it: two loads would add every row twice.</summary>
+    public Task LoadTweaksAsync()
+    {
+        if (_tweaksLoad is { IsCompleted: false }) return _tweaksLoad;
+        return _tweaksLoad = LoadTweaksCoreAsync();
+    }
+
+    private async Task LoadTweaksCoreAsync()
     {
         var all = await Task.Run(() => _tweaksService.GetAllTweaks());
 
@@ -1110,17 +1458,11 @@ public class SystemViewModel : ViewModelBase
         }
         OnPropertyChanged(nameof(TotalTweakCount));
         NotifyTweakStateChanged();
-        OnPropertyChanged(nameof(RestorePointBadgeText));
-        OnPropertyChanged(nameof(RestorePointBadgeColor));
+        OnPropertyChanged(nameof(InputAndDisplayTweaks));
+        OnPropertyChanged(nameof(CpuAndPowerTweaks));
+        OnPropertyChanged(nameof(NetworkAndBackgroundTweaks));
+        OnPropertyChanged(nameof(SecurityAndAdvancedTweaks));
         if (statusOnDone != null) StatusMessage = statusOnDone;
-    }
-
-    private void RefreshAllTweaks() => _ = RefreshAndCheckTweaksAsync();
-
-    private async Task RefreshAndCheckTweaksAsync()
-    {
-        await RefreshAllTweaksAsync();
-        ReportTweaksResetSinceApplied();
     }
 
     private Dictionary<string, bool> SnapshotOptimalState() => Tweaks.ToDictionary(t => t.Id, t => t.IsOptimal, StringComparer.Ordinal);
@@ -1158,24 +1500,25 @@ public class SystemViewModel : ViewModelBase
         {
             IsApplyingTweaks = false;
         }
-
         PromptRestartForBulkAction(before);
+        if (HasStutterReport) await RunStutterCheckAsync(afterAction: true);
     }
 
     private async Task ExecuteResetDefaultsAsync()
     {
-        // Only tweaks that are actually applied are reverted - never a Balanced plan onto a
-        // machine that never used the power-plan tweak, or animations back on for someone who
-        // turned them off in Windows themselves.
-        var applied = Tweaks.Where(t => t.CanToggle && !t.IsInformational && t.IsOptimal).ToList();
+        // Undo Preset puts back what Apply Performance Preset turns on: the recommended tweaks
+        // that are applied. An opt-in tweak the user switched on themselves is theirs, and has its
+        // own Restore Previous on its row. Only applied tweaks are reverted - never a Balanced plan
+        // onto a machine that never used the power-plan tweak.
+        var applied = Tweaks.Where(t => t.IsRecommended && t.IsOptimal).ToList();
         if (applied.Count == 0)
         {
-            StatusMessage = "No TrayTrigger optimizations are currently applied.";
+            StatusMessage = "No preset tweaks are currently applied.";
             return;
         }
         if (!ConfirmBulkAction(
-            "Restore Previous Settings",
-            "This will restore the following settings to what they were before TrayTrigger changed them:",
+            "Undo Preset",
+            "This will put back the following settings to what they were before TrayTrigger changed them:",
             applied.Select(t => t.Name).ToList()))
         {
             return;
@@ -1186,21 +1529,21 @@ public class SystemViewModel : ViewModelBase
         IsApplyingTweaks = true;
         try
         {
-            var restorePoint = await TryCreateRestorePointAsync("TrayTrigger: Before Restore Previous Settings");
+            var restorePoint = await TryCreateRestorePointAsync("TrayTrigger: Before Undo Preset");
 
-            BusyToastMessage = "Restoring previous settings...";
+            BusyToastMessage = "Undoing the preset...";
             StatusMessage = BusyToastMessage;
             await Task.Run(() => _tweaksService.ResetToDefaults(ids));
 
-            await RefreshAllTweaksAsync(BulkActionStatus("Previous settings restored.", restorePoint));
+            await RefreshAllTweaksAsync(BulkActionStatus("Preset undone; previous settings restored.", restorePoint));
             RecordBulkTweakChange(before, applying: false);
         }
         finally
         {
             IsApplyingTweaks = false;
         }
-
         PromptRestartForBulkAction(before);
+        if (HasStutterReport) await RunStutterCheckAsync(afterAction: true);
     }
 
     /// <summary>What happened to the restore point a preset or restore asked for.</summary>
@@ -1233,15 +1576,24 @@ public class SystemViewModel : ViewModelBase
         _ => "No restore point was made: that option is off in Settings.",
     };
 
-    private static bool ConfirmBulkAction(string title, string message, List<string> changingTweakNames)
+    private bool ConfirmBulkAction(string title, string message, List<string> changingTweakNames)
     {
         if (changingTweakNames.Count == 0) return true;
-
-        string detail = "Affected: " + string.Join(", ", changingTweakNames) +
-            ". This may require admin approval and a restart to fully take effect.";
-
+        string detail = BulkActionDetail(changingTweakNames, _settings.CreateRestorePointBeforeTweaks);
         return ModernDialog.Confirm(null, title, message, detail, confirmText: "Continue", cancelText: "Cancel");
     }
+
+    /// <summary>
+    /// The dialog's small print: what changes, and whether a System Restore point is made first.
+    /// The restore point preference lives in Settings and is said here, where it matters, rather
+    /// than on the card.
+    /// </summary>
+    internal static string BulkActionDetail(IReadOnlyList<string> changingTweakNames, bool restorePointOn) =>
+        "Affected: " + string.Join(", ", changingTweakNames) +
+        ". This may require admin approval and a restart to fully take effect. " +
+        (restorePointOn
+            ? "A System Restore point will be created first."
+            : "No System Restore point will be created first; turn that on in Settings > Performance Tweaks.");
 
     /// <summary>Prompts for a restart only when a reboot-required tweak actually changed state in this run.</summary>
     private void PromptRestartForBulkAction(Dictionary<string, bool> before)
@@ -1273,4 +1625,56 @@ public class SystemViewModel : ViewModelBase
             LoggingService.Warn("System", $"Could not launch utility '{target}': {ex.Message}");
         }
     }
+}
+
+/// <summary>One Stutter Check row that needs attention: what was found, its badge, and its one button.</summary>
+public sealed class StutterCheckRowViewModel
+{
+    public StutterCheckRowViewModel(StutterCheckItem item, Action<StutterCheckItem> act)
+    {
+        Item = item;
+        ActionCommand = new RelayCommand(() => act(item));
+    }
+
+    public StutterCheckItem Item { get; }
+    public string Title => Item.Title;
+    public string Detail => Item.Detail;
+    public bool HasDetail => Item.Detail.Length > 0;
+    public bool HasAction => Item.Action != StutterAction.None && Item.ActionLabel.Length > 0;
+    public string ActionLabel => Item.ActionLabel;
+    /// <summary>Fix it is the accent button; Here's how and the Open buttons are outline.</summary>
+    public bool IsPrimaryAction => HasAction && Item.Action == StutterAction.ApplyTweak;
+    public bool IsSecondaryAction => HasAction && Item.Action != StutterAction.ApplyTweak;
+    public ICommand ActionCommand { get; }
+    /// <summary>Info rows are dimmed: worth knowing, nothing to do.</summary>
+    public double RowOpacity => Item.Verdict == StutterVerdict.Info ? 0.65 : 1.0;
+
+    public string BadgeText => Item.Verdict switch
+    {
+        StutterVerdict.NeedsLook => "NEEDS A LOOK",
+        StutterVerdict.CanFix => "TRAYTRIGGER CAN FIX",
+        StutterVerdict.Info => "INFO",
+        _ => "FINE",
+    };
+    public string BadgeBackground => Item.Verdict switch
+    {
+        StutterVerdict.NeedsLook => "#3D2F14",
+        StutterVerdict.CanFix => "#14304D",
+        StutterVerdict.Info => "#2A2A3A",
+        _ => "#238636",
+    };
+    public string BadgeForeground => Item.Verdict switch
+    {
+        StutterVerdict.NeedsLook => "#E8B84E",
+        StutterVerdict.CanFix => "#6CB6FF",
+        StutterVerdict.Info => "#B8B8CC",
+        _ => "#FFFFFF",
+    };
+    public string AccessibleName => Item.Verdict switch
+    {
+        StutterVerdict.NeedsLook => "Needs a look",
+        StutterVerdict.CanFix => "TrayTrigger can fix",
+        StutterVerdict.Info => "Info",
+        _ => "Fine",
+    } + $": {Title}";
 }

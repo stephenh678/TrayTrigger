@@ -1270,6 +1270,30 @@ public partial class App
                 return;
             }
 
+            // --screenshot-stutter <out.png>: the Performance Tweaks tab after a Stutter Check has run
+            // on this PC, with the list of fine checks open, so the card is captured with real rows.
+            if ((e.Args[i].Equals("--screenshot-stutter", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-stutter", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = NavSection.System;
+                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.PerformanceTweaks;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                // Selecting the System section starts the run itself when one is due, and then this
+                // call is a no-op that completes at once: wait for the result, not for the task.
+                var systemVm = _mainViewModel.SystemVM;
+                _ = systemVm.RunStutterCheckAsync();
+                PumpDispatcher(TimeSpan.FromSeconds(30), () => systemVm.HasStutterReport && !systemVm.IsRunningStutterCheck);
+                _mainWindow.UpdateLayout();
+                PumpDispatcher(TimeSpan.FromMilliseconds(400));
+                CaptureVisual(_mainWindow, 960, 1000, targetPng);
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-system-all", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-system-all", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)

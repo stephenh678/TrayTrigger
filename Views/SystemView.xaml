@@ -37,7 +37,14 @@
                                        AutomationProperties.Name="{Binding AccessibleStatus}"
                                        Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
                             <Border Background="{Binding StatusBadgeColor}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"/>
+                                <TextBlock Text="{Binding StatusBadgeText}" FontSize="9" FontWeight="Bold" Foreground="{Binding StatusBadgeForeground}"/>
+                            </Border>
+                            <!-- Every row says which set it is in: PRESET or OPT-IN. A muted blue, so it
+                                 doesn't compete with the green and amber status badges. -->
+                            <Border Background="#1E2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="Part of the Performance Preset: Apply Performance Preset turns it on, Undo Preset puts it back.">
+                                <TextBlock Text="PRESET" FontSize="9" FontWeight="Bold" Foreground="#8FB8E8"/>
                             </Border>
                             <Border Background="#2A2A3A" CornerRadius="3" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
@@ -91,6 +98,39 @@
                                 </MultiBinding>
                             </AutomationProperties.Name>
                         </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- One Stutter Check row that needs attention: title, badge, what to do, one button. -->
+        <DataTemplate x:Key="StutterRowTemplate" DataType="{x:Type vm:StutterCheckRowViewModel}">
+            <Border BorderBrush="#252530" BorderThickness="0,1,0,0" Padding="0,8,0,8" Opacity="{Binding RowOpacity}"
+                    AutomationProperties.Name="{Binding AccessibleName}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <WrapPanel>
+                            <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                            <Border Background="{Binding BadgeBackground}" CornerRadius="3" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding BadgeText}" FontSize="9" FontWeight="Bold" Foreground="{Binding BadgeForeground}"/>
+                            </Border>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"
+                                   Margin="0,3,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <Button Content="{Binding ActionLabel}" Command="{Binding ActionCommand}"
+                                Visibility="{Binding IsPrimaryAction, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernAccentButton}" Padding="12,4" FontSize="11.5"/>
+                        <Button Content="{Binding ActionLabel}" Command="{Binding ActionCommand}"
+                                Visibility="{Binding IsSecondaryAction, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="10,4" FontSize="11.5"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -163,9 +203,9 @@
             <!-- Right: Live Telemetry Indicator - only where the live readings are (All, Hardware Specs) -->
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
                         Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" 
+                <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12"
                            Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <TextBlock Text="Live Hardware Telemetry" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}" 
+                <TextBlock Text="Live Hardware Telemetry" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
                            FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
             </StackPanel>
 
@@ -216,36 +256,23 @@
                 <!-- CATEGORY 1: HARDWARE SPECS                                 -->
                 <!-- ========================================================== -->
                 <StackPanel Visibility="{Binding ShowSpecsSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
-                    <!-- Section Header (shown in All view) -->
+                    <!-- Section header, on every tab: the section's own Refresh lives at its right end. -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE770;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="HARDWARE SPECS" FontSize="11.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="&#x21BB; Refresh"
+                                    Command="{Binding RefreshSpecsCommand}" IsEnabled="{Binding CanRefreshSpecs}"
+                                    AutomationProperties.Name="Refresh hardware specs" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE770;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
+                                           Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="HARDWARE SPECS" FontSize="11.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding SpecsRefreshedDisplay, StringFormat='·  {0}'}" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"
+                                           Visibility="{Binding HasSpecs, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+                        </DockPanel>
                     </Border>
-
-                    <!-- Section toolbar: the refresh for the whole specs section lives here, not in
-                         the last card. Shown while loading too, so the placeholder card below has
-                         the same header as the loaded state. -->
-                    <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                        <Button DockPanel.Dock="Right" Content="Refresh Specs" Command="{Binding RefreshSpecsCommand}"
-                                IsEnabled="{Binding IsSpecsLoaded}"
-                                Style="{StaticResource ModernOutlineButton}" Padding="10,3" VerticalAlignment="Center"/>
-                        <TextBlock DockPanel.Dock="Left" Text="{Binding SpecsRefreshedDisplay}" FontSize="11"
-                                   Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"/>
-                    </DockPanel>
 
                     <!-- Loading placeholder: shown instead of the spec cards, which would otherwise
                          paint "Unknown GPU / 0 GB / 0 x 0 @ 0Hz" for the first second or two. -->
@@ -557,81 +584,156 @@
                 <!-- CATEGORY 2: PERFORMANCE TWEAKS                             -->
                 <!-- ========================================================== -->
                 <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
-                    <!-- Section Header (shown in All view) -->
+                    <!-- Section header, on every tab. Refresh here re-reads every tweak and re-runs Stutter Check. -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9E9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="PERFORMANCE TWEAKS" FontSize="11.5" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
-                            <TextBlock Text="·  Always on, system-wide" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
-                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="&#x21BB; Refresh"
+                                    Command="{Binding RunStutterCheckCommand}"
+                                    AutomationProperties.Name="Refresh tweaks and re-run Stutter Check" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE9E9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
+                                           Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="PERFORMANCE TWEAKS" FontSize="11.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                                <TextBlock Text="·  Always on, system-wide" FontSize="11.5" Foreground="{StaticResource BrushTextMuted}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Stutter Check: the verdict. It only reports; Fix it applies a tweak below. -->
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                                    <Button Content="{Binding StutterRunButtonText}" Command="{Binding RunStutterCheckCommand}"
+                                            Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"
+                                            AutomationProperties.Name="Run Stutter Check"/>
+                                    <Button Content="Copy Results" Command="{Binding CopyStutterResultsCommand}"
+                                            Visibility="{Binding HasStutterReport, Converter={StaticResource BoolToVis}}"
+                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Stutter Check" FontSize="13.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="The things stutter threads tell you to check, checked for you: overlays, other apps' use of the GPU, your display, memory and drives, Windows services, and the tweaks below that matter for stutter."
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <!-- Before the first result: the same ring-and-heading row the result uses, so
+                                 the result lands in the same space instead of pushing the cards below down. -->
+                            <DockPanel Margin="0,10,0,6" LastChildFill="True"
+                                       Visibility="{Binding ShowStutterIntro, Converter={StaticResource BoolToVis}}">
+                                <Grid DockPanel.Dock="Left" Width="46" Height="46" Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <Ellipse Stroke="{StaticResource BrushBorderLight}" StrokeThickness="3" StrokeDashArray="3 2"/>
+                                    <TextBlock Text="&#x2026;" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}"/>
+                                </Grid>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding StutterIntroText}" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding StutterIntroSubline}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <StackPanel Visibility="{Binding HasStutterReport, Converter={StaticResource BoolToVis}}">
+                                <DockPanel Margin="0,10,0,6" LastChildFill="True">
+                                    <Grid DockPanel.Dock="Left" Width="46" Height="46" Margin="0,0,12,0" VerticalAlignment="Center">
+                                        <Ellipse Stroke="{Binding StutterRingColor}" StrokeThickness="3"/>
+                                        <TextBlock Text="{Binding StutterRingText}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    </Grid>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding StutterSummary}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource BrushTextPrimary}"/>
+                                        <TextBlock Text="{Binding StutterSubline}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                                   TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding StutterRows}" ItemTemplate="{StaticResource StutterRowTemplate}"/>
+                                <!-- The checks that passed, always shown, two columns so twelve of them take six lines. -->
+                                <Border BorderBrush="#252530" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,2,0,0"
+                                        Visibility="{Binding HasStutterFine, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding StutterFineHeading}" FontSize="11.5" FontWeight="SemiBold" Foreground="#3FB950"/>
+                                        <ItemsControl ItemsSource="{Binding StutterFineTitles}" Margin="0,4,0,0">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Columns="2"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}" Margin="0,1,12,1" TextWrapping="Wrap">
+                                                        <Run Text="&#x2713; " Foreground="#3FB950"/><Run Text="{Binding Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="Fix it applies a TrayTrigger tweak you can undo below. Here's how opens the help page for that app. Results are included in Copy Diagnostic Info."
+                                           FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How Stutter Check works" Margin="0,6,0,0" HorizontalAlignment="Left"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/stutter_check"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Performance Optimization Status: preset, reset and refresh for every tweak below -->
+                    <!-- Performance Preset: the recommended tweaks below, applied and undone together -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
-                            <DockPanel LastChildFill="True" Margin="0,0,0,8">
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
-                                            IsEnabled="{Binding CanRunBulkAction}"
-                                            Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
-                                    <Button Content="Restore Previous Settings" Command="{Binding ResetDefaultsCommand}"
-                                            IsEnabled="{Binding CanRunBulkAction}"
-                                            Style="{StaticResource ModernOutlineButton}" Margin="0,0,6,0" Padding="10,5"/>
-                                    <Button Content="Refresh" Command="{Binding RefreshTweaksCommand}"
-                                            IsEnabled="{Binding CanRunBulkAction}"
-                                            Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                            <DockPanel LastChildFill="True" Margin="0,0,0,4">
+                                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top" Margin="12,0,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Apply Performance Preset" Command="{Binding ApplyRecommendedPresetCommand}"
+                                                IsEnabled="{Binding CanRunBulkAction}"
+                                                Style="{StaticResource ModernAccentButton}" Margin="0,0,6,0" Padding="12,5"/>
+                                        <Button Content="Undo Preset" Command="{Binding ResetDefaultsCommand}"
+                                                IsEnabled="{Binding CanRunBulkAction}"
+                                                Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                                    </StackPanel>
                                 </StackPanel>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Performance Preset" FontSize="13.5" FontWeight="SemiBold"
+                                               Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="{Binding PresetLeadText}"
+                                               FontSize="11" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <DockPanel Margin="0,10,0,6" LastChildFill="True">
+                                <Grid DockPanel.Dock="Left" Width="46" Height="46" Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <Ellipse Stroke="{Binding PresetRingColor}" StrokeThickness="3"/>
+                                    <TextBlock Text="{Binding PresetRingText}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                </Grid>
                                 <StackPanel VerticalAlignment="Center">
-                                    <DockPanel LastChildFill="False">
-                                        <TextBlock Text="Performance Optimization Status" FontSize="13.5" FontWeight="SemiBold" DockPanel.Dock="Left"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                        <!-- The badge is a link: it opens the setting it reports instead of only
-                                             pointing at it in a tooltip. -->
-                                        <Button AutomationProperties.Name="{Binding RestorePointBadgeText, StringFormat='{}{0}. Opens the setting in Settings'}" Command="{Binding DataContext.OpenPerformanceSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                Background="{Binding RestorePointBadgeColor}" BorderThickness="0" Padding="6,1.5" Margin="8,0,0,0"
-                                                DockPanel.Dock="Left" VerticalAlignment="Center" Cursor="Hand">
-                                            <Button.Template>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
-                                                        <ContentPresenter/>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Button.Template>
-                                            <TextBlock Text="{Binding RestorePointBadgeText}" FontSize="11" FontWeight="SemiBold" Foreground="#FFFFFF"/>
-                                        </Button>
-                                    </DockPanel>
-                                    <TextBlock Text="{Binding TweaksOptimizationScoreDisplay}" FontSize="12" TextTrimming="CharacterEllipsis"
-                                               Foreground="{StaticResource BrushAccentHover}" Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding PresetScoreDisplay}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
+                                               Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="{Binding PresetNotAppliedLine}" FontSize="11.5" Foreground="{StaticResource BrushTextSecondary}"
+                                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding PresetNotCountedLine}" FontSize="11" Foreground="{StaticResource BrushTextMuted}"
+                                               TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Visibility="{Binding HasPresetNotCounted, Converter={StaticResource BoolToVis}}"/>
                                 </StackPanel>
                             </DockPanel>
 
                             <!-- No badge legend here on purpose: the badges (OPTIMAL, OPT-IN, RESTART, ADMIN,
                                  restore point) are defined in the "How tweaks work" help topic this links to. -->
                             <Border Background="#16161B" CornerRadius="6" Padding="8" Margin="0,4,0,0">
-                                <!-- The link is docked before the note, so the note wraps in what's left
-                                     instead of pushing the link off the edge. -->
+                                <!-- The link follows the sentence it belongs to, like the other cards' Learn more links. -->
                                 <DockPanel LastChildFill="True">
                                     <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="#CCA84E"
                                                VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
-                                    <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="12,0,0,0"
-                                            VerticalAlignment="Center" DockPanel.Dock="Right"
-                                            Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
-                                    <TextBlock Text="System-wide, always on until you restore them. Documented Windows settings only - no registry cleaners."
-                                               Foreground="#CCA84E" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    <WrapPanel VerticalAlignment="Center">
+                                        <TextBlock Text="System-wide, always on until you restore them. Documented Windows settings only - no registry cleaners."
+                                                   Foreground="#CCA84E" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                        <Button Style="{StaticResource HelpLinkButton}" Content="How tweaks work" Margin="8,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/overview"/>
+                                    </WrapPanel>
                                 </DockPanel>
                             </Border>
                         </StackPanel>
@@ -644,7 +746,7 @@
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="{Binding InputAndDisplaySummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
-                            <TextBlock Text="How Windows presents games and reads the mouse: GPU scheduling, flip-model and VRR for windowed games, Auto HDR, pointer precision, and the accessibility shortcuts that steal focus mid-game."
+                            <TextBlock Text="How Windows presents games and reads the mouse."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding InputAndDisplayTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
@@ -657,7 +759,7 @@
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="{Binding CpuAndPowerSummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
-                            <TextBlock Text="How much CPU the game gets: Game Mode, the system timer, foreground scheduling, the always-on power plan, and desktop effects the compositor pays for."
+                            <TextBlock Text="How much CPU the game gets."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding CpuAndPowerTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
@@ -670,7 +772,7 @@
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="{Binding NetworkAndBackgroundSummary}" FontSize="11.5"
                                        Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,4"/>
-                            <TextBlock Text="What runs behind the game: network packet throttling and Nagle, update seeding, Game Bar capture and overlay, telemetry sweeps, and driver replacement by Windows Update."
+                            <TextBlock Text="What runs behind the game."
                                        FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding NetworkAndBackgroundTweaks}" ItemTemplate="{StaticResource TweakItemTemplate}"/>
                         </StackPanel>
@@ -693,18 +795,8 @@
                 <!-- CATEGORY 3: PERFORMANCE PROFILES                          -->
                 <!-- ========================================================== -->
                 <StackPanel Visibility="{Binding ShowGameProfilesSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
-                    <!-- Section Header (shown in All view) -->
+                    <!-- Section header, on every tab. -->
                     <Border Margin="0,2,0,8" views:CardSearch.IsHeader="True">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAllTab}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5"
                                        Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>

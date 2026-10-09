@@ -425,6 +425,10 @@ public partial class App : Application
             view: new LaunchPopupHost());
         _mainViewModel.Library.LaunchPopup = _launchPopup;
         _mainViewModel.Tools.LaunchPopup = _launchPopup;
+
+        // Stutter Check runs once, a few seconds after startup and off the UI thread, so the System
+        // page opens with a verdict rather than an empty card. Not while a game is running.
+        _ = RunStutterCheckAfterStartupAsync();
         _launcherService.SessionStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionStarted(s.GameId, s.PlatformLabel));
         _launcherService.SessionGameStarted += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnGameStarted(s.GameId));
         _launcherService.SessionEnded += s => Dispatcher.BeginInvoke(() => _launchPopup?.OnSessionEnded(s.GameId));
@@ -1362,6 +1366,28 @@ public partial class App : Application
             {
                 LoggingService.Error("App", $"Fatal exception recreating MainWindow: {ex2.Message}", ex2);
             }
+        }
+    }
+
+    /// <summary>
+    /// The first Stutter Check: a few seconds in, once the window is idle, and not while a game is
+    /// running. Nothing awaits it, so a failure is logged here or it would vanish.
+    /// </summary>
+    private async System.Threading.Tasks.Task RunStutterCheckAfterStartupAsync()
+    {
+        try
+        {
+            await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(8));
+            if (_isShuttingDown || _mainViewModel == null) return;
+            // Let whatever the window is drawing finish first.
+            await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            if (_isShuttingDown) return;
+            bool gameRunning = _launcherService.GetActiveSessions().Count > 0;
+            await _mainViewModel.SystemVM.RunStutterCheckIfDueAsync(gameRunning, atStartup: true);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("StutterCheck", $"The startup check didn't run: {ex.Message}");
         }
     }
 
