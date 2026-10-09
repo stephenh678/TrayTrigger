@@ -69,7 +69,7 @@ public class ScriptLibraryServiceTests : IDisposable
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase);
 
         Assert.Equal(expected, ScriptLibraryService.BundledFileNames());
-        Assert.NotNull(ScriptLibraryService.ReadTemplate(ScriptLibraryService.BlankBatchFileName));
+        Assert.Null(ScriptLibraryService.ReadTemplate("_Blank.bat"));
         Assert.NotNull(ScriptLibraryService.ReadTemplate(ScriptLibraryService.BlankPowerShellFileName));
         Assert.Null(ScriptLibraryService.ReadBundled(ScriptLibraryService.BlankPowerShellFileName));
     }
@@ -331,16 +331,13 @@ public class ScriptLibraryServiceTests : IDisposable
         Assert.True(text.All(c => c <= 127), $"{example} has a non-ASCII character at index {bad}");
     }
 
-    [Theory]
-    [InlineData("new.bat", "_Blank.bat")]
-    [InlineData("new.cmd", "_Blank.bat")]
-    [InlineData("new.ps1", "_Blank.ps1")]
-    public void CreateFromBlankTemplate_WritesMatchingTemplate(string fileName, string template)
+    [Fact]
+    public void CreateFromBlankTemplate_WritesThePowerShellTemplate()
     {
-        string target = Path.Combine(_base, "sub", fileName);
+        string target = Path.Combine(_base, "sub", "new.ps1");
 
         Assert.True(ScriptLibraryService.CreateFromBlankTemplate(target));
-        Assert.Equal(ScriptLibraryService.ReadTemplate(template), File.ReadAllText(target));
+        Assert.Equal(ScriptLibraryService.ReadTemplate(ScriptLibraryService.BlankPowerShellFileName), File.ReadAllText(target));
 
         // Existing files are left alone.
         File.WriteAllText(target, "edited");
@@ -348,19 +345,30 @@ public class ScriptLibraryServiceTests : IDisposable
         Assert.Equal("edited", File.ReadAllText(target));
     }
 
-    [Fact]
-    public void CreateFromBlankTemplate_RefusesUnknownExtension()
+    [Theory]
+    [InlineData("tool.exe")]
+    [InlineData("close-apps.bat")]
+    [InlineData("close-apps.cmd")]
+    public void CreateFromBlankTemplate_RefusesAnythingButPs1(string fileName)
     {
-        string target = Path.Combine(_base, "tool.exe");
+        string target = Path.Combine(_base, fileName);
         Assert.False(ScriptLibraryService.CreateFromBlankTemplate(target));
         Assert.False(File.Exists(target));
+    }
+
+    [Theory]
+    [InlineData(@"C:\s\close-apps.ps1", @"C:\s\close-apps.ps1")]
+    [InlineData(@"C:\s\close-apps.PS1", @"C:\s\close-apps.PS1")]
+    [InlineData(@"C:\s\close-apps.bat", @"C:\s\close-apps.ps1")]
+    [InlineData(@"C:\s\close-apps", @"C:\s\close-apps.ps1")]
+    public void NewScript_IsAlwaysAPs1(string chosen, string expected)
+    {
+        Assert.Equal(expected, ScriptLibraryService.AsPowerShellScriptPath(chosen));
     }
 
     private static readonly GameEntry Probe = new() { Id = "libtest", Name = "Lib Test Game", ExecutablePath = @"C:\Games\Lib\game.exe" };
 
     [Theory]
-    [InlineData("_Blank.bat", "prelaunch", null, "Pre-launch for \"Lib Test Game\"")]
-    [InlineData("_Blank.bat", "postexit", 12L, "after 12 minute(s)")]
     [InlineData("_Blank.ps1", "prelaunch", null, "Pre-launch for 'Lib Test Game'")]
     [InlineData("_Blank.ps1", "postexit", 12L, "after 12 minute(s)")]
     public void BlankTemplates_RunClean_InBothPhases(string template, string phase, long? playtime, string expectedOutput)
@@ -380,7 +388,6 @@ public class ScriptLibraryServiceTests : IDisposable
     /// only, for the same code-page reason as the examples.
     /// </summary>
     [Theory]
-    [InlineData("_Blank.bat")]
     [InlineData("_Blank.ps1")]
     public void BlankTemplates_AreTheUsersToEdit_AndPointAtTheReadme(string template)
     {
@@ -395,7 +402,7 @@ public class ScriptLibraryServiceTests : IDisposable
     public void Readme_CarriesTheScriptReference()
     {
         string text = ScriptLibraryService.ReadBundled("README.txt")!;
-        foreach (var expected in new[] { "TRAYTRIGGER_GAME_ID", "TRAYTRIGGER_PLAYTIME_MINUTES", "-ExecutionPolicy Bypass", "%6", "$ScriptArgs", "Batch file pitfalls" })
+        foreach (var expected in new[] { "TRAYTRIGGER_GAME_ID", "TRAYTRIGGER_PLAYTIME_MINUTES", "-ExecutionPolicy Bypass", "$ScriptArgs", "TT:" })
         {
             Assert.Contains(expected, text);
         }

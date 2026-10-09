@@ -224,6 +224,33 @@ public class LaunchPopupCoordinatorTests
     }
 
     [Fact]
+    public void ScriptSaid_OutlastsWaitingAfter_ButNotTheDispatch()
+    {
+        var rig = new Rig();
+        rig.Popup.TryBeginLaunch(Game("a"));
+        rig.Popup.OnScriptSaid("a", "closing apps");
+
+        // A slow script: the game hasn't been dispatched, so it isn't "still starting".
+        rig.Fire(d => d == LaunchPopupCoordinator.WaitingAfter);
+        Assert.Equal("Launching", rig.View.Shown!.Status);
+        Assert.Equal("closing apps", rig.View.Shown.Detail);
+        rig.Popup.OnScriptSaid("a", "closed Discord");
+        Assert.Equal("closed Discord", rig.View.Shown!.Detail);
+
+        rig.WaitingForGame = true;
+        rig.Popup.LaunchDispatched("a");
+        Assert.Equal("Still starting", rig.View.Shown!.Status);
+
+        // A script that isn't waited for can still be talking: the popup is about the game now,
+        // and the time it's given isn't stretched.
+        var (capsBefore, _) = rig.Timers(LaunchPopupCoordinator.MaxWait);
+        rig.Popup.OnScriptSaid("a", "started Afterburner");
+        Assert.Equal("Still starting", rig.View.Shown!.Status);
+        Assert.NotEqual("started Afterburner", rig.View.Shown.Detail);
+        Assert.Equal(capsBefore, rig.Timers(LaunchPopupCoordinator.MaxWait).Scheduled);
+    }
+
+    [Fact]
     public void ClosingTool_NamesTheToolBeingClosed_ThenTheOneStarting()
     {
         var rig = new Rig();

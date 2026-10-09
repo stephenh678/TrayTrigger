@@ -12,6 +12,7 @@ namespace TrayTrigger.Tests;
 /// closed after the last game and which tools are opened again. Programs are faked except where
 /// finding or ending a real copy is the point; those use a renamed ping.exe.
 /// </summary>
+[Collection(ActivityCurrentCollection.Name)]
 public class CompanionToolServiceTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N"));

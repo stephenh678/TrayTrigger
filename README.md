@@ -176,7 +176,7 @@ Games ship with whatever DLSS version was current when they were built, and ofte
 
 ### Pre-Launch and Post-Exit Scripts
 
-Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
+Attach a PowerShell script (or an `.exe`) to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
 
 **Real ones ship with the app**, written to be read, copied, and changed:
 
@@ -189,9 +189,8 @@ These files (the examples and a README) are TrayTrigger's copies, kept up to dat
 
 A script doesn't have to be long. This is a complete pre-launch script:
 
-```bat
-@echo off
-taskkill /im Discord.exe /f
+```powershell
+Stop-Process -Name Discord -ErrorAction SilentlyContinue
 ```
 
 **What you get:**

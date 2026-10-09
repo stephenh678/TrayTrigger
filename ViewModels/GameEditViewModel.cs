@@ -1410,7 +1410,7 @@ public class GameEditViewModel : ViewModelBase
 
         if (!GameScriptService.IsSupportedScript(path))
         {
-            return $"{label} script must be one of: {string.Join(", ", GameScriptService.SupportedExtensions)}. Wrap other file types in a .bat.";
+            return $"{label} script must be one of: {string.Join(", ", GameScriptService.SupportedExtensions)}. Start other file types from a one-line .ps1.";
         }
 
         if (!File.Exists(path))
@@ -1463,17 +1463,17 @@ public class GameEditViewModel : ViewModelBase
         var dialog = new SaveFileDialog
         {
             Title = isPreLaunch ? "New Pre-Launch Script" : "New Post-Exit Script",
-            Filter = "Batch script (*.bat)|*.bat|PowerShell script (*.ps1)|*.ps1",
-            DefaultExt = ".bat",
+            Filter = "PowerShell script (*.ps1)|*.ps1",
+            DefaultExt = ".ps1",
             AddExtension = true,
             OverwritePrompt = false,
-            FileName = $"{SafeFileStem(Name)}-{phase}.bat",
+            FileName = $"{SafeFileStem(Name)}-{phase}.ps1",
             InitialDirectory = InitialScriptDirectory(string.Empty)
         };
 
         if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FileName)) return;
 
-        string path = dialog.FileName;
+        string path = ScriptLibraryService.AsPowerShellScriptPath(dialog.FileName);
         try
         {
             bool created = ScriptLibraryService.CreateFromBlankTemplate(path);

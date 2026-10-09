@@ -152,6 +152,7 @@ switch ($Phase) {
 
         # Work out what to close first, so the waiting below happens only once.
         $targets = @()
+        $skipped = @()
         foreach ($arg in ($names | Select-Object -Unique)) {
             # Accept "OneDrive" and "OneDrive.exe" alike.
             $name = $arg -replace '\.exe$', ''
@@ -159,6 +160,7 @@ switch ($Phase) {
 
             if ($NeverClose -contains $name) {
                 Write-Output "Skipping ${name}: it is on the never-close list."
+                $skipped += $name
                 continue
             }
 
@@ -173,6 +175,7 @@ switch ($Phase) {
             $path = ($processes | Where-Object { $_.Path } | Select-Object -First 1).Path
             if (-not $path) {
                 Write-Output "Skipping ${name}: it is running as Administrator."
+                $skipped += $name
                 continue
             }
 
@@ -182,7 +185,12 @@ switch ($Phase) {
         if ($targets.Count -eq 0) {
             # A "TT:" line is for the player: it goes on the game's Played row in
             # Activity & History and into the launch popup. The rest is for the log.
-            Write-Output "TT: nothing to close, none of $($names -join ', ') was running"
+            if ($skipped.Count -gt 0) {
+                Write-Output "TT: nothing closed, this script can't close $($skipped -join ', ') (the log says why)"
+            }
+            else {
+                Write-Output 'TT: nothing to close, none of the apps named was running'
+            }
             exit 0
         }
 

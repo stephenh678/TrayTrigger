@@ -2,14 +2,14 @@
 
 Attach your own script or program to a game and TrayTrigger runs it just before the game starts and again after it exits. Use it for anything TrayTrigger does not do itself: closing Discord, switching audio output, setting an RGB profile, remapping a controller, starting a recorder.
 
-This page covers using scripts. Writing your own script covers the arguments a script receives and the batch and PowerShell details.
+This page covers using scripts. Writing your own script covers the arguments a script receives and the PowerShell details.
 
 ## Supported file types
 
-- .bat and .cmd, run through cmd.exe.
-- .ps1, run through PowerShell with the execution policy bypassed, so a locked-down policy will not block it.
+- .ps1, run through Windows PowerShell with the execution policy bypassed, so a locked-down policy will not block it. The New script... template, the examples and the TrayTrigger-Scripts catalogue are all PowerShell.
 - .exe and .com, run directly.
-- Anything else, such as .py or .ahk, is refused. Wrap it in a one-line .bat instead.
+- .bat and .cmd still run, through cmd.exe, so a batch file you already use keeps working. Write new scripts in PowerShell.
+- Anything else, such as .py or .ahk, is refused. Start it from a one-line .ps1 instead.
 
 ## When they run
 
