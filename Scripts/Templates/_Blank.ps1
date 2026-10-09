@@ -8,6 +8,10 @@
 
   Exit 0 for success. Press Test next to the script box to try it.
 
+  A line that starts with "TT:" is for the player: TrayTrigger puts it on the
+  game's Played row in Activity & History, and shows it in the launch popup
+  before the game. Everything else you print goes to the log.
+
   More - environment variables, exit codes, passing a value from the
   "before" run to the "after" run - is in README.txt in the scripts folder.
 #>
@@ -28,10 +32,12 @@ switch ($Phase) {
     'prelaunch' {
         # --- Runs just before the game starts ---------------------------------
         Write-Output "Pre-launch for '$GameName'"
+        Write-Output "TT: nothing set up yet"
     }
     'postexit' {
         # --- Runs after the game exits. $minutes holds the minutes played -----
         Write-Output "Post-exit for '$GameName' after $minutes minute(s)"
+        Write-Output "TT: nothing to put back yet"
     }
     default {
         Write-Output "Unknown phase '$Phase'"

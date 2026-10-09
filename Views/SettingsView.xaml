@@ -1062,6 +1062,10 @@
                                 <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
                                         ToolTip="Example scripts to copy and adapt, and a README with a quick start and how to write your own"/>
+                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpLinkButton}" Content="Get more scripts"
+                                        Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger-Scripts"
+                                        ToolTip="The TrayTrigger-Scripts catalogue on GitHub: ready-made scripts to drop into the scripts folder, and where to share yours"/>
                             </StackPanel>
 
                             <!-- Default scripts: run for every game that has no script of its own for that phase. -->
@@ -1221,10 +1225,10 @@
                         <StackPanel>
                             <TextBlock Text="Performance Tweak Safety" FontSize="13.5" FontWeight="SemiBold"
                                        Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
-                            <TextBlock Text="Applies to Apply Performance Preset and Restore Previous Settings on the System &amp; Performance page."
+                            <TextBlock Text="Applies to Apply Performance Preset and Undo Preset on the System &amp; Performance page."
                                        Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
-                            <CheckBox Content="Create a System Restore point before Apply Performance Preset or Restore Previous Settings"
+                            <CheckBox Content="Create a System Restore point before Apply Performance Preset or Undo Preset"
                                       IsChecked="{Binding CreateRestorePointBeforeTweaks}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="12.5"/>
                             <TextBlock Text="A Windows rollback point in case a bulk change causes problems. Recommended on."

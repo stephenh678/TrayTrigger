@@ -69,6 +69,23 @@
         <!-- A caution the user may override (a hotkey that shadows a common app shortcut). -->
         <SolidColorBrush x:Key="BrushWarning" Color="#E5C07B"/>
 
+        <!-- Edit dialogs (Edit Game, Edit Tool): the cards on the dialog background, and the
+             panels inside them. -->
+        <SolidColorBrush x:Key="BrushDialogCard" Color="#16161D"/>
+        <SolidColorBrush x:Key="BrushDialogInset" Color="#1B1B24"/>
+        <SolidColorBrush x:Key="BrushDividerSubtle" Color="#242430"/>
+        <!-- The poster frame: its background, the "no poster" placeholder, and the scrim over the blurred fill. -->
+        <SolidColorBrush x:Key="BrushArtworkBackground" Color="#111116"/>
+        <SolidColorBrush x:Key="BrushArtworkPlaceholder" Color="#15151C"/>
+        <SolidColorBrush x:Key="BrushArtworkScrim" Color="#550E0E14"/>
+        <!-- A blue-tinted panel for a linked service (Steam App ID). -->
+        <SolidColorBrush x:Key="BrushInfoPanelBackground" Color="#131B26"/>
+        <SolidColorBrush x:Key="BrushInfoPanelBorder" Color="#1C3852"/>
+        <!-- An amber notice: something set up here won't happen until a setting elsewhere changes. -->
+        <SolidColorBrush x:Key="BrushWarningPanelBackground" Color="#3A2A12"/>
+        <SolidColorBrush x:Key="BrushWarningPanelBorder" Color="#8A6A2A"/>
+        <SolidColorBrush x:Key="BrushWarningPanelText" Color="#FFD27F"/>
+
         <!-- Global Font -->
         <FontFamily x:Key="AppFont">Segoe UI</FontFamily>
         <FontFamily x:Key="IconFont">Segoe MDL2 Assets, Segoe Fluent Icons</FontFamily>
@@ -383,6 +400,13 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <!-- The selected tab looks selected; this says so to a screen reader too ("selected"
+                 after the tab's name), since a Button has no selected state of its own. -->
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="AutomationProperties.ItemStatus" Value="selected"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <!-- Modern Sidebar Navigation Button -->
@@ -577,6 +601,10 @@
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                            </Trigger>
+                            <!-- Faded like a disabled check box, so a box that ignores typing doesn't look ready for it. -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

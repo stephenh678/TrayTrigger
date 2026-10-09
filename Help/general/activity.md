@@ -31,7 +31,7 @@ Each game you play is one row, "Played Elden Ring · 2h 17m", and it moves to th
 - **Skipped**: what the profile didn't apply, and why ("Resizable BAR, off in the BIOS · speakers already unmuted").
 - **Put back**: "everything", or what couldn't be, beside the Critical row for it.
 - **Game**: what was done to the game's own process: the CPU cores it was kept on, the power throttling exemption, HDR on or off for this game, and the DLSS the game actually loaded.
-- **Scripts**: the pre-launch and post-exit scripts that ran, or were skipped, and why.
+- **Scripts**: the pre-launch and post-exit scripts that ran, or were skipped, and why, and what a script said it did ("closed OneDrive and Discord"): any line it prints starting with TT: lands here.
 - **Tools**: what the Tools page did, and didn't: "Discord closed, opened again after · MSI Afterburner already running, left as it was · OneDrive wasn't running, nothing to close". Until your last game has exited it reads "closes after your last game", and if a tool then wouldn't close or couldn't be opened again the line says so, beside the problem row for it. The tools themselves don't get rows; the history is the game.
 
 The same thing happening again is one row too: a problem shows how many times (7 TIMES), and clicking a row shows each time, what it means, **Show in log** for the technical detail, and **Copy details** for a bug report, the whole launch record included. The tabs narrow the list to Problems, Changes or Activity, and the search box finds a game, a tool or what happened.

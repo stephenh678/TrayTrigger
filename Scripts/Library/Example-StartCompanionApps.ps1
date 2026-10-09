@@ -2,7 +2,7 @@
   Name:             Start Companion Apps
   Description:      Starts the tools a game needs when it launches and closes them when it exits.
   Author:           TrayTrigger
-  Version:          2.0
+  Version:          2.1
   Phase:            both
   Needs admin:      no
   Dependencies:     the programs you list
@@ -126,6 +126,9 @@ switch ($Phase) {
         }
 
         $started = @()
+        $startedNames = @()
+        $alreadyRunning = @()
+        $missing = @()
         foreach ($companion in $list) {
             # %ProgramFiles% and similar shortcuts are allowed in paths.
             $path = [Environment]::ExpandEnvironmentVariables($companion.Path)
@@ -133,6 +136,7 @@ switch ($Phase) {
 
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
                 Write-Output "Not found: $path"
+                $missing += $name
                 continue
             }
 
@@ -142,6 +146,7 @@ switch ($Phase) {
                 Where-Object { $_.Path -eq $path }
             if ($already) {
                 Write-Output "$name is already running. Leaving it alone."
+                $alreadyRunning += $name
                 continue
             }
 
@@ -159,16 +164,26 @@ switch ($Phase) {
 
             Write-Output "Started $name."
             $started += '{0}|{1}' -f $startedAt.ToString('o'), $path
+            $startedNames += $name
         }
 
         if ($started.Count -gt 0) {
             Set-Content -LiteralPath $note -Value $started
         }
+
+        # One line for the player: a "TT:" line goes on the game's Played row in
+        # Activity & History and into the launch popup. The rest is for the log.
+        $summary = @()
+        if ($startedNames.Count -gt 0) { $summary += "started $($startedNames -join ', ')" }
+        if ($alreadyRunning.Count -gt 0) { $summary += "$($alreadyRunning -join ', ') already running" }
+        if ($missing.Count -gt 0) { $summary += "not found: $($missing -join ', ')" }
+        Write-Output "TT: $($summary -join '; ')"
     }
 
     'postexit' {
         if (-not (Test-Path -LiteralPath $note)) {
             Write-Output 'This script did not start anything. Nothing to close.'
+            Write-Output 'TT: nothing to close'
             exit 0
         }
         $lines = @(Get-Content -LiteralPath $note)
@@ -200,7 +215,10 @@ switch ($Phase) {
             $targets += [pscustomobject]@{ Name = $name; Processes = $mine }
         }
 
-        if ($targets.Count -eq 0) { exit 0 }
+        if ($targets.Count -eq 0) {
+            Write-Output 'TT: everything this script started had closed already'
+            exit 0
+        }
 
         # Ask each one to close. taskkill without /F sends the same close message
         # Windows sends when you sign out, which reaches a tray program's hidden
@@ -217,19 +235,29 @@ switch ($Phase) {
             $targets.Processes | Wait-Process -Timeout $GraceSeconds -ErrorAction SilentlyContinue
         }
 
+        $closedNames = @()
+        $leftRunning = @()
         foreach ($target in $targets) {
             $left = @($target.Processes | Where-Object { -not $_.HasExited })
             if ($left.Count -eq 0) {
                 Write-Output "Closed $($target.Name)."
+                $closedNames += $target.Name
             }
             elseif ($force) {
                 $left | Stop-Process -Force -ErrorAction SilentlyContinue
                 Write-Output "Ended $($target.Name)."
+                $closedNames += $target.Name
             }
             else {
                 Write-Output "$($target.Name) didn't close when asked, so it was left running. Add force to Script Arguments to end it."
+                $leftRunning += $target.Name
             }
         }
+
+        $summary = @()
+        if ($closedNames.Count -gt 0) { $summary += "closed $($closedNames -join ', ')" }
+        if ($leftRunning.Count -gt 0) { $summary += "$($leftRunning -join ', ') wouldn't close" }
+        Write-Output "TT: $($summary -join '; ')"
     }
 
     default {

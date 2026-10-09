@@ -828,7 +828,7 @@ public class SystemViewModel : ViewModelBase
         };
     }
 
-    // Busy state for the Apply Preset / Restore Previous Settings bulk actions. These can take anywhere
+    // Busy state for the Apply Preset / Undo Preset bulk actions. These can take anywhere
     // from a couple seconds to well over a minute (elevated UAC prompts, powercfg, a restore
     // point snapshot), so the actual work runs off the UI thread and this drives a floating
     // toast + disables the action buttons for the duration instead of the window looking frozen.
@@ -1384,7 +1384,7 @@ public class SystemViewModel : ViewModelBase
             groupKey: $"tweak|{tweak.Id}|{nowOptimal}");
     }
 
-    /// <summary>A preset or Restore Previous Settings: what actually changed, as one entry.</summary>
+    /// <summary>A preset or Undo Preset: what actually changed, as one entry.</summary>
     private void RecordBulkTweakChange(Dictionary<string, bool> before, bool applying)
     {
         var changed = Tweaks.Where(t => before.TryGetValue(t.Id, out bool was) && was != t.IsOptimal).ToList();

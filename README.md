@@ -176,7 +176,7 @@ Games ship with whatever DLSS version was current when they were built, and ofte
 
 ### Pre-Launch and Post-Exit Scripts
 
-Attach a `.bat`, `.cmd`, `.ps1`, or `.exe` to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
+Attach a PowerShell script (or an `.exe`) to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
 
 **Real ones ship with the app**, written to be read, copied, and changed:
 
@@ -189,9 +189,8 @@ These files (the examples and a README) are TrayTrigger's copies, kept up to dat
 
 A script doesn't have to be long. This is a complete pre-launch script:
 
-```bat
-@echo off
-taskkill /im Discord.exe /f
+```powershell
+Stop-Process -Name Discord -ErrorAction SilentlyContinue
 ```
 
 **What you get:**
@@ -203,7 +202,7 @@ taskkill /im Discord.exe /f
 - **Default scripts** in Settings run for every game that has no script of its own, with a per-game opt-out.
 - **New script...** creates a blank template with every argument already read for you and opens it in your editor.
 
-Scripts are off by default. Nothing runs until you enable them and choose one. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract.
+Nothing runs until you choose a script for a game. To hide scripts altogether, untick "Enable game scripts" in Settings > Launch & Performance. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract.
 
 ---
 
@@ -219,7 +218,7 @@ Windows set up for games, and an eye on the hardware running them.
 
 System-wide settings, separate from the per-game profiles. 22 documented gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
 
-See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Restore Previous Settings**. Bulk changes can create a System Restore point.
+See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Undo Preset**. Bulk changes can create a System Restore point.
 
 ### Hardware Monitoring
 
@@ -246,7 +245,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 ### Verifying a download
 ```powershell
-Get-FileHash .\TrayTrigger-v1.6.0-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.6.1-Setup.exe -Algorithm SHA256
 ```
 Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
 
@@ -280,7 +279,7 @@ Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the 
 No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).
 
 **Can changes be reverted?**
-Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Restore Previous Settings. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.
+Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Undo Preset. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.
 
 ---
 

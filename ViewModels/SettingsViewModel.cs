@@ -1814,17 +1814,17 @@ public class SettingsViewModel : ViewModelBase
         var dialog = new SaveFileDialog
         {
             Title = isPreLaunch ? "New Default Pre-Launch Script" : "New Default Post-Exit Script",
-            Filter = "Batch script (*.bat)|*.bat|PowerShell script (*.ps1)|*.ps1",
-            DefaultExt = ".bat",
+            Filter = "PowerShell script (*.ps1)|*.ps1",
+            DefaultExt = ".ps1",
             AddExtension = true,
             OverwritePrompt = false,
-            FileName = $"Default-{phase}.bat",
+            FileName = $"Default-{phase}.ps1",
             InitialDirectory = InitialDefaultScriptDirectory(string.Empty)
         };
 
         if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FileName)) return;
 
-        string path = dialog.FileName;
+        string path = ScriptLibraryService.AsPowerShellScriptPath(dialog.FileName);
         try
         {
             bool created = ScriptLibraryService.CreateFromBlankTemplate(path);

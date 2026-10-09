@@ -79,10 +79,28 @@ public class GameEditViewModel : ViewModelBase
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasStatusMessage));
             }
+            // Any new message is news until ShowProblem says otherwise.
+            if (_statusIsProblem)
+            {
+                _statusIsProblem = false;
+                OnPropertyChanged(nameof(StatusIsProblem));
+            }
         }
     }
 
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(_statusMessage);
+
+    private bool _statusIsProblem;
+
+    /// <summary>The footer's message is a failure (a refused save, a look-up that errored), shown in the problem colour, not the accent.</summary>
+    public bool StatusIsProblem => _statusIsProblem;
+
+    private void ShowProblem(string message)
+    {
+        StatusMessage = message;
+        _statusIsProblem = true;
+        OnPropertyChanged(nameof(StatusIsProblem));
+    }
 
     public GameEntry SourceGame { get; }
     public bool IsNewGame { get; }
@@ -185,6 +203,7 @@ public class GameEditViewModel : ViewModelBase
         BrowseCoverCommand = new RelayCommand(BrowseCover);
         ResetCoverCommand = new RelayCommand(ResetCover);
         LookUpCommand = new RelayCommand(LookUp, () => !IsRefreshingMetadata);
+        UndoLookUpCommand = new RelayCommand(UndoLookUp, () => CanUndoLookUp && !IsRefreshingMetadata);
         FetchBySteamIdCommand = new RelayCommand(FetchBySteamId, () => !IsRefreshingMetadata);
         RefreshPosterCommand = new RelayCommand(RefreshPoster, () => !IsRefreshingMetadata);
         SaveCommand = new RelayCommand(Save);
@@ -230,8 +249,27 @@ public class GameEditViewModel : ViewModelBase
     public string ExecutablePath
     {
         get => _executablePath;
-        set { _executablePath = value; OnPropertyChanged(); }
+        set
+        {
+            _executablePath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsLinkTarget));
+            OnPropertyChanged(nameof(ExecutableLabel));
+            OnPropertyChanged(nameof(LinkTargetHint));
+        }
     }
+
+    /// <summary>The target is a launcher link (steam://rungameid/..., a protocol URL), not a program to run.</summary>
+    public bool IsLinkTarget => _executablePath?.Contains("://", StringComparison.Ordinal) == true;
+
+    public string ExecutableLabel => IsLinkTarget ? "Launch Link" : "Executable / Shortcut Target";
+
+    /// <summary>Under a link target: what it is, and how to run a program instead where that is possible.</summary>
+    public string LinkTargetHint => !IsLinkTarget ? string.Empty
+        : !HasPlatform ? "Windows opens this link to start the game, with whatever program handles it."
+        : !CanOfferLaunchDirectly ? $"{PlatformName} opens this link to start the game."
+        : LaunchDirectly ? "Launching directly needs a program: Browse to the game's .exe."
+        : $"{PlatformName} opens this link to start the game. To run a program instead, tick \"{LaunchDirectlyLabel}\" and Browse to its .exe.";
 
     public string Arguments
     {
@@ -276,7 +314,7 @@ public class GameEditViewModel : ViewModelBase
         {
             _performanceProfile = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ProfileSummaryLines));
+            NotifyProfileSummary();
         }
     }
 
@@ -303,6 +341,35 @@ public class GameEditViewModel : ViewModelBase
     }
 
     public bool HasProfileSummary => _profileTweaks != null;
+
+    /// <summary>How many summary lines show before "Show N more". A list one line longer is shown whole.</summary>
+    internal const int ProfileSummaryCollapsedLines = 4;
+    private bool _showAllProfileLines;
+
+    /// <summary>The summary as shown: whole, or its first lines while a long list is collapsed.</summary>
+    public IReadOnlyList<string> VisibleProfileSummaryLines =>
+        CanExpandProfileSummary && !_showAllProfileLines ? ProfileSummaryLines.Take(ProfileSummaryCollapsedLines).ToList() : ProfileSummaryLines;
+
+    public bool CanExpandProfileSummary => ProfileSummaryLines.Count > ProfileSummaryCollapsedLines + 1;
+
+    public string ProfileSummaryToggleText => _showAllProfileLines
+        ? "Show fewer"
+        : $"Show {ProfileSummaryLines.Count - ProfileSummaryCollapsedLines} more";
+
+    public ICommand ToggleProfileSummaryCommand => _toggleProfileSummaryCommand ??= new RelayCommand(() =>
+    {
+        _showAllProfileLines = !_showAllProfileLines;
+        NotifyProfileSummary();
+    });
+    private ICommand? _toggleProfileSummaryCommand;
+
+    private void NotifyProfileSummary()
+    {
+        OnPropertyChanged(nameof(ProfileSummaryLines));
+        OnPropertyChanged(nameof(VisibleProfileSummaryLines));
+        OnPropertyChanged(nameof(CanExpandProfileSummary));
+        OnPropertyChanged(nameof(ProfileSummaryToggleText));
+    }
 
     public IReadOnlyList<PerformanceProfileMode> PerformanceProfileOptions { get; } =
         new[] { PerformanceProfileMode.Off, PerformanceProfileMode.Optimized, PerformanceProfileMode.Aggressive };
@@ -389,7 +456,7 @@ public class GameEditViewModel : ViewModelBase
     public string CpuCoresDelaySeconds
     {
         get => _cpuCoresDelaySeconds;
-        set { _cpuCoresDelaySeconds = value; OnPropertyChanged(); }
+        set { _cpuCoresDelaySeconds = value; OnPropertyChanged(); ClearFieldError(EditField.CpuCoresDelay); }
     }
 
     /// <summary>The delay only matters when the choice changes something.</summary>
@@ -407,7 +474,7 @@ public class GameEditViewModel : ViewModelBase
             _hdr = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(HdrHint));
-            OnPropertyChanged(nameof(ProfileSummaryLines));
+            NotifyProfileSummary();
         }
     }
 
@@ -552,11 +619,48 @@ public class GameEditViewModel : ViewModelBase
     /// </summary>
     private void RejectField(EditField field, string message)
     {
-        StatusMessage = message;
+        // The reason goes under the field itself, where the eye already is once focus moves
+        // there; the footer only says the save didn't happen.
+        SetFieldError(field, message);
+        ShowProblem("Not saved: one field needs fixing. The reason is under it.");
         var section = SectionOf(field);
         if (!IsAllSection && SelectedSection != section) SelectedSection = section;
         ValidationFailed?.Invoke(field);
     }
+
+    private (EditField Field, string Message)? _fieldError;
+
+    /// <summary>Why Save refused this field, shown under it until the field is edited; else null.</summary>
+    public string? SteamAppIdError => ErrorFor(EditField.SteamAppId);
+    public string? PreLaunchScriptError => ErrorFor(EditField.PreLaunchScript);
+    public string? PostExitScriptError => ErrorFor(EditField.PostExitScript);
+    public string? PreLaunchTimeoutError => ErrorFor(EditField.PreLaunchTimeout);
+    public string? CpuCoresDelayError => ErrorFor(EditField.CpuCoresDelay);
+
+    private string? ErrorFor(EditField field) => _fieldError is { } e && e.Field == field ? e.Message : null;
+
+    private void SetFieldError(EditField? field, string? message = null)
+    {
+        EditField? previous = _fieldError?.Field;
+        _fieldError = field is { } f ? (f, message ?? string.Empty) : null;
+        if (previous is { } p) OnPropertyChanged(ErrorPropertyOf(p));
+        if (field is { } now && now != previous) OnPropertyChanged(ErrorPropertyOf(now));
+    }
+
+    /// <summary>Editing the refused field takes its message away.</summary>
+    private void ClearFieldError(EditField field)
+    {
+        if (_fieldError?.Field == field) SetFieldError(null);
+    }
+
+    private static string ErrorPropertyOf(EditField field) => field switch
+    {
+        EditField.SteamAppId => nameof(SteamAppIdError),
+        EditField.PreLaunchScript => nameof(PreLaunchScriptError),
+        EditField.PostExitScript => nameof(PostExitScriptError),
+        EditField.PreLaunchTimeout => nameof(PreLaunchTimeoutError),
+        _ => nameof(CpuCoresDelayError),
+    };
 
     public string PreLaunchScriptPath
     {
@@ -565,6 +669,7 @@ public class GameEditViewModel : ViewModelBase
         {
             _preLaunchScriptPath = value;
             OnPropertyChanged();
+            ClearFieldError(EditField.PreLaunchScript);
             OnPropertyChanged(nameof(HasPreLaunchScript));
             OnPropertyChanged(nameof(HasAnyScript));
             OnPropertyChanged(nameof(CanEditScriptArguments));
@@ -581,6 +686,7 @@ public class GameEditViewModel : ViewModelBase
         {
             _postExitScriptPath = value;
             OnPropertyChanged();
+            ClearFieldError(EditField.PostExitScript);
             OnPropertyChanged(nameof(HasPostExitScript));
             OnPropertyChanged(nameof(HasAnyScript));
             OnPropertyChanged(nameof(CanEditScriptArguments));
@@ -621,8 +727,11 @@ public class GameEditViewModel : ViewModelBase
     public bool IsTestingScript
     {
         get => _isTestingScript;
-        private set { _isTestingScript = value; OnPropertyChanged(); }
+        private set { _isTestingScript = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsBusy)); }
     }
+
+    /// <summary>Something is running that the footer's busy bar stands for: a look-up or a script test.</summary>
+    public bool IsBusy => IsRefreshingMetadata || IsTestingScript;
 
     /// <summary>Raised on the UI thread when a Test Run finishes; the view shows the report.</summary>
     public event Action<ScriptTestReport>? ScriptTestCompleted;
@@ -772,7 +881,7 @@ public class GameEditViewModel : ViewModelBase
     public string PreLaunchScriptTimeoutSeconds
     {
         get => _preLaunchScriptTimeoutSeconds;
-        set { _preLaunchScriptTimeoutSeconds = value; OnPropertyChanged(); }
+        set { _preLaunchScriptTimeoutSeconds = value; OnPropertyChanged(); ClearFieldError(EditField.PreLaunchTimeout); }
     }
 
     public string PreLaunchTimeoutHint => $"Seconds to wait ({GameScriptService.MinPreLaunchTimeoutSeconds}-{GameScriptService.MaxPreLaunchTimeoutSeconds}); default {GameScriptService.DefaultPreLaunchWaitTimeout.TotalSeconds:0}.";
@@ -805,6 +914,8 @@ public class GameEditViewModel : ViewModelBase
             OnPropertyChanged(nameof(HasPlatform));
             OnPropertyChanged(nameof(PlatformDescription));
             OnPropertyChanged(nameof(LaunchDirectlyLabel));
+            OnPropertyChanged(nameof(LaunchDirectlyHint));
+            OnPropertyChanged(nameof(LinkTargetHint));
             OnPropertyChanged(nameof(CanOfferSteamLaunch));
             OnPropertyChanged(nameof(CanOfferSteamBadge));
         }
@@ -830,7 +941,7 @@ public class GameEditViewModel : ViewModelBase
     public bool HasPlatform
     {
         get => (_hasPlatform || _isSteamGame) && !_convertToLocal;
-        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); OnPropertyChanged(nameof(CanOfferSteamLaunch)); OnPropertyChanged(nameof(CanOfferLaunchDirectly)); }
+        private set { _hasPlatform = value; OnPropertyChanged(); OnPropertyChanged(nameof(PlatformDescription)); OnPropertyChanged(nameof(LaunchDirectlyLabel)); OnPropertyChanged(nameof(LaunchDirectlyHint)); OnPropertyChanged(nameof(LinkTargetHint)); OnPropertyChanged(nameof(CanOfferSteamLaunch)); OnPropertyChanged(nameof(CanOfferLaunchDirectly)); }
     }
 
     /// <summary>"GOG", "EA", "Epic", "Ubisoft" or "Steam" - whichever tag the entry carries.
@@ -863,7 +974,8 @@ public class GameEditViewModel : ViewModelBase
                 : SourceGame.IsBattleNetGame ? (string.IsNullOrEmpty(SourceGame.BattleNetProgramId)
                     ? SourceGame.BattleNetUid
                     : $"{SourceGame.BattleNetUid}, launch code {SourceGame.BattleNetProgramId}")
-                : SteamAppId;
+                // Steam's App ID has its own box in the Identity card, so it isn't repeated here.
+                : null;
             string via = SourceGame.ImportedFrom != null ? "Imported from" : "Linked to";
             return string.IsNullOrEmpty(id) ? $"{via} {PlatformName}" : $"{via} {PlatformName} (ID {id})";
         }
@@ -871,12 +983,14 @@ public class GameEditViewModel : ViewModelBase
 
     public string LaunchDirectlyLabel => $"Launch this executable directly instead of through {PlatformName}";
 
+    public string LaunchDirectlyHint => $"Off: starts through {PlatformName} (cloud saves, achievements, overlay). On: runs the executable below, for an alternate exe such as a DX11 build or a mod launcher.";
+
     /// <summary>See <see cref="GameEntry.LaunchDirectly"/>: without this, editing the executable
     /// path of a platform game has no effect because the client-launch path ignores it.</summary>
     public bool LaunchDirectly
     {
         get => _launchDirectly;
-        set { _launchDirectly = value; OnPropertyChanged(); }
+        set { _launchDirectly = value; OnPropertyChanged(); OnPropertyChanged(nameof(LinkTargetHint)); }
     }
 
     /// <summary>Drops the platform tag and ID on save, making this a plain Local game: launched
@@ -904,6 +1018,7 @@ public class GameEditViewModel : ViewModelBase
         { 
             _steamAppId = value;
             OnPropertyChanged();
+            ClearFieldError(EditField.SteamAppId);
             OnPropertyChanged(nameof(SteamAppIdDisplay));
             OnPropertyChanged(nameof(HasSteamAppId));
             OnPropertyChanged(nameof(CanOfferSteamLaunch));
@@ -923,6 +1038,7 @@ public class GameEditViewModel : ViewModelBase
             {
                 _isRefreshingMetadata = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsBusy));
                 Application.Current?.Dispatcher?.InvokeAsync(CommandManager.InvalidateRequerySuggested);
             }
         }
@@ -997,6 +1113,7 @@ public class GameEditViewModel : ViewModelBase
     public ICommand BrowseCoverCommand { get; }
     public ICommand ResetCoverCommand { get; }
     public ICommand LookUpCommand { get; }
+    public ICommand UndoLookUpCommand { get; }
     public ICommand FetchBySteamIdCommand { get; }
     public ICommand RefreshPosterCommand { get; }
     public ICommand SaveCommand { get; }
@@ -1155,6 +1272,7 @@ public class GameEditViewModel : ViewModelBase
     /// </summary>
     public async Task LookUpAsync()
     {
+        LookUpState before = CurrentLookUpState();
         try
         {
             string term = !string.IsNullOrWhiteSpace(Name) ? Name : Path.GetFileNameWithoutExtension(ExecutablePath);
@@ -1198,12 +1316,13 @@ public class GameEditViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Look up failed: {ex.Message}";
+            ShowProblem($"Look up failed: {ex.Message}");
             LoggingService.Warn("GameEdit", $"Look up failed: {ex.Message}");
         }
         finally
         {
             IsRefreshingMetadata = false;
+            OfferUndo(before);
         }
     }
 
@@ -1277,6 +1396,7 @@ public class GameEditViewModel : ViewModelBase
 
         IsRefreshingMetadata = true;
         StatusMessage = $"Fetching Steam details for App ID {id}...";
+        LookUpState before = CurrentLookUpState();
         try
         {
             SteamMetadataService.InvalidateCache(id);
@@ -1294,16 +1414,51 @@ public class GameEditViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error fetching from Steam: {ex.Message}";
+            ShowProblem($"Error fetching from Steam: {ex.Message}");
             LoggingService.Warn("GameEdit", $"Failed to fetch Steam details for AppID '{id}': {ex.Message}");
         }
         finally
         {
             IsRefreshingMetadata = false;
+            OfferUndo(before);
         }
     }
 
     public void FetchBySteamId() => _ = FetchBySteamIdAsync();
+
+    /// <summary>What Look Up and Fetch by ID can replace, kept from before the last one that did, for Undo.</summary>
+    private sealed record LookUpState(string Name, string? SteamAppId, string Category, string? FetchedCoverPath, string? CustomCoverPath);
+
+    private LookUpState? _lookUpUndo;
+
+    private LookUpState CurrentLookUpState() => new(Name, SteamAppId, Category, _fetchedCoverPath, _customCoverPath);
+
+    /// <summary>The last Look Up or Fetch by ID replaced something, and Undo can put it back.</summary>
+    public bool CanUndoLookUp => _lookUpUndo != null;
+
+    /// <summary>After a look-up: offers Undo when it changed anything. One that changed nothing leaves an earlier Undo as it was.</summary>
+    private void OfferUndo(LookUpState before)
+    {
+        if (CurrentLookUpState() == before) return;
+        _lookUpUndo = before;
+        OnPropertyChanged(nameof(CanUndoLookUp));
+    }
+
+    /// <summary>Puts back the title, App ID, category and poster from before the last look-up. One step, then it's gone.</summary>
+    private void UndoLookUp()
+    {
+        if (_lookUpUndo is not { } before) return;
+        _lookUpUndo = null;
+        OnPropertyChanged(nameof(CanUndoLookUp));
+        Name = before.Name;
+        SteamAppId = before.SteamAppId;
+        Category = before.Category;
+        _fetchedCoverPath = before.FetchedCoverPath;
+        _customCoverPath = before.CustomCoverPath;
+        OnPropertyChanged(nameof(CustomCoverPath));
+        UpdateCoverPreview();
+        StatusMessage = "Put back the title, Steam App ID, category and poster from before the look-up.";
+    }
 
     /// <summary>
     /// Force re-downloads poster art for the currently set Steam AppID, bypassing the on-disk
@@ -1339,7 +1494,7 @@ public class GameEditViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Failed to refresh poster: {ex.Message}";
+            ShowProblem($"Failed to refresh poster: {ex.Message}");
             LoggingService.Warn("GameEdit", $"Failed to refresh poster for AppID '{id}': {ex.Message}");
         }
         finally
@@ -1410,7 +1565,7 @@ public class GameEditViewModel : ViewModelBase
 
         if (!GameScriptService.IsSupportedScript(path))
         {
-            return $"{label} script must be one of: {string.Join(", ", GameScriptService.SupportedExtensions)}. Wrap other file types in a .bat.";
+            return $"{label} script must be one of: {string.Join(", ", GameScriptService.SupportedExtensions)}. Start other file types from a one-line .ps1.";
         }
 
         if (!File.Exists(path))
@@ -1463,17 +1618,17 @@ public class GameEditViewModel : ViewModelBase
         var dialog = new SaveFileDialog
         {
             Title = isPreLaunch ? "New Pre-Launch Script" : "New Post-Exit Script",
-            Filter = "Batch script (*.bat)|*.bat|PowerShell script (*.ps1)|*.ps1",
-            DefaultExt = ".bat",
+            Filter = "PowerShell script (*.ps1)|*.ps1",
+            DefaultExt = ".ps1",
             AddExtension = true,
             OverwritePrompt = false,
-            FileName = $"{SafeFileStem(Name)}-{phase}.bat",
+            FileName = $"{SafeFileStem(Name)}-{phase}.ps1",
             InitialDirectory = InitialScriptDirectory(string.Empty)
         };
 
         if (FileDialogCloak.Show(dialog) != true || string.IsNullOrWhiteSpace(dialog.FileName)) return;
 
-        string path = dialog.FileName;
+        string path = ScriptLibraryService.AsPowerShellScriptPath(dialog.FileName);
         try
         {
             bool created = ScriptLibraryService.CreateFromBlankTemplate(path);
@@ -1483,7 +1638,7 @@ public class GameEditViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Could not create the script: {ex.Message}";
+            ShowProblem($"Could not create the script: {ex.Message}");
             return;
         }
 
@@ -1505,6 +1660,8 @@ public class GameEditViewModel : ViewModelBase
         {
             Name = "Unnamed Game";
         }
+
+        SetFieldError(null);
 
         // Scripts are validated at save time rather than silently skipped at launch, so a typo
         // or an unsupported file type is caught while the user is still looking at the field.

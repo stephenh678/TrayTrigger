@@ -45,12 +45,97 @@ public sealed record ScriptTestResult(bool Started, int? ExitCode, bool TimedOut
 ///
 /// When a script runs hidden (and not elevated) its stdout/stderr are captured into the
 /// TrayTrigger log under the GameScript category, so a misbehaving script can be diagnosed
-/// without editing it to redirect its own output.
+/// without editing it to redirect its own output. A line it prints starting with "TT:" is
+/// the script speaking to the player (<see cref="TryParseSaid"/>): it goes onto the game's
+/// Played row in Activity &amp; History and, before the game, into the launch popup.
 /// </summary>
 public class GameScriptService
 {
     public const string PhasePreLaunch = "prelaunch";
     public const string PhasePostExit = "postexit";
+
+    /// <summary>
+    /// A pre-launch script said something for the player, with a "TT:" line (<see cref="TryParseSaid"/>):
+    /// the launch popup shows it while the game waits. Raised on the script's output thread.
+    /// </summary>
+    public event Action<GameEntry, string>? Said;
+
+    /// <summary>What a script prints at the start of a line to speak to the player: "TT: closed OneDrive".</summary>
+    public const string SaidPrefix = "TT:";
+    /// <summary>The most "TT:" lines one run puts on the Played row, and the longest each may be, so a chatty script can't take the row over.</summary>
+    internal const int MaxSaidLines = 5;
+    internal const int MaxSaidLength = 200;
+
+    /// <summary>
+    /// A line of script output that starts with "TT:" (any case, after any leading spaces) is the
+    /// script speaking to the player; <paramref name="text"/> is what it said, trimmed, without a
+    /// closing full stop (whatever shows it ends the sentence), and cut to <see cref="MaxSaidLength"/>.
+    /// Anything else, and a bare "TT:", is ordinary output for the log.
+    /// </summary>
+    public static bool TryParseSaid(string? line, out string text)
+    {
+        text = string.Empty;
+        if (line == null) return false;
+        var span = line.AsSpan().TrimStart();
+        if (!span.StartsWith(SaidPrefix, StringComparison.OrdinalIgnoreCase)) return false;
+        var rest = span[SaidPrefix.Length..].Trim().TrimEnd('.').TrimEnd();
+        if (rest.Length == 0) return false;
+        if (rest.Length <= MaxSaidLength)
+        {
+            text = rest.ToString();
+            return true;
+        }
+        // Not between the two halves of an emoji, which would leave half a character.
+        int cut = MaxSaidLength - 1;
+        if (char.IsHighSurrogate(rest[cut - 1])) cut--;
+        text = string.Concat(rest[..cut], "…");
+        return true;
+    }
+
+    /// <summary>
+    /// Collects what one run of a script says: each "TT:" line is noted on the Played row's Scripts
+    /// line once the run's own note is written (<see cref="NoteFromNowOn"/>), so "ran" comes before
+    /// what it did; a pre-launch run tells the launch popup; and the last line explains a failure in
+    /// the problem row.
+    /// </summary>
+    private sealed class SaidLines(GameScriptService owner, GameEntry game, bool tellPopup)
+    {
+        private readonly Lock _lock = new();
+        private readonly List<string> _lines = new();
+        private bool _noting;
+        public string? Last { get; private set; }
+
+        public void OnLine(string text)
+        {
+            lock (_lock)
+            {
+                Last = text;
+                if (_lines.Count < MaxSaidLines && !_lines.Contains(text, StringComparer.Ordinal))
+                {
+                    _lines.Add(text);
+                    if (_noting) LaunchRecord.Note(game.Id, LaunchRecord.Scripts, text);
+                }
+            }
+            if (!tellPopup) return;
+            try { owner.Said?.Invoke(game, text); }
+            catch (Exception ex) { LoggingService.Swallowed("GameScript", ex, "passing on what the script said"); }
+        }
+
+        /// <summary>
+        /// Once the run's own note ("ran", "failed", "started") is written: notes the lines said so
+        /// far, and every later one as it comes, as a script still running after its wait does.
+        /// </summary>
+        public void NoteFromNowOn()
+        {
+            // Under the lock, so a line arriving meanwhile is noted once, and in order.
+            lock (_lock)
+            {
+                if (_noting) return;
+                _noting = true;
+                foreach (string line in _lines) LaunchRecord.Note(game.Id, LaunchRecord.Scripts, line);
+            }
+        }
+    }
 
     /// <summary>
     /// Default upper bound on how long a "wait for it" pre-launch script can hold up the game
@@ -209,15 +294,19 @@ public class GameScriptService
                 return abortOnFailure ? PreLaunchScriptResult.Abort("the pre-launch script did not start") : PreLaunchScriptResult.Proceed;
             }
 
-            AttachOutputLogging(process, psi, game, PhasePreLaunch);
+            // What the script says follows its own "started", "ran" or "failed", so the Scripts
+            // line reads in order however soon it speaks.
+            var said = new SaidLines(this, game, tellPopup: true);
+            AttachOutputLogging(process, psi, game, PhasePreLaunch, said.OnLine);
 
             if (!wait)
             {
                 var effective = script.Value;
                 NoteScript(game, effective, PhasePreLaunch, "started, not waited for");
+                said.NoteFromNowOn();
                 DisposeOnExit(process, code =>
                 {
-                    if (code != 0) RecordScriptProblem(game, effective, PhasePreLaunch, $"failed (exit code {code})", cancelledLaunch: false);
+                    if (code != 0) RecordScriptProblem(game, effective, PhasePreLaunch, $"failed (exit code {code})", cancelledLaunch: false, said.Last);
                 });
                 process = null;
                 return PreLaunchScriptResult.Proceed;
@@ -234,12 +323,16 @@ public class GameScriptService
                 if (exitCode != 0)
                 {
                     LoggingService.Warn("GameScript", $"Pre-launch script for '{game.Name}' exited with code {exitCode}{(abortOnFailure ? "; cancelling the launch." : "; launching anyway.")}");
-                    RecordScriptProblem(game, script.Value, PhasePreLaunch, $"failed (exit code {exitCode})", abortOnFailure);
-                    return abortOnFailure ? PreLaunchScriptResult.Abort($"the pre-launch script exited with code {exitCode}") : PreLaunchScriptResult.Proceed;
+                    RecordScriptProblem(game, script.Value, PhasePreLaunch, $"failed (exit code {exitCode})", abortOnFailure, said.Last);
+                    said.NoteFromNowOn();
+                    return abortOnFailure
+                        ? PreLaunchScriptResult.Abort(said.Last != null ? $"the pre-launch script said: {said.Last}" : $"the pre-launch script exited with code {exitCode}")
+                        : PreLaunchScriptResult.Proceed;
                 }
 
                 LoggingService.Verbose("GameScript", $"Pre-launch script for '{game.Name}' completed.");
                 NoteScript(game, script.Value, PhasePreLaunch, "ran");
+                said.NoteFromNowOn();
                 return PreLaunchScriptResult.Proceed;
             }
 
@@ -247,9 +340,10 @@ public class GameScriptService
             // Only when it cost the launch: a script that just takes longer than the wait, with the
             // game started anyway, is working as set up and would otherwise be a problem every launch.
             if (abortOnFailure)
-                RecordScriptProblem(game, script.Value, PhasePreLaunch, $"was still running after {timeout.TotalSeconds:0} seconds", cancelledLaunch: true);
+                RecordScriptProblem(game, script.Value, PhasePreLaunch, $"was still running after {timeout.TotalSeconds:0} seconds", cancelledLaunch: true, said.Last);
             else
                 NoteScript(game, script.Value, PhasePreLaunch, $"still running after {timeout.TotalSeconds:0}s, the game launched anyway");
+            said.NoteFromNowOn();
             DisposeOnExit(process);
             process = null;
             return abortOnFailure
@@ -348,11 +442,14 @@ public class GameScriptService
                 RecordScriptProblem(game, effective, PhasePostExit, "didn't start", cancelledLaunch: false);
                 return;
             }
-            AttachOutputLogging(process, psi, game, PhasePostExit);
+            // After the game, so the launch popup isn't told: a new launch of the same game could be showing.
+            var said = new SaidLines(this, game, tellPopup: false);
+            AttachOutputLogging(process, psi, game, PhasePostExit, said.OnLine);
             NoteScript(game, effective, PhasePostExit, "started");
+            said.NoteFromNowOn();
             DisposeOnExit(process, code =>
             {
-                if (code != 0) RecordScriptProblem(game, effective, PhasePostExit, $"failed (exit code {code})", cancelledLaunch: false);
+                if (code != 0) RecordScriptProblem(game, effective, PhasePostExit, $"failed (exit code {code})", cancelledLaunch: false, said.Last);
             });
         }
         catch (Exception ex)
@@ -377,15 +474,17 @@ public class GameScriptService
     /// script that fails every time is one row with a count. A cancelled administrator prompt is the
     /// user's own choice and isn't recorded. The Played row's Scripts line says so too.
     /// </summary>
-    private static void RecordScriptProblem(GameEntry game, EffectiveScript script, string phase, string what, bool cancelledLaunch)
+    /// <param name="said">The script's last "TT:" line, which explains the failure in its own words when it gave one.</param>
+    private static void RecordScriptProblem(GameEntry game, EffectiveScript script, string phase, string what, bool cancelledLaunch, string? said = null)
     {
         string phaseLabel = phase == PhasePreLaunch ? "pre-launch" : "post-exit";
         string which = script.IsDefault ? $"default {phaseLabel}" : phaseLabel;
         string text = $"{game.Name}: {which} script {what}{(cancelledLaunch ? "; the launch was cancelled" : string.Empty)}";
         string file = Path.GetFileName(script.Path.Trim().Trim('"'));
         NoteScript(game, script, phase, what + (cancelledLaunch ? ", the launch was cancelled" : string.Empty));
+        string explained = said != null ? $"{file} said: {said}." : $"{file}.";
         ActivityService.Add(ActivityLevel.Problem, text, subject: game.Name,
-            detail: $"{file}. Test it from {(script.IsDefault ? "Settings > Launch & Performance" : "Edit Game")}; what it printed is in the log.",
+            detail: $"{explained} Test it from {(script.IsDefault ? "Settings > Launch & Performance" : "Edit Game")}; what it printed is in the log.",
             groupKey: $"script.{phase}|{game.Id}");
     }
 
@@ -519,19 +618,26 @@ public class GameScriptService
         using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
         try { process.WaitForExitAsync(cts.Token).GetAwaiter().GetResult(); }
         catch (OperationCanceledException) { /* the two seconds are up: whatever output arrived is what there is */ }
+        catch (InvalidOperationException) { /* disposed meanwhile by the other of DisposeOnExit's two paths, which has drained it */ }
     }
 
     /// <summary>
     /// Streams a hidden script's stdout/stderr into the log. Only possible when the process was
     /// started with redirected streams (hidden and not elevated - see <see cref="BuildStartInfo"/>).
+    /// A stdout line starting with "TT:" also goes to <paramref name="said"/>, as the player's text.
     /// </summary>
-    private static void AttachOutputLogging(Process process, ProcessStartInfo psi, GameEntry game, string phase)
+    private static void AttachOutputLogging(Process process, ProcessStartInfo psi, GameEntry game, string phase, Action<string>? said = null)
     {
         if (!psi.RedirectStandardOutput) return;
         string tag = $"[{game.Name} {phase}]";
         try
         {
-            process.OutputDataReceived += (_, e) => { if (e.Data != null) LoggingService.Verbose("GameScript", $"{tag} {e.Data}"); };
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data == null) return;
+                LoggingService.Verbose("GameScript", $"{tag} {e.Data}");
+                if (said != null && TryParseSaid(e.Data, out string text)) said(text);
+            };
             process.ErrorDataReceived += (_, e) => { if (e.Data != null) LoggingService.Warn("GameScript", $"{tag} {e.Data}"); };
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
@@ -566,13 +672,18 @@ public class GameScriptService
             process.Exited += (s, _) =>
             {
                 if (s is not Process p) return;
-                try { Report(p); }
+                // Exited can fire before the last of the script's output has been read; disposing
+                // then would drop it, a "TT:" line included. Bounded, for a child holding the pipes.
+                // Nothing may escape: this runs on a thread-pool thread, where an exception ends the app.
+                try { WaitForOutputDrain(p); Report(p); }
+                catch (Exception ex) { LoggingService.Swallowed("GameScript", ex, "reporting the script's exit"); }
                 finally { p.Dispose(); }
             };
             if (process.HasExited)
             {
                 // Exited may already have fired (or never will if it raced EnableRaisingEvents);
                 // reporting is once-only and disposing twice is harmless.
+                WaitForOutputDrain(process);
                 Report(process);
                 process.Dispose();
             }

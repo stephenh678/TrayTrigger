@@ -89,40 +89,52 @@ CHANGING AN EXAMPLE
 WRITING YOUR OWN
 ----------------
 
-  In Edit Game, "New script..." next to a script box creates a script from a
-  blank template - PowerShell for a name ending in .ps1, a batch file for .bat
-  or .cmd - under a name you choose, and opens it for editing. It is yours:
-  TrayTrigger never changes it.
+  In Edit Game, "New script..." next to a script box creates a PowerShell
+  script from a blank template under a name you choose, and opens it for
+  editing. It is yours: TrayTrigger never changes it.
 
   TrayTrigger runs it like this, just before the game starts and again after
   it exits:
 
-    .ps1  powershell -NoProfile -ExecutionPolicy Bypass -File <script> <values>
-    .bat  cmd /d /s /c <script> <values>
+    powershell -NoProfile -ExecutionPolicy Bypass [-WindowStyle Hidden]
+               -File <script> <1> <2> <3> <4> <5> <6...>
 
-  Every script gets the same five values, in this order:
+  -WindowStyle Hidden is there when "Run scripts hidden" is ticked, and always
+  for the Test button.
 
-    1  Phase       prelaunch before the game, postexit after it
-    2  GameName    the game's name as shown in TrayTrigger
-    3  GameExe     the full path of the game's exe
-    4  GameId      a stable ID for the game, handy for naming files
-    5  Playtime    minutes played: empty before the game, a number after it
+  The values, in order, with the names the template's param block gives them:
 
-  Whatever you type in Script Arguments comes after those five. In
-  PowerShell, the param block at the top of the template and every example
-  reads them all, and puts Script Arguments in $ScriptArgs, already split
-  into words: a value in double quotes arrives as one word, without the
-  quotes. In a batch file the five are %1 to %5, and Script Arguments start
-  at %6, exactly as typed.
+    1  $Phase       prelaunch before the game, postexit after it.
+    2  $GameName    The game's name as shown in TrayTrigger. A leading "-" is
+                    removed, since PowerShell would read "-Foo" as a parameter
+                    name rather than a value.
+    3  $GameExe     The full path of the game's exe, unchanged.
+    4  $GameId      A stable ID for the game. Use it to name note files.
+    5  $Playtime    Empty before the game, the minutes played after it. It is
+                    passed even when empty, so the values after it never shift.
+    6+ $ScriptArgs  Whatever you typed in Script Arguments, split into words
+                    the way Windows splits a command line: spaces separate,
+                    double quotes keep a value together and are removed.
+                      recommended "C:\My Tools\x.exe" force
+                    arrives as three words.
 
-  The name is changed a little so it can't break the script: in PowerShell a
-  leading "-" is removed, and in a batch file percent signs are removed and
-  double quotes become apostrophes. The exact name is always in the
-  environment variable below.
+  A default script (Settings > Launch & Performance) gets the game's own
+  Script Arguments when it has some, and the Default Script Arguments
+  otherwise.
 
   Unless the script runs as Administrator, the same values are also in
   environment variables: TRAYTRIGGER_PHASE, TRAYTRIGGER_GAME_NAME,
-  TRAYTRIGGER_GAME_EXE, TRAYTRIGGER_GAME_ID and TRAYTRIGGER_PLAYTIME_MINUTES.
+  TRAYTRIGGER_GAME_EXE, TRAYTRIGGER_GAME_ID and, after the game,
+  TRAYTRIGGER_PLAYTIME_MINUTES. TRAYTRIGGER_GAME_NAME is the exact name,
+  leading "-" included. Windows can't pass them through the administrator
+  prompt, which is why the ID and playtime are arguments too.
+
+  The Test button in Edit Game uses what is typed in the dialog right now:
+  the Name box (or "Unnamed Game" when it's empty), the executable box and
+  the Script Arguments box, with the saved game's ID. Post-exit tests pass a
+  playtime of 0. A test always runs hidden and never as Administrator, and is
+  stopped after 30 seconds; a real run is never stopped. The result says
+  where your real settings would differ.
 
   The "before" run and the "after" run are separate. To pass something from
   one to the other, write a small note file in your TEMP folder named after
@@ -134,18 +146,23 @@ WRITING YOUR OWN
   Whatever the script prints is shown by the Test button, and goes to the
   TrayTrigger log when the script runs hidden.
 
+  A line that starts with "TT:" is for the player: TrayTrigger puts it on
+  the game's Played row in Activity & History, after "ran", and shows it in
+  the launch popup before the game. Say what you did, in a few words:
+
+    Write-Output "TT: closed OneDrive and Discord"
+
+  Up to five such lines per run are kept. When the script fails, its last
+  "TT:" line explains why on the problem row. Only a script that runs hidden
+  and not as Administrator is heard, since that is when its output is
+  captured. Both examples and the template do this.
+
   Scripts run as you, without Administrator rights, unless you tick "Run
   scripts as Administrator". Neither example needs it.
 
-  Batch file pitfalls:
-    - cmd still reads rem lines, so don't put argument references, redirect
-      arrows, ampersands or pipes in a comment.
-    - Don't put the playtime value right before a redirect arrow: cmd reads
-      a digit followed by the arrow as a handle redirect. Put a space or
-      brackets between them.
-    - Read each value into a variable with a quoted set line, as the
-      template does, and echo the variable in quotes. A name holding an
-      ampersand or a pipe would otherwise split the line into two commands.
+  A batch file (.bat or .cmd) you already use still runs, through cmd.exe,
+  but the template, the examples and the catalogue are PowerShell, and so
+  is everything this README describes.
 
   The same details, with more examples, are in the app: Edit Game >
   "Writing your own".
@@ -162,11 +179,20 @@ WHEN SOMETHING DOESN'T WORK
   there to see what a hidden script printed.
 
 
-SHARING YOUR SCRIPT
--------------------
+MORE SCRIPTS, AND SHARING YOURS
+-------------------------------
 
-  Post a script you want to share in Show and tell in TrayTrigger's
-  Discussions on GitHub:
+  Ready-made scripts are in the TrayTrigger-Scripts catalogue on GitHub:
+
+    https://github.com/stephenh678/TrayTrigger-Scripts
+
+  Each is one PowerShell file with the same header as the examples here.
+  Download it into this folder and choose it in Edit Game; its header says
+  what to put in Script Arguments. "Get more scripts" beside the script boxes
+  opens the catalogue.
+
+  To share a script you wrote, open a pull request there, or post it in Show
+  and tell in TrayTrigger's Discussions:
 
     https://github.com/stephenh678/TrayTrigger/discussions/7
 
@@ -179,5 +205,6 @@ SHARING YOUR SCRIPT
       network calls, no Invoke-Expression, no installing modules.
     - Only close programs the user named or that your script started, and
       put back whatever you change.
+    - Say what it did with "TT:" lines, so it shows on the Played row.
     - Explain every step in a comment.
     - Test both phases with the Test buttons.

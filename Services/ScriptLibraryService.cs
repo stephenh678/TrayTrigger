@@ -30,7 +30,6 @@ public class ScriptLibraryService
     /// <summary>Logical-name prefix set in TrayTrigger.csproj for Scripts\Templates\*.</summary>
     private const string TemplatePrefix = "ScriptTemplate/";
     public const string ReadmeFileName = "README.txt";
-    public const string BlankBatchFileName = "_Blank.bat";
     public const string BlankPowerShellFileName = "_Blank.ps1";
 
     public string ScriptsDirectory { get; }
@@ -57,7 +56,7 @@ public class ScriptLibraryService
     /// </summary>
     public static string? ReadBundled(string fileName) => ReadResource(ResourcePrefix + fileName);
 
-    /// <summary>A blank template (<see cref="BlankBatchFileName"/>, <see cref="BlankPowerShellFileName"/>),
+    /// <summary>A blank template (<see cref="BlankPowerShellFileName"/>),
     /// as <see cref="ReadBundled"/> reads an installed file, or null.</summary>
     public static string? ReadTemplate(string fileName) => ReadResource(TemplatePrefix + fileName);
 
@@ -164,7 +163,8 @@ public class ScriptLibraryService
         // OBS's exit warning while the replay buffer runs meant the script ended OBS every time.
         "Example-OBSReplayBuffer.ps1",
         // 1.4.8: the templates stay embedded for "New script..."; their notes moved to the README.
-        BlankBatchFileName,
+        // 1.6.1: New script... makes PowerShell only, and the batch template is gone altogether.
+        "_Blank.bat",
         BlankPowerShellFileName,
     };
 
@@ -325,21 +325,24 @@ public class ScriptLibraryService
     }
 
     /// <summary>
-    /// Writes the blank template matching the target's extension (.bat/.cmd or .ps1) to the
-    /// given path. Returns false without touching anything if the file already exists or the
-    /// extension has no template. Throws on I/O failure so the caller can show the reason.
+    /// The name "New script..." creates: what was chosen in its save dialog, as a .ps1. Scripts
+    /// are PowerShell, so a name typed as "close-apps.bat" becomes "close-apps.ps1".
+    /// </summary>
+    public static string AsPowerShellScriptPath(string chosenPath) =>
+        string.Equals(Path.GetExtension(chosenPath), ".ps1", StringComparison.OrdinalIgnoreCase)
+            ? chosenPath
+            : Path.ChangeExtension(chosenPath, ".ps1");
+
+    /// <summary>
+    /// Writes the blank PowerShell template to the given .ps1 path. Returns false without touching
+    /// anything if the file already exists or the path isn't a .ps1 (see
+    /// <see cref="AsPowerShellScriptPath"/>). Throws on I/O failure so the caller can show the reason.
     /// </summary>
     public static bool CreateFromBlankTemplate(string targetPath)
     {
-        string ext = Path.GetExtension(targetPath).ToLowerInvariant();
-        string? templateName = ext switch
-        {
-            ".bat" or ".cmd" => BlankBatchFileName,
-            ".ps1" => BlankPowerShellFileName,
-            _ => null
-        };
-        if (templateName == null || File.Exists(targetPath)) return false;
+        if (!string.Equals(Path.GetExtension(targetPath), ".ps1", StringComparison.OrdinalIgnoreCase) || File.Exists(targetPath)) return false;
 
+        const string templateName = BlankPowerShellFileName;
         string? content = ReadTemplate(templateName);
         if (content == null) return false;
 

@@ -869,7 +869,7 @@
         <!-- Card search found nothing. -->
         <views:SearchNoMatches Grid.Row="2" Host="{Binding ElementName=SystemCardsPanel}"/>
 
-        <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Restore Previous Settings runs) -->
+        <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Undo Preset runs) -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
                 Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
                 CornerRadius="8" Padding="16,10" Panel.ZIndex="100">

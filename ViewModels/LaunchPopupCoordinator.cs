@@ -115,6 +115,10 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
     private string? _platform;
     /// <summary>"Starting (tool) first" or "Closing (tool) first" while a tool is being dealt with before the game, else null.</summary>
     private string? _toolStep;
+    /// <summary>The pre-launch script's last "TT:" line, shown while the launch is still being prepared, until a tool step or the dispatch replaces it.</summary>
+    private string? _scriptSaid;
+    /// <summary>The game has been dispatched: a "TT:" line after this, from a script that isn't waited for, is no longer about preparing it.</summary>
+    private bool _dispatched;
     /// <summary>A failure or notice a tool's closing prompt covered, put back when the prompt is answered. Anything else shown drops it: the newer message wins.</summary>
     private (LaunchTarget Target, LaunchPopupKind Kind, string? Message, string? ActionText, Action? Action)? _setAside;
     private string? _message;
@@ -216,6 +220,18 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         Render(_kind);
     }
 
+    /// <summary>
+    /// The pre-launch script said something with a "TT:" line ("closed OneDrive and Discord"): shown
+    /// as the popup's detail while the game is still being prepared, the way a tool step is.
+    /// </summary>
+    public void OnScriptSaid(string id, string text)
+    {
+        if (!IsProgressFor(id) || _dispatched || string.IsNullOrWhiteSpace(text)) return;
+        _scriptSaid = text.Trim();
+        ArmCap(_target!);
+        Render(_kind);
+    }
+
     /// <summary>The game's own process is running.</summary>
     public void OnGameStarted(string id)
     {
@@ -230,6 +246,8 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
 
     public void LaunchDispatched(string id)
     {
+        // The game is on its way: what the script said before it is old news for the popup.
+        if (IsProgressFor(id)) { _dispatched = true; _scriptSaid = null; Render(_kind); }
         // Nothing to wait for: no session (an untracked game that was already running got focus),
         // or a tracked session whose game is already running, so SessionGameStarted won't come again.
         if (IsProgressFor(id) && !_isWaitingForGame(id)) CloseSoon();
@@ -311,6 +329,8 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _target = target;
         _platform = null;
         _toolStep = null;
+        _scriptSaid = null;
+        _dispatched = false;
         _setAside = null;
         _message = message;
         _actionText = actionText;
@@ -341,11 +361,13 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
             _ => _message,
         };
 
-        // Until its tools have been closed and started the game hasn't been dispatched, so there's nothing else to wait on.
-        if (_toolStep != null && kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting)
+        // Until its script has run and its tools have been closed and started the game hasn't been
+        // dispatched, so there's nothing else to wait on. A tool step is the newer news.
+        string? preparing = _toolStep ?? _scriptSaid;
+        if (preparing != null && kind is LaunchPopupKind.Launching or LaunchPopupKind.Waiting)
         {
             status = "Launching";
-            detail = _toolStep;
+            detail = preparing;
         }
 
         _view.Show(new LaunchPopupContent(kind, _target.Name, status, detail, _iconFor(_target), _actionText));
@@ -393,6 +415,8 @@ public sealed class LaunchPopupCoordinator : ILaunchPopup, IDisposable
         _token++;
         _target = null;
         _toolStep = null;
+        _scriptSaid = null;
+        _dispatched = false;
         _setAside = null;
         _action = null;
         _view.Hide();

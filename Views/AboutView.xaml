@@ -272,7 +272,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Verified, Reversible Windows Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Performance Preset and Restore Previous Settings can take a System Restore Point first."
+                                    <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Performance Preset and Undo Preset can take a System Restore Point first."
                                                FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
