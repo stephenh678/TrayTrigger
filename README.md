@@ -15,6 +15,10 @@
 </p>
 
 <p align="center">
+  <img src="site/assets/walkthrough.gif" width="800" alt="One launch in TrayTrigger: pick a game in the tray, its own setup, the launch popup, and the Activity row showing what changed and that it was put back">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/github/v/release/stephenh678/TrayTrigger?style=flat-square&label=release" alt="Latest release">
   <img src="https://img.shields.io/github/downloads/stephenh678/TrayTrigger/total?style=flat-square&label=downloads" alt="Downloads">
   <img src="https://img.shields.io/github/license/stephenh678/TrayTrigger?style=flat-square" alt="License">

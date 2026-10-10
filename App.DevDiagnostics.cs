@@ -1045,6 +1045,8 @@ public partial class App
                 bool expanded = e.Args.Skip(i + 2).Any(a => a.Equals("expanded", StringComparison.OrdinalIgnoreCase));
                 // "played": only the Played row open, as the site shows it.
                 bool playedOnly = e.Args.Skip(i + 2).Any(a => a.Equals("played", StringComparison.OrdinalIgnoreCase));
+                // "narrow": the window at its minimum width, so the lines wrap and can be cropped large.
+                bool narrow = e.Args.Skip(i + 2).Any(a => a.Equals("narrow", StringComparison.OrdinalIgnoreCase));
                 _skipSettingsSaveOnExit = true;
                 if (!empty && ActivityService.Current is { } activity)
                 {
@@ -1055,19 +1057,19 @@ public partial class App
                     activity.Record(ActivityLevel.Activity, "The startup scan found 3 new games", detail: "Add them with Scan for Games on the Library page.");
                     activity.Record(ActivityLevel.Activity, "Played Hades · 48m", subject: "Hades",
                         detail: "Played: from 18:02 to 18:50 · launched through Steam.\nProfile: Off · nothing changed.", groupKey: "played|hades");
-                    activity.Record(ActivityLevel.Change, "Played Elden Ring · 2h 17m", subject: "Elden Ring",
-                        detail: "Played: from 20:14 to 22:31 · launched through Steam · Steam closed after.\n"
+                    activity.Record(ActivityLevel.Change, "Played Overwatch · 2h 17m", subject: "Overwatch",
+                        detail: "Played: from 20:14 to 22:31 · launched through Battle.net · Battle.net closed after.\n"
                               + "Profile: Aggressive · changed: Ultimate Performance power plan · HDR on · NVIDIA power management: Prefer maximum performance · Windows' multimedia scheduler settings.\n"
                               + "Skipped: Resizable BAR, off in the BIOS · speakers already unmuted.\n"
                               + "Put back: everything.\n"
                               + "Game: kept on the 8 performance cores (CPUs 0-15) · exempt from Windows power throttling · DLSS 310.2.1 from NVIDIA.\n"
                               + "Scripts: pre-launch Example-CloseBackgroundApps.ps1 ran · closed Dropbox and Google Drive.\n"
                               + "Tools: Discord closed, opened again after · MSI Afterburner started, closed after · OneDrive wasn't running, nothing to close.",
-                        groupKey: "played|er");
+                        groupKey: "played|ow");
                     for (int n = 0; n < 7; n++)
-                        activity.Record(ActivityLevel.Problem, "Elden Ring: post-exit script failed (exit code 1)", subject: "Elden Ring",
-                            detail: "close-apps.ps1. Test it from Edit Game; what it printed is in the log.", groupKey: "script.postexit|er");
-                    activity.Record(ActivityLevel.Critical, "Elden Ring: couldn't put back the power plan", detail: "Restore Previous on this page tries again.",
+                        activity.Record(ActivityLevel.Problem, "Overwatch: post-exit script failed (exit code 1)", subject: "Overwatch",
+                            detail: "close-apps.ps1. Test it from Edit Game; what it printed is in the log.", groupKey: "script.postexit|ow");
+                    activity.Record(ActivityLevel.Critical, "Overwatch: couldn't put back the power plan", detail: "Restore Previous on this page tries again.",
                         groupKey: PerformanceProfileService.UnrestoredActivityKey);
                     activity.SetState(new AttentionItem(PerformanceProfileService.UnrestoredActivityKey, "The power plan wasn't put back",
                         "A Performance Profile changed it for a game and couldn't change it back afterwards.", "Restore Previous", () => { }, IsCritical: true));
@@ -1075,13 +1077,14 @@ public partial class App
                 _mainViewModel.ActivityVM.Refresh();
                 if (expanded && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Count > 1) is { } repeated) repeated.IsExpanded = true;
                 // And a Played row, for its launch record with the section labels in bold.
-                if ((expanded || playedOnly) && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Text.StartsWith("Played Elden", StringComparison.Ordinal)) is { } played) played.IsExpanded = true;
+                if ((expanded || playedOnly) && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Text.StartsWith("Played Overwatch", StringComparison.Ordinal)) is { } played) played.IsExpanded = true;
                 // Not through CurrentSection's setter alone: opening the page marks everything seen,
                 // and the capture is meant to show the dot as a user would find it.
                 _mainViewModel.CurrentSection = NavSection.Activity;
+                if (narrow) _mainWindow.Width = _mainWindow.MinWidth;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
-                CaptureVisual(_mainWindow, 960, 750, targetPng);
+                CaptureVisual(_mainWindow, narrow ? 720 : 960, 750, targetPng);
                 ExitApplication();
                 return;
             }
@@ -1493,6 +1496,35 @@ public partial class App
                 if (scrollOffset is double offset) sv?.ScrollToVerticalOffset(offset); else sv?.ScrollToBottom();
                 dlg.UpdateLayout();
                 CaptureVisual(dlg, 820, 660, targetPng);
+                ExitApplication();
+                return;
+            }
+
+            // --screenshot-launch-popup <out.png> [script] ["Game name"]: the launch popup by the tray clock
+            // for the first game (or one named, as the Activity capture's sample names it), launching
+            // through Steam on the Aggressive profile; with "script", showing what its pre-launch script
+            // said instead. Nothing is launched.
+            if ((e.Args[i].Equals("--screenshot-launch-popup", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-launch-popup", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                string targetPng = e.Args[i + 1];
+                var extra = e.Args.Skip(i + 2).ToList();
+                bool scriptSaid = extra.Remove("script");
+                string? named = extra.FirstOrDefault();
+                _skipSettingsSaveOnExit = true;
+                var game = (named == null ? _mainViewModel.Games.FirstOrDefault()?.Game
+                        : _mainViewModel.Games.FirstOrDefault(g => g.Game.Name.Equals(named, StringComparison.OrdinalIgnoreCase))?.Game)
+                    ?? new GameEntry { Name = named ?? "DOOM Eternal", IsSteamGame = true };
+                string store = game.IsBattleNetGame ? "Battle.net" : "Steam";
+                var target = LaunchTarget.ForGame(game) with { PerformanceProfile = PerformanceProfileMode.Aggressive };
+                string? detail = scriptSaid ? "closed Dropbox and Google Drive" : LaunchPopupCoordinator.LaunchingDetail(target, store);
+                var popup = new LaunchPopupWindow();
+                popup.Render(new LaunchPopupContent(LaunchPopupKind.Launching, target.Name, "Launching", detail, GetLaunchTargetIcon(target), null));
+                popup.Show();
+                popup.Opacity = 1;
+                popup.UpdateLayout();
+                CaptureVisual(popup, (int)popup.ActualWidth, (int)popup.ActualHeight, targetPng);
                 ExitApplication();
                 return;
             }
