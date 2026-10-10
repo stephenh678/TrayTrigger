@@ -173,6 +173,9 @@
   .contrast b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
   .contrast .temp { border-color: rgba(61, 220, 151, .4); }
 
+  .walkthrough { margin: 0 auto 40px; max-width: 960px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-2); box-shadow: 0 24px 70px rgba(0,0,0,.5); }
+  .walkthrough img { width: 100%; }
+
   /* feature drill-downs */
   .pillar { display: grid; grid-template-columns: 1fr 1.15fr; gap: 48px; align-items: center; }
   .pillar.flip > :first-child { order: 2; }
@@ -342,6 +345,7 @@
 <section id="how">
   <div class="wrap">
     <div class="section-head"><div class="kicker">How it works</div><h2>One click starts it all</h2><p>The launch is the trigger. Pick a game, and everything you chose for it happens around it.</p></div>
+    <figure class="walkthrough"><picture><source srcset="assets/walkthrough.webp" type="image/webp"><img loading="lazy" src="assets/walkthrough.gif" width="1280" height="720" alt="A walkthrough of one launch: pick a game in the tray menu; its own profile, CPU cores and HDR; the launch popup starting it through Steam; tools and scripts closing Dropbox and Google Drive first; and the Played row in Activity and History showing what changed and that everything was put back"></picture></figure>
     <div class="grid steps">
       <div class="step"><div class="n">01 · Launch</div><p>Pick a game from the <strong>tray menu</strong>, the library or its own hotkey. It starts through its store's client, or directly.</p></div>
       <div class="step"><div class="n">02 · Set up</div><p>TrayTrigger notes how Windows is set, then applies the game's <strong>profile</strong>: power plan, HDR, GPU preference, CPU cores, DLSS Override. Your <strong>tools</strong> close or start; your <strong>script</strong> runs.</p></div>
@@ -354,7 +358,7 @@
       <h3 style="font-size:24px">See exactly what a launch did</h3>
       <p>Each game's Played row in <strong>Activity &amp; History</strong> lists what the profile changed, what it skipped and why, the cores the game ran on, what your script said it did, and the tools it closed and started. <a href="https://github.com/stephenh678/TrayTrigger/wiki/Activity-%26-History">How Activity &amp; History works →</a></p>
     </div>
-    <figure class="closeup proof-shot"><img loading="lazy" src="assets/closeup-played.png" width="1210" height="225" alt="A Played Elden Ring row in Activity and History: launched through Steam and Steam closed after; the Aggressive profile's changes including HDR on; what was skipped; put back: everything; kept on the 8 performance cores; the pre-launch script closed Dropbox and Google Drive; Discord closed and opened again after, MSI Afterburner started and closed after"></figure>
+    <figure class="closeup proof-shot"><img loading="lazy" src="assets/closeup-played.png" width="1031" height="244" alt="A Played Overwatch row in Activity and History: launched through Battle.net and Battle.net closed after; the Aggressive profile's changes including HDR on; what was skipped; put back: everything; kept on the 8 performance cores; the pre-launch script closed Dropbox and Google Drive; Discord closed and opened again after, MSI Afterburner started and closed after"></figure>
   </div>
 </section>
 
