@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TrayTrigger: per-game Windows settings that put themselves back</title>
-<meta name="description" content="Sets Windows up for the game you're about to play (HDR, power plan, CPU cores, DLSS Override, scripts, tools) and puts everything back when you quit. Free, open source, lives in your tray.">
+<title>TrayTrigger: launch from the tray, and let Windows adapt to the game</title>
+<meta name="description" content="An open-source game launcher for Windows. Steam, Epic, GOG, Xbox, Battle.net and more in one tray menu; each game starts with its own HDR, CPU cores, power plan, DLSS and companion apps, and those settings revert when you quit.">
 <link rel="icon" href="assets/app_icon.png">
 <link rel="canonical" href="https://stephenh678.github.io/TrayTrigger/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="TrayTrigger: per-game Windows settings that put themselves back">
-<meta property="og:description" content="Sets Windows up for the game you're about to play (HDR, power plan, CPU cores, DLSS Override, your own scripts, tools) and puts everything back when you quit. Free, open source, lives in your tray.">
+<meta property="og:title" content="TrayTrigger: launch from the tray, and let Windows adapt to the game">
+<meta property="og:description" content="An open-source game launcher for Windows. Every game in one tray menu, each starting with its own HDR, CPU cores, power plan, DLSS and companion apps. Quit, and those settings revert.">
 <meta property="og:image" content="https://stephenh678.github.io/TrayTrigger/assets/social-preview.png">
 <meta property="og:image:width" content="1536">
 <meta property="og:image:height" content="1024">
@@ -22,14 +22,15 @@
     --panel: #0f172b;
     --panel-2: #121f38;
     --line: rgba(143, 184, 232, .14);
+    --line-2: rgba(143, 184, 232, .32);
     --text: #e6edf7;
     --muted: #9fb0c8;
-    --dim: #6f7c92;
+    --dim: #a1aec2;
     --accent: #2f8fff;
     --accent-2: #63b3ff;
     --ok: #3ddc97;
     --radius: 14px;
-    --max: 1100px;
+    --max: 1120px;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -41,431 +42,506 @@
   a { color: var(--accent-2); text-decoration: none; }
   a:hover { text-decoration: underline; }
   img { max-width: 100%; height: auto; display: block; }
+  code { font: 14px ui-monospace, Consolas, "Cascadia Code", monospace; color: #cfe1ff; }
   .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
   h1, h2, h3 { line-height: 1.15; margin: 0 0 12px; letter-spacing: -.01em; }
   h2 { font-size: clamp(26px, 3.4vw, 36px); }
-  h3 { font-size: 19px; }
+  h3 { font-size: 18px; }
   p { margin: 0 0 14px; }
   .muted { color: var(--muted); }
   .dim { color: var(--dim); }
-  section { padding: 72px 0; }
+  section { padding: 80px 0; }
   section + section { border-top: 1px solid var(--line); }
+  section, [id] { scroll-margin-top: 76px; }
+  .kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 8px; }
+  .section-head { max-width: 760px; margin-bottom: 36px; }
+  .section-head p { color: var(--muted); font-size: 17px; }
+  .center { text-align: center; margin-left: auto; margin-right: auto; }
+  .icon-sm { width: 18px; height: 18px; flex: none; }
 
   /* nav */
   nav {
     position: sticky; top: 0; z-index: 10;
-    background: rgba(7, 11, 20, .85); backdrop-filter: blur(10px);
+    background: rgba(7, 11, 20, .88); backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);
   }
   nav .wrap { display: flex; align-items: center; gap: 18px; height: 60px; }
   /* The name is one span: a flex gap between "Tray" and "Trigger" would split the word in two. */
   nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
+  nav .brand:hover { text-decoration: none; }
   nav .brand img { width: 28px; height: 28px; }
-  nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
-  nav .links a { color: var(--muted); }
-  nav .links a:hover { color: var(--text); text-decoration: none; }
-  @media (max-width: 640px) { nav .links a.hide-sm { display: none; } }
-
-  /* hero */
-  .hero {
-    padding: 84px 0 60px; text-align: center; position: relative; overflow: hidden;
-    background:
-      radial-gradient(700px 360px at 50% -40px, rgba(30, 95, 192, .38), transparent 70%),
-      linear-gradient(180deg, var(--bg-2), var(--bg));
+  nav .links { margin-left: auto; display: flex; align-items: center; gap: 20px; font-size: 14px; }
+  nav .links a:not(.btn) { color: var(--muted); padding: 6px 0; border-bottom: 2px solid transparent; }
+  nav .links a:not(.btn):hover { color: var(--text); text-decoration: none; }
+  nav .links a[aria-current="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  nav .btn { padding: 8px 14px; font-size: 14px; }
+  @media (max-width: 900px) { nav .links a.hide-md { display: none; } }
+  @media (max-width: 640px) {
+    nav .wrap { gap: 10px; padding: 0 16px; }
+    nav .links { gap: 14px; font-size: 13px; }
+    nav .links a.hide-sm { display: none; }
+    nav .brand { font-size: 15px; }
   }
-  .hero .icon { width: 96px; height: 96px; margin: 0 auto 18px; filter: drop-shadow(0 8px 28px rgba(47, 143, 255, .35)); }
-  .hero h1 { font-size: clamp(40px, 6vw, 64px); margin-bottom: 6px; }
-  .accent { color: var(--accent); }
-  .hero .tag { font-size: clamp(20px, 2.6vw, 26px); font-weight: 600; color: var(--text); margin-bottom: 18px; }
-  .hero .lead { max-width: 760px; margin: 0 auto 28px; font-size: 18px; color: var(--muted); }
-  .hero .lead strong { color: var(--text); }
-  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 14px; }
+
+  /* buttons */
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
   .btn {
     display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 10px;
     font-weight: 600; font-size: 16px; border: 1px solid var(--line); color: var(--text); background: var(--panel);
     transition: transform .12s, background .12s, border-color .12s;
   }
-  .btn:hover { text-decoration: none; transform: translateY(-1px); border-color: rgba(143, 184, 232, .35); }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); border-color: var(--line-2); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 8px 24px rgba(47, 143, 255, .3); }
   .btn.primary:hover { background: #3f99ff; }
-  .btn small { font-weight: 400; opacity: .8; font-size: 13px; }
-  .facts { font-size: 14px; color: var(--dim); }
-  .facts span + span::before { content: "·"; margin: 0 10px; }
-  .logos { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 22px; margin: 34px 0 8px; }
-  .logos img { height: 44px; width: auto; opacity: .9; }
-  .hero .card { max-width: 900px; margin: 44px auto 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+  .btn small { font-weight: 400; opacity: .85; font-size: 13px; }
+  .trust-note { font-size: 14px; color: var(--dim); margin: 14px auto 0; max-width: 620px; }
+  .facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; margin-top: 22px; font-size: 14px; color: var(--dim); }
+  .facts span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; }
+  .facts svg { color: var(--ok); }
 
-  /* lifecycle */
-  .grid { display: grid; gap: 16px; }
-  .grid-4 { grid-template-columns: repeat(4, 1fr); }
-  .grid-3 { grid-template-columns: repeat(3, 1fr); }
-  .grid-2 { grid-template-columns: repeat(2, 1fr); }
-  @media (max-width: 900px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: 1fr; } }
-  @media (max-width: 560px) { .grid-4, .grid-2 { grid-template-columns: 1fr; } }
-  .tile {
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px;
+  /* hero */
+  .hero {
+    padding: 72px 0 96px; text-align: center; position: relative; overflow: hidden;
+    background:
+      radial-gradient(760px 380px at 50% -40px, rgba(30, 95, 192, .40), transparent 70%),
+      linear-gradient(180deg, var(--bg-2), var(--bg));
   }
-  .tile .step { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 8px; }
-  .tile p { color: var(--muted); margin: 0; font-size: 15px; }
-  .tile p strong { color: var(--text); }
-  .section-head { max-width: 760px; margin-bottom: 36px; }
-  .section-head p { color: var(--muted); font-size: 17px; }
+  .hero h1 { font-size: clamp(36px, 5.4vw, 60px); margin-bottom: 18px; }
+  .accent { color: var(--accent); }
+  .hero .lead { max-width: 720px; margin: 0 auto 28px; font-size: 18px; color: var(--muted); }
+  .hero .lead strong { color: var(--text); }
+  /* The tray menu laid over the library: the app in one look. */
+  .hero-shot { position: relative; max-width: 960px; margin: 56px auto 0; padding-bottom: 28px; text-align: left; }
+  .hero-shot .lib { width: 80%; }
+  .hero-shot .tray { position: absolute; right: 0; bottom: 0; width: 33%; border-color: rgba(99, 179, 255, .5); box-shadow: 0 0 50px rgba(47, 143, 255, .16), 0 24px 70px rgba(0, 0, 0, .6); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 8px 16px; border-radius: 999px;
+    border: 1px solid var(--line-2); background: rgba(15, 23, 43, .85); color: var(--text); font-size: 15px; font-weight: 600;
+  }
+  .chip:hover { text-decoration: none; border-color: var(--accent-2); }
+  .chip .accent { color: var(--accent-2); }
+  @media (max-width: 640px) {
+    .hero { padding: 44px 0 64px; }
+    .hero-shot .lib { width: 90%; }
+    .hero-shot .tray { width: 42%; }
+  }
 
-  /* pillars */
-  .pillar { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; padding: 28px 0; }
-  .pillar:nth-child(even) { direction: rtl; }
-  .pillar:nth-child(even) > * { direction: ltr; }
-  @media (max-width: 860px) { .pillar { grid-template-columns: 1fr; direction: ltr; } }
-  .pillar ul { margin: 0; padding-left: 20px; color: var(--muted); }
-  .pillar li { margin-bottom: 8px; }
-  .pillar li strong { color: var(--text); }
+  /* screenshots */
   .shot { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.45); background: var(--panel); }
-  .shot img, header .card img { display: block; width: 100%; cursor: zoom-in; }
-  .lightbox { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(3,6,12,.9); cursor: zoom-out; }
-  .lightbox.open { display: flex; }
-  .lightbox img { max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.6); }
-  /* Group bands: the tagline with the group's own word lit, like the README's banners. */
-  .theme-band {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 0 .45em; margin: 0 0 24px; padding: 26px 24px;
-    border: 1px solid var(--line); border-radius: 18px; color: #4a566e;
-    background: radial-gradient(520px 150px at 50% -30px, rgba(30, 95, 192, .35), transparent 70%), linear-gradient(180deg, #0e162a, var(--bg));
-    font-size: clamp(28px, 4.6vw, 48px); font-weight: 700; line-height: 1.1; letter-spacing: -.01em;
-  }
-  .theme-band .on { color: var(--accent); }
-  .kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 8px; }
-  pre {
-    background: #050810; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto;
-    font: 13px/1.5 ui-monospace, Consolas, "Cascadia Code", monospace; color: #cfe1ff; margin: 12px 0 0;
-  }
-  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: middle; }
+  .shot img { display: block; width: 100%; cursor: zoom-in; }
+  .shot-stack { display: grid; gap: 18px; }
+  figure { margin: 0; }
+  figcaption { padding: 14px 18px; color: var(--muted); font-size: 14px; text-align: left; }
+  figcaption strong { color: var(--text); }
+  /* The Edit Game captures are cropped to the app window in the files themselves; the frame shows the whole image. */
+  .capture { position: relative; width: 100%; overflow: hidden; background: #1d1d26; }
+  .crop-profile { aspect-ratio: 1202 / 732; }
+  .crop-scripts { aspect-ratio: 1202 / 983; }
+  .capture img { position: absolute; left: 0; top: 0; width: 100%; max-width: none; border: 0; border-radius: 0; }
 
-  /* profiles table + comparison */
-  table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-  th { color: var(--dim); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
-  td.c, th.c { text-align: center; }
-  .yes { color: var(--ok); font-weight: 700; }
+  /* audience cards */
+  .grid { display: grid; gap: 16px; }
+  .audience { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 680px) { .audience { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 440px) { .audience { grid-template-columns: 1fr; } }
+  .card {
+    display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: var(--radius);
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    transition: border-color .12s, transform .12s;
+  }
+  a.card:hover { text-decoration: none; border-color: var(--line-2); transform: translateY(-2px); }
+  .card svg { width: 26px; height: 26px; color: var(--accent-2); margin-bottom: 6px; }
+  .card h3 { font-size: 16px; margin: 0; }
+  .card p { color: var(--muted); font-size: 14px; margin: 0; flex: 1; }
+  .card .more { font-size: 13px; color: var(--accent-2); margin-top: 6px; }
 
-  /* tweaks */
-  .cat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
-  .cat h3 { font-size: 15px; color: var(--accent-2); margin-bottom: 8px; }
-  .cat p { margin: 0; color: var(--muted); font-size: 14px; }
+  /* how it works */
+  .steps { grid-template-columns: repeat(4, 1fr); counter-reset: step; }
+  @media (max-width: 900px) { .steps { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+  .step { position: relative; padding: 22px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line); }
+  .step .n { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 6px; }
+  .step.revert { border-color: rgba(61, 220, 151, .45); background: linear-gradient(180deg, rgba(61, 220, 151, .08), var(--panel)); }
+  .step.revert .n { color: var(--ok); }
+  .step p { color: var(--muted); margin: 0; font-size: 15px; }
+  .step p strong { color: var(--text); }
+  .proof { display: grid; grid-template-columns: 1fr 1.25fr; gap: 40px; align-items: center; margin-top: 56px; }
+  @media (max-width: 860px) { .proof { grid-template-columns: 1fr; } }
+  .contrast { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+  @media (max-width: 440px) { .contrast { grid-template-columns: 1fr; } }
+  .contrast div { padding: 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 14px; color: var(--muted); }
+  .contrast b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+  .contrast .temp { border-color: rgba(61, 220, 151, .4); }
+
+  /* feature drill-downs */
+  .pillar { display: grid; grid-template-columns: 1fr 1.15fr; gap: 48px; align-items: center; }
+  .pillar.flip > :first-child { order: 2; }
+  @media (max-width: 860px) { .pillar { grid-template-columns: 1fr; gap: 28px; } .pillar.flip > :first-child { order: 0; } }
+  .pillar ul { margin: 18px 0 0; padding: 0; list-style: none; }
+  .pillar li { position: relative; padding-left: 28px; margin-bottom: 14px; color: var(--muted); }
+  .pillar li::before { content: ""; position: absolute; left: 4px; top: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px rgba(47, 143, 255, .6); }
+  .pillar li strong { color: var(--text); }
+  .learn { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 18px; font-size: 14px; }
+  .logos { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 4px 0 6px; }
+  .logos img { height: 34px; width: auto; opacity: .9; }
+
+  /* close-ups: one part of a window, shown no larger than it was captured so the text stays sharp */
+  .closeup { width: fit-content; max-width: 100%; margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line-2); background: #1f1f27; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+  .closeup img { width: auto; max-width: 100%; cursor: zoom-in; }
+  .closeup figcaption { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; font-size: 13px; }
+  .closeup-stack { display: grid; gap: 18px; justify-items: start; }
+  .pillar > .closeup, .pillar > .closeup-stack { justify-self: center; }
+  /* Wide captures go under the text, at close to their real size. */
+  .pillar.wide { grid-template-columns: 1fr; gap: 32px; }
+  .pillar.wide > div:first-child { max-width: 820px; }
+  .pillar.wide .closeup-stack { justify-items: center; width: 100%; }
+  .proof-shot { margin: 28px auto 0; }
+
+  /* per-game rows */
+  .rows { display: grid; gap: 56px; }
+  .row { display: grid; grid-template-columns: 1fr 1.1fr; gap: 48px; align-items: center; }
+  .row > .closeup { justify-self: center; }
+  @media (max-width: 860px) { .row { grid-template-columns: 1fr; gap: 22px; } }
+  .row h3 { font-size: 22px; }
+  .row p { color: var(--muted); }
+  .row p strong { color: var(--text); }
+  .pain { color: var(--text); font-weight: 600; }
+
+  /* scripts */
+  .scripts-band { background: radial-gradient(700px 320px at 85% 20%, rgba(30, 95, 192, .22), transparent 70%); }
+  .scripts-band h2 { font-size: clamp(30px, 4.2vw, 44px); }
+  .code-card { margin: 0; min-width: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line-2); background: #050810; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .code-card figcaption { padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); color: var(--text); font: 600 13px ui-monospace, Consolas, "Cascadia Code", monospace; }
+  .code-card figcaption span { color: var(--dim); font-weight: 400; }
+  .code-card pre { margin: 0; padding: 16px; overflow-x: auto; font: 13px/1.6 ui-monospace, Consolas, "Cascadia Code", monospace; color: #cfe1ff; }
+  .code-card code { font: inherit; color: inherit; }
+  .code-card .k { color: #c792ea; } .code-card .v { color: #82aaff; } .code-card .s { color: #c3e88d; } .code-card .c { color: #7f8ba3; font-style: italic; } .code-card .t { color: #ffcb6b; }
+
+  /* honesty band */
+  .honest { background: linear-gradient(180deg, var(--bg-2), var(--bg)); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .grid-3 { grid-template-columns: 1fr; } }
+  .honest .card p + p { margin-top: 10px; }
+  .honest .card p strong { color: var(--text); }
+
+  /* quick start + download */
+  .download-band { text-align: center; background: radial-gradient(640px 320px at 50% 100%, rgba(30, 95, 192, .3), transparent 70%); }
+  .download-band .steps { grid-template-columns: repeat(3, 1fr); text-align: left; margin: 0 0 40px; }
+  @media (max-width: 760px) { .download-band .steps { grid-template-columns: 1fr; } }
 
   /* faq */
   details { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 0 18px; margin-bottom: 10px; }
-  summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   summary::-webkit-details-marker { display: none; }
   summary::after { content: "+"; color: var(--dim); font-weight: 400; font-size: 20px; }
   details[open] summary::after { content: "–"; }
   details p { color: var(--muted); padding-bottom: 14px; margin: 0; }
+  #faq .wrap { max-width: 860px; }
 
   /* footer */
   footer { padding: 40px 0 56px; border-top: 1px solid var(--line); color: var(--dim); font-size: 14px; }
   footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; }
   footer .spacer { flex: 1; }
-  .download-band { text-align: center; padding: 72px 0; background: radial-gradient(600px 300px at 50% 100%, rgba(30, 95, 192, .3), transparent 70%); }
-  section, [id] { scroll-margin-top: 80px; }
-  .hero h1 { font-size: clamp(34px, 5vw, 58px); margin-bottom: 20px; }
-  .hero .card { max-width: 760px; }
-  figure { margin: 0; }
-  figcaption { padding: 16px 20px; color: var(--muted); font-size: 14px; text-align: left; }
-  figcaption strong { display: block; color: var(--text); margin-bottom: 4px; }
-  .note { color: var(--muted); margin-top: 22px; font-size: 14px; }
-  .feedback-actions { justify-content: flex-start; }
-  .facts, .dim { color: #a1aec2; }
-  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid #9bcfff; outline-offset: 5px; }
+  footer .feedback { flex-basis: 100%; color: var(--muted); }
+
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid #9bcfff; outline-offset: 4px; }
   .skip-link { position: fixed; top: -100px; left: 16px; z-index: 200; padding: 12px; background: var(--panel); }
   .skip-link:focus { top: 8px; }
+
+  /* lightbox */
   .image-button { display: block; width: 100%; border: 0; padding: 0; background: transparent; cursor: zoom-in; }
-  dialog.lightbox { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; border: 0; }
+  .capture > .image-button, .image-button > .capture { height: 100%; }
+  dialog.lightbox { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; border: 0; padding: 24px; background: rgba(3,6,12,.92); cursor: zoom-out; align-items: center; justify-content: center; }
   dialog.lightbox[open] { display: flex; }
   .lightbox-close { position: absolute; right: 20px; top: 16px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: white; cursor: pointer; }
-  .lightbox img { max-height: calc(100dvh - 100px); }
-  @media (max-width: 640px) { nav .wrap { gap: 10px; padding: 0 16px; } nav .links { gap: 12px; font-size: 12px; } nav .brand { font-size: 14px; } nav .brand img { width: 22px; height: 22px; } .hero { padding-top: 48px; } section { padding: 48px 0; } }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
-  .hero-showcase { display: grid; grid-template-columns: 1.55fr 1fr; align-items: center; gap: 24px; margin-top: 44px; text-align: left; }
-  .hero-showcase .card { width: 100%; max-width: none; margin: 0; background: #10192b; }
-  .hero-showcase .tray-card { border-color: rgba(99,179,255,.5); box-shadow: 0 0 50px rgba(47,143,255,.13), 0 24px 70px rgba(0,0,0,.5); }
-  .capture-label { display: flex; align-items: center; gap: 8px; padding: 14px 18px; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #b8d9ff; }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #63b3ff; box-shadow: 0 0 12px #2f8fff; }
-  /* The Edit Game captures are cropped to the app window in the files themselves; the frame shows the whole image. */
-  .capture { position: relative; width: 100%; overflow: hidden; background: #1d1d26; }
-  .crop-profile { aspect-ratio: 1389 / 1059; }
-  .crop-scripts { aspect-ratio: 1202 / 983; }
-  .capture img { position: absolute; max-width: none; height: auto; border: 0; border-radius: 0; }
-  .crop-profile img { width: 100%; left: 0; top: 0; }
-  .crop-scripts img { width: 100%; left: 0; top: 0; }
-  #walkthrough .grid { align-items: start; }
-  #walkthrough .shot { background: linear-gradient(145deg, #142340, #0e1729); }
-  .lightbox-content { width: min(1100px, 92vw); }
+  .lightbox-content { width: min(1200px, 92vw); }
+  .lightbox-content img { margin: auto; max-width: 100%; max-height: calc(100dvh - 100px); width: auto; height: auto; border-radius: 10px; border: 1px solid var(--line); }
   .lightbox-content .capture { margin: auto; border-radius: 10px; }
-  .lightbox-content .crop-profile { max-width: calc((100dvh - 110px) * 1389 / 1059); }
+  .lightbox-content .capture img { max-height: none; width: 100%; border: 0; }
+  .lightbox-content .crop-profile { max-width: calc((100dvh - 110px) * 1202 / 732); }
   .lightbox-content .crop-scripts { max-width: calc((100dvh - 110px) * 1202 / 983); }
-  .lightbox-content .capture img { max-height: none; }
-  .lightbox-content > img { margin: auto; }
-  @media (max-width: 760px) { .hero-showcase { grid-template-columns: 1fr; gap: 20px; } .hero-showcase .tray-card { max-width: 420px; justify-self: center; } }
+
+  @media (max-width: 640px) { section { padding: 56px 0; } .wrap { padding: 0 16px; } }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .btn, .card { transition: none; }
+    .btn:hover, a.card:hover { transform: none; }
+  }
 </style>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 
-<nav>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+  <symbol id="i-hdr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-wheel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 14v7M10.2 11 3.5 9M13.8 11l6.7-2"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></symbol>
+  <symbol id="i-tray" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15h5l1.5 2h5L16 15h5"/></symbol>
+</svg>
+
+<nav aria-label="Main">
   <div class="wrap">
     <a class="brand" href="#top"><img src="assets/app_icon.png" alt=""><span>Tray<span class="accent">Trigger</span></span></a>
     <div class="links">
-      <a href="#quick-start">Get started</a>
-      <a href="#library" class="hide-sm">Library</a>
-      <a href="#tweaks" class="hide-sm">Tweaks</a>
-      <a href="#feedback" class="hide-sm">Give feedback</a>
-      <a href="#faq">FAQ</a>
-      <a href="https://github.com/stephenh678/TrayTrigger/wiki" class="hide-sm">Wiki</a>
+      <a href="#how" class="hide-sm">How it works</a>
+      <a href="#launchers" class="hide-md">Features</a>
+      <a href="#faq" class="hide-sm">FAQ</a>
       <a href="https://github.com/stephenh678/TrayTrigger">GitHub</a>
+      <a class="btn primary" href="#download"><svg class="icon-sm" aria-hidden="true"><use href="#i-download"/></svg>Download</a>
     </div>
   </div>
 </nav>
 
 <header class="hero" id="top">
   <div class="wrap">
-    <img class="icon" src="assets/app_icon.png" alt="TrayTrigger icon">
-    <p class="kicker">TrayTrigger for Windows</p>
-    <h1>Set up for the game.<br><span class="accent">Put back when you quit.</span></h1>
-    <div class="tag">Launch. Automate. <span class="accent">Play.</span></div>
+    <p class="kicker">Open-source game launcher for Windows</p>
+    <h1>Launch from the tray.<br><span class="accent">Let Windows adapt to the game.</span></h1>
     <p class="lead">
-      HDR, power plan, CPU cores, DLSS Override, your scripts and tools: chosen per game, applied at launch,
-      <strong>reverted on exit</strong>, and logged so you can see exactly what changed. Anything it doesn't do, a script of yours can. A tray app, free and open source.
+      Steam, Epic, GOG, Xbox, Battle.net and more in one tray menu. Each game starts with its own
+      <strong>HDR, CPU cores, power plan, DLSS and companion apps</strong>, with store clients kept out of the way.
+      Quit, and those settings revert.
     </p>
     <div class="cta">
-      <a class="btn primary" id="dl-setup" href="https://github.com/stephenh678/TrayTrigger/releases/latest">⬇ Download for Windows <small id="dl-ver"></small></a>
+      <a class="btn primary" id="dl-setup" href="https://github.com/stephenh678/TrayTrigger/releases/latest"><svg class="icon-sm" aria-hidden="true"><use href="#i-download"/></svg>Download for Windows <small id="dl-ver"></small></a>
       <a class="btn" id="dl-zip" href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
-      <a class="btn" href="#walkthrough">See how it works</a>
     </div>
-    <div class="facts"><span>Windows 10 / 11</span><span>Free</span><span>Open source (MIT)</span><span>No account</span><span>No telemetry</span></div>
+    <div class="facts">
+      <span><svg class="icon-sm" aria-hidden="true"><use href="#i-check"/></svg>Free &amp; open source (MIT)</span>
+      <span><svg class="icon-sm" aria-hidden="true"><use href="#i-check"/></svg>No telemetry</span>
+      <span><svg class="icon-sm" aria-hidden="true"><use href="#i-check"/></svg>No account</span>
+      <span><svg class="icon-sm" aria-hidden="true"><use href="#i-check"/></svg>Windows 10 / 11</span>
+    </div>
 
-    <div class="logos">
-      <img src="assets/steam.png" alt="Steam" title="Steam">
-      <img src="assets/epic_games.png" alt="Epic Games" title="Epic Games">
-      <img src="assets/gog_galaxy.png" alt="GOG Galaxy" title="GOG Galaxy">
-      <img src="assets/ea_app.png" alt="EA app" title="EA app">
-      <img src="assets/ubisoft_connect.png" alt="Ubisoft Connect" title="Ubisoft Connect">
-      <img src="assets/xbox.png" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass">
-      <img src="assets/battlenet.png" alt="Battle.net" title="Battle.net">
-      <img src="assets/local_games.png" alt="Local games" title="Any executable or shortcut">
+    <div class="hero-shot">
+      <div class="shot lib"><img src="assets/library-current.png" width="1382" height="1052" alt="TrayTrigger's library: games from every launcher in one poster grid, with favorites, categories and launcher badges"></div>
+      <div class="shot tray"><img src="assets/tray-menu.png" width="704" height="819" alt="TrayTrigger's tray menu: Recent, Favorites and a game category, one right-click away"></div>
     </div>
-    <p class="dim" style="font-size:14px">Scans all seven, plus anything you drop on the window.</p>
-
-    <div class="hero-showcase">
-      <figure class="card library-card"><div class="capture-label"><span class="status-dot"></span> YOUR LIBRARY, TOGETHER</div><img src="assets/library-current.png" width="1382" height="1052" alt="TrayTrigger library with favorites, launcher badges, and Scan for Games"><figcaption>Find your favorites across launchers.</figcaption></figure>
-      <figure class="card tray-card"><div class="capture-label"><span class="status-dot"></span> ONE TRAY MENU AWAY</div><img src="assets/tray-menu.png" width="704" height="819" alt="TrayTrigger tray menu with Recent, Favorites, and an expanded Action category"><figcaption>Pick a favorite. Browse a category. Play.</figcaption></figure>
-    </div>
+    <a class="chip" href="#how">Every game one right-click away<span class="accent">See what one launch does ↓</span></a>
   </div>
 </header>
 
 <main id="main">
-<section id="quick-start">
+<section id="setups">
   <div class="wrap">
-    <div class="section-head"><div class="kicker">Start with one game</div><h2>From download to play in three steps</h2><p>Start with the launcher. Add profiles and automation when you want them.</p></div>
-    <div class="grid grid-3">
-      <div class="tile"><div class="step">01 · Download</div><h3>Choose your setup</h3><p>Get the <a href="#download">Windows installer or portable ZIP</a>. Windows 10/11, 64-bit. No separate .NET install needed.</p></div>
-      <div class="tile"><div class="step">02 · Scan</div><h3>Find your games</h3><p>Open <strong>Scan for Games</strong> in the library. Add an executable or shortcut for games the scan does not find.</p></div>
-      <div class="tile"><div class="step">03 · Launch</div><h3>Play from the tray</h3><p>Right-click the TrayTrigger icon in the Windows system tray and choose a game. Leave its profile <strong>Off</strong> to launch without per-game tweaks.</p></div>
-    </div>
-    <p class="note">First download? <a href="#download-trust">Read about signing and verifying your download.</a></p>
-  </div>
-</section>
-<section id="walkthrough">
-  <div class="wrap">
-    <div class="section-head"><div class="kicker">Inside TrayTrigger</div><h2>A quick look at your next session</h2><p>Explore these application screenshots. Select any image to see it full size.</p></div>
-    <div class="grid grid-3">
-      <figure class="shot"><img loading="lazy" src="assets/tray-menu.png" alt="Tray menu showing Recent, Favorites, and games in the Action category"><figcaption><strong>1. Your next game, one tray menu away.</strong> Launch a favorite, return to a recent game, or browse your categories.</figcaption></figure>
-      <figure class="shot"><div class="capture crop-profile"><img loading="lazy" src="assets/profile-current.png" alt="Per-game settings with Optimized selected, default CPU cores, and a Ctrl+Shift+End launch hotkey"></div><figcaption><strong>2. Give each game its own setup.</strong> Choose a profile and launch hotkey. Profile settings restore when the game exits.</figcaption></figure>
-      <figure class="shot"><div class="capture crop-scripts"><img loading="lazy" src="assets/scripts-current.png" alt="Pre-launch and post-exit scripts configured with the Close Background Apps example and discord.exe argument"></div><figcaption><strong>3. Automate the before and after.</strong> This setup uses the Close Background Apps example for both script phases, with Discord as the target.</figcaption></figure>
+    <div class="section-head"><div class="kicker">Built for your setup</div><h2>Find your reason</h2><p>Start with the one thing you change by hand before every session.</p></div>
+    <div class="grid audience">
+      <a class="card" href="#launchers"><svg aria-hidden="true"><use href="#i-tray"/></svg><h3>Too many launchers</h3><p>Seven stores in one tray menu. Launchers start minimized and close after the game.</p><span class="more">Launchers →</span></a>
+      <a class="card" href="#x3d"><svg aria-hidden="true"><use href="#i-cpu"/></svg><h3>Ryzen X3D &amp; Intel hybrid</h3><p>Put a game on the 3D V-Cache cores or the P-cores, for that game only. No Process Lasso rules.</p><span class="more">CPU cores →</span></a>
+      <a class="card" href="#hdr"><svg aria-hidden="true"><use href="#i-hdr"/></svg><h3>HDR &amp; OLED</h3><p>HDR on for the game that does it well, off for the one that doesn't. No more Win+Alt+B.</p><span class="more">HDR per game →</span></a>
+      <a class="card" href="#sim-racing"><svg aria-hidden="true"><use href="#i-wheel"/></svg><h3>Sim racing &amp; flight</h3><p>SimHub, CrewChief or TrackIR start with the game and close when you're done.</p><span class="more">Companion apps →</span></a>
+      <a class="card" href="#scripts"><svg aria-hidden="true"><use href="#i-code"/></svg><h3>Missing a feature?</h3><p>Write it. Your own PowerShell runs before and after any game, and says what it did.</p><span class="more">Your scripts →</span></a>
+      <a class="card" href="#stutter"><svg aria-hidden="true"><use href="#i-sliders"/></svg><h3>Chasing stutter</h3><p>Stutter Check runs the usual checklist in one click, and every tweak shows its real state.</p><span class="more">Stutter Check →</span></a>
     </div>
   </div>
 </section>
 
-<section id="session">
+<section id="how">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">How it works</div><h2>One click starts it all</h2><p>The launch is the trigger. Pick a game, and everything you chose for it happens around it.</p></div>
+    <div class="grid steps">
+      <div class="step"><div class="n">01 · Launch</div><p>Pick a game from the <strong>tray menu</strong>, the library or its own hotkey. It starts through its store's client, or directly.</p></div>
+      <div class="step"><div class="n">02 · Set up</div><p>TrayTrigger notes how Windows is set, then applies the game's <strong>profile</strong>: power plan, HDR, GPU preference, CPU cores, DLSS Override. Your <strong>tools</strong> close or start; your <strong>script</strong> runs.</p></div>
+      <div class="step"><div class="n">03 · Play</div><p>TrayTrigger stays a <strong>tray icon</strong>. Suspend a game with Ctrl+Alt+P for a cutscene you can't pause, or close it from the tray.</p></div>
+      <div class="step revert"><div class="n">04 · Put back</div><p>When the game exits, every per-game setting <strong>goes back and is checked</strong>. Closed tools return, the launcher closes if you asked. After a crash, on the next start.</p></div>
+    </div>
+
+    <div class="section-head" style="margin:64px 0 0">
+      <div class="kicker">Every launch, on the record</div>
+      <h3 style="font-size:24px">See exactly what a launch did</h3>
+      <p>Each game's Played row in <strong>Activity &amp; History</strong> lists what the profile changed, what it skipped and why, the cores the game ran on, what your script said it did, and the tools it closed and started. <a href="https://github.com/stephenh678/TrayTrigger/wiki/Activity-%26-History">How Activity &amp; History works →</a></p>
+    </div>
+    <figure class="closeup proof-shot"><img loading="lazy" src="assets/closeup-played.png" width="1210" height="225" alt="A Played Elden Ring row in Activity and History: launched through Steam and Steam closed after; the Aggressive profile's changes including HDR on; what was skipped; put back: everything; kept on the 8 performance cores; the pre-launch script closed Dropbox and Google Drive; Discord closed and opened again after, MSI Afterburner started and closed after"></figure>
+  </div>
+</section>
+
+<section id="launchers">
+  <div class="wrap pillar" id="library">
+    <div>
+      <div class="kicker">Too many launchers</div>
+      <h2>Every store in one tray menu</h2>
+      <div class="logos">
+        <img src="assets/steam.png" alt="Steam" title="Steam" loading="lazy">
+        <img src="assets/epic_games.png" alt="Epic Games" title="Epic Games" loading="lazy">
+        <img src="assets/gog_galaxy.png" alt="GOG Galaxy" title="GOG Galaxy" loading="lazy">
+        <img src="assets/ea_app.png" alt="EA app" title="EA app" loading="lazy">
+        <img src="assets/ubisoft_connect.png" alt="Ubisoft Connect" title="Ubisoft Connect" loading="lazy">
+        <img src="assets/xbox.png" alt="Xbox / PC Game Pass" title="Xbox / PC Game Pass" loading="lazy">
+        <img src="assets/battlenet.png" alt="Battle.net" title="Battle.net" loading="lazy">
+        <img src="assets/local_games.png" alt="Any executable or shortcut" title="Any executable or shortcut" loading="lazy">
+      </div>
+      <ul>
+        <li><strong>Seven stores, one scan.</strong> Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass and Battle.net games arrive with their real titles and art. Drop any exe or shortcut for the rest.</li>
+        <li><strong>A right-click, or Ctrl+Alt+T.</strong> Now Playing, Recent, Favorites and your categories in the tray menu; type a few letters and press Enter. Give any game its own launch hotkey.</li>
+        <li><strong>Clients out of the way.</strong> Games still start through their store, so cloud saves and achievements work, but Steam, GOG Galaxy and Epic start in the background, and any launcher can close after the game.</li>
+      </ul>
+      <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-the-tray-menu-works">How the tray menu works →</a><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-a-game-is-launched">How a game is launched →</a></div>
+    </div>
+    <figure class="closeup"><img loading="lazy" src="assets/closeup-launcher.png" width="632" height="260" alt="Edit Game's Launch settings for a Steam game: launch through Steam, with Close the launcher after this game exits ticked"><figcaption>Per game: close Steam, EA or Ubisoft Connect when you stop playing.</figcaption></figure>
+  </div>
+</section>
+
+<section id="performance">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">Per-game setup</div><h2>Each game gets its own setup</h2><p>Chosen in the game's Edit Game window, applied when it launches, and reverted when it exits.</p></div>
+    <div class="rows">
+      <div class="row" id="x3d">
+        <div>
+          <div class="kicker">Ryzen X3D &amp; Intel hybrid</div>
+          <h3>The right cores for each game</h3>
+          <p class="pain">Games landing on the wrong CCD, or a Process Lasso rule for every exe?</p>
+          <p>Set <strong>CPU Cores</strong> per game: the 3D V-Cache cores on a Ryzen X3D, the performance cores on an Intel hybrid CPU, or Auto to let TrayTrigger pick for your CPU. It uses Windows <strong>CPU Sets</strong>, not a hard affinity mask, and the game's Played row says where it ran.</p>
+          <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/CPU-Cores">CPU Cores →</a></div>
+        </div>
+        <figure class="closeup"><img loading="lazy" src="assets/closeup-cores.png" width="638" height="186" alt="Edit Game's CPU Cores setting on Auto, recommending the performance cores on a hybrid CPU with 8 performance and 8 efficiency cores"><figcaption>Shown on an Intel hybrid CPU. On a Ryzen X3D, Auto picks the V-Cache cores.</figcaption></figure>
+      </div>
+
+      <div class="row" id="hdr">
+        <div>
+          <div class="kicker">HDR &amp; OLED</div>
+          <h3>HDR on for this game, off when you quit</h3>
+          <p class="pain">HDR left on after a game, and a washed-out desktop?</p>
+          <p>Set <strong>HDR</strong> On for the games that do it well and Off for the ones that render it badly, or let the profile decide. Windows' HDR switches when the game launches and switches back when it exits. A display already in HDR is left alone.</p>
+          <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Enable-HDR-(profile)">HDR per game →</a></div>
+        </div>
+        <figure class="closeup"><img loading="lazy" src="assets/closeup-hdr.png" width="638" height="136" alt="Edit Game's HDR setting: On for this game, turned on at launch and back off at exit, whatever its profile"></figure>
+      </div>
+
+      <div class="row" id="profiles">
+        <div>
+          <div class="kicker">Profiles &amp; DLSS Override</div>
+          <h3>Power, GPU and DLSS, set per game</h3>
+          <p><strong>Optimized</strong> uses your high-performance power plan and GPU, keeps an NVIDIA GPU at full clocks and stops Windows throttling the game, with opt-in HDR, Do Not Disturb and a frame cap just under your refresh rate. <strong>Aggressive</strong> adds scheduling priority, timer resolution and more. Each profile lists exactly what it will change.</p>
+          <p><strong>NVIDIA DLSS Override</strong> runs a game on your driver's newer DLSS files without touching the game folder.</p>
+          <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Profiles-work">How profiles work →</a><a href="https://github.com/stephenh678/TrayTrigger/wiki/NVIDIA-DLSS-Override">DLSS Override →</a></div>
+        </div>
+        <figure class="closeup"><img loading="lazy" src="assets/closeup-profile.png" width="638" height="260" alt="Edit Game's Performance Profile set to Aggressive, listing what it changes: the Ultimate Plan power plan, the high-performance GPU, NVIDIA Prefer Maximum Performance, and exempting the game from power throttling, with 5 more"></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sim-racing">
+  <div class="wrap pillar wide" id="tools">
+    <div>
+      <div class="kicker">Sim racing, flight &amp; companion apps</div>
+      <h2>Your apps start with the game, and close after</h2>
+      <ul>
+        <li><strong>Tools that start with your games.</strong> SimHub, CrewChief, TrackIR or Afterburner start when a game launches and close after the last one exits. One that was already running is left alone.</li>
+        <li><strong>Tools closed for your games.</strong> Discord, OneDrive or a browser close just before the game and open again after it, unless you opened it yourself in the meantime.</li>
+        <li><strong>On the record.</strong> The game's Played row lists which tools were closed, started, or left as they were.</li>
+      </ul>
+      <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Starting-and-closing-tools-with-your-games">Tools and your games →</a></div>
+    </div>
+    <figure class="closeup"><img loading="lazy" src="assets/closeup-tools.png" width="1226" height="302" alt="Tools page: filters for Start with Games and Close with Games, and tools such as Discord, DLSS Swapper and MSI Afterburner"></figure>
+  </div>
+</section>
+
+<section id="scripts" class="scripts-band">
   <div class="wrap">
     <div class="section-head">
-      <h2>From launch to exit, handled</h2>
-      <p>Pick a game from the tray. TrayTrigger uses its launcher and the options you selected. Profiles and scripts are optional, so you choose how much to automate.</p>
+      <div class="kicker">Your own scripts</div>
+      <h2>Missing a feature? <span class="accent">Write it.</span></h2>
+      <p>If PowerShell can do it, TrayTrigger can do it around any game. Your script runs just before the game starts and again after it exits, with the game's name, exe and minutes played handed to it, and what it did shows up on that game's row in Activity &amp; History.</p>
     </div>
-    <div class="grid grid-4">
-      <div class="tile"><div class="step">1 · Before launch</div><p>If enabled, records and applies the game's <strong>Performance Profile</strong>. Runs your <strong>pre-launch script</strong> if you have configured one, closes the <strong>tools</strong> you'd rather not have running and starts the ones you want with the game.</p></div>
-      <div class="tile"><div class="step">2 · On launch</div><p>Starts the game with your <strong>launch arguments</strong>, as Administrator if you asked, through Steam, GOG, Epic, EA, Ubisoft, Xbox, or Battle.net, or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears.</p></div>
-      <div class="tile"><div class="step">3 · While playing</div><p>Stays a tray icon. The tooltip and the menu's <strong>Now Playing</strong> section show what's running. No window to alt-tab past. <strong>Suspend</strong> a game with Ctrl+Alt+P for a cutscene you can't pause and resume it the same way, or use <strong>Close Game</strong> from the tray.</p></div>
-      <div class="tile"><div class="step">4 · On exit</div><p>Restores <strong>per-game profile settings</strong> to their previous state, checks each one took, brings back the tools it closed, and writes the whole launch on the game's row in <strong>Activity &amp; History</strong>. Runs your configured post-exit script and closes the launcher if selected. After a crash, the saved profile state is restored on next start.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- Grouped by the tagline, in its order: Launch, then Automate, then Play. Each group opens with its band. -->
-<section id="launch">
-  <div class="wrap">
-    <div class="theme-band" aria-hidden="true"><span class="on">Launch.</span><span>Automate.</span><span>Play.</span></div>
-    <div class="pillar" id="library">
-      <div>
-        <div class="kicker">Your Library</div>
-        <h2>Every game in one library</h2>
-        <p class="muted">Find the game you want without remembering which store it came from. Browse cover art, filter your library, and keep favorites within reach.</p>
-        <ul>
-          <li><strong>Seven launchers, one scan.</strong> Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net games arrive with their real titles and launch through their own client. Drop any exe, shortcut, or folder for the rest.</li>
-          <li><strong>Artwork and info.</strong> Steam metadata and poster art, with optional SteamGridDB artwork and RAWG details using your own API keys.</li>
-          <li><strong>Four views</strong>: poster grid, extra large, compact icons, details list. Posters can show only their art until you point at one. Filter by launcher, profile, or state; group by category; edit a whole selection at once, with undo.</li>
-          <li><strong>The tray menu.</strong> Now Playing, Recent, Favorites, and every category one right-click away, or Ctrl+Alt+T from anywhere. Type a few letters in its search box and press Enter to launch. Game icons, a compact layout, and a per-game launch hotkey recorded from the keys you press.</li>
-          <li><strong>Uninstalled games stay.</strong> A game you remove from its launcher is greyed out and tagged NOT INSTALLED, with its playtime, hotkey and settings kept for when you reinstall.</li>
-          <li><strong>Backup and restore.</strong> Your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake.</li>
-          <li><strong>Activity &amp; History.</strong> The games you played and for how long, every change to a profile or tweak, and anything that didn't go to plan, each with a badge, plus a one-click fix for a setting a profile couldn't put back. One notification after your last game; nothing interrupts play.</li>
-        </ul>
-      </div>
-      <div class="shot"><img src="assets/library-current.png" alt="Games library in poster grid view with categories, filters, and launcher badges"></div>
-    </div>
-
     <div class="pillar">
       <div>
-        <div class="kicker">Launcher Control</div>
-        <h2>Launchers that stay out of the way</h2>
         <ul>
-          <li><strong>Launch arguments</strong> per game: <code>-windowed -ResX=1280</code>, <code>-dx11</code>, <code>-skipintro</code>, whatever the engine takes.</li>
-          <li><strong>Close the launcher after the game exits</strong>, so Steam, GOG Galaxy, Epic, the EA app, Ubisoft Connect, the Xbox app, or Battle.net isn't still sitting in your tray an hour later.</li>
-          <li><strong>Launchers stay minimized</strong>: Steam and GOG Galaxy start in the background and Epic launches silently, so only the game appears.</li>
-          <li><strong>Launch popup</strong> by the tray clock for hotkey and tray launches: what the game is waiting on, and the reason if a launch fails.</li>
-          <li><strong>Tools</strong>: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys. A tool can start with your games and close when the last one exits, or be closed for them: Discord, OneDrive or a browser out of the way while you play, and back when you're done.</li>
-          <li><strong>Run as Administrator</strong> per game, <strong>launch directly</strong> to bypass a launcher entirely when the game allows it.</li>
-          <li><strong>CPU Cores</strong> per game: performance cores on an Intel hybrid CPU, the 3D V-Cache cores on a Ryzen X3D. Auto picks what fits your CPU.</li>
-          <li><strong>NVIDIA DLSS Override</strong> per game: run a game on your driver's newer DLSS files instead of the ones it shipped with, without touching the game folder. Select several games to switch it for all of them.</li>
-          <li><strong>Hardware monitoring</strong> in the same window: live CPU, RAM and GPU load, VRAM, displays, drives, and DirectX capability, without a second app. It warns about what slows a game down, like a screen left below its fastest refresh rate, a GPU on fewer PCIe lanes than it supports, or games on a hard drive, and checks for a newer NVIDIA driver when you ask.</li>
+          <li><strong>Start from a ready-made one.</strong> The <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts catalogue</a> switches your display's refresh rate for one game and back, changes an Afterburner profile, records with OBS, or backs up a save folder when you quit. Or press <strong>New script...</strong> in Edit Game for a template.</li>
+          <li><strong>One script, many games.</strong> Per-game <strong>Script Arguments</strong> hand each game its own values: a save folder, a profile number, a refresh rate.</li>
+          <li><strong>Tested before you trust it.</strong> <strong>Test Run</strong> shows exactly what the script saw and printed. Make the game wait for it, give it a timeout, or cancel the launch if it fails.</li>
+          <li><strong>In its own words.</strong> A line starting <code>TT:</code> goes on the game's Played row and in the launch popup, so you see "saves backed up", not an exit code.</li>
+          <li><strong>Yours, and in plain sight.</strong> Nothing runs until you attach a script. Scripts run as you, or as Administrator through Windows' own prompt when you choose it.</li>
         </ul>
+        <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger-Scripts/blob/main/HOW-TO-WRITE-A-SCRIPT.md">Write a script, step by step →</a><a href="https://github.com/stephenh678/TrayTrigger/wiki/Writing-your-own-script">The full reference →</a></div>
       </div>
-      <div class="shot"><img src="assets/edit-launch.png" alt="Edit Game: the Launch card with launcher options, target, working directory, and arguments"></div>
-    </div>
+      <figure class="code-card">
+        <figcaption>Backup-Saves.ps1 <span>· the whole script</span></figcaption>
+<pre><code><span class="k">param</span>(<span class="v">$Phase</span>, <span class="v">$GameName</span>, <span class="v">$GameExe</span>, <span class="v">$GameId</span>, <span class="v">$Playtime</span>,
+      [<span class="t">Parameter</span>(ValueFromRemainingArguments)] <span class="v">$ScriptArgs</span>)
 
-  </div>
-</section>
-
-<section id="automate">
-  <div class="wrap">
-    <div class="theme-band" aria-hidden="true"><span>Launch.</span><span class="on">Automate.</span><span>Play.</span></div>
-    <div class="pillar">
-      <div>
-        <div class="kicker">Performance Profiles</div>
-        <h2>Tuned for each game, restored on exit</h2>
-        <ul>
-          <li><strong>Off</strong>: no per-game tweaks. TrayTrigger just launches the game.</li>
-          <li><strong>Optimized</strong>: your custom high-performance power plan, high-performance GPU preference for that game, an NVIDIA GPU kept at full clocks, and the game exempt from Windows' power throttling. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers, and a frame cap just under your refresh rate for G-SYNC and FreeSync monitors.</li>
-          <li><strong>Aggressive</strong>: everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, Resizable BAR for the games NVIDIA never tested, and an off-by-default Defender exclusion.</li>
-          <li><strong>HDR, chosen per game</strong>: on for this game, off for one that renders it badly, or whatever the profile says.</li>
-          <li>Every profile change is recorded and reverted on exit, and the game's Played row in Activity &amp; History says what changed, what was skipped and why, and that it was all put back. Set it per game, or in bulk from the library.</li>
-        </ul>
-      </div>
-      <figure class="shot"><div class="capture crop-profile"><img loading="lazy" src="assets/profile-current.png" alt="Edit Game with the Optimized profile selected and default CPU cores"></div><figcaption><strong>Your settings, per game.</strong> This example pairs the Optimized profile with a dedicated launch hotkey.</figcaption></figure>
-    </div>
-
-    <div class="pillar" id="scripts">
-      <div>
-        <div class="kicker">Make it yours · New in 1.6.1<span class="badge">nothing runs until you pick one</span></div>
-        <h2>If TrayTrigger doesn't do it, your script can</h2>
-        <p class="muted">A PowerShell script runs just before any game and again after it, with the game's name, path and minutes played handed to it. Whatever you'd want done around a session, before and after, is a few lines away.</p>
-        <ul>
-          <li><strong>Ready-made, or your own.</strong> The <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts catalogue</a> has scripts to drop in: switch your display's refresh rate for one game and put it back, change an Afterburner profile, record with OBS, back up a save folder when you quit. <strong>New script...</strong> in Edit Game starts yours from a template.</li>
-          <li><strong>Per game, tested before you trust it.</strong> Per-game <strong>Script Arguments</strong> let one script serve many games. <strong>Test Run</strong> shows exactly what the script saw and printed. Timeouts, and cancel-the-launch-on-failure, when a script is a precondition.</li>
-          <li><strong>On the record.</strong> A script says what it did in its own words, and TrayTrigger puts that on the game's Played row in Activity &amp; History and in the launch popup: "closed OneDrive and Discord".</li>
-          <li><strong>As you, by default.</strong> Scripts run as you, or as Administrator through Windows' own prompt when you choose it. Read a script before you attach it; it does what it says, nothing more.</li>
-        </ul>
-        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger-Scripts/blob/main/HOW-TO-WRITE-A-SCRIPT.md">How to write a TrayTrigger script, step by step →</a> &nbsp;·&nbsp; <a href="https://github.com/stephenh678/TrayTrigger/wiki/Writing-your-own-script">The full reference →</a></p>
-
-      </div>
-      <figure class="shot"><div class="capture crop-scripts"><img loading="lazy" src="assets/scripts-current.png" alt="Edit Game's Scripts tab: Close Background Apps set for before and after the game, with recommended as its Script Arguments"></div><figcaption><strong>Your routine, per game.</strong> Pick a ready-made script or start your own with New script..., test it, and choose whether the game waits for it.</figcaption></figure>
+<span class="c"># Back up this game's saves every time you quit.</span>
+<span class="c"># Script Arguments in Edit Game: the game's save folder.</span>
+<span class="k">if</span> (<span class="v">$Phase</span> <span class="k">-eq</span> <span class="s">'postexit'</span>) {
+    <span class="v">$name</span> = <span class="v">$GameName</span> <span class="k">-replace</span> <span class="s">'[\\/:*?"&lt;&gt;|]'</span>, <span class="s">''</span>
+    <span class="v">$zip</span>  = <span class="s">"D:\SaveBackups\</span><span class="v">$name</span> <span class="s">$(</span><span class="t">Get-Date</span> -f yyyy-MM-dd_HHmm<span class="s">).zip"</span>
+    <span class="t">New-Item</span> -ItemType Directory -Force <span class="s">D:\SaveBackups</span> | <span class="t">Out-Null</span>
+    <span class="t">Compress-Archive</span> -Path <span class="v">$ScriptArgs</span>[0] -DestinationPath <span class="v">$zip</span>
+    <span class="t">Write-Output</span> <span class="s">"TT: saves backed up after </span><span class="v">$Playtime</span><span class="s"> min"</span>
+}</code></pre>
+      </figure>
     </div>
   </div>
 </section>
 
-<section id="play">
-  <div class="wrap">
-    <div class="theme-band" aria-hidden="true"><span>Launch.</span><span>Automate.</span><span class="on">Play.</span></div>
-    <div class="pillar" id="tweaks">
-      <div>
-        <div class="kicker">Performance Tweaks · Stutter Check</div>
-        <h2>Windows, ready for play</h2>
-        <p class="muted">Optional Windows settings for display, input, scheduling, and background activity. These are separate from per-game profiles: they stay applied until you revert them.</p>
-        <ul>
-          <li><strong>Stutter Check.</strong> The checks every "my game stutters" thread tells you to go through, run for you in one click: overlay apps, a browser or Discord holding video memory, a monitor below its fastest refresh rate, memory below its rated speed, games on a hard drive, shader caches, Game Mode, the power plan and more. Each row says what it found and what to do. It reports and changes nothing by itself.</li>
-          <li><strong>See what changes.</strong> The Performance Preset card counts the recommended tweaks that are on, and each row shows its real Windows state and the explanation for the setting.</li>
-          <li><strong>Choose what fits.</strong> Results depend on your PC and game; performance improvements are not guaranteed.</li>
-          <li><strong>Revert when you want.</strong> Undo settings individually or use Undo Preset to put back what TrayTrigger recorded. Bulk changes can create a System Restore point.</li>
-        </ul>
-        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">Explore the tweaks, trade-offs, and restore behavior →</a></p>
-      </div>
-      <div class="shot"><img src="assets/system-tweaks.png" width="1168" height="1196" alt="Performance Tweaks page: Stutter Check with 16 checks run, one needing a look, and the Performance Preset card with all 14 preset tweaks applied"></div>
+<section id="stutter">
+  <div class="wrap pillar wide" id="tweaks">
+    <div>
+      <div class="kicker">Stutter Check &amp; Performance Tweaks</div>
+      <h2>Find the stutter before you blame the game</h2>
+      <p class="muted">Separate from per-game setup: these are system-wide, and stay until you undo them.</p>
+      <ul>
+        <li><strong>Stutter Check.</strong> The checks every "my game stutters" thread asks for, in one click: overlays, a browser holding video memory, a monitor below its fastest refresh rate, memory below its rated speed, games on a hard drive, and more. It reports; it changes nothing by itself.</li>
+        <li><strong>Tweaks you can see and undo.</strong> Each row shows its real Windows state and what the setting does. Undo one, or use Undo Preset; bulk changes can create a System Restore point first.</li>
+        <li><strong>Hardware Specs.</strong> Live CPU, RAM and GPU load, VRAM, displays and drives, with warnings like a GPU running on fewer PCIe lanes than it supports.</li>
+      </ul>
+      <div class="learn"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Stutter-Check">Stutter Check →</a><a href="https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work">The tweaks and their trade-offs →</a></div>
     </div>
-    <div class="pillar" id="activity">
-      <div>
-        <div class="kicker">Activity &amp; History · Every launch on the record</div>
-        <h2>Know what changed, and what didn't go to plan</h2>
-        <p class="muted">A bell at the bottom of the sidebar opens a plain-language record of your sessions, by day, kept for 30 days, 90 or a year, and cleared when you say. Nothing interrupts a game: one notification after your last game sums up anything that went wrong.</p>
-        <ul>
-          <li><strong>Every launch, on the record.</strong> Open a game's Played row and it says exactly what TrayTrigger did for that launch, and didn't: when and through which launcher, what the profile changed, skipped and put back, what was done to the game's own process, the scripts that ran, and the tools closed, started or left alone because they were already running.</li>
-          <li><strong>Every session and change.</strong> The games you played and for how long, games you added, and every change to a profile, CPU Cores, DLSS Override or Windows tweak.</li>
-          <li><strong>Problems stand out.</strong> Each row has a badge: CRITICAL when your PC was left changed, PROBLEM when a script or tool didn't do what you asked, then CHANGE and ACTIVITY. A repeat is one row with a count.</li>
-          <li><strong>One click to put it right.</strong> A setting a profile couldn't put back waits under Needs Attention with <strong>Restore Previous</strong>, and is marked FIXED once it's back. A red dot on the bell and a line in the tray say when something needs you.</li>
-        </ul>
-        <p class="note"><a href="https://github.com/stephenh678/TrayTrigger/wiki/Activity-%26-History">How Activity &amp; History works →</a></p>
-      </div>
-      <div class="shot"><img loading="lazy" src="assets/activity-history.png" width="1168" height="884" alt="Activity and History page: a power plan that wasn't put back under Needs Attention with a Restore Previous button, a Keep 90 days dropdown and Clear History button, and a Played Elden Ring row opened to show the profile, what was skipped and put back, the game's cores, the script and the tools closed and started for that launch"></div>
+    <figure class="closeup"><img loading="lazy" src="assets/closeup-stutter.png" width="1023" height="240" alt="Stutter Check: 16 checks, 1 needs a look, 15 fine; two overlay apps running, NVIDIA App overlay and RivaTuner, with a Here's how button"></figure>
+  </div>
+</section>
+
+<section id="honest" class="honest">
+  <div class="wrap">
+    <div class="section-head"><div class="kicker">No surprises</div><h2>What it changes, and what it doesn't</h2></div>
+    <div class="grid grid-3">
+      <div class="card"><h3>What goes back</h3><p><strong>Per-game settings</strong> go back when the game exits, and are checked. After a crash, on the next start.</p><p><strong>System tweaks</strong> and whatever your scripts do stay until you undo them. Bulk changes can make a restore point first.</p></div>
+      <div class="card"><h3>How it touches a game</h3><p>CPU cores are set with Windows <strong>CPU Sets</strong>, not a hard affinity mask. Nothing is injected into a game and no driver is installed.</p><p>Suspend refuses games with a kernel anti-cheat. TrayTrigger runs as you; a few machine-wide tweaks ask for UAC.</p></div>
+      <div class="card"><h3>Your privacy</h3><p><strong>No telemetry, no account.</strong> It goes online for game info and art, for update checks you can turn off, and for services you add your own key to.</p><p>MIT licensed. <a href="https://github.com/stephenh678/TrayTrigger">Read the source</a> and <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">SECURITY.md</a>.</p></div>
     </div>
   </div>
 </section>
 
-<section id="compare">
+<section class="download-band" id="download">
   <div class="wrap">
-    <div class="section-head">
-      <h2>Keep your launchers. Simplify your routine.</h2>
-<p>Your games still launch through their own clients. TrayTrigger gives you a shared tray menu and optional steps around each session: apply a profile, run your scripts, and close the launcher afterward when configured.</p>
+    <div class="section-head center" id="quick-start"><div class="kicker">Quick start</div><h2>From download to play in three steps</h2></div>
+    <div class="grid steps">
+      <div class="step"><div class="n">01 · Install</div><p>Run the installer, or unzip the portable build anywhere. Windows 10/11, 64-bit; no .NET install needed.</p></div>
+      <div class="step"><div class="n">02 · Scan</div><p>Press <strong>Scan for Games</strong> in the library. Drop an exe or shortcut for anything it doesn't find.</p></div>
+      <div class="step"><div class="n">03 · Play</div><p>Right-click the tray icon and pick a game. Leave its profile Off to just launch, and add a profile when you want one.</p></div>
     </div>
+    <div class="cta">
+      <a class="btn primary" id="dl-setup-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest"><svg class="icon-sm" aria-hidden="true"><use href="#i-download"/></svg>Download for Windows</a>
+      <a class="btn" id="dl-zip-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
+    </div>
+    <p class="trust-note">Free, no sign-up. Update checks are built in and can be turned off. <a href="https://github.com/stephenh678/TrayTrigger/releases">All releases</a></p>
   </div>
 </section>
 
 <section id="faq">
   <div class="wrap">
     <div class="section-head"><h2>FAQ</h2></div>
-    <details><summary>TrayTrigger doesn't do something I want. Now what?</summary><p>If it's something to do before or after a game, a script can do it: TrayTrigger runs a PowerShell script of yours at launch and at exit, with the game's details handed in, and shows what it did on the game's row in Activity &amp; History. Start with the <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts catalogue</a>, or New script... in Edit Game. For anything else, ask in <a href="https://github.com/stephenh678/TrayTrigger/discussions">Discussions</a>.</p></details>
-    <details open><summary>Is it safe? What does it touch?</summary><p>You choose which profiles, system tweaks, and scripts to enable. Per-game profile settings restore on exit; system-wide tweaks stay applied until you revert them. Scripts run as you unless you choose elevation, and their changes require their own cleanup. Bulk system changes can create a System Restore point first. See <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">SECURITY.md</a> for the full breakdown.</p></details>
+    <details><summary>Can it get me banned?</summary><p>TrayTrigger doesn't inject anything into a game or install a driver. It changes Windows settings around the game and sets its CPU cores and priority through the same Windows APIs Task Manager uses. Suspend, which pauses a game's process, refuses games with a kernel anti-cheat, because a game that stops answering its anti-cheat can be disconnected. No outside tool can promise what an anti-cheat will decide, so leave a competitive game's profile Off if you're unsure.</p></details>
     <details><summary>Does it need administrator access?</summary><p>Not to run. A few tweaks write machine-wide settings and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.</p></details>
     <details><summary>Does it phone home?</summary><p>No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).</p></details>
-    <details><summary>Can changes be reverted?</summary><p>Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Undo Preset. Custom scripts are not automatically undone; use a post-exit script for any cleanup they need.</p></details>
-    <details><summary>Can I move TrayTrigger to a new PC?</summary><p>Yes. Settings &rsaquo; Diagnostics &amp; Storage &rsaquo; Backup &amp; Restore saves your library, settings, tools, scripts and artwork to one .zip. Restore it on the new PC and TrayTrigger finds your games again through their launchers, or on the new drive when a drive letter changed. Games that aren't installed yet are kept, greyed out. Game saves aren't part of a backup.</p></details>
     <details id="download-trust"><summary>Is the download signed?</summary><p>No. Releases are not code-signed, so Windows SmartScreen may warn the first time you run the installer. Releases are built by GitHub Actions from the public source and published with a SHA-256 checksum file. Verify a download with <code>Get-FileHash</code> in PowerShell and compare it to SHA256SUMS.txt on the release page, then choose More info and Run anyway. See the <a href="https://github.com/stephenh678/TrayTrigger#code-signing">code signing section</a> for details.</p></details>
-    <details><summary>Where do I ask a question or report a game that scanned wrong?</summary><p>Questions go to <a href="https://github.com/stephenh678/TrayTrigger/discussions/5">Discussions</a>. Wrong art, name, or launcher goes on the <a href="https://github.com/stephenh678/TrayTrigger/issues/9">scan tracking issue</a>, one comment per game. Bugs get an <a href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">issue</a>.</p></details>
+    <details><summary>TrayTrigger doesn't do something I want. Now what?</summary><p>If it's something to do before or after a game, a script can do it: TrayTrigger runs a PowerShell script of yours at launch and at exit, with the game's details handed in, and shows what it did on the game's row in Activity &amp; History. Start with the <a href="https://github.com/stephenh678/TrayTrigger-Scripts">TrayTrigger-Scripts catalogue</a>, or New script... in Edit Game. For anything else, ask in <a href="https://github.com/stephenh678/TrayTrigger/discussions">Discussions</a>.</p></details>
+    <details><summary>Can I move TrayTrigger to a new PC?</summary><p>Yes. Settings &rsaquo; Diagnostics &amp; Storage &rsaquo; Backup &amp; Restore saves your library, settings, tools, scripts and artwork to one .zip. Restore it on the new PC and TrayTrigger finds your games again through their launchers. Game saves aren't part of a backup.</p></details>
   </div>
 </section>
-
-<section id="feedback">
-  <div class="wrap">
-    <div class="section-head"><div class="kicker">Help shape TrayTrigger</div><h2>Tell me how your first game went</h2><p>Did the scan find your games? Did your first launch work? What would you like to automate next?</p></div>
-    <div class="cta feedback-actions"><a class="btn primary" href="https://github.com/stephenh678/TrayTrigger/discussions">Give feedback</a><a class="btn" href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">Report a bug</a></div>
-    <p class="muted">For a launch problem, include the game, launcher, Windows version, and TrayTrigger version. Review any screenshots or logs for personal information before posting.</p>
-  </div>
-</section>
-<section class="download-band" id="download">
-  <div class="wrap">
-    <h2>Ready to play?</h2>
-    <p class="muted" style="max-width:600px;margin:0 auto 26px">Free and open source. Installer or portable ZIP. Windows 10 or 11, 64-bit. Nothing to sign up for.</p>
-    <div class="cta">
-      <a class="btn primary" id="dl-setup-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest">⬇ Download for Windows</a>
-      <a class="btn" id="dl-zip-2" href="https://github.com/stephenh678/TrayTrigger/releases/latest">Portable ZIP</a>
-    </div>
-    <p class="dim" style="font-size:14px;margin-top:14px">Update checks are built in and can be turned off. <a href="https://github.com/stephenh678/TrayTrigger/releases">All releases</a></p>
-    <p class="dim" style="font-size:14px;margin-top:6px">Releases are not code-signed. <a href="https://github.com/stephenh678/TrayTrigger#verifying-a-download">Verify your download</a> against the release's SHA256SUMS.txt.</p>
-  </div>
-</section>
-
 </main>
+
 <footer>
   <div class="wrap">
+    <p class="feedback">Tell me how your first game went: <a href="https://github.com/stephenh678/TrayTrigger/discussions">Discussions</a> · <a href="https://github.com/stephenh678/TrayTrigger/issues/new/choose">Report a bug</a> · <a href="https://github.com/stephenh678/TrayTrigger/issues/9">A game scanned wrong</a></p>
     <span>© <span id="year"></span> <a href="https://github.com/stephenh678">stephenh678</a> · MIT License</span>
     <span class="spacer"></span>
     <a href="https://github.com/stephenh678/TrayTrigger">GitHub</a>
     <a href="https://github.com/stephenh678/TrayTrigger/wiki">Wiki</a>
-    <a href="https://github.com/stephenh678/TrayTrigger/discussions">Discussions</a>
+    <a href="https://github.com/stephenh678/TrayTrigger/releases">Releases</a>
     <a href="https://github.com/stephenh678/TrayTrigger/blob/main/SECURITY.md">Security</a>
   </div>
 </footer>
@@ -494,10 +570,24 @@
     })
     .catch(() => {});
 
+  // The nav marks the section in view.
+  const navLinks = [...document.querySelectorAll('nav .links a[href^="#"]:not(.btn)')];
+  const featureIds = ['launchers', 'performance', 'sim-racing', 'scripts', 'stutter'];
+  const linkFor = id => navLinks.find(a => a.getAttribute('href') === '#' + (featureIds.includes(id) ? 'launchers' : id));
+  const spy = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      navLinks.forEach(a => a.removeAttribute('aria-current'));
+      const link = linkFor(e.target.id);
+      if (link) link.setAttribute('aria-current', 'true');
+    }
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  for (const s of document.querySelectorAll('header[id], main section[id]')) spy.observe(s);
+
   // Native dialog provides keyboard dismissal, focus containment and restoration.
   const lightbox = document.getElementById('lightbox');
   const lightboxContent = lightbox.querySelector('.lightbox-content');
-  for (const img of document.querySelectorAll('.shot img, header .card img')) {
+  for (const img of document.querySelectorAll('.shot img, .closeup img')) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'image-button';

@@ -769,6 +769,26 @@ public partial class App
                 return;
             }
 
+            // --screenshot-library <view mode> <out.png>: the library as it is, in the given view
+            // ("Poster Grid", "Extra Large", "Compact Icons", "Details List"), for the site and README.
+            if ((e.Args[i].Equals("--screenshot-library", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-library", StringComparison.OrdinalIgnoreCase)) &&
+                i + 2 < e.Args.Length)
+            {
+                string viewMode = e.Args[i + 1];
+                string targetPng = e.Args[i + 2];
+                _skipSettingsSaveOnExit = true;
+                string previousMode = _mainViewModel.SettingsVM.LibraryViewMode;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = viewMode;
+                _mainWindow.Show();
+                _mainWindow.UpdateLayout();
+                CaptureVisual(_mainWindow, 960, 700, targetPng);
+                _mainViewModel.SettingsVM.LibraryViewMode = previousMode;
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-select <view mode> <out.png>: the library in Select mode with the first
             // two visible cards checked, in the given view ("Poster Grid", "Extra Large",
             // "Compact Icons", "Details List").
@@ -1023,10 +1043,12 @@ public partial class App
                 string targetPng = e.Args[i + 1];
                 bool empty = e.Args.Skip(i + 2).Any(a => a.Equals("empty", StringComparison.OrdinalIgnoreCase));
                 bool expanded = e.Args.Skip(i + 2).Any(a => a.Equals("expanded", StringComparison.OrdinalIgnoreCase));
+                // "played": only the Played row open, as the site shows it.
+                bool playedOnly = e.Args.Skip(i + 2).Any(a => a.Equals("played", StringComparison.OrdinalIgnoreCase));
                 _skipSettingsSaveOnExit = true;
                 if (!empty && ActivityService.Current is { } activity)
                 {
-                    activity.Record(ActivityLevel.Activity, "Updated to 1.5.0", detail: "From 1.4.8.");
+                    activity.Record(ActivityLevel.Activity, "Updated to 1.6.1", detail: "From 1.6.0.");
                     var fixedSample = activity.Record(ActivityLevel.Critical, "Hades: couldn't put back Windows' multimedia scheduler settings", subject: "Hades",
                         detail: "Restore Previous on this page tries again. Windows Settings can also change them back by hand.", groupKey: "sample.fixed");
                     activity.MarkFixed([fixedSample.Id]);
@@ -1039,7 +1061,7 @@ public partial class App
                               + "Skipped: Resizable BAR, off in the BIOS · speakers already unmuted.\n"
                               + "Put back: everything.\n"
                               + "Game: kept on the 8 performance cores (CPUs 0-15) · exempt from Windows power throttling · DLSS 310.2.1 from NVIDIA.\n"
-                              + "Scripts: pre-launch Example-CloseBackgroundApps.ps1 ran.\n"
+                              + "Scripts: pre-launch Example-CloseBackgroundApps.ps1 ran · closed Dropbox and Google Drive.\n"
                               + "Tools: Discord closed, opened again after · MSI Afterburner started, closed after · OneDrive wasn't running, nothing to close.",
                         groupKey: "played|er");
                     for (int n = 0; n < 7; n++)
@@ -1053,7 +1075,7 @@ public partial class App
                 _mainViewModel.ActivityVM.Refresh();
                 if (expanded && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Count > 1) is { } repeated) repeated.IsExpanded = true;
                 // And a Played row, for its launch record with the section labels in bold.
-                if (expanded && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Text.StartsWith("Played Elden", StringComparison.Ordinal)) is { } played) played.IsExpanded = true;
+                if ((expanded || playedOnly) && _mainViewModel.ActivityVM.Groups.FirstOrDefault(g => g.Text.StartsWith("Played Elden", StringComparison.Ordinal)) is { } played) played.IsExpanded = true;
                 // Not through CurrentSection's setter alone: opening the page marks everything seen,
                 // and the capture is meant to show the dot as a user would find it.
                 _mainViewModel.CurrentSection = NavSection.Activity;
@@ -1492,6 +1514,8 @@ public partial class App
                 bool autoCores = i + 3 < e.Args.Length && e.Args[i + 3].Equals("autocores", StringComparison.OrdinalIgnoreCase);
                 // "script": Close Background Apps set for both phases with "recommended", as the site shows it.
                 bool withScript = i + 3 < e.Args.Length && e.Args[i + 3].Equals("script", StringComparison.OrdinalIgnoreCase);
+                // "site": HDR On, CPU Cores on Auto and the launcher closed after, as the landing page's close-ups show them.
+                bool forSite = i + 3 < e.Args.Length && e.Args[i + 3].Equals("site", StringComparison.OrdinalIgnoreCase);
                 _skipSettingsSaveOnExit = true;
                 // A copy, so pressing Save for the "invalid" capture can never touch the library.
                 // Prefer a game that actually ships DLSS, so the Performance tab's DLSS card is in
@@ -1513,7 +1537,12 @@ public partial class App
                 if (invalid) editVm.SteamAppId = "not-a-number";
                 // The Performance tab shows the tier summary; Aggressive lists the most.
                 if (section == GameEditSection.Performance) editVm.PerformanceProfile = PerformanceProfileMode.Aggressive;
-                if (autoCores) editVm.CpuAffinity = CpuAffinityMode.Auto;
+                if (autoCores || forSite) editVm.CpuAffinity = CpuAffinityMode.Auto;
+                if (forSite)
+                {
+                    editVm.Hdr = HdrMode.On;
+                    editVm.CloseLauncherOnExit = true;
+                }
                 if (withScript)
                 {
                     editVm.PreLaunchScriptPath = Path.Combine(new ScriptLibraryService(_storageService.BaseDirectory).ScriptsDirectory, "Example-CloseBackgroundApps.ps1");
