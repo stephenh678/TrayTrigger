@@ -45,3 +45,15 @@ The optional per-game Defender exclusion (part of the Aggressive performance pro
 ## Scripts and hotkeys
 
 The optional pre-launch/post-exit script feature (disabled by default; must be enabled in Settings) runs a `.bat`, `.cmd`, `.ps1`, or `.exe` file **that you explicitly attach to a specific game**. TrayTrigger does not download, generate, or execute any script on your behalf — you are always the one supplying the script and its contents are entirely your responsibility.
+
+## Verifying a release
+
+Release binaries are built only by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners; nothing is built on a developer machine. Each release publishes `TrayTrigger-v*-Setup.exe`, the portable `.zip`, a `SHA256SUMS.txt` covering both, and a signature of that file, `SHA256SUMS.txt.sig`. The installer itself is not code-signed (no publisher certificate), which is why Windows SmartScreen may warn on first run.
+
+From 1.4.5, `SHA256SUMS.txt` is signed by the release workflow. The in-app updater checks that signature against public keys built into TrayTrigger and refuses an update without a valid one, so replacing both the installer and its checksum on a release is not enough to get an update installed.
+
+To check it yourself, download `SHA256SUMS.txt`, `SHA256SUMS.txt.sig` and [`release-signing-key.pub.pem`](release-signing-key.pub.pem), then run (OpenSSL ships with Git for Windows):
+```powershell
+openssl dgst -sha256 -verify release-signing-key.pub.pem -signature SHA256SUMS.txt.sig SHA256SUMS.txt
+```
+`Verified OK` means the checksums came from the release workflow. A release signed with the offline backup key verifies against [`release-signing-backup-key.pub.pem`](release-signing-backup-key.pub.pem) instead.
