@@ -221,3 +221,5 @@ If you find a security issue, please see [SECURITY.md](SECURITY.md) for how to r
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**Forks and credit.** TrayTrigger is MIT licensed: keep the copyright notice and license text. If you build on it, a link back is appreciated but not required. If you publish your own builds, please use a different name and icon so people can tell them from the official releases, which are only at [github.com/stephenh678/TrayTrigger/releases](https://github.com/stephenh678/TrayTrigger/releases).
