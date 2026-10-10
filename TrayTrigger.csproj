@@ -10,10 +10,10 @@
     <AssemblyName>TrayTrigger</AssemblyName>
     <RootNamespace>TrayTrigger</RootNamespace>
     <Version>1.6.1</Version>
-    <Authors>Steph</Authors>
+    <Authors>stephenh678</Authors>
     <Product>TrayTrigger</Product>
     <Description>Windows system tray game launcher with Steam integration, per-game performance profiles, live hardware telemetry, and verified one-click performance tweaks.</Description>
-    <Copyright>Copyright (c) Steph</Copyright>
+    <Copyright>Copyright (c) stephenh678</Copyright>
     <RepositoryUrl>https://github.com/stephenh678/TrayTrigger</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishSingleFile>true</PublishSingleFile>
