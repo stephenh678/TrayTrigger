@@ -5,7 +5,7 @@
 <h1 align="center">TrayTrigger</h1>
 
 <p align="center">
-  <img src="Assets/readme/tagline.png" width="640" alt="Launch. Automate. Play.">
+  <img src="Assets/readme/tagline.png" width="640" alt="Launch from the tray. Let Windows adapt to the game.">
 </p>
 
 <p align="center">
