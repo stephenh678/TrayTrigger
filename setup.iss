@@ -26,9 +26,9 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
-AppCopyright=Copyright (c) 2026 Steph
+AppCopyright=Copyright (c) 2026 stephenh678
 VersionInfoCompany={#MyAppPublisher}
-VersionInfoCopyright=Copyright (c) 2026 Steph
+VersionInfoCopyright=Copyright (c) 2026 stephenh678
 VersionInfoProductName={#MyAppName}
 VersionInfoDescription={#MyAppName} Setup
 ; Setup.exe carries the same product/version metadata as TrayTrigger.exe so the code-signing
