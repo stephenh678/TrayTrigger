@@ -114,7 +114,6 @@ The launcher part, so the session part has something to run. A dark, Fluent-styl
 - **Drag and drop** an executable or shortcut onto the window to add it. **Batch folder scanner** with executable scoring that filters out uninstallers and launcher stubs. **Icon extraction** from executables, shortcuts, and game folders.
 - **Search Settings, System & Performance, and About** from a box beside their tabs: the cards that mention your words stay, with the words highlighted.
 - **Backup & Restore**: your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake. A restore finds games whose drive letter, user folder or launcher folder changed.
-- **Activity & History**: a bell at the bottom of the sidebar opens a plain-language record of the games you played and for how long, games you added, every change to a Performance Profile, CPU Cores, DLSS Override or System tweak, and anything that didn't go to plan. Each row has a badge (CRITICAL, PROBLEM, CHANGE, ACTIVITY), and a setting a profile couldn't put back gets a Restore Previous button, then a FIXED badge once it's back. One notification after your last game sums up anything that went wrong; nothing interrupts a game.
 
 <p align="center">
   <img src="site/assets/library-current.png" width="800" alt="Games library, poster grid view"><br>
@@ -161,11 +160,6 @@ Assign each game a tier in Edit Game. It applies the moment the game launches an
 | **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, NVIDIA Resizable BAR for games NVIDIA hasn't decided on, and an off-by-default Microsoft Defender exclusion. |
 
 - **CPU Cores**: independently of the tier, keep a game on the cores that suit it: the performance cores of a hybrid Intel CPU, for older engines and anti-cheat titles that stutter on E-cores, or the 3D V-Cache CCD of a dual-CCD Ryzen X3D (7950X3D, 9950X3D), found from each CCD's cache size rather than a list of models. Auto picks for whichever PC the game runs on. Set with Windows' CPU Sets, with an optional delay for anti-cheat titles.
-- **Suspend and resume** (Ctrl+Alt+P, or the tray's Now Playing menu): freeze a game where it is for a cutscene you can't pause, with its sound muted and its playtime clock stopped. Games with anti-cheat are never suspended, and nothing is ever left frozen.
-- **Session-scoped**: tweaks apply on launch (through any supported launcher or a direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
-- **Crash-safe**: the snapshot lives on disk. If TrayTrigger or your PC crashes mid-session, the next start restores your pre-game state. A normal shutdown restores the power plan, HDR, and GPU preference immediately.
-- **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
-- **Close Game / Force Close** in the game's right-click menu, Game Details and the tray: quit the game and get your tweaks back, or kill it if it won't close. A game that never appears is rolled back automatically after three minutes.
 
 ### NVIDIA DLSS Override
 
@@ -208,16 +202,6 @@ Stop-Process -Name Discord -ErrorAction SilentlyContinue
 
 Nothing runs until you choose a script for a game. To hide scripts altogether, untick "Enable game scripts" in Settings > Launch & Performance. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract.
 
----
-
-<p align="center">
-  <img src="Assets/readme/play.png" width="560" alt="Play">
-</p>
-
-## Play
-
-Windows set up for games, and an eye on the hardware running them.
-
 ### Performance Tweaks
 
 System-wide settings, separate from the per-game profiles. 22 documented gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
@@ -231,6 +215,35 @@ Instant breakdown of CPU, GPU, VRAM, RAM, displays, motherboard, BIOS, OS versio
 <p align="center">
   <img src="Assets/screenshots/system-hardware.png" width="800" alt="Live hardware telemetry and system specs">
 </p>
+
+---
+
+<p align="center">
+  <img src="Assets/readme/play.png" width="560" alt="Play">
+</p>
+
+## Play
+
+It stays a tray icon while the game runs.
+
+- **Suspend and resume** (Ctrl+Alt+P, or the tray's Now Playing menu): freeze a game where it is for a cutscene you can't pause, with its sound muted and its playtime clock stopped. Games with anti-cheat are never suspended, and nothing is ever left frozen.
+- **Now Playing**: the tray tooltip and the tray menu's *Now Playing* section show what is running, with Close Game and Force Close one click away.
+
+---
+
+<p align="center">
+  <img src="Assets/readme/putback.png" width="560" alt="Put back">
+</p>
+
+## Put back
+
+When the game exits, every per-game setting goes back to what it was, and what happened is on the record.
+
+- **Session-scoped**: tweaks apply on launch (through any supported launcher or a direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
+- **Crash-safe**: the snapshot lives on disk. If TrayTrigger or your PC crashes mid-session, the next start restores your pre-game state. A normal shutdown restores the power plan, HDR, and GPU preference immediately.
+- **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
+- **Close Game / Force Close** in the game's right-click menu, Game Details and the tray: quit the game and get your tweaks back, or kill it if it won't close. A game that never appears is rolled back automatically after three minutes.
+- **Activity & History**: a bell at the bottom of the sidebar opens a plain-language record of the games you played and for how long, games you added, every change to a Performance Profile, CPU Cores, DLSS Override or System tweak, and anything that didn't go to plan. Each row has a badge (CRITICAL, PROBLEM, CHANGE, ACTIVITY), and a setting a profile couldn't put back gets a Restore Previous button, then a FIXED badge once it's back. One notification after your last game sums up anything that went wrong; nothing interrupts a game.
 
 ---
 
