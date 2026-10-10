@@ -59,191 +59,72 @@
 
 ---
 
+## Find your reason
+
+Start with the one thing you change by hand before every session.
+
+| If you... | TrayTrigger |
+|---|---|
+| Juggle too many launchers | Puts seven stores in one tray menu. Launchers start minimized and close after the game. [Launchers](https://stephenh678.github.io/TrayTrigger/#launchers) |
+| Have a Ryzen X3D or an Intel hybrid CPU | Puts a game on the 3D V-Cache cores or the P-cores, for that game only. No Process Lasso rules. [CPU cores](https://stephenh678.github.io/TrayTrigger/#performance) |
+| Play on an HDR or OLED display | Turns HDR on for the game that does it well and off for the one that doesn't. No more Win+Alt+B. [HDR per game](https://stephenh678.github.io/TrayTrigger/#performance) |
+| Sim race or fly | Starts SimHub, CrewChief or TrackIR with the game and closes them when you're done. [Companion apps](https://stephenh678.github.io/TrayTrigger/#sim-racing) |
+| Want a feature that isn't there | Runs your own PowerShell before and after any game, and says what it did. [Your scripts](https://stephenh678.github.io/TrayTrigger/#scripts) |
+| Chase stutter | Runs the usual checklist in one click, and shows every tweak's real state. [Stutter Check](https://stephenh678.github.io/TrayTrigger/#stutter) |
+
+---
+
+## How it works
+
+The launch is the trigger. Pick a game, and everything you chose for it happens around it.
+
+**1. Launch.** Pick a game from the tray menu, the library or its own hotkey. It starts through its store's client, or directly.
+
+<p align="center">
+  <img src="site/assets/library-current.png" width="800" alt="The games library, a poster grid with launcher badges">
+</p>
+
+**2. Set up.** TrayTrigger notes how Windows is set, then applies the game's profile: power plan, HDR, GPU preference, CPU cores, DLSS Override. Your tools close or start, and your script runs.
+
+<p align="center">
+  <img src="site/assets/closeup-profile.png" width="638" alt="Edit Game's Performance Profile set to Aggressive, with the changes it lists">
+</p>
+
+**3. Play.** TrayTrigger stays a tray icon. Suspend a game with Ctrl+Alt+P for a cutscene you can't pause, or close it from the tray.
+
+**4. Put back.** When the game exits, every per-game setting goes back and is checked. Closed tools return, and the launcher closes if you asked. After a crash, it happens on the next start.
+
+### Every launch, on the record
+
+Each game's Played row in Activity & History lists what the profile changed, what it skipped and why, the cores the game ran on, what your script said it did, and the tools it closed and started.
+
+<p align="center">
+  <img src="site/assets/closeup-played.png" width="800" alt="A Played Overwatch row in Activity and History: what the profile changed, what was put back, the cores the game ran on">
+</p>
+
+### Also in the box
+
+A hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Override per game, and 22 system tweaks that each show Windows' real current state. All of it has a page on the [wiki](https://github.com/stephenh678/TrayTrigger/wiki/Home).
+
+---
+
+## What it changes, and what it doesn't
+
+- **What goes back:** per-game settings go back when the game exits, and are checked. After a crash, they go back on the next start. System tweaks and whatever your scripts do stay until you undo them. Bulk changes can make a System Restore point first.
+- **How it touches a game:** CPU cores are set with Windows CPU Sets, not a hard affinity mask. Nothing is injected into a game and no driver is installed. Suspend refuses games with a kernel anti-cheat. TrayTrigger runs as you, and a few machine-wide tweaks ask for UAC.
+- **Your privacy:** no telemetry and no account. It goes online for game info and art, for update checks you can turn off, and for services you add your own key to. MIT licensed. Read the source and [SECURITY.md](SECURITY.md).
+
+---
+
 ## Quick start
 
-1. **Download** the installer or portable ZIP from the [latest release](https://github.com/stephenh678/TrayTrigger/releases/latest). Windows 10/11, 64-bit; no separate .NET install needed. See [signing status](#code-signing) and [download verification](#verifying-a-download).
-2. **Scan** with **Scan for Games** in the library. Add an executable or shortcut for anything the scan misses.
-3. **Launch** a game from TrayTrigger's right-click system-tray menu. Leave its performance profile **Off** to launch without per-game tweaks.
+1. **Install.** Run the installer from the [latest release](https://github.com/stephenh678/TrayTrigger/releases/latest), or unzip the portable build anywhere. Windows 10/11, 64-bit; no .NET install needed. See [signing status](#code-signing).
+2. **Scan.** Press **Scan for Games** in the library. Drop an executable or shortcut onto the window for anything it doesn't find.
+3. **Play.** Right-click the tray icon and pick a game. Leave its profile **Off** to just launch, and add a profile when you want one.
 
 [See how it works](https://stephenh678.github.io/TrayTrigger/#how) · [Give feedback](https://github.com/stephenh678/TrayTrigger/discussions) · [Report a bug](https://github.com/stephenh678/TrayTrigger/issues/new/choose)
 
 **Did your first game launch successfully?** Tell us the game and launcher, and what you would like it to handle next.
-
-
-<p align="center">
-  <img src="Assets/social-preview.png" alt="TrayTrigger: an open-source game launcher for Windows with per-game HDR, CPU cores, power plan, DLSS and scripts, put back when the game exits">
-</p>
-
----
-
-## From launch to exit, handled
-
-A launcher's job ends when the game is running. TrayTrigger is what happens around that: what Windows looks like while you play, what your other apps do, and what gets put back when you're done. Per-game profiles restore their settings on exit. System-wide tweaks stay applied until you revert them; custom scripts need their own cleanup actions.
-
-| When | What TrayTrigger does |
-|---|---|
-| **Before launch** | Snapshots your current settings. Applies the game's **Performance Profile**: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution, CPU cores. Runs your **pre-launch script**: close OneDrive, start SimHub. |
-| **On launch** | Starts the game with your **launch arguments**, as Administrator if you asked, through its own launcher (Steam, GOG, Epic, EA, Ubisoft, Xbox, Battle.net) or directly. Steam, GOG Galaxy and Epic start quietly in the background, so only the game appears. |
-| **While playing** | Stays a tray icon. A launch from a hotkey or the tray menu shows a small card by the clock with what the game is waiting on (Battle.net signing in, say) until it starts. The tooltip and the tray menu's *Now Playing* section show what's running. |
-| **On exit** | Restores **per-game profile settings to their previous state**. Runs your **post-exit script**. Closes the launcher if you told it to. Crash-safe: if TrayTrigger or Windows dies mid-game, the snapshot is restored on next start. |
-
-### Why not just Steam?
-
-Steam launches Steam games. It doesn't change your power plan for one game and put it back after, start the tools a game needs, or close itself when the game exits. TrayTrigger does that for every game from every store, and it launches Steam games through Steam. It isn't a replacement for any store or launcher; it's the layer under them.
-
----
-
-<p align="center">
-  <img src="Assets/readme/launch.png" width="560" alt="Launch">
-</p>
-
-## Launch
-
-Every game from every store in one library, started through its own launcher the way you want it.
-
-### Your Library
-
-The launcher part, so the session part has something to run. A dark, Fluent-style interface built to look at home on Windows 11: poster art, rounded cards, Segoe Fluent icons, no menu bar and no ribbon.
-
-- **Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass, and Battle.net**: Scan for Games reads each launcher's own install records, so every installed game shows up with its real title and launches through its own client (or, for Game Pass titles, through Windows itself). Each integration has its own on/off switch.
-- **Artwork and metadata**: Steam's official metadata (description, developer, release date, Metacritic score) plus high-res poster art from SteamGridDB. Optional RAWG info for games that aren't on Steam (Game Pass, Epic exclusives, Battle.net games like Hearthstone and StarCraft II), with a per-game Steam | RAWG switch. Both need your own free API key and are off until you add one. The first-run Welcome asks for both before any game is added, with a button to each site's key page and a check that the pasted key works.
-- **Four views**: poster grid, extra large, compact icons, details list. Poster cards zoom on hover, or show only their art until you point at one.
-- **Filters**: by launcher, performance profile, and state (never played, favorite, missing executable, has a hotkey, has scripts, runs elevated).
-- **Favorites and categories**: favorites pin to the top of the tray menu; the rest goes into custom categories or a flat list.
-- **Batch editing**: Ctrl+click, Shift+click, or Ctrl+A, then right-click to favorite, hide, re-categorize, set the Performance Profile, CPU Cores, or launch options, refresh art, or remove, with undo.
-- **Drag and drop** an executable or shortcut onto the window to add it. **Batch folder scanner** with executable scoring that filters out uninstallers and launcher stubs. **Icon extraction** from executables, shortcuts, and game folders.
-- **Search Settings, System & Performance, and About** from a box beside their tabs: the cards that mention your words stay, with the words highlighted.
-- **Backup & Restore**: your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake. A restore finds games whose drive letter, user folder or launcher folder changed.
-
-<p align="center">
-  <img src="site/assets/library-current.png" width="800" alt="Games library, poster grid view"><br>
-  <em>Poster grid with automatic art, categories, filters, and launcher badges</em>
-</p>
-
-<p align="center">
-  <img src="site/assets/tray-menu.png" width="460" alt="TrayTrigger tray menu with Recent, Favorites, and an expanded game category"><br>
-  <em>Your next game, one tray menu away.</em>
-</p>
-
-### Launcher Control
-
-- **Launch arguments** per game, passed exactly as typed.
-- **Run as Administrator** per game.
-- **Close the launcher after the game exits**: Steam, GOG Galaxy, EA App, Epic, Ubisoft Connect, the Xbox app, or Battle.net shut down once the session ends, so they don't stay resident with their overlays and background processes.
-- **Launchers stay minimized** (on by default): Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game shows.
-- **Launch popup** by the tray clock for hotkey and tray launches: the game, what it's waiting on, and the reason if a launch fails, without opening the window.
-- **Global hotkeys** to open the library (Ctrl+Alt+G), open the tray menu (Ctrl+Alt+T) and suspend the game (Ctrl+Alt+P), all changeable in Settings, and per-game hotkeys to launch.
-- **One-click launch from the tray menu**: Recent, Favorites, and Categories, no window to open.
-
-### Tools
-
-On by default, and turned off in Settings > General if you don't want it: launch the apps you use alongside games, like DLSS Swapper or MSI Afterburner, from the same tray menu and hotkeys, or have a program start with your games and close again after them, or close Discord or OneDrive when a game launches and bring it back after. Drop a program, script, shortcut, or Microsoft Store app on the Tools page to add it.
-
----
-
-<p align="center">
-  <img src="Assets/readme/setup.png" width="560" alt="Set up">
-</p>
-
-## Set up
-
-What happens around every launch, set once per game and put back when it exits.
-
-### Performance Profiles
-
-Assign each game a tier in Edit Game. It applies the moment the game launches and reverts the moment it closes.
-
-| Tier | What it does |
-|---|---|
-| **Off** | No per-game tweaks. TrayTrigger just launches the game. |
-| **Optimized** | Your custom high-performance power plan, high-performance GPU preference for that game, NVIDIA's Prefer maximum performance, and an exemption from Windows' power throttling. Opt-in extras: Enable HDR, Do Not Disturb, Unmute Speakers, a frame cap just under your refresh rate. |
-| **Aggressive** | Everything in Optimized, plus System Responsiveness, MMCSS "Games" scheduling priority, Above Normal process priority, a 0.5 ms timer resolution request, NVIDIA Resizable BAR for games NVIDIA hasn't decided on, and an off-by-default Microsoft Defender exclusion. |
-
-- **CPU Cores**: independently of the tier, keep a game on the cores that suit it: the performance cores of a hybrid Intel CPU, for older engines and anti-cheat titles that stutter on E-cores, or the 3D V-Cache CCD of a dual-CCD Ryzen X3D (7950X3D, 9950X3D), found from each CCD's cache size rather than a list of models. Auto picks for whichever PC the game runs on. Set with Windows' CPU Sets, with an optional delay for anti-cheat titles.
-
-### NVIDIA DLSS Override
-
-Games ship with whatever DLSS version was current when they were built, and often never update it. Your GeForce driver keeps newer ones. One switch in Edit Game runs the game on the driver's DLSS files instead, for Super Resolution, Ray Reconstruction, and Frame Generation.
-
-- **The same setting NVIDIA App calls DLSS Override**, per game, including games NVIDIA App doesn't list. NVIDIA App resets it on those; TrayTrigger puts it back each time it launches the game.
-- **No game files touched**: nothing is downloaded or swapped, so a game update or "verify files" can't undo it, and there is nothing to break. If a game ignores the override it simply uses its own DLSS, as before.
-- **Says what you'll get, then what you got**: the card shows the version inside the game and the one the driver would use (310.1.0 → 310.9.0), and a **Last run** line with the version the game actually loaded the last time you played, and where it came from.
-- **Easy to take back out**: untick it, or **Restore**, and that game's NVIDIA settings return to exactly what they were, leaving alone anything another tool has changed since. **Restore All** in Settings > Launch & Performance does every game at once. Removing a game puts its override back, and so does uninstalling TrayTrigger.
-- **No administrator rights needed.** Steam and other launcher games are included. On a PC with an NVIDIA driver the card is on every game; for one that ships no DLSS it is a single line saying so.
-- **NVIDIA DLSS overlays**: an opt-in switch on the same Settings card turns on NVIDIA's own two overlays for checking that an override took - the corner line (DLSS version, preset letter, render resolution) and, in a game using Frame Generation, the bar across the top (driver and Streamline versions, output and motion-vector resolutions, frame multiplier, refresh rate, and the driver profile in use).
-
-### Pre-Launch and Post-Exit Scripts
-
-Attach a PowerShell script (or an `.exe`) to any game. It runs just before the game starts and again after it exits, for direct, Steam, GOG, EA, Epic, Ubisoft, Xbox, and Battle.net launches alike. Use it for anything TrayTrigger doesn't do itself.
-
-**Real ones ship with the app**, written to be read, copied, and changed:
-
-| Script | What it does |
-|---|---|
-| `Example-CloseBackgroundApps.ps1` | Asks background apps to close (cloud sync with "recommended", or the ones you name) and reopens the ones that closed; add "force" to end any that won't. |
-| `Example-StartCompanionApps.ps1` | Starts the tools a game needs (SimHub, TrackIR) for the games you pick, and closes only the ones it started. |
-
-These files (the examples and a README) are TrayTrigger's copies, kept up to date as it updates, so a corrected example reaches a folder you already have. Work on a copy - "New script..." makes one named after the game, and a file TrayTrigger did not put there is never touched. If you edit a bundled one anyway, your version is kept beside it as `<name>.previous` rather than lost.
-
-A script doesn't have to be long. This is a complete pre-launch script:
-
-```powershell
-Stop-Process -Name Discord -ErrorAction SilentlyContinue
-```
-
-**What you get:**
-- **Test Run buttons** next to every script field: runs it now, shows the exit code and output, without launching the game.
-- **Script Arguments** per game, so one generic script serves your whole library (a profile name, a list of apps).
-- **Game info passed in**: phase, game name, exe, game ID, and playtime as arguments, plus `TRAYTRIGGER_*` environment variables.
-- **Wait / timeout / cancel-on-failure**: hold the launch until the script finishes, or treat it as a precondition and abort the launch (and roll back the profile) if it fails.
-- **Hidden or elevated**: suppress the console window with output captured to the log, or run through UAC.
-- **Default scripts** in Settings run for every game that has no script of its own, with a per-game opt-out.
-- **New script...** creates a blank template with every argument already read for you and opens it in your editor.
-
-Nothing runs until you choose a script for a game. To hide scripts altogether, untick "Enable game scripts" in Settings > Launch & Performance. See the [scripts wiki page](https://github.com/stephenh678/TrayTrigger/wiki/Pre-Launch-and-Post-Exit-Scripts) for the full contract.
-
-### Performance Tweaks
-
-System-wide settings, separate from the per-game profiles. 22 documented gaming tweaks plus a status readout for Core Isolation, each tweak toggled individually, each showing Windows' **real current state** before you touch anything (HAGS is read from the display driver itself), and each reverting to the exact state TrayTrigger found, not a hard-coded "default". Every tweak has an in-app **Learn more** (and a [wiki page](https://github.com/stephenh678/TrayTrigger/wiki)) that explains the trade-off honestly. Most aren't a guaranteed win for every game, and they're presented that way. Tweaks that can't apply on your machine say so instead of pretending.
-
-See [How Performance Tweaks work](https://github.com/stephenh678/TrayTrigger/wiki/How-Performance-Tweaks-work) for the full list, trade-offs, and restore behavior. Revert system-wide tweaks individually or with **Undo Preset**. Bulk changes can create a System Restore point.
-
-### Hardware Monitoring
-
-Instant breakdown of CPU, GPU, VRAM, RAM, displays, motherboard, BIOS, OS version, and DirectX capability, so you can sanity-check specs before deciding which profile a game gets.
-
-<p align="center">
-  <img src="Assets/screenshots/system-hardware.png" width="800" alt="Live hardware telemetry and system specs">
-</p>
-
----
-
-<p align="center">
-  <img src="Assets/readme/play.png" width="560" alt="Play">
-</p>
-
-## Play
-
-It stays a tray icon while the game runs.
-
-- **Suspend and resume** (Ctrl+Alt+P, or the tray's Now Playing menu): freeze a game where it is for a cutscene you can't pause, with its sound muted and its playtime clock stopped. Games with anti-cheat are never suspended, and nothing is ever left frozen.
-- **Now Playing**: the tray tooltip and the tray menu's *Now Playing* section show what is running, with Close Game and Force Close one click away.
-
----
-
-<p align="center">
-  <img src="Assets/readme/putback.png" width="560" alt="Put back">
-</p>
-
-## Put back
-
-When the game exits, every per-game setting goes back to what it was, and what happened is on the record.
-
-- **Session-scoped**: tweaks apply on launch (through any supported launcher or a direct `.exe`) and revert to your exact prior settings on exit. No manual undo, no config left behind.
-- **Crash-safe**: the snapshot lives on disk. If TrayTrigger or your PC crashes mid-session, the next start restores your pre-game state. A normal shutdown restores the power plan, HDR, and GPU preference immediately.
-- **Two games at once**: machine-wide tweaks apply with the first game and restore with the last. Per-game tweaks apply and restore independently.
-- **Close Game / Force Close** in the game's right-click menu, Game Details and the tray: quit the game and get your tweaks back, or kill it if it won't close. A game that never appears is rolled back automatically after three minutes.
-- **Activity & History**: a bell at the bottom of the sidebar opens a plain-language record of the games you played and for how long, games you added, every change to a Performance Profile, CPU Cores, DLSS Override or System tweak, and anything that didn't go to plan. Each row has a badge (CRITICAL, PROBLEM, CHANGE, ACTIVITY), and a setting a profile couldn't put back gets a Restore Previous button, then a FIXED badge once it's back. One notification after your last game sums up anything that went wrong; nothing interrupts a game.
 
 ---
 
@@ -281,7 +162,7 @@ openssl dgst -sha256 -verify release-signing-key.pub.pem -signature SHA256SUMS.t
 ## FAQ
 
 **Why do I need this if I already have Steam?**
-Steam's job ends when the game is running. TrayTrigger handles what happens around that, for every game from every store, and it still launches Steam games through Steam. See [Why not just Steam?](#why-not-just-steam) above.
+Steam's job ends when the game is running. TrayTrigger handles what happens around that, for every game from every store, and it still launches Steam games through Steam.
 
 **Does it work alongside other launchers and library apps?**
 Yes. TrayTrigger launches each game through its own client and changes nothing about how those clients work. Run whatever front end you like; TrayTrigger manages the session around the launch.
