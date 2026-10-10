@@ -67,11 +67,11 @@
 
 [See how it works](https://stephenh678.github.io/TrayTrigger/#how) · [Give feedback](https://github.com/stephenh678/TrayTrigger/discussions) · [Report a bug](https://github.com/stephenh678/TrayTrigger/issues/new/choose)
 
-**Did your first game launch successfully?** Tell us the game and launcher, and what you would like to automate next.
+**Did your first game launch successfully?** Tell us the game and launcher, and what you would like it to handle next.
 
 
 <p align="center">
-  <img src="Assets/social-preview.png" alt="TrayTrigger: launchers that close themselves, per-game performance profiles, pre-launch and post-exit scripts, reversible Windows tweaks">
+  <img src="Assets/social-preview.png" alt="TrayTrigger: an open-source game launcher for Windows with per-game HDR, CPU cores, power plan, DLSS and scripts, put back when the game exits">
 </p>
 
 ---
@@ -143,12 +143,12 @@ On by default, and turned off in Settings > General if you don't want it: launch
 ---
 
 <p align="center">
-  <img src="Assets/readme/automate.png" width="560" alt="Automate">
+  <img src="Assets/readme/setup.png" width="560" alt="Set up">
 </p>
 
-## Automate
+## Set up
 
-What happens around every launch, set once per game and undone when it exits.
+What happens around every launch, set once per game and put back when it exits.
 
 ### Performance Profiles
 
