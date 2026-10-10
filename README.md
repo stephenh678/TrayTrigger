@@ -118,7 +118,7 @@ A hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Ov
 
 ## Quick start
 
-1. **Install.** Run the installer from the [latest release](https://github.com/stephenh678/TrayTrigger/releases/latest), or unzip the portable build anywhere. Windows 10/11, 64-bit; no .NET install needed. See [signing status](#code-signing).
+1. **Install.** Run the installer from the [latest release](https://github.com/stephenh678/TrayTrigger/releases/latest), or unzip the portable build anywhere. Windows 10/11, 64-bit; no .NET install needed. See [signing status](#verifying-a-download).
 2. **Scan.** Press **Scan for Games** in the library. Drop an executable or shortcut onto the window for anything it doesn't find.
 3. **Play.** Right-click the tray icon and pick a game. Leave its profile **Off** to just launch, and add a profile when you want one.
 
@@ -142,16 +142,12 @@ TrayTrigger checks GitHub Releases for updates and installs them in one click. E
 Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installer against it before launching, and refuses to install anything that doesn't match.
 
 ### Verifying a download
+
+Releases are **not code-signed**, so Windows SmartScreen may warn the first time you run the installer (**More info** > **Run anyway**). To check a download, compare its hash with the matching line in the release's `SHA256SUMS.txt`:
 ```powershell
 Get-FileHash .\TrayTrigger-v1.6.1-Setup.exe -Algorithm SHA256
 ```
-Compare the hash with the matching line in the release's `SHA256SUMS.txt`. Releases are not code-signed (see [Code signing](#code-signing)), so the checksum is how you confirm a download is the file the release workflow built.
-
-From 1.4.5, `SHA256SUMS.txt` is itself signed by the release workflow, and each release includes `SHA256SUMS.txt.sig`. The in-app updater checks that signature against public keys built into TrayTrigger and refuses an update without a valid one, so replacing both the installer and its checksum on a release is not enough to get an update installed. To check it yourself, download both files and [`release-signing-key.pub.pem`](release-signing-key.pub.pem) from this repository, then run (OpenSSL ships with Git for Windows):
-```powershell
-openssl dgst -sha256 -verify release-signing-key.pub.pem -signature SHA256SUMS.txt.sig SHA256SUMS.txt
-```
-`Verified OK` means the checksums came from the release workflow. A release signed with the offline backup key verifies against [`release-signing-backup-key.pub.pem`](release-signing-backup-key.pub.pem) instead.
+Releases are built by the public [GitHub Actions workflow](.github/workflows/release.yml), and the checksum file is itself signed. To verify that signature, see [SECURITY.md](SECURITY.md#verifying-a-release).
 
 ### Requirements
 - Windows 10 (version 1809+) or Windows 11, 64-bit
@@ -221,16 +217,6 @@ Bug reports, feature requests, and pull requests are welcome. See [CONTRIBUTING.
 ## Security
 
 If you find a security issue, please see [SECURITY.md](SECURITY.md) for how to report it privately.
-
-## Code signing
-
-> **Status:** releases are **not code-signed**. Verify a download against `SHA256SUMS.txt` as described under [Verifying a download](#verifying-a-download).
-
-Because the installer has no publisher certificate, Windows SmartScreen may show "Windows protected your PC" the first time you run it. Check the file's hash first, then choose **More info** > **Run anyway**. The portable ZIP is the same program without an installer.
-
-**How releases are built.** Release binaries are built exclusively by the public GitHub Actions workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) on GitHub-hosted runners; nothing is built on a developer machine. Each release publishes `TrayTrigger-v*-Setup.exe`, the portable `.zip`, a `SHA256SUMS.txt` covering both, and a signature of that file, `SHA256SUMS.txt.sig`. The in-app updater refuses an installer that doesn't match, or a checksum file that isn't signed by a TrayTrigger release key.
-
-**Privacy policy.** TrayTrigger collects no telemetry and transfers no personal data. Its only network calls are to Steam's public APIs (game metadata and artwork for games you add), SteamGridDB (artwork, only if you enter your own API key), RAWG (game info for non-Steam titles, only if you enter your own API key), NVIDIA's driver service (only when you press Check for Newer Driver, and naming only your GPU model), and GitHub Releases (update checks, which can be turned off in Settings). See [SECURITY.md](SECURITY.md) for the full statement.
 
 ## License
 
