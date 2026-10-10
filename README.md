@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <strong>Sets Windows up for the game you're about to play, and puts everything back when you quit.</strong><br>
-  HDR, power plan, CPU cores, DLSS Override, your scripts and tools: chosen per game, applied at launch,<br>
-  reverted on exit, and logged so you can see what changed. A tray app. Free and open source.
+  <strong>An open-source game launcher for Windows. Launch from the tray, and let Windows adapt to the game.</strong><br>
+  Steam, Epic, GOG, Xbox, Battle.net and more in one tray menu. Each game starts with its own HDR, CPU cores,<br>
+  power plan, DLSS and companion apps, with store clients kept out of the way. Quit, and those settings revert.
 </p>
 
 <p align="center">
@@ -61,7 +61,7 @@
 2. **Scan** with **Scan for Games** in the library. Add an executable or shortcut for anything the scan misses.
 3. **Launch** a game from TrayTrigger's right-click system-tray menu. Leave its performance profile **Off** to launch without per-game tweaks.
 
-[See the screenshot walkthrough](https://stephenh678.github.io/TrayTrigger/#walkthrough) · [Give feedback](https://github.com/stephenh678/TrayTrigger/discussions) · [Report a bug](https://github.com/stephenh678/TrayTrigger/issues/new/choose)
+[See how it works](https://stephenh678.github.io/TrayTrigger/#how) · [Give feedback](https://github.com/stephenh678/TrayTrigger/discussions) · [Report a bug](https://github.com/stephenh678/TrayTrigger/issues/new/choose)
 
 **Did your first game launch successfully?** Tell us the game and launcher, and what you would like to automate next.
 

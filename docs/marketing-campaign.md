@@ -6,18 +6,28 @@ YouTube video or article by someone else, and a Discussions tab with strangers i
 
 ## 1. Positioning
 
-**One line:** *TrayTrigger sets Windows up for the game you're about to play, and puts everything
-back when you quit.*
+**One line:** *An open-source game launcher for Windows. Launch from the tray, and let Windows
+adapt to the game.*
 
-**Why this line.** Gamers call every optimizer "snake oil" because optimizers change things
-permanently and quietly. TrayTrigger's whole design is the opposite: per game, visible, reverted,
-logged in Activity & History. That is the one thing no competitor leads with, so lead with it.
+**Why this line** (revised 2026-10-09, agreed with Gemini). TrayTrigger is a launcher: the launch
+is the trigger, and games started elsewhere get no setup. Optimizers (Pavise-Game, GameShift,
+Process Lasso, Razer Cortex) watch for a running game, and the new open-source ones restore
+afterwards too, so "puts everything back" is no longer unique. It's the trust point, not the
+reason to download, so it closes the sub-line and doesn't lead.
 
-**Three support points**, always in this order:
-1. **Per game.** HDR, CPU cores, power plan, DLSS Override, scripts, tools: chosen for each game.
-2. **Everything goes back.** When the game exits, after a crash, and the Activity page shows what
-   it did and what it couldn't put back.
-3. **Light and honest.** A tray app. Open source. Says which tweaks are placebo in its own UI.
+**Hierarchy**, always in this order:
+1. **What it is.** One tray menu for every store: Steam, Epic, GOG, Xbox, Battle.net and more.
+2. **Why it's different.** Each game starts with its own HDR, CPU cores, power plan, DLSS,
+   companion apps and scripts.
+3. **Why trust it.** Per-game settings revert when you quit, and Activity & History shows what
+   each launch did. Open source. Says which tweaks are placebo in its own UI.
+
+**Accuracy rules:** games still start through their store's client (say "clients kept out of the
+way", never "skip the storefronts"); CPU Sets, never "affinity"; only per-game settings revert
+(system tweaks and users' scripts stay), so never "your PC is put back exactly".
+
+**Deep links:** each audience post links to its own section of the site: `#launchers`, `#x3d`,
+`#hdr`, `#sim-racing`, `#scripts`, `#stutter`.
 
 **Never say:** boost, FPS booster, optimizer, unlock, turbo. Those words trigger the downvote.
 **Say:** set up, put back, per game, what changed, 1% lows.
