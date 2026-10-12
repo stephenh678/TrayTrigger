@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "name": "Green",
+  "author": "TrayTrigger",
+  "base": "dark",
+  "background": { "image": "green.jpg", "strength": 1.0, "position": "right" },
+  "colors": {
+    "Accent": "#238636"
+  }
+}

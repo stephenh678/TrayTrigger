@@ -114,6 +114,16 @@ public partial class App
                     height = h;
                 }
             }
+            // TRAYTRIGGER_THEME_SWAP=<theme id>: paint the window in the theme the app started with, then switch to
+            // this one while it is on screen and capture that. A capture that matches one started in the theme
+            // directly (--theme) proves the live switch repaints everything.
+            string? swapTo = Environment.GetEnvironmentVariable("TRAYTRIGGER_THEME_SWAP");
+            if (!string.IsNullOrWhiteSpace(swapTo))
+            {
+                using var before = CaptureVisualBitmap(window, width, height);
+                TrayTrigger.Services.Theming.ThemeService.Instance.Apply(swapTo);
+                PumpDispatcher(TimeSpan.FromMilliseconds(400));
+            }
             using var bmp = CaptureVisualBitmap(window, width, height);
             string? parentDir = Path.GetDirectoryName(targetPng);
             if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))

@@ -24,6 +24,8 @@
      TrayTrigger wordmark only; controls keep the accent colours above. -->
     <Color x:Key="ColorBrand">#2F8FFF</Color>
     <Color x:Key="ColorTextPrimary">#FFFFFF</Color>
+    <!-- Text on a solid accent, danger or success fill (a primary button, a CRITICAL badge). White in every theme: the fill is always dark enough for it. -->
+    <Color x:Key="ColorTextOnSolid">#FFFFFF</Color>
     <Color x:Key="ColorTextSecondary">#9E9EAA</Color>
     <!-- 5.0:1 on cards (#1C1C23), 5.5:1 on the window background: WCAG AA for small text. -->
     <Color x:Key="ColorTextMuted">#8A8A96</Color>
@@ -41,6 +43,12 @@
     <SolidColorBrush x:Key="BrushBrand" Color="{StaticResource ColorBrand}"/>
     <SolidColorBrush x:Key="BrushAccentPressed" Color="{StaticResource ColorAccentPressed}"/>
     <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}"/>
+    <SolidColorBrush x:Key="BrushTextOnSolid" Color="{StaticResource ColorTextOnSolid}"/>
+    <!-- Text drawn over poster art, on the dark fade at the foot of a card (and on the dark badge over it). The art and its fade
+         stay dark in every theme, so this text stays light. -->
+    <SolidColorBrush x:Key="BrushArtText" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="BrushArtTextSecondary" Color="#9E9EAA"/>
+    <SolidColorBrush x:Key="BrushArtTextMuted" Color="#8A8A96"/>
     <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}"/>
     <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextMuted}"/>
     <!-- Destructive actions: Remove from Library, Force Close, Exit. One brush for text and glyphs alike. -->

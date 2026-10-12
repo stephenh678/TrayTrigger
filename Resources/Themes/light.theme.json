@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "name": "Light",
+  "author": "TrayTrigger",
+  "base": "light",
+  "background": { "image": "light.jpg", "strength": 1.0, "position": "right" },
+  "colors": {
+    "Background": "#F3F3F6",
+    "Surface": "#FFFFFF",
+    "SurfaceHover": "#EAEAF0",
+    "DialogCard": "#FAFAFC",
+    "Border": "#DADAE3",
+    "BorderStrong": "#C2C2CF",
+    "BorderAccent": "#8DB4E0",
+
+    "Accent": "#0067C0",
+    "AccentHover": "#0078D4",
+    "AccentText": "#005A9E",
+    "AccentPressed": "#004E8C",
+    "AccentWash": "#DCEBFA",
+    "Brand": "#1B6FD6",
+    "InfoText": "#0B5CAD",
+
+    "TextPrimary": "#1A1A1F",
+    "TextOnSolid": "#FFFFFF",
+    "ArtText": "#FFFFFF",
+    "ArtTextSecondary": "#9E9EAA",
+    "ArtTextMuted": "#8A8A96",
+    "TextSecondary": "#55556A",
+    "TextMuted": "#666676",
+    "TextSoft": "#44445A",
+    "TextDisabled": "#9A9AA8",
+
+    "Danger": "#C42B35",
+    "DangerWash": "#FBE9EA",
+    "DangerBorder": "#E3A6AA",
+    "DangerSolid": "#C42B31",
+    "DangerSolidHover": "#A8232A",
+
+    "Warning": "#8A5A00",
+    "WarningWash": "#FFF3D6",
+    "WarningBorder": "#E2B659",
+    "Highlight": "#66FFC400",
+
+    "SuccessText": "#1A7F37",
+    "SuccessWash": "#DDF4E4",
+    "SuccessSolid": "#1A7F37",
+
+    "Gold": "#D19A00",
+    "BadgePurple": "#5B3FB5",
+    "BadgePurpleWash": "#E9E3FA",
+
+    "Scrim": "#CC000000",
+    "OverlayLine": "#40808090"
+  }
+}

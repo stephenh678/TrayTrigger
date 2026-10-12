@@ -5,11 +5,11 @@
     <!-- What a page's card search shows when nothing on the selected tab matches. -->
     <StackPanel>
         <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeDisplay}"
-                   Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-        <TextBlock x:Name="TitleText" FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource BrushTextPrimary}"
+                   Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+        <TextBlock x:Name="TitleText" FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                    FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
         <TextBlock Text="Try a different word or another tab, or press Esc to clear the search."
-                   FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
+                   FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                    FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
     </StackPanel>
 </UserControl>

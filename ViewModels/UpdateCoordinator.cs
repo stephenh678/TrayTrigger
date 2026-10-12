@@ -30,9 +30,19 @@ public class UpdateCoordinator : ViewModelBase
         _settings = settings;
         _onStatusChanged = onStatusChanged;
         _onTrayNotification = onTrayNotification;
+        ListenForThemeChanges();
 
         CheckForUpdatesCommand = new AsyncRelayCommand(async () => await CheckForUpdatesAsync(true));
     }
+
+    /// <summary>Colors the status by palette name, and remembers the name: the brush is looked up again when the theme changes.</summary>
+    private void SetStatusBrush(string key)
+    {
+        _updateStatusBrushKey = key;
+        UpdateStatusBrush = AppPalette.Brush(key);
+    }
+
+    protected override void OnThemeChanged() => UpdateStatusBrush = AppPalette.Brush(_updateStatusBrushKey);
 
     public ICommand CheckForUpdatesCommand { get; }
 
@@ -59,6 +69,7 @@ public class UpdateCoordinator : ViewModelBase
         set => SetProperty(ref _updateStatusIcon, value);
     }
 
+    private string _updateStatusBrushKey = "BrushSuccessText";
     private Brush _updateStatusBrush = AppPalette.Brush("BrushSuccessText");
     public Brush UpdateStatusBrush
     {
@@ -72,10 +83,7 @@ public class UpdateCoordinator : ViewModelBase
         {
             UpdateStatusBadgeText = "Checking for updates...";
             UpdateStatusIcon = "";
-            if (Application.Current?.TryFindResource("BrushAccentText") is Brush accentBrush)
-            {
-                UpdateStatusBrush = accentBrush;
-            }
+            SetStatusBrush("BrushAccentText");
 
             var result = await UpdateService.Instance.CheckForUpdatesAsync(_settings.IncludePrereleaseUpdates);
 
@@ -85,10 +93,7 @@ public class UpdateCoordinator : ViewModelBase
                     ? $"{result.LatestRelease.TagName} pre-release available!"
                     : $"{result.LatestRelease.TagName} available!";
                 UpdateStatusIcon = "";
-                if (Application.Current?.TryFindResource("BrushAccentText") is Brush acBrush)
-                {
-                    UpdateStatusBrush = acBrush;
-                }
+                SetStatusBrush("BrushAccentText");
 
                 bool mainWindowVisible = Application.Current?.MainWindow is { IsVisible: true };
                 bool alreadySnoozed = interactive == false &&
@@ -124,7 +129,7 @@ public class UpdateCoordinator : ViewModelBase
             {
                 UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
                 UpdateStatusIcon = "";
-                UpdateStatusBrush = AppPalette.Brush("BrushSuccessText");
+                SetStatusBrush("BrushSuccessText");
 
                 if (interactive)
                 {
@@ -140,7 +145,7 @@ public class UpdateCoordinator : ViewModelBase
             {
                 UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
                 UpdateStatusIcon = "";
-                UpdateStatusBrush = AppPalette.Brush("BrushSuccessText");
+                SetStatusBrush("BrushSuccessText");
 
                 if (interactive)
                 {
@@ -156,7 +161,7 @@ public class UpdateCoordinator : ViewModelBase
             {
                 UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Check failed";
                 UpdateStatusIcon = "";
-                UpdateStatusBrush = AppPalette.Brush("BrushDanger");
+                SetStatusBrush("BrushDanger");
 
                 if (interactive)
                 {
@@ -174,7 +179,7 @@ public class UpdateCoordinator : ViewModelBase
             LoggingService.Error("UpdateCoordinator", "CheckForUpdatesAsync error", ex);
             UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Check failed";
             UpdateStatusIcon = "";
-            UpdateStatusBrush = AppPalette.Brush("BrushDanger");
+            SetStatusBrush("BrushDanger");
 
             if (interactive)
             {

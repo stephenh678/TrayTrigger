@@ -35,16 +35,32 @@ public class ColorGuardTests
         "Services/AppPalette.cs",           // formats colors; names none
     };
 
+    // Services/Theming/ is left out of the scan below: it is the code that parses, derives and builds colors, so it handles values by its nature.
     private static readonly Regex CodeLiteral = new(
         "Color\\.From(Rgb|Argb)\\(|\"#[0-9A-Fa-f]{6,8}\"|System\\.Drawing\\.Color\\.From|\\b(Colors|Brushes)\\.(?!Transparent\\b)\\w+");
 
     [Fact]
     public void NoCode_BuildsAColorFromValues()
     {
-        var offenders = Offenders(Sources("*.cs").Where(f => !ArtworkFiles.Contains(f)), CodeLiteral);
+        var offenders = Offenders(Sources("*.cs").Where(f => !ArtworkFiles.Contains(f) && !f.StartsWith("Services/Theming/")), CodeLiteral);
 
         Assert.True(offenders.Count == 0,
             "Ask AppPalette for a named color from Resources/Colors.xaml instead of writing its value. Found:\n" + string.Join('\n', offenders));
+    }
+
+    /// <summary>
+    /// A theme replaces Colors.xaml while the app runs. A {StaticResource} brush is looked up once, when
+    /// its view loads, and never again, so it would keep the old theme's color. {DynamicResource} looks it
+    /// up again when the dictionary changes.
+    /// </summary>
+    [Fact]
+    public void NoView_ReadsAColorWithStaticResource()
+    {
+        var offenders = Offenders(Sources("*.xaml").Where(f => f != "Resources/Colors.xaml"),
+            new Regex("\\{StaticResource\\s+(?:Brush|Color)\\w+\\}"));
+
+        Assert.True(offenders.Count == 0,
+            "Colors change with the theme, so a view reads them with {DynamicResource}. Found:\n" + string.Join('\n', offenders));
     }
 
     [Fact]

@@ -42,9 +42,9 @@ public partial class App
             {
                 if (!element.IsVisible) continue;
                 if (element is not (ButtonBase or TextBoxBase or ComboBox or ListBoxItem or Slider or PasswordBox or HotkeyRecorderBox)) continue;
-                // Controls inside a ComboBox's own template (its toggle button, its text box) are
-                // announced as part of the combo box.
-                if (element.TemplatedParent is ComboBox) continue;
+                // Controls inside a ComboBox's or a Slider's own template (the toggle button, the text box, the two
+                // halves of the track) are announced as part of the combo box or the slider.
+                if (element.TemplatedParent is ComboBox or Slider) continue;
                 total++;
                 var peer = UIElementAutomationPeer.CreatePeerForElement(element);
                 string name = peer?.GetName() ?? string.Empty;
@@ -90,6 +90,7 @@ public partial class App
         var game = _mainViewModel.Games.FirstOrDefault()?.Game ?? new GameEntry { Name = "Audit Game" };
         Dialog("Edit Game", new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true));
         Dialog("Edit Tool", new ToolEditDialog(new ToolEntry { Name = "Audit Tool", TargetPath = @"C:\Windows\notepad.exe" }, new[] { "Mods" }, _iconExtractorService));
+        Dialog("Edit Theme", new ThemeEditDialog(new TrayTrigger.ViewModels.ThemeEditorViewModel(TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance)));
         Dialog("Scan for Games", new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()));
         var details = new GameDetailsViewModel(game, new SteamMetadataService(), new SteamSearchService()) { IsLoading = false };
         Dialog("Game Details", new GameDetailsDialog(details));

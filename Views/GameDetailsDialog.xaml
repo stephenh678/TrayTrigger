@@ -10,8 +10,8 @@
         Height="680" Width="820"
         MinHeight="560" MinWidth="720"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BrushSurface}"
-        Foreground="{StaticResource BrushTextPrimary}"
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="{StaticResource AppFont}">
 
     <Grid Margin="20,16,20,16">
@@ -33,18 +33,18 @@
 
             <!-- Poster Artwork Container -->
             <Border Grid.Column="0" Width="170" Height="255" CornerRadius="{StaticResource RadiusCard}"
-                    Background="{StaticResource BrushBackground}" BorderBrush="{StaticResource BrushBorder}"
+                    Background="{DynamicResource BrushBackground}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" Margin="0,0,20,0">
                 <Border.Clip>
                     <RectangleGeometry Rect="0,0,168,253" RadiusX="7" RadiusY="7"/>
                 </Border.Clip>
                 <Grid>
                     <!-- Fallback Icon Tile if no poster -->
-                    <Border Background="{StaticResource BrushDialogCard}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Border Background="{DynamicResource BrushDialogCard}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <Image Source="{Binding DisplayCoverImage}" Width="64" Height="64" Margin="0,0,0,8"
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
-                            <TextBlock Text="No poster yet" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
+                            <TextBlock Text="No poster yet" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                        HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -57,7 +57,7 @@
                             <BlurEffect Radius="24" RenderingBias="Performance"/>
                         </Image.Effect>
                     </Image>
-                    <Border Background="{StaticResource BrushScrim}"/>
+                    <Border Background="{DynamicResource BrushScrim}"/>
 
                     <!-- Crisp Centered Artwork (Preserves 100% of the artwork, ZERO cropping of logos or text) -->
                     <Image Source="{Binding DisplayCoverImage}" Stretch="Uniform"
@@ -82,8 +82,8 @@
                             VerticalAlignment="Top" Margin="0,2,10,0"/>
                     <StackPanel>
                         <TextBlock Text="{Binding GameTitle}" FontSize="{StaticResource FontSizeHeading}" FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding GenresDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushAccentText}"
+                                   Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding GenresDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
                                    Margin="0,4,0,0" FontWeight="Medium"/>
                     </StackPanel>
                 </DockPanel>
@@ -96,35 +96,35 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <DockPanel Margin="0,0,0,3" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Developer:" Width="80" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding Developers}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="Developer:" Width="80" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding Developers}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
                         <DockPanel Margin="0,0,0,3" Visibility="{Binding HasPublishers, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Publisher:" Width="80" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding Publishers}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="Publisher:" Width="80" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding Publishers}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
                         <DockPanel Visibility="{Binding HasReleaseDate, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Release Date:" Width="80" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding ReleaseDate}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBlock Text="Release Date:" Width="80" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding ReleaseDate}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Margin="12,0,0,0">
                         <DockPanel Margin="0,0,0,3">
-                            <TextBlock Text="Playtime:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}" FontWeight="Medium"/>
+                            <TextBlock Text="Playtime:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="Medium"/>
                         </DockPanel>
                         <DockPanel Margin="0,0,0,3">
-                            <TextBlock Text="Last Played:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBlock Text="Last Played:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                         <DockPanel>
-                            <TextBlock Text="Category:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBlock Text="Category:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                         <!-- The drive it loads from: a game on a hard drive loads slower than on an SSD. -->
                         <DockPanel Margin="0,3,0,0" Visibility="{Binding HasInstallDrive, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Installed on:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding InstallDrive}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBlock Text="Installed on:" Width="75" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="{Binding InstallDrive}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                     </StackPanel>
                 </Grid>
@@ -132,7 +132,7 @@
                 <!-- Scores & Sentiment Badges -->
                 <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
                     <!-- Metacritic Score -->
-                    <Border Background="{StaticResource BrushSuccessWash}" BorderBrush="{StaticResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" 
+                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" 
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
                         <Border.Style>
                             <Style TargetType="Border">
@@ -145,36 +145,36 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding MetacriticScore}" FontWeight="Bold" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushSuccessText}" Margin="0,0,6,0"/>
-                            <TextBlock Text="Metascore" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushSuccessText}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding MetacriticScore}" FontWeight="Bold" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" Margin="0,0,6,0"/>
+                            <TextBlock Text="Metascore" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- RAWG community rating (RAWG source only; fills in where Metacritic is absent) -->
-                    <Border Background="{StaticResource BrushSuccessWash}" BorderBrush="{StaticResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
+                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
                             Visibility="{Binding HasRawgRating, Converter={StaticResource BoolToVis}}"
                             ToolTip="Community rating on rawg.io">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}"
-                                       Foreground="{StaticResource BrushSuccessText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding RawgRatingDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushSuccessText}" FontWeight="Medium" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushSuccessText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding RawgRatingDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="Medium" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- ESRB rating (RAWG source only) -->
-                    <Border Background="{StaticResource BrushSurfaceHover}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
+                    <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
                             Visibility="{Binding HasEsrbRating, Converter={StaticResource BoolToVis}}"
                             ToolTip="ESRB age rating">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="ESRB" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding EsrbRating}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" FontWeight="Medium" VerticalAlignment="Center"/>
+                            <TextBlock Text="ESRB" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding EsrbRating}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" FontWeight="Medium" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Steam Review Summary -->
-                    <Border Background="{StaticResource BrushAccentWash}" BorderBrush="{StaticResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
+                    <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
                         <Border.Style>
                             <Style TargetType="Border">
@@ -188,8 +188,8 @@
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8E1;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}"
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding ReviewSummary}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushAccentText}" FontWeight="Medium"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding ReviewSummary}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" FontWeight="Medium"/>
                         </StackPanel>
                     </Border>
                 </WrapPanel>
@@ -204,9 +204,9 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{StaticResource BrushSurfaceHover}" BorderBrush="{StaticResource BrushBorder}" 
+                                <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" 
                                         BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="8,3" Margin="0,0,6,6">
-                                    <TextBlock Text="{Binding}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -217,7 +217,7 @@
                 <DockPanel Grid.Row="4" VerticalAlignment="Bottom" Margin="0,4,0,0" LastChildFill="False">
                     <!-- Destructive Action (Safely Isolated on Far Right) -->
                     <Button AutomationProperties.Name="Remove from library" DockPanel.Dock="Right" Command="{Binding DeleteGameCommand}"
-                            Style="{StaticResource ModernOutlineButton}" Foreground="{StaticResource BrushDanger}" BorderBrush="{StaticResource BrushDangerBorder}"
+                            Style="{StaticResource ModernOutlineButton}" Foreground="{DynamicResource BrushDanger}" BorderBrush="{DynamicResource BrushDangerBorder}"
                             Padding="12,7" Margin="0,0,0,6" FontSize="{StaticResource FontSizeBody}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,6,0" VerticalAlignment="Center"/>
@@ -249,7 +249,7 @@
                         <Button AutomationProperties.Name="Force Close Game" Command="{Binding ForceCloseCommand}"
                                 Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"
                                 Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6" FontSize="{StaticResource FontSizeBody}"
-                                Foreground="{StaticResource BrushDanger}"
+                                Foreground="{DynamicResource BrushDanger}"
                                 ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
@@ -290,7 +290,7 @@
         </Grid>
 
         <!-- Divider -->
-        <Separator Grid.Row="1" Background="{StaticResource BrushSurfaceHover}" Margin="0,0,0,14"/>
+        <Separator Grid.Row="1" Background="{DynamicResource BrushSurfaceHover}" Margin="0,0,0,14"/>
 
         <!-- ============================================================== -->
         <!-- 2. SCROLLABLE DETAILS: SYNOPSIS, SPECS & NEWS                  -->
@@ -304,7 +304,7 @@
                      is remembered per game (GameEntry.PreferredMetadataSource) and drives the text
                      fields above and the synopsis below - never the category, art or sorting. -->
                 <DockPanel Margin="0,0,0,10" LastChildFill="True">
-                    <Border DockPanel.Dock="Left" Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}"
+                    <Border DockPanel.Dock="Left" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" VerticalAlignment="Center" Margin="0,0,12,0"
                             Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}">
                         <StackPanel Orientation="Horizontal">
@@ -321,7 +321,7 @@
                     <Button AutomationProperties.Name="Change which game this matches" DockPanel.Dock="Right" Command="{Binding ChangeMatchCommand}"
                             Visibility="{Binding CanChangeMatch, Converter={StaticResource BoolToVis}}"
                             Style="{StaticResource ModernGhostButton}" Padding="8,4" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center"
-                            Foreground="{StaticResource BrushAccentText}"
+                            Foreground="{DynamicResource BrushAccentText}"
                             ToolTip="{Binding ChangeMatchToolTip}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -336,11 +336,11 @@
                          it re-fetches on its own, and this link does it on demand. -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0"
                                 Visibility="{Binding ShowFreshness, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding LastUpdatedCaption}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}"
+                        <TextBlock Text="{Binding LastUpdatedCaption}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                    VerticalAlignment="Center"/>
                         <Button Command="{Binding RefreshNowCommand}"
                                 Style="{StaticResource ModernGhostButton}" Padding="8,4" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center"
-                                Foreground="{StaticResource BrushAccentText}" Margin="2,0,0,0"
+                                Foreground="{DynamicResource BrushAccentText}" Margin="2,0,0,0"
                                 ToolTip="{Binding RefreshNowToolTip}" AutomationProperties.Name="Refresh game info now">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -348,7 +348,7 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                    <TextBlock Text="{Binding MatchCaption}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}"
+                    <TextBlock Text="{Binding MatchCaption}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis"
                                Visibility="{Binding HasMatchCaption, Converter={StaticResource BoolToVis}}"/>
                 </DockPanel>
@@ -365,19 +365,19 @@
                             </Style.Triggers>
                         </Style>
                     </StackPanel.Style>
-                    <ProgressBar IsIndeterminate="True" Width="200" Height="4" Margin="0,0,0,12" Foreground="{StaticResource BrushAccent}"/>
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4" Margin="0,0,0,12" Foreground="{DynamicResource BrushAccent}"/>
                     <TextBlock Text="{Binding LoadingMessage}"
-                               FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center"/>
+                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- RAWG status notice (neutral, not an error): no match / bad key / offline -->
-                <Border Background="{StaticResource BrushAccentWash}" BorderBrush="{StaticResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,14"
+                <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,14"
                         Visibility="{Binding HasRawgStatus, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="{Binding RawgStatusMessage}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding RawgStatusMessage}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"/>
                 </Border>
 
                 <!-- Error Notice -->
-                <Border Background="{StaticResource BrushDangerWash}" BorderBrush="{StaticResource BrushDangerBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDangerWash}" BorderBrush="{DynamicResource BrushDangerBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,14">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -388,26 +388,26 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <TextBlock Text="{Binding ErrorMessage}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushDanger}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding ErrorMessage}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushDanger}" TextWrapping="Wrap"/>
                 </Border>
 
 
                 <!-- A. About / Synopsis Card -->
-                <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                     <StackPanel>
-                        <TextBlock Text="ABOUT THE GAME" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
-                        <TextBlock Text="{Binding ShortDescription}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"
+                        <TextBlock Text="ABOUT THE GAME" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding ShortDescription}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                                    TextWrapping="Wrap" LineHeight="20"/>
                         <!-- Required RAWG attribution: an active link wherever RAWG data is shown. -->
-                        <TextBlock Margin="0,10,0,0" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}"
+                        <TextBlock Margin="0,10,0,0" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                    Visibility="{Binding ShowRawgAttribution, Converter={StaticResource BoolToVis}}">
-                            <Hyperlink Command="{Binding OpenRawgPageCommand}" Foreground="{StaticResource BrushTextSecondary}">Data from RAWG</Hyperlink>
+                            <Hyperlink Command="{Binding OpenRawgPageCommand}" Foreground="{DynamicResource BrushTextSecondary}">Data from RAWG</Hyperlink>
                         </TextBlock>
                     </StackPanel>
                 </Border>
 
                 <!-- B. PC System Requirements Card -->
-                <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -421,7 +421,7 @@
                     <StackPanel>
                         <DockPanel Margin="0,0,0,10">
                             <TextBlock Text="PC SYSTEM REQUIREMENTS" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
                                 <Button Content="Minimum" Command="{Binding ShowMinReqsCommand}" 
                                         Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{StaticResource FontSizeBody}" Margin="0,0,6,0"/>
@@ -429,13 +429,13 @@
                                         Style="{StaticResource ModernOutlineButton}" Padding="8,3" FontSize="{StaticResource FontSizeBody}"/>
                             </StackPanel>
                         </DockPanel>
-                        <TextBlock Text="{Binding CurrentRequirementsText}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" 
+                        <TextBlock Text="{Binding CurrentRequirementsText}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
                                    TextWrapping="Wrap" LineHeight="19" FontFamily="Consolas, Segoe UI"/>
                     </StackPanel>
                 </Border>
 
                 <!-- C. Latest Patch Notes & News Card -->
-                <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -453,20 +453,20 @@
                                     Command="{Binding OpenNewsHubCommand}"
                                     Style="{StaticResource ModernGhostButton}"
                                     Padding="0" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="12,0,0,0"
-                                    Foreground="{StaticResource BrushAccentText}">
+                                    Foreground="{DynamicResource BrushAccentText}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="View All News on Steam" VerticalAlignment="Center"/>
                                     <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                 </StackPanel>
                             </Button>
                             <TextBlock Text="LATEST DEVELOPER NEWS &amp; PATCH NOTES" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </DockPanel>
 
                         <ItemsControl ItemsSource="{Binding NewsItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border BorderBrush="{StaticResource BrushBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,10" Margin="0,0,0,10">
+                                    <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,10" Margin="0,0,0,10">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
@@ -476,21 +476,21 @@
 
                                             <!-- News Title & Date -->
                                             <DockPanel Grid.Row="0" Margin="0,0,0,4">
-                                                <TextBlock Text="{Binding DateDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
+                                                <TextBlock Text="{Binding DateDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                                            DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                                 <!-- PATCH badge: shown only when Steam tagged the post as patch notes -->
-                                                <Border DockPanel.Dock="Left" Background="{StaticResource BrushSuccessWash}" BorderBrush="{StaticResource BrushSuccessSolid}" BorderThickness="1"
+                                                <Border DockPanel.Dock="Left" Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1"
                                                         CornerRadius="{StaticResource RadiusSmall}" Padding="6,1" Margin="0,0,8,0" VerticalAlignment="Center"
                                                         Visibility="{Binding IsPatchNotes, Converter={StaticResource BoolToVis}}">
-                                                    <TextBlock Text="PATCH" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{StaticResource BrushSuccessText}"/>
+                                                    <TextBlock Text="PATCH" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushSuccessText}"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Title}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                           Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                                           Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                                             </DockPanel>
 
                                             <!-- News Snippet -->
                                             <TextBlock Grid.Row="1" Text="{Binding Snippet}" FontSize="{StaticResource FontSizeBody}" 
-                                                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                                       Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6"/>
 
                                             <!-- Read More Link -->
                                             <Button AutomationProperties.Name="{Binding Title, StringFormat='Read: {0}'}" Grid.Row="2"
@@ -498,7 +498,7 @@
                                                     CommandParameter="{Binding Url}"
                                                     Style="{StaticResource ModernGhostButton}"
                                                     Padding="0" HorizontalAlignment="Left" FontSize="{StaticResource FontSizeBody}"
-                                                    Foreground="{StaticResource BrushAccentText}">
+                                                    Foreground="{DynamicResource BrushAccentText}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="Read Full Notes" VerticalAlignment="Center"/>
                                                     <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}" VerticalAlignment="Center" Margin="5,0,0,0"/>
@@ -518,7 +518,7 @@
         <!-- 3. BOTTOM ACTIONS                                              -->
         <!-- ============================================================== -->
         <DockPanel Grid.Row="3">
-            <TextBlock Text="{Binding Game.ExecutablePath}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" 
+            <TextBlock Text="{Binding Game.ExecutablePath}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="580"/>
             <Button Content="_Close" Click="CloseButton_Click" IsCancel="True" Style="{StaticResource ModernOutlineButton}" 
                     Padding="18,6" DockPanel.Dock="Right" HorizontalAlignment="Right"/>

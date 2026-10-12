@@ -107,6 +107,13 @@ public partial class App : Application
         void Log(string msg) => LoggingService.Info("App", msg);
         _logger = Log;
 
+        // Before any window exists, so the first frame already has the chosen colors. "--theme <id>" (a
+        // capture or a test) wins over the setting and is not saved.
+        TrayTrigger.Services.Theming.ThemeService.Instance.ShowBackground = startupSettings.ShowThemeBackground;
+        int themeArg = Array.FindIndex(e.Args, a => a.Equals("--theme", StringComparison.OrdinalIgnoreCase));
+        TrayTrigger.Services.Theming.ThemeService.Instance.Apply(
+            themeArg >= 0 && themeArg + 1 < e.Args.Length ? e.Args[themeArg + 1] : startupSettings.ThemeId);
+
         // Drop installers left in %TEMP% by earlier in-app updates (off the UI thread: it's
         // file I/O against a folder that may hold several 50 MB files).
         _ = Task.Run(UpdateService.CleanupDownloadedInstallers);
@@ -615,6 +622,8 @@ public partial class App : Application
             {
                 if (e.PropertyName == nameof(SettingsViewModel.GlobalManageHotkey)) UpdateTrayToolTip();
             };
+            // Some of the menu's colors are set in code (icons, muted labels), so a theme switch builds it again.
+            TrayTrigger.Services.Theming.ThemeService.Instance.ThemeChanged += (_, _) => UpdateTrayContextMenu();
             if (!_trayIcon.IsCreated)
             {
                 _trayIcon.ForceCreate();

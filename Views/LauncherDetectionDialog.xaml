@@ -9,8 +9,8 @@
         Width="516" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushSurface}"
-        Foreground="{StaticResource BrushTextPrimary}">
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}">
 
     <Window.Resources>
         <!-- Whole card is the toggle - click anywhere on it, not just a checkbox, and the
@@ -21,8 +21,8 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <Border x:Name="CardBorder" CornerRadius="{StaticResource RadiusCard}" BorderThickness="1"
-                                Background="{StaticResource BrushSurface}"
-                                BorderBrush="{StaticResource BrushBorder}">
+                                Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}">
                             <Grid Margin="12,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -37,16 +37,16 @@
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding DisplayName}" FontSize="{StaticResource FontSizeSubhead}"
-                                               FontFamily="{StaticResource AppFont}" Foreground="{StaticResource BrushTextPrimary}"
+                                               FontFamily="{StaticResource AppFont}" Foreground="{DynamicResource BrushTextPrimary}"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding SubLabel}" FontSize="{StaticResource FontSizeBody}"
-                                               Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0"/>
+                                               Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
                                 </StackPanel>
 
                                 <!-- Selected checkmark badge -->
                                 <Border x:Name="CheckBadge" Grid.Column="1" Width="18" Height="18" CornerRadius="{StaticResource RadiusCard}"
                                         HorizontalAlignment="Right" VerticalAlignment="Top"
-                                        Background="Transparent" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1.5">
+                                        Background="Transparent" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1.5">
                                     <TextBlock x:Name="CheckGlyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
                                                FontSize="{StaticResource FontSizeBadge}" Foreground="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
@@ -54,14 +54,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource BrushAccentWash}"/>
-                                <Setter TargetName="CheckBadge" Property="Background" Value="{StaticResource BrushAccent}"/>
-                                <Setter TargetName="CheckBadge" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                <Setter TargetName="CheckGlyph" Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource BrushAccentWash}"/>
+                                <Setter TargetName="CheckBadge" Property="Background" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="CheckBadge" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="CheckGlyph" Property="Foreground" Value="{DynamicResource BrushTextOnSolid}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -80,10 +80,10 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,14">
-            <TextBlock Text="Game Launchers Found" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}"
+            <TextBlock Text="Game Launchers Found" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}"
                        FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
             <TextBlock Text="TrayTrigger found these installed with games on this PC. Choose which ones it should manage - you can change this later in Settings."
-                       FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
+                       FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                        FontFamily="{StaticResource AppFont}" TextWrapping="Wrap" Margin="0,2,0,0"/>
         </StackPanel>
 

@@ -56,7 +56,9 @@ public sealed class TabForegroundConverter : IMultiValueConverter
     {
         var (isActive, isHovered) = TabState.Read(values);
 
-        if (isActive || isHovered) return AppPalette.Brush("BrushTextPrimary");
+        // The active tab is filled with the accent color; a hovered one only lifts off the strip.
+        if (isActive) return AppPalette.Brush("BrushTextOnSolid");
+        if (isHovered) return AppPalette.Brush("BrushTextPrimary");
         return AppPalette.Brush("BrushTextSecondary");
     }
 

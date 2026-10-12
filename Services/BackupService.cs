@@ -19,7 +19,7 @@ public sealed record RestoreResult(
 
 /// <summary>
 /// Settings › Diagnostics &amp; Storage › Backup &amp; Restore: TrayTrigger's own data in one .zip -
-/// the library, settings, tools, scripts and cached art - to move to a new PC or undo a mistake.
+/// the library, settings, tools, scripts, themes and cached art - to move to a new PC or undo a mistake.
 /// Game saves are deliberately not part of it.
 ///
 /// <para><b>Backing up</b> reads the files as they are on disk; the caller saves first, so they
@@ -44,6 +44,7 @@ public sealed class BackupService
     internal const string ReadyMarkerName = "ready.txt";
     private const string DataPrefix = "data/";
     private const string ScriptsPrefix = "data/Scripts/";
+    private const string ThemesPrefix = "data/Themes/";
     private const string IconsPrefix = "cache/Icons/";
     private const string CoversPrefix = "cache/Covers/";
 
@@ -100,6 +101,20 @@ public sealed class BackupService
             }
         }
 
+        // The user's own themes: small JSON files, kept flat. Nothing else in the folder is theirs.
+        string themesDir = Path.Combine(_storage.BaseDirectory, "Themes");
+        if (Directory.Exists(themesDir))
+        {
+            foreach (var path in Directory.EnumerateFiles(themesDir))
+            {
+                // A theme file, or a picture a theme uses (the loader refuses a picture over 20 MB, so one over is not a theme's).
+                bool theme = path.EndsWith(".theme.json", StringComparison.OrdinalIgnoreCase);
+                bool picture = TrayTrigger.Services.Theming.ThemeBackgroundLoader.IsPictureFile(path)
+                               && new FileInfo(path).Length <= TrayTrigger.Services.Theming.ThemeBackgroundLoader.MaxFileBytes;
+                if (theme || picture) files.Add((ThemesPrefix + Path.GetFileName(path), path, '-'));
+            }
+        }
+
         int art = 0;
         foreach (var (prefix, dir) in new[] { (IconsPrefix, _storage.IconsDirectory), (CoversPrefix, _storage.CoversDirectory) })
         {
@@ -140,8 +155,10 @@ public sealed class BackupService
                         // created can't take an entry back), and a restore would put that empty file
                         // over the real one.
                         using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                        // Art is already compressed; squeezing it again only costs time.
-                        var level = entryName.StartsWith("cache/", StringComparison.Ordinal) ? CompressionLevel.NoCompression : CompressionLevel.Optimal;
+                        // Art and theme pictures are already compressed; squeezing them again only costs time.
+                        bool compressed = entryName.StartsWith("cache/", StringComparison.Ordinal)
+                            || (entryName.StartsWith(ThemesPrefix, StringComparison.Ordinal) && TrayTrigger.Services.Theming.ThemeBackgroundLoader.IsPictureFile(entryName));
+                        var level = compressed ? CompressionLevel.NoCompression : CompressionLevel.Optimal;
                         var entry = zip.CreateEntry(entryName, level);
                         // A zip can only hold dates from 1980 to 2107; a file stamped outside them
                         // (a copy with no date, a clock set wrong) keeps the zip's default instead.
@@ -153,7 +170,7 @@ public sealed class BackupService
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
                         // One unreadable icon must not cost the whole backup; the library is what matters.
-                        if (entryName.StartsWith(DataPrefix, StringComparison.Ordinal) && !entryName.StartsWith(ScriptsPrefix, StringComparison.Ordinal)) throw;
+                        if (entryName.StartsWith(DataPrefix, StringComparison.Ordinal) && !entryName.StartsWith(ScriptsPrefix, StringComparison.Ordinal) && !entryName.StartsWith(ThemesPrefix, StringComparison.Ordinal)) throw;
                         LoggingService.Warn("Backup", $"Left '{path}' out of the backup: {ex.Message}");
                         if (counts == 's') manifest.Scripts--;
                         else if (counts == 'a') manifest.ArtFiles--;
@@ -324,6 +341,9 @@ public sealed class BackupService
         if (name == ManifestEntry) return true;
         if (name.Contains("..", StringComparison.Ordinal) || name.Contains('\\') || name.Contains(':')) return false;
         if (name.StartsWith(ScriptsPrefix, StringComparison.Ordinal)) return name.Length > ScriptsPrefix.Length;
+        if (name.StartsWith(ThemesPrefix, StringComparison.Ordinal))
+            return name.Length > ThemesPrefix.Length && name.IndexOf('/', ThemesPrefix.Length) < 0
+                && (name.EndsWith(".theme.json", StringComparison.OrdinalIgnoreCase) || TrayTrigger.Services.Theming.ThemeBackgroundLoader.IsPictureFile(name));
         foreach (var prefix in new[] { IconsPrefix, CoversPrefix })
         {
             if (name.StartsWith(prefix, StringComparison.Ordinal)) return name.Length > prefix.Length && name.IndexOf('/', prefix.Length) < 0;
@@ -375,6 +395,7 @@ public sealed class BackupService
             }
 
             int scripts = CopyFolder(Path.Combine(stagedData, "Scripts"), Path.Combine(_storage.BaseDirectory, "Scripts"));
+            CopyFolder(Path.Combine(stagedData, "Themes"), Path.Combine(_storage.BaseDirectory, "Themes"));
             int art = CopyFolder(Path.Combine(staging, "cache", "Icons"), _storage.IconsDirectory)
                 + CopyFolder(Path.Combine(staging, "cache", "Covers"), _storage.CoversDirectory);
 

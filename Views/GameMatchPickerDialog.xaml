@@ -9,8 +9,8 @@
         MinHeight="480" MinWidth="540"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushSurface}"
-        Foreground="{StaticResource BrushTextPrimary}"
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="{StaticResource AppFont}">
 
     <Grid Margin="20">
@@ -24,8 +24,8 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,14">
-            <TextBlock x:Name="TitleTextBlock" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}" FontWeight="Normal"/>
-            <TextBlock x:Name="SubtitleTextBlock" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+            <TextBlock x:Name="TitleTextBlock" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="Normal"/>
+            <TextBlock x:Name="SubtitleTextBlock" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
         </StackPanel>
 
         <!-- Search -->
@@ -41,8 +41,8 @@
         </Grid>
 
         <!-- Results -->
-        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" Margin="0,0,0,10">
+        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Margin="0,0,0,10">
             <Grid>
                 <ListBox x:Name="ResultsListBox" Background="Transparent" BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -53,7 +53,7 @@
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource BrushSurfaceHover}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource BrushSurfaceHover}"/>
                             <Setter Property="Padding" Value="12,9"/>
                             <Setter Property="Cursor" Value="Hand"/>
                             <Setter Property="Template">
@@ -67,10 +67,10 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Background" Value="{StaticResource BrushAccentWash}"/>
+                                                <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                                <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -81,14 +81,14 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <DockPanel LastChildFill="True">
-                                <Border DockPanel.Dock="Right" Background="{StaticResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5" Margin="10,0,0,0"
+                                <Border DockPanel.Dock="Right" Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5" Margin="10,0,0,0"
                                         VerticalAlignment="Center" Visibility="{Binding CurrentVisibility}">
-                                    <TextBlock Text="CURRENT" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{StaticResource BrushAccentText}"/>
+                                    <TextBlock Text="CURRENT" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Hit.Name}" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Hit.Subtitle}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
+                                               Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Hit.Subtitle}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                                TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>
@@ -97,15 +97,15 @@
                 </ListBox>
 
                 <!-- Empty / loading overlay -->
-                <TextBlock x:Name="EmptyTextBlock" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
+                <TextBlock x:Name="EmptyTextBlock" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                            Margin="24" Visibility="Collapsed"/>
             </Grid>
         </Border>
 
         <!-- Attribution (RAWG's terms need an active link wherever their data shows; Steam needs none) -->
-        <TextBlock x:Name="AttributionTextBlock" Grid.Row="3" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,12" Visibility="Collapsed">
-            <Hyperlink x:Name="AttributionLink" Click="AttributionLink_Click" Foreground="{StaticResource BrushTextSecondary}"><Run x:Name="AttributionRun"/></Hyperlink>
+        <TextBlock x:Name="AttributionTextBlock" Grid.Row="3" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,12" Visibility="Collapsed">
+            <Hyperlink x:Name="AttributionLink" Click="AttributionLink_Click" Foreground="{DynamicResource BrushTextSecondary}"><Run x:Name="AttributionRun"/></Hyperlink>
         </TextBlock>
 
         <!-- Buttons -->

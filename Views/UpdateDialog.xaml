@@ -9,10 +9,10 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushSurface}"
-        Foreground="{StaticResource BrushTextPrimary}">
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}">
 
-    <Border BorderBrush="{StaticResource BrushBorder}" BorderThickness="0,1,0,0">
+    <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,1,0,0">
         <Grid Margin="24,20,24,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header with Badge & Version Comparison -->
@@ -36,49 +36,49 @@
                 <!-- Title & Version Row -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="Update Available" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold" 
-                               Foreground="{StaticResource BrushTextPrimary}"/>
+                               Foreground="{DynamicResource BrushTextPrimary}"/>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">
                         <!-- Current Version Badge -->
-                        <Border Background="{StaticResource BrushSurface}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                        <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
                             <TextBlock x:Name="CurrentVersionText" Text="v1.0.0" FontSize="{StaticResource FontSizeBody}" 
-                                       Foreground="{StaticResource BrushTextMuted}" FontWeight="SemiBold"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontWeight="SemiBold"/>
                         </Border>
 
-                        <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}"
+                        <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                    Margin="8,0,8,0" VerticalAlignment="Center"/>
 
                         <!-- New Version Badge -->
-                        <Border Background="{StaticResource BrushSuccessWash}" BorderBrush="{StaticResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                        <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
                             <TextBlock x:Name="NewVersionText" Text="v1.0.1" FontSize="{StaticResource FontSizeBody}" 
-                                       Foreground="{StaticResource BrushSuccessText}" FontWeight="SemiBold"/>
+                                       Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
                         </Border>
 
-                        <Border x:Name="LatestBadge" Background="{StaticResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="LATEST" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{StaticResource BrushAccentText}"/>
+                        <Border x:Name="LatestBadge" Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="LATEST" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
                         </Border>
-                        <Border x:Name="PrereleaseBadge" Background="{StaticResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                            <TextBlock Text="PRE-RELEASE" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{StaticResource BrushWarning}"/>
+                        <Border x:Name="PrereleaseBadge" Background="{DynamicResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock Text="PRE-RELEASE" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}"/>
                         </Border>
                     </StackPanel>
 
                     <!-- Release Name -->
                     <TextBlock x:Name="ReleaseTitleText" Text="TrayTrigger Release" FontSize="{StaticResource FontSizeBody}" 
-                               FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" 
+                               FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" 
                                Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </Grid>
 
             <!-- Row 1: Release Notes Viewer -->
-            <Border Grid.Row="1" Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" 
+            <Border Grid.Row="1" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
                     BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="RELEASE NOTES" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                               Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,6"/>
+                               Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
                     <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <TextBlock x:Name="ReleaseNotesText" 
                                    Text="No release notes provided." 
-                                   FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" 
+                                   FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
                                    TextWrapping="Wrap" LineHeight="17" FontFamily="{StaticResource AppFont}"/>
                     </ScrollViewer>
                 </StackPanel>
@@ -90,12 +90,12 @@
                     <!-- Percent docks first so the status text (last child) fills the rest and can wrap
                          for the longer verification-failure message. -->
                     <TextBlock x:Name="ProgressPercentText" Text="0%" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                               Foreground="{StaticResource BrushAccentText}" DockPanel.Dock="Right" Margin="12,0,0,0"/>
+                               Foreground="{DynamicResource BrushAccentText}" DockPanel.Dock="Right" Margin="12,0,0,0"/>
                     <TextBlock x:Name="ProgressStatusText" Text="Downloading installer..." FontSize="{StaticResource FontSizeBody}"
-                               Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"/>
+                               Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"/>
                 </DockPanel>
                 <ProgressBar x:Name="DownloadProgressBar" Height="6" Minimum="0" Maximum="100" Value="0" 
-                             Foreground="{StaticResource BrushAccentText}" Background="{StaticResource BrushSurface}" BorderThickness="0"/>
+                             Foreground="{DynamicResource BrushAccentText}" Background="{DynamicResource BrushSurface}" BorderThickness="0"/>
             </StackPanel>
 
             <!-- Row 3: Action Buttons Footer -->

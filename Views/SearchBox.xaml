@@ -22,10 +22,10 @@
             </Button.Template>
             <Button.Style>
                 <Style TargetType="Button">
-                    <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
                     <Style.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                         </Trigger>
                         <!-- Reads the box, not Text, so it shows with the first letter rather than
                              after the typing delay. -->

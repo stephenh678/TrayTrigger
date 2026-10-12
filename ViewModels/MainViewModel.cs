@@ -255,6 +255,8 @@ public class MainViewModel : ViewModelBase
         // properties are relayed above.
         Library.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
         Import.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+        // The same for the update status the About page binds (UpdateStatusBrush, UpdateStatusIcon, ...).
+        Update.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
 
         // Lets import/scan completion messages fall back to the floating toast whenever the
         // Library status bar isn't the section on screen (see LibraryViewModel.AnnounceImportResult).

@@ -10,6 +10,8 @@
   Compare:  .\tools\Capture-Baseline.ps1 -Compare C:\temp\tt-before,C:\temp\tt-after
 
   Only a few screens:  .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-x -Only library,edit
+  In another theme:    .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-light -Theme Light
+  Switch live:         .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-swap -SwapTo Light   (starts in the saved theme, then switches while the window is up)
 
   The compare counts pixels that differ between same-named PNGs and exits 1 if any do. For a cleanup
   that must not change how the app looks, every image should say 0. -Tolerance N ignores per-channel
@@ -21,7 +23,9 @@ param(
     [string]$Exe = (Join-Path $PSScriptRoot '..\bin\Debug\net10.0-windows\win-x64\TrayTrigger.exe'),
     [int]$TimeoutSeconds = 45,
     [int]$Tolerance = 0,
-    [string[]]$Only
+    [string[]]$Only,
+    [string]$Theme,
+    [string]$SwapTo
 )
 
 # One entry per screen: the switch name, then any arguments it takes before the output file. Switches that
@@ -34,7 +38,7 @@ $Screens = @(
     @('settings'), @('settings-general'), @('settings-library'), @('settings-performance'), @('settings-tray'),
     @('settings-undo'), @('settings-diagnostics'), @('settings-top'),
     @('system-all'), @('system-profiles'), @('system-ready'), @('system-specs'), @('system-tweaks'), @('stutter'),
-    @('tools'), @('tool-edit'), @('activity'),
+    @('tools'), @('tool-edit'), @('theme-edit'), @('theme-edit', 'green'), @('theme-edit', 'picker'), @('activity'),
     @('about'), @('about-overview'), @('about-features'), @('about-shortcuts'), @('about-support'), @('about-diagnostics'),
     @('edit'), @('edit-bottom'), @('edit-poster'), @('details'), @('picker'),
     @('confirm'), @('exit-dialog'), @('launch-popup'), @('updater-dialog'), @('welcome'), @('steam'),
@@ -87,6 +91,7 @@ if (Get-Process TrayTrigger -ErrorAction SilentlyContinue) { throw 'Close TrayTr
 New-Item -ItemType Directory -Force $Out | Out-Null
 
 $failed = @()
+if ($SwapTo) { $env:TRAYTRIGGER_THEME_SWAP = $SwapTo }
 if ($Only) { $Only = @($Only | ForEach-Object { $_ -split ',' }); $Screens = @($Screens | Where-Object { $Only -contains $_[0] }) }
 foreach ($screen in $Screens) {
     $name = $screen[0]
@@ -96,11 +101,13 @@ foreach ($screen in $Screens) {
     $png = Join-Path $Out "$file.png"
     Remove-Item $png -ErrorAction SilentlyContinue
     $q = [char]34
-    $argText = (@("--screenshot-$name") + ($extra | ForEach-Object { "$q$_$q" }) + "$q$png$q") -join ' '
+    $themeArgs = if ($Theme) { @('--theme', "$q$Theme$q") } else { @() }
+    $argText = ($themeArgs + @("--screenshot-$name") + ($extra | ForEach-Object { "$q$_$q" }) + "$q$png$q") -join ' '
     $p = Start-Process -FilePath $Exe -ArgumentList $argText -PassThru
     if (-not $p.WaitForExit($TimeoutSeconds * 1000)) { $p.Kill(); $p.WaitForExit() }
     if (Test-Path $png) { "{0,-34} ok" -f $label } else { "{0,-34} NO IMAGE" -f $label; $failed += $label }
 }
+Remove-Item Env:TRAYTRIGGER_THEME_SWAP -ErrorAction SilentlyContinue
 ''
 "Captured $($Screens.Count - $failed.Count) of $($Screens.Count) into $Out"
 if ($failed) { "No image for: $($failed -join ', ')" }

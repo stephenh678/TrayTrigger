@@ -10,6 +10,7 @@ using TrayTrigger.Models;
 using TrayTrigger.Services;
 using TrayTrigger.ViewModels;
 using TrayTrigger.Views;
+using TrayTrigger.Services.Theming;
 
 namespace TrayTrigger;
 
@@ -23,6 +24,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = _viewModel;
+
+        // The theme's picture is held only while the window is on screen: loaded when it first shows, let go when it hides to the tray.
+        IsVisibleChanged += (_, _) => ThemeService.Instance.WindowShown = IsVisible;
 
         try
         {

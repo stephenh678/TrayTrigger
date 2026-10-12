@@ -9,8 +9,8 @@
         Height="560" Width="680"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushSurface}"
-        Foreground="{StaticResource BrushTextPrimary}">
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -24,10 +24,10 @@
         <!-- Header -->
         <DockPanel Grid.Row="0" Margin="0,0,0,16">
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Add Games from Folder" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}" 
+                <TextBlock Text="Add Games from Folder" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                 <TextBlock Text="{Binding SubtitleText}" 
-                           FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" 
+                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
                            FontFamily="{StaticResource AppFont}" Margin="0,2,0,0"/>
             </StackPanel>
         </DockPanel>
@@ -52,8 +52,8 @@
         </Grid>
 
         <!-- Games List -->
-        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
-                BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
+        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
             <ListBox ItemsSource="{Binding FilteredGames}" 
                      Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -62,7 +62,7 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="{StaticResource BrushSurfaceHover}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BrushSurfaceHover}"/>
                         <Setter Property="Padding" Value="10,8"/>
                         <Setter Property="Template">
                             <Setter.Value>
@@ -75,7 +75,7 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                            <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -104,7 +104,7 @@
                             </CheckBox>
 
                             <!-- Game Icon -->
-                            <Border Width="36" Height="36" CornerRadius="{StaticResource RadiusControl}" Background="{StaticResource BrushSurfaceHover}" 
+                            <Border Width="36" Height="36" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}" 
                                     Margin="0,0,12,0" VerticalAlignment="Center" DockPanel.Dock="Left">
                                 <Image Source="{Binding IconImage}" Width="28" Height="28" 
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -146,8 +146,8 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <Border Background="{StaticResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5">
-                                        <TextBlock Text="IN LIBRARY" Foreground="{StaticResource BrushSuccessText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold"/>
+                                    <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5">
+                                        <TextBlock Text="IN LIBRARY" Foreground="{DynamicResource BrushSuccessText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold"/>
                                     </Border>
                                 </Border>
                             </StackPanel>
@@ -155,10 +155,10 @@
                             <!-- Name and Branch Path -->
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}" 
+                                           Foreground="{DynamicResource BrushTextPrimary}" 
                                            FontFamily="{StaticResource AppFont}"/>
                                 <TextBlock Text="{Binding DisplayPath}" FontSize="{StaticResource FontSizeBody}" 
-                                           Foreground="{StaticResource BrushTextSecondary}" 
+                                           Foreground="{DynamicResource BrushTextSecondary}" 
                                            FontFamily="{StaticResource AppFont}"
                                            TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                             </StackPanel>
@@ -177,7 +177,7 @@
         <!-- Footer -->
         <DockPanel Grid.Row="4">
             <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="{StaticResource FontSizeBody}"
-                       Foreground="{StaticResource BrushTextSecondary}"
+                       Foreground="{DynamicResource BrushTextSecondary}"
                        VerticalAlignment="Center"/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

@@ -22,7 +22,7 @@
                 <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
                           Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
 
-                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"
+                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
 
                 <Button Grid.Column="2" Content="Remove"
@@ -44,7 +44,7 @@
                 <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" AutomationProperties.Name="{Binding Path, StringFormat='Scan {0}'}" VerticalAlignment="Center"
                           Margin="0,0,10,0" Style="{StaticResource ModernCheckBox}"/>
 
-                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"
+                <TextBlock Grid.Column="1" Text="{Binding Path}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
             </Grid>
         </DataTemplate>
@@ -58,9 +58,9 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"
+                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                                TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding DisplayPath}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}"
+                    <TextBlock Text="{Binding DisplayPath}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
                 </StackPanel>
 
@@ -83,18 +83,18 @@
         <!-- Undo toast for removed scan locations and ignored games / folders (UX-11): the
              Library's toast, floated over the bottom of the settings list. -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Panel.ZIndex="100"
-                Background="{StaticResource BrushSurfaceHover}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5"
                 CornerRadius="{StaticResource RadiusCard}" Padding="16,10"
                 Visibility="{Binding IsUndoToastVisible, Converter={StaticResource BoolToVis}}"
                 MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
                 IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{DynamicResource ColorFloatingShadow}"/>
             </Border.Effect>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}" Margin="0,0,10,0" VerticalAlignment="Center"
-                           Foreground="{StaticResource BrushAccent}"/>
-                <TextBlock Text="{Binding UndoToastMessage}" Foreground="{StaticResource BrushTextPrimary}" MaxWidth="420"
+                           Foreground="{DynamicResource BrushAccent}"/>
+                <TextBlock Text="{Binding UndoToastMessage}" Foreground="{DynamicResource BrushTextPrimary}" MaxWidth="420"
                            TextTrimming="CharacterEllipsis" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
                 <Button Content="UNDO" Command="{Binding UndoRemovalCommand}"
                         Style="{StaticResource ModernAccentButton}" Padding="12,4" Margin="0,0,10,0" VerticalAlignment="Center"/>
@@ -108,15 +108,15 @@
         <DockPanel Grid.Row="0" Margin="0,0,0,14">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
-                           Foreground="{StaticResource BrushSuccessText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <TextBlock Text="Saved in real time" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" 
+                           Foreground="{DynamicResource BrushSuccessText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBlock Text="Saved in real time" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" 
                            FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Application Settings" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}" 
+                <TextBlock Text="Application Settings" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                 <TextBlock Text="Startup and updates, launcher integrations and artwork, the tray menu, launch scripts and tweak safety, and diagnostics"
-                           FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" 
+                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis" 
                            FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
             </StackPanel>
         </DockPanel>
@@ -134,7 +134,7 @@
         <views:SearchBox x:Name="SettingsSearchBox" DockPanel.Dock="Right" HorizontalAlignment="Left" Margin="12,0,0,0"
                          KeyboardNavigation.TabIndex="1"
                          Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
-        <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}"
+        <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                 BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" HorizontalAlignment="Left"
                 KeyboardNavigation.TabIndex="0" KeyboardNavigation.TabNavigation="Local"
                 views:ScrollToTop.Target="{Binding ElementName=SettingsScroll}">
@@ -182,29 +182,29 @@
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="GENERAL" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- 1.1 Window & Tray Icon: the window and the icon, in the order you meet them -
+                    <!-- 1.0 Window & Tray Icon: the window and the icon, in the order you meet them -
                          startup, the icon itself, what its left-click does. What happens when a game starts
                          is Launch & Performance > Launching Games; the hotkeys have their own card below;
                          the menu's contents are the Tray Menu category. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Window &amp; Tray Icon" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How the window, tray icon and hotkeys work" Margin="0,0,0,8" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="general/overview"/>
 
                             <CheckBox Content="Start with Windows" IsChecked="{Binding StartWithWindows}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Launches TrayTrigger automatically when you log in to Windows." 
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
                                        Margin="24,3,0,0" TextWrapping="Wrap"/>
 
                             <!-- Nested Sub-Toggle: Start Minimized -->
@@ -214,7 +214,7 @@
                                           IsEnabled="{Binding CanConfigureMinimized}" 
                                           Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                                 <TextBlock Text="When enabled, runs tray-only with no window opened on system boot."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                            Margin="24,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
 
@@ -228,20 +228,20 @@
                                         VerticalAlignment="Center" Padding="10,5"/>
                             </DockPanel>
                             <TextBlock Text="Asks Windows to keep the TrayTrigger icon on the taskbar instead of in the hidden overflow. Windows 11 only; Windows decides, and the tip below is the one method it always honours."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
                             <!-- What Windows actually did with the request - a request it dropped used to look
                                  exactly like one it honoured. -->
-                            <TextBlock Text="{Binding TrayPromotionStatus}" Foreground="{StaticResource BrushAccentText}" FontSize="{StaticResource FontSizeBody}"
+                            <TextBlock Text="{Binding TrayPromotionStatus}" Foreground="{DynamicResource BrushAccentText}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,0,0,6" TextWrapping="Wrap"
                                        Visibility="{Binding HasTrayPromotionStatus, Converter={StaticResource BoolToVis}}"/>
 
-                            <Border Background="{StaticResource BrushSurface}" CornerRadius="{StaticResource RadiusControl}" Padding="8" Margin="24,4,0,0">
+                            <Border Background="{DynamicResource BrushSurface}" CornerRadius="{StaticResource RadiusControl}" Padding="8" Margin="24,4,0,0">
                                 <DockPanel LastChildFill="True">
-                                    <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushWarning}"
+                                    <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
                                                VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
                                     <TextBlock Text="Tip: You can also drag the TrayTrigger icon from the taskbar ^ overflow chevron directly onto your taskbar to pin it permanently."
-                                               Foreground="{StaticResource BrushWarning}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                               Foreground="{DynamicResource BrushWarning}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </Border>
 
@@ -250,27 +250,83 @@
                                       IsChecked="{Binding TrayLeftClickOpensMenu}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}" Margin="0,12,0,0"/>
                             <TextBlock Text="Off: left-click shows or hides the window and right-click opens the menu. On: both clicks open the menu. Double-click always opens the window."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,0" TextWrapping="Wrap"/>
 
                         </StackPanel>
                     </Border>
 
+                    <!-- 1.1 Appearance: the theme. The choice applies at once, and the New theme button writes a
+                         theme file that starts as a copy of the one on screen. -->
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                            Padding="14,12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Appearance" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                            <Button Style="{StaticResource HelpLinkButton}" Content="How themes work, and how to make your own" Margin="0,0,0,8" HorizontalAlignment="Left"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="general/themes"/>
+
+                            <TextBlock Text="Theme" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                            <!-- A wrapping row: at the window's narrowest the last buttons drop to a second line instead of being cut off.
+                                 The 4 below each item is the gap above the line of text under the row. -->
+                            <WrapPanel Orientation="Horizontal">
+                                <ComboBox AutomationProperties.Name="Theme" ItemsSource="{Binding Appearance.Themes}"
+                                          SelectedValue="{Binding Appearance.SelectedThemeId}" SelectedValuePath="Id" DisplayMemberPath="DisplayName"
+                                          Style="{StaticResource ModernComboBox}" VerticalAlignment="Center" MinWidth="260" Margin="0,0,8,4"/>
+                                <Button Command="{Binding Appearance.DeleteCommand}" IsEnabled="{Binding Appearance.CanDelete}"
+                                        Style="{StaticResource ModernOutlineButton}" Width="32" Height="32" Padding="0" Margin="0,0,8,4" VerticalAlignment="Center"
+                                        AutomationProperties.Name="Delete this theme"
+                                        ToolTip="Delete this theme and the pictures made for it. Built-in themes cannot be deleted.">
+                                    <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushDanger}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Command="{Binding Appearance.EditCommand}" Style="{StaticResource ModernOutlineButton}" Padding="12,5" Margin="0,0,8,4" VerticalAlignment="Center"
+                                        AutomationProperties.Name="{Binding Appearance.EditLabel}"
+                                        ToolTip="Change the colors, the picture and the name. A built-in theme cannot be changed, so this makes a new theme of your own from it.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE70F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Appearance.EditLabel}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Content="Open themes folder" Command="{Binding Appearance.OpenFolderCommand}" Margin="0,0,0,4" VerticalAlignment="Center"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
+                            </WrapPanel>
+                            <TextBlock Text="{Binding Appearance.Summary}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,0" TextWrapping="Wrap"/>
+                            <CheckBox Content="Show the theme's background picture" IsChecked="{Binding Appearance.ShowBackground}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}" Margin="0,10,0,0"/>
+                            <TextBlock Text="The picture behind the pages. Off leaves the theme's plain background color."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Margin="24,3,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Appearance.Status}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushWarning}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       AutomationProperties.LiveSetting="Polite"
+                                       Visibility="{Binding Appearance.HasStatus, Converter={StaticResource BoolToVis}}"/>
+
+                            <TextBlock Text="{Binding Appearance.PictureMessage}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       AutomationProperties.LiveSetting="Polite"
+                                       Visibility="{Binding Appearance.HasPictureMessage, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- 1.2 Hotkeys: TrayTrigger's own global hotkeys. Games and tools set theirs in Edit
                          Game and Edit Tool. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Hotkeys" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="Work anywhere in Windows, with the window open or hidden. Games and tools set their own launch hotkeys in Edit Game and Edit Tool."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="Setting a hotkey" Margin="0,0,0,10" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="general/overview"/>
 
                             <TextBlock Text="Show / Hide Window Hotkey" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,6"/>
                             <!-- Recorded from real key presses; a combo another game or another app holds is
                                  refused with the reason instead of being saved and silently failing to register. -->
                             <views:HotkeyRecorderBox AutomationProperties.Name="Show / Hide Window Hotkey" x:Name="ManageHotkeyBox" Hotkey="{Binding GlobalManageHotkey}" OwnerId="{x:Static services:HotkeyManager.ManageOwnerId}"
@@ -279,43 +335,43 @@
                                        Visibility="{Binding HasMessage, ElementName=ManageHotkeyBox, Converter={StaticResource BoolToVis}}"
                                        FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                             <TextBlock Text="Press this key combination anywhere in Windows to show or hide the TrayTrigger window (default: Ctrl+Alt+G). Click the box and press the keys: Ctrl, Alt or Shift plus a key, or a function key on its own."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
 
                             <TextBlock Text="Open Tray Menu Hotkey" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,14,0,6"/>
                             <views:HotkeyRecorderBox AutomationProperties.Name="Open Tray Menu Hotkey" x:Name="TrayMenuHotkeyBox" Hotkey="{Binding TrayMenuHotkey}" OwnerId="{x:Static services:HotkeyManager.TrayMenuOwnerId}"
                                                      ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
                             <TextBlock Text="{Binding Message, ElementName=TrayMenuHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=TrayMenuHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=TrayMenuHotkeyBox, Converter={StaticResource BoolToVis}}"
                                        FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                             <TextBlock Text="Press this key combination anywhere in Windows to open the tray menu by the tray icon, the same menu as right-clicking the tray icon, ready to type a search (default: Ctrl+Alt+T)."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
 
                             <TextBlock Text="Suspend / Resume Game Hotkey" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,14,0,6"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,14,0,6"/>
                             <views:HotkeyRecorderBox AutomationProperties.Name="Suspend / Resume Game Hotkey" x:Name="SuspendHotkeyBox" Hotkey="{Binding SuspendGameHotkey}" OwnerId="{x:Static services:HotkeyManager.SuspendOwnerId}"
                                                      ShowInlineMessage="False" Margin="0,0,0,6" Width="180" HorizontalAlignment="Left"/>
                             <TextBlock Text="{Binding Message, ElementName=SuspendHotkeyBox}" Foreground="{Binding MessageBrush, ElementName=SuspendHotkeyBox}"
                                        Visibility="{Binding HasMessage, ElementName=SuspendHotkeyBox, Converter={StaticResource BoolToVis}}"
                                        FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap" Margin="0,0,0,6"/>
                             <TextBlock Text="Press it in a game you launched from TrayTrigger to minimize it, freeze it where it is, mute it and stop its playtime clock; press it again to bring it back and carry on (default: Ctrl+Alt+P). For cutscenes you can't pause, or stepping away. The tray menu's Now Playing section does the same. Online games disconnect while suspended, and games protected by anti-cheat (Easy Anti-Cheat, BattlEye and the like) are never suspended."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Suspend works" Margin="0,4,0,0" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/suspend"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 1.3 Tools: the feature switch for the Tools page. Its tray option is under Tray Menu. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Tools" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8"/>
                             <CheckBox Content="Enable Tools" IsChecked="{Binding EnableTools}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Adds a Tools page to the sidebar for the programs you use alongside games, like DLSS Swapper, Vortex or MSI Afterburner. Drop a program or its shortcut to add it, sort tools into their own categories, star favorites and give them hotkeys. Turning it off hides the page and keeps your tools for next time."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,0" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Tools work" Margin="24,4,0,0" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tools/overview"/>
@@ -323,13 +379,13 @@
                     </Border>
 
                     <!-- 1.4 Updates & GitHub Releases -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <DockPanel LastChildFill="False" Margin="0,0,0,8">
                                 <TextBlock Text="Updates" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                           Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                 <Button Content="Check for Updates Now" Command="{Binding CheckUpdatesInSettingsCommand}"
                                         Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
                                         VerticalAlignment="Center" Padding="10,4"/>
@@ -339,19 +395,19 @@
                                       IsChecked="{Binding AutoCheckForUpdates}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Checks GitHub Releases when TrayTrigger starts and notifies you when an update is available."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Receive pre-release (beta) updates"
                                       IsChecked="{Binding IncludePrereleaseUpdates}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Also offer beta builds. New features first, but they may be less stable."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="About the beta channel" Margin="24,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="updates/prerelease"/>
 
-                            <TextBlock Text="{Binding UpdateStatusText}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushAccentText}"
+                            <TextBlock Text="{Binding UpdateStatusText}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
                                        Margin="0,8,0,0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -387,21 +443,21 @@
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="LIBRARY &amp; ART" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 2.1 Launcher Integrations -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Launcher Integrations" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Each toggle controls whether Scan for Games looks for that launcher's installed games. Turning one off never removes or changes games already in your library."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How the Game Scanner works" Margin="0,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
 
@@ -415,24 +471,24 @@
                                 </CheckBox>
                             </DockPanel>
                             <TextBlock Text="Found via Steam's own library manifests, with official artwork from Steam's cache. Untick a library folder below to skip it."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
                             <!-- Steam's library folders live here, under the toggle that owns them, rather than
                                  in the manual Scan Locations list below. Untick one to skip that library. -->
-                            <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                     CornerRadius="{StaticResource RadiusControl}" Padding="10,8" Margin="24,0,0,10"
                                     Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}">
                                 <StackPanel>
                                     <DockPanel LastChildFill="False" Margin="0,0,0,6">
                                         <TextBlock Text="Steam Libraries" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                                   Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                         <Button Content="Refresh" Command="{Binding RefreshSteamScanLocationsCommand}"
                                                 Style="{StaticResource ModernGhostButton}" DockPanel.Dock="Right" Padding="8,3" FontSize="{StaticResource FontSizeBody}"/>
                                     </DockPanel>
 
                                     <TextBlock Text="No Steam libraries detected. Click Refresh after installing Steam."
-                                               FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap"
                                                Visibility="{Binding HasNoSteamLibraryLocations, Converter={StaticResource BoolToVis}}"/>
 
                                     <ItemsControl ItemsSource="{Binding SteamLibraryLocations}" ItemTemplate="{StaticResource SteamLibraryRowTemplate}"/>
@@ -447,7 +503,7 @@
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via GOG Galaxy's own install records. No scan location needed."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox AutomationProperties.Name="Enable EA library integration" IsChecked="{Binding EaIntegrationEnabled}"
@@ -458,7 +514,7 @@
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via the EA app's install manifests. Limitation: only games in EA's default folders (EA Games / Origin Games) are found - a custom install location is not."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox AutomationProperties.Name="Enable Epic Games library integration" IsChecked="{Binding EpicIntegrationEnabled}"
@@ -469,7 +525,7 @@
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via the Epic Games Launcher's own install records. No scan location needed."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox AutomationProperties.Name="Enable Ubisoft Connect library integration" IsChecked="{Binding UbisoftIntegrationEnabled}"
@@ -480,7 +536,7 @@
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via Ubisoft Connect's install records, any location. Limitation: Ubisoft records no title or exe, so both are read from the install folder - occasionally wrong for a game with several executables."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox AutomationProperties.Name="Enable Xbox / PC Game Pass library integration" IsChecked="{Binding XboxIntegrationEnabled}"
@@ -491,7 +547,7 @@
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via Windows' own Gaming Services records, so every game installed through the Xbox app is covered, on any drive. Games launch through Windows like the Xbox app does - no direct-exe option. Limitation: only modern (GDK) titles are detected; a few older Microsoft Store games that never moved to the current format are not."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox AutomationProperties.Name="Enable Battle.net library integration" IsChecked="{Binding BattleNetIntegrationEnabled}"
@@ -502,26 +558,26 @@
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="Found via Blizzard's install records, on any drive. Games launch through Battle.net - no direct-exe option, because Battle.net signs the game in. If Battle.net is closed it's started for you. Limitation: right after Battle.net's own cache is cleared, a newly installed game's launch code can't be read until Battle.net has been opened once."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 2.2 Scan for Games: when it runs, the button that runs it now, the extra folders
                          it searches, and what it must skip. Everything scanning-related in one card. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <DockPanel LastChildFill="False" Margin="0,0,0,4">
                                 <TextBlock Text="Scan for Games" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                           Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                                 <Button Content="Scan for Games Now" Command="{Binding OpenScanForGamesCommand}"
                                         Style="{StaticResource ModernOutlineButton}" DockPanel.Dock="Right"
                                         VerticalAlignment="Center" Padding="10,4"/>
                             </DockPanel>
                             <TextBlock Text="Finds installed games through the launchers above and in any extra folders you add here, marks the ones in your library that are no longer installed, and lets you keep the scanner out of what it should skip."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How scanning works" Margin="0,0,0,10"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scanner/overview"/>
 
@@ -529,25 +585,25 @@
                                       IsChecked="{Binding AutoScanForGamesOnStartup}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Runs Scan for Games quietly each time TrayTrigger opens, covering the launchers above and your Scan Locations - only interrupts you with the New Games Found picker if it actually finds something new. A game you have uninstalled is greyed out and tagged either way: that check runs at startup whether this is on or not."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
                             <CheckBox Content="Notify me when a scan finds new games"
                                       IsChecked="{Binding NotifyWhenScanAddsGames}" IsEnabled="{Binding AutoScanForGamesOnStartup}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}" Margin="24,0,0,0"/>
                             <TextBlock Text="A notification by the tray clock as well as the line in Activity &amp; History, so you hear about it even when TrayTrigger starts in the tray. Off by default."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="48,3,0,12" TextWrapping="Wrap"/>
 
                             <!-- Scan Locations manager (manual folders only - Steam's own libraries are listed
                                  under the Steam integration toggle above) -->
-                            <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                     CornerRadius="{StaticResource RadiusControl}" Padding="12,10">
                                 <StackPanel>
                                     <TextBlock Text="Scan Locations" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+                                               Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8"/>
 
                                     <TextBlock Text="No folders yet. Add one such as D:\Games to have Scan for Games look through its subfolders."
-                                               FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"
                                                Visibility="{Binding HasNoScanLocations, Converter={StaticResource BoolToVis}}"/>
 
                                     <ItemsControl ItemsSource="{Binding ScanLocations}" ItemTemplate="{StaticResource ScanLocationRowTemplate}" Margin="0,0,0,4"/>
@@ -560,16 +616,16 @@
                             <!-- Ignored Games manager -->
                             <!-- Always shown: the card header promises this list, and hiding it while empty left
                                  the reader looking for a section that was not there. -->
-                            <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                     CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,10,0,0">
                                 <StackPanel>
                                     <TextBlock Text="Ignored Games" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                               Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                                     <TextBlock Text="Never suggested by Add Folder or Scan for Games. Remove one to let it be detected again."
-                                               FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
                                     <ItemsControl ItemsSource="{Binding IgnoredGamePaths}" ItemTemplate="{StaticResource IgnoredGamePathRowTemplate}"/>
                                     <TextBlock Text="Nothing ignored yet. Use Ignore on a Scan for Games result to keep that game out of future scans, or ignore a whole folder below."
-                                               FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap"
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"
                                                Visibility="{Binding HasNoIgnoredGamePaths, Converter={StaticResource BoolToVis}}"/>
                                     <!-- Folders are the one ignore added by hand: a Utilities or Mods folder under a scan
                                          location is skipped whole, however its contents change. -->
@@ -583,14 +639,14 @@
 
                     <!-- 2.3 Game Titles & Categories: how an added game is named and filed. Where its art and
                          info come from is 2.4. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Game Titles &amp; Categories" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="How games you add are named and which category they go in, whether you scan for them or drop them on the window."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How titles are detected" Margin="0,0,0,10" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/titles"/>
 
@@ -598,11 +654,11 @@
                                       IsChecked="{Binding SearchOfficialTitleOnline}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Looks up the official title and Steam App ID instead of using the file name."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
 
                             <DockPanel Margin="24,0,0,10" LastChildFill="False" IsEnabled="{Binding SearchOfficialTitleOnline}">
-                                <TextBlock Text="Matching sensitivity:" Foreground="{StaticResource BrushTextSecondary}" 
+                                <TextBlock Text="Matching sensitivity:" Foreground="{DynamicResource BrushTextSecondary}" 
                                            FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <ComboBox AutomationProperties.Name="Matching sensitivity" ItemsSource="{Binding ConfidenceThresholdOptions}" 
                                           SelectedItem="{Binding OnlineMatchSensitivity, Mode=TwoWay}" 
@@ -613,7 +669,7 @@
                                       IsChecked="{Binding AutoCategorizeFromSteam}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="New games get their store genre (Action, RPG, Strategy) as a category instead of Uncategorized. Uses Steam's genre when the game is on Steam, otherwise RAWG's if RAWG is set up under Art &amp; Info Sources."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
 
                         </StackPanel>
@@ -622,21 +678,21 @@
                     <!-- 2.4 Art & Info Sources: where posters and game info come from beyond Steam, and how
                          fresh they are kept. Both free keys in one card, the place the Welcome dialog and the
                          "Better Art and Game Info" reminder send people to. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Art &amp; Info Sources" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Steam's posters and game info need no setup. SteamGridDB and RAWG fill in what Steam doesn't have; both are free and optional, each with a key from a free account."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Getting the free keys"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/api_keys"/>
-                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="How artwork is found"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/artwork"/>
-                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Where game info comes from"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/game_info"/>
                             </StackPanel>
@@ -645,7 +701,7 @@
                                       IsChecked="{Binding UseSteamGridDbArt}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Community posters for games Steam has none for yet. Needs a free API key: Get Free Key opens the page, and once you've signed in, paste the key here. Games already in your library get their posters as soon as the key is checked."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
 
                             <!-- Never greyed out: pasting a key ticks the box above (SettingsViewModel.SteamGridDbApiKey),
@@ -675,7 +731,7 @@
                                       IsChecked="{Binding UseRawgMetadata}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Developer, publisher, release date, synopsis, and genre for games that aren't on Steam (Game Pass, Epic exclusives, Roblox, and so on). Needs a free RAWG API key: Get Free Key opens the page, and once you've signed up, paste the key here. Shown via a source toggle in each game's details window."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
                             <!-- Never greyed out, like the SteamGridDB key above. -->
                             <StackPanel Margin="24,0,0,12">
@@ -702,11 +758,11 @@
                                         IsEnabled="{Binding CanRefreshAllPosters}"
                                         Style="{StaticResource ModernOutlineButton}" Padding="10,5"
                                         HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding PosterRefreshStatus}" Foreground="{StaticResource BrushAccentText}"
+                                <TextBlock Text="{Binding PosterRefreshStatus}" Foreground="{DynamicResource BrushAccentText}"
                                            FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,4"/>
                             </StackPanel>
                             <TextBlock Text="Re-checks every game for better art, including ones that already have a poster."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="0,4,0,12" TextWrapping="Wrap"/>
 
                             <!-- Freshness of the cached Steam / RAWG details behind Game Details. The window
@@ -719,9 +775,9 @@
                                           Style="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Right"
                                           DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                                    <TextBlock Text="Refresh game info:" Foreground="{StaticResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}"/>
+                                    <TextBlock Text="Refresh game info:" Foreground="{DynamicResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}"/>
                                     <TextBlock Text="Game Details opens from a copy saved on disk and shows when it was last updated. This is how old that copy may get before it's refreshed in the background; Refresh in the details window always fetches fresh info."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                               Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
 
@@ -729,28 +785,28 @@
                                     Style="{StaticResource ModernOutlineButton}" Padding="10,5"
                                     HorizontalAlignment="Left" Margin="0,0,0,4"/>
                             <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters are kept."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="0,4,0,2" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 2.5 Library View: how the library is laid outand what each card shows. Poster art
                          comes before "Show details on hover", which only applies to posters. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Library View" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="How the library is laid out and what each game's card shows."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="Posters and details on hover" Margin="0,0,0,12" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/artwork"/>
 
                             <DockPanel Margin="0,0,0,12" LastChildFill="False">
                                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                                    <TextBlock Text="Library view mode:" Foreground="{StaticResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}"/>
-                                    <TextBlock Text="The same setting as the view buttons above the library; it is remembered between sessions." Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0"/>
+                                    <TextBlock Text="Library view mode:" Foreground="{DynamicResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}"/>
+                                    <TextBlock Text="The same setting as the view buttons above the library; it is remembered between sessions." Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ComboBox AutomationProperties.Name="Library view mode" ItemsSource="{Binding ViewModeOptions}" 
                                           SelectedItem="{Binding LibraryViewMode, Mode=TwoWay}" 
@@ -761,14 +817,14 @@
                                       IsChecked="{Binding UseVerticalPosterArt}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Shows each game's poster on its library card instead of a square icon, when one is available."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Show details on hover"
                                       IsChecked="{Binding PosterDetailsOnHover}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Poster Grid and Extra Large show only each game's artwork until you point at one; then the art zooms in and the rest of its details appear. Choose below what stays on every card. The same setting as the eye button beside the view buttons."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,8" TextWrapping="Wrap"/>
 
                             <!-- What stays on the card at rest (PosterDetailsViewModel), alphabetically. Greyed out
@@ -788,7 +844,7 @@
                                     </Style>
                                 </StackPanel.Resources>
                                 <TextBlock Text="Keep on every card, even when you're not pointing at it:" Style="{StaticResource PosterDetailsListText}"
-                                           Foreground="{StaticResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,6"/>
+                                           Foreground="{DynamicResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,6"/>
                                 <!-- Flows to as many columns as the card has room for: all nine on one line in a
                                      wide window, three at the smallest. -->
                                 <WrapPanel Orientation="Horizontal" ItemWidth="150">
@@ -804,7 +860,7 @@
                                 </WrapPanel>
                                 <TextBlock Text="Everything else appears when you point at a card, Tab to it or right-click it. The Play button always waits for that, and a game that isn't installed always stays dimmed."
                                            Style="{StaticResource PosterDetailsListText}"
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
 
                         </StackPanel>
@@ -829,40 +885,40 @@
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="TRAY MENU" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 3.1 Tray Menu: what it lists, then how it looks. The icon itself (left-click, always show) is under General. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Tray Menu" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How the tray menu works" Margin="0,0,0,8"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="traymenu/overview"/>
 
                             <TextBlock Text="What it lists" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,6"/>
                             <CheckBox Content="Show a search box at the top of the tray menu"
                                       IsChecked="{Binding ShowTraySearch}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Type to find a game (or tool) by name or category; Enter launches the first match and Esc clears the box."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Show a Recent section in the tray menu"
                                       IsChecked="{Binding ShowRecentInTray}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Your last-played games, at the top of the tray menu, whether category grouping is on or not."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
                             <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
-                                <TextBlock Text="Max recent games to show:" Foreground="{StaticResource BrushTextSecondary}"
+                                <TextBlock Text="Max recent games to show:" Foreground="{DynamicResource BrushTextSecondary}"
                                            FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBox AutomationProperties.Name="Max recent games to show" Text="{Binding MaxRecentInTray, UpdateSourceTrigger=LostFocus}"
                                          Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left" TextAlignment="Center"
@@ -871,7 +927,7 @@
                             </DockPanel>
 
                             <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowRecentInTray}">
-                                <TextBlock Text="Recent sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                <TextBlock Text="Recent sort order:" Foreground="{DynamicResource BrushTextSecondary}"
                                            FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <ComboBox AutomationProperties.Name="Recent sort order" ItemsSource="{Binding TraySortOptions}"
                                           SelectedItem="{Binding RecentTraySortOption, Mode=TwoWay}"
@@ -882,11 +938,11 @@
                                       IsChecked="{Binding ShowFavoritesInTray}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Your starred games, near the top of the tray menu, whether category grouping is on or not. Hidden while you have no favorites."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,6" TextWrapping="Wrap"/>
 
                             <DockPanel Margin="24,0,0,6" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
-                                <TextBlock Text="Max favorites to show:" Foreground="{StaticResource BrushTextSecondary}"
+                                <TextBlock Text="Max favorites to show:" Foreground="{DynamicResource BrushTextSecondary}"
                                            FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBox AutomationProperties.Name="Max favorites to show" Text="{Binding MaxFavoritesInTray, UpdateSourceTrigger=LostFocus}"
                                          Style="{StaticResource ModernTextBox}" Width="50" HorizontalAlignment="Left" TextAlignment="Center"
@@ -895,7 +951,7 @@
                             </DockPanel>
 
                             <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowFavoritesInTray}">
-                                <TextBlock Text="Favorites sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                <TextBlock Text="Favorites sort order:" Foreground="{DynamicResource BrushTextSecondary}"
                                            FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <ComboBox AutomationProperties.Name="Favorites sort order" ItemsSource="{Binding TraySortOptions}"
                                           SelectedItem="{Binding FavoritesTraySortOption, Mode=TwoWay}"
@@ -906,11 +962,11 @@
                                       IsChecked="{Binding GroupTrayMenuByCategory}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="On: games sit under a submenu for each category. Off: one flat list, in the order chosen below." 
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" 
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <DockPanel Margin="24,0,0,12" LastChildFill="False">
-                                <TextBlock Text="Tray menu sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                <TextBlock Text="Tray menu sort order:" Foreground="{DynamicResource BrushTextSecondary}"
                                            FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <ComboBox AutomationProperties.Name="Tray menu sort order" ItemsSource="{Binding TraySortOptions}"
                                           SelectedItem="{Binding TrayMenuSortOption, Mode=TwoWay}"
@@ -924,11 +980,11 @@
                                           IsChecked="{Binding ShowToolsInTray}"
                                           Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                                 <TextBlock Text="Adds a Tools submenu after your games, with every tool in one list."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                            Margin="24,3,0,6" TextWrapping="Wrap"/>
 
                                 <DockPanel Margin="24,0,0,12" LastChildFill="False" IsEnabled="{Binding ShowToolsInTray}">
-                                    <TextBlock Text="Tools sort order:" Foreground="{StaticResource BrushTextSecondary}"
+                                    <TextBlock Text="Tools sort order:" Foreground="{DynamicResource BrushTextSecondary}"
                                                FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <ComboBox AutomationProperties.Name="Tools sort order" ItemsSource="{Binding ToolsSortOptions}"
                                               SelectedItem="{Binding ToolsTraySortOption, Mode=TwoWay}"
@@ -937,19 +993,19 @@
                             </StackPanel>
 
                             <TextBlock Text="How it looks" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,4,0,6"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,4,0,6"/>
                             <CheckBox Content="Show game icons in the tray menu"
                                       IsChecked="{Binding ShowTrayMenuIcons}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Each game's icon beside its name, or its launcher's logo when it has no icon. Off gives a text-only menu."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Compact tray menu"
                                       IsChecked="{Binding CompactTrayMenu}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Tighter rows and smaller icons, so a long library fits without scrolling."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,10" TextWrapping="Wrap"/>
 
                         </StackPanel>
@@ -974,22 +1030,22 @@
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="LAUNCH &amp; PERFORMANCE" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 4.1 Launching Games: what happens on screen when a game starts - the window gets out
                          of the way, the launchers stay quiet, the popup by the tray icon says how it's going. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Launching Games" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
                             <TextBlock Text="What happens on screen when a game starts."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How a game is launched" Margin="0,0,0,10" HorizontalAlignment="Left"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/launch"/>
 
@@ -997,7 +1053,7 @@
                                       IsChecked="{Binding MinimizeOnGameLaunch}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Automatically hides the TrayTrigger window to the system tray whenever a game starts so it never covers your game."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,12" TextWrapping="Wrap"/>
 
                             <!-- With the option above: both keep windows off the game while it starts. -->
@@ -1005,7 +1061,7 @@
                                       IsChecked="{Binding KeepLaunchersMinimized}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Steam and GOG Galaxy start in the background when they aren't already running, and Epic launches silently, so only the game opens. The EA app, Ubisoft Connect, Xbox and Battle.net are left as they are."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,12" TextWrapping="Wrap"/>
 
                             <!-- The icon's launch popup: what a launch from a game hotkey or the tray menu shows
@@ -1015,7 +1071,7 @@
                                       IsChecked="{Binding ShowLaunchPopup}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="{Binding LaunchPopupDescription}"
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,0" TextWrapping="Wrap"/>
 
                             <!-- Nested sub-toggle: the popup for launches from the open window too. -->
@@ -1025,7 +1081,7 @@
                                           IsEnabled="{Binding ShowLaunchPopup}"
                                           Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                                 <TextBlock Text="Off: only while TrayTrigger is hidden, or when &quot;Minimize to system tray when launching a game&quot; is about to hide it. On: every launch from the open window uses the popup, in place of the notice inside the window. A launch error still opens a dialog while the window is in front."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                            Margin="24,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </StackPanel>
@@ -1033,36 +1089,36 @@
 
                     <!-- 4.2 Per-game launch scripts (off by default; gates the Edit Game card).
                          Lives here, with the other launch-time behaviour, rather than under General. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                 <TextBlock Text="Game Launch Scripts" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                <Border Background="{StaticResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="ADVANCED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{StaticResource BrushTextSoft}"/>
+                                           Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                <Border Background="{DynamicResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="ADVANCED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushTextSoft}"/>
                                 </Border>
                             </StackPanel>
                             <TextBlock Text="Run your own script or program before a game starts and after it exits - close Discord, switch audio, set an RGB profile."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Enable scripts (per-game and default)"
                                       IsChecked="{Binding EnableGameScripts}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="The master switch. While off, no script runs for any game - not a game's own, not the defaults below - and the Scripts card stays out of Edit Game. Turning it on also installs the templates and examples in the scripts folder. Games that already have a script keep their settings either way."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal" Margin="24,0,0,2">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
-                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Writing your own"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/writing"/>
-                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Open scripts folder" Command="{Binding OpenScriptsFolderCommand}"
                                         ToolTip="Example scripts to copy and adapt, and a README with a quick start and how to write your own"/>
-                                <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Get more scripts"
                                         Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger-Scripts"
                                         ToolTip="The TrayTrigger-Scripts catalogue on GitHub: ready-made scripts to drop into the scripts folder, and where to share yours"/>
@@ -1071,18 +1127,18 @@
                             <!-- Default scripts: run for every game that has no script of its own for that phase. -->
                             <StackPanel Margin="0,12,0,0" IsEnabled="{Binding EnableGameScripts}">
                                 <TextBlock Text="Default scripts for every game" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,2"/>
+                                           Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
                                 <TextBlock Text="Needs Enable scripts above. Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                                 <CheckBox Content="Run the default scripts"
                                           IsChecked="{Binding DefaultScriptsEnabled}"
                                           Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,2"/>
                                 <TextBlock Text="Off by default. Nothing below runs until this is ticked. Untick it later to pause the defaults without clearing them."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="24,0,0,10" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="24,0,0,10" TextWrapping="Wrap"/>
 
                                 <StackPanel IsEnabled="{Binding DefaultScriptsEnabled}">
-                                <TextBlock Text="Default pre-launch script" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Default pre-launch script" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1100,7 +1156,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,-4,0,8">
                                     <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPreLaunchScriptCommand}"
                                             ToolTip="Create a new script of your own from the blank template, in the scripts folder, and open it for editing"/>
-                                    <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPreLaunchScriptCommand}"/>
                                 </StackPanel>
                                 <CheckBox Content="Use the same script for pre-launch and post-exit"
@@ -1108,7 +1164,7 @@
                                           Style="{StaticResource ModernCheckBox}" Margin="0,0,0,10"
                                           ToolTip="For a script that handles both phases in one file, like the bundled examples"/>
 
-                                <TextBlock Text="Default post-exit script" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Default post-exit script" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1129,20 +1185,20 @@
                                     <Button Style="{StaticResource HelpLinkButton}" Content="New script..." Command="{Binding NewDefaultPostExitScriptCommand}"
                                             IsEnabled="{Binding CanEditDefaultPostExitScript}"
                                             ToolTip="Create a new script of your own from the blank template, in the scripts folder, and open it for editing"/>
-                                    <TextBlock Text="·" Foreground="{StaticResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
                                     <Button Style="{StaticResource HelpLinkButton}" Content="Open in editor" Command="{Binding EditDefaultPostExitScriptCommand}"/>
                                 </StackPanel>
 
                                 <TextBlock Text="Default Script Arguments (optional, passed to both default scripts)" FontSize="{StaticResource FontSizeBody}"
-                                           Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <TextBox AutomationProperties.Name="Default script arguments" Text="{Binding DefaultScriptArguments, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource ModernTextBox}" IsEnabled="{Binding HasAnyDefaultScript}" Margin="0,0,0,4"/>
                                 <TextBlock Text="Used for every game whose own Script Arguments in Edit Game are empty; a game with its own uses those instead. For example, &quot;recommended&quot; for the Close Background Apps example."
-                                           FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
-                                <Border Background="{StaticResource BrushWarningWash}" BorderBrush="{StaticResource BrushWarningBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="10,6" Margin="0,0,0,8"
+                                <Border Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="10,6" Margin="0,0,0,8"
                                         Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushWarning}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
                                 </Border>
 
                                 <CheckBox Content="Wait for the default pre-launch script to finish before starting the game"
@@ -1151,7 +1207,7 @@
                                 <DockPanel Margin="22,0,0,6" LastChildFill="True" IsEnabled="{Binding HasDefaultPreLaunchScript}">
                                     <TextBox AutomationProperties.Name="Default pre-launch script timeout in seconds" DockPanel.Dock="Left" Width="64" TextAlignment="Center" Text="{Binding DefaultPreLaunchScriptTimeoutSeconds, UpdateSourceTrigger=LostFocus}"
                                              Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}"
+                                    <TextBlock Text="{Binding DefaultPreLaunchTimeoutHint}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                                TextWrapping="Wrap" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <CheckBox Content="Cancel the launch if the default pre-launch script fails" ToolTip="Fails means a non-zero exit code, a timeout, or a script that won't start."
@@ -1170,15 +1226,15 @@
 
                     <!-- 4.3 NVIDIA DLSS:the two things about DLSS that are not per game. Hidden on a
                          PC with no NVIDIA driver, as the Edit Game card is. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10"
                             Visibility="{Binding Dlss.IsAvailable, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
                         <StackPanel>
                             <TextBlock Text="NVIDIA DLSS" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="DLSS Override runs a game on the DLSS files installed with your GeForce driver instead of the older ones inside the game. It is switched on per game, in Edit Game."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -1186,12 +1242,12 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}">
+                                    <TextBlock FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}">
                                         <Run Text="DLSS Override:"/>
                                         <Run Text="{Binding Dlss.OverrideCountText, Mode=OneWay}" FontWeight="SemiBold"/>
                                     </TextBlock>
                                     <TextBlock Text="Restore All turns it off for every game and puts NVIDIA's settings back the way they were. The setting lives in NVIDIA's driver, not in TrayTrigger, so do this before uninstalling."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,3,12,2" TextWrapping="Wrap"/>
+                                               Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,3,12,2" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Button Grid.Column="1" Content="Restore All" VerticalAlignment="Center"
                                         AutomationProperties.Name="Restore the DLSS settings of every game"
@@ -1205,7 +1261,7 @@
                                       IsChecked="{Binding Dlss.IndicatorOn}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="NVIDIA's own two overlays, together: the corner line with the DLSS version, preset letter and render resolution, and, in a game using Frame Generation, the bar across the top with the driver and Streamline versions, the output and motion-vector resolutions, the frame multiplier, refresh rate and the driver profile in use. For checking that an override is in effect, not for leaving on - they draw over every DLSS game until you untick this."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="About the DLSS overlays" Margin="24,0,0,2"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="dlss/indicator"/>
@@ -1213,26 +1269,26 @@
                             <!-- Only when a change did not work. -->
                             <TextBlock Text="{Binding Dlss.Status}" FontSize="{StaticResource FontSizeBody}" Margin="0,8,0,0"
                                        AutomationProperties.LiveSetting="Polite"
-                                       Foreground="{StaticResource BrushWarning}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"
                                        Visibility="{Binding Dlss.HasStatus, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 4.4 Preset & Reset Options -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Performance Tweak Safety" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Applies to Apply Performance Preset and Undo Preset on the System &amp; Performance page."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Create a System Restore point before Apply Performance Preset or Undo Preset"
                                       IsChecked="{Binding CreateRestorePointBeforeTweaks}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="A Windows rollback point in case a bulk change causes problems. Recommended on."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="About restore points" Margin="24,0,0,2"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="tweaks/restore_point"/>
@@ -1258,33 +1314,33 @@
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="DIAGNOSTICS &amp; STORAGE" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- 5.1 Troubleshooting & Diagnostics -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Diagnostic Logging &amp; Traces" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Configure diagnostic logging to catch errors and trace execution while troubleshooting issues." 
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                             <CheckBox Content="Enable verbose logging" 
                                       IsChecked="{Binding VerboseLoggingEnabled}" 
                                       Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}"/>
                             <TextBlock Text="Adds detailed traces (launch parameters, scoring, registry checks) to the log. Turn on when reproducing a problem."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <Button Style="{StaticResource HelpLinkButton}" Content="Reading the log &amp; reporting a problem" Margin="24,0,0,12"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/logs"/>
 
                             <!-- Active Debug Log Info Box -->
-                            <Border Background="{StaticResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" BorderBrush="{StaticResource BrushSurfaceHover}" BorderThickness="1" Padding="12,10">
+                            <Border Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" BorderBrush="{DynamicResource BrushSurfaceHover}" BorderThickness="1" Padding="12,10">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1292,11 +1348,11 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                                        <TextBlock Text="Active Debug Log File" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="Active Debug Log File" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,2"/>
                                         <TextBlock Text="{Binding LogFilePathDisplay}" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}" 
-                                                   Foreground="{StaticResource BrushAccentText}" TextTrimming="CharacterEllipsis"/>
+                                                   Foreground="{DynamicResource BrushAccentText}" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding LogFileSizeDisplay, StringFormat='Current File Size: {0}'}" 
-                                                   FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" Margin="0,2,0,0"/>
+                                                   FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -1325,23 +1381,23 @@
                                             ToolTip="Saves the same report as a file, for attaching instead of pasting."/>
                                 </StackPanel>
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="Diagnostic report" Foreground="{StaticResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}"/>
+                                    <TextBlock Text="Diagnostic report" Foreground="{DynamicResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}"/>
                                     <TextBlock Text="Version, Windows, hardware, launchers, library counts, the settings that matter to bugs and the last warnings from the log, for a bug report. API keys are never included."
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                               Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- 5.2 Storage & Asset Caches -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Data Storage &amp; Asset Cache" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                             <TextBlock Text="Where TrayTrigger keeps your library, settings and artwork." 
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,10" TextWrapping="Wrap"/>
 
                             <!-- Roaming: Database & Settings -->
                             <DockPanel LastChildFill="True" Margin="0,0,0,10">
@@ -1349,15 +1405,15 @@
                                         Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="10,5"/>
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
                                     <TextBlock Text="User Data &amp; Settings (%AppData%)" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource BrushTextSecondary}"/>
-                                    <TextBlock Text="{Binding StorageDirectoryDisplay}" Foreground="{StaticResource BrushAccentText}" 
+                                               Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding StorageDirectoryDisplay}" Foreground="{DynamicResource BrushAccentText}" 
                                                FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
                                     <TextBlock Text="Your library and settings (games.json, settings.json), with a backup copy of each." 
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
 
-                            <Separator Background="{StaticResource BrushSurfaceHover}" Margin="0,2,0,10"/>
+                            <Separator Background="{DynamicResource BrushSurfaceHover}" Margin="0,2,0,10"/>
 
                             <!-- Local: Artwork & Media Caches -->
                             <DockPanel LastChildFill="True">
@@ -1365,19 +1421,19 @@
                                         Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="10,5"/>
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
                                     <TextBlock Text="Artwork &amp; Icons Cache (%LocalAppData%)" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource BrushTextSecondary}"/>
-                                    <TextBlock Text="{Binding CacheDirectoryDisplay}" Foreground="{StaticResource BrushAccentText}" 
+                                               Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Text="{Binding CacheDirectoryDisplay}" Foreground="{DynamicResource BrushAccentText}" 
                                                FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}" Margin="0,2,0,2"/>
                                     <TextBlock Text="Contains extracted game icons (.png) and downloaded poster artwork (.jpg)." 
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- 5.3 Backup & Restore: TrayTrigger's own data in one .zip (BackupService). -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}"
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -1388,9 +1444,9 @@
                             </StackPanel>
                             <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
                                 <TextBlock Text="Backup &amp; Restore" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}"/>
-                                <TextBlock Text="Saves your game library, settings, tools, scripts and artwork to one .zip file, to move TrayTrigger to a new PC or undo a mistake. Restoring puts them back and finds games whose drive letter or folder changed. Game saves aren't included."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextPrimary}"/>
+                                <TextBlock Text="Saves your game library, settings, tools, scripts, themes and artwork to one .zip file, to move TrayTrigger to a new PC or undo a mistake. Restoring puts them back and finds games whose drive letter or folder changed. Game saves aren't included."
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="How backups work" Margin="0,4,0,0" HorizontalAlignment="Left"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/backup"/>
                             </StackPanel>
@@ -1398,17 +1454,17 @@
                     </Border>
 
                     <!-- 5.4 Reset Settings to Defaults -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
-                            BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
                             <Button DockPanel.Dock="Right" Content="Restore Defaults" Command="{Binding ResetSettingsCommand}" 
                                     Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="12,6"/>
                             <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
                                 <TextBlock Text="Reset Settings to Defaults" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource BrushTextPrimary}"/>
+                                           Foreground="{DynamicResource BrushTextPrimary}"/>
                                 <TextBlock Text="Restores startup, tray menu, game detection, and display preferences to the recommended defaults. Your game library and custom artwork are preserved."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
@@ -1425,7 +1481,7 @@
              "Settings saved", "Added scan location", and the integration-toggle messages
              were all invisible. -->
         <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" FontSize="{StaticResource FontSizeBody}"
-                   Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
+                   Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
                    TextWrapping="Wrap" Margin="0,0,0,2">
             <TextBlock.Style>
                 <Style TargetType="TextBlock">

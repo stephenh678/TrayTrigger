@@ -9,7 +9,7 @@ namespace TrayTrigger.Tests;
 
 public class TabStateConvertersTests
 {
-    private static readonly string[] ThemeKeys = { "BrushAccent", "BrushAccentHover", "BrushSurfaceHover", "BrushTextPrimary", "BrushTextSecondary" };
+    private static readonly string[] ThemeKeys = { "BrushAccent", "BrushAccentHover", "BrushSurfaceHover", "BrushTextOnSolid", "BrushTextPrimary", "BrushTextSecondary" };
 
     /// <summary>The converters look brushes up through Application.Current, so the theme keys are
     /// registered on the shared test Application (a distinct brush per key) and the body runs on
@@ -44,12 +44,12 @@ public class TabStateConvertersTests
         Assert.Same(Brushes.Transparent, Convert(new TabBackgroundConverter(), false, false)));
 
     [Fact]
-    public void Foreground_ActiveOrHoveredIsPrimaryText_IdleIsSecondaryText() => WithThemeBrushes(resources =>
+    public void Foreground_ActiveIsTextOnTheAccentFill_HoveredIsPrimaryText_IdleIsSecondaryText() => WithThemeBrushes(resources =>
     {
         var converter = new TabForegroundConverter();
-        Assert.Same(resources["BrushTextPrimary"], Convert(converter, true, false));
+        Assert.Same(resources["BrushTextOnSolid"], Convert(converter, true, false));
+        Assert.Same(resources["BrushTextOnSolid"], Convert(converter, true, true));
         Assert.Same(resources["BrushTextPrimary"], Convert(converter, false, true));
-        Assert.Same(resources["BrushTextPrimary"], Convert(converter, true, true));
         Assert.Same(resources["BrushTextSecondary"], Convert(converter, false, false));
     });
 

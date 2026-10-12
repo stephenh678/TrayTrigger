@@ -309,6 +309,7 @@ public sealed class ActivityGroupViewModel : ViewModelBase
 
     public ActivityGroupViewModel(ActivityGroup group, DateTime nowLocal)
     {
+        ListenForThemeChanges();
         Group = group;
         When = ActivityViewModel.FormatWhen(group.Latest.TimeUtc, nowLocal);
         Section = ActivityViewModel.SectionFor(group.Latest.TimeUtc, nowLocal);
@@ -375,6 +376,12 @@ public sealed class ActivityGroupViewModel : ViewModelBase
         ActivityLevel.Change => "",
         _ => "",
     };
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(LevelBackground));
+        OnPropertyChanged(nameof(LevelForeground));
+    }
+
     public string LevelBackground => Group.Latest.Level switch
     {
         ActivityLevel.Critical => AppPalette.Hex("BrushDangerSolidHover"),
@@ -384,7 +391,7 @@ public sealed class ActivityGroupViewModel : ViewModelBase
     };
     public string LevelForeground => Group.Latest.Level switch
     {
-        ActivityLevel.Critical => AppPalette.Hex("BrushTextPrimary"),
+        ActivityLevel.Critical => AppPalette.Hex("BrushTextOnSolid"),
         ActivityLevel.Problem => AppPalette.Hex("BrushWarning"),
         ActivityLevel.Change => AppPalette.Hex("BrushInfoText"),
         _ => AppPalette.Hex("BrushTextSoft"),

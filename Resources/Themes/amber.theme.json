@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "name": "Amber",
+  "author": "TrayTrigger",
+  "base": "dark",
+  "background": { "image": "amber.jpg", "strength": 1.0, "position": "right" },
+  "colors": {
+    "Accent": "#A85A00"
+  }
+}

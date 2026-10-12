@@ -112,15 +112,16 @@ public partial class LibraryView : UserControl
     {
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
-            DropZoneBorder.BorderBrush = (Brush)FindResource("BrushAccent");
-            DropZoneBorder.Background = AppPalette.Brush("BrushAccentWash");
+            // As references, not brushes: the drop zone has to keep following a theme switch.
+            DropZoneBorder.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+            DropZoneBorder.SetResourceReference(Border.BackgroundProperty, "BrushAccentWash");
         }
     }
 
     private void DropZone_DragLeave(object sender, DragEventArgs e)
     {
-        DropZoneBorder.BorderBrush = (Brush)FindResource("BrushBorder");
-        DropZoneBorder.Background = AppPalette.Brush("BrushDialogCard");
+        DropZoneBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorder");
+        DropZoneBorder.SetResourceReference(Border.BackgroundProperty, "BrushDialogCard");
     }
 
     private void DropZone_Drop(object sender, DragEventArgs e)

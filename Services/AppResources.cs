@@ -9,8 +9,8 @@ namespace TrayTrigger.Services;
 /// Typography.xaml, Shapes.xaml). The one place that knows how to read them in code, shared by
 /// <see cref="AppPalette"/>, <see cref="AppTypography"/> and <see cref="AppShapes"/>.
 ///
-/// <para>The running app answers from its own resources. With no <see cref="Application"/> (the unit
-/// tests) the file is loaded on its own, once, so the answer is the same either way.</para>
+/// <para>The running app answers from its own resources. In the unit tests, which have no App.xaml, the file is
+/// loaded on its own, once, so the answer is the same either way.</para>
 /// </summary>
 internal static class AppResources
 {
@@ -26,10 +26,13 @@ internal static class AppResources
         return found;
     }
 
+    /// <summary>A new copy of the file, not the shared one: the theme code reads it to learn the built-in colors and must not see a swapped theme.</summary>
+    internal static ResourceDictionary LoadFresh(string file) => Load(file);
+
     private static ResourceDictionary Load(string file)
     {
-        // The pack:// scheme is registered by touching PackUriHelper; the app does this on its own.
-        _ = System.IO.Packaging.PackUriHelper.UriSchemePack;
+        // A pack:// URI is read through a web request handler that WPF registers when an Application is
+        // created. The running app has one, and the unit tests make one with WpfTestHost.
         return new ResourceDictionary
         {
             Source = new Uri($"pack://application:,,,/TrayTrigger;component/Resources/{file}", UriKind.Absolute)

@@ -241,7 +241,8 @@ internal static class SearchHighlight
     internal sealed class HighlightAdorner : Adorner
     {
         // Find-in-page amber: translucent, so the label stays readable through it.
-        private static readonly Brush Fill = CreateFill();
+        // Read when drawn, not once: the theme can change while a search is on screen.
+        private static Brush Fill => AppPalette.Brush("BrushHighlight");
 
         private readonly string[] _terms;
         private readonly TextBlock _block;
@@ -288,13 +289,6 @@ internal static class SearchHighlight
             if (!_block.IsVisible) return;
             foreach (Rect rect in _rects)
                 drawingContext.DrawRoundedRectangle(Fill, null, rect, 2, 2);
-        }
-
-        private static Brush CreateFill()
-        {
-            var brush = AppPalette.Brush("BrushHighlight").Clone();
-            brush.Freeze();
-            return brush;
         }
     }
 }

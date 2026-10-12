@@ -87,7 +87,17 @@ public partial class HotkeyRecorderBox : UserControl
     {
         InitializeComponent();
         ShowStoredValue();
+        // The colors are set in code, so a theme change has to set them again.
+        // Loaded can come twice without an Unloaded between; take the handler off first so it is never there twice.
+        Loaded += (_, _) =>
+        {
+            TrayTrigger.Services.Theming.ThemeService.Instance.ThemeChanged -= OnThemeChanged;
+            TrayTrigger.Services.Theming.ThemeService.Instance.ThemeChanged += OnThemeChanged;
+        };
+        Unloaded += (_, _) => TrayTrigger.Services.Theming.ThemeService.Instance.ThemeChanged -= OnThemeChanged;
     }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => ShowStoredValue();
 
     // ------------------------------------------------------------------ display
 

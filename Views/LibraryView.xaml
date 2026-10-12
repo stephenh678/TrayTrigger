@@ -86,7 +86,7 @@
             </MenuItem>
             <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding BatchRefreshMetadataCommand}"/>
             <Separator/>
-            <MenuItem Header="Remove from Library" Command="{Binding BatchRemoveCommand}" Foreground="{StaticResource BrushDanger}"/>
+            <MenuItem Header="Remove from Library" Command="{Binding BatchRemoveCommand}" Foreground="{DynamicResource BrushDanger}"/>
         </ContextMenu>
 
         <!-- Reusable Game Context Menu shared across Grid, Icons, and List views -->
@@ -97,7 +97,7 @@
             <!-- Icons on the first group only, Windows 11 style: the actions a player reaches for
                  most, and the same glyphs the tray menu's Now Playing submenu uses. -->
             <MenuItem Header="Play" Command="{Binding LaunchCommand}" FontWeight="SemiBold">
-                <MenuItem.Icon><TextBlock Text="&#xE768;" Style="{StaticResource MenuGlyphIcon}" Foreground="{StaticResource BrushAccentText}"/></MenuItem.Icon>
+                <MenuItem.Icon><TextBlock Text="&#xE768;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushAccentText}"/></MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
                 <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
@@ -133,7 +133,7 @@
             </MenuItem>
             <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}"
                       ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
-                <MenuItem.Icon><TextBlock Text="&#xE711;" Style="{StaticResource MenuGlyphIcon}" Foreground="{StaticResource BrushDanger}"/></MenuItem.Icon>
+                <MenuItem.Icon><TextBlock Text="&#xE711;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushDanger}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -259,7 +259,7 @@
             </MenuItem>
 
             <Separator/>
-            <MenuItem Header="Remove from Library" Command="{Binding DeleteCommand}" Foreground="{StaticResource BrushDanger}"/>
+            <MenuItem Header="Remove from Library" Command="{Binding DeleteCommand}" Foreground="{DynamicResource BrushDanger}"/>
         </ContextMenu>
 
         <!-- ==================================================================== -->
@@ -447,15 +447,15 @@
         <Style x:Key="UnavailableBadgeBorder" TargetType="Border">
             <Setter Property="Visibility" Value="Collapsed"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="{StaticResource BrushWarningWash}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BrushWarningBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource BrushWarningWash}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushWarningBorder}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
                     <Setter Property="Visibility" Value="Visible"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
-                    <Setter Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
-                    <Setter Property="BorderBrush" Value="{StaticResource BrushBorderStrong}"/>
+                    <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -475,17 +475,17 @@
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
-                    <Setter Property="Background" Value="{StaticResource BrushScrim}"/>
+                    <Setter Property="Background" Value="{DynamicResource BrushScrim}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="UnavailableBadgeText" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{StaticResource BrushWarning}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
             <Setter Property="Text" Value="{Binding UnavailableLabel}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource BrushInfoText}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BrushInfoText}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -505,17 +505,17 @@
                            <!-- Right: Live Game Count Status (matching Settings & System) -->
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
-                                          Foreground="{StaticResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" 
+                                          Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" 
                                           FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                            </StackPanel>
 
                            <!-- Left: Title & Subtitle matching Settings & System -->
                            <StackPanel VerticalAlignment="Center">
-                               <TextBlock Text="Games Library" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}" 
+                               <TextBlock Text="Games Library" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                                           FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                                <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, and local folders"
-                                          FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
+                                          FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
                                           FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
                            </StackPanel>
                        </DockPanel>
@@ -548,7 +548,7 @@
                            </StackPanel>
 
                            <!-- Left: Segmented Category Tabs -->
-                           <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}"
+                           <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                                    BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" Margin="0,0,16,0"
                                    HorizontalAlignment="Left" VerticalAlignment="Center">
                                <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource EdgeChevronScrollViewer}"
@@ -566,10 +566,10 @@
                                                        Margin="0,0,2,0">
                                                    <StackPanel Orientation="Horizontal">
                                                        <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}"
-                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushGold}" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushGold}" Margin="0,0,5,0" VerticalAlignment="Center"
                                                                   Visibility="{Binding IsFavoritesTab, Converter={StaticResource BoolToVis}}"/>
                                                        <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
-                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,5,0" VerticalAlignment="Center"
                                                                   Visibility="{Binding IsHiddenTab, Converter={StaticResource BoolToVis}}"/>
                                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                                    </StackPanel>
@@ -606,7 +606,7 @@
                            <Grid Grid.Column="2" Margin="0,0,10,0">
                                <!-- Same container as the view-mode switcher to its right, so the two icon
                                     controls read as one family rather than a loose button beside a group. -->
-                               <Border Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}"
+                               <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                                        BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3"/>
                                <!-- 34 rather than the 32 of every other icon button in this row: the badge
                                     needs the extra two pixels to clear the glyph. Kept as close as it can
@@ -619,7 +619,7 @@
                                        ToolTip="{Binding Library.Filter.ActiveFilterSummary}"
                                        AutomationProperties.Name="{Binding Library.Filter.AccessibleName}">
                                    <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
-                                              Foreground="{StaticResource BrushTextPrimary}"
+                                              Foreground="{DynamicResource BrushTextPrimary}"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                </Button>
 
@@ -636,14 +636,14 @@
                                     badge squarely on top of it. Out here it aligns to the whole control.
                                     Not hit-testable, so the corner it covers still presses the button. -->
                                <Border x:Name="LibraryFilterBadge"
-                                       Background="{StaticResource BrushAccentHover}"
-                                       BorderBrush="{StaticResource BrushDialogCard}" BorderThickness="1" IsHitTestVisible="False"
+                                       Background="{DynamicResource BrushAccentHover}"
+                                       BorderBrush="{DynamicResource BrushDialogCard}" BorderThickness="1" IsHitTestVisible="False"
                                        CornerRadius="{StaticResource RadiusCard}" Height="15" MinWidth="15" Padding="3,0"
                                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0"
                                        Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}">
                                    <TextBlock Text="{Binding Library.Filter.ActiveFilterCount}"
                                               FontSize="{StaticResource FontSizeBadge}" FontFamily="{StaticResource AppFont}"
-                                              Foreground="{StaticResource BrushTextPrimary}"
+                                              Foreground="{DynamicResource BrushTextOnSolid}"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                </Border>
 
@@ -655,10 +655,10 @@
                                       PlacementTarget="{Binding ElementName=LibraryFilterButton}" Placement="Custom"
                                       StaysOpen="False" AllowsTransparency="True" Focusable="True"
                                       Opened="LibraryFilterPopup_Opened" PreviewKeyDown="LibraryFilterPopup_PreviewKeyDown">
-                                   <Border Background="{StaticResource BrushSurface}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1"
+                                   <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                            CornerRadius="{StaticResource RadiusCard}" Padding="6,12" MinWidth="270" MaxWidth="300">
                                        <Border.Effect>
-                                           <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="{StaticResource ColorFloatingShadow}"/>
+                                           <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="{DynamicResource ColorFloatingShadow}"/>
                                        </Border.Effect>
                                        <StackPanel>
                                            <DockPanel Margin="8,0,8,8">
@@ -678,7 +678,7 @@
                                                    </Button.Style>
                                                </Button>
                                                <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                                          Foreground="{StaticResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                                          Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
                                            </DockPanel>
 
                                            <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -688,7 +688,7 @@
                                                            <StackPanel Margin="0,0,0,10"
                                                                        Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                                                                <TextBlock Text="{Binding Title}" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
-                                                                          Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,4"/>
+                                                                          Foreground="{DynamicResource BrushTextMuted}" Margin="8,0,0,4"/>
                                                                <ItemsControl ItemsSource="{Binding Options}">
                                                                    <ItemsControl.ItemTemplate>
                                                                        <DataTemplate DataType="{x:Type vm:LibraryFilterOption}">
@@ -715,7 +715,7 @@
                            </Grid>
 
                            <!-- View Mode Switcher (Grid, Icons, List) -->
-                           <Border Grid.Column="3" Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}"
+                           <Border Grid.Column="3" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                                    BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3">
                                <StackPanel Orientation="Horizontal">
                                    <!-- Not one of the views: it changes how both poster views draw their cards,
@@ -747,8 +747,8 @@
                                                    <Setter Property="BorderBrush" Value="Transparent"/>
                                                    <Style.Triggers>
                                                        <DataTrigger Binding="{Binding SettingsVM.PosterDetailsOnHover}" Value="True">
-                                                           <Setter Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                           <Setter Property="Background" Value="{StaticResource BrushAccentWash}"/>
+                                                           <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                                           <Setter Property="Background" Value="{DynamicResource BrushAccentWash}"/>
                                                        </DataTrigger>
                                                    </Style.Triggers>
                                                </Style>
@@ -757,10 +757,10 @@
                                                       HorizontalAlignment="Center" VerticalAlignment="Center">
                                                <TextBlock.Style>
                                                    <Style TargetType="TextBlock">
-                                                       <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                                                       <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                                                        <Style.Triggers>
                                                            <DataTrigger Binding="{Binding SettingsVM.PosterDetailsOnHover}" Value="True">
-                                                               <Setter Property="Foreground" Value="{StaticResource BrushAccentText}"/>
+                                                               <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
                                                            </DataTrigger>
                                                        </Style.Triggers>
                                                    </Style>
@@ -768,7 +768,7 @@
                                            </TextBlock>
                                        </Border>
                                    </Button>
-                                   <Border Width="1" Margin="4,5" Background="{StaticResource BrushBorder}"/>
+                                   <Border Width="1" Margin="4,5" Background="{DynamicResource BrushBorder}"/>
 
                                    <!-- Every button is icon-only, so each carries a tooltip and an automation
                                         name. Extra Large uses a "large tiles" glyph (E8A9) - the old E71D
@@ -778,28 +778,28 @@
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsExtraLargeView}"
         AutomationProperties.Name="Extra Large posters view" ToolTip="Extra large posters">
                                        <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeSubhead}"
-                                                  Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                  Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                    <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
                                            Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsGridView}"
         AutomationProperties.Name="Poster grid view" ToolTip="Poster grid">
                                        <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                  Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                    <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Compact Icons"
                                            Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsIconsView}"
         AutomationProperties.Name="Compact icons view" ToolTip="Compact icons">
                                        <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                  Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                    <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Details List"
                                            Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsListView}"
         AutomationProperties.Name="Details list view" ToolTip="Details list">
                                        <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                  Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                </StackPanel>
                            </Border>
@@ -811,8 +811,8 @@
                                 on the window already works, but this gives it a visible highlight) -->
                            <Border x:Name="DropZoneBorder" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                    Margin="0,20,0,20" CornerRadius="{StaticResource RadiusCard}"
-                                   BorderBrush="{StaticResource BrushBorder}" BorderThickness="1.5"
-                                   Background="{StaticResource BrushDialogCard}"
+                                   BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1.5"
+                                   Background="{DynamicResource BrushDialogCard}"
                                    AllowDrop="True" Drop="DropZone_Drop" DragOver="DropZone_DragOver"
                                    DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave">
                                <Border.Style>
@@ -842,10 +842,10 @@
                                    <Image Source="pack://application:,,,/Assets/app_icon.png" Width="64" Height="64"
                                           HorizontalAlignment="Center" Margin="0,0,0,14" RenderOptions.BitmapScalingMode="HighQuality"/>
                                    <TextBlock Text="Your library is empty"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource BrushTextPrimary}"
+                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox (PC Game Pass), and Battle.net. Or drop a game's exe, shortcut, or install folder anywhere on this window."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                        <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
@@ -889,15 +889,15 @@
                                        </Style>
                                    </StackPanel.Style>
                                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeDisplay}"
-                                              Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                              Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                    <TextBlock Text="No games match"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource BrushTextPrimary}"
+                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Nothing in this category matches your search. Press Esc to clear the search, or pick another tab."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                    <TextBlock Text="Adding a game instead? Drop its exe, shortcut, or install folder anywhere on this window, or use Add Game / Add Folder above."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                </StackPanel>
 
@@ -922,12 +922,12 @@
                                        </Style>
                                    </StackPanel.Style>
                                    <TextBlock Text="&#xE734;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeDisplay}"
-                                              Foreground="{StaticResource BrushGold}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                              Foreground="{DynamicResource BrushGold}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                    <TextBlock Text="No favorites yet"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource BrushTextPrimary}"
+                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Click the star on any game to add it to your Favorites."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
+                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                </StackPanel>
 
@@ -947,12 +947,12 @@
                                        </Style>
                                    </StackPanel.Style>
                                    <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeDisplay}"
-                                              Foreground="{StaticResource BrushAccentText}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                              Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                    <TextBlock Text="Hidden by your filters"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource BrushTextPrimary}"
+                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Your library has games, but none of them match the filters you have set. Filters stay put between sessions - the filter button shows how many are on."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
                                               FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,16"/>
                                    <Button Content="Clear filters" Command="{Binding Library.Filter.ClearCommand}"
                                            Style="{StaticResource ModernAccentButton}" HorizontalAlignment="Center"/>
@@ -1013,8 +1013,8 @@
                                        <ItemsControl.ItemTemplate>
                                            <DataTemplate DataType="{x:Type vm:GameCardViewModel}">
                                                <Border x:Name="CardBorder" CornerRadius="{StaticResource RadiusCard}" 
-                                                       Background="{StaticResource BrushSurface}" 
-                                                       BorderBrush="{StaticResource BrushBorder}" 
+                                                       Background="{DynamicResource BrushSurface}" 
+                                                       BorderBrush="{DynamicResource BrushBorder}" 
                                                        BorderThickness="1"
                                                        Margin="7"
                                                        RenderTransformOrigin="0.5,0.5"
@@ -1073,7 +1073,7 @@
                                                                    <Image Source="{Binding CoverImage}" Stretch="UniformToFill"
                                                                           Opacity="0.45"
                                                                           RenderOptions.BitmapScalingMode="LowQuality"/>
-                                                                   <Border Background="{StaticResource BrushScrim}"/>
+                                                                   <Border Background="{DynamicResource BrushScrim}"/>
 
                                                                    <!-- Crisp Artwork Layer (Fits cleanly without cropping letters, logos, or characters) -->
                                                                    <Image Source="{Binding CoverImage}" Stretch="Uniform"
@@ -1092,8 +1092,8 @@
                                                                    views:PosterDetailFade.Part="TopShade">
                                                                <Border.Background>
                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                       <GradientStop Color="{StaticResource ColorRaw990D0D12}" Offset="0.0"/>
-                                                                       <GradientStop Color="{StaticResource ColorRaw000D0D12}" Offset="1.0"/>
+                                                                       <GradientStop Color="{DynamicResource ColorRaw990D0D12}" Offset="0.0"/>
+                                                                       <GradientStop Color="{DynamicResource ColorRaw000D0D12}" Offset="1.0"/>
                                                                    </LinearGradientBrush>
                                                                </Border.Background>
                                                            </Border>
@@ -1106,16 +1106,16 @@
                                                                <Border CornerRadius="{StaticResource RadiusInnerBottom}" views:PosterDetailFade.Part="BottomShade">
                                                                    <Border.Background>
                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                           <GradientStop Color="{StaticResource ColorRaw00111114}" Offset="0.0"/>
-                                                                           <GradientStop Color="{StaticResource ColorRaw88111114}" Offset="0.25"/>
-                                                                           <GradientStop Color="{StaticResource ColorRawE6111114}" Offset="0.65"/>
-                                                                           <GradientStop Color="{StaticResource ColorRawF8111114}" Offset="1.0"/>
+                                                                           <GradientStop Color="{DynamicResource ColorRaw00111114}" Offset="0.0"/>
+                                                                           <GradientStop Color="{DynamicResource ColorRaw88111114}" Offset="0.25"/>
+                                                                           <GradientStop Color="{DynamicResource ColorRawE6111114}" Offset="0.65"/>
+                                                                           <GradientStop Color="{DynamicResource ColorRawF8111114}" Offset="1.0"/>
                                                                        </LinearGradientBrush>
                                                                    </Border.Background>
                                                                </Border>
                                                                <StackPanel Margin="11,18,11,9">
                                                                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                                                              Foreground="{StaticResource BrushTextPrimary}" 
+                                                                              Foreground="{DynamicResource BrushArtText}" 
                                                                               FontFamily="{StaticResource AppFont}"
                                                                               TextTrimming="CharacterEllipsis"
                                                                               views:PosterDetailFade.Part="Title"/>
@@ -1125,12 +1125,12 @@
                                                                            <ColumnDefinition Width="*"/>
                                                                        </Grid.ColumnDefinitions>
                                                                        <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" 
-                                                                                  Foreground="{StaticResource BrushTextSecondary}" 
+                                                                                  Foreground="{DynamicResource BrushArtTextSecondary}" 
                                                                                   FontFamily="{StaticResource AppFont}"
                                                                                   TextTrimming="CharacterEllipsis"
                                                                                   views:PosterDetailFade.Part="Playtime"/>
                                                                        <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" 
-                                                                                  Foreground="{StaticResource BrushTextMuted}" 
+                                                                                  Foreground="{DynamicResource BrushArtTextMuted}" 
                                                                                   HorizontalAlignment="Right"
                                                                                   TextAlignment="Right"
                                                                                   TextTrimming="CharacterEllipsis"
@@ -1153,7 +1153,7 @@
                                                            <!-- Center Icon & Name -->
                                                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,4">
                                                                <Border CornerRadius="{StaticResource RadiusCard}" Width="64" Height="64" Margin="0,0,0,12"
-                                                                       Background="{StaticResource BrushSurfaceHover}" HorizontalAlignment="Center">
+                                                                       Background="{DynamicResource BrushSurfaceHover}" HorizontalAlignment="Center">
                                                                    <Image Source="{Binding IconImage}" Width="56" Height="56"
                                                                           Style="{StaticResource UnavailableDimmedArt}"
                                                                           RenderOptions.BitmapScalingMode="HighQuality"
@@ -1161,7 +1161,7 @@
                                                                </Border>
 
                                                                <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" 
-                                                                          Foreground="{StaticResource BrushTextPrimary}" 
+                                                                          Foreground="{DynamicResource BrushTextPrimary}" 
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"
                                                                           TextAlignment="Center" TextTrimming="CharacterEllipsis" 
                                                                           MaxWidth="160" HorizontalAlignment="Center"/>
@@ -1175,11 +1175,11 @@
                                                                        <ColumnDefinition Width="*"/>
                                                                    </Grid.ColumnDefinitions>
                                                                    <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" 
-                                                                              Foreground="{StaticResource BrushTextSecondary}" 
+                                                                              Foreground="{DynamicResource BrushTextSecondary}" 
                                                                               FontFamily="{StaticResource AppFont}"
                                                                               TextTrimming="CharacterEllipsis"/>
                                                                    <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" 
-                                                                              Foreground="{StaticResource BrushTextMuted}" 
+                                                                              Foreground="{DynamicResource BrushTextMuted}" 
                                                                               HorizontalAlignment="Right"
                                                                               TextAlignment="Right"
                                                                               TextTrimming="CharacterEllipsis"
@@ -1348,7 +1348,7 @@
                                                                    <!-- Category Pill (Hidden if category is Steam to prevent duplicate badges).
                                                                         Always preceded by exactly one visible platform/local badge above, so
                                                                         its left margin is unconditional. -->
-                                                                   <Border Background="{StaticResource BrushScrim}" BorderBrush="{StaticResource BrushOverlayLine}" BorderThickness="1"
+                                                                   <Border Background="{DynamicResource BrushScrim}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
                                                                            CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center"
                                                                            views:PosterDetailFade.Part="Category">
                                                                        <Border.Style>
@@ -1362,12 +1362,12 @@
                                                                            </Style>
                                                                        </Border.Style>
                                                                        <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}"
-                                                                                  Foreground="{StaticResource BrushTextSecondary}"
+                                                                                  Foreground="{DynamicResource BrushArtTextSecondary}"
                                                                                   FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                                    </Border>
 
                                                                    <!-- Hidden Pill -->
-                                                                   <Border Background="{StaticResource BrushBorder}" BorderBrush="{StaticResource BrushOverlayLine}" BorderThickness="1"
+                                                                   <Border Background="{DynamicResource BrushBorder}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
                                                                            CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center"
                                                                            views:PosterDetailFade.Part="HiddenTag">
                                                                        <Border.Style>
@@ -1381,7 +1381,7 @@
                                                                            </Style>
                                                                        </Border.Style>
                                                                        <TextBlock Text="HIDDEN" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
-                                                                                  Foreground="{StaticResource BrushTextSoft}"
+                                                                                  Foreground="{DynamicResource BrushTextSoft}"
                                                                                   FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                                                    </Border>
                                                                </StackPanel>
@@ -1390,23 +1390,23 @@
                                                                    <!-- With details on hover there's no top vignette under PLAYING while the card
                                                                         is at rest, so its near-clear fill goes nearly solid to stay readable on
                                                                         bright art. -->
-                                                                   <Border BorderBrush="{StaticResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center"
+                                                                   <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center"
                                                                            views:PosterDetailFade.Part="PlayingTag">
                                                                        <Border.Style>
                                                                            <Style TargetType="Border">
                                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                               <Setter Property="Background" Value="{StaticResource BrushSuccessWash}"/>
+                                                                               <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
                                                                                <Style.Triggers>
                                                                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
                                                                                        <Setter Property="Visibility" Value="Visible"/>
                                                                                    </DataTrigger>
                                                                                    <DataTrigger Binding="{Binding DataContext.SettingsVM.PosterDetailsOnHover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                                                       <Setter Property="Background" Value="{StaticResource BrushSuccessWash}"/>
+                                                                                       <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
                                                                                    </DataTrigger>
                                                                                </Style.Triggers>
                                                                            </Style>
                                                                        </Border.Style>
-                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{StaticResource BrushSuccessText}" FontFamily="{StaticResource AppFont}"/>
+                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{StaticResource AppFont}"/>
                                                                    </Border>
                                                                    <!-- Favorite Star - outermost corner -->
                                                                    <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
@@ -1514,14 +1514,14 @@
                                                         lose a little - the badge and the title have to stay readable. -->
                                                    <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
                                                        <Setter TargetName="CardBorder" Property="Opacity" Value="0.82"/>
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushWarningBorder}"/>
+                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BrushWarningBorder}"/>
                                                    </DataTrigger>
                                                    <!-- After the one above, so a not-installed card takes this border instead. -->
                                                    <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushBorderStrong}"/>
+                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
                                                    </DataTrigger>
                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                                                    </Trigger>
                                                    <!-- The card lift: in while the card is pointed at or its right-click menu is up,
                                                         out otherwise. The menu counts because it takes the mouse, so IsMouseOver
@@ -1553,7 +1553,7 @@
                                                    </MultiDataTrigger>
                                                    <!-- Keep the card lit while its menu is up, so it's clear which game is being changed. -->
                                                    <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                                                    </DataTrigger>
 
                                                    <!-- Show details on hover: the art zoom. Same shape as the lift above. -->
@@ -1593,11 +1593,11 @@
                                                        </MultiDataTrigger.ExitActions>
                                                    </MultiDataTrigger>
                                                    <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=CardBorder}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                                                        <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
                                                    </DataTrigger>
                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                       <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                                                        <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
                                                    </DataTrigger>
                                                </DataTemplate.Triggers>
@@ -1629,8 +1629,8 @@
                                        <ItemsControl.ItemTemplate>
                                            <DataTemplate DataType="{x:Type vm:GameCardViewModel}">
                                                <Border x:Name="IconCardBorder" CornerRadius="{StaticResource RadiusCard}" 
-                                                       Background="{StaticResource BrushSurface}" 
-                                                       BorderBrush="{StaticResource BrushBorder}" 
+                                                       Background="{DynamicResource BrushSurface}" 
+                                                       BorderBrush="{DynamicResource BrushBorder}" 
                                                        BorderThickness="1"
                                                        Width="116" Height="124" Margin="6"
                                                        Cursor="Hand" Focusable="True" AutomationProperties.Name="{Binding Name}"
@@ -1664,22 +1664,22 @@
                                                                <Button.Template>
                                                                    <ControlTemplate TargetType="Button">
                                                                        <TextBlock x:Name="StarGlyph" Text="&#xE734;" FontFamily="{StaticResource IconFont}"
-                                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"
+                                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                        <ControlTemplate.Triggers>
                                                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
                                                                                <Setter TargetName="StarGlyph" Property="Text" Value="&#xE735;"/>
-                                                                               <Setter TargetName="StarGlyph" Property="Foreground" Value="{StaticResource BrushGold}"/>
+                                                                               <Setter TargetName="StarGlyph" Property="Foreground" Value="{DynamicResource BrushGold}"/>
                                                                            </DataTrigger>
                                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                               <Setter TargetName="StarGlyph" Property="Foreground" Value="{StaticResource BrushGold}"/>
+                                                                               <Setter TargetName="StarGlyph" Property="Foreground" Value="{DynamicResource BrushGold}"/>
                                                                            </Trigger>
                                                                        </ControlTemplate.Triggers>
                                                                    </ControlTemplate>
                                                                </Button.Template>
                                                            </Button>
 
-                                                           <Border Background="{StaticResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1692,11 +1692,11 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="STEAM" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushAccentText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="STEAM" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{StaticResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1709,11 +1709,11 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="GOG" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushBadgePurple}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="GOG" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{StaticResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1726,11 +1726,11 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="EA" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushSuccessText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="EA" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{StaticResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1743,11 +1743,11 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="EPIC" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushTextPrimary}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="EPIC" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{StaticResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1760,11 +1760,11 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="UBI" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushGold}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="UBI" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{StaticResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1777,11 +1777,11 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="XBOX" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushSuccessText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="XBOX" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{StaticResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1794,12 +1794,12 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="B.NET" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushInfoText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="B.NET" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
                                                            <!-- Local games get a pill here too, so every platform is marked in every view. -->
-                                                           <Border Background="{StaticResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1810,14 +1810,14 @@
                                                                        </Style.Triggers>
                                                                    </Style>
                                                                </Border.Style>
-                                                               <TextBlock Text="LOCAL" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushTextSoft}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                               <TextBlock Text="LOCAL" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                            </Border>
 
                                                        </DockPanel>
 
                                                        <!-- Icon -->
                                                        <Border Grid.Row="1" Width="48" Height="48" CornerRadius="{StaticResource RadiusControl}"
-                                                               Background="{StaticResource BrushSurfaceHover}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                               Background="{DynamicResource BrushSurfaceHover}" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                            <Image Source="{Binding IconImage}" Width="42" Height="42"
                                                                   Style="{StaticResource UnavailableDimmedArt}"
                                                                   RenderOptions.BitmapScalingMode="HighQuality"
@@ -1828,9 +1828,9 @@
                                                             whole tag fits. Beside the star and the launcher pill in the top row there
                                                             was room for "NOT IN" at best. Only one of the two ever shows. -->
                                                        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-3">
-                                                           <Border Background="{StaticResource BrushSuccessWash}" BorderBrush="{StaticResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
+                                                           <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
                                                                <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{StaticResource BrushSuccessText}"/>
+                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
                                                            </Border>
                                                            <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                    CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
@@ -1840,7 +1840,7 @@
 
                                                        <!-- Title -->
                                                        <TextBlock Grid.Row="2" Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" 
-                                                                  Foreground="{StaticResource BrushTextPrimary}" 
+                                                                  Foreground="{DynamicResource BrushTextPrimary}" 
                                                                   FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"
                                                                   TextAlignment="Center" TextTrimming="CharacterEllipsis" 
                                                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
@@ -1848,11 +1848,11 @@
                                                        <!-- Playtime / Category Subtext -->
                                                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
                                                            <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}"
-                                                                      Foreground="{StaticResource BrushTextMuted}"
+                                                                      Foreground="{DynamicResource BrushTextMuted}"
                                                                       FontFamily="{StaticResource AppFont}"
                                                                       TextTrimming="CharacterEllipsis"/>
                                                            <TextBlock Text=" &#x2022; HIDDEN" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
-                                                                      Foreground="{StaticResource BrushTextSoft}" FontFamily="{StaticResource AppFont}"
+                                                                      Foreground="{DynamicResource BrushTextSoft}" FontFamily="{StaticResource AppFont}"
                                                                       Visibility="{Binding IsHidden, Converter={StaticResource BoolToVis}}"/>
                                                        </StackPanel>
 
@@ -1885,26 +1885,26 @@
                                                <DataTemplate.Triggers>
                                                    <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
                                                        <Setter TargetName="IconCardBorder" Property="Opacity" Value="0.82"/>
-                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{StaticResource BrushWarningBorder}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{DynamicResource BrushWarningBorder}"/>
                                                    </DataTrigger>
                                                    <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
-                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{StaticResource BrushBorderStrong}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
                                                    </DataTrigger>
                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                       <Setter TargetName="IconCardBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                                    </Trigger>
                                                    <!-- Stays lit while the card's right-click menu is open (the menu takes the mouse). -->
                                                    <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
-                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                       <Setter TargetName="IconCardBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                                    </DataTrigger>
                                                    <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=IconCardBorder}" Value="True">
-                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                       <Setter TargetName="IconCardBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                                    </DataTrigger>
                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                       <Setter TargetName="IconCardBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                                                        <Setter TargetName="IconCardBorder" Property="BorderThickness" Value="2"/>
                                                    </DataTrigger>
                                                </DataTemplate.Triggers>
@@ -1938,7 +1938,7 @@
                                </Grid.RowDefinitions>
 
                                <!-- Header Bar (Fixed, never scrolls out of view) -->
-                               <Border Grid.Row="0" Background="{StaticResource BrushDialogCard}" BorderBrush="{StaticResource BrushBorder}" 
+                               <Border Grid.Row="0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
                                        BorderThickness="0,0,0,1" Padding="11,8" Margin="0,0,6,6" CornerRadius="{StaticResource RadiusSmall}">
                                    <Grid>
                                        <Grid.ColumnDefinitions>
@@ -1950,15 +1950,15 @@
                                            <ColumnDefinition Width="90"/>  <!-- Actions -->
                                        </Grid.ColumnDefinitions>
                                        <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
                                        <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
                                        <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
                                        <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
                                        <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{StaticResource BrushTextMuted}" FontFamily="{StaticResource AppFont}" 
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}" 
                                                   HorizontalAlignment="Right" Margin="0,0,6,0"/>
                                    </Grid>
                                </Border>
@@ -2001,8 +2001,8 @@
                                    <ListBox.ItemTemplate>
                                        <DataTemplate DataType="{x:Type vm:GameCardViewModel}">
                                            <Border x:Name="ListRowBorder" CornerRadius="{StaticResource RadiusControl}" 
-                                                   Background="{StaticResource BrushSurface}" 
-                                                   BorderBrush="{StaticResource BrushBorder}" 
+                                                   Background="{DynamicResource BrushSurface}" 
+                                                   BorderBrush="{DynamicResource BrushBorder}" 
                                                    BorderThickness="1"
                                                    Height="46" Margin="0,2,0,3" Padding="10,0"
                                                    Cursor="Hand"
@@ -2025,7 +2025,7 @@
 
                                                    <!-- Icon -->
                                                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="{StaticResource RadiusSmall}" 
-                                                           Background="{StaticResource BrushSurfaceHover}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                           Background="{DynamicResource BrushSurfaceHover}" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                        <Image Source="{Binding IconImage}" Width="24" Height="24"
                                                               Style="{StaticResource UnavailableDimmedArt}"
                                                               RenderOptions.BitmapScalingMode="HighQuality"
@@ -2045,16 +2045,16 @@
                                                        <Button Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0"
         AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                                       <Border Background="{StaticResource BrushSuccessWash}" BorderBrush="{StaticResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{StaticResource BrushSuccessText}" FontFamily="{StaticResource AppFont}"/>
+                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
                                                        <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <TextBlock Style="{StaticResource UnavailableBadgeText}"
                                                                       FontSize="{StaticResource FontSizeBadge}" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2067,11 +2067,11 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="STEAM" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushAccentText}"
+                                                               <TextBlock Text="STEAM" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}"
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2084,11 +2084,11 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="GOG" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushBadgePurple}"
+                                                               <TextBlock Text="GOG" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}"
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2101,11 +2101,11 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="EA" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushSuccessText}"
+                                                               <TextBlock Text="EA" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2118,11 +2118,11 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="EPIC" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushTextPrimary}"
+                                                               <TextBlock Text="EPIC" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}"
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2135,11 +2135,11 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="UBI" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushGold}"
+                                                               <TextBlock Text="UBI" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}"
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2152,12 +2152,12 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="XBOX" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushSuccessText}"
+                                                               <TextBlock Text="XBOX" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
 
-                                                       <Border Background="{StaticResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2170,11 +2170,11 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="B.NET" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushInfoText}"
+                                                               <TextBlock Text="B.NET" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}"
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2185,10 +2185,10 @@
                                                                    </Style.Triggers>
                                                                </Style>
                                                            </Border.Style>
-                                                           <TextBlock Text="LOCAL" FontSize="{StaticResource FontSizeBadge}" Foreground="{StaticResource BrushTextSoft}"
+                                                           <TextBlock Text="LOCAL" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}"
                                                                       FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                        </Border>
-                                                       <Border Background="{StaticResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2200,32 +2200,32 @@
                                                                </Style>
                                                            </Border.Style>
                                                            <TextBlock Text="HIDDEN" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
-                                                                      Foreground="{StaticResource BrushTextSoft}" FontFamily="{StaticResource AppFont}"/>
+                                                                      Foreground="{DynamicResource BrushTextSoft}" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
                                                        </StackPanel>
                                                        <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                                                  Foreground="{StaticResource BrushTextPrimary}"
+                                                                  Foreground="{DynamicResource BrushTextPrimary}"
                                                                   FontFamily="{StaticResource AppFont}"
                                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"
                                                                   VerticalAlignment="Center"/>
                                                    </DockPanel>
 
                                                    <!-- Category Pill -->
-                                                   <Border Grid.Column="2" Background="{StaticResource BrushSurface}" BorderBrush="{StaticResource BrushOverlayLine}" BorderThickness="1"
+                                                   <Border Grid.Column="2" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
                                                            CornerRadius="{StaticResource RadiusSmall}" Padding="7,2" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                        <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBadge}" 
-                                                                  Foreground="{StaticResource BrushTextSecondary}" 
+                                                                  Foreground="{DynamicResource BrushTextSecondary}" 
                                                                   FontFamily="{StaticResource AppFont}"/>
                                                    </Border>
 
                                                    <!-- Playtime -->
                                                    <TextBlock Grid.Column="3" Text="{Binding ListPlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" 
-                                                              Foreground="{StaticResource BrushTextSecondary}" 
+                                                              Foreground="{DynamicResource BrushTextSecondary}" 
                                                               FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
 
                                                    <!-- Last Played -->
                                                    <TextBlock Grid.Column="4" Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" 
-                                                              Foreground="{StaticResource BrushTextMuted}" 
+                                                              Foreground="{DynamicResource BrushTextMuted}" 
                                                               FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
 
                                                    <!-- Action Buttons -->
@@ -2252,22 +2252,22 @@
                                            <DataTemplate.Triggers>
                                                <DataTrigger Binding="{Binding IsUnavailable}" Value="True">
                                                    <Setter TargetName="ListRowBorder" Property="Opacity" Value="0.82"/>
-                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{StaticResource BrushWarningBorder}"/>
+                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{DynamicResource BrushWarningBorder}"/>
                                                </DataTrigger>
                                                <DataTrigger Binding="{Binding IsNotInstalled}" Value="True">
-                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{StaticResource BrushBorderStrong}"/>
+                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
                                                </DataTrigger>
                                                <Trigger Property="IsMouseOver" Value="True">
-                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                   <Setter TargetName="ListRowBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                                   <Setter TargetName="ListRowBorder" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                                </Trigger>
                                                <!-- Stays lit while the row's right-click menu is open (the menu takes the mouse). -->
                                                <DataTrigger Binding="{Binding IsContextMenuOpen}" Value="True">
-                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                                   <Setter TargetName="ListRowBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                                   <Setter TargetName="ListRowBorder" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                                </DataTrigger>
                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                                                   <Setter TargetName="ListRowBorder" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                                                    <Setter TargetName="ListRowBorder" Property="BorderThickness" Value="2"/>
                                                </DataTrigger>
                                            </DataTemplate.Triggers>
@@ -2288,7 +2288,7 @@
                                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                                <StackPanel Orientation="Horizontal">
                                    <TextBlock Text="{Binding SelectionSummary}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,12,0"
-                                              Foreground="{StaticResource BrushTextPrimary}"/>
+                                              Foreground="{DynamicResource BrushTextPrimary}"/>
                                    <Button Command="{Binding BatchFavoriteCommand}" Style="{StaticResource SelectionBarButton}"
                                            AutomationProperties.Name="{Binding BatchFavoriteLabel}">
                                        <StackPanel Orientation="Horizontal">
@@ -2317,7 +2317,7 @@
                                            <TextBlock Text="&#xE70D;" Style="{StaticResource SelectionBarGlyph}" Margin="6,1,0,0"/>
                                        </StackPanel>
                                    </Button>
-                                   <Rectangle Width="1" Fill="{StaticResource BrushBorderStrong}" Margin="6,4"/>
+                                   <Rectangle Width="1" Fill="{DynamicResource BrushBorderStrong}" Margin="6,4"/>
                                    <Button Command="{Binding ClearSelectionCommand}" Style="{StaticResource SelectionBarButton}"
                                            AutomationProperties.Name="Clear selection" ToolTip="Clear selection (Esc)">
                                        <StackPanel Orientation="Horizontal">
@@ -2331,12 +2331,12 @@
                            <!-- Floating Non-Blocking Undo Toast. The 10-second window pauses while the
                                 pointer is over it or it has keyboard focus (OnUndoToastHoldChanged). -->
                            <Border HorizontalAlignment="Center" Margin="0,8,0,0"
-                                   Background="{StaticResource BrushSurfaceHover}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5"
+                                   Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5"
                                    CornerRadius="{StaticResource RadiusCard}" Padding="16,10"
                                    MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
                                    IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
                                <Border.Effect>
-                                   <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
+                                   <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{DynamicResource ColorFloatingShadow}"/>
                                </Border.Effect>
                                <Border.Style>
                                    <Style TargetType="Border">
@@ -2350,8 +2350,8 @@
                                </Border.Style>
                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeSubhead}" Margin="0,0,10,0" VerticalAlignment="Center"
-                                              Foreground="{StaticResource BrushAccent}"/>
-                                   <TextBlock Text="{Binding UndoToastMessage}" Foreground="{StaticResource BrushTextPrimary}"
+                                              Foreground="{DynamicResource BrushAccent}"/>
+                                   <TextBlock Text="{Binding UndoToastMessage}" Foreground="{DynamicResource BrushTextPrimary}"
                                               FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
                                    <Button Content="UNDO" Command="{Binding UndoDeleteCommand}"
                                            Style="{StaticResource ModernAccentButton}" Padding="12,4" Margin="0,0,10,0" VerticalAlignment="Center"/>
@@ -2375,7 +2375,7 @@
                            <!-- Only for the first five sessions (UX-14e); after that the tray tooltip says it. -->
                            <TextBlock DockPanel.Dock="Right" Text="{Binding SettingsVM.GlobalManageHotkey, StringFormat='Hotkey: {0} to show or hide this window'}" FontSize="{StaticResource FontSizeBody}"
                                       Visibility="{Binding SettingsVM.ShowHotkeyHint, Converter={StaticResource BoolToVis}}"
-                                      Foreground="{StaticResource BrushTextMuted}" Margin="14,0,0,0"
+                                      Foreground="{DynamicResource BrushTextMuted}" Margin="14,0,0,0"
                                       FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                            <!-- Multi-select hint: only while two or more cards are selected. -->
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
@@ -2389,13 +2389,13 @@
                                    </Style>
                                </StackPanel.Style>
                                <TextBlock Text="{Binding SelectionHint}" FontSize="{StaticResource FontSizeBody}"
-                                          Foreground="{StaticResource BrushAccentText}"
+                                          Foreground="{DynamicResource BrushAccentText}"
                                           FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                                <Button Style="{StaticResource HelpLinkButton}" Content="Learn more" Margin="10,0,0,0" VerticalAlignment="Center"
                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/select_mode"/>
                            </StackPanel>
                            <TextBlock Text="{Binding StatusMessage}" FontSize="{StaticResource FontSizeBody}" TextTrimming="CharacterEllipsis"
-                                      Foreground="{StaticResource BrushTextSecondary}"
+                                      Foreground="{DynamicResource BrushTextSecondary}"
                                       FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
                        </DockPanel>
     </Grid>
