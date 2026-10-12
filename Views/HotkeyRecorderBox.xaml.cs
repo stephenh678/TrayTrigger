@@ -101,7 +101,7 @@ public partial class HotkeyRecorderBox : UserControl
         Display.Text = hasValue ? HotkeyManager.Normalize(stored) ?? stored : Placeholder;
         Display.Foreground = Brush(hasValue ? "BrushTextPrimary" : "BrushTextMuted");
         ClearButton.Visibility = hasValue ? Visibility.Visible : Visibility.Collapsed;
-        Box.BorderBrush = Brush("BrushBorderDark");
+        Box.BorderBrush = Brush("BrushBorder");
         HideMessage();
     }
 

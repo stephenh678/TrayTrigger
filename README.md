@@ -104,7 +104,7 @@ Each game's Played row in Activity & History lists what the profile changed, wha
 
 ### Also in the box
 
-A hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Override per game, and 22 system tweaks that each show Windows' real current state. All of it has a page on the [wiki](https://github.com/stephenh678/TrayTrigger/wiki/Home).
+A hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Override per game, and 21 system tweaks that each show Windows' real current state. All of it has a page on the [wiki](https://github.com/stephenh678/TrayTrigger/wiki/Home).
 
 ---
 

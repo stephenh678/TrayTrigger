@@ -3,6 +3,15 @@ using System.Collections.Generic;
 
 namespace TrayTrigger.Models;
 
+/// <summary>What the DLSS Override does about presets, for all three features at once.</summary>
+public enum DlssPresetChoice
+{
+    /// <summary>Writes NVIDIA's recommended preset: K, L or M by mode, whatever the game asks for.</summary>
+    Recommended,
+    /// <summary>Writes no preset, as in NVIDIA's own profiles: the game picks its own.</summary>
+    Default
+}
+
 /// <summary>Where a DLSS setting's value came from before TrayTrigger touched it.</summary>
 public enum DlssSettingOrigin
 {
@@ -76,6 +85,13 @@ public class DlssLastRun
     public List<string> FromGame { get; set; } = new();
 
     /// <summary>
+    /// The same readings with the feature each belongs to, so the card can say which of Super
+    /// Resolution, Ray Reconstruction and Frame Generation came from where. Empty on a record
+    /// saved before this existed, which keeps the version-only wording.
+    /// </summary>
+    public List<DlssLoadedRuntime> Runtimes { get; set; } = new();
+
+    /// <summary>
     /// The oldest DLSS version the game itself shipped at the time. A game patch changes it, and
     /// the reading then describes a setup that no longer exists.
     /// </summary>
@@ -83,6 +99,18 @@ public class DlssLastRun
 
     /// <summary>The path fragment that identifies the driver's model store.</summary>
     public const string NgxStoreMarker = @"\NVIDIA\NGX\models\";
+}
+
+/// <summary>One feature's runtime as seen loaded in the game. Plain setters: it round trips through JSON.</summary>
+public class DlssLoadedRuntime
+{
+    /// <summary>"Super Resolution", "Ray Reconstruction" or "Frame Generation".</summary>
+    public string Feature { get; set; } = string.Empty;
+
+    public string Version { get; set; } = string.Empty;
+
+    /// <summary>True when it came out of the driver's store; false for the game's own file.</summary>
+    public bool FromNvidia { get; set; }
 }
 
 /// <summary>What happened to one setting during an apply or undo, for reporting and for tests.</summary>

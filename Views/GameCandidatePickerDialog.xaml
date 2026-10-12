@@ -9,7 +9,7 @@
         MinHeight="460" MinWidth="520"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
+        Background="{StaticResource BrushSurface}"
         Foreground="{StaticResource BrushTextPrimary}">
 
     <Grid Margin="20">
@@ -22,18 +22,18 @@
         <!-- Header -->
         <DockPanel Grid.Row="0" Margin="0,0,0,16">
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Choose Game Executable" FontSize="18" Foreground="{StaticResource BrushTextPrimary}"
+                <TextBlock Text="Choose Game Executable" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}"
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                 <TextBlock x:Name="SubtitleTextBlock" 
                            Text="Multiple candidates were found. Select the game's executable:" 
-                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                           FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" 
                            FontFamily="{StaticResource AppFont}" Margin="0,2,0,0"/>
             </StackPanel>
         </DockPanel>
 
         <!-- List of Candidates -->
-        <Border Grid.Row="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Margin="0,0,0,16">
+        <Border Grid.Row="1" CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
+                BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
             <ListBox x:Name="CandidatesListBox" Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      MouseDoubleClick="CandidatesListBox_MouseDoubleClick">
@@ -42,7 +42,7 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#222228"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource BrushSurfaceHover}"/>
                         <Setter Property="Padding" Value="12,10"/>
                         <Setter Property="Cursor" Value="Hand"/>
                         <Setter Property="Template">
@@ -56,7 +56,7 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Background" Value="#1C2E3D"/>
+                                            <Setter Property="Background" Value="{StaticResource BrushAccentWash}"/>
                                         </Trigger>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
@@ -71,26 +71,26 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <DockPanel LastChildFill="True">
-                            <Border CornerRadius="6" Background="#26262B" Width="36" Height="36" Margin="0,0,12,0" DockPanel.Dock="Left">
+                            <Border CornerRadius="{StaticResource RadiusControl}" Background="{StaticResource BrushSurfaceHover}" Width="36" Height="36" Margin="0,0,12,0" DockPanel.Dock="Left">
                                 <Image Source="{Binding IconImage}" Width="28" Height="28" 
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Border>
 
                             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0">
-                                <TextBlock Text="{Binding DisplaySize}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" 
+                                <TextBlock Text="{Binding DisplaySize}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextMuted}" 
                                            HorizontalAlignment="Right"/>
-                                <Border Background="#1C2E3D" CornerRadius="4" Padding="5,1.5" Margin="0,3,0,0"
+                                <Border Background="{StaticResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5" Margin="0,3,0,0"
                                         HorizontalAlignment="Right"
                                         Visibility="{Binding IsRecommendedVisibility}">
-                                    <TextBlock Text="RECOMMENDED" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrushAccentHover}"/>
+                                    <TextBlock Text="RECOMMENDED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{StaticResource BrushAccentText}"/>
                                 </Border>
                             </StackPanel>
 
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Candidate.Name}" FontSize="13.5" FontWeight="SemiBold" 
+                                <TextBlock Text="{Binding Candidate.Name}" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
                                            Foreground="{StaticResource BrushTextPrimary}" FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Text="{Binding DisplayPath}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                                <TextBlock Text="{Binding DisplayPath}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" 
                                            FontFamily="{StaticResource AppFont}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                             </StackPanel>
                         </DockPanel>

@@ -59,7 +59,7 @@ public class UpdateCoordinator : ViewModelBase
         set => SetProperty(ref _updateStatusIcon, value);
     }
 
-    private Brush _updateStatusBrush = new SolidColorBrush(Color.FromRgb(78, 201, 176)); // #4EC9B0
+    private Brush _updateStatusBrush = AppPalette.Brush("BrushSuccessText");
     public Brush UpdateStatusBrush
     {
         get => _updateStatusBrush;
@@ -72,7 +72,7 @@ public class UpdateCoordinator : ViewModelBase
         {
             UpdateStatusBadgeText = "Checking for updates...";
             UpdateStatusIcon = "";
-            if (Application.Current?.TryFindResource("BrushAccentHover") is Brush accentBrush)
+            if (Application.Current?.TryFindResource("BrushAccentText") is Brush accentBrush)
             {
                 UpdateStatusBrush = accentBrush;
             }
@@ -85,7 +85,7 @@ public class UpdateCoordinator : ViewModelBase
                     ? $"{result.LatestRelease.TagName} pre-release available!"
                     : $"{result.LatestRelease.TagName} available!";
                 UpdateStatusIcon = "";
-                if (Application.Current?.TryFindResource("BrushAccentHover") is Brush acBrush)
+                if (Application.Current?.TryFindResource("BrushAccentText") is Brush acBrush)
                 {
                     UpdateStatusBrush = acBrush;
                 }
@@ -124,7 +124,7 @@ public class UpdateCoordinator : ViewModelBase
             {
                 UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
                 UpdateStatusIcon = "";
-                UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(78, 201, 176));
+                UpdateStatusBrush = AppPalette.Brush("BrushSuccessText");
 
                 if (interactive)
                 {
@@ -140,7 +140,7 @@ public class UpdateCoordinator : ViewModelBase
             {
                 UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Up to date";
                 UpdateStatusIcon = "";
-                UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(78, 201, 176));
+                UpdateStatusBrush = AppPalette.Brush("BrushSuccessText");
 
                 if (interactive)
                 {
@@ -156,7 +156,7 @@ public class UpdateCoordinator : ViewModelBase
             {
                 UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Check failed";
                 UpdateStatusIcon = "";
-                UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(224, 108, 117));
+                UpdateStatusBrush = AppPalette.Brush("BrushDanger");
 
                 if (interactive)
                 {
@@ -174,7 +174,7 @@ public class UpdateCoordinator : ViewModelBase
             LoggingService.Error("UpdateCoordinator", "CheckForUpdatesAsync error", ex);
             UpdateStatusBadgeText = $"{UpdateService.CurrentVersionDisplay} • Check failed";
             UpdateStatusIcon = "";
-            UpdateStatusBrush = new SolidColorBrush(Color.FromRgb(224, 108, 117));
+            UpdateStatusBrush = AppPalette.Brush("BrushDanger");
 
             if (interactive)
             {

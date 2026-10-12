@@ -1,4 +1,5 @@
 using System;
+using TrayTrigger.Services;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -112,14 +113,14 @@ public partial class LibraryView : UserControl
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             DropZoneBorder.BorderBrush = (Brush)FindResource("BrushAccent");
-            DropZoneBorder.Background = new SolidColorBrush(Color.FromArgb(50, 0, 122, 204));
+            DropZoneBorder.Background = AppPalette.Brush("BrushAccentWash");
         }
     }
 
     private void DropZone_DragLeave(object sender, DragEventArgs e)
     {
-        DropZoneBorder.BorderBrush = (Brush)FindResource("BrushBorderDark");
-        DropZoneBorder.Background = new SolidColorBrush(Color.FromRgb(22, 22, 25));
+        DropZoneBorder.BorderBrush = (Brush)FindResource("BrushBorder");
+        DropZoneBorder.Background = AppPalette.Brush("BrushDialogCard");
     }
 
     private void DropZone_Drop(object sender, DragEventArgs e)

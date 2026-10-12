@@ -1,4 +1,5 @@
 using System;
+using TrayTrigger.Services;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -291,7 +292,7 @@ internal static class SearchHighlight
 
         private static Brush CreateFill()
         {
-            var brush = new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xC4, 0x00));
+            var brush = AppPalette.Brush("BrushHighlight").Clone();
             brush.Freeze();
             return brush;
         }

@@ -331,15 +331,14 @@ public static partial class WindowThemeService
             // Windows 11 Build 22000+ support custom caption/text colors. Take them from the
             // window's own Background - every window sets one from the palette - so the caption
             // always matches the client area directly below it. That includes QuickInputDialog,
-            // which uses BrushBgDark rather than the dialog color and so had the wrong caption
+            // which uses BrushBackground rather than the dialog color and so had the wrong caption
             // under the old main-window-vs-dialog split.
             if (window.Background is SolidColorBrush background)
             {
                 int captionColor = ToColorRef(background.Color);
                 DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, in captionColor, sizeof(int));
 
-                int textColor = ToColorRef(
-                    Application.Current?.TryFindResource("ColorTextPrimary") as Color? ?? Colors.White);
+                int textColor = ToColorRef(AppPalette.ColorOf("BrushTextPrimary"));
                 DwmSetWindowAttribute(handle, DWMWA_TEXT_COLOR, in textColor, sizeof(int));
             }
             else

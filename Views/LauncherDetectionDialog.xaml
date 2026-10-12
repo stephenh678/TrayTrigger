@@ -9,7 +9,7 @@
         Width="516" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
+        Background="{StaticResource BrushSurface}"
         Foreground="{StaticResource BrushTextPrimary}">
 
     <Window.Resources>
@@ -20,9 +20,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="CardBorder" CornerRadius="8" BorderThickness="1"
-                                Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}">
+                        <Border x:Name="CardBorder" CornerRadius="{StaticResource RadiusCard}" BorderThickness="1"
+                                Background="{StaticResource BrushSurface}"
+                                BorderBrush="{StaticResource BrushBorder}">
                             <Grid Margin="12,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -36,29 +36,29 @@
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding DisplayName}" FontSize="13.5"
+                                    <TextBlock Text="{Binding DisplayName}" FontSize="{StaticResource FontSizeSubhead}"
                                                FontFamily="{StaticResource AppFont}" Foreground="{StaticResource BrushTextPrimary}"
                                                TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding SubLabel}" FontSize="12"
+                                    <TextBlock Text="{Binding SubLabel}" FontSize="{StaticResource FontSizeBody}"
                                                Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0"/>
                                 </StackPanel>
 
                                 <!-- Selected checkmark badge -->
-                                <Border x:Name="CheckBadge" Grid.Column="1" Width="18" Height="18" CornerRadius="9"
+                                <Border x:Name="CheckBadge" Grid.Column="1" Width="18" Height="18" CornerRadius="{StaticResource RadiusCard}"
                                         HorizontalAlignment="Right" VerticalAlignment="Top"
-                                        Background="Transparent" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1.5">
+                                        Background="Transparent" BorderBrush="{StaticResource BrushBorder}" BorderThickness="1.5">
                                     <TextBlock x:Name="CheckGlyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
-                                               FontSize="10" Foreground="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                               FontSize="{StaticResource FontSizeBadge}" Foreground="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                <Setter TargetName="CardBorder" Property="Background" Value="#1A2230"/>
+                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource BrushAccentWash}"/>
                                 <Setter TargetName="CheckBadge" Property="Background" Value="{StaticResource BrushAccent}"/>
                                 <Setter TargetName="CheckBadge" Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
-                                <Setter TargetName="CheckGlyph" Property="Foreground" Value="White"/>
+                                <Setter TargetName="CheckGlyph" Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
@@ -80,10 +80,10 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,14">
-            <TextBlock Text="Game Launchers Found" FontSize="18" Foreground="{StaticResource BrushTextPrimary}"
+            <TextBlock Text="Game Launchers Found" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}"
                        FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
             <TextBlock Text="TrayTrigger found these installed with games on this PC. Choose which ones it should manage - you can change this later in Settings."
-                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
+                       FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
                        FontFamily="{StaticResource AppFont}" TextWrapping="Wrap" Margin="0,2,0,0"/>
         </StackPanel>
 

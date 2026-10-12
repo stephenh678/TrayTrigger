@@ -9,10 +9,10 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
+        Background="{StaticResource BrushSurface}"
         Foreground="{StaticResource BrushTextPrimary}">
 
-    <Border BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="0,1,0,0">
+    <Border BorderBrush="{StaticResource BrushBorder}" BorderThickness="0,1,0,0">
         <Grid Margin="24,20,24,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Message Content Area -->
@@ -27,10 +27,10 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Status / Type Icon Badge -->
-                <Border x:Name="IconBadge" Grid.Column="0" Width="44" Height="44" CornerRadius="22" 
-                        Background="#2E181B" BorderBrush="#781D22" BorderThickness="1.5" 
+                <Border x:Name="IconBadge" Grid.Column="0" Width="44" Height="44" CornerRadius="{StaticResource RadiusLarge}" 
+                        Background="{StaticResource BrushDangerWash}" BorderBrush="{StaticResource BrushDangerBorder}" BorderThickness="1.5" 
                         Margin="0,0,16,0" VerticalAlignment="Top" HorizontalAlignment="Center">
-                    <TextBlock x:Name="IconGlyph" Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="18"
+                    <TextBlock x:Name="IconGlyph" Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeHeading}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
 
@@ -38,13 +38,13 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock x:Name="PrimaryMessageText" 
                                Text="Are you sure you want to remove this item?" 
-                               FontSize="14" FontWeight="SemiBold" 
+                               FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
                                Foreground="{StaticResource BrushTextPrimary}" 
                                TextWrapping="Wrap" LineHeight="20"/>
 
                     <TextBlock x:Name="DetailMessageText" 
                                Text="This will only remove the shortcut from TrayTrigger. Your installed game files will not be deleted." 
-                               FontSize="12" 
+                               FontSize="{StaticResource FontSizeBody}" 
                                Foreground="{StaticResource BrushTextSecondary}" 
                                TextWrapping="Wrap" LineHeight="17" 
                                Margin="0,8,0,0"/>

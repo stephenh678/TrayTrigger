@@ -18,10 +18,28 @@ It is the same setting NVIDIA App calls DLSS Override. TrayTrigger switches it o
 - It takes effect the next time you start the game. TrayTrigger checks the setting again each time it launches the game and puts it back if NVIDIA App has reset it.
 - **Restore** on the card, or unticking the switch, returns that game's settings to exactly what they were before. **Restore All** in Settings > Launch & Performance > NVIDIA DLSS does the same for every game at once - do that before uninstalling TrayTrigger, because the setting lives in NVIDIA's driver, not in TrayTrigger. Removing a game from the library also puts its override back.
 
+## Preset
+
+The **Preset** choice on the card says what the override does about DLSS presets, for all three features at once.
+
+- **NVIDIA recommended** (the default): NVIDIA picks the preset for each DLSS mode, whatever the game asks for. At the time of writing that is K for Quality, Balanced and Native, M for Performance and L for Ultra Performance. It is NVIDIA App's **Recommended** choice.
+- **Default**: no preset is written, so the game picks its own, as NVIDIA's own profiles leave it and as DLSS Swapper's Default does. The game still gets the newer DLSS version.
+
+Changing it while the override is on takes effect the next time you start the game. Newer presets can cost more performance on RTX 20 and 30 cards, so Default can suit them better. If NVIDIA App sets a preset for the game after you, NVIDIA App's choice stays.
+
 ## Checking that it worked
 
 - The card's **Last run** line says nothing is recorded yet until you have played with the override on. After that it shows the DLSS version the game actually loaded, and whether it came from NVIDIA or from the game's own files.
 - For the preset letter and render resolution, tick **Show the NVIDIA DLSS overlays in games** in Settings > Launch & Performance > NVIDIA DLSS. It draws NVIDIA's own overlays in the game: a corner line with the version, preset and resolution, and, where Frame Generation is running, a bar across the top that also names the driver profile the override was written to.
+
+## If another tool changes it
+
+DLSS Swapper, RHI, NVIDIA App and NVIDIA Profile Inspector all write to the same game profile in NVIDIA's driver, and the driver keeps one value per setting, so the last tool to write wins. TrayTrigger never overwrites a value another tool has changed since it applied the override.
+
+- When that happens, the next launch of the game leaves the settings alone and Activity & History shows **DLSS Override was changed by another app**. The game still runs, with whatever mix of settings is now on its profile.
+- The **Last run** line is where it shows. It names each feature and where it loaded from, so "Ray Reconstruction 310.4.0 from the game's own files" means that feature is no longer using the driver's DLSS.
+- To take the settings back, untick **Enable DLSS Override for this game** and tick it again. That writes the override's values again. Settings that belong to another tool, such as Frame Generation's multi-frame count, are not touched.
+- If another tool keeps changing them, leave the override off for that game and let that tool manage it.
 
 ## Trade-offs
 
@@ -32,7 +50,7 @@ It is the same setting NVIDIA App calls DLSS Override. TrayTrigger switches it o
 
 ## Details
 
-- Writes six values to the game's profile in NVIDIA's driver settings: for each of the three features, "Enable DLL Override" and "Forced Preset Letter" set to NVIDIA's recommended preset. In NVIDIA App that is the game's **DLSS Override - Model Presets** set to **Recommended**: NVIDIA chooses the model for that game, rather than the game's own choice ("Use 3D app setting") or always the newest ("Latest"). If NVIDIA has no profile for the game, TrayTrigger creates one and removes it again on Restore.
+- Writes six values to the game's profile in NVIDIA's driver settings: for each of the three features, "Enable DLL Override" and, unless the preset is Default, "Forced Preset Letter" set to NVIDIA's recommended preset. In NVIDIA App that is the game's **DLSS Override - Model Presets** set to **Recommended**: NVIDIA chooses the preset for each mode, rather than the game's own choice ("Use the 3D application setting"). If NVIDIA has no profile for the game, TrayTrigger creates one and removes it again on Restore.
 - Only that game's profile is written. NVIDIA App's Global settings are left as they are, so a game without the override keeps choosing its own model.
 - Before writing, TrayTrigger records what each value was and where it came from. Restore only touches a value that is still exactly as TrayTrigger left it.
 - For a game started through a launcher, the setting goes on the program that actually draws the game, which TrayTrigger finds by looking through the game's folder for its DLSS files and the program that goes with them.

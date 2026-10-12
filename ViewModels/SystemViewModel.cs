@@ -121,11 +121,11 @@ public class SystemTweakViewModel : ViewModelBase
     public string StatusBadgeText => IsInformational ? (IsOptimal ? "ON" : "OFF")
         : !IsAvailable ? "N/A"
         : IsOptimal ? "OPTIMAL" : IsRecommended ? "NOT APPLIED" : "STANDARD";
-    public string StatusBadgeColor => IsInformational ? "#2F5F8F"
-        : !IsAvailable ? "#4A4A55"
-        : IsOptimal ? "#238636" : IsRecommended ? "#3D2F14" : "#6E6E7A";
+    public string StatusBadgeColor => IsInformational ? AppPalette.Hex("BrushBorderAccent")
+        : !IsAvailable ? AppPalette.Hex("BrushBorderStrong")
+        : IsOptimal ? AppPalette.Hex("BrushSuccessSolid") : IsRecommended ? AppPalette.Hex("BrushWarningWash") : AppPalette.Hex("BrushTextDisabled");
     /// <summary>A recommended tweak that is off gets the amber badge (RESTART's colours), so it is the row you see first.</summary>
-    public string StatusBadgeForeground => IsNotApplied ? "#E8B84E" : "#FFFFFF";
+    public string StatusBadgeForeground => IsNotApplied ? AppPalette.Hex("BrushWarning") : AppPalette.Hex("BrushTextPrimary");
     /// <summary>Part of the preset and currently off: what Apply Performance Preset would change.</summary>
     public bool IsNotApplied => IsRecommended && !IsOptimal;
     // "Restore Previous", not "Revert to Default": it puts back the value TrayTrigger found before
@@ -296,7 +296,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
     public string HelpTopicId { get; }
 
     public string StatusBadgeText => IsEnabled ? "ENABLED" : "DISABLED";
-    public string StatusBadgeColor => IsEnabled ? "#238636" : "#6E6E7A";
+    public string StatusBadgeColor => IsEnabled ? AppPalette.Hex("BrushSuccessSolid") : AppPalette.Hex("BrushTextDisabled");
     public string ActionButtonText => IsEnabled ? "Disable" : "Enable";
 
     /// <summary>The row for a screen reader: "Set power plan, enabled, asks for administrator permission".</summary>
@@ -643,7 +643,7 @@ public class SystemViewModel : ViewModelBase
     public string PresetRingText => $"{OptimalTweakCount}/{TotalTweakCount}";
     /// <summary>Both cards' rings follow one rule: green when nothing is left to do, amber when something is.</summary>
     public string PresetRingColor => RingColor(allGood: TotalTweakCount == 0 || OptimalTweakCount == TotalTweakCount);
-    internal static string RingColor(bool allGood) => allGood ? "#238636" : "#E8B84E";
+    internal static string RingColor(bool allGood) => allGood ? AppPalette.Hex("BrushSuccessSolid") : AppPalette.Hex("BrushWarning");
     public string PresetScoreDisplay => PresetScoreText(OptimalTweakCount, TotalTweakCount);
     public string PresetNotAppliedLine => PresetNotAppliedText(
         Tweaks.Where(t => t.IsNotApplied).Select(t => (t.Name, t.RequiresAdmin, t.RequiresReboot)).ToList());
@@ -976,6 +976,7 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StutterRunButtonText));
                 OnPropertyChanged(nameof(StutterIntroText));
                 OnPropertyChanged(nameof(StutterIntroSubline));
+                CommandManager.InvalidateRequerySuggested();
             }
         }
     }
@@ -1658,17 +1659,17 @@ public sealed class StutterCheckRowViewModel
     };
     public string BadgeBackground => Item.Verdict switch
     {
-        StutterVerdict.NeedsLook => "#3D2F14",
-        StutterVerdict.CanFix => "#14304D",
-        StutterVerdict.Info => "#2A2A3A",
-        _ => "#238636",
+        StutterVerdict.NeedsLook => AppPalette.Hex("BrushWarningWash"),
+        StutterVerdict.CanFix => AppPalette.Hex("BrushAccentWash"),
+        StutterVerdict.Info => AppPalette.Hex("BrushBorder"),
+        _ => AppPalette.Hex("BrushSuccessSolid"),
     };
     public string BadgeForeground => Item.Verdict switch
     {
-        StutterVerdict.NeedsLook => "#E8B84E",
-        StutterVerdict.CanFix => "#6CB6FF",
-        StutterVerdict.Info => "#B8B8CC",
-        _ => "#FFFFFF",
+        StutterVerdict.NeedsLook => AppPalette.Hex("BrushWarning"),
+        StutterVerdict.CanFix => AppPalette.Hex("BrushInfoText"),
+        StutterVerdict.Info => AppPalette.Hex("BrushTextSoft"),
+        _ => AppPalette.Hex("BrushTextPrimary"),
     };
     public string AccessibleName => Item.Verdict switch
     {

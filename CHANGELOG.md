@@ -8,6 +8,11 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.6.2
+
+- **DLSS Override: choose the preset** - the override has always asked NVIDIA's driver for its recommended preset as well as the newest DLSS version, which the card never said. The card now has a Preset choice: NVIDIA recommended (what it did before, and still the default) or Default, which leaves the preset to the game as NVIDIA's own profiles do. Default suits a game that looks worse under NVIDIA's pick. The help page explains both.
+- **DLSS Override: Last run names the features** - the card's Last run line now says which of Super Resolution, Ray Reconstruction and Frame Generation loaded from NVIDIA and which from the game's own files, so a feature the override missed is easy to spot. The help page also explains what happens when DLSS Swapper, RHI or the NVIDIA App change the same settings.
+
 ## 1.6.1
 
 - **Scripts that tell you what they did** - a line a pre-launch or post-exit script prints starting with TT: is for you, not the log: it goes on the game's Played row in Activity & History, after "ran", as in "Scripts: pre-launch Example-CloseBackgroundApps.ps1 ran · closed OneDrive and Discord", and shows in the launch popup while the game is still being prepared. When a script fails, its last TT: line explains why on the problem row instead of an exit code. The bundled examples and the New script... template already do it. Writing your own script, in the help, has the details.

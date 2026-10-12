@@ -9,7 +9,7 @@
         Height="560" Width="680"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
+        Background="{StaticResource BrushSurface}"
         Foreground="{StaticResource BrushTextPrimary}">
 
     <Grid Margin="20">
@@ -24,10 +24,10 @@
         <!-- Header -->
         <DockPanel Grid.Row="0" Margin="0,0,0,16">
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Add Games from Folder" FontSize="18" Foreground="{StaticResource BrushTextPrimary}" 
+                <TextBlock Text="Add Games from Folder" FontSize="{StaticResource FontSizeHeading}" Foreground="{StaticResource BrushTextPrimary}" 
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                 <TextBlock Text="{Binding SubtitleText}" 
-                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                           FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}" 
                            FontFamily="{StaticResource AppFont}" Margin="0,2,0,0"/>
             </StackPanel>
         </DockPanel>
@@ -52,8 +52,8 @@
         </Grid>
 
         <!-- Games List -->
-        <Border Grid.Row="2" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Margin="0,0,0,16">
+        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{StaticResource BrushSurface}" 
+                BorderBrush="{StaticResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
             <ListBox ItemsSource="{Binding FilteredGames}" 
                      Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -62,7 +62,7 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#222228"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource BrushSurfaceHover}"/>
                         <Setter Property="Padding" Value="10,8"/>
                         <Setter Property="Template">
                             <Setter.Value>
@@ -104,7 +104,7 @@
                             </CheckBox>
 
                             <!-- Game Icon -->
-                            <Border Width="36" Height="36" CornerRadius="6" Background="#22222A" 
+                            <Border Width="36" Height="36" CornerRadius="{StaticResource RadiusControl}" Background="{StaticResource BrushSurfaceHover}" 
                                     Margin="0,0,12,0" VerticalAlignment="Center" DockPanel.Dock="Left">
                                 <Image Source="{Binding IconImage}" Width="28" Height="28" 
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -122,7 +122,7 @@
                             <!-- Badges (Right Dock) -->
                             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0" HorizontalAlignment="Right">
                                 <Button Content="Ignore" Command="{Binding IgnoreCommand}"
-                                        FontSize="11" Padding="0"
+                                        FontSize="{StaticResource FontSizeBody}" Padding="0"
                                         HorizontalAlignment="Right">
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource ModernGhostButton}">
@@ -146,18 +146,18 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <Border Background="#203022" CornerRadius="4" Padding="5,1.5">
-                                        <TextBlock Text="IN LIBRARY" Foreground="#52C41A" FontSize="9" FontWeight="SemiBold"/>
+                                    <Border Background="{StaticResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5">
+                                        <TextBlock Text="IN LIBRARY" Foreground="{StaticResource BrushSuccessText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold"/>
                                     </Border>
                                 </Border>
                             </StackPanel>
 
                             <!-- Name and Branch Path -->
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                                <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
                                            Foreground="{StaticResource BrushTextPrimary}" 
                                            FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Text="{Binding DisplayPath}" FontSize="12" 
+                                <TextBlock Text="{Binding DisplayPath}" FontSize="{StaticResource FontSizeBody}" 
                                            Foreground="{StaticResource BrushTextSecondary}" 
                                            FontFamily="{StaticResource AppFont}"
                                            TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
@@ -171,12 +171,12 @@
         <!-- Remember as Scan Location -->
         <CheckBox Grid.Row="3" Content="{Binding RememberScanLocationLabel}" IsChecked="{Binding RememberAsScanLocation}"
                   IsEnabled="{Binding CanToggleRememberAsScanLocation}"
-                  Style="{StaticResource ModernCheckBox}" FontSize="12.5" Margin="0,0,0,12"
+                  Style="{StaticResource ModernCheckBox}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,12"
                   Visibility="{Binding ShowScanLocationRow, Converter={StaticResource BoolToVis}}"/>
 
         <!-- Footer -->
         <DockPanel Grid.Row="4">
-            <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="12"
+            <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="{StaticResource FontSizeBody}"
                        Foreground="{StaticResource BrushTextSecondary}"
                        VerticalAlignment="Center"/>
 

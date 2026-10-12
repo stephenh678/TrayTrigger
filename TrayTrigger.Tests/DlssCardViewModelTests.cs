@@ -450,6 +450,127 @@ public class DlssCardViewModelTests
         Assert.Equal(0x0000000Du, profile.Settings[SrPreset].Value);
     }
 
+    // ---- Last run names the features ----------------------------------------------------------
+
+    [Fact]
+    public async Task LastRun_NamesWhichFeatureLoadedFromWhere()
+    {
+        var last = Ran(new[] { "310.9.0" }, new[] { "310.4.0" });
+        last.Runtimes =
+        [
+            new() { Feature = "Super Resolution", Version = "310.9.0", FromNvidia = true },
+            new() { Feature = "Ray Reconstruction", Version = "310.9.0", FromNvidia = true },
+            new() { Feature = "Frame Generation", Version = "310.4.0", FromNvidia = false }
+        ];
+
+        var card = await Played(last);
+
+        Assert.Equal(
+            "Last run: loaded Super Resolution and Ray Reconstruction 310.9.0 from NVIDIA; Frame Generation 310.4.0 from the game's own files.",
+            card.LastRunLine);
+    }
+
+    [Fact]
+    public async Task LastRun_NamesThreeFeaturesTogether_WhenTheyShareASource()
+    {
+        var last = Ran(new[] { "310.9.0" }, None);
+        last.Runtimes =
+        [
+            new() { Feature = "Super Resolution", Version = "310.9.0", FromNvidia = true },
+            new() { Feature = "Ray Reconstruction", Version = "310.9.0", FromNvidia = true },
+            new() { Feature = "Frame Generation", Version = "310.9.0", FromNvidia = true }
+        ];
+
+        var card = await Played(last);
+
+        Assert.Equal("Last run: loaded Super Resolution, Ray Reconstruction and Frame Generation 310.9.0 from NVIDIA.", card.LastRunLine);
+    }
+
+    // ---- The preset choice --------------------------------------------------------------------
+
+    [Fact]
+    public async Task ASwitchedOnGame_WritesRecommendedPresets_ByDefault()
+    {
+        var (card, _, profile, game) = await SwitchedOn();
+
+        Assert.Equal(DlssPresetChoice.Recommended, card.SelectedPreset);
+        Assert.Equal(0x00FFFFFFu, profile.Settings[SrPreset].Value);
+        Assert.Equal(6, game.DlssSettings.Count);
+    }
+
+    [Fact]
+    public async Task ChoosingDefaultWhileOn_HandsBackThePresets_AndKeepsTheVersionOverride()
+    {
+        var (card, _, profile, game) = await SwitchedOn();
+        profile.Settings[SrPreset] = (0x00FFFFFF, false);
+
+        await card.SetPresetAsync(DlssPresetChoice.Default);
+
+        Assert.Equal(DlssPresetChoice.Default, game.DlssPreset);
+        Assert.False(profile.Settings.ContainsKey(SrPreset));
+        Assert.True(card.OverrideEnabled);
+        Assert.DoesNotContain(game.DlssSettings, r => r.SettingId == SrPreset);
+        Assert.Equal(3, game.DlssSettings.Count);
+        Assert.Equal(1u, profile.Settings[0x10E41E01].Value);
+    }
+
+    [Fact]
+    public async Task ChoosingRecommendedAgain_WritesThePresetsBack()
+    {
+        var (card, _, profile, game) = await SwitchedOn();
+        await card.SetPresetAsync(DlssPresetChoice.Default);
+
+        await card.SetPresetAsync(DlssPresetChoice.Recommended);
+
+        Assert.Equal(0x00FFFFFFu, profile.Settings[SrPreset].Value);
+        Assert.Equal(6, game.DlssSettings.Count);
+    }
+
+    [Fact]
+    public async Task ChoosingDefaultBeforeSwitchingOn_WritesNoPresets()
+    {
+        var driver = new FakeDrsBackend();
+        var profile = driver.AddProfile("game.exe", "Test Game");
+        var game = new GameEntry();
+        var card = Card(driver, game.DlssSettings, game: game);
+        await card.LoadAsync();
+
+        await card.SetPresetAsync(DlssPresetChoice.Default);
+        card.OverrideEnabled = true;
+        await WaitForIdle(card);
+
+        Assert.True(card.OverrideEnabled);
+        Assert.False(profile.Settings.ContainsKey(SrPreset));
+        Assert.Equal(3, game.DlssSettings.Count);
+    }
+
+    [Fact]
+    public async Task ChoosingDefault_WhenAPresetCannotBeHandedBack_KeepsOwningIt()
+    {
+        var (card, _, profile, game) = await SwitchedOn();
+        // The driver refuses to delete this value (NVIDIA holds one of its own beneath ours).
+        profile.HiddenPredefined[SrPreset] = 0x00000001;
+
+        await card.SetPresetAsync(DlssPresetChoice.Default);
+
+        // The new apply no longer writes the preset, but the old value is still there and still ours to undo.
+        Assert.Contains(game.DlssSettings, r => r.SettingId == SrPreset);
+        Assert.Equal(0x00FFFFFFu, profile.Settings[SrPreset].Value);
+    }
+
+    [Fact]
+    public async Task UndoingADefaultOverride_LeavesAPresetSomeoneElseSet()
+    {
+        var (card, _, profile, game) = await SwitchedOn();
+        await card.SetPresetAsync(DlssPresetChoice.Default);
+        profile.Settings[SrPreset] = (0x0000000D, false);   // NVIDIA App, afterwards
+
+        await ((AsyncRelayCommand)card.RestoreCommand).ExecuteAsync();
+
+        Assert.Empty(game.DlssSettings);
+        Assert.Equal(0x0000000Du, profile.Settings[SrPreset].Value);
+    }
+
     // ---- Loading -----------------------------------------------------------------------------
 
     [Fact]

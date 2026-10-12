@@ -1,0 +1,114 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Every color the app uses, by name. Views reference these names and never a literal value;
+         docs/style-guide.html is generated from this file (python tools/Build-StyleGuide.py). -->
+
+    <!-- Colors -->
+    <Color x:Key="ColorBackground">#121214</Color>
+
+    <!-- History: the sidebar rail used to have its own colors (#202020, to match Windows' Mica Alt in
+         dark mode, and a divider). They were folded into BrushSurface and BrushBorder in the style
+         cleanup: 6 and 7 units away, with no visible change. Before 1.4.0-beta.3 the rail was #141418
+         and the divider #26262E, if either is ever wanted back. -->
+
+    <Color x:Key="ColorSurface">#1C1C23</Color>
+    <Color x:Key="ColorSurfaceHover">#252530</Color>
+    <Color x:Key="ColorBorder">#2C2C38</Color>
+    <Color x:Key="ColorBorderStrong">#3C3C4D</Color>
+    <Color x:Key="ColorAccent">#007ACC</Color>
+    <Color x:Key="ColorAccentHover">#0098FF</Color>
+    <!-- Accent as text: links, icons and captions on a dark surface. Equal to AccentHover today; a light theme needs its own, darker value. -->
+    <Color x:Key="ColorAccentText">#0098FF</Color>
+    <Color x:Key="ColorAccentPressed">#005A9E</Color>
+    <!-- The blue of the logo's lower T (tools/IconGen Accent). For the "Trigger" half of the
+     TrayTrigger wordmark only; controls keep the accent colours above. -->
+    <Color x:Key="ColorBrand">#2F8FFF</Color>
+    <Color x:Key="ColorTextPrimary">#FFFFFF</Color>
+    <Color x:Key="ColorTextSecondary">#9E9EAA</Color>
+    <!-- 5.0:1 on cards (#1C1C23), 5.5:1 on the window background: WCAG AA for small text. -->
+    <Color x:Key="ColorTextMuted">#8A8A96</Color>
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="BrushBackground" Color="{StaticResource ColorBackground}"/>
+    <SolidColorBrush x:Key="BrushSurface" Color="{StaticResource ColorSurface}"/>
+    <SolidColorBrush x:Key="BrushSurfaceHover" Color="{StaticResource ColorSurfaceHover}"/>
+    <SolidColorBrush x:Key="BrushBorder" Color="{StaticResource ColorBorder}"/>
+    <SolidColorBrush x:Key="BrushBorderStrong" Color="{StaticResource ColorBorderStrong}"/>
+    <SolidColorBrush x:Key="BrushBorderAccent" Color="#2A5A8A"/>
+    <SolidColorBrush x:Key="BrushAccent" Color="{StaticResource ColorAccent}"/>
+    <SolidColorBrush x:Key="BrushAccentHover" Color="{StaticResource ColorAccentHover}"/>
+    <SolidColorBrush x:Key="BrushAccentText" Color="{StaticResource ColorAccentText}"/>
+    <SolidColorBrush x:Key="BrushBrand" Color="{StaticResource ColorBrand}"/>
+    <SolidColorBrush x:Key="BrushAccentPressed" Color="{StaticResource ColorAccentPressed}"/>
+    <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}"/>
+    <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}"/>
+    <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextMuted}"/>
+    <!-- Destructive actions: Remove from Library, Force Close, Exit. One brush for text and glyphs alike. -->
+    <SolidColorBrush x:Key="BrushDanger" Color="#E06C75"/>
+    <!-- A caution the user may override (a hotkey that shadows a common app shortcut). -->
+    <SolidColorBrush x:Key="BrushWarning" Color="#E5C07B"/>
+
+    <!-- Edit dialogs (Edit Game, Edit Tool): the cards on the dialog background, and the
+     panels inside them. -->
+    <SolidColorBrush x:Key="BrushDialogCard" Color="#16161D"/>
+
+    <!-- Shadow under the floating bars, menus and toasts. -->
+    <Color x:Key="ColorFloatingShadow">#000000</Color>
+
+    <LinearGradientBrush x:Key="BrushTabStripFadeLeft" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF16161D" Offset="0.45"/>
+        <GradientStop Color="#0016161D" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrushTabStripFadeRight" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#0016161D" Offset="0"/>
+        <GradientStop Color="#FF16161D" Offset="0.55"/>
+    </LinearGradientBrush>
+
+    <!-- Overlay and fade colors written as AARRGGBB, named by their value: the tab strip and poster fades, which have no role name of their own yet. -->
+    <Color x:Key="ColorRaw000D0D12">#000D0D12</Color>
+    <Color x:Key="ColorRaw00111114">#00111114</Color>
+    <Color x:Key="ColorRaw88111114">#88111114</Color>
+    <Color x:Key="ColorRaw990D0D12">#990D0D12</Color>
+    <Color x:Key="ColorRawE6111114">#E6111114</Color>
+    <Color x:Key="ColorRawF8111114">#F8111114</Color>
+
+    <!-- Status, badge and overlay colors, by role. Views and code read them by name (AppPalette in code). -->
+    <Color x:Key="ColorTextSoft">#B8B8CC</Color>
+    <Color x:Key="ColorTextDisabled">#6E6E7A</Color>
+    <SolidColorBrush x:Key="BrushTextSoft" Color="{StaticResource ColorTextSoft}"/>
+    <SolidColorBrush x:Key="BrushTextDisabled" Color="{StaticResource ColorTextDisabled}"/>
+    <Color x:Key="ColorSuccessText">#FF3FB950</Color>
+    <SolidColorBrush x:Key="BrushSuccessText" Color="{StaticResource ColorSuccessText}"/>
+    <Color x:Key="ColorSuccessWash">#FF1C2E22</Color>
+    <SolidColorBrush x:Key="BrushSuccessWash" Color="{StaticResource ColorSuccessWash}"/>
+    <Color x:Key="ColorSuccessSolid">#FF238636</Color>
+    <SolidColorBrush x:Key="BrushSuccessSolid" Color="{StaticResource ColorSuccessSolid}"/>
+    <Color x:Key="ColorWarningWash">#FF3D2F14</Color>
+    <SolidColorBrush x:Key="BrushWarningWash" Color="{StaticResource ColorWarningWash}"/>
+    <Color x:Key="ColorWarningBorder">#FF8A6A2A</Color>
+    <SolidColorBrush x:Key="BrushWarningBorder" Color="{StaticResource ColorWarningBorder}"/>
+    <Color x:Key="ColorGold">#FFFFD700</Color>
+    <SolidColorBrush x:Key="BrushGold" Color="{StaticResource ColorGold}"/>
+    <Color x:Key="ColorDangerWash">#FF2E181B</Color>
+    <SolidColorBrush x:Key="BrushDangerWash" Color="{StaticResource ColorDangerWash}"/>
+    <Color x:Key="ColorDangerBorder">#FF781D22</Color>
+    <SolidColorBrush x:Key="BrushDangerBorder" Color="{StaticResource ColorDangerBorder}"/>
+    <Color x:Key="ColorDangerSolid">#FF9E2A2B</Color>
+    <SolidColorBrush x:Key="BrushDangerSolid" Color="{StaticResource ColorDangerSolid}"/>
+    <Color x:Key="ColorDangerSolidHover">#FFBD3A42</Color>
+    <SolidColorBrush x:Key="BrushDangerSolidHover" Color="{StaticResource ColorDangerSolidHover}"/>
+    <Color x:Key="ColorInfoText">#FF6CB6FF</Color>
+    <SolidColorBrush x:Key="BrushInfoText" Color="{StaticResource ColorInfoText}"/>
+    <Color x:Key="ColorAccentWash">#FF1C2E3D</Color>
+    <SolidColorBrush x:Key="BrushAccentWash" Color="{StaticResource ColorAccentWash}"/>
+    <Color x:Key="ColorBadgePurple">#FFB9A6F0</Color>
+    <SolidColorBrush x:Key="BrushBadgePurple" Color="{StaticResource ColorBadgePurple}"/>
+    <Color x:Key="ColorBadgePurpleWash">#FF2B2340</Color>
+    <SolidColorBrush x:Key="BrushBadgePurpleWash" Color="{StaticResource ColorBadgePurpleWash}"/>
+    <Color x:Key="ColorScrim">#CC000000</Color>
+    <SolidColorBrush x:Key="BrushScrim" Color="{StaticResource ColorScrim}"/>
+    <Color x:Key="ColorOverlayLine">#33FFFFFF</Color>
+    <SolidColorBrush x:Key="BrushOverlayLine" Color="{StaticResource ColorOverlayLine}"/>
+    <Color x:Key="ColorHighlight">#66FFC400</Color>
+    <SolidColorBrush x:Key="BrushHighlight" Color="{StaticResource ColorHighlight}"/>
+</ResourceDictionary>

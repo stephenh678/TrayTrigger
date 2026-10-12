@@ -11,7 +11,7 @@
         <!-- The same clear x as the hotkey box: shown once there's text. -->
         <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0"
                 Click="OnClearClick" ToolTip="Clear search" AutomationProperties.Name="Clear search"
-                Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="9"
+                Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}"
                 Background="Transparent" BorderThickness="0" Padding="6,4" Cursor="Hand" Focusable="False">
             <Button.Template>
                 <ControlTemplate TargetType="Button">

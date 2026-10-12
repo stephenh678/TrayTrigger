@@ -2949,7 +2949,7 @@ public partial class App
 
                 var container = new Border
                 {
-                    Background = (Brush)FindResource("BrushBgDark"),
+                    Background = (Brush)FindResource("BrushBackground"),
                     Padding = new Thickness(25),
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center
@@ -3018,7 +3018,7 @@ public partial class App
 
                 var container = new Border
                 {
-                    Background = (Brush)FindResource("BrushBgDark"),
+                    Background = (Brush)FindResource("BrushBackground"),
                     Padding = new Thickness(25),
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center

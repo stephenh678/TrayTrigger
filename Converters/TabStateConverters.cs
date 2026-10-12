@@ -1,4 +1,5 @@
 using System;
+using TrayTrigger.Services;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
@@ -55,8 +56,8 @@ public sealed class TabForegroundConverter : IMultiValueConverter
     {
         var (isActive, isHovered) = TabState.Read(values);
 
-        if (isActive || isHovered) return Brushes.White;
-        return Application.Current?.TryFindResource("BrushTextSecondary") as Brush ?? Brushes.Gray;
+        if (isActive || isHovered) return AppPalette.Brush("BrushTextPrimary");
+        return AppPalette.Brush("BrushTextSecondary");
     }
 
     public object[] ConvertBack(object value, Type[] targetTypes, object? parameter, CultureInfo culture)

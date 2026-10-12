@@ -20,6 +20,16 @@ public class DlssLastRunTests
         new(dll, $@"C:\Games\Test\bin\x64\{dll}", version, FromDriverStore: false);
 
     [Fact]
+    public void TheReading_NamesTheFeatureEachRuntimeBelongsTo()
+    {
+        var last = DlssProbeService.ReadLastRun(
+            new[] { FromStore("dlssg", 20318464), FromGame("nvngx_dlss.dll", "310.1.0") }, null);
+
+        Assert.Contains(last!.Runtimes, r => r.Feature == "Frame Generation" && r.FromNvidia && r.Version == "310.9.0");
+        Assert.Contains(last.Runtimes, r => r.Feature == "Super Resolution" && !r.FromNvidia && r.Version == "310.1.0");
+    }
+
+    [Fact]
     public void ARuntimeFromTheDriverStore_IsReportedWithTheVersionInItsPath()
     {
         // The hashed .bin carries no version resource; the versions\<n> folder is the version.

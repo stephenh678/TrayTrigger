@@ -29,10 +29,15 @@ public sealed class DlssOverrideService(IDrsBackend backend)
     /// <paramref name="existing"/> record left it, "the state before this write" is TrayTrigger's
     /// own value, and capturing that would make undo restore the override. There the original
     /// capture is carried over instead.</para>
+    ///
+    /// <para>With <see cref="DlssPresetChoice.Default"/> the preset settings are left out, so the
+    /// game picks its own. Going from Recommended to Default is an undo followed by this apply,
+    /// not a re-apply: a preset value TrayTrigger wrote must be handed back, not forgotten.</para>
     /// </summary>
     public DlssOperationResult Apply(
         string executablePath, string gameName,
-        IReadOnlyList<DlssSettingRecord>? existing = null)
+        IReadOnlyList<DlssSettingRecord>? existing = null,
+        DlssPresetChoice presets = DlssPresetChoice.Recommended)
     {
         // Not the launched executable: the one that renders. For a launcher-based game they differ,
         // and the driver keys its profiles on the renderer. See ResolveRenderingExecutable.
@@ -45,7 +50,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
         // The write happens in its own scope so the session is closed before the check below.
         // NVIDIA's own documentation warns that DRS sessions do not merge, and reading through the
         // session that just wrote would only show its own in-memory copy - confirming nothing.
-        var written = WriteRecipe(exePath, exeName, gameName, existing);
+        var written = WriteRecipe(exePath, exeName, gameName, existing, presets);
         if (written.Error != null) return DlssOperationResult.Failure(written.Error);
 
         var verified = VerifyWriteBack(exePath, exeName, written.Records, written.Details);
@@ -84,7 +89,7 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
     private WriteOutcome WriteRecipe(
         string exePath, string exeName, string gameName,
-        IReadOnlyList<DlssSettingRecord>? existing)
+        IReadOnlyList<DlssSettingRecord>? existing, DlssPresetChoice presets)
     {
         var noDetails = new List<DlssSettingOutcomeDetail>();
         var noRecords = new List<DlssSettingRecord>();
@@ -120,6 +125,9 @@ public sealed class DlssOverrideService(IDrsBackend backend)
 
         foreach (var def in DlssProbeService.Settings)
         {
+            // Not written, so not recorded and not reported: the game's own choice stands.
+            if (def.IsPreset && presets == DlssPresetChoice.Default) continue;
+
             // NVIDIA adds and retires setting ids between driver versions. An id this driver does
             // not have is stepped over, not reported as a failure - and never recorded, because
             // there is nothing to undo.

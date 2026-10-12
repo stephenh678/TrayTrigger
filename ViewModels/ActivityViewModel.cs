@@ -377,17 +377,17 @@ public sealed class ActivityGroupViewModel : ViewModelBase
     };
     public string LevelBackground => Group.Latest.Level switch
     {
-        ActivityLevel.Critical => "#DA3633",
-        ActivityLevel.Problem => "#3D2F14",
-        ActivityLevel.Change => "#14304D",
-        _ => "#2A2A3A",
+        ActivityLevel.Critical => AppPalette.Hex("BrushDangerSolidHover"),
+        ActivityLevel.Problem => AppPalette.Hex("BrushWarningWash"),
+        ActivityLevel.Change => AppPalette.Hex("BrushAccentWash"),
+        _ => AppPalette.Hex("BrushBorder"),
     };
     public string LevelForeground => Group.Latest.Level switch
     {
-        ActivityLevel.Critical => "#FFFFFF",
-        ActivityLevel.Problem => "#E8B84E",
-        ActivityLevel.Change => "#6CB6FF",
-        _ => "#B8B8CC",
+        ActivityLevel.Critical => AppPalette.Hex("BrushTextPrimary"),
+        ActivityLevel.Problem => AppPalette.Hex("BrushWarning"),
+        ActivityLevel.Change => AppPalette.Hex("BrushInfoText"),
+        _ => AppPalette.Hex("BrushTextSoft"),
     };
 
     /// <summary>Every Critical entry in the row put right since: a green FIXED badge, as OPTIMAL is green.</summary>

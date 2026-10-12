@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <!-- Every text size the app uses, by name. Views reference these names and never a number;
+         docs/style-guide.html is generated from this file (python tools/Build-StyleGuide.py).
+         To change how big a kind of text is, change it here. -->
+
+    <!-- Badge and tag labels, the smallest text. -->
+    <sys:Double x:Key="FontSizeBadge">9</sys:Double>
+    <!-- Body text: labels, descriptions, hints, rows. Nearly everything. -->
+    <sys:Double x:Key="FontSizeBody">12</sys:Double>
+    <!-- Semibold subheadings inside a page or card. -->
+    <sys:Double x:Key="FontSizeSubhead">14</sys:Double>
+    <!-- Section titles. -->
+    <sys:Double x:Key="FontSizeTitle">16</sys:Double>
+    <!-- Dialog and page headings. -->
+    <sys:Double x:Key="FontSizeHeading">20</sys:Double>
+    <!-- Big numbers and empty-state text. -->
+    <sys:Double x:Key="FontSizeDisplay">32</sys:Double>
+</ResourceDictionary>

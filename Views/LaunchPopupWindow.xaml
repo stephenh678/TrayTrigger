@@ -13,10 +13,10 @@
         Focusable="False" UseLayoutRounding="True" Opacity="0"
         FontFamily="{StaticResource AppFont}">
 
-    <Border x:Name="Card" Margin="10,10,12,14" Padding="12,10,8,10" CornerRadius="8"
-            Background="#24242E" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5">
+    <Border x:Name="Card" Margin="10,10,12,14" Padding="12,10,8,10" CornerRadius="{StaticResource RadiusCard}"
+            Background="{StaticResource BrushSurfaceHover}" BorderBrush="{StaticResource BrushAccent}" BorderThickness="1.5">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.5" Color="#000000"/>
+            <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.5" Color="{StaticResource ColorFloatingShadow}"/>
         </Border.Effect>
         <Grid>
             <Grid.ColumnDefinitions>
@@ -31,40 +31,40 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border x:Name="IconTile" Grid.Row="0" Grid.Column="0" Width="34" Height="34" CornerRadius="6"
-                    Background="#2F2F3E" Margin="0,0,10,0" VerticalAlignment="Center">
+            <Border x:Name="IconTile" Grid.Row="0" Grid.Column="0" Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}"
+                    Background="{StaticResource BrushBorder}" Margin="0,0,10,0" VerticalAlignment="Center">
                 <Grid>
                     <Image x:Name="GameIcon" Width="26" Height="26" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <TextBlock x:Name="IconGlyph" Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="16"
+                    <TextBlock x:Name="IconGlyph" Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeTitle}"
                                Foreground="{StaticResource BrushTextSecondary}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
 
             <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0">
-                <TextBlock x:Name="StatusText" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
+                <TextBlock x:Name="StatusText" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextSecondary}"
                            TextTrimming="CharacterEllipsis"/>
-                <TextBlock x:Name="NameText" FontSize="13" Foreground="{StaticResource BrushTextPrimary}"
+                <TextBlock x:Name="NameText" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource BrushTextPrimary}"
                            TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
             </StackPanel>
 
             <Button x:Name="CloseButton" Grid.Row="0" Grid.Column="2" Content="&#xE711;"
-                    FontFamily="{StaticResource IconFont}" FontSize="10" Padding="6,4" VerticalAlignment="Top"
+                    FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}" Padding="6,4" VerticalAlignment="Top"
                     Style="{StaticResource ModernGhostButton}" Focusable="False"
                     AutomationProperties.Name="Close" ToolTip="Close" Click="OnCloseClick"/>
 
-            <TextBlock x:Name="DetailText" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" FontSize="12"
+            <TextBlock x:Name="DetailText" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" FontSize="{StaticResource FontSizeBody}"
                        Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,8,4,0"/>
 
             <Button x:Name="ActionButton" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Left"
-                    FontSize="11.5" Padding="6,3" Margin="-6,5,0,0" Focusable="False"
-                    Foreground="{StaticResource BrushAccentHover}" Style="{StaticResource ModernGhostButton}"
+                    FontSize="{StaticResource FontSizeBody}" Padding="6,3" Margin="-6,5,0,0" Focusable="False"
+                    Foreground="{StaticResource BrushAccentText}" Style="{StaticResource ModernGhostButton}"
                     Click="OnActionClick"/>
 
             <Grid x:Name="ProgressTrack" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Height="3"
-                  Margin="0,10,4,0" Background="#2F2F3E" ClipToBounds="True">
-                <Border x:Name="ProgressBar" Width="80" HorizontalAlignment="Left" CornerRadius="1.5"
+                  Margin="0,10,4,0" Background="{StaticResource BrushBorder}" ClipToBounds="True">
+                <Border x:Name="ProgressBar" Width="80" HorizontalAlignment="Left" CornerRadius="{StaticResource RadiusSmall}"
                         Background="{StaticResource BrushAccent}">
                     <Border.RenderTransform>
                         <TranslateTransform x:Name="ProgressShift" X="-80"/>

@@ -667,7 +667,7 @@ public class ActivityServiceTests : IDisposable
             new ActivityGroup("k", new ActivityEntry { Level = level, Text = "x" }, [DateTime.UtcNow]), DateTime.Now);
 
         Assert.Equal("CRITICAL", Row(ActivityLevel.Critical).LevelTag);
-        Assert.Equal("#DA3633", Row(ActivityLevel.Critical).LevelBackground);
+        Assert.Equal(TrayTrigger.Services.AppPalette.Hex("BrushDangerSolidHover"), Row(ActivityLevel.Critical).LevelBackground);
         Assert.Equal("PROBLEM", Row(ActivityLevel.Problem).LevelTag);
         Assert.Equal("CHANGE", Row(ActivityLevel.Change).LevelTag);
         Assert.Equal("ACTIVITY", Row(ActivityLevel.Activity).LevelTag);

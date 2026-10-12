@@ -110,6 +110,12 @@ public class GameEntry
     public DlssLastRun? DlssLastRun { get; set; }
 
     /// <summary>
+    /// Whether the override also forces NVIDIA's recommended presets. The default writes them, as
+    /// every earlier version did, so a game saved before this existed behaves the same.
+    /// </summary>
+    public DlssPresetChoice DlssPreset { get; set; } = DlssPresetChoice.Recommended;
+
+    /// <summary>
     /// Which cores the game's process is kept on (Edit Game › Performance › CPU Cores), with CPU
     /// Sets. Independent of the profile tier: on an Intel hybrid CPU (12th gen+) some engines and
     /// anti-cheat titles run worse when threads land on E-cores, and on a dual-CCD Ryzen X3D most
