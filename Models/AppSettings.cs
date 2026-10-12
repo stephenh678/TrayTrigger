@@ -58,6 +58,13 @@ public class AppSettings
     public double? MainWindowWidth { get; set; }
     public double? MainWindowHeight { get; set; }
     public bool MainWindowMaximized { get; set; } = false;
+    /// <summary>
+    /// The Game Details window's size (device-independent units) as the player last left it.
+    /// Null until it has been resized once, in which case the XAML default size applies.
+    /// Size only: the window is centered over the main window each time. See GameDetailsDialog.
+    /// </summary>
+    public double? GameDetailsWidth { get; set; }
+    public double? GameDetailsHeight { get; set; }
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
     /// <summary>Opens the tray menu by the tray icon from anywhere, search box ready. Blank means none.
     /// A settings file from before it existed gets the default.</summary>
@@ -77,6 +84,8 @@ public class AppSettings
     /// a library that lost its games.
     /// </summary>
     public List<string> LibraryFilterKeys { get; set; } = new();
+    /// <summary>Filter combinations the player named and saved from the library's filter flyout.</summary>
+    public List<SavedLibraryFilter> SavedLibraryFilters { get; set; } = new();
     public bool ShowRecentInTray { get; set; } = true;
     public int MaxRecentInTray { get; set; } = 5;
     public string RecentTraySortOption { get; set; } = "Most Recently Played";

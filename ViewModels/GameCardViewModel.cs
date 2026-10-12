@@ -185,6 +185,7 @@ public class GameCardViewModel : ViewModelBase
             () => _onToggleDlssOverride != null && !IsDlssOverrideBusy);
         OpenFolderCommand = new RelayCommand(OpenContainingFolder);
         OpenStoreCommand = new RelayCommand(OpenStorePage);
+        OpenPcGamingWikiCommand = new RelayCommand(OpenPcGamingWiki);
         OpenInSteamLibraryCommand = new RelayCommand(OpenInSteamLibrary);
         VerifyFilesCommand = new RelayCommand(VerifyFiles);
 
@@ -485,6 +486,7 @@ public class GameCardViewModel : ViewModelBase
     public ICommand ChangeCoverCommand { get; }
     public ICommand OpenFolderCommand { get; }
     public ICommand OpenStoreCommand { get; }
+    public ICommand OpenPcGamingWikiCommand { get; }
     public ICommand OpenInSteamLibraryCommand { get; }
     public ICommand VerifyFilesCommand { get; }
     public ICommand ToggleFavoriteCommand { get; }
@@ -701,6 +703,12 @@ public class GameCardViewModel : ViewModelBase
         {
             SteamScannerService.OpenStorePage(Game.SteamAppId);
         }
+    }
+
+    private void OpenPcGamingWiki()
+    {
+        string? url = PcGamingWikiLink.For(Game.SteamAppId, Game.Name);
+        if (url is not null) HelpCommands.OpenUrl.Execute(url);
     }
 
     private void OpenInSteamLibrary()

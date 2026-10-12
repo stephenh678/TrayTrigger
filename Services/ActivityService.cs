@@ -25,7 +25,9 @@ public sealed record AttentionItem(string Key, string Text, string Detail, strin
 /// <summary>One row on the page: every entry with the same <see cref="ActivityEntry.GroupKey"/>.</summary>
 /// <param name="Fixed">Every Critical entry in the row has been put right (and there is one): the
 /// FIXED badge. One left unfixed - an earlier run's, say - keeps it off, so FIXED never hides it.</param>
-public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyList<DateTime> TimesUtc, bool Fixed = false)
+/// <param name="Varied">A setting row whose entries don't all say the same thing: a setting switched on,
+/// off and on again shares one row, so its count is of changes, not of times it was turned on.</param>
+public sealed record ActivityGroup(string Key, ActivityEntry Latest, IReadOnlyList<DateTime> TimesUtc, bool Fixed = false, bool Varied = false)
 {
     public int Count => TimesUtc.Count;
 }
@@ -320,7 +322,8 @@ public sealed class ActivityService
                 var ordered = g.OrderByDescending(e => e.TimeUtc).ToList();
                 var critical = ordered.Where(e => e.Level == ActivityLevel.Critical).ToList();
                 bool isFixed = critical.Count > 0 && critical.All(e => e.FixedUtc != null);
-                return new ActivityGroup(g.Key, ordered[0], ordered.Select(e => e.TimeUtc).ToList(), isFixed);
+                bool varied = PerformanceActivity.IsSettingRowKey(g.Key) && ordered.Select(e => e.Text).Distinct(StringComparer.Ordinal).Count() > 1;
+                return new ActivityGroup(g.Key, ordered[0], ordered.Select(e => e.TimeUtc).ToList(), isFixed, varied);
             })
             .OrderByDescending(g => g.Latest.TimeUtc)
             .ToList();

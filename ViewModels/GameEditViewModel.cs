@@ -498,6 +498,9 @@ public class GameEditViewModel : ViewModelBase
     });
     internal Func<bool> HdrDisplayPresent { get; init; } = () => s_hdrDisplayPresent.Value;
 
+    /// <summary>The same answer for callers with no edit window, such as the library's filter flyout.</summary>
+    internal static bool HdrDisplayPresentOnThisPc => s_hdrDisplayPresent.Value;
+
     /// <summary>The HDR box is left out on a PC with no HDR-capable display, unless the game already has a choice.</summary>
     public bool ShowHdr => _initialHdr != HdrMode.ProfileDefault || HdrDisplayPresent();
 

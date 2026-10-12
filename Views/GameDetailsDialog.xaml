@@ -7,7 +7,7 @@
         xmlns:services="clr-namespace:TrayTrigger.Services"
         mc:Ignorable="d"
         Title="Game Details"
-        Height="680" Width="820"
+        Height="680" Width="880"
         MinHeight="560" MinWidth="720"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BrushSurface}"
@@ -218,7 +218,8 @@
                     <!-- Destructive Action (Safely Isolated on Far Right) -->
                     <Button AutomationProperties.Name="Remove from library" DockPanel.Dock="Right" Command="{Binding DeleteGameCommand}"
                             Style="{StaticResource ModernOutlineButton}" Foreground="{DynamicResource BrushDanger}" BorderBrush="{DynamicResource BrushDangerBorder}"
-                            Padding="12,7" Margin="0,0,0,6" FontSize="{StaticResource FontSizeBody}">
+                            Padding="12,7" Margin="0,0,0,6" FontSize="{StaticResource FontSizeBody}"
+                            VerticalAlignment="Top">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Remove" VerticalAlignment="Center"/>
@@ -274,6 +275,18 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Open on RAWG" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <!-- Where to find a game's PC fixes (ultrawide, FOV, frame cap, save location).
+                             Follows neither source: Steam App ID when there is one, else a name search. -->
+                        <Button AutomationProperties.Name="Open the PCGamingWiki page" Command="{Binding OpenPcGamingWikiCommand}"
+                                Visibility="{Binding HasPcGamingWikiPage, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource ModernOutlineButton}" Padding="13,7" Margin="0,0,10,6"
+                                FontSize="{StaticResource FontSizeBody}"
+                                ToolTip="Open this game's page on PCGamingWiki: fixes, ultrawide and FOV support, frame cap and save location">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="PCGamingWiki" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button AutomationProperties.Name="Edit game" Command="{Binding EditGameCommand}"

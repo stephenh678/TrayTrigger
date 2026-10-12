@@ -542,6 +542,13 @@ public class GameDetailsViewModel : ViewModelBase
     public string NewsHubUrl => !string.IsNullOrWhiteSpace(Game.SteamAppId) ? $"https://store.steampowered.com/news/app/{Game.SteamAppId}" : string.Empty;
     public bool HasNewsHub => !string.IsNullOrWhiteSpace(NewsHubUrl);
 
+    /// <summary>The game's PCGamingWiki page (Steam App ID when it has one, otherwise a search
+    /// for its name). Not tied to the Steam | RAWG switch: it is where to look for the PC fixes,
+    /// whichever source is showing.</summary>
+    public string? PcGamingWikiUrl => PcGamingWikiLink.For(Game.SteamAppId, Game.Name);
+    public bool HasPcGamingWikiPage => PcGamingWikiUrl is not null;
+
+    public ICommand OpenPcGamingWikiCommand { get; }
     public ICommand LaunchGameCommand { get; }
     public ICommand EditGameCommand { get; }
     public ICommand DeleteGameCommand { get; }
@@ -627,6 +634,7 @@ public class GameDetailsViewModel : ViewModelBase
         CloseGameCommand = new RelayCommand(() => { RequestClose?.Invoke(); _closeGameAction?.Invoke(Game); }, () => IsPlaying);
         ForceCloseCommand = new RelayCommand(() => { RequestClose?.Invoke(); _forceCloseAction?.Invoke(Game); }, () => IsPlaying);
         OpenStorePageCommand = new RelayCommand(ExecuteOpenStorePage, () => !string.IsNullOrWhiteSpace(StoreUrl));
+        OpenPcGamingWikiCommand = new RelayCommand(() => ExecuteOpenUrl(PcGamingWikiUrl), () => HasPcGamingWikiPage);
         OpenNewsUrlCommand = new RelayCommand(p => ExecuteOpenUrl(p as string));
         OpenNewsHubCommand = new RelayCommand(() => ExecuteOpenUrl(NewsHubUrl), () => HasNewsHub);
         ShowMinReqsCommand = new RelayCommand(() => IsShowingRecommendedReqs = false);

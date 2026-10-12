@@ -22,6 +22,10 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 - The window title, text fields, play-mode chips and score badges follow the selected source, and so does the store button: "Steam Store" while Steam is selected, "Open on RAWG" (the game's rawg.io page) while RAWG is selected. Steam-only sections (review summary, PC requirements, news) hide while RAWG is selected.
 - Cover art and sorting never change with the switch.
 
+## PCGamingWiki
+
+The **PCGamingWiki** button in the details window opens the game's page on pcgamingwiki.com, where the PC fixes are: ultrawide and FOV support, frame cap and save game location. A Steam game opens its page directly; any other game opens the wiki's search for its name, which lands on the page when the title matches. It shows for every game and does not follow the Steam | RAWG switch. Nothing is downloaded: the link opens in your browser.
+
 ## What RAWG adds to the library
 
 - Category. When "Automatically categorize games from store genres" is on, a game Steam cannot categorize gets RAWG's main genre instead: one with no Steam listing, one whose Steam page has been delisted, or one whose Steam page lists no genre. This only fills a game that is still Uncategorized; a category you set yourself is never overwritten. A new RAWG key runs this pass over the library as soon as it checks out.

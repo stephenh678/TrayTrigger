@@ -832,11 +832,15 @@
                             <StackPanel Margin="24,0,0,12" IsEnabled="{Binding PosterDetailsOnHover}">
                                 <StackPanel.Resources>
                                     <Style x:Key="PosterDetailsListText" TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                                         <Style.Triggers>
                                             <Trigger Property="IsEnabled" Value="False">
-                                                <Setter Property="Opacity" Value="0.45"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource BrushTextDisabled}"/>
                                             </Trigger>
                                         </Style.Triggers>
+                                    </Style>
+                                    <Style x:Key="PosterDetailsListNote" TargetType="TextBlock" BasedOn="{StaticResource PosterDetailsListText}">
+                                        <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
                                     </Style>
                                     <Style TargetType="CheckBox" BasedOn="{StaticResource ModernCheckBox}">
                                         <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
@@ -844,7 +848,7 @@
                                     </Style>
                                 </StackPanel.Resources>
                                 <TextBlock Text="Keep on every card, even when you're not pointing at it:" Style="{StaticResource PosterDetailsListText}"
-                                           Foreground="{DynamicResource BrushTextPrimary}" FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,6"/>
+                                           FontSize="{StaticResource FontSizeBody}" Margin="0,0,0,6"/>
                                 <!-- Flows to as many columns as the card has room for: all nine on one line in a
                                      wide window, three at the smallest. -->
                                 <WrapPanel Orientation="Horizontal" ItemWidth="150">
@@ -859,8 +863,8 @@
                                     <CheckBox Content="Title" IsChecked="{Binding PosterDetails.Title}"/>
                                 </WrapPanel>
                                 <TextBlock Text="Everything else appears when you point at a card, Tab to it or right-click it. The Play button always waits for that, and a game that isn't installed always stays dimmed."
-                                           Style="{StaticResource PosterDetailsListText}"
-                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                           Style="{StaticResource PosterDetailsListNote}"
+                                           FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
 
                         </StackPanel>

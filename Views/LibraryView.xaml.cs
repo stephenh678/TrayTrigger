@@ -32,7 +32,36 @@ public partial class LibraryView : UserControl
         // OnCardContextMenuOpening and its highlight cleared here when the menu goes away.
         ((ContextMenu)FindResource("GameItemContextMenu")).Closed += OnCardContextMenuClosed;
         ((ContextMenu)FindResource("GameBatchContextMenu")).Closed += OnCardContextMenuClosed;
+
+        // The filter asks for a name and a yes through the view, so it stays free of dialogs. The data
+        // context arrives after construction, hence Loaded.
+        Loaded += (_, _) => WireFilterPrompts();
     }
+
+    private void WireFilterPrompts()
+    {
+        if (DataContext is not MainViewModel main) return;
+        var filter = main.Library.Filter;
+        filter.PromptForName = () =>
+        {
+            var dialog = new QuickInputDialog("Save Filter", "Save this filter",
+                "Name it. The ticked options are saved; the category tab and search text are not.", string.Empty);
+            return dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.ResultValue) ? dialog.ResultValue : null;
+        };
+        filter.ConfirmReplace = (name, saved, now) => ModernDialog.Confirm(
+            WindowHelper.ActiveOwner(), "Replace saved filter", $"Replace the saved filter \"{name}\"?",
+            $"Saved: {saved}.\nNow: {now}.", confirmText: "Replace", cancelText: "Cancel");
+        filter.ConfirmDelete = name => ModernDialog.ConfirmDelete(
+            WindowHelper.ActiveOwner(), "Delete saved filter", $"Delete the saved filter \"{name}\"?",
+            "Your games and your other filters are not affected.", confirmText: "Delete");
+    }
+
+    /// <summary>
+    /// Closes the flyout before the name box opens over it. Click runs ahead of the button's Command,
+    /// which is what asks for the name.
+    /// </summary>
+    private void LibraryFilterSave_Click(object sender, RoutedEventArgs e) =>
+        ViewModel.Library.Filter.IsOpen = false;
 
     private MainViewModel ViewModel => (MainViewModel)DataContext;
 
@@ -55,14 +84,16 @@ public partial class LibraryView : UserControl
     ];
 
     /// <summary>
-    /// Moves focus into the flyout so its tick boxes are reachable by keyboard. A Popup does not
-    /// take focus on its own, which left the whole panel unusable without a mouse.
+    /// Puts focus on the flyout itself, so Escape works and Tab goes to its first control. A Popup does
+    /// not take focus on its own, which left the panel unusable without a mouse. Focus goes to the panel
+    /// and not to its first option: an option with focus draws a blue outline, which on opening read as
+    /// that option being picked.
     /// </summary>
     private void LibraryFilterPopup_Opened(object? sender, EventArgs e)
     {
         if (LibraryFilterPopup.Child is FrameworkElement child)
         {
-            child.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            child.Focus();
         }
     }
 
@@ -82,8 +113,7 @@ public partial class LibraryView : UserControl
     /// <summary>
     /// Clear leaves the flyout open, but the button hides itself once nothing is ticked, and a
     /// hidden button can't keep keyboard focus. Click runs ahead of the Command that clears, so
-    /// focus moves once that has happened: onto the first option, which is now the first
-    /// focusable element in the panel.
+    /// focus moves once that has happened: back onto the panel, as when it opened.
     /// </summary>
     private void LibraryFilterClear_Click(object sender, RoutedEventArgs e)
     {
@@ -91,7 +121,7 @@ public partial class LibraryView : UserControl
         {
             if (LibraryFilterPopup.IsOpen && LibraryFilterPopup.Child is FrameworkElement child)
             {
-                child.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                child.Focus();
             }
         }), System.Windows.Threading.DispatcherPriority.Input);
     }

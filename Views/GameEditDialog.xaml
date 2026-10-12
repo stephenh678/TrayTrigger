@@ -121,7 +121,7 @@
                                     </Border.Style>
                                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                         <TextBlock Text="&#xEB9F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeHeading}"
-                                                   Foreground="{DynamicResource BrushTextSecondary}" HorizontalAlignment="Center" Opacity="0.5" Margin="0,0,0,8"/>
+                                                   Foreground="{DynamicResource BrushTextDisabled}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
                                         <TextBlock Text="NO POSTER" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource BrushTextSecondary}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="600 × 900" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"

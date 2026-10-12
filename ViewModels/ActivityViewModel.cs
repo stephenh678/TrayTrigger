@@ -407,8 +407,12 @@ public sealed class ActivityGroupViewModel : ViewModelBase
     /// <summary>"7 TIMES" on a repeated problem, the way MISSING flags a card; blank otherwise.</summary>
     public string CountTag => IsProblem && Count > 1 ? $"{Count} TIMES" : string.Empty;
     public bool ShowCountTag => CountTag.Length > 0;
-    /// <summary>A repeated change or activity gets a quiet count instead of a tag.</summary>
-    public string QuietCount => !IsProblem && Count > 1 ? $"· {Count} times" : string.Empty;
+    /// <summary>A repeated change or activity gets a quiet count instead of a tag. A row whose
+    /// entries differ (a setting turned on, off and on again) counts the changes: "turned on · 3
+    /// times" would read as three turn-ons.</summary>
+    public string QuietCount => !IsProblem && Count > 1
+        ? (Group.Varied ? $"· changed {Count} times" : $"· {Count} times")
+        : string.Empty;
     public bool ShowQuietCount => QuietCount.Length > 0;
     public bool ShowTimes => Count > 1;
     /// <summary>The latest ten times; Copy details has them all.</summary>

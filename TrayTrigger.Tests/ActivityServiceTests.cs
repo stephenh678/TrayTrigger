@@ -320,6 +320,67 @@ public class ActivityServiceTests : IDisposable
         Assert.Contains("SimHub didn't start with Elden Ring", problem.DetailsText());
     }
 
+    [Fact]
+    public void ASettingSwitchedBackAndForth_CountsChanges_NotTurnOns()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Change, "DLSS Override turned on for Elden Ring", groupKey: "dlss.game|er");
+        service.Record(ActivityLevel.Change, "DLSS Override turned off for Elden Ring", groupKey: "dlss.game|er");
+        service.Record(ActivityLevel.Change, "DLSS Override turned on for Elden Ring", groupKey: "dlss.game|er");
+        service.Record(ActivityLevel.Change, "Hades' profile changed from Optimized to Aggressive", groupKey: "profile.game|h");
+        service.Record(ActivityLevel.Change, "Hades' profile changed from Optimized to Aggressive", groupKey: "profile.game|h");
+
+        var rows = ActivityService.Group(service.Entries)
+            .Select(g => new ActivityGroupViewModel(g, DateTime.Now)).ToDictionary(r => r.Group.Key);
+        Assert.Equal("· changed 3 times", rows["dlss.game|er"].QuietCount);
+        Assert.Equal("· 2 times", rows["profile.game|h"].QuietCount);
+    }
+
+    /// <summary>
+    /// Rows whose text varies for another reason - a play session's length, a scan's count - are repeats,
+    /// not changes: "Played Hades · 1h · changed 8 times" would be wrong.
+    /// </summary>
+    [Fact]
+    public void ARepeatedRowWhoseTextVaries_IsStillCountedAsTimes()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Change, "Played Hades · 4m", groupKey: "played|hades");
+        service.Record(ActivityLevel.Change, "Played Hades · 1h 2m", groupKey: "played|hades");
+        service.Record(ActivityLevel.Activity, "The startup scan found 3 new games", groupKey: "scan.found");
+        service.Record(ActivityLevel.Activity, "The startup scan found 5 new games", groupKey: "scan.found");
+
+        var rows = ActivityService.Group(service.Entries)
+            .Select(g => new ActivityGroupViewModel(g, DateTime.Now)).ToDictionary(r => r.Group.Key);
+        Assert.Equal("· 2 times", rows["played|hades"].QuietCount);
+        Assert.Equal("· 2 times", rows["scan.found"].QuietCount);
+    }
+
+    /// <summary>
+    /// "changed N times" rests on the key of a row, so it is checked against the keys the describers really
+    /// build - one game's profile, CPU Cores, HDR and DLSS Override, and a tier's tweak - not against keys
+    /// typed into a test.
+    /// </summary>
+    [Fact]
+    public void EverySettingRowKeyThatIsBuilt_IsRecognisedAsASettingRow()
+    {
+        var er = new GameEntry { Id = "er", Name = "Elden Ring" };
+        var now = DateTime.UtcNow;
+
+        string[] keys =
+        [
+            PerformanceActivity.DescribeGamesChanged([(er, PerformanceProfileMode.Off)], PerformanceProfileMode.Aggressive, now).GroupKey,
+            PerformanceActivity.DescribeGamesChanged([(er, CpuAffinityMode.Default)], CpuAffinityMode.Auto, now).GroupKey,
+            PerformanceActivity.DescribeGamesChanged([(er, HdrMode.ProfileDefault)], HdrMode.On, now).GroupKey,
+            PerformanceActivity.DescribeDlssChanged([("er", "Elden Ring")], true, now).GroupKey,
+            PerformanceActivity.DescribeTierTweakChanged("Optimized", "Enable HDR", true).GroupKey,
+        ];
+        Assert.All(keys, key => Assert.True(PerformanceActivity.IsSettingRowKey(key), key));
+
+        // A play session or a scan is not a setting being switched.
+        Assert.False(PerformanceActivity.IsSettingRowKey("played|hades"));
+        Assert.False(PerformanceActivity.IsSettingRowKey("scan.found"));
+    }
+
     /// <summary>A row the user opened stays open when something new arrives.</summary>
     [Fact]
     public void Page_AnOpenRow_StaysOpen_WhenTheListRefreshes()
