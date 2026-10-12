@@ -397,7 +397,8 @@ public class ActivityServiceTests : IDisposable
         var service = new ActivityService(_dir, () => _now);
         _now = DateTime.UtcNow.AddDays(-9);
         service.Record(ActivityLevel.Activity, "Played Hades · 1h");
-        _now = DateTime.UtcNow.AddHours(-1);
+        // Seconds, not hours: an hour ago is yesterday for the first hour after midnight, when a UTC CI run can land.
+        _now = DateTime.UtcNow.AddSeconds(-5);
         service.Record(ActivityLevel.Problem, "SimHub didn't start");
         var page = new ActivityViewModel(service);
 
@@ -667,7 +668,7 @@ public class ActivityServiceTests : IDisposable
             new ActivityGroup("k", new ActivityEntry { Level = level, Text = "x" }, [DateTime.UtcNow]), DateTime.Now);
 
         Assert.Equal("CRITICAL", Row(ActivityLevel.Critical).LevelTag);
-        Assert.Equal("#DA3633", Row(ActivityLevel.Critical).LevelBackground);
+        Assert.Equal(TrayTrigger.Services.AppPalette.Hex("BrushDangerSolidHover"), Row(ActivityLevel.Critical).LevelBackground);
         Assert.Equal("PROBLEM", Row(ActivityLevel.Problem).LevelTag);
         Assert.Equal("CHANGE", Row(ActivityLevel.Change).LevelTag);
         Assert.Equal("ACTIVITY", Row(ActivityLevel.Activity).LevelTag);

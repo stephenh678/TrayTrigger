@@ -35,6 +35,8 @@ public partial class App
         GameEntry SampleGame() => new() { Name = "Key Test Game", Category = "Action" };
         var categories = new[] { "Action", "RPG" };
         var tool = new ToolEntry { Name = "Key Test Tool", Category = "Mods", TargetPath = @"C:\Tools\missing.exe" };
+        ThemeEditDialog NewThemeEdit() => new(new TrayTrigger.ViewModels.ThemeEditorViewModel(
+            TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance));
         ModernDialog Confirm() => new("Remove from Library", "Remove it?", "Detail", "Remove", "Cancel", DialogIconType.Delete);
 
         var cases = new List<DialogKeyCase>
@@ -62,6 +64,9 @@ public partial class App
                 w => Find<HotkeyRecorderBox>(w), new[] { Key.Escape }),
             new("ToolEditDialog, hotkey recording", "hotkey box", "Enter", () => new ToolEditDialog(tool, categories, _iconExtractorService),
                 w => Find<HotkeyRecorderBox>(w), new[] { Key.Enter }),
+            new("ThemeEditDialog, no changes", "text box", "Esc", NewThemeEdit, w => Find<TextBox>(w), new[] { Key.Escape }),
+            new("ThemeEditDialog, name edited", "text box", "Esc, then Esc on the prompt", NewThemeEdit, w => Find<TextBox>(w), new[] { Key.Escape },
+                w => Find<TextBox>(w).Text = "Edited theme"),
             new("ScanForGamesDialog (empty)", "list", "Esc", () => new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()), w => Find<ListBox>(w), new[] { Key.Escape }),
             new("ScanForGamesDialog (empty)", "text box", "Enter", () => new ScanForGamesDialog(_mainViewModel, new(), new(), new(), new(), new(), new(), new(), new()), w => Find<TextBox>(w), new[] { Key.Enter }),
             new("WelcomeDialog", "button", "Esc", () => new WelcomeDialog(), w => Find<Button>(w), new[] { Key.Escape }),

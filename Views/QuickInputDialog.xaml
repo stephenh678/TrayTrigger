@@ -9,8 +9,8 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushBgDark}"
-        Foreground="{StaticResource BrushTextPrimary}">
+        Background="{DynamicResource BrushBackground}"
+        Foreground="{DynamicResource BrushTextPrimary}">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -20,10 +20,10 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock x:Name="HeadingTextBlock" Text="Quick Edit" FontSize="16" FontWeight="Normal" 
-                       Foreground="{StaticResource BrushTextPrimary}" FontFamily="{StaticResource AppFont}"/>
-            <TextBlock x:Name="PromptTextBlock" Text="Enter the new value:" FontSize="12" 
-                       Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
+            <TextBlock x:Name="HeadingTextBlock" Text="Quick Edit" FontSize="{StaticResource FontSizeTitle}" FontWeight="Normal" 
+                       Foreground="{DynamicResource BrushTextPrimary}" FontFamily="{StaticResource AppFont}"/>
+            <TextBlock x:Name="PromptTextBlock" Text="Enter the new value:" FontSize="{StaticResource FontSizeBody}" 
+                       Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
         </StackPanel>
 
         <!-- Either TextBox or Editable ComboBox -->

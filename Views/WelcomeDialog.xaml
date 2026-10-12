@@ -9,8 +9,8 @@
         Width="560" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
-        Foreground="{StaticResource BrushTextPrimary}"
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="{StaticResource AppFont}">
 
     <Window.Resources>
@@ -18,20 +18,20 @@
              Check result. DataContext is SettingsViewModel, so the keys save, switch their source
              on and check themselves exactly as they do in Settings > Library & Art. -->
         <Style x:Key="KeyRowTitle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
         </Style>
         <Style x:Key="KeyRowDescription" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
             <Setter Property="LineHeight" Value="17"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
             <Setter Property="Margin" Value="0,2,0,8"/>
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="0,1,0,0">
+    <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,1,0,0">
         <Grid Margin="24,20,24,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
@@ -53,24 +53,24 @@
                        RenderOptions.BitmapScalingMode="HighQuality"/>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="StepText" Text="GETTING STARTED · STEP 1 OF 2" FontSize="11" FontWeight="Bold"
-                               Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,3"/>
+                    <TextBlock x:Name="StepText" Text="GETTING STARTED · STEP 1 OF 2" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
+                               Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,3"/>
                     <!-- The wordmark: "Trigger" in the logo's blue. Runs on one line, so no space creeps in. -->
-                    <TextBlock FontSize="15" FontWeight="SemiBold"
-                               Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"><Run Text="Welcome to Tray"/><Run Text="Trigger" Foreground="{StaticResource BrushBrand}"/></TextBlock>
+                    <TextBlock FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"><Run Text="Welcome to Tray"/><Run Text="Trigger" Foreground="{DynamicResource BrushBrand}"/></TextBlock>
                 </StackPanel>
             </Grid>
 
-            <Border Grid.Row="1" Height="1" Background="{StaticResource BrushBorderDark}" Margin="0,0,0,12"/>
+            <Border Grid.Row="1" Height="1" Background="{DynamicResource BrushBorder}" Margin="0,0,0,12"/>
 
             <!-- Step 1: the two optional keys, asked for before any game is added because posters
                  and info are fetched as each game is imported. -->
             <StackPanel x:Name="KeysStep" Grid.Row="2">
-                <TextBlock FontSize="13" LineHeight="19" TextWrapping="Wrap"
-                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"
+                <TextBlock FontSize="{StaticResource FontSizeBody}" LineHeight="19" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,6"
                            Text="Better art and game info, before you add your games (optional)."/>
-                <TextBlock FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                           Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,14"
+                <TextBlock FontSize="{StaticResource FontSizeBody}" LineHeight="18" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,14"
                            Text="Steam's posters and game info need no setup. Two free sites fill in what Steam doesn't have, each with a key from a free account: click Get Free Key, sign in, then copy the key and paste it here."/>
 
                 <!-- SteamGridDB -->
@@ -127,7 +127,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                        <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource BrushTextMuted}"
+                        <TextBlock FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap" Foreground="{DynamicResource BrushTextMuted}"
                                    Text="Leave them blank to skip. You can add them later in Settings &gt; Library &amp; Art."/>
                         <Button Style="{StaticResource HelpLinkButton}" Content="More about the keys" Margin="0,3,0,0"
                                 Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/api_keys"/>
@@ -140,8 +140,8 @@
             <!-- Step 2: one sentence, then three things, then Scan. -->
             <StackPanel x:Name="GamesStep" Grid.Row="2" Visibility="Collapsed">
                 <StackPanel Margin="0,0,0,16">
-                    <TextBlock FontSize="13" LineHeight="19" TextWrapping="Wrap"
-                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,12"
+                    <TextBlock FontSize="{StaticResource FontSizeBody}" LineHeight="19" TextWrapping="Wrap"
+                               Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,12"
                                Text="Add your installed games, then launch them from the tray."/>
 
                     <Grid Margin="6,0,0,5">
@@ -149,10 +149,10 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                        <TextBlock Grid.Column="0" Text="•" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
                                    Margin="0,0,8,0" VerticalAlignment="Top"/>
-                        <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                                   Foreground="{StaticResource BrushTextSecondary}"
+                        <TextBlock Grid.Column="1" FontSize="{StaticResource FontSizeBody}" LineHeight="18" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
                                    Text="Scan for Games finds what Steam, GOG, EA, Epic, Ubisoft, Xbox and Battle.net have installed, or drag a game's exe, shortcut or folder onto this window."/>
                     </Grid>
 
@@ -161,10 +161,10 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                        <TextBlock Grid.Column="0" Text="•" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
                                    Margin="0,0,8,0" VerticalAlignment="Top"/>
-                        <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                                   Foreground="{StaticResource BrushTextSecondary}"
+                        <TextBlock Grid.Column="1" FontSize="{StaticResource FontSizeBody}" LineHeight="18" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
                                    Text="Launch from the tray icon or a hotkey, even with this window closed."/>
                     </Grid>
 
@@ -173,10 +173,10 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="•" FontSize="12" Foreground="{StaticResource BrushAccentHover}"
+                        <TextBlock Grid.Column="0" Text="•" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}"
                                    Margin="0,0,8,0" VerticalAlignment="Top"/>
-                        <TextBlock Grid.Column="1" FontSize="12" LineHeight="18" TextWrapping="Wrap"
-                                   Foreground="{StaticResource BrushTextSecondary}"
+                        <TextBlock Grid.Column="1" FontSize="{StaticResource FontSizeBody}" LineHeight="18" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
                                    Text="Games you add get the low-risk Optimized performance profile while they run, put back when they exit. Choose Off or Aggressive for any game in Edit Game."/>
                     </Grid>
                 </StackPanel>

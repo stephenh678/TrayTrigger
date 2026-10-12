@@ -927,6 +927,54 @@ public partial class App
                 return;
             }
 
+            if ((e.Args[i].Equals("--screenshot-theme-edit", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-theme-edit", StringComparison.OrdinalIgnoreCase)) &&
+                i + 1 < e.Args.Length)
+            {
+                // Edit Theme on the built-in Dark theme, which opens as a copy; nothing is saved. "green" first
+                // changes the accent, to show the preview following it:
+                // --screenshot-theme-edit [green|picker] <file.png>
+                string targetPng = e.Args.Skip(i + 1).FirstOrDefault(a => a.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) ?? e.Args[i + 1];
+                _skipSettingsSaveOnExit = true;
+                var editor = new TrayTrigger.ViewModels.ThemeEditorViewModel(
+                    TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance);
+                if (e.Args.Any(a => a.Equals("green", StringComparison.OrdinalIgnoreCase)))
+                {
+                    editor.Accent.Hex = "#238636";
+                    editor.Accent.CommitHex();
+                }
+                if (e.Args.Any(a => a.Equals("hard", StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Text almost the color of the cards, to show which colors are marked as hard to read.
+                    editor.Text.Hex = "#26262E";
+                    editor.Text.CommitHex();
+                }
+                if (e.Args.Any(a => a.Equals("picker", StringComparison.OrdinalIgnoreCase)))
+                {
+                    // The color picker on its own, as it looks in the popup under a swatch.
+                    var panel = new ColorPickerPanel { Color = editor.Accent.Color, OriginalColor = editor.Accent.Original, Suggestions = editor.Accent.Suggestions };
+                    var host = new Window
+                    {
+                        Width = 280, Height = 340, WindowStyle = WindowStyle.None, ShowInTaskbar = false,
+                        Background = (System.Windows.Media.Brush)FindResource("BrushSurface"),
+                        Content = new System.Windows.Controls.Border { Padding = new Thickness(12), Child = panel },
+                    };
+                    host.Show();
+                    host.UpdateLayout();
+                    CaptureVisual(host, 280, 340, targetPng);
+                    host.Close();
+                    ExitApplication();
+                    return;
+                }
+                var dlg = new ThemeEditDialog(editor);
+                dlg.Show();
+                dlg.UpdateLayout();
+                CaptureVisual(dlg, 940, (int)dlg.ActualHeight, targetPng);
+                dlg.Close();
+                ExitApplication();
+                return;
+            }
+
             if ((e.Args[i].Equals("--screenshot-settings", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-settings", StringComparison.OrdinalIgnoreCase)) &&
                 i + 1 < e.Args.Length)
@@ -2479,6 +2527,13 @@ public partial class App
                 return;
             }
 
+            // --test-theme-picker <out.txt>: the color picker driven by keys and typing (App.ThemePickerTest.cs).
+            if (e.Args[i].Equals("--test-theme-picker", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunThemePickerTest(e.Args[i + 1]);
+                return;
+            }
+
             // --test-dialog-keys <out.txt>: Esc and Enter in each dialog (App.DialogKeyTests.cs).
             if (e.Args[i].Equals("--test-dialog-keys", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {
@@ -2874,14 +2929,14 @@ public partial class App
                     Title = "Card Context Menu Preview",
                     Width = 320,
                     Height = 360,
-                    Background = new SolidColorBrush(Color.FromRgb(18, 18, 20)),
+                    Background = AppPalette.Brush("BrushBackground"),
                     WindowStartupLocation = WindowStartupLocation.CenterScreen
                 };
 
                 var container = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(23, 23, 28)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(44, 44, 56)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(5),
@@ -2943,13 +2998,13 @@ public partial class App
                     Title = "Tray Menu Preview",
                     Width = 380,
                     Height = 640,
-                    Background = new SolidColorBrush(Color.FromRgb(14, 14, 18)),
+                    Background = AppPalette.Brush("BrushBackground"),
                     WindowStartupLocation = WindowStartupLocation.CenterScreen
                 };
 
                 var container = new Border
                 {
-                    Background = (Brush)FindResource("BrushBgDark"),
+                    Background = (Brush)FindResource("BrushBackground"),
                     Padding = new Thickness(25),
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center
@@ -2957,8 +3012,8 @@ public partial class App
 
                 var menuBorder = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(21, 21, 28)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(44, 44, 60)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(6),
@@ -3012,13 +3067,13 @@ public partial class App
                     Title = "Tray Menu Grouped Preview",
                     Width = 420,
                     Height = 640,
-                    Background = new SolidColorBrush(Color.FromRgb(14, 14, 18)),
+                    Background = AppPalette.Brush("BrushBackground"),
                     WindowStartupLocation = WindowStartupLocation.CenterScreen
                 };
 
                 var container = new Border
                 {
-                    Background = (Brush)FindResource("BrushBgDark"),
+                    Background = (Brush)FindResource("BrushBackground"),
                     Padding = new Thickness(25),
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center
@@ -3026,8 +3081,8 @@ public partial class App
 
                 var menuBorder = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(21, 21, 28)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(44, 44, 60)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(6),
@@ -3207,14 +3262,14 @@ public partial class App
                     Title = "Tray Context Menu Preview",
                     Width = 280,
                     Height = 250,
-                    Background = new SolidColorBrush(Color.FromRgb(18, 18, 20)),
+                    Background = AppPalette.Brush("BrushBackground"),
                     WindowStartupLocation = WindowStartupLocation.CenterScreen
                 };
 
                 var container = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(23, 23, 28)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(44, 44, 56)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(5),
@@ -3258,7 +3313,7 @@ public partial class App
                     Title = "Tray Context Menu Preview - Persistent Recent Category",
                     Width = 460,
                     Height = 260,
-                    Background = new SolidColorBrush(Color.FromRgb(18, 18, 20)),
+                    Background = AppPalette.Brush("BrushBackground"),
                     WindowStartupLocation = WindowStartupLocation.CenterScreen
                 };
 
@@ -3273,8 +3328,8 @@ public partial class App
                 // 1. Root Tray Context Menu (Categorized)
                 var container1 = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(23, 23, 28)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(44, 44, 56)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(5),
@@ -3309,8 +3364,8 @@ public partial class App
                 // 2. Open Submenu Preview for Recent
                 var containerSub = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(26, 26, 34)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(50, 50, 64)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(5),
@@ -3347,7 +3402,7 @@ public partial class App
                     Title = "Tray Context Menu Preview - Flat Mode with Persistent Recent",
                     Width = 460,
                     Height = 290,
-                    Background = new SolidColorBrush(Color.FromRgb(18, 18, 20)),
+                    Background = AppPalette.Brush("BrushBackground"),
                     WindowStartupLocation = WindowStartupLocation.CenterScreen
                 };
 
@@ -3362,8 +3417,8 @@ public partial class App
                 // 1. Root Tray Context Menu (Flat Mode)
                 var container1 = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(23, 23, 28)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(44, 44, 56)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(5),
@@ -3396,8 +3451,8 @@ public partial class App
                 // 2. Open Submenu Preview for Recent
                 var containerSub = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(26, 26, 34)),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(50, 50, 64)),
+                    Background = AppPalette.Brush("BrushSurface"),
+                    BorderBrush = AppPalette.Brush("BrushBorder"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(8),
                     Padding = new Thickness(5),

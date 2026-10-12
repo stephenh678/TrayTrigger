@@ -9,10 +9,10 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
-        Foreground="{StaticResource BrushTextPrimary}">
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}">
 
-    <Border BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="0,1,0,0">
+    <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,1,0,0">
         <Grid Margin="24,20,24,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Heading -->
@@ -23,24 +23,24 @@
                 <RowDefinition Height="Auto"/> <!-- Buttons -->
             </Grid.RowDefinitions>
 
-            <TextBlock x:Name="HeadingText" Grid.Row="0" FontSize="16" FontFamily="{StaticResource AppFont}"
-                       Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
-            <TextBlock x:Name="SummaryText" Grid.Row="1" FontSize="12" FontFamily="{StaticResource AppFont}"
-                       Foreground="{StaticResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+            <TextBlock x:Name="HeadingText" Grid.Row="0" FontSize="{StaticResource FontSizeTitle}" FontFamily="{StaticResource AppFont}"
+                       Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap"/>
+            <TextBlock x:Name="SummaryText" Grid.Row="1" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}"
+                       Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,6,0,12"/>
 
-            <Border x:Name="NoteBorder" Grid.Row="2" Background="#3A2A12" BorderBrush="#8A6A2A" BorderThickness="1"
-                    CornerRadius="6" Padding="10,6" Margin="0,0,0,12" Visibility="Collapsed">
-                <TextBlock x:Name="NoteText" FontSize="11" Foreground="#FFD27F" TextWrapping="Wrap"/>
+            <Border x:Name="NoteBorder" Grid.Row="2" Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusControl}" Padding="10,6" Margin="0,0,0,12" Visibility="Collapsed">
+                <TextBlock x:Name="NoteText" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
             </Border>
 
-            <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="12"
-                       Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,4"/>
+            <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="{StaticResource FontSizeBody}"
+                       Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,4"/>
 
             <TextBox AutomationProperties.Name="Script output" x:Name="OutputBox" Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
-                     FontFamily="Consolas" FontSize="11.5"
+                     FontFamily="Consolas" FontSize="{StaticResource FontSizeBody}"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                     Background="{StaticResource BrushSurfaceDark}" Foreground="{StaticResource BrushTextPrimary}"
-                     BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="8"
+                     Background="{DynamicResource BrushSurface}" Foreground="{DynamicResource BrushTextPrimary}"
+                     BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="8"
                      Margin="0,0,0,16"/>
 
             <DockPanel Grid.Row="5">
@@ -49,7 +49,7 @@
                 <Button DockPanel.Dock="Right" Content="Copy Output" Click="CopyButton_Click"
                         Style="{StaticResource ModernGhostButton}" MinWidth="90"/>
                 <TextBlock Text="The full run is also in the TrayTrigger log under GameScript."
-                           FontSize="12" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center"/>
+                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
             </DockPanel>
         </Grid>
     </Border>

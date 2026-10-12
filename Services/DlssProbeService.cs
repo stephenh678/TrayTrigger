@@ -38,7 +38,11 @@ public static class DlssProbeService
     /// One DLSS driver setting: what it is, the short feature code the ownership record stores, and
     /// the value the override writes.
     /// </summary>
-    public sealed record DlssSettingDefinition(uint Id, string Name, string Feature, string FeatureCode, uint RecommendedValue);
+    public sealed record DlssSettingDefinition(uint Id, string Name, string Feature, string FeatureCode, uint RecommendedValue)
+    {
+        /// <summary>A forced preset letter, as opposed to the switch that substitutes the runtime.</summary>
+        public bool IsPreset => Name.Contains("Preset", StringComparison.Ordinal);
+    }
 
     /// <summary>A DLSS runtime the game itself ships, found in its install folder.</summary>
     public sealed record ShippedRuntime(string Feature, string RelativePath, string? FileVersion);
@@ -583,6 +587,7 @@ public static class DlssProbeService
 
             var list = match.FromDriverStore ? result.FromNvidia : result.FromGame;
             if (!list.Contains(version)) list.Add(version);
+            result.Runtimes.Add(new Models.DlssLoadedRuntime { Feature = feature.Name, Version = version, FromNvidia = match.FromDriverStore });
         }
 
         return result.FromNvidia.Count + result.FromGame.Count == 0 ? null : result;

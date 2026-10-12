@@ -214,6 +214,9 @@ public class SettingsViewModel : ViewModelBase
     public ICommand SetViewModeCommand { get; }
     public ICommand TogglePosterDetailsOnHoverCommand { get; }
     public ICommand OpenTaskbarSettingsCommand { get; }
+
+    /// <summary>Settings > General > Appearance: the theme picker.</summary>
+    public ThemeSettingsViewModel Appearance { get; }
     public ICommand OpenSteamGridDbSiteCommand { get; }
     public ICommand OpenRawgSiteCommand { get; }
     public ICommand OpenScanForGamesCommand { get; }
@@ -304,6 +307,7 @@ public class SettingsViewModel : ViewModelBase
         TogglePosterDetailsOnHoverCommand = new RelayCommand(() => PosterDetailsOnHover = !PosterDetailsOnHover);
         PosterDetails = new PosterDetailsViewModel(() => _settings.PosterDetailsAtRest, () => AutoSaveSettings(nameof(PosterDetails)));
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
+        Appearance = new ThemeSettingsViewModel(_settings, () => AutoSaveSettings());
         OpenSteamGridDbSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute(SteamGridDbService.KeyPageUrl));
         OpenRawgSiteCommand = new RelayCommand(() => HelpCommands.OpenUrl.Execute(RawgService.KeyPageUrl));
         ClearMetadataCacheCommand = new RelayCommand(() =>

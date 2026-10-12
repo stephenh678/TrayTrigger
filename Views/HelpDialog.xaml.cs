@@ -87,9 +87,9 @@ public partial class HelpDialog : Window
     private TextBlock MakeHeading(string text, bool isFirst) => new()
     {
         Text = text,
-        FontSize = 11,
+        FontSize = AppTypography.Size("FontSizeBody"),
         FontWeight = FontWeights.Bold,
-        Foreground = Res("BrushAccentHover"),
+        Foreground = Res("BrushAccentText"),
         Margin = new Thickness(0, isFirst ? 0 : 14, 0, 6)
     };
 
@@ -97,7 +97,7 @@ public partial class HelpDialog : Window
     {
         var tb = new TextBlock
         {
-            FontSize = 12,
+            FontSize = AppTypography.Size("FontSizeBody"),
             LineHeight = 18,
             Foreground = Res("BrushTextSecondary"),
             TextWrapping = TextWrapping.Wrap,
@@ -155,8 +155,8 @@ public partial class HelpDialog : Window
         var dot = new TextBlock
         {
             Text = indent == 0 ? "•" : "◦",
-            FontSize = 12,
-            Foreground = Res("BrushAccentHover"),
+            FontSize = AppTypography.Size("FontSizeBody"),
+            Foreground = Res("BrushAccentText"),
             Margin = new Thickness(0, 0, 8, 0),
             VerticalAlignment = VerticalAlignment.Top
         };
@@ -164,7 +164,7 @@ public partial class HelpDialog : Window
 
         var body = new TextBlock
         {
-            FontSize = 12,
+            FontSize = AppTypography.Size("FontSizeBody"),
             LineHeight = 18,
             Foreground = Res("BrushTextSecondary"),
             TextWrapping = TextWrapping.Wrap
@@ -182,18 +182,18 @@ public partial class HelpDialog : Window
         // Same amber callout treatment the System page uses for its "💡" banner.
         var body = new TextBlock
         {
-            FontSize = 11.5,
+            FontSize = AppTypography.Size("FontSizeBody"),
             LineHeight = 17,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xE8, 0xB8, 0x4E)),
+            Foreground = AppPalette.Brush("BrushWarning"),
             TextWrapping = TextWrapping.Wrap
         };
         AddInlines(body, text);
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x1B)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x3D, 0x2F, 0x14)),
+            Background = AppPalette.Brush("BrushDialogCard"),
+            BorderBrush = AppPalette.Brush("BrushWarningWash"),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = AppShapes.Radius("RadiusControl"),
             Padding = new Thickness(10, 8, 10, 8),
             Margin = new Thickness(0, 2, 0, 10),
             Child = body

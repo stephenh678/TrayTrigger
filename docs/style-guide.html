@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TrayTrigger style guide</title><style>
+:root{--bg:#121214;--card:#1C1C23;--text:#fff;--muted:#9E9EAA;--line:#2C2C38}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",system-ui,sans-serif;padding:24px 16px 64px}
+main{max-width:1100px;margin:0 auto}h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:36px 0 8px;border-bottom:1px solid var(--line);padding-bottom:6px}
+p.note{color:var(--muted);margin:4px 0 14px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.sw{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}.chip{height:54px;border-bottom:1px solid var(--line)}
+.sw div.t{padding:8px 10px;font-size:12px}.sw b{display:block;font-size:13px}.sw code,code{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}.dot{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #fff3;vertical-align:-2px;margin-right:6px}
+.s-inpal{color:#98c379}.s-merge{color:#61afef}.s-close{color:#E5C07B}.s-role{color:#c678dd}.s-one{color:#E06C75}small{color:var(--muted)}
+.sum{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}.sum div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px}.sum b{font-size:20px;display:block}
+</style></head><body><main>
+<h1>TrayTrigger style guide</h1>
+<p class="note">Generated from the real files by <code>tools/Build-StyleGuide.py</code>; re-run it after any change. Contrast is against the window <code>#121214</code> and card <code>#1C1C23</code>.
+Dev-only code in <code>Diagnostics/</code> is not listed (4 color uses there).</p>
+<div class="sum">
+<div><b>40</b>palette brushes</div>
+<div><b>0</b>hard-coded colors in XAML (0 not in the palette)</div>
+<div><b>5</b>colors in code (5 uses)</div>
+<div><b>6</b>text sizes</div>
+<div><b>6</b>corner radii</div>
+</div>
+<h2>Palette (40 brushes)</h2><p class="note">What a theme would define. Contrast shown for text-on-background use.</p><div class="grid">
+<div class="sw"><div class="chip" style="background:#121214"></div><div class="t"><b>BrushBackground</b><code>#121214</code> · ColorBackground<br><small>vs window 1.0:1 · vs card 1.1:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#1C1C23"></div><div class="t"><b>BrushSurface</b><code>#1C1C23</code> · ColorSurface<br><small>vs window 1.1:1 · vs card 1.0:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#252530"></div><div class="t"><b>BrushSurfaceHover</b><code>#252530</code> · ColorSurfaceHover<br><small>vs window 1.2:1 · vs card 1.1:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#2C2C38"></div><div class="t"><b>BrushBorder</b><code>#2C2C38</code> · ColorBorder<br><small>vs window 1.4:1 · vs card 1.2:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#3C3C4D"></div><div class="t"><b>BrushBorderStrong</b><code>#3C3C4D</code> · ColorBorderStrong<br><small>vs window 1.7:1 · vs card 1.6:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#2A5A8A"></div><div class="t"><b>BrushBorderAccent</b><code>#2A5A8A</code><br><small>vs window 2.6:1 · vs card 2.4:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#007ACC"></div><div class="t"><b>BrushAccent</b><code>#007ACC</code> · ColorAccent<br><small>vs window 4.1:1 · vs card 3.8:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#0098FF"></div><div class="t"><b>BrushAccentHover</b><code>#0098FF</code> · ColorAccentHover<br><small>vs window 6.2:1 · vs card 5.6:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#0098FF"></div><div class="t"><b>BrushAccentText</b><code>#0098FF</code> · ColorAccentText<br><small>vs window 6.2:1 · vs card 5.6:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#2F8FFF"></div><div class="t"><b>BrushBrand</b><code>#2F8FFF</code> · ColorBrand<br><small>vs window 5.8:1 · vs card 5.2:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#005A9E"></div><div class="t"><b>BrushAccentPressed</b><code>#005A9E</code> · ColorAccentPressed<br><small>vs window 2.6:1 · vs card 2.4:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FFFFFF"></div><div class="t"><b>BrushTextPrimary</b><code>#FFFFFF</code> · ColorTextPrimary<br><small>vs window 18.7:1 · vs card 16.9:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FFFFFF"></div><div class="t"><b>BrushTextOnSolid</b><code>#FFFFFF</code> · ColorTextOnSolid<br><small>vs window 18.7:1 · vs card 16.9:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FFFFFF"></div><div class="t"><b>BrushArtText</b><code>#FFFFFF</code><br><small>vs window 18.7:1 · vs card 16.9:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#9E9EAA"></div><div class="t"><b>BrushArtTextSecondary</b><code>#9E9EAA</code><br><small>vs window 7.1:1 · vs card 6.4:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#8A8A96"></div><div class="t"><b>BrushArtTextMuted</b><code>#8A8A96</code><br><small>vs window 5.5:1 · vs card 5.0:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#9E9EAA"></div><div class="t"><b>BrushTextSecondary</b><code>#9E9EAA</code> · ColorTextSecondary<br><small>vs window 7.1:1 · vs card 6.4:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#8A8A96"></div><div class="t"><b>BrushTextMuted</b><code>#8A8A96</code> · ColorTextMuted<br><small>vs window 5.5:1 · vs card 5.0:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#E06C75"></div><div class="t"><b>BrushDanger</b><code>#E06C75</code><br><small>vs window 5.9:1 · vs card 5.3:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#E5C07B"></div><div class="t"><b>BrushWarning</b><code>#E5C07B</code><br><small>vs window 10.8:1 · vs card 9.8:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#16161D"></div><div class="t"><b>BrushDialogCard</b><code>#16161D</code><br><small>vs window 1.0:1 · vs card 1.1:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#B8B8CC"></div><div class="t"><b>BrushTextSoft</b><code>#B8B8CC</code> · ColorTextSoft<br><small>vs window 9.6:1 · vs card 8.7:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#6E6E7A"></div><div class="t"><b>BrushTextDisabled</b><code>#6E6E7A</code> · ColorTextDisabled<br><small>vs window 3.7:1 · vs card 3.4:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF3FB950"></div><div class="t"><b>BrushSuccessText</b><code>#FF3FB950</code> · ColorSuccessText<br><small>vs window 7.4:1 · vs card 6.7:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF1C2E22"></div><div class="t"><b>BrushSuccessWash</b><code>#FF1C2E22</code> · ColorSuccessWash<br><small>vs window 1.3:1 · vs card 1.2:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF238636"></div><div class="t"><b>BrushSuccessSolid</b><code>#FF238636</code> · ColorSuccessSolid<br><small>vs window 4.0:1 · vs card 3.7:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF3D2F14"></div><div class="t"><b>BrushWarningWash</b><code>#FF3D2F14</code> · ColorWarningWash<br><small>vs window 1.4:1 · vs card 1.3:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF8A6A2A"></div><div class="t"><b>BrushWarningBorder</b><code>#FF8A6A2A</code> · ColorWarningBorder<br><small>vs window 3.7:1 · vs card 3.4:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FFFFD700"></div><div class="t"><b>BrushGold</b><code>#FFFFD700</code> · ColorGold<br><small>vs window 13.3:1 · vs card 12.1:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF2E181B"></div><div class="t"><b>BrushDangerWash</b><code>#FF2E181B</code> · ColorDangerWash<br><small>vs window 1.1:1 · vs card 1.0:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF781D22"></div><div class="t"><b>BrushDangerBorder</b><code>#FF781D22</code> · ColorDangerBorder<br><small>vs window 1.8:1 · vs card 1.6:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF9E2A2B"></div><div class="t"><b>BrushDangerSolid</b><code>#FF9E2A2B</code> · ColorDangerSolid<br><small>vs window 2.5:1 · vs card 2.3:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FFBD3A42"></div><div class="t"><b>BrushDangerSolidHover</b><code>#FFBD3A42</code> · ColorDangerSolidHover<br><small>vs window 3.4:1 · vs card 3.1:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF6CB6FF"></div><div class="t"><b>BrushInfoText</b><code>#FF6CB6FF</code> · ColorInfoText<br><small>vs window 8.7:1 · vs card 7.9:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF1C2E3D"></div><div class="t"><b>BrushAccentWash</b><code>#FF1C2E3D</code> · ColorAccentWash<br><small>vs window 1.3:1 · vs card 1.2:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FFB9A6F0"></div><div class="t"><b>BrushBadgePurple</b><code>#FFB9A6F0</code> · ColorBadgePurple<br><small>vs window 8.7:1 · vs card 7.9:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#FF2B2340"></div><div class="t"><b>BrushBadgePurpleWash</b><code>#FF2B2340</code> · ColorBadgePurpleWash<br><small>vs window 1.3:1 · vs card 1.1:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#CC000000"></div><div class="t"><b>BrushScrim</b><code>#CC000000</code> · ColorScrim<br><small>vs window 1.1:1 · vs card 1.2:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#33FFFFFF"></div><div class="t"><b>BrushOverlayLine</b><code>#33FFFFFF</code> · ColorOverlayLine<br><small>vs window 18.7:1 · vs card 16.9:1</small></div></div>
+<div class="sw"><div class="chip" style="background:#66FFC400"></div><div class="t"><b>BrushHighlight</b><code>#66FFC400</code> · ColorHighlight<br><small>vs window 11.7:1 · vs card 10.6:1</small></div></div>
+</div>
+<h2>Hard-coded colors in XAML (0)</h2>
+<p class="note">Every literal hex value in the views and styles, most used first. Status against the palette:
+<span class="s-inpal">in palette</span> (exact match: use the brush) ·
+<span class="s-merge">merges silently</span> (within 3 RGB units of a palette color, not visible) ·
+<span class="s-close">close</span> (within 8, slightly visible) ·
+<span class="s-role">needs a role</span> (used more than once, no near palette color) ·
+<span class="s-one">one-off</span> (used once, no near palette color). Counts: .</p>
+<table><tr><th>Color</th><th>Uses</th><th>Status</th><th>Nearest / palette name</th><th>Used by (property · file:line)</th></tr>
+</table>
+<h2>Colors in code (5 uses)</h2>
+<p class="note">Colors built in C# (<code>Color.FromRgb</code>, <code>Brushes.X</code>, hex strings) in the app's own code. What is left here is artwork (the tray icon tile, the poster overlay, the fallback game icon) and has to stay the same in any theme. Not listed: the dev diagnostics, the build-time icon generator, the helper that reads the palette, and <code>Transparent</code>.</p>
+<table><tr><th>Color</th><th>Status</th><th>File:line</th><th>Code</th></tr>
+<tr><td><span class="dot" style="background:#007ACC"></span><code>#007ACC</code></td><td class="s-inpal">in palette · BrushAccent</td><td><small>IconExtractorService.cs:205</small></td><td><small>using var borderPen = new Pen(Color.FromArgb(0, 122, 204), 3f); // #007ACC</small></td></tr>
+<tr><td><span class="dot" style="background:#16FFFFFF"></span><code>#16FFFFFF</code></td><td class="s-one">one-off</td><td><small>App.xaml.cs:1194</small></td><td><small>private static readonly Brush TrayIconTileBrush = CreateFrozenBrush(Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF));</small></td></tr>
+<tr><td><span class="dot" style="background:#26262B"></span><code>#26262B</code></td><td class="s-close">close · BrushSurfaceHover</td><td><small>IconExtractorService.cs:201</small></td><td><small>using (var bgBrush = new SolidBrush(Color.FromArgb(38, 38, 43))) // #26262B</small></td></tr>
+<tr><td><span class="dot" style="background:#8C0A0A0E"></span><code>#8C0A0A0E</code></td><td class="s-one">one-off</td><td><small>SteamMetadataService.cs:854</small></td><td><small>using (var overlay = new SolidBrush(Color.FromArgb(140, 10, 10, 14)))</small></td></tr>
+<tr><td><span class="dot" style="background:#F0F0F0"></span><code>#F0F0F0</code></td><td class="s-one">one-off · BrushTextPrimary</td><td><small>IconExtractorService.cs:217</small></td><td><small>using var textBrush = new SolidBrush(Color.FromArgb(240, 240, 240));</small></td></tr>
+</table>
+<h2>Named colors in XAML</h2><p class="note">Colors written as a word, such as <code>White</code>. <code>Transparent</code> (41 uses) is the same in every theme and is not listed.</p>
+<table><tr><th>Name</th><th>Property</th><th>Where</th></tr>
+<tr><td colspan="3">None.</td></tr>
+</table>
+<h2>Text sizes (6 named)</h2>
+<p class="note">The sizes in <code>Resources/Typography.xaml</code>, with how often each is used. Views reference these names; a number written straight into a view is caught by the TypographyGuardTests.
+No view writes a size as a number.</p>
+<table><tr><th>Name</th><th>Size</th><th>Uses</th><th>Sample</th><th>Mostly in</th></tr>
+<tr><td><code>FontSizeBadge</code></td><td>9</td><td>78</td><td style="font-size:9px">The quick brown fox jumps over the lazy dog</td><td><small>LibraryView ×26, SystemView ×14, AboutView ×13, ActivityView ×7</small></td></tr>
+<tr><td><code>FontSizeBody</code></td><td>12</td><td>680</td><td style="font-size:12px">The quick brown fox jumps over the lazy dog</td><td><small>SettingsView ×177, SystemView ×87, AboutView ×71, GameEditDialog ×64</small></td></tr>
+<tr><td><code>FontSizeSubhead</code></td><td>14</td><td>67</td><td style="font-size:14px">The quick brown fox jumps over the lazy dog</td><td><small>SettingsView ×20, AboutView ×18, SystemView ×11, GameEditDialog ×5</small></td></tr>
+<tr><td><code>FontSizeTitle</code></td><td>16</td><td>34</td><td style="font-size:16px">The quick brown fox jumps over the lazy dog</td><td><small>MainWindow ×8, SystemView ×6, ToolsView ×5, LibraryView ×4</small></td></tr>
+<tr><td><code>FontSizeHeading</code></td><td>20</td><td>21</td><td style="font-size:20px">The quick brown fox jumps over the lazy dog</td><td><small>AboutView ×2, GameEditDialog ×2, ToolEditDialog ×2, ToolsView ×2</small></td></tr>
+<tr><td><code>FontSizeDisplay</code></td><td>32</td><td>10</td><td style="font-size:32px">The quick brown fox jumps over the lazy dog</td><td><small>ToolsView ×4, LibraryView ×3, ActivityView ×2, SearchNoMatches ×1</small></td></tr>
+</table>
+<h2>Corner radii (6 named)</h2>
+<p class="note">The radii in <code>Resources/Shapes.xaml</code>, with how often each is used. Views reference these names; a number written straight into a view is caught by the ShapeGuardTests.
+No view writes a radius as a number.</p>
+<table><tr><th>Name</th><th>Radius</th><th>Uses</th><th>Shape</th><th>Mostly in</th></tr>
+<tr><td><code>RadiusSmall</code></td><td>4</td><td>87</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:4px"></div></td><td><small>LibraryView ×29, AboutView ×14, App ×13, SystemView ×9</small></td></tr>
+<tr><td><code>RadiusControl</code></td><td>6</td><td>59</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:6px"></div></td><td><small>AboutView ×18, LibraryView ×7, SettingsView ×7, App ×5</small></td></tr>
+<tr><td><code>RadiusCard</code></td><td>8</td><td>80</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:8px"></div></td><td><small>AboutView ×20, SettingsView ×20, GameEditDialog ×7, LibraryView ×7</small></td></tr>
+<tr><td><code>RadiusLarge</code></td><td>999</td><td>6</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:999px"></div></td><td><small>App ×4, HelpDialog ×1, ModernDialog ×1</small></td></tr>
+<tr><td><code>RadiusInnerTop</code></td><td>7,7,0,0</td><td>1</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:7px 7px 0px 0px"></div></td><td><small>LibraryView ×1</small></td></tr>
+<tr><td><code>RadiusInnerBottom</code></td><td>0,0,7,7</td><td>1</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:0px 0px 7px 7px"></div></td><td><small>LibraryView ×1</small></td></tr>
+</table></main></body></html>

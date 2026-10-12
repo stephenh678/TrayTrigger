@@ -10,8 +10,8 @@
         Height="580" Width="680"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
-        Foreground="{StaticResource BrushTextPrimary}">
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -23,10 +23,10 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="New Games Found" FontSize="18" Foreground="{StaticResource BrushTextPrimary}"
+            <TextBlock Text="New Games Found" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}"
                        FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
             <TextBlock Text="{Binding SubtitleText}"
-                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}"
+                       FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                        FontFamily="{StaticResource AppFont}" Margin="0,2,0,0"/>
         </StackPanel>
 
@@ -50,8 +50,8 @@
         </Grid>
 
         <!-- Results List -->
-        <Border Grid.Row="2" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Margin="0,0,0,16">
+        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
             <ListBox ItemsSource="{Binding FilteredResults}"
                      Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -59,7 +59,7 @@
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#222228"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BrushSurfaceHover}"/>
                         <Setter Property="Padding" Value="10,8"/>
                         <Setter Property="Template">
                             <Setter.Value>
@@ -72,7 +72,7 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                                            <Setter Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -89,7 +89,7 @@
                                       Style="{StaticResource ModernCheckBox}" DockPanel.Dock="Left"/>
 
                             <!-- Game Icon -->
-                            <Border Width="36" Height="36" CornerRadius="6" Background="#22222A"
+                            <Border Width="36" Height="36" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}"
                                     Margin="0,0,12,0" VerticalAlignment="Center" DockPanel.Dock="Left">
                                 <Image Source="{Binding IconImage}" Width="32" Height="32"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -104,16 +104,16 @@
 
                             <!-- Ignore -->
                             <Button DockPanel.Dock="Right" Content="Ignore" Command="{Binding IgnoreCommand}"
-                                    Style="{StaticResource ModernGhostButton}" FontSize="11" Padding="6,2" Margin="10,0,0,0"
+                                    Style="{StaticResource ModernGhostButton}" FontSize="{StaticResource FontSizeBody}" Padding="6,2" Margin="10,0,0,0"
                                     VerticalAlignment="Center"/>
 
                             <!-- Name and Install Path -->
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Name}" FontSize="13.5"
-                                           Foreground="{StaticResource BrushTextPrimary}"
+                                <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeSubhead}"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
                                            FontFamily="{StaticResource AppFont}"/>
-                                <TextBlock Text="{Binding PathDisplay}" FontSize="12"
-                                           Foreground="{StaticResource BrushTextMuted}"
+                                <TextBlock Text="{Binding PathDisplay}" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextMuted}"
                                            TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                             </StackPanel>
                         </DockPanel>
@@ -124,8 +124,8 @@
 
         <!-- Footer -->
         <DockPanel Grid.Row="3" LastChildFill="False">
-            <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="12"
-                       Foreground="{StaticResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
+            <TextBlock Text="{Binding SelectedCountDisplay}" FontSize="{StaticResource FontSizeBody}"
+                       Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}"
                        VerticalAlignment="Center" DockPanel.Dock="Left"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                 <Button Style="{StaticResource HelpLinkButton}" Content="How scanning works" VerticalAlignment="Center" Margin="0,0,14,0"

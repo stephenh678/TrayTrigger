@@ -116,16 +116,25 @@ public class SystemTweakViewModel : ViewModelBase
         }
     }
 
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(StatusBadgeColor));
+        OnPropertyChanged(nameof(StatusBadgeForeground));
+    }
+
     // Informational rows (Core Isolation) get a neutral ON/OFF badge: "optimal" would mean a
     // security feature is off. Unavailable rows show a grey N/A badge.
     public string StatusBadgeText => IsInformational ? (IsOptimal ? "ON" : "OFF")
         : !IsAvailable ? "N/A"
         : IsOptimal ? "OPTIMAL" : IsRecommended ? "NOT APPLIED" : "STANDARD";
-    public string StatusBadgeColor => IsInformational ? "#2F5F8F"
-        : !IsAvailable ? "#4A4A55"
-        : IsOptimal ? "#238636" : IsRecommended ? "#3D2F14" : "#6E6E7A";
+    public string StatusBadgeColor => IsInformational ? AppPalette.Hex("BrushBorderAccent")
+        : !IsAvailable ? AppPalette.Hex("BrushBorderStrong")
+        : IsOptimal ? AppPalette.Hex("BrushSuccessSolid") : IsRecommended ? AppPalette.Hex("BrushWarningWash") : AppPalette.Hex("BrushTextDisabled");
     /// <summary>A recommended tweak that is off gets the amber badge (RESTART's colours), so it is the row you see first.</summary>
-    public string StatusBadgeForeground => IsNotApplied ? "#E8B84E" : "#FFFFFF";
+    public string StatusBadgeForeground => IsNotApplied ? AppPalette.Hex("BrushWarning")
+        // The green OPTIMAL fill is a solid one; every other badge fill follows the theme's own text.
+        : !IsInformational && IsAvailable && IsOptimal ? AppPalette.Hex("BrushTextOnSolid")
+        : AppPalette.Hex("BrushTextPrimary");
     /// <summary>Part of the preset and currently off: what Apply Performance Preset would change.</summary>
     public bool IsNotApplied => IsRecommended && !IsOptimal;
     // "Restore Previous", not "Revert to Default": it puts back the value TrayTrigger found before
@@ -153,6 +162,7 @@ public class SystemTweakViewModel : ViewModelBase
 
     public SystemTweakViewModel(SystemTweakItem model, SystemTweaksService service, Action<string> notifyParent, Action<SystemTweakViewModel, bool>? onToggled = null)
     {
+        ListenForThemeChanges();
         Model = model;
         _service = service;
         _notifyParent = notifyParent;
@@ -295,8 +305,15 @@ public class ProfileTweakToggleViewModel : ViewModelBase
     /// <summary>"Learn more" target, e.g. "profiles/power_plan" -> Help/profiles/power_plan.md.</summary>
     public string HelpTopicId { get; }
 
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(StatusBadgeColor));
+        OnPropertyChanged(nameof(StatusBadgeForeground));
+    }
+
     public string StatusBadgeText => IsEnabled ? "ENABLED" : "DISABLED";
-    public string StatusBadgeColor => IsEnabled ? "#238636" : "#6E6E7A";
+    public string StatusBadgeColor => IsEnabled ? AppPalette.Hex("BrushSuccessSolid") : AppPalette.Hex("BrushTextDisabled");
+    public string StatusBadgeForeground => IsEnabled ? AppPalette.Hex("BrushTextOnSolid") : AppPalette.Hex("BrushTextPrimary");
     public string ActionButtonText => IsEnabled ? "Disable" : "Enable";
 
     /// <summary>The row for a screen reader: "Set power plan, enabled, asks for administrator permission".</summary>
@@ -306,6 +323,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
 
     public ProfileTweakToggleViewModel(string name, string shortDescription, string whyItMatters, string helpTopicId, Func<bool> getter, Action<bool> setter, bool isOptIn = false, bool requiresAdmin = false, string note = "")
     {
+        ListenForThemeChanges();
         Name = name;
         ShortDescription = shortDescription;
         WhyItMatters = whyItMatters;
@@ -351,6 +369,7 @@ public class ProfileTweakToggleViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEnabled));
         OnPropertyChanged(nameof(StatusBadgeText));
         OnPropertyChanged(nameof(StatusBadgeColor));
+        OnPropertyChanged(nameof(StatusBadgeForeground));
         OnPropertyChanged(nameof(ActionButtonText));
         OnPropertyChanged(nameof(AccessibleStatus));
     }
@@ -641,9 +660,16 @@ public class SystemViewModel : ViewModelBase
     // The Performance Preset card: the score as a ring, which recommended tweaks are off and what
     // applying them will ask for, and which ones this PC can't use and so aren't counted.
     public string PresetRingText => $"{OptimalTweakCount}/{TotalTweakCount}";
+
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(PresetRingColor));
+        OnPropertyChanged(nameof(StutterRingColor));
+    }
+
     /// <summary>Both cards' rings follow one rule: green when nothing is left to do, amber when something is.</summary>
     public string PresetRingColor => RingColor(allGood: TotalTweakCount == 0 || OptimalTweakCount == TotalTweakCount);
-    internal static string RingColor(bool allGood) => allGood ? "#238636" : "#E8B84E";
+    internal static string RingColor(bool allGood) => allGood ? AppPalette.Hex("BrushSuccessSolid") : AppPalette.Hex("BrushWarning");
     public string PresetScoreDisplay => PresetScoreText(OptimalTweakCount, TotalTweakCount);
     public string PresetNotAppliedLine => PresetNotAppliedText(
         Tweaks.Where(t => t.IsNotApplied).Select(t => (t.Name, t.RequiresAdmin, t.RequiresReboot)).ToList());
@@ -976,6 +1002,7 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StutterRunButtonText));
                 OnPropertyChanged(nameof(StutterIntroText));
                 OnPropertyChanged(nameof(StutterIntroSubline));
+                CommandManager.InvalidateRequerySuggested();
             }
         }
     }
@@ -1190,6 +1217,7 @@ public class SystemViewModel : ViewModelBase
 
     public SystemViewModel(SystemInfoService infoService, SystemTweaksService tweaksService, AppSettings settings, StorageService storageService)
     {
+        ListenForThemeChanges();
         _infoService = infoService;
         _tweaksService = tweaksService;
         _settings = settings;
@@ -1628,10 +1656,11 @@ public class SystemViewModel : ViewModelBase
 }
 
 /// <summary>One Stutter Check row that needs attention: what was found, its badge, and its one button.</summary>
-public sealed class StutterCheckRowViewModel
+public sealed class StutterCheckRowViewModel : ViewModelBase
 {
     public StutterCheckRowViewModel(StutterCheckItem item, Action<StutterCheckItem> act)
     {
+        ListenForThemeChanges();
         Item = item;
         ActionCommand = new RelayCommand(() => act(item));
     }
@@ -1649,6 +1678,12 @@ public sealed class StutterCheckRowViewModel
     /// <summary>Info rows are dimmed: worth knowing, nothing to do.</summary>
     public double RowOpacity => Item.Verdict == StutterVerdict.Info ? 0.65 : 1.0;
 
+    protected override void OnThemeChanged()
+    {
+        OnPropertyChanged(nameof(BadgeBackground));
+        OnPropertyChanged(nameof(BadgeForeground));
+    }
+
     public string BadgeText => Item.Verdict switch
     {
         StutterVerdict.NeedsLook => "NEEDS A LOOK",
@@ -1658,17 +1693,17 @@ public sealed class StutterCheckRowViewModel
     };
     public string BadgeBackground => Item.Verdict switch
     {
-        StutterVerdict.NeedsLook => "#3D2F14",
-        StutterVerdict.CanFix => "#14304D",
-        StutterVerdict.Info => "#2A2A3A",
-        _ => "#238636",
+        StutterVerdict.NeedsLook => AppPalette.Hex("BrushWarningWash"),
+        StutterVerdict.CanFix => AppPalette.Hex("BrushAccentWash"),
+        StutterVerdict.Info => AppPalette.Hex("BrushBorder"),
+        _ => AppPalette.Hex("BrushSuccessSolid"),
     };
     public string BadgeForeground => Item.Verdict switch
     {
-        StutterVerdict.NeedsLook => "#E8B84E",
-        StutterVerdict.CanFix => "#6CB6FF",
-        StutterVerdict.Info => "#B8B8CC",
-        _ => "#FFFFFF",
+        StutterVerdict.NeedsLook => AppPalette.Hex("BrushWarning"),
+        StutterVerdict.CanFix => AppPalette.Hex("BrushInfoText"),
+        StutterVerdict.Info => AppPalette.Hex("BrushTextSoft"),
+        _ => AppPalette.Hex("BrushTextOnSolid"),
     };
     public string AccessibleName => Item.Verdict switch
     {

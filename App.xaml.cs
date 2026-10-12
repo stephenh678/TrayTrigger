@@ -107,6 +107,13 @@ public partial class App : Application
         void Log(string msg) => LoggingService.Info("App", msg);
         _logger = Log;
 
+        // Before any window exists, so the first frame already has the chosen colors. "--theme <id>" (a
+        // capture or a test) wins over the setting and is not saved.
+        TrayTrigger.Services.Theming.ThemeService.Instance.ShowBackground = startupSettings.ShowThemeBackground;
+        int themeArg = Array.FindIndex(e.Args, a => a.Equals("--theme", StringComparison.OrdinalIgnoreCase));
+        TrayTrigger.Services.Theming.ThemeService.Instance.Apply(
+            themeArg >= 0 && themeArg + 1 < e.Args.Length ? e.Args[themeArg + 1] : startupSettings.ThemeId);
+
         // Drop installers left in %TEMP% by earlier in-app updates (off the UI thread: it's
         // file I/O against a folder that may hold several 50 MB files).
         _ = Task.Run(UpdateService.CleanupDownloadedInstallers);
@@ -615,6 +622,8 @@ public partial class App : Application
             {
                 if (e.PropertyName == nameof(SettingsViewModel.GlobalManageHotkey)) UpdateTrayToolTip();
             };
+            // Some of the menu's colors are set in code (icons, muted labels), so a theme switch builds it again.
+            TrayTrigger.Services.Theming.ThemeService.Instance.ThemeChanged += (_, _) => UpdateTrayContextMenu();
             if (!_trayIcon.IsCreated)
             {
                 _trayIcon.ForceCreate();
@@ -755,7 +764,7 @@ public partial class App : Application
                     Header = "No games in library",
                     Style = TrayItemStyle,
                     IsEnabled = false,
-                    Foreground = new SolidColorBrush(Color.FromRgb(140, 140, 150))
+                    Foreground = AppPalette.Brush("BrushTextMuted")
                 };
                 menu.Items.Add(emptyItem);
             }
@@ -789,7 +798,7 @@ public partial class App : Application
                         // can't be switched to while it's frozen.
                         if (session.IsSuspended)
                         {
-                            var resume = CreateNavMenuItem("Resume Game", "", () => ResumeFromTray(gameId), (Brush)FindResource("BrushAccentHover"));
+                            var resume = CreateNavMenuItem("Resume Game", "", () => ResumeFromTray(gameId), (Brush)FindResource("BrushAccentText"));
                             resume.ToolTip = "Unfreezes the game where it stopped, unmutes it and brings it back to the front. Its playtime clock starts again.";
                             sessionItem.Items.Add(resume);
                         }
@@ -866,7 +875,7 @@ public partial class App : Application
                             Style = TrayItemStyle,
                             IsEnabled = false,
                             IsHitTestVisible = false,
-                            FontSize = 12,
+                            FontSize = AppTypography.Size("FontSizeBody"),
                             Foreground = (Brush)FindResource("BrushTextMuted")
                         });
                     }
@@ -1008,7 +1017,7 @@ public partial class App : Application
 
             // Navigation & exit items. A tray-first launcher should reach its two most common
             // non-launch tasks from the tray too, not only after opening the window.
-            menu.Items.Add(CreateNavMenuItem("Games Library", "\uE7FC", () => OpenSection(NavSection.Library), (Brush)FindResource("BrushAccentHover")));
+            menu.Items.Add(CreateNavMenuItem("Games Library", "\uE7FC", () => OpenSection(NavSection.Library), (Brush)FindResource("BrushAccentText")));
             menu.Items.Add(CreateNavMenuItem("Scan for Games...", "\uE721", () =>
             {
                 OpenSection(NavSection.Library);

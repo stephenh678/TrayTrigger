@@ -125,7 +125,13 @@ public sealed class DlssCardViewModel : ViewModelBase
     public bool CanEnable => _content.HasDlss;
 
     /// <summary>True while a driver write is in flight.</summary>
-    public bool IsBusy { get => _isBusy; private set => SetProperty(ref _isBusy, value); }
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set { if (SetProperty(ref _isBusy, value)) OnPropertyChanged(nameof(IsNotBusy)); }
+    }
+
+    public bool IsNotBusy => !_isBusy;
 
     // ---- The one thing the card says --------------------------------------------------------
 
@@ -163,6 +169,110 @@ public sealed class DlssCardViewModel : ViewModelBase
     {
         if (on == OverrideEnabled || IsBusy || (on && !CanEnable)) return Task.CompletedTask;
         return on ? ApplyAsync() : RestoreAsync();
+    }
+
+    /// <summary>One entry of the preset dropdown.</summary>
+    public sealed record PresetOption(DlssPresetChoice Value, string Label);
+
+    /// <summary>
+    /// The names are the ones DLSS Swapper and the NVIDIA App's profiles use, so nothing here is a
+    /// term of our own.
+    /// </summary>
+    public IReadOnlyList<PresetOption> PresetOptions { get; } =
+    [
+        new(DlssPresetChoice.Recommended, "NVIDIA recommended"),
+        new(DlssPresetChoice.Default, "Default")
+    ];
+
+    /// <summary>
+    /// Whether the override also forces NVIDIA's recommended presets, for all three features. Saved
+    /// with the game. While the override is on, changing it takes effect at once: the driver is
+    /// handed back what it had and written again, so the record never claims a preset TrayTrigger
+    /// has stopped writing.
+    /// </summary>
+    public DlssPresetChoice SelectedPreset
+    {
+        get => _game?.DlssPreset ?? DlssPresetChoice.Recommended;
+        set => _ = SetPresetAsync(value);
+    }
+
+    public string PresetHint => SelectedPreset == DlssPresetChoice.Recommended
+        ? "Uses NVIDIA's preset for each DLSS mode, whatever the game asks for."
+        : "The game picks its own preset, as it does without the override.";
+
+    /// <summary>Awaitable for tests: a property setter cannot hand its task back.</summary>
+    public async Task SetPresetAsync(DlssPresetChoice choice)
+    {
+        if (_game == null || choice == SelectedPreset) return;
+        if (IsBusy) { OnPropertyChanged(nameof(SelectedPreset)); return; }
+
+        var previous = _game.DlssPreset;
+        _game.DlssPreset = choice;
+        OnPropertyChanged(nameof(PresetHint));
+
+        // Nothing written yet: the choice is read when the switch goes on.
+        if (_records.Count == 0 || string.IsNullOrWhiteSpace(_rendererPath))
+        {
+            _persist?.Invoke();
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            string path = _rendererPath;
+            string name = _gameName;
+            var before = _records.ToList();
+
+            // Undo, then apply. A value the user's other tools changed meanwhile is handed back as
+            // in Restore: choosing a preset here is the user taking the setting over again.
+            var undone = await Task.Run(() => _overrides.Undo(before)).ConfigureAwait(true);
+            if (!undone.Succeeded)
+            {
+                _game.DlssPreset = previous;
+                Status = undone.Error ?? "NVIDIA would not undo the change.";
+                return;
+            }
+
+            var handedBack = undone.Details
+                .Where(d => d.Outcome == DlssSettingOutcome.SkippedForeignChange)
+                .Select(d => d.SettingId)
+                .ToHashSet();
+            var remaining = undone.Records.Where(r => !handedBack.Contains(r.SettingId)).ToList();
+
+            var applied = await Task.Run(() => _overrides.Apply(path, name, remaining, choice)).ConfigureAwait(true);
+            _records.Clear();
+            if (applied.Succeeded)
+            {
+                _records.AddRange(applied.Records);
+                // A value the undo could not hand back is still there and still TrayTrigger's, even when the
+                // new apply no longer writes that setting (the preset, when going to Default).
+                _records.AddRange(remaining.Where(r => applied.Records.All(a => a.SettingId != r.SettingId)));
+                Status = applied.HadWriteBackFailures
+                    ? "NVIDIA accepted the change but did not report it back, so it may not have taken effect."
+                    : null;
+            }
+            else
+            {
+                // The undo went through and the write did not: the override is off, and the switch says so.
+                _records.AddRange(remaining);
+                Status = applied.Error ?? "NVIDIA would not accept the change.";
+            }
+
+            ClearDerivedState();
+            _persist?.Invoke();
+            await ReloadAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error("Dlss", $"Changing the DLSS preset failed: {ex.Message}", ex);
+            Status = $"Something went wrong: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            RaiseAll();
+        }
     }
 
     /// <summary>Puts back everything TrayTrigger changed, whatever the switch currently says.</summary>
@@ -205,6 +315,8 @@ public sealed class DlssCardViewModel : ViewModelBase
                 !string.Equals(last.GameVersion, _content.GameVersion, StringComparison.Ordinal))
                 return string.Empty;
 
+            if (last.Runtimes.Count > 0) return NamedLastRun(last.Runtimes);
+
             string nvidia = string.Join(" and ", last.FromNvidia);
             string game = string.Join(" and ", last.FromGame);
 
@@ -217,6 +329,31 @@ public sealed class DlssCardViewModel : ViewModelBase
             };
         }
     }
+
+    /// <summary>
+    /// Which feature loaded from where: <c>Last run: loaded Super Resolution and Ray
+    /// Reconstruction 310.9.0 from NVIDIA; Frame Generation 310.4.0 from the game's own files.</c>
+    /// Features that share a source and version are named together. Where one came from the game, the
+    /// line shows it, because the override did not take for that feature.
+    /// </summary>
+    internal static string NamedLastRun(IReadOnlyList<DlssLoadedRuntime> runtimes)
+    {
+        var parts = new List<string>();
+        foreach (bool fromNvidia in new[] { true, false })
+        {
+            foreach (var group in runtimes.Where(r => r.FromNvidia == fromNvidia).GroupBy(r => r.Version))
+                parts.Add($"{JoinNames(group.Select(r => r.Feature).ToList())} {group.Key} " +
+                          (fromNvidia ? "from NVIDIA" : "from the game's own files"));
+        }
+        return parts.Count == 0 ? string.Empty : $"Last run: loaded {string.Join("; ", parts)}.";
+    }
+
+    private static string JoinNames(IReadOnlyList<string> names) => names.Count switch
+    {
+        1 => names[0],
+        2 => $"{names[0]} and {names[1]}",
+        _ => $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}"
+    };
 
     // ---- Work --------------------------------------------------------------------------------
 
@@ -273,7 +410,7 @@ public sealed class DlssCardViewModel : ViewModelBase
             string path = _rendererPath;
             string name = _gameName;
             var before = _records.ToList();
-            var result = await Task.Run(() => _overrides.Apply(path, name, before)).ConfigureAwait(true);
+            var result = await Task.Run(() => _overrides.Apply(path, name, before, SelectedPreset)).ConfigureAwait(true);
 
             if (!result.Succeeded)
             {
@@ -382,6 +519,8 @@ public sealed class DlssCardViewModel : ViewModelBase
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasStatus));
         OnPropertyChanged(nameof(LastRunLine));
+        OnPropertyChanged(nameof(SelectedPreset));
+        OnPropertyChanged(nameof(PresetHint));
     }
 
     // ---- Projection --------------------------------------------------------------------------

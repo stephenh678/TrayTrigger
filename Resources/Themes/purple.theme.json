@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "name": "Purple",
+  "author": "TrayTrigger",
+  "base": "dark",
+  "background": { "image": "purple.jpg", "strength": 1.0, "position": "right" },
+  "colors": {
+    "Background": "#15111F",
+    "Accent": "#7C3AED"
+  }
+}

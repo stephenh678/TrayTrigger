@@ -7,6 +7,7 @@ Settings > Diagnostics & Storage > Backup & Restore saves everything TrayTrigger
 - Your game library: every game with its category, favorite, hotkey, playtime, Performance Profile, CPU Cores, scripts and the rest of Edit Game.
 - Your settings, including scan locations and ignored games.
 - Your tools, and your scripts folder.
+- The themes you made, with their background pictures. The built-in themes are part of TrayTrigger itself.
 - Cached artwork and icons, so posters don't have to be fetched again.
 
 Game saves are not in it, and neither is anything in the games' own folders.

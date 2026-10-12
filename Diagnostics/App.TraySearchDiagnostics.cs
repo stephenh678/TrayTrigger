@@ -55,8 +55,8 @@ public partial class App
             foreach (var item in items) panel.Children.Add(item);
             var menuBorder = new Border
             {
-                Background = (Brush)FindResource("BrushSurfaceDark"),
-                BorderBrush = (Brush)FindResource("BrushBorderDark"),
+                Background = (Brush)FindResource("BrushSurface"),
+                BorderBrush = (Brush)FindResource("BrushBorder"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(6),
@@ -65,7 +65,7 @@ public partial class App
             var window = new Window
             {
                 Title = "Tray Menu Preview",
-                Background = (Brush)FindResource("BrushBgDark"),
+                Background = (Brush)FindResource("BrushBackground"),
                 Content = new Border { Padding = new Thickness(20), Child = menuBorder, VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Left },
             };
             CaptureVisual(window, 380, 640, targetPng);

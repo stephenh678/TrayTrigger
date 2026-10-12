@@ -19,18 +19,18 @@
         <DockPanel Grid.Row="0" Margin="0,0,0,14">
             <!-- Right: Version & Status Indicator Badge -->
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="{Binding UpdateStatusIcon}" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12" 
+                <TextBlock Text="{Binding UpdateStatusIcon}" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
                            Foreground="{Binding UpdateStatusBrush}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <TextBlock Text="{Binding UpdateStatusBadgeText}" FontSize="12" Foreground="{StaticResource BrushTextMuted}" 
+                <TextBlock Text="{Binding UpdateStatusBadgeText}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" 
                            FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- Left: Title & Subtitle matching Settings -->
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="About" FontSize="20" Foreground="{StaticResource BrushTextPrimary}" 
+                <TextBlock Text="About" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
                            FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
                 <TextBlock Text="Application overview, key features, keyboard shortcuts, and support links" 
-                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" 
+                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
                            FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
             </StackPanel>
         </DockPanel>
@@ -41,8 +41,8 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Background="#181820" BorderBrush="{StaticResource BrushBorderDark}"
-                BorderThickness="1" CornerRadius="6" Padding="3" HorizontalAlignment="Left"
+        <Border Grid.Column="0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" HorizontalAlignment="Left"
                 views:ScrollToTop.Target="{Binding ElementName=AboutScroll}">
             <StackPanel Orientation="Horizontal">
                 <Button Content="All" Command="{Binding SelectAboutAllTabCommand}"
@@ -87,16 +87,16 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="APPLICATION OVERVIEW" FontSize="11.5" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="APPLICATION OVERVIEW" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Hero Identity Card -->
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="18,16" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
                             <Image Source="/Assets/app_icon.png" Width="52" Height="52"
@@ -112,25 +112,25 @@
                             <StackPanel VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <!-- The wordmark: "Trigger" in the logo's blue. Runs on one line, so no space creeps in. -->
-                                    <TextBlock FontSize="19" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
-                                               Foreground="{StaticResource BrushTextPrimary}"><Run Text="Tray"/><Run Text="Trigger" Foreground="{StaticResource BrushBrand}"/></TextBlock>
-                                    <Border Background="#1C2E3D" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding AppVersionDisplay}" FontSize="11" Foreground="{StaticResource BrushAccentHover}" FontWeight="SemiBold"/>
+                                    <TextBlock FontSize="{StaticResource FontSizeHeading}" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
+                                               Foreground="{DynamicResource BrushTextPrimary}"><Run Text="Tray"/><Run Text="Trigger" Foreground="{DynamicResource BrushBrand}"/></TextBlock>
+                                    <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding AppVersionDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" FontWeight="SemiBold"/>
                                     </Border>
-                                    <Border Background="#1E2028" CornerRadius="4" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text=".NET 10.0" FontSize="10.5" Foreground="#85929E" FontWeight="SemiBold"/>
+                                    <Border Background="{DynamicResource BrushSurface}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text=".NET 10.0" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextMuted}" FontWeight="SemiBold"/>
                                     </Border>
                                 </StackPanel>
                                 <TextBlock Text="Per-game Windows tuning and launch automation, from the tray. Per-game changes revert when the game exits."
-                                           Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
 
                     <!-- Environment strip: real values about this install (what a bug report
                          needs), replacing the old marketing labels. -->
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -142,31 +142,31 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <Border Grid.Column="0" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="0,0,3,6">
+                            <Border Grid.Column="0" Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,3,6">
                                 <StackPanel>
-                                    <TextBlock Text="WINDOWS" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
-                                    <TextBlock Text="{Binding OsDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="WINDOWS" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                    <TextBlock Text="{Binding OsDisplay}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Row="1" Grid.Column="0" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="0,0,3,0">
+                            <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,3,0">
                                 <StackPanel>
-                                    <TextBlock Text="RUNTIME" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
-                                    <TextBlock Text="{Binding RuntimeDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="RUNTIME" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                    <TextBlock Text="{Binding RuntimeDisplay}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Row="1" Grid.Column="1" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,0,0">
+                            <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="3,0,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="LIBRARY" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
-                                    <TextBlock Text="{Binding TotalGameCountDisplay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="LIBRARY" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                    <TextBlock Text="{Binding TotalGameCountDisplay}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Row="0" Grid.Column="1" Background="#17171C" CornerRadius="6" Padding="12,10" Margin="3,0,0,6">
+                            <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="3,0,0,6">
                                 <StackPanel>
-                                    <TextBlock Text="DATA FOLDER" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextMuted}" Margin="0,0,0,3"/>
-                                    <TextBlock Text="{Binding SettingsVM.StorageDirectoryDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"
+                                    <TextBlock Text="DATA FOLDER" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,3"/>
+                                    <TextBlock Text="{Binding SettingsVM.StorageDirectoryDisplay}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"
                                                TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </Border>
@@ -191,15 +191,14 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="KEY FEATURES" FontSize="11.5" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="KEY FEATURES" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Feature grid: ten tiles in the order the README presents the product and a
-                         session runs - profile, scripts, launch, tweaks, tray, library, DLSS, tools, backup, hardware. -->
+                    <!-- Feature grid: thirteen tiles, most useful first - profile, library, tray, launcher control, tweaks, Stutter Check, scripts, DLSS, activity, tools, backup, hardware, then themes across the foot. -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -212,180 +211,214 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <!-- 1: Performance Profiles -->
-                        <Border Grid.Row="0" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                        <Border Grid.Row="0" Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Performance Profiles" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Performance Profiles" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                     <TextBlock Text="Give each game an Optimized or Aggressive tier: power plan, GPU preference, HDR, Do Not Disturb, process priority, timer resolution. Applied when the game launches, reverted to exactly what it found when it exits, and restored on the next start if anything crashes mid-session. CPU Cores keeps a game on the cores that suit it: performance cores on an Intel hybrid, the 3D V-Cache cores on a Ryzen X3D."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
 
-                        <!-- 2: Scripts -->
-                        <Border Grid.Row="0" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                        <!-- 2: Library -->
+                        <Border Grid.Row="0" Grid.Column="1" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE756;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE753;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Attach your own .bat, .cmd, .ps1 or .exe to any game, or set defaults for all of them: close OneDrive, start SimHub for your racing games. Test Run buttons, per-game arguments, wait and cancel-on-failure, and real examples ship with the app."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Seven Launchers, One Library" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="A Fluent-style library built to look at home on Windows 11, in dark, light or a theme of your own: poster art, rounded cards, no menu bar. Scan for Games reads Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass and Battle.net's own install records, plus any folder you drop on the window. Real titles, Steam metadata and poster art, SteamGridDB and RAWG to fill the gaps, categories, filters, four views and batch editing. Games you uninstall stay, greyed out, with their playtime and settings kept."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
 
-                        <!-- 3: Launcher Control -->
-                        <Border Grid.Row="1" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                        <!-- 3: Tray launcher & hotkeys -->
+                        <Border Grid.Row="1" Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE765;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Launcher Control" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam, GOG Galaxy and Epic quietly so only the game appears. A second launch brings the running game forward instead of starting a duplicate; Suspend, Close Game and Force Close are one click away while it runs."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
-                        <!-- 4: Windows tweaks -->
-                        <Border Grid.Row="1" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
-                            <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Verified, Reversible Windows Tweaks" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Performance Preset and Undo Preset can take a System Restore Point first."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
-                        <!-- 5: Tray launcher & hotkeys -->
-                        <Border Grid.Row="2" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
-                            <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE765;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Tray Launcher &amp; Hotkeys" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Tray Launcher &amp; Hotkeys" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                     <TextBlock Text="Lives in the tray: Now Playing, Recent, Favorites and every category one right-click or Ctrl+Alt+T away, with a search box that launches the top match on Enter. Hotkeys show the window, open the tray menu and suspend the game, and any game can have its own - recorded from the keys you press, and refused up front if another app already has it."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
 
-                        <!-- 6: Library -->
-                        <Border Grid.Row="2" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                        <!-- 4: Launcher Control -->
+                        <Border Grid.Row="1" Grid.Column="1" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
                             <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE753;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Seven Launchers, One Library" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="A dark, Fluent-style library built to look at home on Windows 11: poster art, rounded cards, no menu bar. Scan for Games reads Steam, GOG, EA, Epic, Ubisoft Connect, Xbox / PC Game Pass and Battle.net's own install records, plus any folder you drop on the window. Real titles, Steam metadata and poster art, SteamGridDB and RAWG to fill the gaps, categories, filters, four views and batch editing. Games you uninstall stay, greyed out, with their playtime and settings kept."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Launcher Control" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Launch arguments and Run as Administrator per game. Close Steam, GOG Galaxy, EA, Epic, Ubisoft Connect, the Xbox app or Battle.net when the game exits, and start Steam, GOG Galaxy and Epic quietly so only the game appears. A second launch brings the running game forward instead of starting a duplicate; Suspend, Close Game and Force Close are one click away while it runs."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
 
-                        <!-- 7: DLSS Override -->
-                        <Border Grid.Row="3" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                        <!-- 5: Windows tweaks -->
+                        <Border Grid.Row="2" Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE950;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="NVIDIA DLSS Override" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Verified, Reversible Windows Tweaks" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Twenty documented gaming settings, each showing Windows' real current state and each reverting to exactly what it found, plus a read-only Core Isolation check. Trade-off-heavy ones (Visual Effects, Nagle's Algorithm) stay off by default and clearly badged; Apply Performance Preset and Undo Preset can take a System Restore Point first."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 6: Stutter Check -->
+                        <Border Grid.Row="2" Grid.Column="1" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Stutter Check" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="One click runs the checklist every stutter thread sends you through: overlays, apps holding video memory, refresh rate, RAM speed, drives, Resizable BAR, shader caches, the power plan and Search indexing. Each row says what it found and what to do. It only reports, never changes anything on its own, and never runs while a game is running."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 7: Scripts -->
+                        <Border Grid.Row="3" Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE756;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Pre-Launch &amp; Post-Exit Scripts" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Attach your own .bat, .cmd, .ps1 or .exe to any game, or set defaults for all of them: close OneDrive, start SimHub for your racing games. Test Run buttons, per-game arguments, wait and cancel-on-failure, and real examples ship with the app."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 8: DLSS Override -->
+                        <Border Grid.Row="3" Grid.Column="1" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE950;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="NVIDIA DLSS Override" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                     <TextBlock Text="Run a game on your GeForce driver&apos;s newer DLSS files instead of the ones it shipped with: Super Resolution, Ray Reconstruction and Frame Generation. Per game, with nothing in the game folder touched, and put back exactly as it was when you switch it off."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
 
-                        <!-- 8: Tools -->
-                        <Border Grid.Row="3" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                        <!-- 9: Activity & History -->
+                        <Border Grid.Row="4" Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
                             <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Tools" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="An optional page for the programs you use alongside games, like MSI Afterburner or DLSS Swapper: launch them from the tray menu or a hotkey, or have them start with your games and close when the last one exits."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
-                        <!-- 9: Backup and restore -->
-                        <Border Grid.Row="4" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
-                            <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE777;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Backup &amp; Restore" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Your library, settings, tools, scripts and artwork in one .zip, to move to a new PC or undo a mistake. A restore finds games whose drive letter or folder changed, and backs up what you had first."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
-                        <!-- 10: Hardware monitoring -->
-                        <Border Grid.Row="4" Grid.Column="1" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
-                            <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Hardware Monitoring" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Live CPU and RAM load, plus GPU, VRAM, displays, drives, motherboard, BIOS, OS build and DirectX capability on the System page - so you can sanity-check specs before deciding which profile a game gets."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
-                        <!-- 11: Activity & History -->
-                        <Border Grid.Row="5" Grid.Column="0" CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                                BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
-                            <DockPanel LastChildFill="True">
-                                <Border Width="34" Height="34" CornerRadius="6" Background="#20202A" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <TextBlock Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" FontSize="14"
-                                               Foreground="{StaticResource BrushAccentHover}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Activity &amp; History" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Activity &amp; History" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                     <TextBlock Text="The bell at the bottom of the sidebar: what TrayTrigger changed for your games and put back, anything that didn't go to plan, and a fix for a setting a profile couldn't put back. One notification after your last game."
-                                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 10: Tools -->
+                        <Border Grid.Row="4" Grid.Column="1" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Tools" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="An optional page for the programs you use alongside games, like MSI Afterburner or DLSS Swapper: launch them from the tray menu or a hotkey, or have them start with your games and close when the last one exits."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 11: Backup and restore -->
+                        <Border Grid.Row="5" Grid.Column="0" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,5,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE777;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Backup &amp; Restore" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Your library, settings, tools, scripts, themes and artwork in one .zip, to move to a new PC or undo a mistake. A restore finds games whose drive letter or folder changed, and backs up what you had first."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 12: Hardware monitoring -->
+                        <Border Grid.Row="5" Grid.Column="1" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="5,0,0,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Hardware Monitoring" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Live CPU and RAM load, plus GPU, VRAM, displays, drives, motherboard, BIOS, OS build and DirectX capability on the System page - so you can sanity-check specs before deciding which profile a game gets."
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 13: Themes, across both columns so the last row is not half empty -->
+                        <Border Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="14,12" Margin="0,0,0,10">
+                            <DockPanel LastChildFill="True">
+                                <Border Width="34" Height="34" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0" VerticalAlignment="Top">
+                                    <TextBlock Text="&#xE790;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}"
+                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Top">
+                                    <TextBlock Text="Themes &amp; Backgrounds" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Dark, Light, Green, Amber and Purple, or Auto to follow Windows&apos; light or dark mode (and its High Contrast colors), switched at once with no restart. Each theme has a background picture behind the pages, with the cards left solid so text stays readable; turn it off, or choose your own JPG or PNG. Make a theme of your own with New theme from this... (Edit theme... on one of yours): pick its colors with a color square or type a #RRGGBB, watch a preview, and save. The fine-tuning colors live in the theme file, which the app follows each time you save it. Settings &gt; General &gt; Appearance."
+
+                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
@@ -409,15 +442,15 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="SHORTCUTS" FontSize="11.5" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="SHORTCUTS" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,12">
@@ -426,144 +459,144 @@
                                         Style="{StaticResource ModernOutlineButton}" 
                                         VerticalAlignment="Center" Padding="11,5"/>
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="Keyboard &amp; Mouse Controls" FontSize="13.5" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Keyboard &amp; Mouse Controls" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
+                                               Foreground="{DynamicResource BrushTextPrimary}"/>
                                     <TextBlock Text="What the keys and clicks do." 
-                                               Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="0,2,0,0"/>
+                                               Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </DockPanel>
 
                             <!-- Table Container -->
-                            <Border Background="#17171C" CornerRadius="6" Padding="14,10">
+                            <Border Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" Padding="14,10">
                                 <StackPanel>
                                     <!-- Row 1: Global Hotkey - shows the configured value, not a hard-coded Ctrl+Alt+G -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="7,2">
-                                                <TextBlock Text="{Binding SettingsVM.GlobalManageHotkey}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="7,2">
+                                                <TextBlock Text="{Binding SettingsVM.GlobalManageHotkey}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentText}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="Show or hide the TrayTrigger window from anywhere in Windows (change it in Settings > General)"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 1b: Tray menu hotkey - the configured value -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="{StaticResource BrushKeyCapBackground}" BorderBrush="{StaticResource BrushKeyCapBorder}" BorderThickness="1" CornerRadius="4" Padding="7,2">
-                                                <TextBlock Text="{Binding SettingsVM.TrayMenuHotkey}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="7,2">
+                                                <TextBlock Text="{Binding SettingsVM.TrayMenuHotkey}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentText}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="Open the tray menu by the tray icon from anywhere in Windows, ready to search (change it in Settings > General)"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 1c: Suspend hotkey - the configured value -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="{StaticResource BrushKeyCapBackground}" BorderBrush="{StaticResource BrushKeyCapBorder}" BorderThickness="1" CornerRadius="4" Padding="7,2">
-                                                <TextBlock Text="{Binding SettingsVM.SuspendGameHotkey}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushAccentHover}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="7,2">
+                                                <TextBlock Text="{Binding SettingsVM.SuspendGameHotkey}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentText}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="Suspend the game you're playing, or resume it - games with anti-cheat excepted (change it in Settings > General)"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 2: Tray Left-Click -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Left-Click" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Left-Click" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
-                                            <TextBlock Text=" Tray Icon" Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text=" Tray Icon" Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Text="Show or hide the TrayTrigger window. Double-click always opens it"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center"/>
                                     </DockPanel>
 
                                     <!-- Row 3: Tray Right-Click -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Right-Click" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Right-Click" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
-                                            <TextBlock Text=" Tray Icon" Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text=" Tray Icon" Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Text="Quick-launch menu: a search box (type, then Enter launches the top match), Now Playing, Recent, Favorites, all games (grouped or flat), Scan for Games, Settings, Exit"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 4: Game Card Left-Click -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Left-Click" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Left-Click" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
-                                            <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text=" Game Card" Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Text="Open Game Details (store data, playtime, poster). Keyboard: Enter on a focused card; Ctrl+Enter launches"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 4b: Select mode -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Ctrl+Click" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Ctrl+Click" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
-                                            <TextBlock Text=" / " Foreground="{StaticResource BrushTextMuted}" FontSize="12" VerticalAlignment="Center"/>
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Ctrl+A" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <TextBlock Text=" / " Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Ctrl+A" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
-                                            <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text=" Game Card" Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Text="Select several games (Shift+click for a range), then use the selection bar at the bottom, or right-click one of them for the batch menu: Favorite, Hide, Change Category, Performance Profile, Refresh, or Remove them together. Delete removes the selection; Esc or a click on empty space clears it"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 5: Game Card Right-Click -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Right-Click" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Right-Click" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
-                                            <TextBlock Text=" Game Card" Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text=" Game Card" Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                         </StackPanel>
                                         <TextBlock Text="Play, Details, Favorite, Hide; Suspend, Close Game and Force Close while playing; DLSS Override, Performance Profile, CPU Cores and Launch Options; Edit, Steam links, Remove"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </DockPanel>
 
                                     <!-- Row 6: Quick Search -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Ctrl+F" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Ctrl+F" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="Focus the search box on any page that has one"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center"/>
                                     </DockPanel>
 
                                     <!-- Row 6b: Edit Game's tabs -->
                                     <DockPanel Margin="0,0,0,9">
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="Ctrl+Tab" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                                                <TextBlock Text="Ctrl+Tab" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="Next tab in Edit Game (Ctrl+Shift+Tab goes back)"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center"/>
                                     </DockPanel>
 
                                     <!-- Row 7: Escape -->
                                     <DockPanel>
                                         <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
-                                            <Border Background="#252532" BorderBrush="#353545" BorderThickness="1" CornerRadius="4" Padding="8,2">
-                                                <TextBlock Text="Esc" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                            <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="8,2">
+                                                <TextBlock Text="Esc" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="Clear the search and show everything again"
-                                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource BrushTextSecondary}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center"/>
                                     </DockPanel>
                                 </StackPanel>
                             </Border>
@@ -588,28 +621,28 @@
                             </Style>
                         </Border.Style>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="12.5" 
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="SUPPORT &amp; LINKS" FontSize="11.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushAccentHover}" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="SUPPORT &amp; LINKS" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Card 0: Help Topics index (every embedded Help/**.md, grouped by section) -->
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="Help Topics" FontSize="13.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBlock Text="Help Topics" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"/>
                             <TextBlock Text="The same explanations that sit behind every Learn more link, in one place."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="0,2,0,10" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,10" TextWrapping="Wrap"/>
                             <ItemsControl ItemsSource="{Binding HelpTopicIndex}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Margin="0,0,0,8">
-                                            <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="Bold"
-                                                       Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
+                                                       Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
                                             <ItemsControl ItemsSource="{Binding Topics}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
@@ -618,7 +651,7 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Button Style="{StaticResource HelpLinkButton}" Content="{Binding Title}" FontSize="11.5"
+                                                        <Button Style="{StaticResource HelpLinkButton}" Content="{Binding Title}" FontSize="{StaticResource FontSizeBody}"
                                                                 Margin="0,0,18,5"
                                                                 Command="{x:Static services:HelpCommands.ShowTopic}"
                                                                 CommandParameter="{Binding Id}"/>
@@ -633,8 +666,8 @@
                     </Border>
 
                     <!-- Card 1: Copy System Info for Bug Reports - what a stuck reader does next, before opening the log -->
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -646,16 +679,16 @@
                                         ToolTip="Saves the same report as a file, for attaching instead of pasting."/>
                             </StackPanel>
                             <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
-                                <TextBlock Text="System Environment Report" FontSize="13.5" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource BrushTextPrimary}"/>
+                                <TextBlock Text="System Environment Report" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
+                                           Foreground="{DynamicResource BrushTextPrimary}"/>
                                 <TextBlock Text="Version, install type, Windows build, CPU, GPU, RAM, launcher integrations and whether each client is installed, library counts, the settings that matter to bugs, applied tweaks, any running session, and the last warnings from the log. API keys are never included." 
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
                     <!-- Card 2: Centralized Diagnostics Link -->
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
                             <Button AutomationProperties.Name="Open Diagnostics &amp; Storage" DockPanel.Dock="Right"
@@ -664,22 +697,22 @@
                                     VerticalAlignment="Center" Padding="12,5">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Open Diagnostics &amp; Storage" VerticalAlignment="Center"/>
-                                    <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="11" VerticalAlignment="Center" Margin="7,0,0,0"/>
+                                    <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="7,0,0,0"/>
                                 </StackPanel>
                             </Button>
                             <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
-                                <TextBlock Text="Diagnostics &amp; Storage" FontSize="13.5" FontWeight="SemiBold"
-                                           Foreground="{StaticResource BrushTextPrimary}"/>
+                                <TextBlock Text="Diagnostics &amp; Storage" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource BrushTextPrimary}"/>
                                 <TextBlock Text="The debug log, verbose logging, data and artwork folders, and Reset Settings live under Settings > Diagnostics &amp; Storage."
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
 
 
                     <!-- Card 3: Community & Issues -->
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}" 
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1" 
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -689,23 +722,23 @@
                                         Style="{StaticResource ModernOutlineButton}" VerticalAlignment="Center" Padding="11,5"/>
                             </StackPanel>
                             <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
-                                <TextBlock Text="Community &amp; Open Source" FontSize="13.5" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource BrushTextPrimary}"/>
+                                <TextBlock Text="Community &amp; Open Source" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
+                                           Foreground="{DynamicResource BrushTextPrimary}"/>
                                 <TextBlock Text="TrayTrigger is open source. Report a bug or suggest a feature on GitHub." 
-                                           Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
 
                     <!-- Card 4: the project's own pages, whatever the update repository is set to. -->
-                    <Border CornerRadius="8" Background="{StaticResource BrushSurfaceDark}"
-                            BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
+                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                            BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
-                            <TextBlock Text="Online" FontSize="13.5" FontWeight="SemiBold"
-                                       Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBlock Text="Online" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource BrushTextPrimary}"/>
                             <TextBlock Text="The website, these help pages online, and where to ask a question or see what changed."
-                                       Foreground="{StaticResource BrushTextMuted}" FontSize="12" Margin="0,2,0,8" TextWrapping="Wrap"/>
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{StaticResource FontSizeBody}" Margin="0,2,0,8" TextWrapping="Wrap"/>
                             <WrapPanel>
                                 <Button Content="Website" Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://stephenh678.github.io/TrayTrigger/"
                                         Style="{StaticResource ModernOutlineButton}" Padding="11,5" Margin="0,0,6,6"/>

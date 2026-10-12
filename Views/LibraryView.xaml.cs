@@ -1,4 +1,5 @@
 using System;
+using TrayTrigger.Services;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -111,15 +112,16 @@ public partial class LibraryView : UserControl
     {
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
-            DropZoneBorder.BorderBrush = (Brush)FindResource("BrushAccent");
-            DropZoneBorder.Background = new SolidColorBrush(Color.FromArgb(50, 0, 122, 204));
+            // As references, not brushes: the drop zone has to keep following a theme switch.
+            DropZoneBorder.SetResourceReference(Border.BorderBrushProperty, "BrushAccent");
+            DropZoneBorder.SetResourceReference(Border.BackgroundProperty, "BrushAccentWash");
         }
     }
 
     private void DropZone_DragLeave(object sender, DragEventArgs e)
     {
-        DropZoneBorder.BorderBrush = (Brush)FindResource("BrushBorderDark");
-        DropZoneBorder.Background = new SolidColorBrush(Color.FromRgb(22, 22, 25));
+        DropZoneBorder.SetResourceReference(Border.BorderBrushProperty, "BrushBorder");
+        DropZoneBorder.SetResourceReference(Border.BackgroundProperty, "BrushDialogCard");
     }
 
     private void DropZone_Drop(object sender, DragEventArgs e)

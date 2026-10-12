@@ -280,7 +280,8 @@ public class GameScriptServiceTests : IDisposable
 
         svc.RunPostExit(game, 12);
 
-        var until = DateTime.UtcNow.AddSeconds(5);
+        // A cold CI runner can take several seconds to start cmd.exe.
+        var until = DateTime.UtcNow.AddSeconds(20);
         while (DateTime.UtcNow < until && LaunchRecord.Peek(game.Id, LaunchRecord.Scripts).Count < 2) Thread.Sleep(50);
         Assert.Equal(["post-exit post.bat started", "backed up the saves"], LaunchRecord.Peek(game.Id, LaunchRecord.Scripts));
         // The launch popup is only for before a game: a relaunch of this one could be showing.

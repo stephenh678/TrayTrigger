@@ -258,6 +258,13 @@ public class BackupServiceTests : IDisposable
     [InlineData("data/settings.json", true)]
     [InlineData("data/Scripts/My Game.ps1", true)]
     [InlineData("data/Scripts/sub/helper.ps1", true)]
+    [InlineData("data/Themes/Forest.theme.json", true)]
+    [InlineData("data/Themes/Night.Theme.JSON", true)]
+    [InlineData("data/Themes/notes.txt", false)]
+    [InlineData("data/Themes/Forest.jpg", true)]
+    [InlineData("data/Themes/Forest.png", true)]
+    [InlineData("data/Themes/sub/Forest.theme.json", false)]
+    [InlineData("data/Themes/../x.theme.json", false)]
     [InlineData("cache/Icons/g1.png", true)]
     [InlineData("cache/Covers/g1.jpg", true)]
     [InlineData("data/profile-session.json", false)]
@@ -269,6 +276,34 @@ public class BackupServiceTests : IDisposable
     public void OnlyWhatABackupHolds_IsTakenFromIt(string name, bool taken)
     {
         Assert.Equal(taken, BackupService.IsBackupEntry(name));
+    }
+
+    [Fact]
+    public void TheUsersThemes_AreInTheBackup_AndComeBack()
+    {
+        var before = Storage("pc");
+        before.SaveGames([]);
+        before.SaveSettings(new AppSettings { ThemeId = "user:Forest" });
+        string themes = Path.Combine(before.BaseDirectory, "Themes");
+        Directory.CreateDirectory(themes);
+        File.WriteAllText(Path.Combine(themes, "Forest.theme.json"), "{ \"name\": \"Forest\" }");
+        File.WriteAllText(Path.Combine(themes, "notes.txt"), "not a theme");
+
+        string zip = Path.Combine(_root, "backup.zip");
+        new BackupService(before).Create(zip);
+        using (var archive = ZipFile.OpenRead(zip))
+        {
+            Assert.NotNull(archive.GetEntry("data/Themes/Forest.theme.json"));
+            Assert.Null(archive.GetEntry("data/Themes/notes.txt"));
+        }
+
+        File.Delete(Path.Combine(themes, "Forest.theme.json"));
+        var service = new BackupService(before);
+        service.StageRestore(zip, service.CreateSafetyBackup());
+        var result = new BackupService(new StorageService(before.BaseDirectory, before.LocalCacheDirectory)).ApplyPendingRestore(() => NoLaunchers);
+
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal("{ \"name\": \"Forest\" }", File.ReadAllText(Path.Combine(themes, "Forest.theme.json")));
     }
 
     // ------------------------------------------------------------------ this PC's settings

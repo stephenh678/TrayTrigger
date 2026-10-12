@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Every corner radius the app uses, by name. Views reference these names and never a number;
+         docs/style-guide.html is generated from this file (python tools/Build-StyleGuide.py).
+         To change how round a kind of shape is, change it here. -->
+
+    <!-- Badges, tags, pills and small chips. -->
+    <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
+    <!-- Buttons, text boxes, list rows and other controls. -->
+    <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+    <!-- Cards, panels and menus. -->
+    <CornerRadius x:Key="RadiusCard">8</CornerRadius>
+    <!-- Circles, pills and round badges. A radius larger than half the shape just makes it fully round,
+         so this one value covers every size of circle. -->
+    <CornerRadius x:Key="RadiusLarge">999</CornerRadius>
+
+    <!-- The inner edge of a card with a 1 px border: the card's radius less the border, so the fill
+         meets the outline exactly. Used where only the top or only the bottom of a card is filled. -->
+    <CornerRadius x:Key="RadiusInnerTop">7,7,0,0</CornerRadius>
+    <CornerRadius x:Key="RadiusInnerBottom">0,0,7,7</CornerRadius>
+</ResourceDictionary>

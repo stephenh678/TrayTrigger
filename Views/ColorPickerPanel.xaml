@@ -1,0 +1,84 @@
+<UserControl x:Class="TrayTrigger.Views.ColorPickerPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="236" Focusable="False">
+    <!-- A color square (saturation across, brightness up), a hue strip, suggested colors, and the color it started as next to
+         the color it is now. The square and the strip are filled in code: they are drawing, not theme colors. -->
+    <StackPanel>
+        <Border CornerRadius="{StaticResource RadiusControl}" Height="150" ClipToBounds="True"
+                BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1">
+            <Grid x:Name="Square" Background="Transparent" Cursor="Cross" Focusable="True"
+                  FocusVisualStyle="{StaticResource KeyboardFocusRing}"
+                  AutomationProperties.Name="Color: saturation and brightness"
+                  AutomationProperties.HelpText="Left and right arrows change saturation, up and down change brightness. Hold Shift for bigger steps."
+                  SizeChanged="Square_SizeChanged" MouseLeftButtonDown="Square_MouseDown" MouseMove="Square_MouseMove"
+                  MouseLeftButtonUp="Square_MouseUp" LostMouseCapture="Square_LostMouseCapture" KeyDown="Square_KeyDown">
+                <Rectangle x:Name="HueFill"/>
+                <Rectangle x:Name="WhiteFade"/>
+                <Rectangle x:Name="BlackFade"/>
+                <Canvas IsHitTestVisible="False">
+                    <Border x:Name="Handle" Width="14" Height="14" CornerRadius="{StaticResource RadiusLarge}" BorderThickness="2"
+                            BorderBrush="{DynamicResource BrushTextPrimary}" Background="Transparent">
+                        <Border CornerRadius="{StaticResource RadiusLarge}" BorderThickness="1" BorderBrush="{DynamicResource BrushBackground}"/>
+                    </Border>
+                </Canvas>
+            </Grid>
+        </Border>
+
+        <Grid Margin="0,12,0,0" Height="20">
+            <Border x:Name="HueStrip" Height="12" CornerRadius="{StaticResource RadiusLarge}" VerticalAlignment="Center"/>
+            <Slider x:Name="HueSlider" Minimum="0" Maximum="359" SmallChange="1" LargeChange="15"
+                    Style="{StaticResource ThemeSliderStyle}" Background="Transparent" Foreground="Transparent"
+                    AutomationProperties.Name="Hue" ValueChanged="HueSlider_ValueChanged"/>
+        </Grid>
+
+        <ItemsControl x:Name="SuggestionList" Margin="0,12,0,0" Focusable="False">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Width="22" Height="22" Margin="0,0,6,6" Padding="0" Cursor="Hand" Click="Suggestion_Click"
+                            Tag="{Binding}" ToolTip="{Binding Text}"
+                            AutomationProperties.Name="{Binding Text}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="chip" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1" BorderBrush="{DynamicResource BrushBorderStrong}"
+                                        Background="{Binding Brush}"/>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="chip" Property="BorderBrush" Value="{DynamicResource BrushTextPrimary}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsKeyboardFocused" Value="True">
+                                        <Setter TargetName="chip" Property="BorderBrush" Value="{DynamicResource BrushAccentHover}"/>
+                                        <Setter TargetName="chip" Property="BorderThickness" Value="2"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+            <Button x:Name="OriginalChip" Width="64" Height="28" Padding="0" Cursor="Hand" Click="OriginalChip_Click"
+                    ToolTip="The color it was. Click to put it back." AutomationProperties.Name="Put the original color back">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="chip" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1" BorderBrush="{DynamicResource BrushBorderStrong}"
+                                Background="{TemplateBinding Background}"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="chip" Property="BorderBrush" Value="{DynamicResource BrushAccentHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Border x:Name="CurrentChip" Width="64" Height="28" Margin="6,0,0,0" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1"
+                    BorderBrush="{DynamicResource BrushBorderStrong}" AutomationProperties.Name="The color now"/>
+            <TextBlock Text="was, now" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

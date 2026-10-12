@@ -8,13 +8,13 @@
         <!-- Looks like ModernTextBox (same fill, border, height) but never takes typed text: a
              hotkey is recorded from the keys actually pressed, so what is stored always parses
              and is spelled the same way everywhere. -->
-        <Border x:Name="Box" Background="#17171B" BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="1"
-                CornerRadius="4" MinHeight="28" Padding="9,0" Cursor="Hand"
+        <Border x:Name="Box" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                CornerRadius="{StaticResource RadiusSmall}" MinHeight="28" Padding="9,0" Cursor="Hand"
                 MouseLeftButtonDown="OnBoxMouseLeftButtonDown">
             <DockPanel>
                 <Button AutomationProperties.Name="Clear hotkey" x:Name="ClearButton" DockPanel.Dock="Right" Click="OnClearClick" ToolTip="Clear"
-                        Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="9"
-                        Foreground="{StaticResource BrushTextMuted}" Background="Transparent" BorderThickness="0"
+                        Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}"
+                        Foreground="{DynamicResource BrushTextMuted}" Background="Transparent" BorderThickness="0"
                         Padding="4,0" Margin="6,0,-4,0" Cursor="Hand" Focusable="False" Visibility="Collapsed">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
@@ -24,13 +24,13 @@
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-                <TextBlock x:Name="Display" VerticalAlignment="Center" FontFamily="{StaticResource AppFont}" FontSize="12"
-                           Foreground="{StaticResource BrushTextMuted}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="Display" VerticalAlignment="Center" FontFamily="{StaticResource AppFont}" FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
         <!-- Shown here unless the host sets ShowInlineMessage="False" and places its own TextBlock
              bound to Message / MessageBrush / HasMessage - a 160 px box wraps a sentence badly. -->
-        <TextBlock x:Name="InlineMessage" FontSize="11" Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed"
-                   Foreground="{StaticResource BrushDanger}"/>
+        <TextBlock x:Name="InlineMessage" FontSize="{StaticResource FontSizeBody}" Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+                   Foreground="{DynamicResource BrushDanger}"/>
     </StackPanel>
 </UserControl>

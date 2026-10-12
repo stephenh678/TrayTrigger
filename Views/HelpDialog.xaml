@@ -10,11 +10,11 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
-        Background="{StaticResource BrushDialogBg}"
-        Foreground="{StaticResource BrushTextPrimary}"
+        Background="{DynamicResource BrushSurface}"
+        Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="{StaticResource AppFont}">
 
-    <Border BorderBrush="{StaticResource BrushBorderDark}" BorderThickness="0,1,0,0">
+    <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,1,0,0">
         <Grid Margin="24,20,24,18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
@@ -30,23 +30,23 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22"
-                        Background="#1C2E3D" BorderBrush="{StaticResource BrushBorderAccent}" BorderThickness="1.5"
+                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="{StaticResource RadiusLarge}"
+                        Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1.5"
                         Margin="0,0,16,0" VerticalAlignment="Top">
-                    <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="18"
-                               Foreground="{StaticResource BrushAccentHover}"
+                    <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeHeading}"
+                               Foreground="{DynamicResource BrushAccentText}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="BreadcrumbText" Text="TRAYTRIGGER HELP" FontSize="11" FontWeight="Bold"
-                               Foreground="{StaticResource BrushAccentHover}" Margin="0,0,0,3"/>
-                    <TextBlock x:Name="TitleText" Text="Topic" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"/>
+                    <TextBlock x:Name="BreadcrumbText" Text="TRAYTRIGGER HELP" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
+                               Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,3"/>
+                    <TextBlock x:Name="TitleText" Text="Topic" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"/>
                 </StackPanel>
             </Grid>
 
-            <Border Grid.Row="1" Height="1" Background="{StaticResource BrushBorderDark}" Margin="0,0,0,12"/>
+            <Border Grid.Row="1" Height="1" Background="{DynamicResource BrushBorder}" Margin="0,0,0,12"/>
 
             <!-- Body: blocks are added from code-behind so each kind gets the right theme styling -->
             <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
@@ -55,8 +55,8 @@
 
             <!-- Footer -->
             <DockPanel Grid.Row="3" LastChildFill="False">
-                <TextBlock x:Name="FooterHintText" Text="Esc to close" FontSize="12"
-                           Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                <TextBlock x:Name="FooterHintText" Text="Esc to close" FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                 <Button Content="Close" Style="{StaticResource ModernOutlineButton}" Padding="16,6"
                         DockPanel.Dock="Right" IsCancel="True" Click="OnCloseClick"/>
             </DockPanel>

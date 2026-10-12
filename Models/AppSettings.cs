@@ -16,6 +16,15 @@ public class AppSettings
     /// <summary>Executable paths permanently excluded from "Add Folder" and "Scan for Games" results. See <see cref="IgnoredGamePath"/>.</summary>
     public List<IgnoredGamePath> IgnoredGamePaths { get; set; } = new();
 
+    /// <summary>
+    /// The color theme: a built-in theme's name ("Dark", "Light", ...), "user:" and a theme file's name for
+    /// one of the user's own, or "Auto" to follow Windows' light or dark mode. See docs/theming-plan.md.
+    /// </summary>
+    public string ThemeId { get; set; } = "Dark";
+
+    /// <summary>Whether the theme's background picture is shown behind the pages. Off leaves the theme's plain background color.</summary>
+    public bool ShowThemeBackground { get; set; } = true;
+
     public bool StartWithWindows { get; set; } = false;
     public bool StartMinimizedToTray { get; set; } = true;
     public bool GroupTrayMenuByCategory { get; set; } = true;
