@@ -9,7 +9,7 @@ The menu is grouped, and the groups are the same in the single-game and batch me
 1. **Doing something now** - Play, Game Details, and, while the game is running, Suspend Game (or Resume Game), Close Game and Force Close Game.
 2. **Marking it** - Add to Favorites, Hide, Open Containing Folder, and Locate Executable if the file is missing.
 3. **Quick settings** - DLSS Override, then Performance Profile, CPU Cores, and Launch Options, each a cascading submenu.
-4. **Editing it** - Edit Game Properties, Rename, the Change submenu, and Refresh Poster & Metadata.
+4. **Editing it** - Edit Game Properties, Rename, the Change submenu, Refresh Poster & Metadata, and PCGamingWiki, which opens the game's page on the wiki (see PCGamingWiki in the game info help).
 5. **Steam** - store page, library, and Verify Game Files, for games with a Steam App ID.
 6. **Remove from Library.**
 

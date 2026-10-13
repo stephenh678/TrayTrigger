@@ -287,6 +287,10 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource BrushAccentPressed}"/>
                             </Trigger>
+                            <!-- A link with nothing to do reads as disabled in the theme's disabled text color. -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextDisabled}"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -664,46 +668,113 @@
             </Setter>
         </Style>
 
-        <!-- Filter flyout option row. Deliberately a clone of the ComboBoxItem style above: the
-             filter flyout and the Sort dropdown sit next to each other in the library toolbar and
-             do the same kind of job, so picking a filter should look like picking a sort order -
-             a full-width row that fills accent blue when it is on. A ToggleButton rather than a
-             ComboBoxItem because filters are multi-select; only the selection mechanic differs,
-             never the appearance. -->
+        <!-- Filter flyout option row: a full-width row with a blue check in a fixed gutter. The check is what says
+             "on" and nothing is drawn while it is off, so a list of unticked options stays quiet; the row itself
+             never fills, so a row cannot look picked unless it has the check. A ToggleButton rather than a CheckBox
+             because the settings options have a third state, the opposite ("DLSS Override off"): it keeps the same
+             blue check, and its label turns the warning color, so the wording and the color say which way it is asked for. -->
         <Style x:Key="FilterOptionToggle" TargetType="ToggleButton">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
             <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="border" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        <Border x:Name="border" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <DockPanel>
+                                <Grid x:Name="Gutter" DockPanel.Dock="Left" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <Path x:Name="Tick" Data="M 3.5,8.2 L 6.6,11.2 L 12.4,4.9" Stroke="{DynamicResource BrushAccentText}" StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed"/>
+                                </Grid>
+                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            </DockPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="border" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BrushAccent}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource BrushTextOnSolid}"/>
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
                             </Trigger>
-                            <!-- Hovering something already on must not read as "off": keep it blue
-                                 and lift it, the way the sort list highlights its current choice. -->
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsChecked" Value="True"/>
-                                    <Condition Property="IsMouseOver" Value="True"/>
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BrushAccentHover}"/>
-                            </MultiTrigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BrushAccentHover}"/>
-                                <Setter TargetName="border" Property="BorderThickness" Value="1"/>
+                            <!-- The opposite (the third state): the same blue check, and the label in the warning color. -->
+                            <Trigger Property="IsChecked" Value="{x:Null}">
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+                                <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A saved filter's row in the library filter flyout: the same gutter and blue check as the options, shown while
+             it is the filter on screen. It is a button (applying a saved filter is an action, not a tick) and Tag says
+             whether it is the one on screen. -->
+        <Style x:Key="FilterSavedRow" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                            <DockPanel>
+                                <Grid x:Name="Gutter" DockPanel.Dock="Left" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <Path x:Name="Tick" Data="M 3.5,8.2 L 6.6,11.2 L 12.4,4.9" Stroke="{DynamicResource BrushAccentText}" StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed"/>
+                                </Grid>
+                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                            </Trigger>
+                            <!-- A DataTrigger, not a Trigger on Tag: Tag is an object, so a plain Trigger compares the string
+                                 "True" with the bool the binding puts there and never matches. Among a template's own triggers
+                                 the control is "Self"; TemplatedParent would look one level further out and find nothing. -->
+                            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <!-- The tick is only seen; this says "applied" to a screen reader too, as a selected tab says "selected". -->
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="AutomationProperties.ItemStatus" Value="applied"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- The small glyph button beside a saved filter (delete): a row-height hover wash and nothing else. -->
+        <Style x:Key="FilterSavedGlyphButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BrushSurfaceHover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

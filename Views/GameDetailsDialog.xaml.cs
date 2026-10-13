@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Threading;
@@ -9,10 +10,14 @@ namespace TrayTrigger.Views;
 public partial class GameDetailsDialog : Window
 {
     private readonly GameDetailsViewModel _viewModel;
+    private readonly double _defaultWidth;
+    private readonly double _defaultHeight;
 
     public GameDetailsDialog(GameDetailsViewModel viewModel)
     {
         InitializeComponent();
+        _defaultWidth = Width;
+        _defaultHeight = Height;
         _viewModel = viewModel;
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
@@ -34,6 +39,34 @@ public partial class GameDetailsDialog : Window
             Activate();
             _ = _viewModel.LoadInstallDriveAsync();
         };
+    }
+
+    /// <summary>
+    /// Use the size the player last left this window at, in place of the XAML default. Ignored
+    /// when it is missing, below the window's minimum, or larger than the work area, so a size
+    /// saved on a bigger display can't come back too big to reach its buttons.
+    /// </summary>
+    public void ApplySavedSize(double? width, double? height)
+    {
+        if (width is not double w || height is not double h || double.IsNaN(w) || double.IsNaN(h)) return;
+        var workArea = SystemParameters.WorkArea;
+        if (w < MinWidth || h < MinHeight || w > workArea.Width || h > workArea.Height) return;
+        Width = w;
+        Height = h;
+    }
+
+    /// <summary>
+    /// The size to remember, read once the window has closed; null when it is at the XAML default,
+    /// so a player who never resized it keeps following the default if that is ever changed.
+    /// </summary>
+    public (double Width, double Height)? SizeToRemember
+    {
+        get
+        {
+            double width = Math.Round(ActualWidth), height = Math.Round(ActualHeight);
+            if (width <= 0 || height <= 0) return null;
+            return width == _defaultWidth && height == _defaultHeight ? null : (width, height);
+        }
     }
 
     /// <summary>

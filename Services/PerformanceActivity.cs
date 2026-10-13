@@ -14,6 +14,15 @@ namespace TrayTrigger.Services;
 /// </summary>
 public static class PerformanceActivity
 {
+    /// <summary>
+    /// True for the group keys of rows that record a setting being switched (a game's profile, CPU Cores,
+    /// HDR or DLSS Override, a tier's tweak). Their text says which way it went, so a row whose entries differ
+    /// has been flipped back and forth. Other rows' text varies for other reasons - a play session's length,
+    /// a scan's count - and is not a change.
+    /// </summary>
+    internal static bool IsSettingRowKey(string groupKey) =>
+        groupKey.Contains(".game|", StringComparison.Ordinal) || groupKey.StartsWith("profile.tier|", StringComparison.Ordinal);
+
     public static void GameChanged(GameEntry game, PerformanceProfileMode was, PerformanceProfileMode now) =>
         GamesChanged([(game, was)], now);
 

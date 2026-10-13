@@ -2376,28 +2376,29 @@ public partial class App
                         if (after != 1) throw new Exception($"Ticking '{steamKey}' should leave 1 game visible, saw {after}.");
                         if (!Dispatcher.Invoke(() => filter.HasActiveFilters)) throw new Exception("HasActiveFilters stayed false - the count badge would never appear.");
 
-                        // Selection is shown by the row filling accent blue, the way the Sort
-                        // dropdown marks its current choice - there is no tick box any more, so if
-                        // that trigger stops firing there is nothing at all on screen saying which
-                        // filters are on.
-                        string rowFill = Dispatcher.Invoke(() =>
+                        // Selection is shown by a blue check in the row's gutter, and nothing is
+                        // drawn while it is off - the row never fills. If that trigger stops firing
+                        // there is nothing at all on screen saying which filters are on.
+                        var (tickShown, tickColor) = Dispatcher.Invoke(() =>
                         {
-                            var border = FindVisualChildren<Border>(steamBox!).FirstOrDefault();
-                            return (border?.Background as SolidColorBrush)?.Color.ToString() ?? "<none>";
+                            var tick = steamBox!.Template.FindName("Tick", steamBox) as System.Windows.Shapes.Path;
+                            return (tick?.Visibility == Visibility.Visible, (tick?.Stroke as SolidColorBrush)?.Color.ToString() ?? "<none>");
                         });
-                        string accent = ((SolidColorBrush)Current.Resources["BrushAccent"]).Color.ToString();
-                        if (!string.Equals(rowFill, accent, StringComparison.OrdinalIgnoreCase))
-                            throw new Exception($"A selected filter row did not fill accent blue: it is '{rowFill}', expected '{accent}'.");
+                        if (!tickShown) throw new Exception("A ticked filter option shows no check.");
+                        string accentText = ((SolidColorBrush)Current.Resources["BrushAccentText"]).Color.ToString();
+                        if (!string.Equals(tickColor, accentText, StringComparison.OrdinalIgnoreCase))
+                            throw new Exception($"The check is '{tickColor}', expected the accent text blue '{accentText}'.");
 
-                        // And the fill has to span the flyout, not hug the label - a row that only
-                        // tints its text width looks like a highlight, not a selection.
+                        // And the row has to span its list, not hug the label, so the whole line
+                        // is the target and the hover wash is a full-width band.
                         double rowGap = Dispatcher.Invoke(() =>
                         {
-                            var popup = FindVisualChild<System.Windows.Controls.Primitives.Popup>(_mainWindow, p => p.IsOpen);
-                            return popup?.Child is FrameworkElement panel ? panel.ActualWidth - steamBox!.ActualWidth : double.NaN;
+                            DependencyObject? parent = steamBox!;
+                            while (parent != null && parent is not ItemsControl) parent = VisualTreeHelper.GetParent(parent);
+                            return parent is ItemsControl list ? list.ActualWidth - steamBox!.ActualWidth : double.NaN;
                         });
-                        if (double.IsNaN(rowGap) || rowGap > 20)
-                            throw new Exception($"Selected rows do not span the flyout - {rowGap:0.#}px narrower than the panel, so the blue fill hugs the label instead.");
+                        if (double.IsNaN(rowGap) || rowGap > 2)
+                            throw new Exception($"Option rows do not span their list - {rowGap:0.#}px narrower, so only the label is a target.");
 
                         // The badge is a Border+TextBlock bound to ActiveFilterCount inside the
                         // button's content Grid. Nothing above proves it rendered, or that the
@@ -2455,7 +2456,8 @@ public partial class App
                         Dispatcher.Invoke(() => CaptureVisual(_mainWindow, 1020, 760, shot));
 
                         // Clear from inside the flyout, which is the only place it exists: it must
-                        // empty the filter, untick the box on screen, and shut the flyout behind it.
+                        // empty the filter and untick the box on screen. It is a reset, not a close,
+                        // so the flyout stays open for the next tick.
                         Dispatcher.Invoke(() => filter.IsOpen = true);
                         System.Threading.Thread.Sleep(300);
                         Dispatcher.Invoke(() => filter.ClearCommand.Execute(null));
@@ -2463,12 +2465,12 @@ public partial class App
                         int cleared = Dispatcher.Invoke(() => _mainViewModel.Library.FilteredGames.Cast<object>().Count());
                         if (cleared != 2) throw new Exception($"Clear should restore all 2 games, saw {cleared}.");
                         if (Dispatcher.Invoke(() => steamBox.IsChecked == true)) throw new Exception("Clear emptied the filter but left the tick box checked on screen.");
-                        if (Dispatcher.Invoke(() => filter.IsOpen)) throw new Exception("Clear left the flyout open - the Clear button hides itself at zero, so it vanishes under the pointer.");
+                        if (!Dispatcher.Invoke(() => filter.IsOpen)) throw new Exception("Clear closed the flyout - it is a reset, and the next tick should not need the flyout opened again.");
 
                         if (Dispatcher.Invoke(() => _mainWindow.LibraryPage.LibraryFilterBadge.IsVisible))
                             throw new Exception("The badge survived Clear - it should disappear at zero, not show a 0.");
 
-                        outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} option rows rendered; ticking Steam went {before} -> {after} games, badge read 1, flyout right-aligned within {drift:0.#}px, Clear restored {cleared} and closed the flyout; screenshot {shot}";
+                        outcome = $"[TEST_LIBRARY_FILTER_PASSED] {boxCount} option rows rendered; ticking Steam went {before} -> {after} games, badge read 1, flyout right-aligned within {drift:0.#}px, Clear restored {cleared} and left the flyout open; screenshot {shot}";
                     }
                     catch (Exception ex)
                     {

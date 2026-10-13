@@ -2080,6 +2080,8 @@ public class SettingsViewModel : ViewModelBase
             // only sane answer here - the tick boxes live in LibraryFilterViewModel, and clearing
             // the saved keys behind its back would leave them ticked and write them straight back.
             nameof(AppSettings.LibraryFilterKeys),
+            // Filters the player named and saved: curated by hand, like the library itself.
+            nameof(AppSettings.SavedLibraryFilters),
             nameof(AppSettings.SkippedUpdateVersion),
             nameof(AppSettings.RemindAfterUtc),
             nameof(AppSettings.SteamGridDbApiKey),
@@ -2109,6 +2111,8 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.MainWindowWidth),
             nameof(AppSettings.MainWindowHeight),
             nameof(AppSettings.MainWindowMaximized),
+            nameof(AppSettings.GameDetailsWidth),
+            nameof(AppSettings.GameDetailsHeight),
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),

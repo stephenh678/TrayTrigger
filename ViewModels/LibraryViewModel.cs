@@ -185,8 +185,15 @@ public class LibraryViewModel : ViewModelBase
             _selectedCategory = _settings.LastCategoryFilter;
         }
 
-        Filter = new LibraryFilterViewModel(OnFilterChanged);
+        Filter = new LibraryFilterViewModel(OnFilterChanged,
+            saved: _settings.SavedLibraryFilters,
+            onSavedChanged: filters =>
+            {
+                _settings.SavedLibraryFilters = filters.ToList();
+                _storageService.SaveSettings(_settings);
+            });
         Filter.RestoreKeys(_settings.LibraryFilterKeys);
+        Filter.CountProvider = CountForFilterSummary;
 
         FilteredGames = CollectionViewSource.GetDefaultView(Games);
         FilteredGames.Filter = FilterGameItem;
@@ -1107,8 +1114,10 @@ public class LibraryViewModel : ViewModelBase
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
+        dlg.ApplySavedSize(_settings.GameDetailsWidth, _settings.GameDetailsHeight);
         if (openMatchPicker) dlg.OpenMatchPickerWhenReady();
         dlg.ShowDialog();
+        RememberGameDetailsSize(dlg);
 
         if (requestedLaunch)
         {
@@ -2352,6 +2361,17 @@ public class LibraryViewModel : ViewModelBase
             (!string.IsNullOrWhiteSpace(executablePath) && string.Equals(g.Game.ExecutablePath, executablePath, StringComparison.OrdinalIgnoreCase)));
     }
 
+    /// <summary>Keeps the size the player left the details window at, for the next one to open at.</summary>
+    private void RememberGameDetailsSize(Views.GameDetailsDialog dlg)
+    {
+        var size = dlg.SizeToRemember;
+        double? width = size?.Width, height = size?.Height;
+        if (_settings.GameDetailsWidth == width && _settings.GameDetailsHeight == height) return;
+        _settings.GameDetailsWidth = width;
+        _settings.GameDetailsHeight = height;
+        _storageService.SaveSettings(_settings);
+    }
+
     public void SaveLibrary([CallerMemberName] string callerMember = "", [CallerFilePath] string callerFile = "")
     {
         _storageService.SaveGames(Games.Select(g => g.Game), callerMember, callerFile);
@@ -2527,10 +2547,26 @@ public class LibraryViewModel : ViewModelBase
         FilteredGames.Refresh();
     }
 
-    private bool FilterGameItem(object obj)
-    {
-        if (obj is not GameCardViewModel card) return false;
+    private bool FilterGameItem(object obj) => obj is GameCardViewModel card && MatchesView(card, applyFlyout: true);
 
+    /// <summary>
+    /// What the flyout's total counts: the games the current tab and search would show, and how many of
+    /// those survive its ticks.
+    /// </summary>
+    private (int Shown, int InView) CountForFilterSummary()
+    {
+        int shown = 0, inView = 0;
+        foreach (var card in Games)
+        {
+            if (!MatchesView(card, applyFlyout: false)) continue;
+            inView++;
+            if (Filter.Matches(card)) shown++;
+        }
+        return (shown, inView);
+    }
+
+    private bool MatchesView(GameCardViewModel card, bool applyFlyout)
+    {
         // "Hidden" is its own filter tab, like Favorites, rather than a separate toggle - a
         // hidden game only ever shows there, and every other tab (including All) excludes it.
         // The record itself is untouched either way, so scans never treat it as new.
@@ -2556,7 +2592,7 @@ public class LibraryViewModel : ViewModelBase
 
         // Flyout filters: launcher, performance profile, per-entry state. AND'd with the tab and
         // the search box, so they narrow what those already chose rather than reaching past them.
-        if (!Filter.Matches(card)) return false;
+        if (applyFlyout && !Filter.Matches(card)) return false;
 
         // Search text filter
         if (!string.IsNullOrWhiteSpace(SearchText))

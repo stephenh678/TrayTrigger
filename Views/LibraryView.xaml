@@ -239,6 +239,7 @@
                 <MenuItem Header="Steam App ID..." Command="{Binding EditSteamAppIdCommand}"/>
             </MenuItem>
             <MenuItem Header="Refresh Poster &amp; Metadata" Command="{Binding RefreshMetadataCommand}"/>
+            <MenuItem Header="PCGamingWiki" Command="{Binding OpenPcGamingWikiCommand}"/>
 
             <!-- Steam-specific actions. One cascading item rather than three top-level ones and a
                  separator, all four of which carried the same HasSteamOverlay visibility style. -->
@@ -656,7 +657,8 @@
                                       StaysOpen="False" AllowsTransparency="True" Focusable="True"
                                       Opened="LibraryFilterPopup_Opened" PreviewKeyDown="LibraryFilterPopup_PreviewKeyDown">
                                    <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                           CornerRadius="{StaticResource RadiusCard}" Padding="6,12" MinWidth="270" MaxWidth="300">
+                                           CornerRadius="{StaticResource RadiusCard}" Padding="6,12" MinWidth="270" MaxWidth="300"
+                                           Focusable="True" FocusVisualStyle="{x:Null}">
                                        <Border.Effect>
                                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="{DynamicResource ColorFloatingShadow}"/>
                                        </Border.Effect>
@@ -677,30 +679,106 @@
                                                        </Style>
                                                    </Button.Style>
                                                </Button>
-                                               <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
-                                                          Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
+                                               <StackPanel VerticalAlignment="Center">
+                                                   <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                              Foreground="{DynamicResource BrushTextPrimary}"/>
+                                                   <TextBlock Text="{Binding Library.Filter.ResultSummary}" FontSize="{StaticResource FontSizeBody}"
+                                                              Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
+                                               </StackPanel>
                                            </DockPanel>
 
-                                           <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                               <ItemsControl ItemsSource="{Binding Library.Filter.Groups}">
-                                                   <ItemsControl.ItemTemplate>
-                                                       <DataTemplate DataType="{x:Type vm:LibraryFilterGroup}">
-                                                           <StackPanel Margin="0,0,0,10"
-                                                                       Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
-                                                               <TextBlock Text="{Binding Title}" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
-                                                                          Foreground="{DynamicResource BrushTextMuted}" Margin="8,0,0,4"/>
-                                                               <ItemsControl ItemsSource="{Binding Options}">
-                                                                   <ItemsControl.ItemTemplate>
-                                                                       <DataTemplate DataType="{x:Type vm:LibraryFilterOption}">
-                                                                           <ToggleButton Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                                                                         Style="{StaticResource FilterOptionToggle}"/>
-                                                                       </DataTemplate>
-                                                                   </ItemsControl.ItemTemplate>
-                                                               </ItemsControl>
-                                                           </StackPanel>
-                                                       </DataTemplate>
-                                                   </ItemsControl.ItemTemplate>
-                                               </ItemsControl>
+                                           <ScrollViewer MaxHeight="460" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                               <StackPanel>
+                                                   <!-- Saved: named combinations of the ticks below. Applying one puts exactly its
+                                                        ticks on screen; changing a tick afterwards marks it "edited". -->
+                                                   <StackPanel Margin="0,0,0,10">
+                                                       <DockPanel Margin="8,0,8,4">
+                                                           <!-- Nothing ticked: nothing to save, and HelpLinkButton shows the link as disabled. -->
+                                                           <Button DockPanel.Dock="Right" Content="Save current..." Style="{StaticResource HelpLinkButton}"
+                                                                   Command="{Binding Library.Filter.SaveCurrentCommand}" Click="LibraryFilterSave_Click"
+                                                                   AutomationProperties.Name="Save the ticked filters under a name"/>
+                                                           <TextBlock Text="SAVED" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                                      Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                                                       </DockPanel>
+                                                       <TextBlock Text="Tick some options, then save them here." Margin="22,0,8,0" TextWrapping="Wrap"
+                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
+                                                           <TextBlock.Style>
+                                                               <Style TargetType="TextBlock">
+                                                                   <Setter Property="Visibility" Value="Collapsed"/>
+                                                                   <Style.Triggers>
+                                                                       <DataTrigger Binding="{Binding Library.Filter.HasSavedFilters}" Value="False">
+                                                                           <Setter Property="Visibility" Value="Visible"/>
+                                                                       </DataTrigger>
+                                                                   </Style.Triggers>
+                                                               </Style>
+                                                           </TextBlock.Style>
+                                                       </TextBlock>
+                                                       <ItemsControl ItemsSource="{Binding Library.Filter.SavedFilters}" Margin="14,0,0,0">
+                                                           <ItemsControl.ItemTemplate>
+                                                               <DataTemplate DataType="{x:Type vm:SavedFilterItem}">
+                                                                   <DockPanel>
+                                                                       <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding DeleteCommand}"
+                                                                               Style="{StaticResource FilterSavedGlyphButton}" HorizontalAlignment="Right"
+                                                                               FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" ToolTip="Delete this saved filter"
+                                                                               AutomationProperties.Name="{Binding Name, StringFormat=Delete saved filter {0}}"/>
+                                                                       <Button Command="{Binding ApplyCommand}" Tag="{Binding IsSelected}"
+                                                                               Style="{StaticResource FilterSavedRow}"
+                                                                               AutomationProperties.Name="{Binding AccessibleName}">
+                                                                           <StackPanel Orientation="Horizontal">
+                                                                               <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" MaxWidth="170"/>
+                                                                               <TextBlock Text="edited" Margin="8,0,0,0" FontStyle="Italic" VerticalAlignment="Center"
+                                                                                          Visibility="{Binding IsEdited, Converter={StaticResource BoolToVis}}"/>
+                                                                           </StackPanel>
+                                                                       </Button>
+                                                                   </DockPanel>
+                                                               </DataTemplate>
+                                                           </ItemsControl.ItemTemplate>
+                                                       </ItemsControl>
+                                                   </StackPanel>
+
+                                                   <ItemsControl ItemsSource="{Binding Library.Filter.Groups}">
+                                                       <ItemsControl.ItemTemplate>
+                                                           <DataTemplate DataType="{x:Type vm:LibraryFilterGroup}">
+                                                               <StackPanel Margin="0,0,0,4"
+                                                                           Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
+                                                                   <!-- A thin rule, then a small blue heading: what the group is, how its ticks combine, and a
+                                                                        "clear" while something in it is on. The options below are indented, so the heading is
+                                                                        plainly a label and not something to press. -->
+                                                                   <Border Height="1" Background="{DynamicResource BrushBorder}" Margin="8,6,8,8"/>
+                                                                   <DockPanel Margin="8,0,8,4">
+                                                                       <Button DockPanel.Dock="Right" Content="clear" Command="{Binding ClearCommand}"
+                                                                               AutomationProperties.Name="{Binding Title, StringFormat=Clear {0}}">
+                                                                           <Button.Style>
+                                                                               <Style TargetType="Button" BasedOn="{StaticResource HelpLinkButton}">
+                                                                                   <Setter Property="Visibility" Value="Hidden"/>
+                                                                                   <Style.Triggers>
+                                                                                       <DataTrigger Binding="{Binding HasChecked}" Value="True">
+                                                                                           <Setter Property="Visibility" Value="Visible"/>
+                                                                                       </DataTrigger>
+                                                                                   </Style.Triggers>
+                                                                               </Style>
+                                                                           </Button.Style>
+                                                                       </Button>
+                                                                       <TextBlock Text="{Binding HeadingText}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                                                  Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                                                                   </DockPanel>
+                                                                   <ItemsControl ItemsSource="{Binding Options}" Margin="14,0,0,0">
+                                                                       <ItemsControl.ItemTemplate>
+                                                                           <DataTemplate DataType="{x:Type vm:LibraryFilterOption}">
+                                                                               <ToggleButton IsThreeState="{Binding AllowExclude, Mode=OneTime}" IsChecked="{Binding State, Mode=TwoWay}"
+                                                                                             Style="{StaticResource FilterOptionToggle}"
+                                                                                             Content="{Binding DisplayLabel}"
+                                                                                             Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVis}}"
+                                                                                             ToolTip="{Binding ToolTipText}"
+                                                                                             AutomationProperties.Name="{Binding DisplayLabel}"/>
+                                                                           </DataTemplate>
+                                                                       </ItemsControl.ItemTemplate>
+                                                                   </ItemsControl>
+                                                               </StackPanel>
+                                                           </DataTemplate>
+                                                       </ItemsControl.ItemTemplate>
+                                                   </ItemsControl>
+                                               </StackPanel>
                                            </ScrollViewer>
 
                                            <!-- Click runs before Command, so the flyout is already closed by

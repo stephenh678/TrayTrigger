@@ -49,6 +49,40 @@ public class ColorGuardTests
     }
 
     /// <summary>
+    /// Text is dimmed with a palette color, never with Opacity. Opacity blends the text with whatever is behind
+    /// it, so the result is a color no theme names and none can set, and it drifts from surface to surface.
+    /// Colors.xaml has TextSecondary, TextMuted and TextDisabled for the dimmer shades; a disabled link gets
+    /// TextDisabled from HelpLinkButton itself. This looks at a TextBlock written with a number for Opacity,
+    /// and at a Style for TextBlocks or for a link button that sets one. Images, shadows, cards and animated
+    /// fades (an Opacity bound or animated, not written as a number) are not text and are not checked.
+    /// </summary>
+    [Fact]
+    public void NoText_IsDimmedWithOpacity()
+    {
+        var textBlockOpacity = new Regex("<TextBlock\\b[^<>]*?\\sOpacity=\"[0-9.]+\"", RegexOptions.Singleline);
+        var textStyle = new Regex(
+            "<Style\\b(?=[^>]*(?:TargetType=\"(?:TextBlock|\\{x:Type TextBlock\\})\"|BasedOn=\"\\{StaticResource HelpLinkButton\\}\"))[^>]*>.*?</Style>",
+            RegexOptions.Singleline);
+        var opacitySetter = new Regex("<Setter\\b[^>]*Property=\"Opacity\"[^>]*Value=\"[0-9.]+\"");
+
+        var offenders = new List<string>();
+        foreach (var file in Sources("*.xaml").Where(f => f != "Resources/Colors.xaml"))
+        {
+            string text = Read(file);
+            int LineOf(int index) => text.Take(index).Count(c => c == '\n') + 1;
+
+            foreach (Match m in textBlockOpacity.Matches(text))
+                offenders.Add($"{file}:{LineOf(m.Index + m.Value.LastIndexOf("Opacity", StringComparison.Ordinal))}  a TextBlock with Opacity");
+            foreach (Match style in textStyle.Matches(text))
+                foreach (Match setter in opacitySetter.Matches(style.Value))
+                    offenders.Add($"{file}:{LineOf(style.Index + setter.Index)}  a text style that sets Opacity");
+        }
+
+        Assert.True(offenders.Count == 0,
+            "Dim text with TextSecondary, TextMuted or TextDisabled from Resources/Colors.xaml, not with Opacity. Found:\n" + string.Join('\n', offenders));
+    }
+
+    /// <summary>
     /// A theme replaces Colors.xaml while the app runs. A {StaticResource} brush is looked up once, when
     /// its view loads, and never again, so it would keep the old theme's color. {DynamicResource} looks it
     /// up again when the dictionary changes.
