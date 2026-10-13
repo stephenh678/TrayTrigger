@@ -107,6 +107,8 @@
                                 <!-- GitHub lives under Support & Links; one button here is enough. -->
                                 <Button Content="Check for Updates" Command="{Binding CheckForUpdatesCommand}"
                                         Style="{StaticResource ModernAccentButton}" Padding="12,5"/>
+                                <Button Content="What's new" Command="{Binding ShowWhatsNewCommand}"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="12,5" Margin="0,6,0,0"/>
                             </StackPanel>
 
                             <StackPanel VerticalAlignment="Center">

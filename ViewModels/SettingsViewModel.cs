@@ -1500,6 +1500,21 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>"Show what's new after an update": the notes window, and the tray notification that offers it.</summary>
+    public bool ShowWhatsNew
+    {
+        get => _settings.ShowWhatsNew;
+        set
+        {
+            if (_settings.ShowWhatsNew != value)
+            {
+                _settings.ShowWhatsNew = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     // --- Global Manage Hotkey ---
 
     // --- Tools ---
@@ -2184,6 +2199,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));
         OnPropertyChanged(nameof(NotifyWhenScanAddsGames));
+        OnPropertyChanged(nameof(ShowWhatsNew));
         OnPropertyChanged(nameof(MinimizeOnGameLaunch));
         OnPropertyChanged(nameof(KeepLaunchersMinimized));
         OnPropertyChanged(nameof(ShowLaunchPopup));
