@@ -60,6 +60,7 @@ public partial class MainWindow : Window
             MaybeShowWelcomePrompt();
             MaybeShowPerformanceProfileMigrationPrompt();
             MaybeShowMetadataSourcesReminder();
+            MaybeShowWhatsNew();
         };
 
         _viewModel.RequestScanResultsPicker += OnRequestScanResultsPicker;
@@ -208,6 +209,24 @@ public partial class MainWindow : Window
         {
             _viewModel.Import.SkipFirstTimeLauncherDetection();
         }
+    }
+
+    /// <summary>
+    /// The "What's new" notes, once after an update (App.NoteVersionChange makes it pending), last
+    /// among the one-time prompts. Marked seen as it opens, like the others, so it can't come back.
+    /// </summary>
+    private void MaybeShowWhatsNew()
+    {
+        var settingsVm = _viewModel.SettingsVM;
+        var settings = settingsVm.Settings;
+        if (string.IsNullOrEmpty(settings.WhatsNewPendingVersion)) return;
+
+        bool show = settings.ShowWhatsNew;
+        settings.WhatsNewPendingVersion = string.Empty;
+        if (show) settings.WhatsNewSeenVersion = WhatsNewService.StableKey(UpdateService.CurrentSemVer);
+        settingsVm.AutoSaveSettings();
+
+        if (show) WhatsNewDialog.ShowFor(this, afterUpdate: true);
     }
 
     /// <summary>

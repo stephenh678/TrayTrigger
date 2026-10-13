@@ -364,6 +364,7 @@ public class MainViewModel : ViewModelBase
             }
         });
         ExitApplicationCommand = new RelayCommand(PromptExitApplication);
+        ShowWhatsNewCommand = new RelayCommand(() => WhatsNewDialog.ShowFor(null, afterUpdate: false));
 
         OpenSettingsCommand = new RelayCommand(OpenSettings);
         OpenTaskbarSettingsCommand = new RelayCommand(TrayPromotionService.OpenWindowsTaskbarSettings);
@@ -642,6 +643,7 @@ public class MainViewModel : ViewModelBase
     }
     public ICommand CheckForUpdatesCommand => Update.CheckForUpdatesCommand;
     public ICommand ExitApplicationCommand { get; }
+    public ICommand ShowWhatsNewCommand { get; }
 
     // --- ABOUT SUB-SECTIONS ---
     private AboutSubSection _currentAboutSection = AboutSubSection.All;

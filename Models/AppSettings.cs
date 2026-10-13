@@ -276,5 +276,16 @@ public class AppSettings
 
     /// <summary>The version that last ran, so an update can be noted once in Activity &amp; History.</summary>
     public string LastRunVersion { get; set; } = string.Empty;
+
+    /// <summary>"Show what's new after an update": the notes dialog, and the tray notification
+    /// that offers it when TrayTrigger starts in the tray.</summary>
+    public bool ShowWhatsNew { get; set; } = true;
+
+    /// <summary>The stable version (such as "1.6.2") whose notes an update has made due and the
+    /// user has not been shown yet. Empty when nothing is waiting.</summary>
+    public string WhatsNewPendingVersion { get; set; } = string.Empty;
+
+    /// <summary>The stable version whose notes were last shown, so its betas and release don't repeat them.</summary>
+    public string WhatsNewSeenVersion { get; set; } = string.Empty;
 }
 

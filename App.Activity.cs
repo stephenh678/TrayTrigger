@@ -28,6 +28,7 @@ public partial class App
     private DispatcherTimer? _activityToastTimer;
     /// <summary>The last notification shown was Activity &amp; History's, so clicking it opens the page.</summary>
     private bool _lastToastOpensActivity;
+    private bool _lastToastOpensWhatsNew;
     private bool _startupTweakCheckPending;
 
     /// <summary>Every tray notification goes through here, so a click knows whose it was.</summary>
@@ -36,7 +37,21 @@ public partial class App
     private void ShowTrayNotification(string title, string message, bool opensActivity)
     {
         _lastToastOpensActivity = opensActivity;
+        _lastToastOpensWhatsNew = false;
         _trayIcon?.ShowNotification(title, message);
+    }
+
+    /// <summary>
+    /// A start in the tray after an update has no window to show the "What's new" popup in, so a
+    /// notification offers it; clicking it opens the window, which shows the popup. Not shown when
+    /// the window is up (it shows the popup itself) or the setting is off.
+    /// </summary>
+    private void OfferWhatsNewFromTray()
+    {
+        var settings = _mainViewModel.Settings;
+        if (_mainWindow != null || !settings.ShowWhatsNew || string.IsNullOrEmpty(settings.WhatsNewPendingVersion)) return;
+        ShowTrayNotification("TrayTrigger updated", $"Now on {UpdateService.CurrentVersionDisplay}. Click to see what's new.");
+        _lastToastOpensWhatsNew = true;
     }
 
     /// <summary>
@@ -49,6 +64,12 @@ public partial class App
         string previous = settings.LastRunVersion;
         if (string.Equals(previous, current, StringComparison.OrdinalIgnoreCase)) return;
         settings.LastRunVersion = current;
+        // The "What's new" notes are offered once per stable version: a beta of 1.6.2 and then 1.6.2
+        // itself are one offer. Kept until shown, so a toast that was missed still gets its popup.
+        if (settings.ShowWhatsNew && WhatsNewService.IsDue(previous, UpdateService.CurrentSemVer, settings.WhatsNewSeenVersion))
+        {
+            settings.WhatsNewPendingVersion = WhatsNewService.StableKey(UpdateService.CurrentSemVer);
+        }
         // Saved now rather than at exit, so a run that doesn't end cleanly can't note it twice.
         _storageService.SaveSettings(settings, source: "App.NoteVersionChange");
         if (string.IsNullOrWhiteSpace(previous)) return;
@@ -94,11 +115,19 @@ public partial class App
         {
             _trayIcon.TrayBalloonTipClicked += (_, _) =>
             {
+                if (_lastToastOpensWhatsNew)
+                {
+                    _lastToastOpensWhatsNew = false;
+                    ShowMainWindow(); // its first load shows the popup
+                    return;
+                }
                 if (!_lastToastOpensActivity) return;
                 _lastToastOpensActivity = false;
                 OpenSection(NavSection.Activity);
             };
         }
+
+        OfferWhatsNewFromTray();
 
         // Tweaks TrayTrigger applied that Windows has changed back since: read once, a minute in,
         // and only when it has applied some - never while a game is running.
