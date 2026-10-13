@@ -540,6 +540,8 @@ public class LibraryFilterTests : IDisposable
         var settings = new AppSettings();
         var keys = Local("Keys"); keys.Hotkey = "Ctrl+1";
         var first = NewLibrary(settings, keys, Local("Plain"));
+        // DLSS Override is only offered on a PC with an NVIDIA driver, which a CI runner lacks.
+        Option(first.Filter, "setting:dlss").IsAvailable = true;
         Option(first.Filter, "status:hotkey").IsExcluded = true;
         Option(first.Filter, "setting:dlss").IsExcluded = true;
         Assert.Equal(["!setting:dlss", "!status:hotkey"], first.Filter.ActiveKeys().Order().ToList());
