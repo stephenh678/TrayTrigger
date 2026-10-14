@@ -27,7 +27,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Status / Type Icon Badge -->
-                <Border x:Name="IconBadge" Grid.Column="0" Width="44" Height="44" CornerRadius="{StaticResource RadiusLarge}" 
+                <Border x:Name="IconBadge" Grid.Column="0" Width="44" Height="44" CornerRadius="{DynamicResource RadiusLarge}" 
                         Background="{DynamicResource BrushDangerWash}" BorderBrush="{DynamicResource BrushDangerBorder}" BorderThickness="1.5" 
                         Margin="0,0,16,0" VerticalAlignment="Top" HorizontalAlignment="Center">
                     <TextBlock x:Name="IconGlyph" Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeHeading}"

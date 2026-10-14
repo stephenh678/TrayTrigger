@@ -350,6 +350,8 @@ public partial class App : Application
         if (!isScreenshot && startupSettings.ApplyOneTimeUpgrades())
             _storageService.SaveSettings(startupSettings);
 
+        // The dialogs that can be resized open at the size they were last left at.
+        TrayTrigger.Services.WindowSizeMemory.Configure(() => _mainViewModel?.Settings ?? startupSettings, s => { if (!_skipSettingsSaveOnExit) _storageService.SaveSettings(s); });
         _mainViewModel = new MainViewModel(
             _storageService,
             startupSettings,

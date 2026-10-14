@@ -455,6 +455,7 @@ public sealed class BackupService
         restored.MainWindowMaximized = current?.MainWindowMaximized ?? false;
         restored.GameDetailsWidth = current?.GameDetailsWidth;
         restored.GameDetailsHeight = current?.GameDetailsHeight;
+        restored.WindowSizes = current?.WindowSizes ?? new();
         restored.StartWithWindows = current?.StartWithWindows ?? false;
         if (current != null)
         {

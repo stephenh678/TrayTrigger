@@ -30,6 +30,37 @@ public class ThemeServiceApplyTests : IDisposable
     });
 
     [Fact]
+    public void ATheme_ThatSetsCorners_ChangesTheRadiiOnScreen_AndDarkPutsThemBack()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "tt-shape-" + Guid.NewGuid().ToString("N"));
+        string before = ThemeCatalog.UserThemesDirectory;
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "Leaf.theme.json"), """{ "shape": { "RadiusCard": [0, 20, 0, 20] } }""");
+            ThemeCatalog.UserThemesDirectory = root;
+
+            OnUiThread(() =>
+            {
+                var resources = System.Windows.Application.Current.Resources;
+                Assert.True(ThemeService.Instance.Apply("user:Leaf"));
+                Assert.Equal(new System.Windows.CornerRadius(0, 20, 0, 20), resources["RadiusCard"]);
+                Assert.Equal(new System.Windows.CornerRadius(0, 19, 0, 19), resources["RadiusPoster"]);
+                Assert.Equal(new System.Windows.CornerRadius(6), resources["RadiusControl"]);
+
+                ThemeService.Instance.Apply(ThemeCatalog.DarkId);
+                Assert.Equal(new System.Windows.CornerRadius(8), resources["RadiusCard"]);
+                Assert.Equal(new System.Windows.CornerRadius(7), resources["RadiusPoster"]);
+            });
+        }
+        finally
+        {
+            ThemeCatalog.UserThemesDirectory = before;
+            try { Directory.Delete(root, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    [Fact]
     public void TheThemesFolder_DeletedAndMadeAgain_IsWatchedAgain()
     {
         string root = Path.Combine(Path.GetTempPath(), "tt-watch-" + Guid.NewGuid().ToString("N"));

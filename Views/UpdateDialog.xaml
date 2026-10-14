@@ -40,7 +40,7 @@
 
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">
                         <!-- Current Version Badge -->
-                        <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                        <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                             <TextBlock x:Name="CurrentVersionText" Text="v1.0.0" FontSize="{StaticResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushTextMuted}" FontWeight="SemiBold"/>
                         </Border>
@@ -49,15 +49,15 @@
                                    Margin="8,0,8,0" VerticalAlignment="Center"/>
 
                         <!-- New Version Badge -->
-                        <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2">
+                        <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                             <TextBlock x:Name="NewVersionText" Text="v1.0.1" FontSize="{StaticResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
                         </Border>
 
-                        <Border x:Name="LatestBadge" Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <Border x:Name="LatestBadge" Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="LATEST" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
                         </Border>
-                        <Border x:Name="PrereleaseBadge" Background="{DynamicResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                        <Border x:Name="PrereleaseBadge" Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
                             <TextBlock Text="PRE-RELEASE" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}"/>
                         </Border>
                     </StackPanel>
@@ -71,7 +71,7 @@
 
             <!-- Row 1: Release Notes Viewer -->
             <Border Grid.Row="1" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
-                    BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="RELEASE NOTES" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
                                Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>

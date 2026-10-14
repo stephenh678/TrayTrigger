@@ -933,7 +933,9 @@ public partial class App
             {
                 // Edit Theme on the built-in Dark theme, which opens as a copy; nothing is saved. "green" first
                 // changes the accent, to show the preview following it:
-                // --screenshot-theme-edit [green|picker] <file.png>
+                // --screenshot-theme-edit [green|picker|hard|leaf|pill|extreme|customize|preview|closed|tall|random<N>] <file.png>
+                // (leaf, pill and extreme set the corners, customize opens the per-kind list with a square poster, preview and
+                // closed force the live preview panel open or shut, tall makes the window tall enough to show everything)
                 string targetPng = e.Args.Skip(i + 1).FirstOrDefault(a => a.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) ?? e.Args[i + 1];
                 _skipSettingsSaveOnExit = true;
                 var editor = new TrayTrigger.ViewModels.ThemeEditorViewModel(
@@ -966,10 +968,31 @@ public partial class App
                     ExitApplication();
                     return;
                 }
+                bool Has(string flag) => e.Args.Any(a => a.Equals(flag, StringComparison.OrdinalIgnoreCase));
+                if (Has("leaf") || Has("pill") || Has("extreme"))
+                {
+                    editor.Corners.Shape = TrayTrigger.Services.Theming.ThemeCorners.Shapes.First(s => s.Id == (Has("leaf") ? "leaf" : Has("pill") ? "pill" : "rounded"));
+                    editor.Corners.Roundness = Has("extreme") ? 14 : 6;
+                }
+                // random<N>: Randomize with seed N (random3, random12 ...), to see what a roll looks like
+                if (e.Args.FirstOrDefault(a => a.StartsWith("random", StringComparison.OrdinalIgnoreCase) && int.TryParse(a.AsSpan(6), out _)) is { } roll)
+                {
+                    editor.Random = new Random(int.Parse(roll.AsSpan(6)));
+                    editor.RandomizeCommand.Execute(null);
+                }
+                if (Has("customize"))
+                {
+                    editor.Corners.ShowCustomize = true;
+                    editor.Corners.Posters.SelectedShape = editor.Corners.Posters.Choices.First(c => c.Id == "rounded");
+                    editor.Corners.Posters.Step = 0;
+                }
                 var dlg = new ThemeEditDialog(editor);
+                if (Has("preview")) editor.IsPreviewOpen = true;
+                if (Has("closed")) editor.IsPreviewOpen = false;
+                if (Has("tall")) dlg.Height = 1300;
                 dlg.Show();
                 dlg.UpdateLayout();
-                CaptureVisual(dlg, 940, (int)dlg.ActualHeight, targetPng);
+                CaptureVisual(dlg, (int)dlg.ActualWidth, (int)dlg.ActualHeight, targetPng);
                 dlg.Close();
                 ExitApplication();
                 return;

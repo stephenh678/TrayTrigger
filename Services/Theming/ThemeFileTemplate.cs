@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Windows;
 
 namespace TrayTrigger.Services.Theming;
 
@@ -69,7 +70,8 @@ internal static class ThemeFileTemplate
     /// <summary>Every color name the file can list, in the order the file writes them.</summary>
     internal static IEnumerable<string> Names => Main.Concat(Optional).Concat(FineTuning).Select(e => e.Name);
 
-    public static string Write(string name, ThemePalette palette, bool isDark, (string Image, double Strength)? background = null, string position = BackgroundPosition.Center)
+    public static string Write(string name, ThemePalette palette, bool isDark, (string Image, double Strength)? background = null, string position = BackgroundPosition.Center,
+        IReadOnlyDictionary<string, CornerRadius>? shape = null)
     {
         var text = new StringBuilder();
         text.AppendLine("{");
@@ -85,6 +87,16 @@ internal static class ThemeFileTemplate
         text.AppendLine($"    \"strength\": {(background?.Strength ?? 0.6).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}  // 0 hides the picture, 1 shows it at full brightness");
         text.AppendLine("  },");
         text.AppendLine();
+        if (shape is { Count: > 0 })
+        {
+            text.AppendLine("  // Corner radii in pixels: one number for all four corners, or four (top-left, top-right, bottom-right, bottom-left).");
+            text.AppendLine("  // RadiusSmall: tags. RadiusControl: buttons and boxes. RadiusCard: cards and panels. RadiusPoster: cover art, which follows the card less 1 when left out.");
+            text.AppendLine("  \"shape\": {");
+            foreach (var key in ThemeShape.Settable.Keys)
+                if (shape.TryGetValue(key, out var radius)) text.AppendLine($"    \"{key}\": {ThemeFileEditor.FormatRadius(radius)},");
+            text.AppendLine("  },");
+            text.AppendLine();
+        }
         text.AppendLine("  // Each color line ends with a comma on purpose, so a line can be turned on or off without breaking the file.");
         text.AppendLine("  \"colors\": {");
 

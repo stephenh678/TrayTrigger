@@ -33,6 +33,7 @@ public class ColorGuardTests
         "Services/SteamMetadataService.cs", // System.Drawing overlay composited into poster images
         "Services/IconExtractorService.cs", // System.Drawing: draws the fallback game icon
         "Services/AppPalette.cs",           // formats colors; names none
+        "ViewModels/PosterSample.cs",       // the plain covers of the made-up games in the theme preview: artwork, not theme colors
     };
 
     // Services/Theming/ is left out of the scan below: it is the code that parses, derives and builds colors, so it handles values by its nature.

@@ -26,6 +26,7 @@ public partial class GameEditDialog : Window
         Action? persistLibrary = null)
     {
         InitializeComponent();
+        TrayTrigger.Services.WindowSizeMemory.Attach(this, "GameEdit");
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
         _viewModel = new GameEditViewModel(game, categories, iconExtractorService, isNewGame, steamGridDbApiKey, minConfidence, scriptsEnabled, scriptDefaults, scriptLibrary, profileTweaks, persistLibrary);

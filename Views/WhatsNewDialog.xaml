@@ -36,7 +36,7 @@
             </Grid>
 
             <Border Grid.Row="1" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                    BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
                 <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <TextBlock x:Name="NotesText" FontSize="{StaticResource FontSizeBody}"
                                Foreground="{DynamicResource BrushTextSecondary}"

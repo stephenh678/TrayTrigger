@@ -8,6 +8,8 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 - **Restore Settings Now** - Done tweaking mid-game? Right-click a running game, in the library or the tray, and put Windows back as it was while the game keeps running.
 - **Auto HDR per game** - Turn Auto HDR on or off for a single game in Edit Game, or opt in through the Optimized profile.
+- **Import theme** - Settings > Appearance > Import theme... adds a theme file (and its picture) made elsewhere.
+- **Theme corners** - Edit theme has a Corners card: pick a shape and how round it is for tags, buttons, cards and posters, with a live preview that slides out beside the window, and a Randomize button for a new starting point.
 - **Smarter Stutter Check** - It now spots a missing or tiny paging file, and a stopped AMD V-Cache optimizer on dual-chiplet X3D CPUs.
 
 ## 1.6.2

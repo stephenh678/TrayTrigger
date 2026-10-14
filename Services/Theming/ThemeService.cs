@@ -197,6 +197,7 @@ public sealed partial class ThemeService
         if (app != null)
         {
             ReplaceColors(app.Resources, Build(palette));
+            ReplaceShapes(app.Resources, ThemeShape.Build(theme.Shape));
             WindowThemeService.UseDarkChrome = theme.IsDark;
             WindowThemeService.ReapplyChrome();
         }
@@ -279,6 +280,19 @@ public sealed partial class ThemeService
             return;
         }
         merged.Insert(0, colors);
+    }
+
+    /// <summary>Swaps in a copy of Shapes.xaml holding the theme's radii; the views follow because they name each radius with DynamicResource.</summary>
+    private static void ReplaceShapes(ResourceDictionary resources, ResourceDictionary shapes)
+    {
+        var merged = resources.MergedDictionaries;
+        for (int i = 0; i < merged.Count; i++)
+        {
+            if (merged[i].Source?.OriginalString.EndsWith("Resources/Shapes.xaml", StringComparison.OrdinalIgnoreCase) != true) continue;
+            merged[i] = shapes;
+            return;
+        }
+        merged.Add(shapes);
     }
 
     // ---- Auto ----------------------------------------------------------------------------------------------------------------

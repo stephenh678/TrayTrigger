@@ -41,7 +41,7 @@
         </Grid>
 
         <!-- Results -->
-        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+        <Border Grid.Row="2" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                 BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Margin="0,0,0,10">
             <Grid>
                 <ListBox x:Name="ResultsListBox" Background="Transparent" BorderThickness="0"
@@ -81,7 +81,7 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <DockPanel LastChildFill="True">
-                                <Border DockPanel.Dock="Right" Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5" Margin="10,0,0,0"
+                                <Border DockPanel.Dock="Right" Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1.5" Margin="10,0,0,0"
                                         VerticalAlignment="Center" Visibility="{Binding CurrentVisibility}">
                                     <TextBlock Text="CURRENT" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
                                 </Border>

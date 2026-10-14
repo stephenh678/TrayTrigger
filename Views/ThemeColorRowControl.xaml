@@ -33,7 +33,7 @@
             </ToggleButton.Style>
             <ToggleButton.Template>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="swatch" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1"
+                    <Border x:Name="swatch" CornerRadius="{DynamicResource RadiusControl}" BorderThickness="1"
                             BorderBrush="{DynamicResource BrushBorderStrong}" Background="{Binding Swatch}"/>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -84,7 +84,7 @@
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
                IsOpen="{Binding IsChecked, ElementName=SwatchButton, Mode=TwoWay}" Opened="PickerPopup_Opened">
             <Border Margin="0,0,8,8" Padding="12" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorderStrong}"
-                    BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" PreviewKeyDown="Picker_PreviewKeyDown">
+                    BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" PreviewKeyDown="Picker_PreviewKeyDown">
                 <views:ColorPickerPanel x:Name="Picker" Color="{Binding Color, Mode=TwoWay}" OriginalColor="{Binding Original}" Suggestions="{Binding Suggestions}"/>
             </Border>
         </Popup>

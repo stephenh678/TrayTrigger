@@ -6,9 +6,10 @@ namespace TrayTrigger.Tests;
 
 /// <summary>
 /// Keeps every corner radius defined in one place, <c>Resources/Shapes.xaml</c>. A view names a radius
-/// (CornerRadius="{StaticResource RadiusCard}"); code asks <c>AppShapes</c> for it. A number written anywhere
+/// (CornerRadius="{DynamicResource RadiusCard}"); code asks <c>AppShapes</c> for it. A number written anywhere
 /// else is a radius that file cannot change and docs/style-guide.html cannot list. To add a radius, give it
-/// a name in Shapes.xaml.
+/// a name in Shapes.xaml. A view reads a radius with DynamicResource, never StaticResource, so a theme that sets
+/// its own radii reaches every view without a restart.
 /// </summary>
 public class ShapeGuardTests
 {
@@ -25,11 +26,33 @@ public class ShapeGuardTests
             "Corner radii belong in Resources/Shapes.xaml, referenced by name. Found:\n" + string.Join('\n', offenders));
     }
 
+    [Fact]
+    public void NoView_ReadsARadiusWithStaticResource()
+    {
+        var offenders = Offenders(Sources("*.xaml"), new Regex("\\{StaticResource\\s+Radius\\w+\\}"));
+
+        Assert.True(offenders.Count == 0,
+            "A radius is read with DynamicResource so a theme can change it. Found:\n" + string.Join('\n', offenders));
+    }
+
+    [Fact]
+    public void NoView_ClipsToAWrittenRadius()
+    {
+        var offenders = Offenders(Sources("*.xaml"), new Regex("<RectangleGeometry\\b[^>]*\\bRadius[XY]=\"[0-9.]+\""));
+
+        Assert.True(offenders.Count == 0,
+            "A rounded clip follows the border's own radius (RoundedClipConverter), not a number. Found:\n" + string.Join('\n', offenders));
+    }
+
     /// <summary>Drawn artwork rather than UI: the tray icon's tile, whose radius follows the icon's size.</summary>
     private static readonly HashSet<string> ArtworkFiles = new()
     {
         "App.xaml.cs",            // the tray icon tile
         "Services/AppShapes.cs",  // reads radii; names none
+        "Services/Theming/ThemeShape.cs", // builds radii from the numbers a theme file gives; names none of its own
+        "Converters/RoundedClipConverter.cs", // scales a shape's corners to its size; names none
+        "Converters/PosterCardRadiusConverter.cs", // the card's corners worked out from the poster's, at the card's size
+        "Services/Theming/ThemeCorners.cs", // the editor's shapes: the numbers a shape works out to, written to a theme file
     };
 
     [Fact]

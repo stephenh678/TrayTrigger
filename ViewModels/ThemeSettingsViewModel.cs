@@ -29,6 +29,7 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         _save = save;
         EditCommand = new RelayCommand(Edit);
         OpenFolderCommand = new RelayCommand(OpenFolder);
+        ImportCommand = new RelayCommand(Import);
         DeleteCommand = new RelayCommand(Delete);
         _themes.ThemesChanged += OnThemesChanged;
         _themes.ThemeChanged += OnThemeChanged;
@@ -39,6 +40,7 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
 
     public ICommand EditCommand { get; }
     public ICommand OpenFolderCommand { get; }
+    public ICommand ImportCommand { get; }
     public ICommand DeleteCommand { get; }
 
     /// <summary>True when the chosen theme is one of the user's: a built-in theme cannot be deleted.</summary>
@@ -162,6 +164,29 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         if (id != _settings.ThemeId) SelectedThemeId = id;
         else _themes.Apply(id);
         RaiseStatus();
+    }
+
+    private void Import()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Import a theme",
+            Filter = "Theme and picture files (*.json;*.jpg;*.jpeg;*.png)|*.json;*.jpg;*.jpeg;*.png",
+            CheckFileExists = true,
+            Multiselect = true,
+        };
+        if (FileDialogCloak.Show(dialog) != true) return;
+
+        var outcome = _themes.ImportThemeFiles(dialog.FileNames);
+        if (!outcome.Ok)
+        {
+            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "The theme was not imported", outcome.Message);
+            return;
+        }
+
+        Reload();
+        SelectedThemeId = ThemeCatalog.UserThemeId(outcome.ThemePath!);
+        PictureMessage = outcome.Message;
     }
 
     private void Delete()

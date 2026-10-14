@@ -50,7 +50,7 @@
         </Grid>
 
         <!-- Results List -->
-        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+        <Border Grid.Row="2" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                 BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
             <ListBox ItemsSource="{Binding FilteredResults}"
                      Background="Transparent" BorderThickness="0"
@@ -89,7 +89,7 @@
                                       Style="{StaticResource ModernCheckBox}" DockPanel.Dock="Left"/>
 
                             <!-- Game Icon -->
-                            <Border Width="36" Height="36" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}"
+                            <Border Width="36" Height="36" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}"
                                     Margin="0,0,12,0" VerticalAlignment="Center" DockPanel.Dock="Left">
                                 <Image Source="{Binding IconImage}" Width="32" Height="32"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>

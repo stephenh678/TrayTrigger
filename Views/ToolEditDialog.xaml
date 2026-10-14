@@ -36,7 +36,7 @@
             <StackPanel Margin="0,0,6,0">
                 <!-- CARD 1: IDENTITY -->
                 <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                        BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14" Margin="0,0,0,12">
+                        BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="Tool" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
@@ -49,7 +49,7 @@
 
                             <!-- Icon -->
                             <StackPanel Grid.Column="0" Margin="0,0,16,0" Width="96">
-                                <Border Width="72" Height="72" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushBackground}"
+                                <Border Width="72" Height="72" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushBackground}"
                                         BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" HorizontalAlignment="Center">
                                     <Grid>
                                         <Image Source="{Binding IconPreview}" Width="56" Height="56"
@@ -96,7 +96,7 @@
 
                 <!-- CARD 2: LAUNCH -->
                 <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                        BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14" Margin="0,0,0,12">
+                        BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="Launch" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>

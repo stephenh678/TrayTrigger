@@ -214,6 +214,16 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             _pictureInfo = _editingFile ? background.Image : "The picture of " + source.Name;
         }
 
+        Corners = new ThemeCornersEditor(source);
+        Corners.Changed += (_, _) =>
+        {
+            ClearMessage();
+            ShapeChanged?.Invoke(this, EventArgs.Empty);
+        };
+        TogglePreviewCommand = new RelayCommand(() => IsPreviewOpen = !IsPreviewOpen);
+        RandomizeCommand = new RelayCommand(Randomize);
+        UndoRandomizeCommand = new RelayCommand(UndoRandomize, () => _undo != null);
+
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(() => RequestClose?.Invoke(false));
         ChoosePictureCommand = new RelayCommand(ChoosePicture);
@@ -245,12 +255,120 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     /// <summary>Raised after <see cref="Palette"/> changed, for the preview to repaint.</summary>
     internal event EventHandler? PaletteChanged;
 
+    private IReadOnlyList<PosterSample>? _samples;
+
+    /// <summary>
+    /// The game cards of the live preview: the player's own games where there are any, at the library's own size. They are made the
+    /// first time the panel opens (it starts closed, and making them reads cover pictures), so this is empty until then.
+    /// </summary>
+    public IReadOnlyList<PosterSample> Samples => _samples ?? [];
+
+    /// <summary>The corner shapes and sizes, for the Corners card.</summary>
+    public ThemeCornersEditor Corners { get; }
+
+    /// <summary>Raised after a corner changed, for the preview to repaint.</summary>
+    internal event EventHandler? ShapeChanged;
+
+    // ---- Randomize -------------------------------------------------------------------------------------------------
+
+    /// <summary>What the colors and corners were before the last Randomize, for Undo; null before the first.</summary>
+    private RandomizeUndo? _undo;
+
+    private sealed record RandomizeUndo(Color[] Colors, bool SurfaceFollowsBackground, CornersState Corners);
+
+    /// <summary>Where the colors and corners come from; a test or a capture replaces it to repeat a result.</summary>
+    internal Random Random { get; set; } = new();
+
+    public ICommand RandomizeCommand { get; }
+    public ICommand UndoRandomizeCommand { get; }
+
+    /// <summary>True after a Randomize: the Undo link shows, and puts back what was there before it.</summary>
+    public bool CanUndoRandomize => _undo != null;
+
+    /// <summary>
+    /// Fills the main colors and the corners at random as a new starting point, which is then changed by hand like anything typed: the colors
+    /// pass the contrast gate (their text is easy to read) and the corners can be anything the sliders allow. The name, the picture, the
+    /// Dark or Light start and the fine-tuning colors a file lists are left as they are.
+    /// </summary>
+    private void Randomize()
+    {
+        var found = ThemeRandomizer.Roll(Random, _isDark, colors => ThemeCatalog.ContrastIssues(PaletteFor(colors)).Count == 0);
+        if (found == null)
+        {
+            ValidationMessage = "No colors that read well were found this time, with the colors the file sets by hand. Try again.";
+            return;
+        }
+
+        _undo = new RandomizeUndo(Rows.Select(r => r.Color).ToArray(), _surfaceFollowsBackground, Corners.Capture());
+        OnPropertyChanged(nameof(CanUndoRandomize));
+
+        // The card color follows the background again: it was worked out for these colors.
+        Background.Color = found.Background;
+        Text.Color = found.Text;
+        Accent.Color = found.Accent;
+        Danger.Color = found.Danger;
+        Warning.Color = found.Warning;
+        Success.Color = found.Success;
+        _surfaceFollowsBackground = true;
+        Recompute();
+        Corners.Randomize(Random);
+    }
+
+    private void UndoRandomize()
+    {
+        if (_undo is not { } undo) return;
+        _undo = null;
+        OnPropertyChanged(nameof(CanUndoRandomize));
+
+        for (int i = 0; i < Rows.Count; i++) Rows[i].Color = undo.Colors[i];
+        _surfaceFollowsBackground = undo.SurfaceFollowsBackground;
+        Recompute();
+        Corners.Restore(undo.Corners);
+    }
+
+    /// <summary>Every color the theme would have with these main colors (and the fine-tuning ones a file sets by hand), for checking them before they are used.</summary>
+    private ThemePalette PaletteFor(ThemeRandomizer.Colors colors)
+    {
+        var overrides = new Dictionary<string, Color>(_handSet)
+        {
+            ["Background"] = colors.Background,
+            ["TextPrimary"] = colors.Text,
+            ["Accent"] = colors.Accent,
+            ["Danger"] = colors.Danger,
+            ["Warning"] = colors.Warning,
+            ["SuccessText"] = colors.Success,
+        };
+        return ThemeDerivation.Resolve(ThemeCatalog.BasePalette(_isDark), overrides);
+    }
+
+    private bool _isPreviewOpen;
+
+    /// <summary>Whether the live preview panel is out. It starts closed; the window widens or narrows to match.</summary>
+    public bool IsPreviewOpen
+    {
+        get => _isPreviewOpen;
+        set
+        {
+            if (!SetProperty(ref _isPreviewOpen, value)) return;
+            OnPropertyChanged(nameof(PreviewTabText));
+            if (value && _samples == null)
+            {
+                _samples = PosterSample.Build(PosterSample.LibraryGames());
+                OnPropertyChanged(nameof(Samples));
+            }
+        }
+    }
+
+    /// <summary>The words on the edge tab: where the preview is, and which way it goes.</summary>
+    public string PreviewTabText => _isPreviewOpen ? "Live preview  <" : "Live preview  >";
+    public ICommand TogglePreviewCommand { get; }
+
     /// <summary>Raised when the window should close: true when the theme was saved.</summary>
     public event Action<bool>? RequestClose;
 
     public string WindowTitle => _editingFile ? "Edit Theme" : "New Theme";
     public string Subtitle => _editingFile
-        ? "Colors, picture and name. The preview shows each change; nothing else changes until you save."
+        ? "The preview shows each change. Nothing is saved until you press Save Changes."
         : $"A copy of {_source.Name} with your changes. It is saved as a theme of your own.";
 
     public string HeadingText => string.IsNullOrWhiteSpace(_name) ? "New theme" : _name.Trim();
@@ -496,7 +614,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     public bool HasUnsavedChanges => Snapshot() != _initial;
 
     private string Snapshot() =>
-        string.Join('|', _name, _isDark, string.Join(',', Rows.Select(r => ThemeColor.Format(r.Color))), _strength.ToString("0.00"), _position, _picture, _pictureSource);
+        string.Join('|', _name, _isDark, string.Join(',', Rows.Select(r => ThemeColor.Format(r.Color))), _strength.ToString("0.00"), _position, _picture, _pictureSource, Corners.Snapshot());
 
     private void Save()
     {
@@ -516,7 +634,8 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             .Where(r => r.Color != r.Original && !(r.Key == "Surface" && _surfaceFollowsBackground))
             .ToDictionary(r => r.Key, r => r.Color);
 
-        var request = new ThemeEditRequest(_source, _name.Trim(), _isDark, Palette, changed, _picture, _pictureSource, _strength, _position);
+        var (shapeSet, shapeClear) = Corners.ForSave();
+        var request = new ThemeEditRequest(_source, _name.Trim(), _isDark, Palette, changed, _picture, _pictureSource, _strength, _position, shapeSet, shapeClear);
         var outcome = _themes.SaveTheme(request);
         if (!outcome.Ok)
         {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Windows;
 using System.Windows.Media;
 
 namespace TrayTrigger.Services.Theming;
@@ -30,7 +31,9 @@ internal sealed record ThemeDefinition(
     /// <summary>The theme's picture behind the pages; null takes the base theme's.</summary>
     ThemeBackground? Background = null,
     /// <summary>What was skipped in the file (a color that is not one, a base that is neither dark nor light), for Settings to show.</summary>
-    IReadOnlyList<string>? Warnings = null);
+    IReadOnlyList<string>? Warnings = null,
+    /// <summary>The corner radii the theme sets (see <see cref="ThemeShape"/>); null leaves every radius at the app's own.</summary>
+    IReadOnlyDictionary<string, CornerRadius>? Shape = null);
 
 /// <summary>The result of reading a theme file: the theme, or why there is none, and what was skipped on the way.</summary>
 internal sealed record ThemeLoadResult(ThemeDefinition? Theme, string? Error, IReadOnlyList<string> Warnings);
@@ -133,9 +136,16 @@ internal static class ThemeFileReader
                 background = new ThemeBackground(image, strength, position);
             }
 
+            Dictionary<string, CornerRadius>? shape = null;
+            if (root.TryGetProperty("shape", out var sh))
+            {
+                if (sh.ValueKind == JsonValueKind.Object) shape = ThemeShape.Read(sh, warnings);
+                else warnings.Add("shape must be an object of radius names; skipped.");
+            }
+
             string id = origin == ThemeOrigin.BuiltIn ? name : "user:" + fileName;
             return new ThemeLoadResult(
-                new ThemeDefinition(id, name, author, baseName == "dark", origin, path, colors, background, warnings),
+                new ThemeDefinition(id, name, author, baseName == "dark", origin, path, colors, background, warnings, shape),
                 null, warnings);
         }
         catch (JsonException ex)

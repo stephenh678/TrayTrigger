@@ -32,11 +32,11 @@
             </Grid.ColumnDefinitions>
 
             <!-- Poster Artwork Container -->
-            <Border Grid.Column="0" Width="170" Height="255" CornerRadius="{StaticResource RadiusCard}"
+            <Border Grid.Column="0" Width="170" Height="255" CornerRadius="{DynamicResource RadiusCard}"
                     Background="{DynamicResource BrushBackground}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" Margin="0,0,20,0">
                 <Border.Clip>
-                    <RectangleGeometry Rect="0,0,168,253" RadiusX="7" RadiusY="7"/>
+                    <MultiBinding Converter="{StaticResource RoundedClipConverter}"><Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}"/><Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/><Binding Path="CornerRadius" RelativeSource="{RelativeSource Self}"/><Binding Path="BorderThickness" RelativeSource="{RelativeSource Self}"/></MultiBinding>
                 </Border.Clip>
                 <Grid>
                     <!-- Fallback Icon Tile if no poster -->
@@ -132,7 +132,7 @@
                 <!-- Scores & Sentiment Badges -->
                 <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
                     <!-- Metacritic Score -->
-                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" 
+                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" 
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
                         <Border.Style>
                             <Style TargetType="Border">
@@ -151,7 +151,7 @@
                     </Border>
 
                     <!-- RAWG community rating (RAWG source only; fills in where Metacritic is absent) -->
-                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
+                    <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
                             Visibility="{Binding HasRawgRating, Converter={StaticResource BoolToVis}}"
                             ToolTip="Community rating on rawg.io">
@@ -163,7 +163,7 @@
                     </Border>
 
                     <!-- ESRB rating (RAWG source only) -->
-                    <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
+                    <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center"
                             Visibility="{Binding HasEsrbRating, Converter={StaticResource BoolToVis}}"
                             ToolTip="ESRB age rating">
@@ -174,7 +174,7 @@
                     </Border>
 
                     <!-- Steam Review Summary -->
-                    <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}"
+                    <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}"
                             Padding="8,4" Margin="0,0,8,4" VerticalAlignment="Center">
                         <Border.Style>
                             <Style TargetType="Border">
@@ -205,7 +205,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}" 
-                                        BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="8,3" Margin="0,0,6,6">
+                                        BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="8,3" Margin="0,0,6,6">
                                     <TextBlock Text="{Binding}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                 </Border>
                             </DataTemplate>
@@ -318,7 +318,7 @@
                      fields above and the synopsis below - never the category, art or sorting. -->
                 <DockPanel Margin="0,0,0,10" LastChildFill="True">
                     <Border DockPanel.Dock="Left" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" VerticalAlignment="Center" Margin="0,0,12,0"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" VerticalAlignment="Center" Margin="0,0,12,0"
                             Visibility="{Binding CanToggleSource, Converter={StaticResource BoolToVis}}">
                         <StackPanel Orientation="Horizontal">
                             <Button Command="{Binding SelectSteamSourceCommand}" Content="Steam" Padding="12,4"
@@ -381,13 +381,13 @@
                 </StackPanel>
 
                 <!-- RAWG status notice (neutral, not an error): no match / bad key / offline -->
-                <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,14"
+                <Border Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,0,0,14"
                         Visibility="{Binding HasRawgStatus, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="{Binding RawgStatusMessage}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"/>
                 </Border>
 
                 <!-- Error Notice -->
-                <Border Background="{DynamicResource BrushDangerWash}" BorderBrush="{DynamicResource BrushDangerBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDangerWash}" BorderBrush="{DynamicResource BrushDangerBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,0,0,14">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -403,7 +403,7 @@
 
 
                 <!-- A. About / Synopsis Card -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                     <StackPanel>
                         <TextBlock Text="ABOUT THE GAME" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
                         <TextBlock Text="{Binding ShortDescription}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
@@ -417,7 +417,7 @@
                 </Border>
 
                 <!-- B. PC System Requirements Card -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -445,7 +445,7 @@
                 </Border>
 
                 <!-- C. Latest Patch Notes & News Card -->
-                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12">
+                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -490,7 +490,7 @@
                                                            DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                                 <!-- PATCH badge: shown only when Steam tagged the post as patch notes -->
                                                 <Border DockPanel.Dock="Left" Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1"
-                                                        CornerRadius="{StaticResource RadiusSmall}" Padding="6,1" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                        CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1" Margin="0,0,8,0" VerticalAlignment="Center"
                                                         Visibility="{Binding IsPatchNotes, Converter={StaticResource BoolToVis}}">
                                                     <TextBlock Text="PATCH" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushSuccessText}"/>
                                                 </Border>

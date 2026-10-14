@@ -10,6 +10,9 @@
     <CornerRadius x:Key="RadiusControl">6</CornerRadius>
     <!-- Cards, panels and menus. -->
     <CornerRadius x:Key="RadiusCard">8</CornerRadius>
+    <!-- The cover art inside a game card, clipped to this. One pixel less than RadiusCard (the card's border), so
+         the art meets the card's outline exactly. A theme that sets nothing for it gets that: its card, less 1. -->
+    <CornerRadius x:Key="RadiusPoster">7</CornerRadius>
     <!-- Circles, pills and round badges. A radius larger than half the shape just makes it fully round,
          so this one value covers every size of circle. -->
     <CornerRadius x:Key="RadiusLarge">999</CornerRadius>

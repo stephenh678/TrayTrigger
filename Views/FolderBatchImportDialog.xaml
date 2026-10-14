@@ -52,7 +52,7 @@
         </Grid>
 
         <!-- Games List -->
-        <Border Grid.Row="2" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+        <Border Grid.Row="2" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                 BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
             <ListBox ItemsSource="{Binding FilteredGames}" 
                      Background="Transparent" BorderThickness="0"
@@ -104,7 +104,7 @@
                             </CheckBox>
 
                             <!-- Game Icon -->
-                            <Border Width="36" Height="36" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}" 
+                            <Border Width="36" Height="36" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}" 
                                     Margin="0,0,12,0" VerticalAlignment="Center" DockPanel.Dock="Left">
                                 <Image Source="{Binding IconImage}" Width="28" Height="28" 
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -146,7 +146,7 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5">
+                                    <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1.5">
                                         <TextBlock Text="IN LIBRARY" Foreground="{DynamicResource BrushSuccessText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold"/>
                                     </Border>
                                 </Border>

@@ -17,9 +17,9 @@ Dev-only code in <code>Diagnostics/</code> is not listed (4 color uses there).</
 <div class="sum">
 <div><b>40</b>palette brushes</div>
 <div><b>0</b>hard-coded colors in XAML (0 not in the palette)</div>
-<div><b>5</b>colors in code (5 uses)</div>
+<div><b>14</b>colors in code (14 uses)</div>
 <div><b>6</b>text sizes</div>
-<div><b>6</b>corner radii</div>
+<div><b>7</b>corner radii</div>
 </div>
 <h2>Palette (40 brushes)</h2><p class="note">What a theme would define. Contrast shown for text-on-background use.</p><div class="grid">
 <div class="sw"><div class="chip" style="background:#121214"></div><div class="t"><b>BrushBackground</b><code>#121214</code> · ColorBackground<br><small>vs window 1.0:1 · vs card 1.1:1</small></div></div>
@@ -72,16 +72,25 @@ Dev-only code in <code>Diagnostics/</code> is not listed (4 color uses there).</
 <span class="s-one">one-off</span> (used once, no near palette color). Counts: .</p>
 <table><tr><th>Color</th><th>Uses</th><th>Status</th><th>Nearest / palette name</th><th>Used by (property · file:line)</th></tr>
 </table>
-<h2>Colors in code (5 uses)</h2>
+<h2>Colors in code (14 uses)</h2>
 <p class="note">Colors built in C# (<code>Color.FromRgb</code>, <code>Brushes.X</code>, hex strings) in the app's own code. What is left here is artwork (the tray icon tile, the poster overlay, the fallback game icon) and has to stay the same in any theme. Not listed: the dev diagnostics, the build-time icon generator, the helper that reads the palette, and <code>Transparent</code>.</p>
 <table><tr><th>Color</th><th>Status</th><th>File:line</th><th>Code</th></tr>
 <tr><td><span class="dot" style="background:#007ACC"></span><code>#007ACC</code></td><td class="s-inpal">in palette · BrushAccent</td><td><small>IconExtractorService.cs:205</small></td><td><small>using var borderPen = new Pen(Color.FromArgb(0, 122, 204), 3f); // #007ACC</small></td></tr>
-<tr><td><span class="dot" style="background:#16FFFFFF"></span><code>#16FFFFFF</code></td><td class="s-one">one-off</td><td><small>App.xaml.cs:1194</small></td><td><small>private static readonly Brush TrayIconTileBrush = CreateFrozenBrush(Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF));</small></td></tr>
+<tr><td><span class="dot" style="background:#14B8A6"></span><code>#14B8A6</code></td><td class="s-one">one-off · BrushAccent</td><td><small>ThemeCatalog.cs:161</small></td><td><small>private static readonly string[] ExtraAccents = [&quot;#14B8A6&quot;, &quot;#EC4899&quot;, &quot;#E06C75&quot;];</small></td></tr>
+<tr><td><span class="dot" style="background:#16FFFFFF"></span><code>#16FFFFFF</code></td><td class="s-one">one-off</td><td><small>App.xaml.cs:1205</small></td><td><small>private static readonly Brush TrayIconTileBrush = CreateFrozenBrush(Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF));</small></td></tr>
 <tr><td><span class="dot" style="background:#26262B"></span><code>#26262B</code></td><td class="s-close">close · BrushSurfaceHover</td><td><small>IconExtractorService.cs:201</small></td><td><small>using (var bgBrush = new SolidBrush(Color.FromArgb(38, 38, 43))) // #26262B</small></td></tr>
+<tr><td><span class="dot" style="background:#2B4A7A"></span><code>#2B4A7A</code></td><td class="s-one">one-off · BrushBorderAccent</td><td><small>PosterSample.cs:39</small></td><td><small>(&quot;Cyberpunk 2077&quot;, &quot;RPG&quot;, &quot;12h 40m played&quot;, &quot;Today&quot;, &quot;#2b4a7a&quot;, &quot;#c9a227&quot;),</small></td></tr>
+<tr><td><span class="dot" style="background:#3A2F1F"></span><code>#3A2F1F</code></td><td class="s-one">one-off · BrushWarningWash</td><td><small>PosterSample.cs:40</small></td><td><small>(&quot;Elden Ring&quot;, &quot;Action&quot;, &quot;86h 5m played&quot;, &quot;Yesterday&quot;, &quot;#3a2f1f&quot;, &quot;#8a6a3a&quot;),</small></td></tr>
+<tr><td><span class="dot" style="background:#4A1F3A"></span><code>#4A1F3A</code></td><td class="s-one">one-off · BrushBadgePurpleWash</td><td><small>PosterSample.cs:41</small></td><td><small>(&quot;Hades II&quot;, &quot;Roguelike&quot;, &quot;23h 15m played&quot;, &quot;3 days ago&quot;, &quot;#4a1f3a&quot;, &quot;#c0504d&quot;),</small></td></tr>
+<tr><td><span class="dot" style="background:#8A6A3A"></span><code>#8A6A3A</code></td><td class="s-one">one-off · BrushWarningBorder</td><td><small>PosterSample.cs:40</small></td><td><small>(&quot;Elden Ring&quot;, &quot;Action&quot;, &quot;86h 5m played&quot;, &quot;Yesterday&quot;, &quot;#3a2f1f&quot;, &quot;#8a6a3a&quot;),</small></td></tr>
 <tr><td><span class="dot" style="background:#8C0A0A0E"></span><code>#8C0A0A0E</code></td><td class="s-one">one-off</td><td><small>SteamMetadataService.cs:854</small></td><td><small>using (var overlay = new SolidBrush(Color.FromArgb(140, 10, 10, 14)))</small></td></tr>
+<tr><td><span class="dot" style="background:#C0504D"></span><code>#C0504D</code></td><td class="s-one">one-off · BrushDangerSolidHover</td><td><small>PosterSample.cs:41</small></td><td><small>(&quot;Hades II&quot;, &quot;Roguelike&quot;, &quot;23h 15m played&quot;, &quot;3 days ago&quot;, &quot;#4a1f3a&quot;, &quot;#c0504d&quot;),</small></td></tr>
+<tr><td><span class="dot" style="background:#C9A227"></span><code>#C9A227</code></td><td class="s-one">one-off · BrushWarningBorder</td><td><small>PosterSample.cs:39</small></td><td><small>(&quot;Cyberpunk 2077&quot;, &quot;RPG&quot;, &quot;12h 40m played&quot;, &quot;Today&quot;, &quot;#2b4a7a&quot;, &quot;#c9a227&quot;),</small></td></tr>
+<tr><td><span class="dot" style="background:#E06C75"></span><code>#E06C75</code></td><td class="s-inpal">in palette · BrushDanger</td><td><small>ThemeCatalog.cs:161</small></td><td><small>private static readonly string[] ExtraAccents = [&quot;#14B8A6&quot;, &quot;#EC4899&quot;, &quot;#E06C75&quot;];</small></td></tr>
+<tr><td><span class="dot" style="background:#EC4899"></span><code>#EC4899</code></td><td class="s-one">one-off · BrushDanger</td><td><small>ThemeCatalog.cs:161</small></td><td><small>private static readonly string[] ExtraAccents = [&quot;#14B8A6&quot;, &quot;#EC4899&quot;, &quot;#E06C75&quot;];</small></td></tr>
 <tr><td><span class="dot" style="background:#F0F0F0"></span><code>#F0F0F0</code></td><td class="s-one">one-off · BrushTextPrimary</td><td><small>IconExtractorService.cs:217</small></td><td><small>using var textBrush = new SolidBrush(Color.FromArgb(240, 240, 240));</small></td></tr>
 </table>
-<h2>Named colors in XAML</h2><p class="note">Colors written as a word, such as <code>White</code>. <code>Transparent</code> (41 uses) is the same in every theme and is not listed.</p>
+<h2>Named colors in XAML</h2><p class="note">Colors written as a word, such as <code>White</code>. <code>Transparent</code> (50 uses) is the same in every theme and is not listed.</p>
 <table><tr><th>Name</th><th>Property</th><th>Where</th></tr>
 <tr><td colspan="3">None.</td></tr>
 </table>
@@ -89,21 +98,22 @@ Dev-only code in <code>Diagnostics/</code> is not listed (4 color uses there).</
 <p class="note">The sizes in <code>Resources/Typography.xaml</code>, with how often each is used. Views reference these names; a number written straight into a view is caught by the TypographyGuardTests.
 No view writes a size as a number.</p>
 <table><tr><th>Name</th><th>Size</th><th>Uses</th><th>Sample</th><th>Mostly in</th></tr>
-<tr><td><code>FontSizeBadge</code></td><td>9</td><td>78</td><td style="font-size:9px">The quick brown fox jumps over the lazy dog</td><td><small>LibraryView ×26, SystemView ×14, AboutView ×13, ActivityView ×7</small></td></tr>
-<tr><td><code>FontSizeBody</code></td><td>12</td><td>680</td><td style="font-size:12px">The quick brown fox jumps over the lazy dog</td><td><small>SettingsView ×177, SystemView ×87, AboutView ×71, GameEditDialog ×64</small></td></tr>
-<tr><td><code>FontSizeSubhead</code></td><td>14</td><td>67</td><td style="font-size:14px">The quick brown fox jumps over the lazy dog</td><td><small>SettingsView ×20, AboutView ×18, SystemView ×11, GameEditDialog ×5</small></td></tr>
-<tr><td><code>FontSizeTitle</code></td><td>16</td><td>34</td><td style="font-size:16px">The quick brown fox jumps over the lazy dog</td><td><small>MainWindow ×8, SystemView ×6, ToolsView ×5, LibraryView ×4</small></td></tr>
-<tr><td><code>FontSizeHeading</code></td><td>20</td><td>21</td><td style="font-size:20px">The quick brown fox jumps over the lazy dog</td><td><small>AboutView ×2, GameEditDialog ×2, ToolEditDialog ×2, ToolsView ×2</small></td></tr>
+<tr><td><code>FontSizeBadge</code></td><td>9</td><td>82</td><td style="font-size:9px">The quick brown fox jumps over the lazy dog</td><td><small>LibraryView ×26, SystemView ×14, AboutView ×13, ActivityView ×7</small></td></tr>
+<tr><td><code>FontSizeBody</code></td><td>12</td><td>748</td><td style="font-size:12px">The quick brown fox jumps over the lazy dog</td><td><small>SettingsView ×183, SystemView ×87, AboutView ×75, GameEditDialog ×66</small></td></tr>
+<tr><td><code>FontSizeSubhead</code></td><td>14</td><td>72</td><td style="font-size:14px">The quick brown fox jumps over the lazy dog</td><td><small>SettingsView ×21, AboutView ×20, SystemView ×11, GameEditDialog ×5</small></td></tr>
+<tr><td><code>FontSizeTitle</code></td><td>16</td><td>35</td><td style="font-size:16px">The quick brown fox jumps over the lazy dog</td><td><small>MainWindow ×8, SystemView ×6, ToolsView ×5, LibraryView ×4</small></td></tr>
+<tr><td><code>FontSizeHeading</code></td><td>20</td><td>22</td><td style="font-size:20px">The quick brown fox jumps over the lazy dog</td><td><small>AboutView ×2, GameEditDialog ×2, ToolEditDialog ×2, ToolsView ×2</small></td></tr>
 <tr><td><code>FontSizeDisplay</code></td><td>32</td><td>10</td><td style="font-size:32px">The quick brown fox jumps over the lazy dog</td><td><small>ToolsView ×4, LibraryView ×3, ActivityView ×2, SearchNoMatches ×1</small></td></tr>
 </table>
-<h2>Corner radii (6 named)</h2>
-<p class="note">The radii in <code>Resources/Shapes.xaml</code>, with how often each is used. Views reference these names; a number written straight into a view is caught by the ShapeGuardTests.
+<h2>Corner radii (7 named)</h2>
+<p class="note">The radii in <code>Resources/Shapes.xaml</code>, with how often each is used. Views reference these names with DynamicResource, so a theme can change them; a number written straight into a view, or a StaticResource, is caught by the ShapeGuardTests. The Theme column says whether a theme file's <code>shape</code> block can set the radius (and its largest value); the poster and the inner edges follow the theme's card, less 1 pixel, unless the theme sets the poster.
 No view writes a radius as a number.</p>
-<table><tr><th>Name</th><th>Radius</th><th>Uses</th><th>Shape</th><th>Mostly in</th></tr>
-<tr><td><code>RadiusSmall</code></td><td>4</td><td>87</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:4px"></div></td><td><small>LibraryView ×29, AboutView ×14, App ×13, SystemView ×9</small></td></tr>
-<tr><td><code>RadiusControl</code></td><td>6</td><td>59</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:6px"></div></td><td><small>AboutView ×18, LibraryView ×7, SettingsView ×7, App ×5</small></td></tr>
-<tr><td><code>RadiusCard</code></td><td>8</td><td>80</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:8px"></div></td><td><small>AboutView ×20, SettingsView ×20, GameEditDialog ×7, LibraryView ×7</small></td></tr>
-<tr><td><code>RadiusLarge</code></td><td>999</td><td>6</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:999px"></div></td><td><small>App ×4, HelpDialog ×1, ModernDialog ×1</small></td></tr>
-<tr><td><code>RadiusInnerTop</code></td><td>7,7,0,0</td><td>1</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:7px 7px 0px 0px"></div></td><td><small>LibraryView ×1</small></td></tr>
-<tr><td><code>RadiusInnerBottom</code></td><td>0,0,7,7</td><td>1</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:0px 0px 7px 7px"></div></td><td><small>LibraryView ×1</small></td></tr>
+<table><tr><th>Name</th><th>Radius</th><th>Theme</th><th>Uses</th><th>Shape</th><th>Mostly in</th></tr>
+<tr><td><code>RadiusSmall</code></td><td>4</td><td><small>up to 16</small></td><td>95</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:4px"></div></td><td><small>LibraryView ×29, App ×17, AboutView ×14, SystemView ×9</small></td></tr>
+<tr><td><code>RadiusControl</code></td><td>6</td><td><small>up to 48</small></td><td>69</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:6px"></div></td><td><small>AboutView ×20, SettingsView ×7, App ×5, GameEditDialog ×5</small></td></tr>
+<tr><td><code>RadiusCard</code></td><td>8</td><td><small>up to 64</small></td><td>89</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:8px"></div></td><td><small>AboutView ×22, SettingsView ×20, GameEditDialog ×7, LibraryView ×7</small></td></tr>
+<tr><td><code>RadiusPoster</code></td><td>7</td><td><small>up to 96 (else card less 1)</small></td><td>5</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:7px"></div></td><td><small>LibraryView ×3, ThemeEditDialog ×2</small></td></tr>
+<tr><td><code>RadiusLarge</code></td><td>999</td><td><small>no</small></td><td>10</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:999px"></div></td><td><small>App ×5, ColorPickerPanel ×3, HelpDialog ×1, ModernDialog ×1</small></td></tr>
+<tr><td><code>RadiusInnerTop</code></td><td>7,7,0,0</td><td><small>follows the card</small></td><td>0</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:7px 7px 0px 0px"></div></td><td><small></small></td></tr>
+<tr><td><code>RadiusInnerBottom</code></td><td>0,0,7,7</td><td><small>follows the card</small></td><td>0</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:0px 0px 7px 7px"></div></td><td><small></small></td></tr>
 </table></main></body></html>

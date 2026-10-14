@@ -216,12 +216,14 @@ for name, v in sizes:
 w('</table>')
 
 w(f"""<h2>Corner radii ({len(radius_tokens)} named)</h2>
-<p class="note">The radii in <code>Resources/Shapes.xaml</code>, with how often each is used. Views reference these names; a number written straight into a view is caught by the ShapeGuardTests.
+<p class="note">The radii in <code>Resources/Shapes.xaml</code>, with how often each is used. Views reference these names with DynamicResource, so a theme can change them; a number written straight into a view, or a StaticResource, is caught by the ShapeGuardTests. The Theme column says whether a theme file's <code>shape</code> block can set the radius (and its largest value); the poster and the inner edges follow the theme's card, less 1 pixel, unless the theme sets the poster.
 {("<b>Still written as a number: " + ", ".join(f"{v} ({c})" for v, c in sorted(radius_literals.items())) + ".</b>") if radius_literals else "No view writes a radius as a number."}</p>
-<table><tr><th>Name</th><th>Radius</th><th>Uses</th><th>Shape</th><th>Mostly in</th></tr>""")
+<table><tr><th>Name</th><th>Radius</th><th>Theme</th><th>Uses</th><th>Shape</th><th>Mostly in</th></tr>""")
+theme_radius = {'RadiusSmall': 'up to 16', 'RadiusControl': 'up to 48', 'RadiusCard': 'up to 64', 'RadiusPoster': 'up to 96 (else card less 1)',
+                'RadiusInnerTop': 'follows the card', 'RadiusInnerBottom': 'follows the card'}
 for name, v in radius_tokens:
     rr = ' '.join(x + 'px' for x in v.split(','))
-    w(f'<tr><td><code>{name}</code></td><td>{e(v)}</td><td>{radius_uses[name]}</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:{rr}"></div></td>'
+    w(f'<tr><td><code>{name}</code></td><td>{e(v)}</td><td><small>{theme_radius.get(name, "no")}</small></td><td>{radius_uses[name]}</td><td><div style="width:64px;height:28px;background:var(--card);border:1px solid #fff4;border-radius:{rr}"></div></td>'
       f'<td><small>{e(", ".join(f"{k} ×{c}" for k, c in radius_where[name].most_common(4)))}</small></td></tr>')
 w('</table></main></body></html>')
 

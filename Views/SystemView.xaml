@@ -16,7 +16,7 @@
             <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}"/>
             <Setter Property="Padding" Value="12,10"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
@@ -36,27 +36,27 @@
                             <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
                                        AutomationProperties.Name="{Binding AccessibleStatus}"
                                        Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{Binding StatusBadgeForeground}"/>
                             </Border>
                             <!-- Every row says which set it is in: PRESET or OPT-IN. A muted blue, so it
                                  doesn't compete with the green and amber status badges. -->
-                            <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                            <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Part of the Performance Preset: Apply Performance Preset turns it on, Undo Preset puts it back.">
                                 <TextBlock Text="PRESET" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushInfoText}"/>
                             </Border>
-                            <Border Background="{DynamicResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                            <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Has a real trade-off, so it stays off until you turn it on yourself.">
                                 <TextBlock Text="OPT-IN" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushTextSoft}"/>
                             </Border>
-                            <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                            <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding RequiresReboot, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Windows only picks up the new value after a restart.">
                                 <TextBlock Text="⟳ RESTART" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}"/>
                             </Border>
-                            <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                            <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Writes a machine-wide value, so Windows asks for administrator permission.">
                                 <StackPanel Orientation="Horizontal">
@@ -116,7 +116,7 @@
                         <WrapPanel>
                             <TextBlock Text="{Binding Title}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" TextWrapping="Wrap"
                                        Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                            <Border Background="{Binding BadgeBackground}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <Border Background="{Binding BadgeBackground}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding BadgeText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{Binding BadgeForeground}"/>
                             </Border>
                         </WrapPanel>
@@ -149,15 +149,15 @@
                             <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
                                        AutomationProperties.Name="{Binding AccessibleStatus}"
                                        Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <Border Background="{Binding StatusBadgeColor}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding StatusBadgeText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{Binding StatusBadgeForeground}"/>
                             </Border>
-                            <Border Background="{DynamicResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                            <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding IsOptIn, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Has a real trade-off, so it stays off until you turn it on yourself.">
                                 <TextBlock Text="OPT-IN" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushTextSoft}"/>
                             </Border>
-                            <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
+                            <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="6,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding RequiresAdmin, Converter={StaticResource BoolToVis}}"
                                     ToolTip="Writes a machine-wide value, so Windows asks for administrator permission.">
                                 <StackPanel Orientation="Horizontal">
@@ -226,7 +226,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
-                BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" HorizontalAlignment="Left"
+                BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" HorizontalAlignment="Left" VerticalAlignment="Center"
                 views:ScrollToTop.Target="{Binding ElementName=ContentScroll}">
             <StackPanel Orientation="Horizontal">
                 <Button Content="All" Command="{Binding SelectAllTabCommand}"
@@ -722,7 +722,7 @@
 
                             <!-- No badge legend here on purpose: the badges (OPTIMAL, OPT-IN, RESTART, ADMIN,
                                  restore point) are defined in the "How tweaks work" help topic this links to. -->
-                            <Border Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" Padding="8" Margin="0,4,0,0">
+                            <Border Background="{DynamicResource BrushDialogCard}" CornerRadius="{DynamicResource RadiusControl}" Padding="8" Margin="0,4,0,0">
                                 <!-- The link follows the sentence it belongs to, like the other cards' Learn more links. -->
                                 <DockPanel LastChildFill="True">
                                     <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
@@ -872,7 +872,7 @@
         <!-- Floating Non-Blocking Busy Toast (shown while Apply Preset / Undo Preset runs) -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
                 Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5"
-                CornerRadius="{StaticResource RadiusCard}" Padding="16,10" Panel.ZIndex="100">
+                CornerRadius="{DynamicResource RadiusCard}" Padding="16,10" Panel.ZIndex="100">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{DynamicResource ColorFloatingShadow}"/>
             </Border.Effect>
