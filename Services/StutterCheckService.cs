@@ -36,6 +36,15 @@ public sealed record AppAccelerationState(string Name, bool Installed, bool Hard
 
 public enum IntelApoState { NotNeeded, Present, Missing, Unknown }
 
+/// <summary>AMD's 3D V-Cache optimizer service: only dual-CCD X3D CPUs depend on it.</summary>
+public enum VCacheOptimizerState { NotApplicable, Running, NotRunning, Unknown }
+
+/// <summary>How Windows' paging file is set up, read from its configuration.</summary>
+public enum PagefileKind { Unknown, None, SystemManaged, Custom }
+
+/// <summary>The paging file setting: its kind and, for a custom one, the largest size set in MB (all files together).</summary>
+public sealed record PagefileState(PagefileKind Kind, long CustomMaxMegabytes = 0);
+
 /// <summary>Everything a run reads, gathered first so the check itself is a pure function (and testable).</summary>
 public sealed class StutterCheckInputs
 {
@@ -52,6 +61,8 @@ public sealed class StutterCheckInputs
     public bool? SearchIndexerBusy { get; init; }
     public double SearchIndexerCpuPercent { get; init; }
     public IntelApoState IntelApo { get; init; } = IntelApoState.Unknown;
+    public PagefileState Pagefile { get; init; } = new(PagefileKind.Unknown);
+    public VCacheOptimizerState VCacheOptimizer { get; init; } = VCacheOptimizerState.NotApplicable;
 }
 
 /// <summary>The outcome of a run: the rows, how long it took, and the lines Copy Results produces.</summary>
@@ -153,11 +164,13 @@ public static class StutterCheckService
         Tweak(inputs, items, "game_dvr", "Game Bar background recording is off", "Game Bar is recording in the background",
             "\"Record what happened\" keeps the GPU encoder busy and writes to your SSD the whole time you play. Fix it applies the Game Bar Captures tweak below.");
         Tweak(inputs, items, "game_mode", "Windows Game Mode is on", "Windows Game Mode is off",
-            "Game Mode keeps Windows Update and driver installs from starting while a full-screen game runs. Microsoft recommends it on; some threads blame it for hitching in particular games, so if one still stutters, try it the other way for that game. Fix it applies the Game Mode tweak below.");
+            "Game Mode keeps Windows Update and driver installs from starting while a full-screen game runs. Microsoft recommends it on; some threads blame it for hitching in particular games, so if one still stutters, try it the other way for that game. On a dual-CCD Ryzen X3D (7900X3D, 7950X3D, 9950X3D), AMD's chipset driver relies on Windows recognizing the game, so leaving Game Mode off can cost the game its place on the V-Cache cores. Fix it applies the Game Mode tweak below.");
         PowerPlan(inputs, items);
         CoreIsolation(inputs, items);
         SearchIndexer(inputs, items);
         IntelApo(inputs, items);
+        Pagefile(inputs, items);
+        VCacheOptimizer(inputs, items);
         return new StutterCheckReport(items, now ?? DateTime.Now, took ?? TimeSpan.Zero);
     }
 
@@ -346,6 +359,41 @@ public static class StutterCheckService
                     StutterVerdict.NeedsLook, StutterAction.HelpTopic, "Here's how", "tweaks/stutter_apo"));
                 break;
         }
+    }
+
+    private static void VCacheOptimizer(StutterCheckInputs inputs, List<StutterCheckItem> items)
+    {
+        switch (inputs.VCacheOptimizer)
+        {
+            case VCacheOptimizerState.Running:
+                items.Add(new("vcache_optimizer", "AMD's V-Cache optimizer is running", "", StutterVerdict.Fine));
+                break;
+            case VCacheOptimizerState.NotRunning:
+                items.Add(new("vcache_optimizer", "AMD's V-Cache optimizer isn't running",
+                    "This CPU has two chiplets and only one has the extra cache. AMD's chipset software runs a service that keeps games on the cache cores, and without it games may land on the other chiplet and run slower. If the PC only just started, wait a minute and run the check again.",
+                    StutterVerdict.NeedsLook, StutterAction.HelpTopic, "Here's how", "tweaks/stutter_vcache"));
+                break;
+        }
+    }
+
+    /// <summary>A custom paging file under this size counts as restricted.</summary>
+    internal const long RestrictedPagefileMegabytes = 4096;
+
+    private static void Pagefile(StutterCheckInputs inputs, List<StutterCheckItem> items)
+    {
+        var state = inputs.Pagefile;
+        if (state.Kind == PagefileKind.Unknown) return;
+        bool none = state.Kind == PagefileKind.None;
+        bool small = state.Kind == PagefileKind.Custom && state.CustomMaxMegabytes < RestrictedPagefileMegabytes;
+        if (!none && !small)
+        {
+            items.Add(new("pagefile", state.Kind == PagefileKind.SystemManaged ? "Windows manages the paging file" : "The paging file has room", "", StutterVerdict.Fine));
+            return;
+        }
+        items.Add(new("pagefile",
+            none ? "Windows has no paging file" : $"The paging file is limited to {state.CustomMaxMegabytes} MB",
+            "Without a paging file Windows can't use memory beyond your RAM, and some games (heavy ones such as Unreal Engine 5 titles) hitch or crash when they run out. Letting Windows manage the paging file is the default setting.",
+            StutterVerdict.NeedsLook, StutterAction.OpenSetting, "Open System Properties", "SystemPropertiesAdvanced.exe"));
     }
 
     private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";

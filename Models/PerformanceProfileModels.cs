@@ -28,6 +28,13 @@ public class OptimizedProfileTweakConfig
     public bool HdrEnabled { get; set; }
 
     /// <summary>
+    /// Turns Windows 11's Auto HDR on for each game's own program while it runs, then puts the
+    /// game's setting back. Off by default, like HDR: it suits some games and ruins others. It only
+    /// shows anything while Windows' HDR and the global Auto HDR switch are on.
+    /// </summary>
+    public bool AutoHdrEnabled { get; set; }
+
+    /// <summary>
     /// Turns Windows toast notifications off for the length of the session (the notification
     /// centre's global toast switch), restoring the prior value on exit. Defaults to false: a user
     /// waiting on a message mid-game would rather see it.

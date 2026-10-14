@@ -197,6 +197,85 @@ public static class StutterProbes
         }
     }
 
+    /// <summary>
+    /// How the paging file is configured: the PagingFiles setting under Session Manager's Memory
+    /// Management key. Empty means none; "?:\pagefile.sys" or sizes of 0 0 mean Windows manages it;
+    /// "C:\pagefile.sys 1024 2048" is a custom file with a minimum and maximum in MB.
+    /// </summary>
+    public static PagefileState Pagefile()
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management");
+            return ParsePagefile(key?.GetValue("PagingFiles") as string[]);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("StutterCheck", $"Could not read the paging file setting: {ex.Message}");
+            return new PagefileState(PagefileKind.Unknown);
+        }
+    }
+
+    internal static PagefileState ParsePagefile(string[]? lines)
+    {
+        if (lines == null) return new PagefileState(PagefileKind.Unknown);
+        var entries = lines.Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
+        if (entries.Count == 0) return new PagefileState(PagefileKind.None);
+
+        long total = 0;
+        foreach (var entry in entries)
+        {
+            var parts = entry.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            bool sized = parts.Length >= 3 && long.TryParse(parts[^2], out long min) && long.TryParse(parts[^1], out long max) && (min > 0 || max > 0);
+            if (!sized) return new PagefileState(PagefileKind.SystemManaged);
+            total += long.Parse(parts[^1]);
+        }
+        return new PagefileState(PagefileKind.Custom, total);
+    }
+
+    /// <summary>The registry name of AMD's 3D V-Cache Performance Optimizer service.</summary>
+    internal const string VCacheServiceName = "amd3dvcacheSvc";
+
+    /// <summary>
+    /// Whether AMD's V-Cache optimizer service is running. Asked only on a dual-CCD X3D CPU: on a
+    /// single-CCD one the service is stopped by design, and elsewhere it isn't needed.
+    /// </summary>
+    public static VCacheOptimizerState VCacheOptimizer(CpuCoreLayout layout)
+    {
+        if (layout != CpuCoreLayout.VCacheMultiCcd) return VCacheOptimizerState.NotApplicable;
+        try
+        {
+            var psi = new ProcessStartInfo("sc.exe", $"query {VCacheServiceName}")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var process = Process.Start(psi);
+            if (process == null) return VCacheOptimizerState.Unknown;
+            string output = process.StandardOutput.ReadToEnd();
+            if (!process.WaitForExit(5000)) return VCacheOptimizerState.Unknown;
+            return ParseServiceQuery(output, process.ExitCode);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("StutterCheck", $"Couldn't ask about the V-Cache optimizer service: {ex.Message}");
+            return VCacheOptimizerState.Unknown;
+        }
+    }
+
+    /// <summary>
+    /// Reads "sc query" for one service. The STATE line starts with a number whatever the Windows
+    /// language (4 is running); exit code 1060 means the service isn't installed.
+    /// </summary>
+    internal static VCacheOptimizerState ParseServiceQuery(string? output, int exitCode)
+    {
+        if (exitCode == 1060) return VCacheOptimizerState.NotRunning;
+        var match = Regex.Match(output ?? "", @"STATE\s*:\s*(\d+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (!match.Success) return VCacheOptimizerState.Unknown;
+        return match.Groups[1].Value == "4" ? VCacheOptimizerState.Running : VCacheOptimizerState.NotRunning;
+    }
+
     /// <summary>Core Ultra desktop and mobile parts, and the 14th-gen desktop K parts Intel added APO to.</summary>
     private static readonly Regex ApoCpu = new(@"Core\(TM\)\s+Ultra|Core\s+Ultra|Core\(TM\)\s+i[579]-14\d{3}K", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 

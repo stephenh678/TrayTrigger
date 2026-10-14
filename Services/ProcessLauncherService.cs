@@ -182,6 +182,31 @@ public partial class ProcessLauncherService
         if (Interlocked.Exchange(ref session.GameStartedSignalled, 1) != 0) return;
         try { SessionGameStarted?.Invoke(session); }
         catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionGameStarted handler failed: {ex.Message}"); }
+        _ = Task.Run(() => NoteAntiCheat(session));
+    }
+
+    /// <summary>
+    /// Looks for an anti-cheat once the game has had time to start its services, remembers it on the
+    /// game (for the Game Details tag) and notes it in the Activity & History row. Never throws.
+    /// </summary>
+    private async Task NoteAntiCheat(ActiveGameSession session)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+            string? found = AntiCheatDetector.Find(SessionInstallDir(session), session.Game.ExecutablePath, session.LaunchedAtUtc);
+            // A check that finds nothing never clears what an earlier launch saw: the game may have
+            // exited before its anti-cheat service started, or the service may start late.
+            if (found == null) return;
+            LaunchRecord.Note(session.GameId, LaunchRecord.Game, $"{found} detected");
+            if (string.Equals(found, session.Game.DetectedAntiCheat, StringComparison.Ordinal)) return;
+            session.Game.DetectedAntiCheat = found;
+            GameUpdated?.Invoke(session.Game);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Verbose("Launcher", $"Anti-cheat check failed: {ex.Message}");
+        }
     }
 
     public ProcessLauncherService(
@@ -329,7 +354,9 @@ public partial class ProcessLauncherService
             TerminateSessionProcesses(session);
         }
 
-        FinishSession(session, gameRan: session.GameStarted, forceCloseGame ? "force-closed by user" : "ended by user");
+        // The game keeps running when it isn't force-closed, so its launcher stays open: closing the
+        // client under a running game breaks its DRM, cloud saves and achievements.
+        FinishSession(session, gameRan: session.GameStarted, forceCloseGame ? "force-closed by user" : "ended by user", closeLauncher: forceCloseGame);
         return true;
     }
 
@@ -766,7 +793,7 @@ public partial class ProcessLauncherService
     /// Built-in tweaks restore first so the user's post-exit script sees the machine back in its
     /// normal state.
     /// </summary>
-    private void FinishSession(ActiveGameSession session, bool gameRan, string reason)
+    private void FinishSession(ActiveGameSession session, bool gameRan, string reason, bool closeLauncher = true)
     {
         if (Interlocked.Exchange(ref session.Finished, 1) != 0) return;
 
@@ -833,7 +860,7 @@ public partial class ProcessLauncherService
 
         try { SessionEnded?.Invoke(session); } catch (Exception ex) { LoggingService.Verbose("Launcher", $"SessionEnded handler failed: {ex.Message}"); }
 
-        if (gameRan && game.CloseLauncherOnExit && LaunchRouter.ClientPlatformFor(session.Route) is LauncherPlatform platform)
+        if (closeLauncher && gameRan && game.CloseLauncherOnExit && LaunchRouter.ClientPlatformFor(session.Route) is LauncherPlatform platform)
         {
             LauncherClientCloser.Close(platform, _steamScannerService.GetSteamInstallPath());
             LaunchRecord.Note(game.Id, LaunchRecord.Launch, $"{LaunchRouter.PlatformLabelFor(session.Route)} closed after");

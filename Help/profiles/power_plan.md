@@ -12,6 +12,7 @@ Switches Windows to the "Ultimate Plan - TrayTrigger" power plan when the game l
 ## Trade-offs
 
 - While the game runs, idle power draw and heat are higher. On a laptop, battery drains faster. The moment the game exits you are back on your normal plan, so none of that applies at the desktop.
+- On battery the plan is not applied: Windows stays on whatever plan it was using, and the game's row in Activity & History says "Ultimate Performance power plan, on battery to save power" under Skipped. The check is made once, when the game launches; plugging in later does not switch it on.
 - This is the same plan the permanent Performance Tweak uses. Prefer this session-scoped version unless you have a reason to run it all day.
 
 ## Details

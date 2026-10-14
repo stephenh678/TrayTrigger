@@ -163,6 +163,8 @@ public class GameEditViewModel : ViewModelBase
         _initialCpuAffinity = game.CpuAffinity;
         _hdr = game.Hdr;
         _initialHdr = game.Hdr;
+        _autoHdr = game.AutoHdr;
+        _initialAutoHdr = game.AutoHdr;
         _cpuCoresDelaySeconds = game.CpuCoresDelaySeconds.ToString();
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
@@ -233,7 +235,7 @@ public class GameEditViewModel : ViewModelBase
     {
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
-        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr,
+        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr,
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -330,8 +332,8 @@ public class GameEditViewModel : ViewModelBase
         {
             if (_profileTweaks == null) return Array.Empty<string>();
             if (PerformanceProfile == PerformanceProfileMode.Off)
-                return new[] { Hdr == HdrMode.On
-                    ? "Off: only HDR is changed when this game runs, from the HDR choice below."
+                return new[] { Hdr == HdrMode.On || AutoHdr != HdrMode.ProfileDefault
+                    ? "Off: only HDR and Auto HDR are changed when this game runs, from the choices below."
                     : "Off: nothing is changed when this game runs." };
             var tweaks = _profileTweaks(PerformanceProfile);
             if (tweaks.Count == 0)
@@ -477,6 +479,32 @@ public class GameEditViewModel : ViewModelBase
             NotifyProfileSummary();
         }
     }
+
+    // --- Auto HDR (per game; overrides the Optimized profile's Enable Auto HDR switch) ---
+
+    private HdrMode _autoHdr;
+    private HdrMode _initialAutoHdr;
+    public HdrMode AutoHdr
+    {
+        get => _autoHdr;
+        set
+        {
+            _autoHdr = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(AutoHdrHint));
+            NotifyProfileSummary();
+        }
+    }
+
+    /// <summary>Auto HDR is a Windows 11 feature: left out on Windows 10, and on a PC with no HDR display, unless the game already has a choice.</summary>
+    public bool ShowAutoHdr => _initialAutoHdr != HdrMode.ProfileDefault || (SystemTweaksService.IsWindows11 && HdrDisplayPresent());
+
+    public string AutoHdrHint => AutoHdr switch
+    {
+        HdrMode.On => "Auto HDR is switched on for this game while it runs and put back when it exits, whatever its profile. It needs Windows' HDR and the global Auto HDR switch to be on, and covers DirectX 11 and 12 games.",
+        HdrMode.Off => "Auto HDR is switched off for this game while it runs and put back when it exits, even when the profile would turn it on. For a game whose HUD blows out or whose whites clip.",
+        _ => "Follows the Optimized profile's Enable Auto HDR switch on the System page, like every other game on that profile. It needs Windows' HDR and the global Auto HDR switch to be on.",
+    };
 
     public sealed record HdrOption(HdrMode Value, string Label);
 
@@ -1757,6 +1785,11 @@ public class GameEditViewModel : ViewModelBase
             PerformanceActivity.GameChanged(SourceGame, SourceGame.Hdr, Hdr);
         }
         SourceGame.Hdr = Hdr;
+        if (SourceGame.AutoHdr != AutoHdr)
+        {
+            PerformanceActivity.AutoHdrGameChanged(SourceGame, SourceGame.AutoHdr, AutoHdr);
+        }
+        SourceGame.AutoHdr = AutoHdr;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.
         if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;

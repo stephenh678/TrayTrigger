@@ -102,10 +102,10 @@
             <MenuItem Header="Game Details..." Command="{Binding ViewDetailsCommand}">
                 <MenuItem.Icon><TextBlock Text="&#xE946;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
             </MenuItem>
-            <!-- Suspend / Resume: one item whose wording follows the game's state. -->
-            <MenuItem Header="{Binding SuspendMenuLabel}" Command="{Binding ToggleSuspendCommand}"
-                      ToolTip="Suspend minimizes the game, freezes it where it is and mutes it, and stops its playtime clock until you resume it. Online games disconnect while suspended; games with anti-cheat are never suspended.">
-                <MenuItem.Icon><TextBlock Text="&#xE769;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+            <!-- Now Playing: one flyout to the right, as the tray menu's Now Playing row has. Only
+                 shown while the game has a session; Suspend's wording follows the game's state. -->
+            <MenuItem Header="Now Playing">
+                <MenuItem.Icon><TextBlock Text="&#xE768;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushAccentText}"/></MenuItem.Icon>
                 <MenuItem.Style>
                     <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -116,34 +116,22 @@
                         </Style.Triggers>
                     </Style>
                 </MenuItem.Style>
-            </MenuItem>
-            <MenuItem Header="Close Game" Command="{Binding CloseGameCommand}"
-                      ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
-                <MenuItem.Icon><TextBlock Text="&#xE7E8;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
-                <MenuItem.Style>
-                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </MenuItem.Style>
-            </MenuItem>
-            <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}"
-                      ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
-                <MenuItem.Icon><TextBlock Text="&#xE711;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushDanger}"/></MenuItem.Icon>
-                <MenuItem.Style>
-                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </MenuItem.Style>
+                <MenuItem Header="{Binding SuspendMenuLabel}" Command="{Binding ToggleSuspendCommand}"
+                          ToolTip="Suspend minimizes the game, freezes it where it is and mutes it, and stops its playtime clock until you resume it. Online games disconnect while suspended; games with anti-cheat are never suspended.">
+                    <MenuItem.Icon><TextBlock Text="&#xE769;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Close Game" Command="{Binding CloseGameCommand}"
+                          ToolTip="Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.">
+                    <MenuItem.Icon><TextBlock Text="&#xE7E8;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Restore Settings Now" Command="{Binding RestoreSettingsCommand}"
+                          ToolTip="Leaves the game running and puts Windows back the way it was: the Performance Profile is restored, the post-exit script runs and tools set to close after the game close. The game is no longer tracked, so its playtime stops counting.">
+                    <MenuItem.Icon><TextBlock Text="&#xE72C;" Style="{StaticResource MenuGlyphIcon}"/></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Force Close Game" Command="{Binding ForceCloseCommand}"
+                          ToolTip="Kills the game's process, then ends the session. Anything unsaved in the game is lost.">
+                    <MenuItem.Icon><TextBlock Text="&#xE711;" Style="{StaticResource MenuGlyphIcon}" Foreground="{DynamicResource BrushDanger}"/></MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="{Binding FavoriteMenuLabel}" Command="{Binding ToggleFavoriteCommand}"/>
             <MenuItem Header="{Binding HideMenuLabel}" Command="{Binding ToggleHiddenCommand}"/>

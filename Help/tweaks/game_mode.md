@@ -9,6 +9,7 @@ Enables Windows Game Mode, which Windows turns on automatically when it detects 
 - Windows Update will not install drivers or send restart notifications while a game is active.
 - Background processes get less CPU time, and the game's threads are prioritised on the main cores.
 - Microsoft's default and their recommended state for gaming PCs.
+- On a dual-CCD Ryzen X3D (7900X3D, 7950X3D, 9950X3D), AMD's chipset driver relies on Windows recognizing the game to place it on the cores with the extra cache. With Game Mode off, that placement can be lost. A game Windows doesn't recognize as a game, such as an emulator or some borderless titles, can miss out too; Game Bar (Win+G) lets you mark it as a game by hand. Single-CCD chips such as the 7800X3D and 9800X3D don't depend on this.
 
 ## Trade-offs
 

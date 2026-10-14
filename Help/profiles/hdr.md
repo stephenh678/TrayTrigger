@@ -14,6 +14,8 @@ Edit Game > Performance has an **HDR** choice for each game, when the PC has an 
 
 HDR is one setting for the whole PC, so it is decided by the first game you start: a second game started while the first is still running neither adds HDR nor takes it away. A change to a game's HDR choice is recorded in Activity & History.
 
+This is for games that support HDR. Auto HDR, which adds HDR-style brightness and colour to games that do not, has its own choice below this one and needs HDR on: see Enable Auto HDR.
+
 ## Why it helps
 
 - Some games only render their full HDR color and brightness range when Windows itself is already in HDR mode - if HDR is off system-wide, the game falls back to SDR even if it supports HDR.

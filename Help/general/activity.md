@@ -30,7 +30,7 @@ Each game you play is one row, "Played Elden Ring · 2h 17m", and it moves to th
 - **Profile**: which one and what it changed ("changed: Ultimate Performance power plan · HDR on · NVIDIA power management: Prefer maximum performance"). An Off profile says "nothing changed".
 - **Skipped**: what the profile didn't apply, and why ("Resizable BAR, off in the BIOS · speakers already unmuted").
 - **Put back**: "everything", or what couldn't be, beside the Critical row for it.
-- **Game**: what was done to the game's own process: the CPU cores it was kept on, the power throttling exemption, HDR on or off for this game, and the DLSS the game actually loaded.
+- **Game**: what was done to the game's own process: the CPU cores it was kept on, the power throttling exemption, HDR on or off for this game, the DLSS the game actually loaded, and an anti-cheat it found ("Easy Anti-Cheat detected", about 20 seconds after the game starts).
 - **Scripts**: the pre-launch and post-exit scripts that ran, or were skipped, and why, and what a script said it did ("closed OneDrive and Discord"): any line it prints starting with TT: lands here.
 - **Tools**: what the Tools page did, and didn't: "Discord closed, opened again after · MSI Afterburner already running, left as it was · OneDrive wasn't running, nothing to close". Until your last game has exited it reads "closes after your last game", and if a tool then wouldn't close or couldn't be opened again the line says so, beside the problem row for it. The tools themselves don't get rows; the history is the game.
 

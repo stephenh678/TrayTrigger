@@ -15,6 +15,7 @@ public class TweakConfigDefaultsTests
         Assert.True(tweaks.PowerPlanEnabled);
         Assert.True(tweaks.GpuPreferenceEnabled);
         Assert.False(tweaks.HdrEnabled);
+        Assert.False(tweaks.AutoHdrEnabled);
         Assert.False(tweaks.DoNotDisturbEnabled);
         Assert.False(tweaks.UnmuteAudioEnabled);
         Assert.True(tweaks.NvidiaMaxPerformanceEnabled);

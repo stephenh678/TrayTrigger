@@ -46,6 +46,7 @@ internal static class AntiCheatDetector
         ("BEService", "BattlEye"),
         ("BEService_x64", "BattlEye"),
         ("EAAntiCheat.GameService", "EA Javelin Anti-Cheat"),
+        ("vgc", "Riot Vanguard"),
     ];
 
     /// <summary>

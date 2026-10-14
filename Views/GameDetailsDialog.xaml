@@ -194,9 +194,9 @@
                     </Border>
                 </WrapPanel>
 
-                <!-- Play Mode Tags -->
+                <!-- Play Mode Tags, then the anti-cheat tag when the last launch saw one -->
                 <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,12" MaxHeight="60">
-                    <ItemsControl ItemsSource="{Binding PlayModes}">
+                    <ItemsControl ItemsSource="{Binding TagList}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel Orientation="Horizontal"/>
@@ -361,9 +361,6 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                    <TextBlock Text="{Binding MatchCaption}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
-                               VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis"
-                               Visibility="{Binding HasMatchCaption, Converter={StaticResource BoolToVis}}"/>
                 </DockPanel>
 
                 <!-- Loading State -->

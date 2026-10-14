@@ -766,6 +766,16 @@ public partial class SystemInfoService
         catch { /* no answer means no battery */ return false; }
     }
 
+    /// <summary>True on a machine with a battery that is running from it. A desktop, or no answer, is false.</summary>
+    public static bool IsOnBattery()
+    {
+        try
+        {
+            return GetSystemPowerStatus(out var status) && status.BatteryFlag != 128 && status.BatteryLifePercent <= 100 && status.ACLineStatus == 0;
+        }
+        catch { /* no answer: not treated as on battery, so the profile applies as before */ return false; }
+    }
+
     private PowerBatteryInfo GetPowerInfo()
     {
         var info = new PowerBatteryInfo();

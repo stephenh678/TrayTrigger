@@ -409,7 +409,7 @@ public class PerformanceProfileService
     /// </summary>
     public bool BeginGameSession(GameEntry game)
     {
-        if (game.PerformanceProfile == PerformanceProfileMode.Off && game.Hdr != HdrMode.On)
+        if (game.PerformanceProfile == PerformanceProfileMode.Off && game.Hdr != HdrMode.On && game.AutoHdr == HdrMode.ProfileDefault)
         {
             LoggingService.Verbose("PerformanceProfile", $"'{game.Name}': profile is Off, nothing applied.");
             LaunchRecord.Note(game.Id, LaunchRecord.Profile, "nothing changed");
@@ -515,6 +515,88 @@ public class PerformanceProfileService
         _ => game.PerformanceProfile != PerformanceProfileMode.Off && settings.OptimizedProfileTweaks.HdrEnabled,
     };
 
+    /// <summary>
+    /// What this game's session writes for Auto HDR: true for on, false for off, null to leave the
+    /// game's own Windows setting alone. The game's choice wins; otherwise the Optimized profile's
+    /// Enable Auto HDR switch, and a game on profile Off follows nothing.
+    /// </summary>
+    internal static bool? AutoHdrTarget(GameEntry game, AppSettings settings) => game.AutoHdr switch
+    {
+        HdrMode.On => true,
+        HdrMode.Off => false,
+        _ => game.PerformanceProfile != PerformanceProfileMode.Off && settings.OptimizedProfileTweaks.AutoHdrEnabled ? true : null,
+    };
+
+    /// <summary>The per-app Auto HDR number Windows stores for a game: odd is on. Its other bits vary by Windows build, so only the lowest one changes.</summary>
+    internal static int AutoHdrValue(string? existingEntry, bool on)
+    {
+        int value = int.TryParse(DirectXGlobalSettings.GetToken(existingEntry, DirectXGlobalSettings.AutoHdr), out int current) && current > 1
+            ? current
+            : 2096;
+        return on ? value | 1 : value & ~1;
+    }
+
+    /// <summary>
+    /// Writes Auto HDR on or off into the game's own graphics entry (the same one GPU preference
+    /// uses), keeping every other setting in it. The entry is captured once per game, so one restore
+    /// puts the whole thing back.
+    /// </summary>
+    private bool ApplyAutoHdr(GameEntry game, AppSettings settings, PerGameProfileSnapshot perGame, string exePath)
+    {
+        bool? target = AutoHdrTarget(game, settings);
+        if (target == null) return false;
+        if (!_backend.SupportsAutoHdr)
+        {
+            Skipped("Auto HDR, Windows 11 only");
+            return false;
+        }
+        // AppStatus=0 is how Windows keeps a game it has on its default graphics settings: nothing
+        // written into that entry is applied, so say so and leave it alone.
+        if (DirectXGlobalSettings.GetToken(_backend.GetGpuPreference(exePath), "AppStatus") == "0")
+        {
+            Skipped("Auto HDR, Windows has this game on its default graphics settings");
+            return false;
+        }
+        try
+        {
+            if (!perGame.GpuPreferenceCaptured)
+            {
+                perGame.GpuPreferenceExecutablePath = exePath;
+                perGame.PreviousGpuPreferenceValue = _backend.GetGpuPreference(exePath);
+                perGame.GpuPreferenceCaptured = true;
+            }
+            string? current = _backend.GetGpuPreference(exePath);
+            string updated = DirectXGlobalSettings.SetToken(current, DirectXGlobalSettings.AutoHdr, AutoHdrValue(current, target.Value).ToString());
+            if (DirectXGlobalSettings.GetToken(updated, "AppStatus") == null) updated = DirectXGlobalSettings.SetToken(updated, "AppStatus", "1");
+            _backend.SetGpuPreference(exePath, updated);
+            LoggingService.Verbose("PerformanceProfile", $"Auto HDR: set {(target.Value ? "on" : "off")} for '{exePath}' (was '{perGame.PreviousGpuPreferenceValue ?? "unset"}').");
+            if (game.AutoHdr == HdrMode.ProfileDefault) Note(target.Value ? "Auto HDR on" : "Auto HDR off");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn("PerformanceProfile", $"ApplyAutoHdr failed: {ex.Message}");
+            Skipped("Auto HDR couldn't be set");
+            return false;
+        }
+    }
+
+    /// <summary>The Auto HDR step for a session that has no per-game snapshot yet. Adds the snapshot when it applied.</summary>
+    private bool ApplyAutoHdrStep(GameEntry game, AppSettings settings, PerformanceProfileSessionSnapshot snapshot, string? exePath)
+    {
+        if (AutoHdrTarget(game, settings) == null) return false;
+        if (exePath == null)
+        {
+            Skipped("Auto HDR, the game's program isn't known for this launch type");
+            return false;
+        }
+        var perGame = new PerGameProfileSnapshot { GameId = game.Id };
+        if (!ApplyAutoHdr(game, settings, perGame, exePath)) return false;
+        snapshot.PerGameSnapshots.Add(perGame);
+        _store.SaveProfileSessionSnapshot(snapshot);
+        return true;
+    }
+
     private bool ApplyPreLaunchTweaks(GameEntry game, AppSettings settings, bool isFirstSession, PerformanceProfileSessionSnapshot snapshot)
     {
         bool applied = false;
@@ -527,13 +609,22 @@ public class PerformanceProfileService
             case HdrMode.On: NoteGame("HDR on for this game"); break;
             case HdrMode.Off: NoteGame("HDR left off for this game"); break;
         }
+        switch (game.AutoHdr)
+        {
+            case HdrMode.On: NoteGame("Auto HDR on for this game"); break;
+            case HdrMode.Off: NoteGame("Auto HDR off for this game"); break;
+        }
 
         // HDR is machine-wide and belongs to the first session; a later game can't add it.
         if (hdrOnly && !isFirstSession)
         {
-            LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' asked for HDR with its profile Off, but another game's session already decided HDR - nothing to apply.");
-            Skipped("HDR, as another game's session already decided it");
-            return false;
+            if (WantsHdr(game, settings))
+            {
+                LoggingService.Verbose("PerformanceProfile", $"'{game.Name}' asked for HDR with its profile Off, but another game's session already decided HDR - nothing to apply.");
+                Skipped("HDR, as another game's session already decided it");
+            }
+            // Auto HDR is per game, so it does not wait for the first session.
+            return ApplyAutoHdrStep(game, settings, snapshot, ResolveRealExecutablePath(game));
         }
 
         if (!isFirstSession) Skipped("the machine-wide tweaks, already on for another game's session");
@@ -553,7 +644,10 @@ public class PerformanceProfileService
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
-            if (hdrOnly) return applied;
+            if (hdrOnly)
+            {
+                return ApplyAutoHdrStep(game, settings, snapshot, ResolveRealExecutablePath(game)) || applied;
+            }
 
             // The two HKLM tweaks are captured first and written together, so one administrator
             // prompt covers both. The snapshot is saved before the write for the same reason it
@@ -621,6 +715,16 @@ public class PerformanceProfileService
         else if (settings.OptimizedProfileTweaks.GpuPreferenceEnabled)
         {
             Skipped("GPU preference, the game's program isn't known for this launch type");
+        }
+
+        if (AutoHdrTarget(game, settings) != null)
+        {
+            if (resolvedExePath == null) Skipped("Auto HDR, the game's program isn't known for this launch type");
+            else
+            {
+                perGame ??= new PerGameProfileSnapshot { GameId = game.Id };
+                if (ApplyAutoHdr(game, settings, perGame, resolvedExePath)) applied = true;
+            }
         }
 
         if (aggressive && settings.AggressiveProfileTweaks.DefenderExclusionEnabled && resolvedExePath != null)
@@ -814,6 +918,13 @@ public class PerformanceProfileService
     /// <summary>True when the previous scheme was captured, and so has to be restored later.</summary>
     private bool ApplyPowerPlan(PerformanceProfileSessionSnapshot snapshot)
     {
+        // Left on whatever plan is active: nothing is captured, so there is nothing to put back.
+        if (_backend.IsOnBattery)
+        {
+            LoggingService.Verbose("PerformanceProfile", "Power Plan: on battery, so the active scheme was left unchanged.");
+            Skipped("Ultimate Performance power plan, on battery to save power");
+            return false;
+        }
         string? previous = _backend.GetActivePowerSchemeGuid();
         if (previous == null)
         {
@@ -1521,7 +1632,10 @@ public class PerformanceProfileService
             snapshot.GpuPreferenceExecutablePath = exePath;
             snapshot.PreviousGpuPreferenceValue = _backend.GetGpuPreference(exePath);
             snapshot.GpuPreferenceCaptured = true;
-            _backend.SetGpuPreference(exePath, "GpuPreference=2;");
+            // Only the GpuPreference token changes: Windows keeps the game's other per-app settings in the
+            // same string (AppStatus, and AutoHDREnable with the game's Auto HDR intensity), and writing
+            // the whole value would drop them for the length of the session.
+            _backend.SetGpuPreference(exePath, DirectXGlobalSettings.SetToken(snapshot.PreviousGpuPreferenceValue, "GpuPreference", "2"));
             LoggingService.Verbose("PerformanceProfile", $"GPU Preference: set 'High performance' for '{exePath}' (was '{snapshot.PreviousGpuPreferenceValue ?? "unset"}').");
             Note("High performance GPU for the game's program");
         }
@@ -1546,14 +1660,14 @@ public class PerformanceProfileService
             {
                 _backend.DeleteGpuPreference(snapshot.GpuPreferenceExecutablePath);
             }
-            LoggingService.Verbose("PerformanceProfile", $"GPU Preference: restored for '{snapshot.GpuPreferenceExecutablePath}' to '{snapshot.PreviousGpuPreferenceValue ?? "unset"}'.");
+            LoggingService.Verbose("PerformanceProfile", $"Graphics entry: restored for '{snapshot.GpuPreferenceExecutablePath}' to '{snapshot.PreviousGpuPreferenceValue ?? "unset"}'.");
         }
         catch (Exception ex)
         {
             LoggingService.Warn("PerformanceProfile", $"RestoreGpuPreference failed: {ex.Message}");
             string path = snapshot.GpuPreferenceExecutablePath;
             string? previous = snapshot.PreviousGpuPreferenceValue;
-            NoteUnrestored($"the GPU preference for {Path.GetFileName(path)}", () =>
+            NoteUnrestored($"the graphics settings for {Path.GetFileName(path)}", () =>
             {
                 if (previous != null) _backend.SetGpuPreference(path, previous);
                 else _backend.DeleteGpuPreference(path);

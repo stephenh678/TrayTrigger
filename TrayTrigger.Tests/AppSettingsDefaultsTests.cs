@@ -36,6 +36,7 @@ public class AppSettingsDefaultsTests
         var tweaks = new AppSettings().OptimizedProfileTweaks;
         Assert.False(tweaks.UnmuteAudioEnabled);
         Assert.False(tweaks.HdrEnabled);
+        Assert.False(tweaks.AutoHdrEnabled);
         Assert.False(tweaks.DoNotDisturbEnabled);
         Assert.False(tweaks.FrameCapEnabled);
 

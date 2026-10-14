@@ -6,11 +6,11 @@ Right-clicking a game card opens its menu. Right-clicking one of two or more sel
 
 The menu is grouped, and the groups are the same in the single-game and batch menus so that what you learn in one applies to the other.
 
-1. **Doing something now** - Play, Game Details, and, while the game is running, Suspend Game (or Resume Game), Close Game and Force Close Game.
+1. **Doing something now** - Play, Game Details, and, while the game is running, a Now Playing submenu that opens to the right with Suspend Game (or Resume Game), Close Game, Restore Settings Now and Force Close Game. Restore Settings Now leaves the game running and puts Windows back the way it was: the Performance Profile is restored, the post-exit script runs and tools set to close after the game close. The game's launcher stays open. The game is no longer tracked, so its playtime stops counting.
 2. **Marking it** - Add to Favorites, Hide, Open Containing Folder, and Locate Executable if the file is missing.
 3. **Quick settings** - DLSS Override, then Performance Profile, CPU Cores, and Launch Options, each a cascading submenu.
 4. **Editing it** - Edit Game Properties, Rename, the Change submenu, Refresh Poster & Metadata, and PCGamingWiki, which opens the game's page on the wiki (see PCGamingWiki in the game info help).
-5. **Steam** - store page, library, and Verify Game Files, for games with a Steam App ID.
+5. **Steam** - store page, Open in Steam Library, and Verify Game Files, for games with a Steam App ID.
 6. **Remove from Library.**
 
 ## Quick settings

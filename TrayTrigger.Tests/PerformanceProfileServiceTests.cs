@@ -35,6 +35,10 @@ public class PerformanceProfileServiceTests : IDisposable
         public readonly List<string> Log = new();
 
         public string? GetActivePowerSchemeGuid() => ActiveScheme;
+        public bool OnBattery;
+        public bool IsOnBattery => OnBattery;
+        public bool Windows11 = true;
+        public bool SupportsAutoHdr => Windows11;
         public bool ActivateUltimatePowerPlan() { ActiveScheme = "ultimate"; Log.Add("power:ultimate"); return true; }
         /// <summary>Models a power plan Windows won't switch back to (deleted, or held by a policy).</summary>
         public bool RefusePowerScheme;
@@ -186,6 +190,144 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.True(_service.EndGameSession("g"));
         Assert.Empty(_service.UnrestoredItems);
     }
+
+    /// <summary>On battery the power plan is left alone, says so, and there is nothing to put back for it.</summary>
+    [Fact]
+    public void OnBattery_LeavesThePowerPlanAlone_AndSaysSo()
+    {
+        _backend.OnBattery = true;
+        string before = _backend.ActiveScheme;
+        var game = Game("on-battery", _exeA, PerformanceProfileMode.Optimized);
+        LaunchRecord.Begin(game.Id);
+
+        Assert.True(_service.BeginGameSession(game));
+        Assert.Equal(before, _backend.ActiveScheme);
+        Assert.DoesNotContain("power:ultimate", _backend.Log);
+        Assert.Contains(LaunchRecord.SkippedPrefix + "Ultimate Performance power plan, on battery to save power",
+            LaunchRecord.Peek(game.Id, LaunchRecord.Profile));
+
+        Assert.True(_service.EndGameSession("on-battery"));
+        Assert.Equal(before, _backend.ActiveScheme);
+    }
+
+    /// <summary>Windows keeps a game's Auto HDR intensity beside its GPU preference; the profile must not drop it.</summary>
+    [Fact]
+    public void GpuPreference_KeepsTheGamesOtherPerAppSettings_AndPutsThemBack()
+    {
+        const string existing = "AppStatus=1;AutoHDREnable=2097;";
+        _backend.GpuPrefs[_exeA] = existing;
+        var game = Game("gpu-token", _exeA, PerformanceProfileMode.Optimized);
+
+        Assert.True(_service.BeginGameSession(game));
+        Assert.Equal("AppStatus=1;AutoHDREnable=2097;GpuPreference=2;", _backend.GpuPrefs[_exeA]);
+
+        Assert.True(_service.EndGameSession("gpu-token"));
+        Assert.Equal(existing, _backend.GpuPrefs[_exeA]);
+    }
+
+    // --- Auto HDR: per game, written into the game's own graphics entry ---
+
+    [Fact]
+    public void AutoHdr_ProfileSwitchOn_WritesOnForTheGame_KeepsItsOtherSettings_AndPutsThemBack()
+    {
+        _settings.OptimizedProfileTweaks.AutoHdrEnabled = true;
+        const string existing = "AppStatus=1;AutoHDREnable=2096;GpuPreference=1;";
+        _backend.GpuPrefs[_exeA] = existing;
+        var game = Game("ahdr-profile", _exeA, PerformanceProfileMode.Optimized);
+
+        Assert.True(_service.BeginGameSession(game));
+        Assert.Equal("2097", DirectXGlobalSettings.GetToken(_backend.GpuPrefs[_exeA], "AutoHDREnable"));
+        Assert.Equal("2", DirectXGlobalSettings.GetToken(_backend.GpuPrefs[_exeA], "GpuPreference"));
+        Assert.Equal("1", DirectXGlobalSettings.GetToken(_backend.GpuPrefs[_exeA], "AppStatus"));
+
+        Assert.True(_service.EndGameSession("ahdr-profile"));
+        Assert.Equal(existing, _backend.GpuPrefs[_exeA]);
+    }
+
+    [Fact]
+    public void AutoHdr_ProfileSwitchOff_LeavesTheGamesWindowsSettingAlone()
+    {
+        const string existing = "AppStatus=1;AutoHDREnable=2096;";
+        _backend.GpuPrefs[_exeA] = existing;
+        _settings.OptimizedProfileTweaks.GpuPreferenceEnabled = false;
+        var game = Game("ahdr-nothing", _exeA, PerformanceProfileMode.Optimized);
+
+        _service.BeginGameSession(game);
+        Assert.Equal(existing, _backend.GpuPrefs[_exeA]);
+        _service.EndGameSession("ahdr-nothing");
+        Assert.Equal(existing, _backend.GpuPrefs[_exeA]);
+    }
+
+    [Fact]
+    public void AutoHdr_OnForThisGame_Works_WithTheProfileOff_AndANewEntryIsRemovedAgain()
+    {
+        var game = Game("ahdr-on", _exeA, PerformanceProfileMode.Off);
+        game.AutoHdr = HdrMode.On;
+
+        Assert.True(_service.BeginGameSession(game));
+        Assert.Equal("2097", DirectXGlobalSettings.GetToken(_backend.GpuPrefs[_exeA], "AutoHDREnable"));
+        Assert.Equal("1", DirectXGlobalSettings.GetToken(_backend.GpuPrefs[_exeA], "AppStatus"));
+
+        Assert.True(_service.EndGameSession("ahdr-on"));
+        Assert.False(_backend.GpuPrefs.ContainsKey(_exeA));
+    }
+
+    [Fact]
+    public void AutoHdr_OffForThisGame_WritesOff_EvenWhenTheProfileWouldTurnItOn_AndKeepsOtherBits()
+    {
+        _settings.OptimizedProfileTweaks.AutoHdrEnabled = true;
+        _backend.GpuPrefs[_exeA] = "AppStatus=1;AutoHDREnable=4147;";
+        var game = Game("ahdr-off", _exeA, PerformanceProfileMode.Optimized);
+        game.AutoHdr = HdrMode.Off;
+
+        Assert.True(_service.BeginGameSession(game));
+        Assert.Equal("4146", DirectXGlobalSettings.GetToken(_backend.GpuPrefs[_exeA], "AutoHDREnable"));
+
+        Assert.True(_service.EndGameSession("ahdr-off"));
+        Assert.Equal("AppStatus=1;AutoHDREnable=4147;", _backend.GpuPrefs[_exeA]);
+    }
+
+    [Fact]
+    public void AutoHdr_LeavesAGameWindowsHasOnItsDefaultGraphicsSettings_Alone()
+    {
+        _settings.OptimizedProfileTweaks.AutoHdrEnabled = true;
+        _settings.OptimizedProfileTweaks.GpuPreferenceEnabled = false;
+        const string existing = "AppStatus=0;";
+        _backend.GpuPrefs[_exeA] = existing;
+        var game = Game("ahdr-default", _exeA, PerformanceProfileMode.Optimized);
+        LaunchRecord.Begin(game.Id);
+
+        _service.BeginGameSession(game);
+        Assert.Equal(existing, _backend.GpuPrefs[_exeA]);
+        Assert.Contains(LaunchRecord.SkippedPrefix + "Auto HDR, Windows has this game on its default graphics settings",
+            LaunchRecord.Peek(game.Id, LaunchRecord.Profile));
+        _service.EndGameSession("ahdr-default");
+    }
+
+    [Fact]
+    public void AutoHdr_IsSkippedOnWindows10_AndSaysSo()
+    {
+        _backend.Windows11 = false;
+        _settings.OptimizedProfileTweaks.AutoHdrEnabled = true;
+        _settings.OptimizedProfileTweaks.GpuPreferenceEnabled = false;
+        var game = Game("ahdr-win10", _exeA, PerformanceProfileMode.Optimized);
+        LaunchRecord.Begin(game.Id);
+
+        _service.BeginGameSession(game);
+        Assert.False(_backend.GpuPrefs.ContainsKey(_exeA));
+        Assert.Contains(LaunchRecord.SkippedPrefix + "Auto HDR, Windows 11 only", LaunchRecord.Peek(game.Id, LaunchRecord.Profile));
+        _service.EndGameSession("ahdr-win10");
+    }
+
+    [Theory]
+    [InlineData(null, true, 2097)]
+    [InlineData(null, false, 2096)]
+    [InlineData("AutoHDREnable=2096;", true, 2097)]
+    [InlineData("AutoHDREnable=2097;", false, 2096)]
+    [InlineData("AutoHDREnable=4147;", false, 4146)]
+    [InlineData("AutoHDREnable=48;", true, 49)]
+    public void AutoHdrValue_ChangesOnlyTheLowestBit(string? entry, bool on, int expected) =>
+        Assert.Equal(expected, PerformanceProfileService.AutoHdrValue(entry, on));
 
     [Fact]
     public void Off_AppliesNothing()

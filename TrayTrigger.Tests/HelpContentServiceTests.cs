@@ -164,6 +164,33 @@ public class HelpContentServiceTests
         Assert.True(links >= 25, $"Only {links} help links were found in the views; the search is probably broken.");
     }
 
+    /// <summary>
+    /// Every fixed item of the game right-click menu is named in the Help pages. Added after a menu
+    /// flyout and a new item shipped with no Help text: the menu is read from the XAML, so a new item
+    /// fails here until its page says what it does.
+    /// </summary>
+    [Fact]
+    public void EveryGameMenuItem_IsNamedInHelp()
+    {
+        string? root = AppContext.BaseDirectory;
+        while (root != null && !File.Exists(Path.Combine(root, "TrayTrigger.csproj"))) root = Path.GetDirectoryName(root);
+        Assert.True(root != null, "The repository root (TrayTrigger.csproj) was not found above the test output folder.");
+
+        string xaml = File.ReadAllText(Path.Combine(root!, "Views", "LibraryView.xaml"));
+        int start = xaml.IndexOf("<ContextMenu x:Key=\"GameItemContextMenu\"", StringComparison.Ordinal);
+        int end = xaml.IndexOf("</ContextMenu>", start, StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start, "The game right-click menu was not found in LibraryView.xaml.");
+        string menu = xaml[start..end];
+
+        string help = string.Join(Environment.NewLine, Directory.EnumerateFiles(Path.Combine(root!, "Help"), "*.md", SearchOption.AllDirectories).Select(File.ReadAllText));
+        var header = new System.Text.RegularExpressions.Regex("<MenuItem Header=\"(?<h>[^\"{]+)\"");
+        var headers = header.Matches(menu).Select(m => System.Net.WebUtility.HtmlDecode(m.Groups["h"].Value).Split(" (")[0].TrimEnd('.')).Distinct().ToList();
+        Assert.True(headers.Count >= 10, $"Only {headers.Count} menu items were found; the search is probably broken.");
+
+        var missing = headers.Where(h => !help.Contains(h, StringComparison.OrdinalIgnoreCase)).ToList();
+        Assert.True(missing.Count == 0, "Right-click menu items not named in any Help page: " + string.Join(", ", missing));
+    }
+
     [Fact]
     public void GetIndex_GroupsBySectionInDisplayOrder_WithOverviewFirst()
     {
