@@ -51,6 +51,13 @@ public static class PerformanceActivity
         IReadOnlyList<(GameEntry Game, HdrMode Was)> changed, HdrMode now, DateTime utcNow) =>
         Describe("HDR", "hdr", changed, now, HdrModes.Label, utcNow);
 
+    public static void AutoHdrGameChanged(GameEntry game, HdrMode was, HdrMode now) =>
+        Record(DescribeAutoHdrChanged([(game, was)], now, DateTime.UtcNow), [game]);
+
+    internal static (string Text, string? Detail, string GroupKey) DescribeAutoHdrChanged(
+        IReadOnlyList<(GameEntry Game, HdrMode Was)> changed, HdrMode now, DateTime utcNow) =>
+        Describe("Auto HDR", "autohdr", changed, now, HdrModes.Label, utcNow);
+
     /// <summary>
     /// One game: "Elden Ring's profile changed from Off to Aggressive", grouped per game and setting
     /// so its row shows where it stands now. Several: one line, each game and what it was in the detail.

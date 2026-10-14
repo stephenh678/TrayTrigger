@@ -37,7 +37,7 @@ The **PCGamingWiki** button in the details window opens the game's page on pcgam
 
 Both sources are searched by the game's name, and the result whose title is closest to that name is kept, subject to the confidence threshold in Settings. The match is remembered so later opens skip the search.
 
-- The line above "About the Game" shows which Steam listing or RAWG entry the game matched.
+- The window title shows which Steam listing or RAWG entry the game matched. Point at "Change match" to see the Steam App ID it used.
 - If it matched the wrong game, or nothing was found, click "Change match", search by title, and pick the right entry. The pick is remembered for the game.
 - Changing the Steam match sets the game's Steam App ID, so its title details, genre and poster art follow the new listing. This is the same as Fetch by ID in Edit Game. How the game launches does not change.
 - Changing the RAWG match updates the RAWG text and, if the game is still Uncategorized, its category.

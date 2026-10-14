@@ -546,6 +546,20 @@
                                 <Button AutomationProperties.Name="Learn more about HDR" Style="{StaticResource HelpLinkButton}"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/hdr"/>
                             </StackPanel>
+
+                            <!-- Auto HDR - per game, overriding the Optimized profile's Enable Auto HDR switch.
+                                 Windows 11 only, with an HDR-capable display, unless the game already has a choice. -->
+                            <StackPanel Visibility="{Binding ShowAutoHdr, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Auto HDR" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,4,0,4"/>
+                                <ComboBox AutomationProperties.Name="Auto HDR" ItemsSource="{Binding HdrOptions}"
+                                          SelectedValue="{Binding AutoHdr}" SelectedValuePath="Value" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding AutoHdrHint}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <Button AutomationProperties.Name="Learn more about Auto HDR" Style="{StaticResource HelpLinkButton}"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/auto_hdr"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -564,21 +578,11 @@
                             <Grid Margin="0,0,0,8">
                                 <TextBlock Text="NVIDIA DLSS Override" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
                                            Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                <!-- Always present on the full card, disabled by the command when
-                                     there is nothing of TrayTrigger's to undo: a button that appears
-                                     only after you commit hides the way back at the moment you want
-                                     to see it, and reflows the card as you tick. The full card is
-                                     shown whenever there is something to undo. -->
-                                <Button Content="Restore" HorizontalAlignment="Right"
-                                        AutomationProperties.Name="Restore the DLSS settings TrayTrigger changed"
-                                        Style="{StaticResource ModernOutlineButton}"
-                                        Visibility="{Binding Dlss.ShowFullCard, Converter={StaticResource BoolToVis}}"
-                                        Command="{Binding Dlss.RestoreCommand}"/>
                             </Grid>
 
                             <!-- The other state, and the only other one: a game that ships no DLSS.
-                                 One quiet line. A greyed-out switch, a description and a disabled
-                                 Restore for something that cannot apply read as a fault, and most
+                                 One quiet line. A greyed-out switch and a description
+                                 for something that cannot apply read as a fault, and most
                                  games ship no DLSS. -->
                             <TextBlock Text="{Binding Dlss.NotAvailableText}"
                                        FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"

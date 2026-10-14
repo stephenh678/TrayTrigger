@@ -537,6 +537,7 @@ public class LibraryViewModel : ViewModelBase
             onCloseGame: CloseGame,
             onForceClose: ForceCloseGame,
             onToggleSuspend: ToggleSuspend,
+            onRestoreSettings: RestoreSettingsNow,
             onPrimaryClick: OnCardPrimaryClick,
             onToggleSelect: OnCardToggleSelect,
             onRangeSelect: OnCardRangeSelect,
@@ -642,6 +643,20 @@ public class LibraryViewModel : ViewModelBase
         {
             bool ended = _launcherService.EndSessionNow(gameId, forceCloseGame: true);
             RunOnUiThread(() => StatusMessage = ended ? $"Force closed {name}; tweaks restored." : $"{name} has no active session.");
+        });
+    }
+
+    /// <summary>"Restore Settings Now": puts Windows back as it was and stops tracking, but leaves the
+    /// game running. Off the UI thread, as above.</summary>
+    private void RestoreSettingsNow(GameCardViewModel card)
+    {
+        StatusMessage = $"Restoring settings for {card.Name}...";
+        string gameId = card.Game.Id;
+        string name = card.Name;
+        _ = Task.Run(() =>
+        {
+            bool ended = _launcherService.EndSessionNow(gameId, forceCloseGame: false);
+            RunOnUiThread(() => StatusMessage = ended ? $"Settings restored for {name}." : $"{name} has no active session.");
         });
     }
 

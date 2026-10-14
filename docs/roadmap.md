@@ -8,6 +8,24 @@ decisions. Declines and the "TrayTrigger is a launcher" scope rule in the archiv
 history, not constraints, until the owner restates them. This file holds the evidence and a
 proposed roadmap; decisions get recorded here as they are made, with a date.
 
+## Owner decisions
+
+- **2026-10-13: declined** the launch-in command (`--launch`), the "Create desktop shortcut"
+  command, the Steam/GOG wrapper (`--wrap %command%`) and late attach. TrayTrigger stays a launcher
+  that starts games itself: from the tray menu, the window or a per-game hotkey. It does not wrap
+  other launchers or act on games it did not start. Where the proposal below mentions these
+  (gap 2, "The launch model", the Releases table and the Additions list), read them as declined.
+- **2026-10-13: declined** a global "close launcher clients when games exit" setting, and a
+  default of it for new games. Closing a client stays a per-game choice, with batch edit for big
+  libraries: a blanket rule can break a download or another game still using the client, and a
+  per-game opt-out would need a three-state field and a migration.
+- **2026-10-13: declined** "mute other apps while the game has focus" (gap 14). Weak evidence of
+  demand, an exceptions list would be needed, and a crash could leave other apps muted. Where the
+  proposal below lists it (gap 14, the 1.8 release and the Additions list), read it as declined.
+- **2026-10-13: declined** a "Clear Shader Cache" button. It undoes what the Keep the DirectX Shader
+  Cache and NVIDIA Shader Cache tweaks protect (a wiped cache means every game recompiles shaders
+  mid-play), and Stutter Check stays diagnostic. A corrupted cache is cleared with Disk Cleanup.
+
 ## How this was researched (2026-10-05)
 
 - **Read directly:** the code, GitHub star counts and issue trackers, vendor forums, tech press.
@@ -277,6 +295,57 @@ HDR "without tripping" the 24H2 colour quirks (the help page documents one).
 - Steam's overlay and playtime tracking behave normally through the wrapper, and what Steam's
   Stop button does to the wrapper process.
 - GOG Galaxy accepts the wrapper as a custom executable.
+
+## Multiple monitors: a plan (2026-10-13, a draft for the owner)
+
+Started from a quick web search of what gamers complain about with two or more screens. The
+sources are forum threads and guides, not measurements, so every item below is a lead to verify on
+real hardware before it is built. Nothing here is decided.
+
+### What gamers report
+
+| Complaint | What the sources say | Source |
+|---|---|---|
+| A video or browser on the second screen makes the game stutter | The most common report. Often blamed on mixed refresh rates (144 Hz with 60 Hz), but other guides say the mix alone is not the cause: the trigger is hardware-accelerated video, borderless presentation, overlays or a busy second desktop. Sources disagree. | [Evetech: mixing 144 Hz and 60 Hz](https://evezone.evetech.co.za/build-lab/mixing-144hz-60hz-monitor-problems-fixes), [Evetech: stuttering with multiple monitors](https://evezone.evetech.co.za/quick-bytes/games-stuttering-with-multiple-monitors-solution) |
+| The cursor leaves the game and a click on the other screen unfocuses it | Mostly borderless windowed games. Exclusive fullscreen holds the cursor; borderless hands it back to Windows. Alt-tab from a full-screen game to a window on the other screen glitches. | [Microsoft Q&A: alt-tab from a full-screen app](https://learn.microsoft.com/en-us/answers/questions/4118680/how-to-fix-alt-tab-issue-when-switching-from-full), [Steam discussion](https://steamcommunity.com/discussions/forum/11/1631916406853830338) |
+| The GPU stays at high clocks and idle power is high with two screens | Well documented. Depends on the refresh rate and resolution combination (one NVIDIA user saw idle draw drop from 95 W to 35 W when one panel went from 144 Hz to 75 Hz). | [NVIDIA forum](https://forums.developer.nvidia.com/t/gpu-is-stuck-to-maximun-power-state-at-idle-when-using-multiple-monitors/310924) |
+| Windows and desktop icons are rearranged when a screen is switched off or unplugged | Windows moves them to the remaining display; they do not always come back. | [Steam discussion](https://steamcommunity.com/discussions/forum/11/624076851028572255), [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/2196825/windows-11-desktop-icons-keep-moving-around) |
+| HDR with a second, non-HDR screen | Nothing found in this search. Treat as unknown. | none |
+
+### What TrayTrigger could do, in order of fit
+
+TrayTrigger's job is to change something for a game and put it back, so each item below is a
+per-game change that is undone on exit.
+
+1. **Show what is wrong (diagnostic only).** Extend Stutter Check to report a mixed-refresh,
+   multi-monitor setup and point to the usual cause (browser hardware acceleration, a video on the
+   second screen). It never changes anything, as its rule says. Cheapest, and it is honest about
+   the sources disagreeing. Size S.
+2. **Keep the cursor in the game.** Per game, off by default, released on alt-tab and on exit,
+   with the cursor released again after a crash. Needs the foreground watcher. Size M.
+3. **Refresh rate per game, per monitor.** Set the game's monitor to its highest rate for the
+   session and put it back, as 1.7's display mode does for resolution. Needs the saved display
+   state to survive a crash. Size M, part of 1.7's display mode work.
+4. **Dim the other screens while the game has focus.** Undone on alt-tab and exit. Needs the
+   foreground watcher. Size M.
+5. **Remember the window and icon layout.** Save which monitor each desktop window is on before a
+   change that can disturb it, and restore it afterwards. The most fragile item here (windows move
+   for many reasons), so last.
+
+### Out of scope
+
+- **Blanking or switching off other monitors.** Already cut: it is where AutoActions crashes, and
+  the sources show nothing gained for performance. Dimming (item 4) covers the real need.
+- **Forcing both screens to one refresh rate.** The workaround people share (144 Hz down to
+  120 Hz or 60 Hz) costs the main screen its rate, and the sources do not agree it works.
+- **A cure for second-screen stutter.** The cause is not settled, so TrayTrigger names the likely
+  suspects and does not claim to fix it.
+
+### To verify before building
+
+- Which two-screen setups really stutter, on a test PC with a 144 Hz and a 60 Hz panel.
+- Whether HDR on one screen with SDR on the other behaves differently for a game on the HDR one.
+- How the cursor lock behaves with the anti-cheats TrayTrigger already recognizes.
 
 ## What Reddit says about new tools in this space
 

@@ -128,6 +128,82 @@ public class StutterCheckServiceTests
         Assert.Equal(StutterVerdict.Fine, report.Items.Single(i => i.Id == "app_accel").Verdict);
     }
 
+    [Theory]
+    [InlineData(null, PagefileKind.Unknown, 0)]
+    [InlineData(new string[0], PagefileKind.None, 0)]
+    [InlineData(new[] { "" }, PagefileKind.None, 0)]
+    [InlineData(new[] { "?:\\pagefile.sys" }, PagefileKind.SystemManaged, 0)]
+    [InlineData(new[] { "C:\\pagefile.sys 0 0" }, PagefileKind.SystemManaged, 0)]
+    [InlineData(new[] { "C:\\pagefile.sys 1024 2048" }, PagefileKind.Custom, 2048)]
+    [InlineData(new[] { "C:\\pagefile.sys 512 1024", "D:\\pagefile.sys 1024 1024" }, PagefileKind.Custom, 2048)]
+    public void PagefileSetting_IsReadFromTheMemoryManagementValue(string[]? lines, PagefileKind kind, long maxMb)
+    {
+        var state = StutterProbes.ParsePagefile(lines);
+        Assert.Equal(kind, state.Kind);
+        Assert.Equal(maxMb, state.CustomMaxMegabytes);
+    }
+
+    [Theory]
+    [InlineData("SERVICE_NAME: amd3dvcacheSvc\r\n        TYPE               : 10  WIN32_OWN_PROCESS\r\n        STATE              : 4  RUNNING\r\n", 0, VCacheOptimizerState.Running)]
+    [InlineData("        STATE              : 1  STOPPED\r\n", 0, VCacheOptimizerState.NotRunning)]
+    [InlineData("        STATE              : 4  L\u00c4UFT\r\n", 0, VCacheOptimizerState.Running)]
+    [InlineData("[SC] EnumQueryServicesStatus:OpenService FAILED 1060:", 1060, VCacheOptimizerState.NotRunning)]
+    [InlineData("", 0, VCacheOptimizerState.Unknown)]
+    [InlineData(null, 5, VCacheOptimizerState.Unknown)]
+    public void ServiceQuery_IsReadByItsStateNumber(string? output, int exitCode, VCacheOptimizerState expected) =>
+        Assert.Equal(expected, StutterProbes.ParseServiceQuery(output, exitCode));
+
+    [Theory]
+    [InlineData(CpuCoreLayout.VCacheSingleCcd)]
+    [InlineData(CpuCoreLayout.MultiCcd)]
+    [InlineData(CpuCoreLayout.Hybrid)]
+    [InlineData(CpuCoreLayout.Uniform)]
+    public void VCacheOptimizer_IsOnlyAskedOnADualCcdX3d(CpuCoreLayout layout) =>
+        Assert.Equal(VCacheOptimizerState.NotApplicable, StutterProbes.VCacheOptimizer(layout));
+
+    [Fact]
+    public void VCacheOptimizerStopped_NeedsALook_WithItsHelpPage()
+    {
+        var item = StutterCheckService.Run(new StutterCheckInputs { VCacheOptimizer = VCacheOptimizerState.NotRunning }).Items.Single(i => i.Id == "vcache_optimizer");
+        Assert.Equal(StutterVerdict.NeedsLook, item.Verdict);
+        Assert.Equal(StutterAction.HelpTopic, item.Action);
+        Assert.Equal("tweaks/stutter_vcache", item.ActionArg);
+    }
+
+    [Fact]
+    public void VCacheOptimizerRunning_IsFine_AndNotApplicableOrUnknownIsLeftOut()
+    {
+        Assert.Equal(StutterVerdict.Fine, StutterCheckService.Run(new StutterCheckInputs { VCacheOptimizer = VCacheOptimizerState.Running }).Items.Single(i => i.Id == "vcache_optimizer").Verdict);
+        Assert.DoesNotContain(StutterCheckService.Run(new StutterCheckInputs()).Items, i => i.Id == "vcache_optimizer");
+        Assert.DoesNotContain(StutterCheckService.Run(new StutterCheckInputs { VCacheOptimizer = VCacheOptimizerState.Unknown }).Items, i => i.Id == "vcache_optimizer");
+    }
+
+    [Fact]
+    public void NoPagingFile_NeedsALook_AndOpensSystemProperties()
+    {
+        var item = StutterCheckService.Run(new StutterCheckInputs { Pagefile = new PagefileState(PagefileKind.None) }).Items.Single(i => i.Id == "pagefile");
+        Assert.Equal(StutterVerdict.NeedsLook, item.Verdict);
+        Assert.Equal(StutterAction.OpenSetting, item.Action);
+        Assert.Equal("SystemPropertiesAdvanced.exe", item.ActionArg);
+    }
+
+    [Theory]
+    [InlineData(PagefileKind.SystemManaged, 0, StutterVerdict.Fine)]
+    [InlineData(PagefileKind.Custom, 16384, StutterVerdict.Fine)]
+    [InlineData(PagefileKind.Custom, 4096, StutterVerdict.Fine)]
+    [InlineData(PagefileKind.Custom, 1024, StutterVerdict.NeedsLook)]
+    public void PagingFile_IsJudgedBySizeOnlyWhenItIsCustom(PagefileKind kind, long maxMb, StutterVerdict expected)
+    {
+        var item = StutterCheckService.Run(new StutterCheckInputs { Pagefile = new PagefileState(kind, maxMb) }).Items.Single(i => i.Id == "pagefile");
+        Assert.Equal(expected, item.Verdict);
+    }
+
+    [Fact]
+    public void PagefileUnknown_IsLeftOut()
+    {
+        Assert.DoesNotContain(StutterCheckService.Run(new StutterCheckInputs()).Items, i => i.Id == "pagefile");
+    }
+
     [Fact]
     public void Memory_BelowRated_NeedsALook_WithTheBiosPage()
     {

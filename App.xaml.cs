@@ -107,6 +107,8 @@ public partial class App : Application
         void Log(string msg) => LoggingService.Info("App", msg);
         _logger = Log;
 
+        TrayTrigger.Views.ComboBoxWheelGuard.Register();
+
         // Before any window exists, so the first frame already has the chosen colors. "--theme <id>" (a
         // capture or a test) wins over the setting and is not saved.
         TrayTrigger.Services.Theming.ThemeService.Instance.ShowBackground = startupSettings.ShowThemeBackground;
@@ -811,6 +813,10 @@ public partial class App : Application
                         var closeGame = CreateNavMenuItem("Close Game", "", () => CloseGameFromTray(gameId, gameName));
                         closeGame.ToolTip = "Asks the game to quit, as its own close button does. Once it exits, TrayTrigger restores the Performance Profile and runs the post-exit script.";
                         sessionItem.Items.Add(closeGame);
+                        var restoreNow = CreateNavMenuItem("Restore Settings Now", "", () =>
+                            Task.Run(() => _launcherService!.EndSessionNow(gameId, forceCloseGame: false)));
+                        restoreNow.ToolTip = "Leaves the game running and puts Windows back the way it was: the Performance Profile is restored, the post-exit script runs and tools set to close after the game close. The game is no longer tracked, so its playtime stops counting.";
+                        sessionItem.Items.Add(restoreNow);
                         var forceClose = CreateNavMenuItem("Force Close Game", "", () =>
                         {
                             if (card != null)

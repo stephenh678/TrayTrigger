@@ -83,6 +83,10 @@ public class GameEntry
     /// preference; never affects the library category, art, or sorting). Auto by default - Steam
     /// when there's a Steam App ID, otherwise RAWG. See <see cref="MetadataSource"/>.</summary>
     public MetadataSource PreferredMetadataSource { get; set; } = MetadataSource.Auto;
+
+    /// <summary>The anti-cheat seen on this game's last launch ("Easy Anti-Cheat"), or null when none
+    /// was seen. Shown as a tag on Game Details; detection can miss, so null is not "has none".</summary>
+    public string? DetectedAntiCheat { get; set; }
     /// <summary>The RAWG game id this entry resolved to, cached so the details window doesn't
     /// re-search RAWG by name each time it opens. 0 when unresolved.</summary>
     public int RawgId { get; set; }
@@ -137,6 +141,14 @@ public class GameEntry
     /// session then changes. See <see cref="Services.PerformanceProfileService.WantsHdr"/>.
     /// </summary>
     public HdrMode Hdr { get; set; } = HdrMode.ProfileDefault;
+
+    /// <summary>
+    /// Windows 11's Auto HDR (SDR games shown in HDR) for this game. Profile setting follows the
+    /// Optimized profile's Enable Auto HDR switch; On and Off decide for this game alone: On
+    /// writes Auto HDR on for the game's program for the session, Off writes it off. Put back on exit.
+    /// See <see cref="Services.PerformanceProfileService.AutoHdrTarget"/>.
+    /// </summary>
+    public HdrMode AutoHdr { get; set; } = HdrMode.ProfileDefault;
 
     /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
     public string PreLaunchScriptPath { get; set; } = string.Empty;

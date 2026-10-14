@@ -15,10 +15,12 @@ Runs the checks every "my game stutters" thread tells you to go through, in one 
 - **Shader cache** - the NVIDIA driver's cache capped, or Windows cleanups set to delete the DirectX shader cache. A game recompiling shaders as you play is the most-cited cause of stutter in the fix threads. Fix it applies the tweak.
 - **PCIe lanes** - a graphics card on fewer lanes than it supports.
 - **Resizable BAR** - off on a card that can use it.
-- **Hardware-Accelerated GPU Scheduling, Game Bar recording, Game Mode** - the System tweaks that matter for stutter. Fix it applies the tweak, which Restore Previous can undo. Game Mode is the contested one: Microsoft recommends it on, and some threads blame it for hitching in particular games, so try it the other way for a game that still stutters.
+- **Hardware-Accelerated GPU Scheduling, Game Bar recording, Game Mode** - the System tweaks that matter for stutter. Fix it applies the tweak, which Restore Previous can undo. Game Mode is the contested one: Microsoft recommends it on, and some threads blame it for hitching in particular games, so try it the other way for a game that still stutters. On a dual-CCD Ryzen X3D, though, leaving it off can cost a game its place on the V-Cache cores.
 - **Power plan** - whether the Ultimate plan is on, or switched to while a game runs.
 - **Core Isolation** - reported, never changed: it is a security boundary.
 - **Windows Search** - whether the indexer is busy right now.
+- **AMD V-Cache optimizer** - on a dual-chiplet X3D CPU (7900X3D, 7950X3D, 9950X3D), whether AMD's V-Cache optimizer service is running. It keeps games on the cores with the extra cache. Single-chiplet X3D CPUs (5800X3D, 7800X3D, 9800X3D) don't need it and aren't checked.
+- **Paging file** - Windows with no paging file, or a custom one under 4 GB. Without one Windows can't use memory beyond your RAM, and some games hitch or crash when they run out. The default, Windows-managed setting is reported as fine.
 - **Intel Application Optimization** - on a Core Ultra or 14th-gen K CPU, whether Intel's APO is installed.
 
 A check that can't be made on this PC - no dedicated GPU, HAGS not supported, the indexer not running - is left out rather than shown as a problem, so the count is what was actually checked.

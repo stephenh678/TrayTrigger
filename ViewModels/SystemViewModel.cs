@@ -771,11 +771,18 @@ public class SystemViewModel : ViewModelBase
                 () => config.PowerThrottlingExemptEnabled,
                 v => { config.PowerThrottlingExemptEnabled = v; Save(); }),
             new("Enable HDR",
-                "Turns on Windows' native HDR display mode while the game runs, then reverts every display to its prior setting on exit.",
+                "Switches your display into HDR mode while the game runs, for games that support HDR. Goes back to normal when the game exits.",
                 "Uses the same Connecting and Configuring Displays (CCD) API behind Settings > System > Display > HDR - not a registry hack, since HDR is a live per-display color pipeline negotiated with the monitor over EDID rather than a static value. Only touches displays Windows already reports as HDR-capable; a display already in HDR is left alone (and left in HDR on exit) rather than being forced off. A game that doesn't render HDR content well can look washed out or over-bright with this on, so it's your call. Risk: a display currently in Windows' Auto Color Management \"WCG\" mode is also forced to full HDR, but Windows' HDR API can only turn a display fully off on restore, not back to WCG specifically - that display may render in plain SDR after the game closes until Windows re-negotiates WCG on its own (e.g. switching to another app).",
                 "profiles/hdr",
                 () => config.HdrEnabled,
                 v => { config.HdrEnabled = v; Save(); },
+                isOptIn: true),
+            new("Enable Auto HDR",
+                "For games that don't support HDR: Windows 11 adds HDR-style brightness and colour to them while they run, then returns to normal on exit. Needs HDR on, so turn on Enable HDR too, or leave Windows HDR on.",
+                "Auto HDR shows an SDR DirectX 11 or 12 game in HDR. This writes Auto HDR on in the game's own entry under Settings > System > Display > Graphics, the same per-game setting Windows keeps, and puts it back when the game exits. It only shows anything while Windows' HDR is on and the global Auto HDR switch is on (Settings > System > Display > HDR). Some games look worse with it: a HUD that blows out, whites that clip. That is why it is opt-in, and why each game can turn it on or off for itself in Edit Game.",
+                "profiles/auto_hdr",
+                () => config.AutoHdrEnabled,
+                v => { config.AutoHdrEnabled = v; Save(); },
                 isOptIn: true),
             new("Do Not Disturb While Playing",
                 "Silences Windows toast notifications for the length of the session, then puts the switch back the way it was.",
@@ -1065,6 +1072,8 @@ public class SystemViewModel : ViewModelBase
                 var overlays = StutterProbes.RunningOverlayApps();
                 var apps = StutterProbes.AppAccelerationStates();
                 var apo = StutterProbes.IntelApo(hardware.Cpu.ModelName);
+                var pagefile = StutterProbes.Pagefile();
+                var vcache = StutterProbes.VCacheOptimizer(CpuTopologyService.GetTopology().Layout);
                 var (indexerBusy, indexerCpu) = await search;
                 return new StutterCheckInputs
                 {
@@ -1077,6 +1086,8 @@ public class SystemViewModel : ViewModelBase
                     SearchIndexerBusy = indexerBusy,
                     SearchIndexerCpuPercent = indexerCpu,
                     IntelApo = apo,
+                    Pagefile = pagefile,
+                    VCacheOptimizer = vcache,
                 };
             });
 

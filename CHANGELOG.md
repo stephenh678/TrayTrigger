@@ -8,6 +8,18 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.6.3
+
+- **Restore Settings Now** - a running game's right-click menu in the library, the tray icon and a new Now Playing flyout have **Restore Settings Now**: it leaves the game running and puts Windows back the way it was (the Performance Profile is restored, the post-exit script runs, tools set to close after the game close). The game's launcher stays open, and the game's playtime stops counting.
+- **Auto HDR, chosen per game** - Edit Game > Performance has an Auto HDR choice beside HDR: Profile setting, On for this game or Off for this game. The Optimized profile has an Enable Auto HDR switch (off by default), and System > Performance Tweaks has Enable Auto HDR for Windows as a whole. It needs HDR on and Windows 11; where it can't apply, Activity & History says why. The game's other graphics settings (such as its GPU preference) are kept and put back.
+- **Anti-cheat tag** - a game that runs an anti-cheat service (now including Riot Vanguard) shows its name as a tag in Game Details and a note in its Activity & History record, so you know which games not to expect tools like Suspend to work with.
+- **Battery rule** - on a laptop running on battery, the Optimized profile no longer switches to the Ultimate power plan, and Activity & History says it skipped it.
+- **Stutter Check: paging file** - reports Windows with no paging file, or a custom one under 4 GB, and opens System Properties.
+- **Stutter Check: AMD V-Cache optimizer** - on a 7900X3D, 7950X3D or 9950X3D, reports when AMD's V-Cache optimizer service isn't running, with a help page of what to try. Game Mode's note now says AMD's chipset driver relies on it for these CPUs.
+- **Clearer Performance Tweaks** - the HDR and Auto HDR descriptions explain what the switch does and when it applies.
+- **Tidier Game Details and Edit Game** - the Game Details window no longer repeats the matched title, and shows the Steam App ID in a tooltip. The DLSS Override card has no Restore button (unticking the switch does the same).
+- **Dropdowns no longer change when you scroll** - scrolling a page with the mouse wheel over a closed dropdown scrolls the page instead of changing the choice.
+
 ## 1.6.2
 
 - **Themes** - Settings > General > Appearance now has a theme picker: Dark (as before), Light, Green, Amber and Purple, or Auto to follow Windows' light or dark mode. The choice applies at once, with no restart, and the title bars follow it. **Edit theme...** makes a theme of your own: pick its main colors (a square and a hue strip, or type a #RRGGBB), watch a preview, choose a background picture and name it. Fine-tuning colors stay in the theme file, which the app follows each time you save it. A theme only has to name the colors it changes; the colors that go with them (hover, pressed, link) are worked out. Each theme also has a background picture behind the pages (the cards stay solid), which you can turn off in Appearance. The picture is centered when the window is resized, and **Keep in view** in the editor chooses which edge stays visible. The trash button beside the picker sends a theme of your own to the Recycle Bin. The help page lists every color name.

@@ -66,21 +66,8 @@ public class GameDetailsViewModel : ViewModelBase
     public bool CanChangeMatch => IsRawgActive ? (CanToggleSource && !IsRawgLoading) : !IsLoading;
     public string ChangeMatchToolTip => IsRawgActive
         ? "Search RAWG and pick the right entry for this game"
-        : "Search the Steam store and pick the right listing for this game";
-
-    /// <summary>"Matched to X" beside the switch: which Steam listing / RAWG entry the game resolved to.</summary>
-    public string MatchCaption
-    {
-        get
-        {
-            if (IsRawgActive)
-                return _rawgDetails != null ? $"Matched to “{_rawgDetails.Name}”" : string.Empty;
-            return !string.IsNullOrWhiteSpace(_details?.Name) && !string.IsNullOrWhiteSpace(Game.SteamAppId)
-                ? $"Matched to “{_details!.Name}” (App ID {Game.SteamAppId})"
-                : string.Empty;
-        }
-    }
-    public bool HasMatchCaption => !string.IsNullOrEmpty(MatchCaption);
+        : (string.IsNullOrWhiteSpace(Game.SteamAppId) ? "" : $"Matched to Steam App ID {Game.SteamAppId}. ")
+          + "Search the Steam store and pick the right listing for this game";
 
     /// <summary>True while the RAWG lookup for this game is in flight (RAWG side only).</summary>
     public bool IsRawgLoading
@@ -184,6 +171,7 @@ public class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ReviewSummary));
                 OnPropertyChanged(nameof(HasReviewSummary));
                 OnPropertyChanged(nameof(PlayModes));
+                OnPropertyChanged(nameof(TagList));
                 OnPropertyChanged(nameof(HasPlayModes));
                 OnPropertyChanged(nameof(GenresDisplay));
                 OnPropertyChanged(nameof(HasRequirements));
@@ -193,8 +181,6 @@ public class GameDetailsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StoreUrl));
                 OnPropertyChanged(nameof(HasStoreUrl));
                 OnPropertyChanged(nameof(ShowSteamStoreButton));
-                OnPropertyChanged(nameof(MatchCaption));
-                OnPropertyChanged(nameof(HasMatchCaption));
                 OnPropertyChanged(nameof(LastUpdatedCaption));
                 OnPropertyChanged(nameof(ShowFreshness));
             }
@@ -429,6 +415,21 @@ public class GameDetailsViewModel : ViewModelBase
     // Play-mode chips: Steam's categories, or RAWG's tags mapped to the same wording.
     public System.Collections.Generic.List<string> PlayModes => IsRawgActive ? (_rawgDetails?.PlayModes ?? new()) : (_details?.PlayModes ?? new());
     public bool HasPlayModes => PlayModes.Count > 0;
+
+    /// <summary>"Anti-cheat: X" tag, from what the game's last launch saw. Null when nothing was seen;
+    /// detection can miss, so the page never says a game has none.</summary>
+    public string? AntiCheatTag => string.IsNullOrWhiteSpace(Game.DetectedAntiCheat) ? null : $"Anti-cheat: {Game.DetectedAntiCheat}";
+
+    /// <summary>The tag row: the play modes, then the anti-cheat tag when there is one.</summary>
+    public System.Collections.Generic.List<string> TagList
+    {
+        get
+        {
+            var tags = new System.Collections.Generic.List<string>(PlayModes);
+            if (AntiCheatTag != null) tags.Add(AntiCheatTag);
+            return tags;
+        }
+    }
 
     /// <summary>"Open on RAWG" - the RAWG counterpart of the Steam Store button, shown while
     /// RAWG is the active source. Targets the game's own rawg.io page (the same as the
@@ -984,14 +985,14 @@ public class GameDetailsViewModel : ViewModelBase
         {
             nameof(IsRawgActive), nameof(IsSteamActive),
             nameof(ShowRawgAttribution), nameof(RawgUrl),
-            nameof(CanChangeMatch), nameof(ChangeMatchToolTip), nameof(MatchCaption), nameof(HasMatchCaption),
+            nameof(CanChangeMatch), nameof(ChangeMatchToolTip),
             nameof(ShowLoading), nameof(LoadingMessage), nameof(RawgStatusMessage), nameof(HasRawgStatus),
             nameof(HasDetails), nameof(GameTitle),
             nameof(Developers), nameof(HasDevelopers), nameof(Publishers), nameof(HasPublishers),
             nameof(ReleaseDate), nameof(HasReleaseDate), nameof(ShortDescription), nameof(GenresDisplay),
             nameof(MetacriticScore), nameof(HasMetacritic), nameof(RawgRatingDisplay), nameof(HasRawgRating),
             nameof(EsrbRating), nameof(HasEsrbRating), nameof(ReviewSummary), nameof(HasReviewSummary),
-            nameof(PlayModes), nameof(HasPlayModes),
+            nameof(PlayModes), nameof(HasPlayModes), nameof(TagList),
             nameof(HasRawgPage), nameof(ShowSteamStoreButton),
             nameof(LastUpdatedCaption), nameof(ShowFreshness), nameof(RefreshNowToolTip),
             nameof(DisplayCoverImage), nameof(AmbientImage), nameof(Category),

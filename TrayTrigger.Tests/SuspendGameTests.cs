@@ -151,6 +151,14 @@ public class SuspendGameTests : IDisposable
     }
 
     [Fact]
+    public void RiotVanguardsService_IsFound_WhenItStartedWithThisGame()
+    {
+        var game = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "tt-ac-" + Guid.NewGuid().ToString("N"))).FullName;
+        var launched = DateTime.UtcNow;
+        Assert.Equal("Riot Vanguard", AntiCheatDetector.Find(game, null, launched, () => [("vgc", launched.AddSeconds(5))]));
+    }
+
+    [Fact]
     public void AnAntiCheatService_CountsOnlyWhenItStartedWithThisGame()
     {
         string game = Path.Combine(_root, "Game");

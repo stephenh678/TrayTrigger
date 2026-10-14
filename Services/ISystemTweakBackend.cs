@@ -21,6 +21,10 @@ public interface ISystemTweakBackend
     bool IsElevated { get; }
 
     string? GetActivePowerSchemeGuid();
+    /// <summary>True when the PC is running on battery; the profile then leaves the power plan alone.</summary>
+    bool IsOnBattery => false;
+    /// <summary>Auto HDR is a Windows 11 feature; on Windows 10 the profile leaves it alone.</summary>
+    bool SupportsAutoHdr => true;
     /// <summary>Finds or creates the "Ultimate Plan - TrayTrigger" scheme, applies its tweaks and
     /// makes it active. Returns false if the scheme could not be created or located.</summary>
     bool ActivateUltimatePowerPlan();
@@ -87,6 +91,10 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
     public bool IsElevated => SystemTweaksService.IsElevated;
 
     public string? GetActivePowerSchemeGuid() => SystemTweaksService.GetActivePowerSchemeGuid();
+
+    public bool IsOnBattery => SystemInfoService.IsOnBattery();
+
+    public bool SupportsAutoHdr => SystemTweaksService.IsWindows11;
 
     public bool ActivateUltimatePowerPlan()
     {

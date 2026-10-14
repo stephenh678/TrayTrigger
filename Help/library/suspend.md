@@ -6,7 +6,7 @@ Suspend freezes a game you launched from TrayTrigger exactly where it is - mid-c
 
 - **The hotkey**, Ctrl+Alt+P unless you change it in Settings > General: press it in the game to suspend it, and again to resume it. With several games running it suspends the one in front.
 - **The tray menu**: the game's row under Now Playing has Suspend Game, or Resume Game while it's suspended. A suspended game shows "suspended" there instead of its playtime.
-- **The library**: right-click the game and choose Suspend Game or Resume Game. Its PLAYING tag reads PAUSED while it's suspended.
+- **The library**: right-click the game and choose Now Playing, then Suspend Game or Resume Game. Its PLAYING tag reads PAUSED while it's suspended.
 - **Play** on a suspended game resumes it and brings it to the front.
 
 ## What happens
@@ -20,7 +20,7 @@ Suspend freezes a game you launched from TrayTrigger exactly where it is - mid-c
 ## Limits
 
 - Online games lose their connection while suspended: the server stops hearing from them.
-- A game protected by anti-cheat - Easy Anti-Cheat, BattlEye, EA Javelin, nProtect GameGuard, XIGNCODE3 and the like - is never suspended. A game that stops answering its anti-cheat is disconnected at best, and can be flagged. TrayTrigger looks for the anti-cheat in the game's folder, and for an anti-cheat service started with the game.
+- A game protected by anti-cheat - Easy Anti-Cheat, BattlEye, EA Javelin, Riot Vanguard, nProtect GameGuard, XIGNCODE3 and the like - is never suspended. A game that stops answering its anti-cheat is disconnected at best, and can be flagged. TrayTrigger looks for the anti-cheat in the game's folder, and for an anti-cheat service started with the game. Once a launch has found one, Game Details shows an "Anti-cheat" tag beside the game's other tags, and the game's row in Activity & History says it was detected. A game with no tag may still have an anti-cheat TrayTrigger couldn't see.
 - While a game is suspended, clicking it in the taskbar won't bring it back - it can't draw itself, and Windows may call it Not Responding. Resume it with the hotkey or the tray menu instead. Close Game resumes it first, then asks it to quit.
 - A game running as administrator can only be suspended when TrayTrigger runs as administrator too.
 - Some games can crash on resume after being suspended a long time. Save first if it matters.

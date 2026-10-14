@@ -79,8 +79,10 @@ public class GameCardViewModel : ViewModelBase
         Action<GameCardViewModel>? onRangeSelect = null,
         Action<GameCardViewModel>? onQuickSettingChanged = null,
         Action<GameCardViewModel>? onToggleDlssOverride = null,
-        Action<GameCardViewModel>? onToggleSuspend = null)
+        Action<GameCardViewModel>? onToggleSuspend = null,
+        Action<GameCardViewModel>? onRestoreSettings = null)
     {
+        RestoreSettingsCommand = new RelayCommand(() => onRestoreSettings?.Invoke(this), () => onRestoreSettings != null);
         _onQuickSettingChanged = onQuickSettingChanged;
         _onToggleDlssOverride = onToggleDlssOverride;
         _onCloseGame = onCloseGame;
@@ -431,6 +433,7 @@ public class GameCardViewModel : ViewModelBase
 
     public ICommand CloseGameCommand { get; }
     public ICommand ForceCloseCommand { get; }
+    public ICommand RestoreSettingsCommand { get; }
 
     /// <summary>
     /// Blank until there is playtime to show. A card already says "Never played" (or when it was
