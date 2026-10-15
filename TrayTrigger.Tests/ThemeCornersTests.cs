@@ -207,21 +207,61 @@ public class ThemeCornersTests : IDisposable
     // ---- Opening a file ----------------------------------------------------------------------------------------
 
     [Fact]
-    public void ACardTheFileSetsWithAShape_OpensAsThatShape_AndTheRestShowAsTheirOwn() => WpfTestHost.Run(() =>
+    public void ACopyOfABuiltInWithCorners_WritesEveryCornerToTheNewFile() => WpfTestHost.Run(() =>
+    {
+        var corners = Open("Abyssal").Corners;
+
+        // Saving over the built-in's own corners would write nothing (they are "already in the file"); a copy is a new file.
+        Assert.Empty(corners.ForSave().Set);
+        var set = corners.ForSave(newFile: true).Set;
+        Assert.Equal(4, set.Count);
+        Assert.Equal(new CornerRadius(16, 16, 16, 0), set["RadiusCard"]);
+    });
+
+    [Fact]
+    public void TheChoiceAbove_StaysUsable_WhileAnyRowStillFollowsItsShapeOrSize() => WpfTestHost.Run(() =>
+    {
+        var vm = OpenFile("Mixed", "{ \"shape\": { \"RadiusSmall\": 7 } }", out _);
+        var c = vm.Corners;
+        var leaf = ThemeCorners.Shapes.First(x => x.Id == "leaf");
+
+        // Tags have their own size but still follow the shape; controls and cards follow both.
+        Assert.True(c.DefaultUsed);
+        Assert.True(c.RoundnessEnabled);
+
+        // Every row but the posters has its own shape and size: nothing follows the choice above.
+        foreach (var row in new[] { c.Tags, c.Controls, c.Cards })
+        {
+            row.SelectedShape = leaf;
+            row.Step = 5;
+        }
+        Assert.False(c.DefaultUsed);
+        Assert.False(c.RoundnessEnabled);
+
+        // Putting one back to Default gives both back.
+        c.Controls.ResetCommand.Execute(null);
+        Assert.True(c.DefaultUsed);
+        Assert.True(c.RoundnessEnabled);
+    });
+
+    [Fact]
+    public void ACardTheFileSetsWithAShape_OpensAsItsOwnRow_AndTheChoiceAboveStaysTheApps() => WpfTestHost.Run(() =>
     {
         var vm = OpenFile("Leafy", "{ \"shape\": { \"RadiusCard\": [0, 16, 0, 16] } }", out _);
 
-        Assert.Equal("leaf", vm.Corners.Shape.Id);
-        Assert.Equal(8, vm.Corners.Roundness);
-        // Tags and controls are the app's own, which is not a leaf at 8, so they show as their own choice.
-        Assert.True(vm.Corners.HasOverrides);
+        // The choice above is the app's own look; the card is a row with its own shape and size.
+        Assert.Equal("rounded", vm.Corners.Shape.Id);
+        Assert.Equal(4, vm.Corners.Roundness);
+        Assert.Equal("leaf", vm.Corners.Cards.SelectedShape.Id);
+        Assert.Equal(8, vm.Corners.Cards.Step);
+        Assert.True(vm.Corners.Cards.HasOwnSetting);
         Assert.True(vm.Corners.ShowCustomize);
         Assert.Equal(new CornerRadius(6), vm.Corners.Values["RadiusControl"]);
-        // Nothing was changed, so nothing is written.
-        var (set, clear) = vm.Corners.ForSave();
-        Assert.Empty(set);
-        Assert.Empty(clear);
-        Assert.False(vm.HasUnsavedChanges);
+
+        // Moving the choice above never moves a row that has its own setting.
+        vm.Corners.Roundness = 12;
+        Assert.Equal(8, vm.Corners.Cards.Step);
+        Assert.Equal(new CornerRadius(0, 16, 0, 16), vm.Corners.Values["RadiusCard"]);
     });
 
     [Fact]

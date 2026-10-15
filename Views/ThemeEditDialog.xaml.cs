@@ -45,7 +45,9 @@ public partial class ThemeEditDialog : Window
         TrayTrigger.Services.WindowSizeMemory.Attach(this, "ThemeEdit", () => viewModel.IsPreviewOpen ? PreviewWidth : 0);
 
         // The live preview is a panel on the right edge: opening it makes the window wider, and closing it takes that back.
-        // It starts closed, as the editor is the size it is meant to be seen at; the tab opens it.
+        // It opens the way it was left (closed the first time, as the editor is the size it is meant to be seen at).
+        viewModel.IsPreviewOpen = TrayTrigger.Services.WindowSizeMemory.ThemeEditPreviewOpen;
+        Closed += (_, _) => TrayTrigger.Services.WindowSizeMemory.RememberThemeEditPreviewOpen(viewModel.IsPreviewOpen);
         ShowPreview(viewModel.IsPreviewOpen, firstTime: true);
         viewModel.PropertyChanged += (_, e) =>
         {

@@ -120,11 +120,15 @@ public sealed partial class ThemeService
     public IReadOnlyList<ThemeInfo> Available()
     {
         var list = new List<ThemeInfo> { new(AutoId, "Auto (follow Windows)", null, BuiltIn: true, IsDark: true) };
-        list.AddRange(ThemeCatalog.BuiltIns.Select(t => new ThemeInfo(t.Id, t.Name, t.Author, true, t.IsDark)));
+        // Dark, the default, comes first; the other built-in looks follow alphabetically, and so do the player's own below them.
+        var builtIns = ThemeCatalog.BuiltIns;
+        list.AddRange(builtIns.Where(t => t.Id == ThemeCatalog.DarkId).Select(t => new ThemeInfo(t.Id, t.Name, t.Author, true, t.IsDark)));
+        list.AddRange(builtIns.Where(t => t.Id != ThemeCatalog.DarkId).OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(t => new ThemeInfo(t.Id, t.Name, t.Author, true, t.IsDark)));
         list.Add(new ThemeInfo(ThemeCatalog.HighContrastId, "High Contrast (Windows colors)", "Windows", true, ThemeCatalog.HighContrast().IsDark));
         var (user, problems) = ThemeCatalog.LoadUserThemes();
         Problems = problems;
-        list.AddRange(user.Select(t => new ThemeInfo(t.Id, t.Name, t.Author, false, t.IsDark)));
+        list.AddRange(user.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).Select(t => new ThemeInfo(t.Id, t.Name, t.Author, false, t.IsDark)));
         return list;
     }
 

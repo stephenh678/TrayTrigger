@@ -29,7 +29,7 @@
         </Style>
         <!-- The States strip in the preview: the shape of a small button, a row, and the caption under each. The colors are set where they are used. -->
         <Style x:Key="StateChip" TargetType="Border">
-            <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
             <Setter Property="Padding" Value="10,4"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -106,10 +106,15 @@
                                 </LinearGradientBrush>
                             </Border.Background>
                         </Border>
-                        <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="10,10,0,0" Padding="6,2" Background="{DynamicResource BrushScrim}"
-                                CornerRadius="{DynamicResource RadiusSmall}">
-                            <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushArtText}"/>
-                        </Border>
+                        <!-- As in the library: the launcher's logo, then the category pill. -->
+                        <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left" Orientation="Horizontal" Margin="10,10,0,0">
+                            <Image Source="pack://application:,,,/Assets/LauncherLogos/local_games.png" Height="22.5" Stretch="Uniform" VerticalAlignment="Center"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <Border Background="{DynamicResource BrushScrim}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextSecondary}" VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
                         <Grid VerticalAlignment="Bottom">
                             <Border>
                                 <Border.Clip>
@@ -134,7 +139,7 @@
                                            Foreground="{DynamicResource BrushArtText}" TextTrimming="CharacterEllipsis"/>
                                 <Grid Margin="0,3,0,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" MaxWidth="90"/>
+                                        <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextSecondary}"
@@ -150,10 +155,11 @@
             </StackPanel>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsHover}" Value="True">
-                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
+                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                     <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                    <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
@@ -404,11 +410,11 @@
                                         <ColumnDefinition Width="28"/>
                                     </Grid.ColumnDefinitions>
                                     <ComboBox ItemsSource="{Binding Shapes}" SelectedItem="{Binding Shape}" ItemTemplate="{StaticResource ShapeItem}"
-                                              Style="{StaticResource ShapeComboBox}" AutomationProperties.Name="Corner shape"/>
+                                              Style="{StaticResource ShapeComboBox}" IsEnabled="{Binding DefaultUsed}" AutomationProperties.Name="Corner shape"/>
                                     <TextBlock Grid.Column="1" Text="Roundness" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}"
                                                Foreground="{DynamicResource BrushTextSecondary}" Margin="16,0,10,0"/>
                                     <Slider Grid.Column="2" Minimum="0" Maximum="16" SmallChange="1" LargeChange="2" TickFrequency="1" IsSnapToTickEnabled="True"
-                                            IsEnabled="{Binding SizeEnabled}" Value="{Binding Roundness, Mode=TwoWay}" Style="{StaticResource ThemeSliderStyle}" VerticalAlignment="Center"
+                                            IsEnabled="{Binding RoundnessEnabled}" Value="{Binding Roundness, Mode=TwoWay}" Style="{StaticResource ThemeSliderStyle}" VerticalAlignment="Center"
                                             AutomationProperties.Name="How round the corners are"/>
                                     <TextBlock Grid.Column="3" Text="{Binding RoundnessText}" Style="{StaticResource CornerNumber}"/>
                                 </Grid>
@@ -510,14 +516,13 @@
                             <DockPanel LastChildFill="False">
                                 <Button DockPanel.Dock="Right" Content="Add Game" Style="{StaticResource ModernAccentButton}" Focusable="False" IsTabStop="False"/>
                                 <Button DockPanel.Dock="Right" Content="Add Folder" Style="{StaticResource ModernOutlineButton}" Margin="0,0,8,0" Focusable="False" IsTabStop="False"/>
-                                <Border DockPanel.Dock="Left" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                        CornerRadius="{DynamicResource RadiusCard}" Padding="3">
+                                <!-- The library's own tab strip: same container and the app's own SegmentedTabButton. -->
+                                <Border DockPanel.Dock="Left" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
+                                        CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}">
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Background="{DynamicResource BrushAccent}" CornerRadius="{DynamicResource RadiusSmall}" Padding="12,4">
-                                            <TextBlock Text="All Games" FontWeight="SemiBold" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
-                                        </Border>
-                                        <TextBlock Text="Favorites" FontWeight="SemiBold" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="12,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Action" FontWeight="SemiBold" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        <Button Content="All Games" Style="{StaticResource SegmentedTabButton}" Tag="True" Focusable="False" IsTabStop="False"/>
+                                        <Button Content="Favorites" Style="{StaticResource SegmentedTabButton}" Tag="False" Margin="2,0,0,0" Focusable="False" IsTabStop="False"/>
+                                        <Button Content="Action" Style="{StaticResource SegmentedTabButton}" Tag="False" Margin="2,0,0,0" Focusable="False" IsTabStop="False"/>
                                     </StackPanel>
                                 </Border>
                             </DockPanel>
@@ -536,19 +541,20 @@
                                     </Style>
                                 </Border.Style>
                                 <StackPanel>
-                                    <TextBlock Text="Destroy All Humans! - Clone Carnage" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="{Binding Samples[0].Name, FallbackValue='Cyberpunk 2077'}" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                     <TextBlock Text="Second-level text, like a description" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0"/>
                                     <TextBlock Text="Quiet text, like a hint or a caption" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                         <TextBlock Text="A link" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
-                                        <Border Style="{StaticResource PreviewBadge}" Background="{DynamicResource BrushSuccessWash}" Margin="14,0,0,0">
-                                            <TextBlock Text="PLAYING" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushSuccessText}"/>
+                                        <!-- The library's own badges: Playing, and the two readings of "isn't there" (Missing, Not installed). -->
+                                        <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" Margin="14,0,0,0">
+                                            <TextBlock Text="▶ PLAYING" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
                                         </Border>
-                                        <Border Style="{StaticResource PreviewBadge}" Background="{DynamicResource BrushWarningWash}">
-                                            <TextBlock Text="NOT INSTALLED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}"/>
+                                        <Border Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="8,0,0,0">
+                                            <TextBlock Text="MISSING" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}"/>
                                         </Border>
-                                        <Border Style="{StaticResource PreviewBadge}" Background="{DynamicResource BrushDangerWash}">
-                                            <TextBlock Text="MISSING" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushDanger}"/>
+                                        <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="8,0,0,0">
+                                            <TextBlock Text="NOT INSTALLED" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushInfoText}"/>
                                         </Border>
                                     </StackPanel>
                                 </StackPanel>
@@ -593,7 +599,7 @@
                                         <Border Style="{StaticResource StateChip}" Background="{DynamicResource BrushAccentPressed}" BorderBrush="{DynamicResource BrushAccentPressed}">
                                             <TextBlock Text="Pressed" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
                                         </Border>
-                                        <Border Style="{StaticResource StateChip}" Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}">
+                                        <Border Style="{StaticResource StateChip}" Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}">
                                             <TextBlock Text="Hover" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                                         </Border>
                                     </StackPanel>

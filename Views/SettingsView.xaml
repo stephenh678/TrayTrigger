@@ -280,8 +280,30 @@
                                  The 4 below each item is the gap above the line of text under the row. -->
                             <WrapPanel Orientation="Horizontal">
                                 <ComboBox AutomationProperties.Name="Theme" ItemsSource="{Binding Appearance.Themes}"
-                                          SelectedValue="{Binding Appearance.SelectedThemeId}" SelectedValuePath="Id" DisplayMemberPath="DisplayName"
-                                          Style="{StaticResource ModernComboBox}" VerticalAlignment="Center" MinWidth="260" Margin="0,0,8,4"/>
+                                          SelectedValue="{Binding Appearance.SelectedThemeId}" SelectedValuePath="Id"
+                                          Style="{StaticResource ModernComboBox}" VerticalAlignment="Center" MinWidth="260" Margin="0,0,8,4">
+                                    <!-- A separator entry is a thin line: it cannot be picked, focused or clicked. -->
+                                    <ComboBox.ItemContainerStyle>
+                                        <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                    <Setter Property="Focusable" Value="False"/>
+                                                    <Setter Property="IsHitTestVisible" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ComboBox.ItemContainerStyle>
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                                <Border Height="1" Background="{DynamicResource BrushBorderStrong}" Margin="0,4"
+                                                        Visibility="{Binding IsSeparator, Converter={StaticResource BoolToVis}}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <Button Command="{Binding Appearance.DeleteCommand}" IsEnabled="{Binding Appearance.CanDelete}"
                                         Style="{StaticResource ModernOutlineButton}" Width="32" Height="32" Padding="0" Margin="0,0,8,4" VerticalAlignment="Center"
                                         AutomationProperties.Name="Delete this theme"

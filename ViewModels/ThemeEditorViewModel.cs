@@ -634,7 +634,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             .Where(r => r.Color != r.Original && !(r.Key == "Surface" && _surfaceFollowsBackground))
             .ToDictionary(r => r.Key, r => r.Color);
 
-        var (shapeSet, shapeClear) = Corners.ForSave();
+        var (shapeSet, shapeClear) = Corners.ForSave(newFile: _source.Path == null);
         var request = new ThemeEditRequest(_source, _name.Trim(), _isDark, Palette, changed, _picture, _pictureSource, _strength, _position, shapeSet, shapeClear);
         var outcome = _themes.SaveTheme(request);
         if (!outcome.Ok)

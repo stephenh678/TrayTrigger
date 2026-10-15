@@ -70,6 +70,8 @@ public class AppSettings
     /// resized has no entry, and opens at its own default size.
     /// </summary>
     public Dictionary<string, WindowSize> WindowSizes { get; set; } = new();
+    /// <summary>Whether the theme editor's Live preview was out when it was last closed; it opens the same way.</summary>
+    public bool ThemeEditPreviewOpen { get; set; }
     public string GlobalManageHotkey { get; set; } = "Ctrl+Alt+G";
     /// <summary>Opens the tray menu by the tray icon from anywhere, search box ready. Blank means none.
     /// A settings file from before it existed gets the default.</summary>

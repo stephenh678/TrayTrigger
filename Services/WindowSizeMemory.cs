@@ -67,6 +67,17 @@ public static class WindowSizeMemory
         return true;
     }
 
+    /// <summary>Whether the theme editor's Live preview was out when it was last closed.</summary>
+    public static bool ThemeEditPreviewOpen => _settings?.Invoke().ThemeEditPreviewOpen ?? false;
+
+    public static void RememberThemeEditPreviewOpen(bool open)
+    {
+        var settings = _settings?.Invoke();
+        if (settings == null || settings.ThemeEditPreviewOpen == open) return;
+        settings.ThemeEditPreviewOpen = open;
+        _save?.Invoke(settings);
+    }
+
     internal static void Remember(string key, WindowSize? size)
     {
         var settings = _settings?.Invoke();

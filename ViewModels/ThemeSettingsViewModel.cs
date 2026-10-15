@@ -11,7 +11,8 @@ using TrayTrigger.Views;
 namespace TrayTrigger.ViewModels;
 
 /// <summary>One entry of the theme picker.</summary>
-public sealed record ThemeChoice(string Id, string DisplayName);
+/// <summary>One entry in the theme list; a separator is a line that cannot be chosen.</summary>
+public sealed record ThemeChoice(string Id, string DisplayName, bool IsSeparator = false);
 
 /// <summary>
 /// Settings > General > Appearance: the theme picker, and the buttons for writing a theme of your own.
@@ -19,6 +20,8 @@ public sealed record ThemeChoice(string Id, string DisplayName);
 /// </summary>
 public sealed class ThemeSettingsViewModel : ViewModelBase
 {
+    private const string SeparatorId = "-separator-";
+
     private readonly Models.AppSettings _settings;
     private readonly Action _save;
     private readonly ThemeService _themes = ThemeService.Instance;
@@ -127,9 +130,13 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
 
     private void Reload()
     {
-        Themes = _themes.Available()
+        var choices = _themes.Available()
             .Select(t => new ThemeChoice(t.Id, t.Id == ThemeCatalog.DarkId ? t.Name + " (Default)" : t.BuiltIn ? t.Name : t.Name + " (yours)"))
             .ToList();
+        // A line between the built-in themes and the player's own, when there are any.
+        int firstOwn = _themes.Available().ToList().FindIndex(t => !t.BuiltIn);
+        if (firstOwn > 0) choices.Insert(firstOwn, new ThemeChoice(SeparatorId, string.Empty, IsSeparator: true));
+        Themes = choices;
         OnPropertyChanged(nameof(Themes));
         // The list was rebuilt, so tell the combo box which entry is selected again.
         OnPropertyChanged(nameof(SelectedThemeId));

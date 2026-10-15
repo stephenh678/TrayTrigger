@@ -418,7 +418,7 @@
                                 </Border>
                                 <StackPanel VerticalAlignment="Top">
                                     <TextBlock Text="Themes &amp; Backgrounds" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Dark, Light, Green, Amber, Purple, Auto, or your own theme with a background picture. Settings &gt; General &gt; Appearance."
+                                    <TextBlock Text="Dark, Light, Green, Amber, Purple, Abyssal, Auto, or your own theme with a background picture. Settings &gt; General &gt; Appearance."
                                                FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DockPanel>

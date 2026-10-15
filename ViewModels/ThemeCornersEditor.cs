@@ -108,6 +108,12 @@ public sealed class CornerRow : ViewModelBase
         }
     }
 
+    /// <summary>True when this row still takes its shape from the choice above it.</summary>
+    internal bool FollowsShape => _custom == null && _selected.IsSame;
+
+    /// <summary>True when this row still takes its size from the choice above it.</summary>
+    internal bool FollowsSize => _custom == null && _stepOverride == null;
+
     /// <summary>True when this row does not just follow the choice above it.</summary>
     internal bool IsOverridden => _custom != null || _byHand || !_selected.IsSame || _stepOverride != null;
 
@@ -210,15 +216,9 @@ public sealed class ThemeCornersEditor : ViewModelBase
         // What the theme says now (what it leaves out is the app's own), worked out as the app will.
         var now = ThemeShape.Build(_file);
         var card = (CornerRadius)now["RadiusCard"];
-        if (ThemeCorners.Recognise(Cards.Target, card) is { } found)
-        {
-            _shape = found.Shape;
-            _roundness = found.Step;
-        }
-        else
-        {
-            Cards.Keep(card);
-        }
+        // Cards are a row like the others: the choice above is the app's own look until a row says otherwise, and a row a
+        // theme file sets keeps its own shape and size, so moving the choice above never moves it.
+        Cards.Load(card);
         Tags.Load((CornerRadius)now["RadiusSmall"]);
         Controls.Load((CornerRadius)now["RadiusControl"]);
         if (_file?.ContainsKey("RadiusPoster") == true) Posters.Load((CornerRadius)now["RadiusPoster"]);
@@ -279,6 +279,12 @@ public sealed class ThemeCornersEditor : ViewModelBase
     public bool IsExtreme => _roundness > ThemeCorners.NormalSteps;
     public bool SizeEnabled => !_shape.IsFull;
 
+    /// <summary>False when tags, controls and cards all have their own shape: nothing follows the shape above, so it is greyed out rather than moved to no effect.</summary>
+    public bool DefaultUsed => Rows.Any(r => r.Target.Key != "RadiusPoster" && r.FollowsShape);
+
+    /// <summary>The same for the size: some row still follows it, and the shape above has a size.</summary>
+    public bool RoundnessEnabled => SizeEnabled && Rows.Any(r => r.Target.Key != "RadiusPoster" && r.FollowsSize);
+
     public bool ShowCustomize
     {
         get => _showCustomize;
@@ -313,6 +319,8 @@ public sealed class ThemeCornersEditor : ViewModelBase
         foreach (var row in Rows) row.Refresh();
         OnPropertyChanged(nameof(DiffersFromDefault));
         OnPropertyChanged(nameof(HasOverrides));
+        OnPropertyChanged(nameof(DefaultUsed));
+        OnPropertyChanged(nameof(RoundnessEnabled));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -371,7 +379,7 @@ public sealed class ThemeCornersEditor : ViewModelBase
     /// already in the file as they are, and the lines the file has that should go (a radius put back to the app's own, a poster
     /// that follows the card again). A radius that is the same as the file's is left alone, so saving a theme changes only what was changed.
     /// </summary>
-    internal (Dictionary<string, CornerRadius> Set, List<string> Clear) ForSave()
+    internal (Dictionary<string, CornerRadius> Set, List<string> Clear) ForSave(bool newFile = false)
     {
         var set = new Dictionary<string, CornerRadius>(StringComparer.Ordinal);
         var clear = new List<string>();
@@ -379,7 +387,8 @@ public sealed class ThemeCornersEditor : ViewModelBase
         {
             string key = row.Target.Key;
             var value = row.Value;
-            bool inFile = _file != null && _file.TryGetValue(key, out _);
+            // A copy of a built-in theme is a new file that holds none of the source's corners, so every one that is not the app's own is written.
+            bool inFile = !newFile && _file != null && _file.TryGetValue(key, out _);
             CornerRadius inTheFile = inFile ? _file![key] : default;
 
             if (inFile && ThemeCorners.Same(inTheFile, value)) continue;
