@@ -213,6 +213,9 @@
                 <DataTrigger Binding="{Binding IsExtreme}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
                 </DataTrigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource BrushTextDisabled}"/>
+                </Trigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
@@ -427,7 +430,7 @@
                                     <Slider Grid.Column="2" Minimum="0" Maximum="16" SmallChange="1" LargeChange="2" TickFrequency="1" IsSnapToTickEnabled="True"
                                             IsEnabled="{Binding RoundnessEnabled}" Value="{Binding Roundness, Mode=TwoWay}" Style="{StaticResource ThemeSliderStyle}" VerticalAlignment="Center"
                                             AutomationProperties.Name="How round the corners are"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding RoundnessText}" Style="{StaticResource CornerNumber}"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding RoundnessText}" IsEnabled="{Binding RoundnessEnabled}" Style="{StaticResource CornerNumber}"/>
                                 </Grid>
                                 <Button Content="{Binding CustomizeText}" Command="{Binding ToggleCustomizeCommand}" Style="{StaticResource HelpLinkButton}" Margin="0,10,0,0"
                                         AutomationProperties.Name="Choose a shape and size for each kind of corner"/>
@@ -449,7 +452,7 @@
                                                     <Slider Grid.Column="2" Margin="14,0,8,0" Minimum="0" Maximum="16" SmallChange="1" LargeChange="2" TickFrequency="1" IsSnapToTickEnabled="True"
                                                             IsEnabled="{Binding SizeEnabled}" Value="{Binding Step, Mode=TwoWay}" Style="{StaticResource ThemeSliderStyle}" VerticalAlignment="Center"
                                                             AutomationProperties.Name="{Binding Label, StringFormat={}{0} roundness}"/>
-                                                    <TextBlock Grid.Column="3" Text="{Binding StepText}" Style="{StaticResource CornerNumber}"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding StepText}" IsEnabled="{Binding SizeEnabled}" Style="{StaticResource CornerNumber}"/>
                                                     <Button Grid.Column="4" Content="&#xE72C;" FontFamily="{StaticResource IconFont}" Style="{StaticResource ModernGhostButton}" Padding="4"
                                                             MinHeight="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                             Command="{Binding ResetCommand}" Visibility="{Binding HasOwnSetting, Converter={StaticResource BoolToVis}}"

@@ -10,7 +10,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 - **Auto HDR per game** - Turn Auto HDR on or off for a single game in Edit Game, or opt in through the Optimized profile.
 - **Abyssal theme** - A new deep-blue look with its own corner shapes, in Settings > Appearance.
 - **Import theme** - Settings > Appearance > Import theme... adds a theme file (and its picture) made elsewhere.
-- **Theme corners** - Edit theme has a Corners card: pick a shape and how round it is for tags, buttons, cards and posters, with a live preview that slides out beside the window, and a Randomize button for a new starting point.
+- **Theme corners** - Edit theme has a Corners card: pick a shape and how round it is for tags, buttons, cards and posters, with a live preview that slides out beside the window, and Randomize links to roll the colors, the corners or both for a new starting point.
 - **Smarter Stutter Check** - It now spots a missing or tiny paging file, and a stopped AMD V-Cache optimizer on dual-chiplet X3D CPUs.
 
 ## 1.6.2

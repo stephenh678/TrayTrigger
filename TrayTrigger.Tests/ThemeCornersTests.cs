@@ -31,6 +31,7 @@ public class ThemeCornersTests : IDisposable
     }
 
     private static CornerShape Shape(string id) => ThemeCorners.Shapes.First(s => s.Id == id);
+    private static CornerShape Shape(string id, CornerRow row) => row.Choices.First(s => s.Id == id);
     private static ThemeEditorViewModel Open(string id) => new(ThemeCatalog.BuiltIn(id)!, ThemeService.Instance);
 
     private ThemeEditorViewModel OpenFile(string name, string text, out string path)
@@ -181,7 +182,7 @@ public class ThemeCornersTests : IDisposable
 
         corners.Shape = Shape("pill");
 
-        Assert.False(corners.SizeEnabled);
+        Assert.False(corners.RoundnessEnabled);
         Assert.Equal(new CornerRadius(16), corners.Values["RadiusControl"]);
         Assert.Equal(new CornerRadius(64), corners.Values["RadiusCard"]);
         Assert.False(corners.Controls.SizeEnabled);
@@ -242,6 +243,73 @@ public class ThemeCornersTests : IDisposable
         c.Controls.ResetCommand.Execute(null);
         Assert.True(c.DefaultUsed);
         Assert.True(c.RoundnessEnabled);
+    });
+
+    [Fact]
+    public void TheRoundnessAbove_IsGreyed_WhenOnlyAShapeWithNoSizeFollowsIt() => WpfTestHost.Run(() =>
+    {
+        var c = Open("Dark").Corners;
+        c.Tags.SelectedShape = Shape("hanging", c.Tags);
+        c.Tags.Step = 5;
+        c.Controls.SelectedShape = Shape("left-cap", c.Controls);   // follows the size above, but a cap has none
+        c.Cards.SelectedShape = Shape("folder-tab", c.Cards);
+        c.Cards.Step = 9;
+        c.Posters.SelectedShape = Shape("reverse-ramp", c.Posters);
+        c.Posters.Step = 10;
+
+        Assert.False(c.RoundnessEnabled);
+
+        // A row whose shape has a size, and that follows it, gives the slider back.
+        c.Controls.SelectedShape = Shape("leaf", c.Controls);
+        Assert.True(c.RoundnessEnabled);
+    });
+
+    [Fact]
+    public void TheRoundnessAbove_StaysUsable_WhileAPosterFollowsTheCardsSizeThroughIt() => WpfTestHost.Run(() =>
+    {
+        var c = Open("Dark").Corners;
+        c.Tags.Step = 5;
+        c.Controls.Step = 5;
+        c.Cards.SelectedShape = Shape("pill", c.Cards);   // the card has no size, but the poster takes the card's
+        c.Posters.SelectedShape = Shape("rounded", c.Posters);
+        var before = c.Values["RadiusPoster"];
+
+        Assert.True(c.RoundnessEnabled);
+        c.Roundness = 8;
+
+        Assert.NotEqual(before, c.Values["RadiusPoster"]);
+    });
+
+    [Fact]
+    public void ARoundnessNothingDraws_IsNotExtreme() => WpfTestHost.Run(() =>
+    {
+        var c = Open("Dark").Corners;
+        c.Shape = Shape("pill");
+        c.Roundness = 12;
+
+        Assert.False(c.RoundnessEnabled);
+        Assert.False(c.IsExtreme);
+        Assert.False(c.AnyExtreme);
+        Assert.False(c.Controls.IsExtreme);
+
+        c.Shape = Shape("rounded");
+        Assert.True(c.IsExtreme);
+        Assert.True(c.AnyExtreme);
+    });
+
+    [Fact]
+    public void CustomFromTheFile_CanBePickedAgain_AfterAShapeWasPicked() => WpfTestHost.Run(() =>
+    {
+        var vm = OpenFile("Odd", "{ \"shape\": { \"RadiusCard\": [3, 11, 5, 2] } }", out _);
+        var cards = vm.Corners.Cards;
+        var custom = cards.Choices.First(x => x.IsCustom);
+        cards.SelectedShape = Shape("pill", cards);
+
+        cards.SelectedShape = custom;
+
+        Assert.Equal(new CornerRadius(3, 11, 5, 2), vm.Corners.Values["RadiusCard"]);
+        Assert.False(cards.SizeEnabled);
+        Assert.Empty(vm.Corners.ForSave().Set);
     });
 
     [Fact]
