@@ -20,7 +20,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="CardBorder" CornerRadius="{StaticResource RadiusCard}" BorderThickness="1"
+                        <Border x:Name="CardBorder" CornerRadius="{DynamicResource RadiusCard}" BorderThickness="1"
                                 Background="{DynamicResource BrushSurface}"
                                 BorderBrush="{DynamicResource BrushBorder}">
                             <Grid Margin="12,10">
@@ -44,7 +44,7 @@
                                 </StackPanel>
 
                                 <!-- Selected checkmark badge -->
-                                <Border x:Name="CheckBadge" Grid.Column="1" Width="18" Height="18" CornerRadius="{StaticResource RadiusCard}"
+                                <Border x:Name="CheckBadge" Grid.Column="1" Width="18" Height="18" CornerRadius="{DynamicResource RadiusCard}"
                                         HorizontalAlignment="Right" VerticalAlignment="Top"
                                         Background="Transparent" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1.5">
                                     <TextBlock x:Name="CheckGlyph" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"

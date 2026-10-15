@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows;
 using System.Windows.Media;
 
 namespace TrayTrigger.Services.Theming;
@@ -31,7 +32,9 @@ internal sealed record ThemeEditRequest(
     PictureChoice Picture,
     string? PictureSource,
     double Strength,
-    string Position = BackgroundPosition.Center);
+    string Position = BackgroundPosition.Center,
+    IReadOnlyDictionary<string, CornerRadius>? ShapeSet = null,
+    IReadOnlyCollection<string>? ShapeClear = null);
 
 /// <summary>What <see cref="ThemeService.SaveTheme"/> did: whether it worked, what to tell the user, and the theme's file.</summary>
 internal sealed record ThemeSaveOutcome(bool Ok, string Message, string? ThemePath);
@@ -106,6 +109,20 @@ public sealed partial class ThemeService
             if (edited != null && shown.Position != r.Position) edited = ThemeFileEditor.SetPosition(edited, r.Position);
         }
 
+        // Corner radii: only the ones the editor changed, so a theme the person wrote by hand keeps its own lines.
+        if (r.ShapeSet != null)
+            foreach (var (key, radius) in r.ShapeSet)
+            {
+                if (edited == null) break;
+                edited = ThemeFileEditor.SetShape(edited, key, radius);
+            }
+        if (r.ShapeClear != null)
+            foreach (var key in r.ShapeClear)
+            {
+                if (edited == null) break;
+                edited = ThemeFileEditor.RemoveShape(edited, key);
+            }
+
         // The edit has to read back as exactly what was asked, or nothing is written.
         if (edited == null || !ReadsBackAs(edited, baseName, path, r, image))
             return new ThemeSaveOutcome(false, "The theme file could not be changed safely, so nothing was changed. You can edit the file yourself.", null);
@@ -143,7 +160,7 @@ public sealed partial class ThemeService
                 break;
         }
 
-        string text = ThemeFileTemplate.Write(name, r.Palette, r.IsDark, background, r.Position);
+        string text = ThemeFileTemplate.Write(name, r.Palette, r.IsDark, background, r.Position, r.ShapeSet);
         if (!ReadsBackAs(text, name, path, r with { Name = name }, background?.Image ?? ThemeBackground.None))
             return new ThemeSaveOutcome(false, "The theme file could not be written safely, so nothing was saved.", null);
 
@@ -181,6 +198,11 @@ public sealed partial class ThemeService
         var parsed = ThemeFileReader.Parse(text, fileName, ThemeOrigin.User, path).Theme;
         if (parsed == null || parsed.Name != r.Name || parsed.IsDark != r.IsDark) return false;
         if (image != null && parsed.Background?.Image != image) return false;
+
+        if (r.ShapeSet != null)
+            foreach (var (key, radius) in r.ShapeSet)
+                if (parsed.Shape == null || !parsed.Shape.TryGetValue(key, out var read) || !ThemeCorners.Same(read, radius)) return false;
+        if (r.ShapeClear != null && parsed.Shape != null && r.ShapeClear.Any(parsed.Shape.ContainsKey)) return false;
 
         var resolved = ThemeCatalog.Resolve(parsed);
         return r.Palette.All(p => resolved.TryGetValue(p.Key, out var color) && color == p.Value);

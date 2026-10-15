@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "name": "Abyssal",
+  "author": "TrayTrigger",
+  "base": "dark",
+  "background": {
+    "image": "abyssal.jpg",
+    "position": "right",
+    "strength": 0.5
+  },
+  "shape": {
+    "RadiusSmall": [
+      7,
+      0,
+      7,
+      0
+    ],
+    "RadiusControl": [
+      12,
+      1.8,
+      12,
+      1.8
+    ],
+    "RadiusCard": [
+      16,
+      16,
+      16,
+      0
+    ],
+    "RadiusPoster": [
+      0,
+      36,
+      0,
+      36
+    ]
+  },
+  "colors": {
+    "Background": "#0A111B",
+    "Surface": "#151F2E",
+    "TextPrimary": "#F2F7FF",
+    "Accent": "#3E6C98",
+    "Danger": "#E56B78",
+    "Warning": "#E8B866",
+    "SuccessText": "#4BCB86",
+    "SurfaceHover": "#1D2B3E",
+    "DialogCard": "#0F1824",
+    "Border": "#2B3B50",
+    "BorderStrong": "#3A4E68",
+    "BorderAccent": "#4A7BA7",
+    "AccentHover": "#4A7BA7",
+    "AccentPressed": "#2F5780",
+    "AccentText": "#8DBDE6",
+    "AccentWash": "#17283A",
+    "Brand": "#3B9BFF",
+    "InfoText": "#9DB4CC",
+    "TextOnSolid": "#FFFFFF",
+    "TextSecondary": "#B4C4D8",
+    "TextMuted": "#9EAFCA",
+    "TextSoft": "#CCD9E9",
+    "TextDisabled": "#71839B",
+    "DangerWash": "#321A25",
+    "DangerBorder": "#843348",
+    "DangerSolid": "#A83249",
+    "DangerSolidHover": "#C4485C",
+    "WarningWash": "#332817",
+    "WarningBorder": "#8C6A32",
+    "Highlight": "#66FFC400",
+    "SuccessWash": "#142E2A",
+    "SuccessSolid": "#218454",
+    "Gold": "#FFD36A",
+    "BadgePurple": "#C0A7FF",
+    "BadgePurpleWash": "#28213F",
+    "Scrim": "#CC000000",
+    "OverlayLine": "#33FFFFFF",
+    "ArtText": "#FFFFFF",
+    "ArtTextSecondary": "#C0CCDA",
+    "ArtTextMuted": "#A0AEC0"
+  }
+}

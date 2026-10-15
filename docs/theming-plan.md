@@ -92,5 +92,38 @@ dark mode.
 
 ## Out of scope for this version
 
-Fonts, text sizes and corner radii stay fixed. They are already named (`Typography.xaml`, `Shapes.xaml`),
-so making them themeable later is a smaller step than this one.
+Fonts and text sizes stay fixed. They are already named (`Typography.xaml`), so making them themeable later
+is a smaller step than this one.
+
+## Corner radii (1.6.3)
+
+Corner radii are themeable. `Shapes.xaml` keeps its names, and a theme file's optional `shape` block sets the
+ones it changes, as `colors` does:
+
+```
+"shape": { "RadiusCard": 20, "RadiusControl": [0, 12, 0, 12] }
+```
+
+- **Four kinds.** `RadiusSmall` (tags and badges, 0 to 16), `RadiusControl` (buttons, boxes and rows, 0 to 48),
+  `RadiusCard` (cards and panels, 0 to 64) and `RadiusPoster` (the cover art, 0 to 96). A number sets all four
+  corners; four numbers set top-left, top-right, bottom-right, bottom-left. The word `Radius` may be left off.
+  `RadiusLarge` (circles) is not themeable.
+- **What follows the card.** A poster that the theme does not set is the card's radius less 1 pixel per corner, which is
+  the card's border, so the art meets the outline. The card's inner top and bottom edges (`RadiusInnerTop`,
+  `RadiusInnerBottom`) follow it the same way. A library card that shows its poster has no fill of its own, its outline takes the poster's
+  corners (`PosterCardRadiusConverter`, scaled to the card's real size as the art's clip is) and the two dark shades over the art are cut to the
+  poster's shape (`PosterShadeClipConverter`), so nothing of the card shows in a corner the art does not fill, for any shape and either card size. With no `shape` block every radius is the app's own, so an existing theme
+  looks as it did.
+- **How it reaches the views.** Every radius is read with `DynamicResource`, and `ThemeService` swaps in a fresh copy of
+  `Shapes.xaml` built by `ThemeShape` when a theme applies, as it does for colors. The poster art, the Game Details art and
+  the Edit Game art are clipped by `RoundedClipConverter` from their own border's radius and size, so they follow a
+  theme's corners; no view clips to a written number. `ShapeGuardTests` enforces both.
+- **No shape names in the file.** The Edit Theme window offers eleven shapes (Rounded, Leaf, Reverse leaf, Folder tab,
+  Speech bubble, Pill, Hanging, Left cap, One big corner, Ramp, Blade) and a roundness from 0 to 16 (steps past 8 are steeper and marked extreme), for the whole theme and,
+  under Customize, for each kind of corner. They exist only in the window; the file holds the numbers they work out to, and
+  the window shows a file's numbers as the shape and size that draw them, or as Custom when none does. A fully round corner
+  is 16 pixels for tags and controls (a larger radius on a wide control stretches into a lens, not a pill), 64 for cards and 96 for posters.
+- **Live preview.** The editor holds only the controls. The preview is a panel on the window's right edge, opened by a tab: the
+  window widens by the panel's width (moving left if it would leave the screen) and the editor keeps its size. It starts closed. Its game cards are the library's own card (184 x 276) with the player's most played games that have a cover, or made-up
+  games when there are none (`PosterSample`).
+- **Not themeable:** launcher icons, elliptical or cut corners, and anything Windows draws itself.

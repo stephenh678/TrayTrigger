@@ -64,7 +64,7 @@ internal static class ThemeCatalog
 
     // ---- Built-in themes -------------------------------------------------------------------------
 
-    private static readonly string[] BuiltInFiles = ["light", "green", "amber", "purple"];
+    private static readonly string[] BuiltInFiles = ["light", "green", "amber", "purple", "abyssal"];
 
     private static IReadOnlyList<ThemeDefinition>? _builtIns;
 

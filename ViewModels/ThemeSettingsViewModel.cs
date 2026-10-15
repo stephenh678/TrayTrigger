@@ -11,7 +11,8 @@ using TrayTrigger.Views;
 namespace TrayTrigger.ViewModels;
 
 /// <summary>One entry of the theme picker.</summary>
-public sealed record ThemeChoice(string Id, string DisplayName);
+/// <summary>One entry in the theme list; a separator is a line that cannot be chosen.</summary>
+public sealed record ThemeChoice(string Id, string DisplayName, bool IsSeparator = false);
 
 /// <summary>
 /// Settings > General > Appearance: the theme picker, and the buttons for writing a theme of your own.
@@ -19,6 +20,8 @@ public sealed record ThemeChoice(string Id, string DisplayName);
 /// </summary>
 public sealed class ThemeSettingsViewModel : ViewModelBase
 {
+    private const string SeparatorId = "-separator-";
+
     private readonly Models.AppSettings _settings;
     private readonly Action _save;
     private readonly ThemeService _themes = ThemeService.Instance;
@@ -29,6 +32,7 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         _save = save;
         EditCommand = new RelayCommand(Edit);
         OpenFolderCommand = new RelayCommand(OpenFolder);
+        ImportCommand = new RelayCommand(Import);
         DeleteCommand = new RelayCommand(Delete);
         _themes.ThemesChanged += OnThemesChanged;
         _themes.ThemeChanged += OnThemeChanged;
@@ -39,6 +43,7 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
 
     public ICommand EditCommand { get; }
     public ICommand OpenFolderCommand { get; }
+    public ICommand ImportCommand { get; }
     public ICommand DeleteCommand { get; }
 
     /// <summary>True when the chosen theme is one of the user's: a built-in theme cannot be deleted.</summary>
@@ -125,9 +130,13 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
 
     private void Reload()
     {
-        Themes = _themes.Available()
+        var choices = _themes.Available()
             .Select(t => new ThemeChoice(t.Id, t.Id == ThemeCatalog.DarkId ? t.Name + " (Default)" : t.BuiltIn ? t.Name : t.Name + " (yours)"))
             .ToList();
+        // A line between the built-in themes and the player's own, when there are any.
+        int firstOwn = _themes.Available().ToList().FindIndex(t => !t.BuiltIn);
+        if (firstOwn > 0) choices.Insert(firstOwn, new ThemeChoice(SeparatorId, string.Empty, IsSeparator: true));
+        Themes = choices;
         OnPropertyChanged(nameof(Themes));
         // The list was rebuilt, so tell the combo box which entry is selected again.
         OnPropertyChanged(nameof(SelectedThemeId));
@@ -162,6 +171,29 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         if (id != _settings.ThemeId) SelectedThemeId = id;
         else _themes.Apply(id);
         RaiseStatus();
+    }
+
+    private void Import()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Import a theme",
+            Filter = "Theme and picture files (*.json;*.jpg;*.jpeg;*.png)|*.json;*.jpg;*.jpeg;*.png",
+            CheckFileExists = true,
+            Multiselect = true,
+        };
+        if (FileDialogCloak.Show(dialog) != true) return;
+
+        var outcome = _themes.ImportThemeFiles(dialog.FileNames);
+        if (!outcome.Ok)
+        {
+            ModernDialog.ShowWarning(WindowHelper.ActiveOwner(), "The theme was not imported", outcome.Message);
+            return;
+        }
+
+        Reload();
+        SelectedThemeId = ThemeCatalog.UserThemeId(outcome.ThemePath!);
+        PictureMessage = outcome.Message;
     }
 
     private void Delete()

@@ -29,7 +29,7 @@
                        Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,6,0,12"/>
 
             <Border x:Name="NoteBorder" Grid.Row="2" Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusControl}" Padding="10,6" Margin="0,0,0,12" Visibility="Collapsed">
+                    CornerRadius="{DynamicResource RadiusControl}" Padding="10,6" Margin="0,0,0,12" Visibility="Collapsed">
                 <TextBlock x:Name="NoteText" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
             </Border>
 

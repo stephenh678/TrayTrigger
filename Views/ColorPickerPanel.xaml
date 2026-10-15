@@ -5,7 +5,7 @@
     <!-- A color square (saturation across, brightness up), a hue strip, suggested colors, and the color it started as next to
          the color it is now. The square and the strip are filled in code: they are drawing, not theme colors. -->
     <StackPanel>
-        <Border CornerRadius="{StaticResource RadiusControl}" Height="150" ClipToBounds="True"
+        <Border CornerRadius="{DynamicResource RadiusControl}" Height="150" ClipToBounds="True"
                 BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1">
             <Grid x:Name="Square" Background="Transparent" Cursor="Cross" Focusable="True"
                   FocusVisualStyle="{StaticResource KeyboardFocusRing}"
@@ -17,16 +17,16 @@
                 <Rectangle x:Name="WhiteFade"/>
                 <Rectangle x:Name="BlackFade"/>
                 <Canvas IsHitTestVisible="False">
-                    <Border x:Name="Handle" Width="14" Height="14" CornerRadius="{StaticResource RadiusLarge}" BorderThickness="2"
+                    <Border x:Name="Handle" Width="14" Height="14" CornerRadius="{DynamicResource RadiusLarge}" BorderThickness="2"
                             BorderBrush="{DynamicResource BrushTextPrimary}" Background="Transparent">
-                        <Border CornerRadius="{StaticResource RadiusLarge}" BorderThickness="1" BorderBrush="{DynamicResource BrushBackground}"/>
+                        <Border CornerRadius="{DynamicResource RadiusLarge}" BorderThickness="1" BorderBrush="{DynamicResource BrushBackground}"/>
                     </Border>
                 </Canvas>
             </Grid>
         </Border>
 
         <Grid Margin="0,12,0,0" Height="20">
-            <Border x:Name="HueStrip" Height="12" CornerRadius="{StaticResource RadiusLarge}" VerticalAlignment="Center"/>
+            <Border x:Name="HueStrip" Height="12" CornerRadius="{DynamicResource RadiusLarge}" VerticalAlignment="Center"/>
             <Slider x:Name="HueSlider" Minimum="0" Maximum="359" SmallChange="1" LargeChange="15"
                     Style="{StaticResource ThemeSliderStyle}" Background="Transparent" Foreground="Transparent"
                     AutomationProperties.Name="Hue" ValueChanged="HueSlider_ValueChanged"/>
@@ -43,7 +43,7 @@
                             AutomationProperties.Name="{Binding Text}">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="chip" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1" BorderBrush="{DynamicResource BrushBorderStrong}"
+                                <Border x:Name="chip" CornerRadius="{DynamicResource RadiusControl}" BorderThickness="1" BorderBrush="{DynamicResource BrushBorderStrong}"
                                         Background="{Binding Brush}"/>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
@@ -66,7 +66,7 @@
                     ToolTip="The color it was. Click to put it back." AutomationProperties.Name="Put the original color back">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="chip" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1" BorderBrush="{DynamicResource BrushBorderStrong}"
+                        <Border x:Name="chip" CornerRadius="{DynamicResource RadiusControl}" BorderThickness="1" BorderBrush="{DynamicResource BrushBorderStrong}"
                                 Background="{TemplateBinding Background}"/>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
@@ -76,7 +76,7 @@
                     </ControlTemplate>
                 </Button.Template>
             </Button>
-            <Border x:Name="CurrentChip" Width="64" Height="28" Margin="6,0,0,0" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1"
+            <Border x:Name="CurrentChip" Width="64" Height="28" Margin="6,0,0,0" CornerRadius="{DynamicResource RadiusControl}" BorderThickness="1"
                     BorderBrush="{DynamicResource BrushBorderStrong}" AutomationProperties.Name="The color now"/>
             <TextBlock Text="was, now" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
         </StackPanel>

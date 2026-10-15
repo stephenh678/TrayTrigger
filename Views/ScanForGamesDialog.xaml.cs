@@ -16,6 +16,7 @@ public partial class ScanForGamesDialog : Window
     public ScanForGamesDialog(MainViewModel mainViewModel, List<DiscoveredSteamGame> steamGames, List<DiscoveredGogGame> gogGames, List<DiscoveredEaGame> eaGames, List<DiscoveredEpicGame> epicGames, List<DiscoveredUbisoftGame> ubisoftGames, List<DiscoveredXboxGame> xboxGames, List<DiscoveredBattleNetGame> battleNetGames, List<GameCandidate> folderCandidates)
     {
         InitializeComponent();
+        TrayTrigger.Services.WindowSizeMemory.Attach(this, "ScanForGames");
         WindowThemeService.PrepareForFirstShow(this);
 
         var vm = new ScanForGamesViewModel(steamGames, gogGames, eaGames, epicGames, ubisoftGames, xboxGames, battleNetGames, folderCandidates,

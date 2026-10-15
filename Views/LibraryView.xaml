@@ -411,17 +411,15 @@
         <sys:Double x:Key="PosterCardHeight">276</sys:Double>
         <sys:Double x:Key="PosterCardWidthExtraLarge">240</sys:Double>
         <sys:Double x:Key="PosterCardHeightExtraLarge">360</sys:Double>
-        <RectangleGeometry x:Key="PosterCardClip" Rect="0,0,182,274" RadiusX="7" RadiusY="7"/>
-        <RectangleGeometry x:Key="PosterCardClipExtraLarge" Rect="0,0,238,358" RadiusX="7" RadiusY="7"/>
 
-        <!-- The poster's rounded-corner clip, following the card size. -->
+        <!-- The poster's rounded-corner clip: the border's own size and CornerRadius (RadiusPoster), so it follows the
+             card size in every view and the theme's corners. -->
         <Style x:Key="PosterArtClip" TargetType="Border">
-            <Setter Property="Clip" Value="{StaticResource PosterCardClip}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding DataContext.SettingsVM.IsExtraLargeView, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                    <Setter Property="Clip" Value="{StaticResource PosterCardClipExtraLarge}"/>
-                </DataTrigger>
-            </Style.Triggers>
+            <Setter Property="Clip">
+                <Setter.Value>
+                    <MultiBinding Converter="{StaticResource RoundedClipConverter}"><Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}"/><Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/><Binding Path="CornerRadius" RelativeSource="{RelativeSource Self}"/><Binding Path="BorderThickness" RelativeSource="{RelativeSource Self}"/></MultiBinding>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- ==================================================================== -->
@@ -538,7 +536,7 @@
 
                            <!-- Left: Segmented Category Tabs -->
                            <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                                   BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" Margin="0,0,16,0"
+                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" Margin="0,0,16,0"
                                    HorizontalAlignment="Left" VerticalAlignment="Center">
                                <ScrollViewer x:Name="CategoryScrollViewer" Style="{StaticResource EdgeChevronScrollViewer}"
                                              PreviewMouseWheel="CategoryScrollViewer_PreviewMouseWheel">
@@ -596,7 +594,7 @@
                                <!-- Same container as the view-mode switcher to its right, so the two icon
                                     controls read as one family rather than a loose button beside a group. -->
                                <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                                       BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3"/>
+                                       BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3"/>
                                <!-- 34 rather than the 32 of every other icon button in this row: the badge
                                     needs the extra two pixels to clear the glyph. Kept as close as it can
                                     be so the control still reads as one of the family. -->
@@ -627,7 +625,7 @@
                                <Border x:Name="LibraryFilterBadge"
                                        Background="{DynamicResource BrushAccentHover}"
                                        BorderBrush="{DynamicResource BrushDialogCard}" BorderThickness="1" IsHitTestVisible="False"
-                                       CornerRadius="{StaticResource RadiusCard}" Height="15" MinWidth="15" Padding="3,0"
+                                       CornerRadius="{DynamicResource RadiusCard}" Height="15" MinWidth="15" Padding="3,0"
                                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0"
                                        Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}">
                                    <TextBlock Text="{Binding Library.Filter.ActiveFilterCount}"
@@ -645,7 +643,7 @@
                                       StaysOpen="False" AllowsTransparency="True" Focusable="True"
                                       Opened="LibraryFilterPopup_Opened" PreviewKeyDown="LibraryFilterPopup_PreviewKeyDown">
                                    <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                           CornerRadius="{StaticResource RadiusCard}" Padding="6,12" MinWidth="270" MaxWidth="300"
+                                           CornerRadius="{DynamicResource RadiusCard}" Padding="6,12" MinWidth="270" MaxWidth="300"
                                            Focusable="True" FocusVisualStyle="{x:Null}">
                                        <Border.Effect>
                                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.65" Color="{DynamicResource ColorFloatingShadow}"/>
@@ -782,7 +780,7 @@
 
                            <!-- View Mode Switcher (Grid, Icons, List) -->
                            <Border Grid.Column="3" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                                   BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3">
+                                   BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3">
                                <StackPanel Orientation="Horizontal">
                                    <!-- Not one of the views: it changes how both poster views draw their cards,
                                         so it sits first, divided off from the four views it doesn't replace.
@@ -807,7 +805,7 @@
                                        </Button.Style>
                                        <!-- On is an outline and an accent glyph, not the filled blue of the view buttons
                                             beside it: filled, it read as a second view being selected. -->
-                                       <Border Width="26" Height="24" CornerRadius="{StaticResource RadiusSmall}" BorderThickness="1">
+                                       <Border Width="26" Height="24" CornerRadius="{DynamicResource RadiusSmall}" BorderThickness="1">
                                            <Border.Style>
                                                <Style TargetType="Border">
                                                    <Setter Property="BorderBrush" Value="Transparent"/>
@@ -876,7 +874,7 @@
                            <!-- Empty State (also the drop target - dragging a file/folder anywhere
                                 on the window already works, but this gives it a visible highlight) -->
                            <Border x:Name="DropZoneBorder" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                   Margin="0,20,0,20" CornerRadius="{StaticResource RadiusCard}"
+                                   Margin="0,20,0,20" CornerRadius="{DynamicResource RadiusCard}"
                                    BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1.5"
                                    Background="{DynamicResource BrushDialogCard}"
                                    AllowDrop="True" Drop="DropZone_Drop" DragOver="DropZone_DragOver"
@@ -1078,10 +1076,10 @@
 
                                        <ItemsControl.ItemTemplate>
                                            <DataTemplate DataType="{x:Type vm:GameCardViewModel}">
-                                               <Border x:Name="CardBorder" CornerRadius="{StaticResource RadiusCard}" 
-                                                       Background="{DynamicResource BrushSurface}" 
-                                                       BorderBrush="{DynamicResource BrushBorder}" 
+                                               <!-- The card carries the poster's corners in its Tag: the style below needs them to shape the outline, and a binding cannot read a DynamicResource itself. -->
+                                               <Border x:Name="CardBorder" 
                                                        BorderThickness="1"
+                                                       Tag="{DynamicResource RadiusPoster}"
                                                        Margin="7"
                                                        RenderTransformOrigin="0.5,0.5"
                                                        Cursor="Hand" Focusable="True"
@@ -1093,7 +1091,26 @@
                                                        <Style TargetType="Border">
                                                            <Setter Property="Width" Value="{StaticResource PosterCardWidth}"/>
                                                            <Setter Property="Height" Value="{StaticResource PosterCardHeight}"/>
+                                                           <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}"/>
+                                                           <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
+                                                           <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
                                                            <Style.Triggers>
+                                                               <!-- A card showing its poster has no fill of its own, and its outline follows the poster's shape
+                                                                    (the same corners as the art's clip, for any shape and either card size), so no card shows in
+                                                                    the corners when a theme makes the poster rounder than the card. -->
+                                                               <DataTrigger Binding="{Binding ShowPosterArt}" Value="True">
+                                                                   <Setter Property="Background" Value="Transparent"/>
+                                                                   <Setter Property="CornerRadius">
+                                                                       <Setter.Value>
+                                                                           <MultiBinding Converter="{StaticResource PosterCardRadiusConverter}">
+                                                                               <Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}"/>
+                                                                               <Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/>
+                                                                               <Binding Path="Tag" RelativeSource="{RelativeSource Self}"/>
+                                                                               <Binding Path="BorderThickness" RelativeSource="{RelativeSource Self}"/>
+                                                                           </MultiBinding>
+                                                                       </Setter.Value>
+                                                                   </Setter>
+                                                               </DataTrigger>
                                                                <!-- The Extra Large view: the same card, bigger. Badge, text and button
                                                                     sizes stay as they are - only the card and its poster grow, as
                                                                     Windows Explorer's own "Extra Large Icons" view does. -->
@@ -1129,7 +1146,7 @@
                                                            <!-- Both artwork layers share one clip so "Show details on hover" can zoom
                                                                 them inside it (PosterArtZoomIn scales PosterArt): a transform on the
                                                                 clipped Border itself would grow the clip along with the art. -->
-                                                           <Border CornerRadius="{StaticResource RadiusControl}" Style="{StaticResource PosterArtClip}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                           <Border x:Name="PosterClipBorder" CornerRadius="{DynamicResource RadiusPoster}" Style="{StaticResource PosterArtClip}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                                                <Grid x:Name="PosterArt" RenderTransformOrigin="0.5,0.5">
                                                                    <Grid.RenderTransform>
                                                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
@@ -1149,13 +1166,21 @@
                                                            </Border>
 
                                                            <!-- Over both artwork layers, under the vignette, title and badges. -->
-                                                           <Border CornerRadius="{StaticResource RadiusControl}" Style="{StaticResource UnavailablePosterScrim}"
+                                                           <Border CornerRadius="{DynamicResource RadiusPoster}" Style="{StaticResource UnavailablePosterScrim}"
                                                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
 
                                                            <!-- Top Dark Vignette for badge readability. With details on hover it stays at
                                                                 rest only while the logo or category does (PosterDetailsViewModel.TopShade). -->
-                                                           <Border VerticalAlignment="Top" Height="48" CornerRadius="{StaticResource RadiusInnerTop}"
+                                                           <Border VerticalAlignment="Top" Height="48"
                                                                    views:PosterDetailFade.Part="TopShade">
+                                                               <Border.Clip>
+                                                                   <MultiBinding Converter="{StaticResource PosterShadeClipConverter}">
+                                                                       <Binding Path="ActualWidth" ElementName="PosterArtView"/>
+                                                                       <Binding Path="ActualHeight" ElementName="PosterArtView"/>
+                                                                       <Binding Path="CornerRadius" ElementName="PosterClipBorder"/>
+                                                                       <Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/>
+                                                                   </MultiBinding>
+                                                               </Border.Clip>
                                                                <Border.Background>
                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                                        <GradientStop Color="{DynamicResource ColorRaw990D0D12}" Offset="0.0"/>
@@ -1169,7 +1194,15 @@
                                                                 stay or fade on its own (Settings can keep any of the three lines at rest, and the
                                                                 gradient with them); the Grid takes the text's height, as the Border did. -->
                                                            <Grid VerticalAlignment="Bottom">
-                                                               <Border CornerRadius="{StaticResource RadiusInnerBottom}" views:PosterDetailFade.Part="BottomShade">
+                                                               <Border views:PosterDetailFade.Part="BottomShade">
+                                                                   <Border.Clip>
+                                                                       <MultiBinding Converter="{StaticResource PosterShadeClipConverter}" ConverterParameter="bottom">
+                                                                           <Binding Path="ActualWidth" ElementName="PosterArtView"/>
+                                                                           <Binding Path="ActualHeight" ElementName="PosterArtView"/>
+                                                                           <Binding Path="CornerRadius" ElementName="PosterClipBorder"/>
+                                                                           <Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}"/>
+                                                                       </MultiBinding>
+                                                                   </Border.Clip>
                                                                    <Border.Background>
                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                                            <GradientStop Color="{DynamicResource ColorRaw00111114}" Offset="0.0"/>
@@ -1218,7 +1251,7 @@
 
                                                            <!-- Center Icon & Name -->
                                                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,4">
-                                                               <Border CornerRadius="{StaticResource RadiusCard}" Width="64" Height="64" Margin="0,0,0,12"
+                                                               <Border CornerRadius="{DynamicResource RadiusCard}" Width="64" Height="64" Margin="0,0,0,12"
                                                                        Background="{DynamicResource BrushSurfaceHover}" HorizontalAlignment="Center">
                                                                    <Image Source="{Binding IconImage}" Width="56" Height="56"
                                                                           Style="{StaticResource UnavailableDimmedArt}"
@@ -1415,7 +1448,7 @@
                                                                         Always preceded by exactly one visible platform/local badge above, so
                                                                         its left margin is unconditional. -->
                                                                    <Border Background="{DynamicResource BrushScrim}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
-                                                                           CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                                           CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center"
                                                                            views:PosterDetailFade.Part="Category">
                                                                        <Border.Style>
                                                                            <Style TargetType="Border">
@@ -1434,7 +1467,7 @@
 
                                                                    <!-- Hidden Pill -->
                                                                    <Border Background="{DynamicResource BrushBorder}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
-                                                                           CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center"
+                                                                           CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center"
                                                                            views:PosterDetailFade.Part="HiddenTag">
                                                                        <Border.Style>
                                                                            <Style TargetType="Border">
@@ -1456,7 +1489,7 @@
                                                                    <!-- With details on hover there's no top vignette under PLAYING while the card
                                                                         is at rest, so its near-clear fill goes nearly solid to stay readable on
                                                                         bright art. -->
-                                                                   <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center"
+                                                                   <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center"
                                                                            views:PosterDetailFade.Part="PlayingTag">
                                                                        <Border.Style>
                                                                            <Style TargetType="Border">
@@ -1506,7 +1539,7 @@
 
                                                            <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                    views:PosterDetailFade.Part="NotInstalledTag"
-                                                                   CornerRadius="{StaticResource RadiusSmall}" Padding="6,2" Margin="0,5,0,0" HorizontalAlignment="Center">
+                                                                   CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="0,5,0,0" HorizontalAlignment="Center">
                                                                <TextBlock Style="{StaticResource UnavailableBadgeText}"
                                                                           FontSize="{StaticResource FontSizeBadge}" FontFamily="{StaticResource AppFont}"/>
                                                            </Border>
@@ -1694,7 +1727,7 @@
 
                                        <ItemsControl.ItemTemplate>
                                            <DataTemplate DataType="{x:Type vm:GameCardViewModel}">
-                                               <Border x:Name="IconCardBorder" CornerRadius="{StaticResource RadiusCard}" 
+                                               <Border x:Name="IconCardBorder" CornerRadius="{DynamicResource RadiusCard}" 
                                                        Background="{DynamicResource BrushSurface}" 
                                                        BorderBrush="{DynamicResource BrushBorder}" 
                                                        BorderThickness="1"
@@ -1745,7 +1778,7 @@
                                                                </Button.Template>
                                                            </Button>
 
-                                                           <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1762,7 +1795,7 @@
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1779,7 +1812,7 @@
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1796,7 +1829,7 @@
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1813,7 +1846,7 @@
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1830,7 +1863,7 @@
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1847,7 +1880,7 @@
                                                                </StackPanel>
                                                            </Border>
 
-                                                           <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1865,7 +1898,7 @@
                                                            </Border>
 
                                                            <!-- Local games get a pill here too, so every platform is marked in every view. -->
-                                                           <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
+                                                           <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Left">
                                                                <Border.Style>
                                                                    <Style TargetType="Border">
                                                                        <Setter Property="Visibility" Value="Collapsed"/>
@@ -1882,7 +1915,7 @@
                                                        </DockPanel>
 
                                                        <!-- Icon -->
-                                                       <Border Grid.Row="1" Width="48" Height="48" CornerRadius="{StaticResource RadiusControl}"
+                                                       <Border Grid.Row="1" Width="48" Height="48" CornerRadius="{DynamicResource RadiusControl}"
                                                                Background="{DynamicResource BrushSurfaceHover}" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                            <Image Source="{Binding IconImage}" Width="42" Height="42"
                                                                   Style="{StaticResource UnavailableDimmedArt}"
@@ -1894,12 +1927,12 @@
                                                             whole tag fits. Beside the star and the launcher pill in the top row there
                                                             was room for "NOT IN" at best. Only one of the two ever shows. -->
                                                        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-3">
-                                                           <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
+                                                           <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
                                                                <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
                                                                <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
                                                            </Border>
                                                            <Border Style="{StaticResource UnavailableBadgeBorder}"
-                                                                   CornerRadius="{StaticResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
+                                                                   CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
                                                                <TextBlock Style="{StaticResource UnavailableBadgeText}" FontSize="{StaticResource FontSizeBadge}"/>
                                                            </Border>
                                                        </StackPanel>
@@ -2005,7 +2038,7 @@
 
                                <!-- Header Bar (Fixed, never scrolls out of view) -->
                                <Border Grid.Row="0" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
-                                       BorderThickness="0,0,0,1" Padding="11,8" Margin="0,0,6,6" CornerRadius="{StaticResource RadiusSmall}">
+                                       BorderThickness="0,0,0,1" Padding="11,8" Margin="0,0,6,6" CornerRadius="{DynamicResource RadiusSmall}">
                                    <Grid>
                                        <Grid.ColumnDefinitions>
                                            <ColumnDefinition Width="42"/> <!-- Icon -->
@@ -2066,7 +2099,7 @@
                                    </ListBox.ItemContainerStyle>
                                    <ListBox.ItemTemplate>
                                        <DataTemplate DataType="{x:Type vm:GameCardViewModel}">
-                                           <Border x:Name="ListRowBorder" CornerRadius="{StaticResource RadiusControl}" 
+                                           <Border x:Name="ListRowBorder" CornerRadius="{DynamicResource RadiusControl}" 
                                                    Background="{DynamicResource BrushSurface}" 
                                                    BorderBrush="{DynamicResource BrushBorder}" 
                                                    BorderThickness="1"
@@ -2090,7 +2123,7 @@
                                                    </Grid.ColumnDefinitions>
 
                                                    <!-- Icon -->
-                                                   <Border Grid.Column="0" Width="30" Height="30" CornerRadius="{StaticResource RadiusSmall}" 
+                                                   <Border Grid.Column="0" Width="30" Height="30" CornerRadius="{DynamicResource RadiusSmall}" 
                                                            Background="{DynamicResource BrushSurfaceHover}" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                        <Image Source="{Binding IconImage}" Width="24" Height="24"
                                                               Style="{StaticResource UnavailableDimmedArt}"
@@ -2111,16 +2144,16 @@
                                                        <Button Style="{StaticResource FavoriteToggleButton}" Command="{Binding ToggleFavoriteCommand}" Margin="0,0,4,0"
         AutomationProperties.Name="{Binding FavoriteMenuLabel}"/>
                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                                       <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
                                                            <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
                                                        <Border Style="{StaticResource UnavailableBadgeBorder}"
-                                                               CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                               CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <TextBlock Style="{StaticResource UnavailableBadgeText}"
                                                                       FontSize="{StaticResource FontSizeBadge}" FontFamily="{StaticResource AppFont}"/>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2137,7 +2170,7 @@
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2154,7 +2187,7 @@
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2171,7 +2204,7 @@
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2188,7 +2221,7 @@
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2205,7 +2238,7 @@
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2223,7 +2256,7 @@
                                                            </StackPanel>
                                                        </Border>
 
-                                                       <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2240,7 +2273,7 @@
                                                                           FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2254,7 +2287,7 @@
                                                            <TextBlock Text="LOCAL" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}"
                                                                       FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
                                                        </Border>
-                                                       <Border Background="{DynamicResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                       <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
                                                                <Style TargetType="Border">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -2278,7 +2311,7 @@
 
                                                    <!-- Category Pill -->
                                                    <Border Grid.Column="2" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
-                                                           CornerRadius="{StaticResource RadiusSmall}" Padding="7,2" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                           CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                        <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBadge}" 
                                                                   Foreground="{DynamicResource BrushTextSecondary}" 
                                                                   FontFamily="{StaticResource AppFont}"/>
@@ -2398,7 +2431,7 @@
                                 pointer is over it or it has keyboard focus (OnUndoToastHoldChanged). -->
                            <Border HorizontalAlignment="Center" Margin="0,8,0,0"
                                    Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5"
-                                   CornerRadius="{StaticResource RadiusCard}" Padding="16,10"
+                                   CornerRadius="{DynamicResource RadiusCard}" Padding="16,10"
                                    MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
                                    IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
                                <Border.Effect>

@@ -9,7 +9,7 @@
              hotkey is recorded from the keys actually pressed, so what is stored always parses
              and is spelled the same way everywhere. -->
         <Border x:Name="Box" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusSmall}" MinHeight="28" Padding="9,0" Cursor="Hand"
+                CornerRadius="{DynamicResource RadiusSmall}" MinHeight="28" Padding="9,0" Cursor="Hand"
                 MouseLeftButtonDown="OnBoxMouseLeftButtonDown">
             <DockPanel>
                 <Button AutomationProperties.Name="Clear hotkey" x:Name="ClearButton" DockPanel.Dock="Right" Click="OnClearClick" ToolTip="Clear"

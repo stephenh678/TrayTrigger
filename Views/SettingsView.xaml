@@ -84,7 +84,7 @@
              Library's toast, floated over the bottom of the settings list. -->
         <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,14" Panel.ZIndex="100"
                 Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5"
-                CornerRadius="{StaticResource RadiusCard}" Padding="16,10"
+                CornerRadius="{DynamicResource RadiusCard}" Padding="16,10"
                 Visibility="{Binding IsUndoToastVisible, Converter={StaticResource BoolToVis}}"
                 MouseEnter="OnUndoToastHoldChanged" MouseLeave="OnUndoToastHoldChanged"
                 IsKeyboardFocusWithinChanged="OnUndoToastFocusChanged" IsVisibleChanged="OnUndoToastFocusChanged">
@@ -135,7 +135,7 @@
                          KeyboardNavigation.TabIndex="1"
                          Text="{Binding SettingsSearchText}" Placeholder="Search settings..."/>
         <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="3" HorizontalAlignment="Left"
+                BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="3" Height="{StaticResource TabStripHeight}" HorizontalAlignment="Left" VerticalAlignment="Center"
                 KeyboardNavigation.TabIndex="0" KeyboardNavigation.TabNavigation="Local"
                 views:ScrollToTop.Target="{Binding ElementName=SettingsScroll}">
             <ScrollViewer Style="{StaticResource EdgeChevronScrollViewer}">
@@ -192,7 +192,7 @@
                          startup, the icon itself, what its left-click does. What happens when a game starts
                          is Launch & Performance > Launching Games; the hotkeys have their own card below;
                          the menu's contents are the Tray Menu category. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -236,7 +236,7 @@
                                        Margin="24,0,0,6" TextWrapping="Wrap"
                                        Visibility="{Binding HasTrayPromotionStatus, Converter={StaticResource BoolToVis}}"/>
 
-                            <Border Background="{DynamicResource BrushSurface}" CornerRadius="{StaticResource RadiusControl}" Padding="8" Margin="24,4,0,0">
+                            <Border Background="{DynamicResource BrushSurface}" CornerRadius="{DynamicResource RadiusControl}" Padding="8" Margin="24,4,0,0">
                                 <DockPanel LastChildFill="True">
                                     <TextBlock Text="&#xE82F;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}"
                                                VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
@@ -265,7 +265,7 @@
 
                     <!-- 1.1 Appearance: the theme. The choice applies at once, and the New theme button writes a
                          theme file that starts as a copy of the one on screen. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -280,8 +280,30 @@
                                  The 4 below each item is the gap above the line of text under the row. -->
                             <WrapPanel Orientation="Horizontal">
                                 <ComboBox AutomationProperties.Name="Theme" ItemsSource="{Binding Appearance.Themes}"
-                                          SelectedValue="{Binding Appearance.SelectedThemeId}" SelectedValuePath="Id" DisplayMemberPath="DisplayName"
-                                          Style="{StaticResource ModernComboBox}" VerticalAlignment="Center" MinWidth="260" Margin="0,0,8,4"/>
+                                          SelectedValue="{Binding Appearance.SelectedThemeId}" SelectedValuePath="Id"
+                                          Style="{StaticResource ModernComboBox}" VerticalAlignment="Center" MinWidth="260" Margin="0,0,8,4">
+                                    <!-- A separator entry is a thin line: it cannot be picked, focused or clicked. -->
+                                    <ComboBox.ItemContainerStyle>
+                                        <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                    <Setter Property="Focusable" Value="False"/>
+                                                    <Setter Property="IsHitTestVisible" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ComboBox.ItemContainerStyle>
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                                <Border Height="1" Background="{DynamicResource BrushBorderStrong}" Margin="0,4"
+                                                        Visibility="{Binding IsSeparator, Converter={StaticResource BoolToVis}}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <Button Command="{Binding Appearance.DeleteCommand}" IsEnabled="{Binding Appearance.CanDelete}"
                                         Style="{StaticResource ModernOutlineButton}" Width="32" Height="32" Padding="0" Margin="0,0,8,4" VerticalAlignment="Center"
                                         AutomationProperties.Name="Delete this theme"
@@ -297,6 +319,9 @@
                                         <TextBlock Text="{Binding Appearance.EditLabel}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
+                                <Button Content="Import theme..." Command="{Binding Appearance.ImportCommand}" Margin="0,0,8,4" VerticalAlignment="Center"
+                                        Style="{StaticResource ModernOutlineButton}" Padding="10,5"
+                                        ToolTip="Add a theme made elsewhere: choose its .theme.json (or .json) and, if it has one, its picture."/>
                                 <Button Content="Open themes folder" Command="{Binding Appearance.OpenFolderCommand}" Margin="0,0,0,4" VerticalAlignment="Center"
                                         Style="{StaticResource ModernOutlineButton}" Padding="10,5"/>
                             </WrapPanel>
@@ -321,7 +346,7 @@
 
                     <!-- 1.2 Hotkeys: TrayTrigger's own global hotkeys. Games and tools set theirs in Edit
                          Game and Edit Tool. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -369,7 +394,7 @@
                     </Border>
 
                     <!-- 1.3 Tools: the feature switch for the Tools page. Its tray option is under Tray Menu. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -386,7 +411,7 @@
                     </Border>
 
                     <!-- 1.4 Updates & GitHub Releases -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -457,7 +482,7 @@
                     </Border>
 
                     <!-- 2.1 Launcher Integrations -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -484,7 +509,7 @@
                             <!-- Steam's library folders live here, under the toggle that owns them, rather than
                                  in the manual Scan Locations list below. Untick one to skip that library. -->
                             <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                    CornerRadius="{StaticResource RadiusControl}" Padding="10,8" Margin="24,0,0,10"
+                                    CornerRadius="{DynamicResource RadiusControl}" Padding="10,8" Margin="24,0,0,10"
                                     Visibility="{Binding SteamIntegrationEnabled, Converter={StaticResource BoolToVis}}">
                                 <StackPanel>
                                     <DockPanel LastChildFill="False" Margin="0,0,0,6">
@@ -572,7 +597,7 @@
 
                     <!-- 2.2 Scan for Games: when it runs, the button that runs it now, the extra folders
                          it searches, and what it must skip. Everything scanning-related in one card. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -604,7 +629,7 @@
                             <!-- Scan Locations manager (manual folders only - Steam's own libraries are listed
                                  under the Steam integration toggle above) -->
                             <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                    CornerRadius="{StaticResource RadiusControl}" Padding="12,10">
+                                    CornerRadius="{DynamicResource RadiusControl}" Padding="12,10">
                                 <StackPanel>
                                     <TextBlock Text="Scan Locations" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,8"/>
@@ -624,7 +649,7 @@
                             <!-- Always shown: the card header promises this list, and hiding it while empty left
                                  the reader looking for a section that was not there. -->
                             <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
-                                    CornerRadius="{StaticResource RadiusControl}" Padding="12,10" Margin="0,10,0,0">
+                                    CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,10,0,0">
                                 <StackPanel>
                                     <TextBlock Text="Ignored Games" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,4"/>
@@ -646,7 +671,7 @@
 
                     <!-- 2.3 Game Titles & Categories: how an added game is named and filed. Where its art and
                          info come from is 2.4. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -685,7 +710,7 @@
                     <!-- 2.4 Art & Info Sources: where posters and game info come from beyond Steam, and how
                          fresh they are kept. Both free keys in one card, the place the Welcome dialog and the
                          "Better Art and Game Info" reminder send people to. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -799,7 +824,7 @@
 
                     <!-- 2.5 Library View: how the library is laid outand what each card shows. Poster art
                          comes before "Show details on hover", which only applies to posters. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -903,7 +928,7 @@
                     </Border>
 
                     <!-- 3.1 Tray Menu: what it lists, then how it looks. The icon itself (left-click, always show) is under General. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -1049,7 +1074,7 @@
 
                     <!-- 4.1 Launching Games: what happens on screen when a game starts - the window gets out
                          of the way, the launchers stay quiet, the popup by the tray icon says how it's going. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -1100,14 +1125,14 @@
 
                     <!-- 4.2 Per-game launch scripts (off by default; gates the Edit Game card).
                          Lives here, with the other launch-time behaviour, rather than under General. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                 <TextBlock Text="Game Launch Scripts" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold"
                                            Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"/>
-                                <Border Background="{DynamicResource BrushBorder}" CornerRadius="{StaticResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                     <TextBlock Text="ADVANCED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushTextSoft}"/>
                                 </Border>
                             </StackPanel>
@@ -1207,7 +1232,7 @@
                                 <TextBlock Text="Used for every game whose own Script Arguments in Edit Game are empty; a game with its own uses those instead. For example, &quot;recommended&quot; for the Close Background Apps example."
                                            FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
 
-                                <Border Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="10,6" Margin="0,0,0,8"
+                                <Border Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="10,6" Margin="0,0,0,8"
                                         Visibility="{Binding HasDefaultScriptsProblem, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="{Binding DefaultScriptsProblem}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
                                 </Border>
@@ -1237,7 +1262,7 @@
 
                     <!-- 4.3 NVIDIA DLSS:the two things about DLSS that are not per game. Hidden on a
                          PC with no NVIDIA driver, as the Edit Game card is. -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10"
                             Visibility="{Binding Dlss.IsAvailable, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
@@ -1286,7 +1311,7 @@
                     </Border>
 
                     <!-- 4.4 Preset & Reset Options -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -1332,7 +1357,7 @@
                     </Border>
 
                     <!-- 5.1 Troubleshooting & Diagnostics -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -1351,7 +1376,7 @@
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/logs"/>
 
                             <!-- Active Debug Log Info Box -->
-                            <Border Background="{DynamicResource BrushDialogCard}" CornerRadius="{StaticResource RadiusControl}" BorderBrush="{DynamicResource BrushSurfaceHover}" BorderThickness="1" Padding="12,10">
+                            <Border Background="{DynamicResource BrushDialogCard}" CornerRadius="{DynamicResource RadiusControl}" BorderBrush="{DynamicResource BrushSurfaceHover}" BorderThickness="1" Padding="12,10">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1401,7 +1426,7 @@
                     </Border>
 
                     <!-- 5.2 Storage & Asset Caches -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <StackPanel>
@@ -1443,7 +1468,7 @@
                     </Border>
 
                     <!-- 5.3 Backup & Restore: TrayTrigger's own data in one .zip (BackupService). -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}"
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}"
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">
@@ -1465,7 +1490,7 @@
                     </Border>
 
                     <!-- 5.4 Reset Settings to Defaults -->
-                    <Border CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+                    <Border CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                             BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" 
                             Padding="14,12" Margin="0,0,0,10">
                         <DockPanel LastChildFill="True">

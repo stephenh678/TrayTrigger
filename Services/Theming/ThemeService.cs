@@ -120,11 +120,15 @@ public sealed partial class ThemeService
     public IReadOnlyList<ThemeInfo> Available()
     {
         var list = new List<ThemeInfo> { new(AutoId, "Auto (follow Windows)", null, BuiltIn: true, IsDark: true) };
-        list.AddRange(ThemeCatalog.BuiltIns.Select(t => new ThemeInfo(t.Id, t.Name, t.Author, true, t.IsDark)));
+        // Dark, the default, comes first; the other built-in looks follow alphabetically, and so do the player's own below them.
+        var builtIns = ThemeCatalog.BuiltIns;
+        list.AddRange(builtIns.Where(t => t.Id == ThemeCatalog.DarkId).Select(t => new ThemeInfo(t.Id, t.Name, t.Author, true, t.IsDark)));
+        list.AddRange(builtIns.Where(t => t.Id != ThemeCatalog.DarkId).OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(t => new ThemeInfo(t.Id, t.Name, t.Author, true, t.IsDark)));
         list.Add(new ThemeInfo(ThemeCatalog.HighContrastId, "High Contrast (Windows colors)", "Windows", true, ThemeCatalog.HighContrast().IsDark));
         var (user, problems) = ThemeCatalog.LoadUserThemes();
         Problems = problems;
-        list.AddRange(user.Select(t => new ThemeInfo(t.Id, t.Name, t.Author, false, t.IsDark)));
+        list.AddRange(user.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).Select(t => new ThemeInfo(t.Id, t.Name, t.Author, false, t.IsDark)));
         return list;
     }
 
@@ -197,6 +201,7 @@ public sealed partial class ThemeService
         if (app != null)
         {
             ReplaceColors(app.Resources, Build(palette));
+            ReplaceShapes(app.Resources, ThemeShape.Build(theme.Shape));
             WindowThemeService.UseDarkChrome = theme.IsDark;
             WindowThemeService.ReapplyChrome();
         }
@@ -279,6 +284,19 @@ public sealed partial class ThemeService
             return;
         }
         merged.Insert(0, colors);
+    }
+
+    /// <summary>Swaps in a copy of Shapes.xaml holding the theme's radii; the views follow because they name each radius with DynamicResource.</summary>
+    private static void ReplaceShapes(ResourceDictionary resources, ResourceDictionary shapes)
+    {
+        var merged = resources.MergedDictionaries;
+        for (int i = 0; i < merged.Count; i++)
+        {
+            if (merged[i].Source?.OriginalString.EndsWith("Resources/Shapes.xaml", StringComparison.OrdinalIgnoreCase) != true) continue;
+            merged[i] = shapes;
+            return;
+        }
+        merged.Add(shapes);
     }
 
     // ---- Auto ----------------------------------------------------------------------------------------------------------------

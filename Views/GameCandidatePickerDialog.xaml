@@ -32,7 +32,7 @@
         </DockPanel>
 
         <!-- List of Candidates -->
-        <Border Grid.Row="1" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
+        <Border Grid.Row="1" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushSurface}" 
                 BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Margin="0,0,0,16">
             <ListBox x:Name="CandidatesListBox" Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -71,7 +71,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <DockPanel LastChildFill="True">
-                            <Border CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}" Width="36" Height="36" Margin="0,0,12,0" DockPanel.Dock="Left">
+                            <Border CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushSurfaceHover}" Width="36" Height="36" Margin="0,0,12,0" DockPanel.Dock="Left">
                                 <Image Source="{Binding IconImage}" Width="28" Height="28" 
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -80,7 +80,7 @@
                             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="10,0,0,0">
                                 <TextBlock Text="{Binding DisplaySize}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" 
                                            HorizontalAlignment="Right"/>
-                                <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{StaticResource RadiusSmall}" Padding="5,1.5" Margin="0,3,0,0"
+                                <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1.5" Margin="0,3,0,0"
                                         HorizontalAlignment="Right"
                                         Visibility="{Binding IsRecommendedVisibility}">
                                     <TextBlock Text="RECOMMENDED" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>

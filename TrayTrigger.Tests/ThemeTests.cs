@@ -170,7 +170,7 @@ public class ThemeTests
 
     [Fact]
     public void TheBuiltInThemes_AreAllThere() =>
-        Assert.Equal(["Dark", "Light", "Green", "Amber", "Purple"], ThemeCatalog.BuiltIns.Select(t => t.Id).ToArray());
+        Assert.Equal(["Dark", "Light", "Green", "Amber", "Purple", "Abyssal"], ThemeCatalog.BuiltIns.Select(t => t.Id).ToArray());
 
     [Fact]
     public void Dark_IsTheColorsFile()
@@ -196,6 +196,7 @@ public class ThemeTests
     [InlineData("Green")]
     [InlineData("Amber")]
     [InlineData("Purple")]
+    [InlineData("Abyssal")]
     public void EveryBuiltInTheme_ReadsComfortably(string id) =>
         Assert.Empty(ThemeCatalog.ContrastProblems(ThemeCatalog.Resolve(ThemeCatalog.BuiltIn(id)!)));
 
@@ -263,6 +264,7 @@ public class ThemeTests
     [InlineData("Green")]
     [InlineData("Amber")]
     [InlineData("Purple")]
+    [InlineData("Abyssal")]
     public void AnExportedTheme_ReadsBackAsTheSameColors(string id)
     {
         var builtIn = ThemeCatalog.BuiltIn(id)!;

@@ -19,6 +19,7 @@ public partial class FolderBatchImportDialog : Window
     public FolderBatchImportDialog(string folderPath, List<GameCandidate> candidates, Func<GameCandidate, bool> isAlreadyImported, bool isAlreadyScanLocation, Action<GameCandidate> onIgnoreCandidate)
     {
         InitializeComponent();
+        TrayTrigger.Services.WindowSizeMemory.Attach(this, "FolderBatchImport");
         WindowThemeService.PrepareForFirstShow(this);
 
         // A real, still-existing folder is one genuine library root (the case this checkbox is

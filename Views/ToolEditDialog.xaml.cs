@@ -12,6 +12,7 @@ public partial class ToolEditDialog : Window
     public ToolEditDialog(ToolEntry tool, IEnumerable<string> categories, IconExtractorService iconExtractorService)
     {
         InitializeComponent();
+        TrayTrigger.Services.WindowSizeMemory.Attach(this, "ToolEdit");
         WindowThemeService.PrepareForFirstShow(this);
         WindowHelper.RemoveMinimizeAndMaximize(this);
         var viewModel = new ToolEditViewModel(tool, categories, iconExtractorService);

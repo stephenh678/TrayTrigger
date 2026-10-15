@@ -790,12 +790,15 @@ public class LibraryFilterTests : IDisposable
         {
             GameDetailsWidth = 940,
             GameDetailsHeight = 710,
+            WindowSizes = new() { ["ThemeEdit"] = new WindowSize { Width = 940, Height = 700 } },
             SavedLibraryFilters = [new SavedLibraryFilter { Name = "No DLSS", Keys = ["!setting:dlss", "launcher:steam"] }],
         });
 
         var loaded = new StorageService(Path.Combine(_root, "roundtrip"), Path.Combine(_root, "roundtrip-local")).LoadSettings();
         Assert.Equal(940, loaded.GameDetailsWidth);
         Assert.Equal(710, loaded.GameDetailsHeight);
+        Assert.Equal(940, loaded.WindowSizes["ThemeEdit"].Width);
+        Assert.Equal(700, loaded.WindowSizes["ThemeEdit"].Height);
         var saved = Assert.Single(loaded.SavedLibraryFilters);
         Assert.Equal("No DLSS", saved.Name);
         Assert.Equal(["!setting:dlss", "launcher:steam"], saved.Keys);

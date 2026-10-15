@@ -318,7 +318,7 @@
                  the two don't overlap if both happen to be visible at once. -->
             <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,70"
                     Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5"
-                    CornerRadius="{StaticResource RadiusCard}" Padding="16,10" Panel.ZIndex="100">
+                    CornerRadius="{DynamicResource RadiusCard}" Padding="16,10" Panel.ZIndex="100">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{DynamicResource ColorFloatingShadow}"/>
                 </Border.Effect>

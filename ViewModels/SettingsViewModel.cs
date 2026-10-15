@@ -2128,6 +2128,7 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.MainWindowMaximized),
             nameof(AppSettings.GameDetailsWidth),
             nameof(AppSettings.GameDetailsHeight),
+            nameof(AppSettings.WindowSizes),
             nameof(AppSettings.HasSeenPerformanceProfileMigrationPrompt),
             nameof(AppSettings.HasSeenLauncherDetectionPrompt),
             nameof(AppSettings.HasSeenWelcomePrompt),
