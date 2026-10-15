@@ -37,6 +37,34 @@ public class ThemeRandomizeTests : IDisposable
     }
 
     [Fact]
+    public void RandomizeColors_LeavesTheCorners_AndRandomizeCorners_LeavesTheColors() => WpfTestHost.Run(() =>
+    {
+        var vm = Open("Dark", 3);
+        string corners = vm.Corners.Snapshot();
+        vm.RandomizeColorsCommand.Execute(null);
+        Assert.Equal(corners, vm.Corners.Snapshot());
+        Assert.True(vm.ColorsDiffer);
+
+        var colors = vm.Rows.Select(r => r.Color).ToArray();
+        vm.RandomizeCornersCommand.Execute(null);
+        Assert.Equal(colors, vm.Rows.Select(r => r.Color).ToArray());
+    });
+
+    [Fact]
+    public void ResetColors_PutsThemBackToHowTheWindowOpened() => WpfTestHost.Run(() =>
+    {
+        var vm = Open("Dark", 5);
+        var opened = vm.Rows.Select(r => r.Color).ToArray();
+        Assert.False(vm.ColorsDiffer);
+
+        vm.RandomizeColorsCommand.Execute(null);
+        vm.ResetColorsCommand.Execute(null);
+
+        Assert.Equal(opened, vm.Rows.Select(r => r.Color).ToArray());
+        Assert.False(vm.ColorsDiffer);
+    });
+
+    [Fact]
     public void EveryRoll_ReadsWell_AndKeepsTheCornersOnTheSliders() => WpfTestHost.Run(() =>
     {
         foreach (string id in new[] { "Dark", "Light" })

@@ -354,9 +354,16 @@
                             <StackPanel>
                                 <Grid>
                                     <TextBlock Text="MAIN COLORS" Style="{StaticResource CardLabel}"/>
-                                    <TextBlock Text="Click a swatch to pick, or type or paste #RRGGBB" HorizontalAlignment="Right"
-                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                        <Button Content="Randomize" Command="{Binding RandomizeColorsCommand}" Style="{StaticResource HelpLinkButton}"
+                                                ToolTip="Try a random set of main colors. The text stays easy to read." AutomationProperties.Name="Randomize the colors"/>
+                                        <Button Content="Reset" Command="{Binding ResetColorsCommand}" Style="{StaticResource HelpLinkButton}" Margin="12,0,0,0"
+                                                Visibility="{Binding ColorsDiffer, Converter={StaticResource BoolToVis}}"
+                                                ToolTip="Put the main colors back to how they were when this window opened" AutomationProperties.Name="Reset the colors"/>
+                                    </StackPanel>
                                 </Grid>
+                                <TextBlock Text="Click a swatch to pick, or type or paste #RRGGBB" Margin="0,0,0,6" FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextMuted}"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -396,9 +403,13 @@
                             <StackPanel DataContext="{Binding Corners}">
                                 <Grid>
                                     <TextBlock Text="CORNERS" Style="{StaticResource CardLabel}"/>
-                                    <Button Content="Reset" Command="{Binding ResetCommand}" Style="{StaticResource HelpLinkButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                            Visibility="{Binding DiffersFromDefault, Converter={StaticResource BoolToVis}}"
-                                            ToolTip="Put every corner back to the app's own" AutomationProperties.Name="Reset the corners"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                        <Button Content="Randomize" Command="{Binding DataContext.RandomizeCornersCommand, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource HelpLinkButton}"
+                                                ToolTip="Try a random shape and size for the corners" AutomationProperties.Name="Randomize the corners"/>
+                                        <Button Content="Reset" Command="{Binding ResetCommand}" Style="{StaticResource HelpLinkButton}" Margin="12,0,0,0"
+                                                Visibility="{Binding DiffersFromDefault, Converter={StaticResource BoolToVis}}"
+                                                ToolTip="Put every corner back to the app's own" AutomationProperties.Name="Reset the corners"/>
+                                    </StackPanel>
                                 </Grid>
                                 <TextBlock Text="Default for every kind of corner" Margin="0,0,0,6" FontSize="{StaticResource FontSizeBody}"
                                            Foreground="{DynamicResource BrushTextMuted}"/>
@@ -418,8 +429,6 @@
                                             AutomationProperties.Name="How round the corners are"/>
                                     <TextBlock Grid.Column="3" Text="{Binding RoundnessText}" Style="{StaticResource CornerNumber}"/>
                                 </Grid>
-                                <TextBlock Text="Extreme: the corners may clip text and art." Foreground="{DynamicResource BrushWarning}" Margin="0,6,0,0"
-                                           FontSize="{StaticResource FontSizeBody}" Visibility="{Binding IsExtreme, Converter={StaticResource BoolToVis}}"/>
                                 <Button Content="{Binding CustomizeText}" Command="{Binding ToggleCustomizeCommand}" Style="{StaticResource HelpLinkButton}" Margin="0,10,0,0"
                                         AutomationProperties.Name="Choose a shape and size for each kind of corner"/>
                                 <StackPanel Visibility="{Binding ShowCustomize, Converter={StaticResource BoolToVis}}">
@@ -452,6 +461,8 @@
                                     <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                                Text="Each row is Default until you change it: it follows the shape and roundness above. Posters follow the cards, one pixel less round. Past 8 is extreme."/>
                                 </StackPanel>
+                                <TextBlock Text="Extreme: the corners may clip text and art." Foreground="{DynamicResource BrushWarning}" Margin="0,10,0,0"
+                                           FontSize="{StaticResource FontSizeBody}" Visibility="{Binding AnyExtreme, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

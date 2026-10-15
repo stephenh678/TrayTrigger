@@ -277,6 +277,8 @@ public sealed class ThemeCornersEditor : ViewModelBase
 
     /// <summary>True when the roundness is past the usual range: the window says it may clip text and art.</summary>
     public bool IsExtreme => _roundness > ThemeCorners.NormalSteps;
+    /// <summary>True when the default or any row shows its number in the warning color.</summary>
+    public bool AnyExtreme => IsExtreme || Rows.Any(r => r.IsExtreme);
     public bool SizeEnabled => !_shape.IsFull;
 
     /// <summary>False when tags, controls and cards all have their own shape: nothing follows the shape above, so it is greyed out rather than moved to no effect.</summary>
@@ -321,6 +323,7 @@ public sealed class ThemeCornersEditor : ViewModelBase
         OnPropertyChanged(nameof(HasOverrides));
         OnPropertyChanged(nameof(DefaultUsed));
         OnPropertyChanged(nameof(RoundnessEnabled));
+        OnPropertyChanged(nameof(AnyExtreme));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 

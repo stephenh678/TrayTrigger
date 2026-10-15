@@ -165,6 +165,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     private readonly Dictionary<string, Color> _handSet = new(StringComparer.Ordinal);
     private readonly string _initial;
     private bool _surfaceFollowsBackground;
+    private readonly bool _openSurfaceFollows;
     private bool _isDark;
     private string _name;
     private double _strength;
@@ -221,7 +222,11 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             ShapeChanged?.Invoke(this, EventArgs.Empty);
         };
         TogglePreviewCommand = new RelayCommand(() => IsPreviewOpen = !IsPreviewOpen);
-        RandomizeCommand = new RelayCommand(Randomize);
+        _openSurfaceFollows = _surfaceFollowsBackground;
+        RandomizeCommand = new RelayCommand(() => Randomize(true, true));
+        RandomizeColorsCommand = new RelayCommand(() => Randomize(true, false));
+        RandomizeCornersCommand = new RelayCommand(() => Randomize(false, true));
+        ResetColorsCommand = new RelayCommand(ResetColors);
         UndoRandomizeCommand = new RelayCommand(UndoRandomize, () => _undo != null);
 
         SaveCommand = new RelayCommand(Save);
@@ -280,38 +285,58 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     internal Random Random { get; set; } = new();
 
     public ICommand RandomizeCommand { get; }
+    public ICommand RandomizeColorsCommand { get; }
+    public ICommand RandomizeCornersCommand { get; }
+    public ICommand ResetColorsCommand { get; }
+
+    /// <summary>True when a main color is not as it was when the window opened: the colors card shows its Reset link.</summary>
+    public bool ColorsDiffer => Rows.Any(r => r.Color != r.Original) || _surfaceFollowsBackground != _openSurfaceFollows;
+
+    private void ResetColors()
+    {
+        foreach (var row in Rows) row.Color = row.Original;
+        _surfaceFollowsBackground = _openSurfaceFollows;
+        Recompute();
+    }
     public ICommand UndoRandomizeCommand { get; }
 
     /// <summary>True after a Randomize: the Undo link shows, and puts back what was there before it.</summary>
     public bool CanUndoRandomize => _undo != null;
 
     /// <summary>
-    /// Fills the main colors and the corners at random as a new starting point, which is then changed by hand like anything typed: the colors
+    /// Fills the main colors, the corners or both at random as a new starting point, which is then changed by hand like anything typed: the colors
     /// pass the contrast gate (their text is easy to read) and the corners can be anything the sliders allow. The name, the picture, the
     /// Dark or Light start and the fine-tuning colors a file lists are left as they are.
     /// </summary>
-    private void Randomize()
+    private void Randomize(bool colors, bool corners)
     {
-        var found = ThemeRandomizer.Roll(Random, _isDark, colors => ThemeCatalog.ContrastIssues(PaletteFor(colors)).Count == 0);
-        if (found == null)
+        ThemeRandomizer.Colors? found = null;
+        if (colors)
         {
-            ValidationMessage = "No colors that read well were found this time, with the colors the file sets by hand. Try again.";
-            return;
+            found = ThemeRandomizer.Roll(Random, _isDark, c => ThemeCatalog.ContrastIssues(PaletteFor(c)).Count == 0);
+            if (found == null)
+            {
+                ValidationMessage = "No colors that read well were found this time, with the colors the file sets by hand. Try again.";
+                return;
+            }
         }
 
         _undo = new RandomizeUndo(Rows.Select(r => r.Color).ToArray(), _surfaceFollowsBackground, Corners.Capture());
         OnPropertyChanged(nameof(CanUndoRandomize));
 
-        // The card color follows the background again: it was worked out for these colors.
-        Background.Color = found.Background;
-        Text.Color = found.Text;
-        Accent.Color = found.Accent;
-        Danger.Color = found.Danger;
-        Warning.Color = found.Warning;
-        Success.Color = found.Success;
-        _surfaceFollowsBackground = true;
-        Recompute();
-        Corners.Randomize(Random);
+        if (found != null)
+        {
+            // The card color follows the background again: it was worked out for these colors.
+            Background.Color = found.Background;
+            Text.Color = found.Text;
+            Accent.Color = found.Accent;
+            Danger.Color = found.Danger;
+            Warning.Color = found.Warning;
+            Success.Color = found.Success;
+            _surfaceFollowsBackground = true;
+            Recompute();
+        }
+        if (corners) Corners.Randomize(Random);
     }
 
     private void UndoRandomize()
@@ -543,6 +568,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
         if (_surfaceFollowsBackground) Surface.Follow(Palette["Surface"]);
         ClearMessage();
         UpdateContrast();
+        OnPropertyChanged(nameof(ColorsDiffer));
         PaletteChanged?.Invoke(this, EventArgs.Empty);
     }
 

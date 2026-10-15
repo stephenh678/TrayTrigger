@@ -80,20 +80,24 @@ internal static class ThemeCorners
 
     private const double F = CornerShape.Full;
 
-    /// <summary>The shapes, in the order the list shows them. The first is today's look.</summary>
+    /// <summary>The shapes, in the order the list shows them: today's look first, then each shape beside its mirror (the list has two columns, and "Default" takes the first place). The first is today's look.</summary>
     public static readonly IReadOnlyList<CornerShape> Shapes =
     [
         new("rounded", "Rounded", 1, 1, 1, 1),
         new("leaf", "Leaf", 0, 1, 0, 1),
         new("reverse-leaf", "Reverse leaf", 1, 0, 1, 0),
-        new("folder-tab", "Folder tab", 1, 1, 0, 0),
-        new("speech-bubble", "Speech bubble", 1, 1, 1, 0),
-        new("pill", "Pill", F, F, F, F),
-        new("hanging", "Hanging", 0, 0, 1, 1),
-        new("left-cap", "Left cap", F, 0, 0, F),
-        new("one-big-corner", "One big corner", 2, 0, 0, 0),
-        new("ramp", "Ramp", 0, 1 / 3.0, 2 / 3.0, 1),
         new("blade", "Blade", 1, 0.15, 1, 0.15),
+        new("reverse-blade", "Reverse blade", 0.15, 1, 0.15, 1),
+        new("ramp", "Ramp", 0, 1 / 3.0, 2 / 3.0, 1),
+        new("reverse-ramp", "Reverse ramp", 1, 2 / 3.0, 1 / 3.0, 0),
+        new("left-cap", "Left cap", F, 0, 0, F),
+        new("right-cap", "Right cap", 0, F, F, 0),
+        new("folder-tab", "Folder tab", 1, 1, 0, 0),
+        new("hanging", "Hanging", 0, 0, 1, 1),
+        new("speech-bubble", "Speech bubble", 1, 1, 1, 0),
+        new("reverse-speech-bubble", "Reverse speech bubble", 1, 1, 0, 1),
+        new("one-big-corner", "One big corner", 2, 0, 0, 0),
+        new("pill", "Pill", F, F, F, F),
     ];
 
     /// <summary>
