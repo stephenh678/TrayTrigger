@@ -1,4 +1,4 @@
-<Window x:Class="TrayTrigger.Views.QuickInputDialog"
+﻿<Window x:Class="TrayTrigger.Views.QuickInputDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -20,10 +20,10 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock x:Name="HeadingTextBlock" Text="Quick Edit" FontSize="{StaticResource FontSizeTitle}" FontWeight="Normal" 
-                       Foreground="{DynamicResource BrushTextPrimary}" FontFamily="{StaticResource AppFont}"/>
-            <TextBlock x:Name="PromptTextBlock" Text="Enter the new value:" FontSize="{StaticResource FontSizeBody}" 
-                       Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
+            <TextBlock x:Name="HeadingTextBlock" Text="Quick Edit" FontSize="{DynamicResource FontSizeTitle}" FontWeight="Normal" 
+                       Foreground="{DynamicResource BrushTextPrimary}" FontFamily="{DynamicResource AppFont}"/>
+            <TextBlock x:Name="PromptTextBlock" Text="Enter the new value:" FontSize="{DynamicResource FontSizeBody}" 
+                       Foreground="{DynamicResource BrushTextSecondary}" FontFamily="{DynamicResource AppFont}" Margin="0,4,0,0"/>
         </StackPanel>
 
         <!-- Either TextBox or Editable ComboBox -->

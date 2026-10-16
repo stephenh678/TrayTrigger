@@ -1,4 +1,4 @@
-<!-- The launch popup (LaunchPopupCoordinator): a small card above the tray clock while a game
+﻿<!-- The launch popup (LaunchPopupCoordinator): a small card above the tray clock while a game
      launched from a hotkey or the tray menu starts with the TrayTrigger window hidden. Never
      activated (WS_EX_NOACTIVATE), kept out of Alt+Tab (WS_EX_TOOLWINDOW), and click-through
      while it only reports progress. Styled like the in-window launch toast. The outer margin
@@ -11,7 +11,7 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False" Topmost="True"
         Focusable="False" UseLayoutRounding="True" Opacity="0"
-        FontFamily="{StaticResource AppFont}">
+        FontFamily="{DynamicResource AppFont}">
 
     <Border x:Name="Card" Margin="10,10,12,14" Padding="12,10,8,10" CornerRadius="{DynamicResource RadiusCard}"
             Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}" BorderThickness="1.5">
@@ -36,29 +36,29 @@
                 <Grid>
                     <Image x:Name="GameIcon" Width="26" Height="26" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <TextBlock x:Name="IconGlyph" Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeTitle}"
+                    <TextBlock x:Name="IconGlyph" Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}"
                                Foreground="{DynamicResource BrushTextSecondary}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
 
             <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0">
-                <TextBlock x:Name="StatusText" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                <TextBlock x:Name="StatusText" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                            TextTrimming="CharacterEllipsis"/>
-                <TextBlock x:Name="NameText" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
+                <TextBlock x:Name="NameText" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                            TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
             </StackPanel>
 
             <Button x:Name="CloseButton" Grid.Row="0" Grid.Column="2" Content="&#xE711;"
-                    FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}" Padding="6,4" VerticalAlignment="Top"
+                    FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}" Padding="6,4" VerticalAlignment="Top"
                     Style="{StaticResource ModernGhostButton}" Focusable="False"
                     AutomationProperties.Name="Close" ToolTip="Close" Click="OnCloseClick"/>
 
-            <TextBlock x:Name="DetailText" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" FontSize="{StaticResource FontSizeBody}"
+            <TextBlock x:Name="DetailText" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" FontSize="{DynamicResource FontSizeBody}"
                        Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,8,4,0"/>
 
             <Button x:Name="ActionButton" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Left"
-                    FontSize="{StaticResource FontSizeBody}" Padding="6,3" Margin="-6,5,0,0" Focusable="False"
+                    FontSize="{DynamicResource FontSizeBody}" Padding="6,3" Margin="-6,5,0,0" Focusable="False"
                     Foreground="{DynamicResource BrushAccentText}" Style="{StaticResource ModernGhostButton}"
                     Click="OnActionClick"/>
 

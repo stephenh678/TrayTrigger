@@ -10,6 +10,11 @@ stable version they lead to.
 
 ## 1.6.3
 
+- **Text size** - Settings > General > Appearance has a **Text size** slider, from 90% to 150%, that makes all of TrayTrigger's text larger or smaller together. Past 130% some screens may clip text, and the slider says so. A theme can set a size of its own; the Settings slider is greyed out, with a note, while that theme is on.
+- **Font** - choose any font installed on your computer for all of TrayTrigger's text, in Settings > General > Appearance. A theme can have its own font too, from the new **Font and text size** card in the theme editor (a font someone else's theme names that you do not have falls back to your own).
+- **Randomize does more** - the theme editor's **Randomize** now also tries a text size, a font and how strongly the background picture shows, and **Undo randomize** puts them all back.
+- **Keep 15 days** - the Keep dropdown on Activity & History has a 15-day choice.
+- **If TrayTrigger can't start** - it now says so in a message and saves what happened to `crash.log`, next to `debug.log`, so you can send it with your report instead of the app just not appearing.
 - **Restore Settings Now** - a running game's right-click menu in the library, the tray icon and a new Now Playing flyout have **Restore Settings Now**: it leaves the game running and puts Windows back the way it was (the Performance Profile is restored, the post-exit script runs, tools set to close after the game close). The game's launcher stays open, and the game's playtime stops counting.
 - **Auto HDR, chosen per game** - Edit Game > Performance has an Auto HDR choice beside HDR: Profile setting, On for this game or Off for this game. The Optimized profile has an Enable Auto HDR switch (off by default), and System > Performance Tweaks has Enable Auto HDR for Windows as a whole. It needs HDR on and Windows 11; where it can't apply, Activity & History says why. The game's other graphics settings (such as its GPU preference) are kept and put back.
 - **Anti-cheat tag** - a game that runs an anti-cheat service (now including Riot Vanguard) shows its name as a tag in Game Details and a note in its Activity & History record, so you know which games not to expect tools like Suspend to work with.

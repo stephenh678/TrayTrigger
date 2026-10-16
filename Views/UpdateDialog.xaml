@@ -1,10 +1,10 @@
-<Window x:Class="TrayTrigger.Views.UpdateDialog"
+﻿<Window x:Class="TrayTrigger.Views.UpdateDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="TrayTrigger - Update Available"
+        Title="Update Available"
         Width="520" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
@@ -35,35 +35,35 @@
 
                 <!-- Title & Version Row -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="Update Available" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold" 
+                    <TextBlock Text="Update Available" FontSize="{DynamicResource FontSizeTitle}" FontWeight="SemiBold" 
                                Foreground="{DynamicResource BrushTextPrimary}"/>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">
                         <!-- Current Version Badge -->
                         <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
-                            <TextBlock x:Name="CurrentVersionText" Text="v1.0.0" FontSize="{StaticResource FontSizeBody}" 
+                            <TextBlock x:Name="CurrentVersionText" Text="v1.0.0" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushTextMuted}" FontWeight="SemiBold"/>
                         </Border>
 
-                        <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                        <TextBlock Text="&#xE72A;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                    Margin="8,0,8,0" VerticalAlignment="Center"/>
 
                         <!-- New Version Badge -->
                         <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
-                            <TextBlock x:Name="NewVersionText" Text="v1.0.1" FontSize="{StaticResource FontSizeBody}" 
+                            <TextBlock x:Name="NewVersionText" Text="v1.0.1" FontSize="{DynamicResource FontSizeBody}" 
                                        Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
                         </Border>
 
                         <Border x:Name="LatestBadge" Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="LATEST" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
+                            <TextBlock Text="LATEST" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushAccentText}"/>
                         </Border>
                         <Border x:Name="PrereleaseBadge" Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                            <TextBlock Text="PRE-RELEASE" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}"/>
+                            <TextBlock Text="PRE-RELEASE" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold" Foreground="{DynamicResource BrushWarning}"/>
                         </Border>
                     </StackPanel>
 
                     <!-- Release Name -->
-                    <TextBlock x:Name="ReleaseTitleText" Text="TrayTrigger Release" FontSize="{StaticResource FontSizeBody}" 
+                    <TextBlock x:Name="ReleaseTitleText" Text="TrayTrigger Release" FontSize="{DynamicResource FontSizeBody}" 
                                FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" 
                                Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
@@ -73,13 +73,13 @@
             <Border Grid.Row="1" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" 
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="RELEASE NOTES" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
+                    <TextBlock Text="RELEASE NOTES" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
                                Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,6"/>
                     <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <TextBlock x:Name="ReleaseNotesText" 
                                    Text="No release notes provided." 
-                                   FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
-                                   TextWrapping="Wrap" LineHeight="17" FontFamily="{StaticResource AppFont}"/>
+                                   FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" 
+                                   TextWrapping="Wrap" LineHeight="17" FontFamily="{DynamicResource AppFont}"/>
                     </ScrollViewer>
                 </StackPanel>
             </Border>
@@ -89,9 +89,9 @@
                 <DockPanel Margin="0,0,0,6">
                     <!-- Percent docks first so the status text (last child) fills the rest and can wrap
                          for the longer verification-failure message. -->
-                    <TextBlock x:Name="ProgressPercentText" Text="0%" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                    <TextBlock x:Name="ProgressPercentText" Text="0%" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                Foreground="{DynamicResource BrushAccentText}" DockPanel.Dock="Right" Margin="12,0,0,0"/>
-                    <TextBlock x:Name="ProgressStatusText" Text="Downloading installer..." FontSize="{StaticResource FontSizeBody}"
+                    <TextBlock x:Name="ProgressStatusText" Text="Downloading installer..." FontSize="{DynamicResource FontSizeBody}"
                                Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"/>
                 </DockPanel>
                 <ProgressBar x:Name="DownloadProgressBar" Height="6" Minimum="0" Maximum="100" Value="0" 

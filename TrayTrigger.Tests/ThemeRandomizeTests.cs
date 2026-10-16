@@ -219,4 +219,78 @@ public class ThemeRandomizeTests : IDisposable
         Assert.Null(found);
         Assert.Equal(ThemeRandomizer.MaxTries, tried);
     }
+
+    [Fact]
+    public void TheTopButton_AlsoRollsTheTextSizeAndFont_WhichAreTheThemesOwnFromThen() => WpfTestHost.Run(() =>
+    {
+        for (int seed = 0; seed < 30; seed++)
+        {
+            var vm = Open("Dark", seed);
+
+            vm.RandomizeCommand.Execute(null);
+
+            Assert.False(vm.UseSettingsTextSize, $"seed {seed}");
+            Assert.InRange(vm.TextSize, TrayTrigger.Services.AppTypography.MinScalePercent, TrayTrigger.Services.AppTypography.RecommendedMaxScalePercent);
+            Assert.False(vm.TextSizeIsLarge);
+            Assert.False(vm.UseSettingsFont, $"seed {seed}");
+            Assert.Contains(vm.Font, TrayTrigger.Services.AppFonts.Installed);
+        }
+    });
+
+    [Fact]
+    public void TheLinksOnTheCards_RollOnlyTheirOwnCard() => WpfTestHost.Run(() =>
+    {
+        var vm = Open("Dark", 3);
+        double strength = vm.Strength;
+
+        vm.RandomizeColorsCommand.Execute(null);
+        vm.RandomizeCornersCommand.Execute(null);
+
+        Assert.True(vm.UseSettingsTextSize);
+        Assert.True(vm.UseSettingsFont);
+        Assert.Equal(strength, vm.Strength);
+    });
+
+    [Fact]
+    public void TheStrength_IsRolledOnlyWhenThereIsAPictureToShow() => WpfTestHost.Run(() =>
+    {
+        var plain = Open("Light", 5);
+        plain.RemovePictureCommand.Execute(null);
+        Assert.False(plain.HasPicture);
+        double before = plain.Strength;
+
+        plain.RandomizeCommand.Execute(null);
+
+        Assert.Equal(before, plain.Strength);
+
+        var withPicture = Open("Dark", 5);
+        Assert.True(withPicture.HasPicture);
+        var seen = new HashSet<double>();
+        for (int seed = 0; seed < 30; seed++)
+        {
+            withPicture.Random = new Random(seed);
+            withPicture.RandomizeCommand.Execute(null);
+            Assert.InRange(withPicture.Strength, 0.2, 1.0);
+            seen.Add(withPicture.Strength);
+        }
+        Assert.True(seen.Count > 3);
+    });
+
+    [Fact]
+    public void Undo_PutsBackTheTextSizeFontAndStrength() => WpfTestHost.Run(() =>
+    {
+        var vm = Open("Dark", 11);
+        Assert.True(vm.HasPicture);
+        vm.UseSettingsTextSize = false;
+        vm.TextSize = 140;
+        double strength = vm.Strength;
+
+        vm.RandomizeCommand.Execute(null);
+        vm.UndoRandomizeCommand.Execute(null);
+
+        Assert.False(vm.UseSettingsTextSize);
+        Assert.Equal(140, vm.TextSize);
+        Assert.True(vm.UseSettingsFont);
+        Assert.Equal(strength, vm.Strength);
+    });
 }

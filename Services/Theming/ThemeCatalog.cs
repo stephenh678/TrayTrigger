@@ -232,7 +232,7 @@ internal static class ThemeCatalog
     public static List<string> ContrastProblems(ThemePalette p) => ContrastIssues(p).Select(i => i.Message).ToList();
 
     /// <summary>A text pair that is too faint, and the editor's colors (by their names in the theme file) that change it.</summary>
-    internal sealed record ContrastIssue(string Message, string Short, string[] Fixes);
+    internal sealed record ContrastIssue(string Message, string Short, string[] Fixes, string Label);
 
     /// <summary>
     /// The same pairs as <see cref="ContrastProblems"/>, each with the main colors to change to fix it: the dimmer text
@@ -245,7 +245,7 @@ internal static class ThemeCatalog
         {
             if (!p.TryGetValue(text, out var fg) || !p.TryGetValue(on, out var bg)) return;
             double ratio = ThemeColor.Contrast(fg, bg);
-            if (ratio < 4.5) issues.Add(new ContrastIssue($"{label} is {ratio:0.0}:1 (4.5:1 reads comfortably).", $"{label} is {ratio:0.0}:1", colors));
+            if (ratio < 4.5) issues.Add(new ContrastIssue($"{label} is {ratio:0.0}:1 (4.5:1 reads comfortably).", $"{label} is {ratio:0.0}:1", colors, label));
         }
         Check("TextPrimary", "Background", "Text on the window background", "TextPrimary", "Background");
         Check("TextPrimary", "Surface", "Text on a card", "TextPrimary", "Surface");

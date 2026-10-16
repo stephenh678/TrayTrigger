@@ -1,4 +1,4 @@
-<UserControl x:Class="TrayTrigger.Views.ColorPickerPanel"
+﻿<UserControl x:Class="TrayTrigger.Views.ColorPickerPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Width="236" Focusable="False">
@@ -78,7 +78,7 @@
             </Button>
             <Border x:Name="CurrentChip" Width="64" Height="28" Margin="6,0,0,0" CornerRadius="{DynamicResource RadiusControl}" BorderThickness="1"
                     BorderBrush="{DynamicResource BrushBorderStrong}" AutomationProperties.Name="The color now"/>
-            <TextBlock Text="was, now" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+            <TextBlock Text="was, now" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
         </StackPanel>
     </StackPanel>
 </UserControl>

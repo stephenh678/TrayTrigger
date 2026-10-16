@@ -34,7 +34,9 @@ internal sealed record ThemeEditRequest(
     double Strength,
     string Position = BackgroundPosition.Center,
     IReadOnlyDictionary<string, CornerRadius>? ShapeSet = null,
-    IReadOnlyCollection<string>? ShapeClear = null);
+    IReadOnlyCollection<string>? ShapeClear = null,
+    int? TextSize = null,
+    string? Font = null);
 
 /// <summary>What <see cref="ThemeService.SaveTheme"/> did: whether it worked, what to tell the user, and the theme's file.</summary>
 internal sealed record ThemeSaveOutcome(bool Ok, string Message, string? ThemePath);
@@ -123,6 +125,15 @@ public sealed partial class ThemeService
                 edited = ThemeFileEditor.RemoveShape(edited, key);
             }
 
+        // The text size: only a change is written, so a theme file the person wrote keeps its own line as it is. No size
+        // (null) means the theme follows Settings, which is a file with no line.
+        if (edited != null && r.TextSize != r.Source.TextSize)
+            edited = r.TextSize is { } size ? ThemeFileEditor.SetTextSize(edited, size) : ThemeFileEditor.RemoveTextSize(edited);
+
+        // The font, the same way: only a change is written, and no font (null) means the theme follows Settings.
+        if (edited != null && r.Font != r.Source.Font)
+            edited = r.Font is { } font ? ThemeFileEditor.SetFont(edited, font) : ThemeFileEditor.RemoveFont(edited);
+
         // The edit has to read back as exactly what was asked, or nothing is written.
         if (edited == null || !ReadsBackAs(edited, baseName, path, r, image))
             return new ThemeSaveOutcome(false, "The theme file could not be changed safely, so nothing was changed. You can edit the file yourself.", null);
@@ -160,7 +171,7 @@ public sealed partial class ThemeService
                 break;
         }
 
-        string text = ThemeFileTemplate.Write(name, r.Palette, r.IsDark, background, r.Position, r.ShapeSet);
+        string text = ThemeFileTemplate.Write(name, r.Palette, r.IsDark, background, r.Position, r.ShapeSet, r.TextSize, r.Font);
         if (!ReadsBackAs(text, name, path, r with { Name = name }, background?.Image ?? ThemeBackground.None))
             return new ThemeSaveOutcome(false, "The theme file could not be written safely, so nothing was saved.", null);
 
@@ -196,7 +207,7 @@ public sealed partial class ThemeService
     private static bool ReadsBackAs(string text, string fileName, string path, ThemeEditRequest r, string? image)
     {
         var parsed = ThemeFileReader.Parse(text, fileName, ThemeOrigin.User, path).Theme;
-        if (parsed == null || parsed.Name != r.Name || parsed.IsDark != r.IsDark) return false;
+        if (parsed == null || parsed.Name != r.Name || parsed.IsDark != r.IsDark || parsed.TextSize != r.TextSize || parsed.Font != r.Font) return false;
         if (image != null && parsed.Background?.Image != image) return false;
 
         if (r.ShapeSet != null)

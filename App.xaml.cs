@@ -81,9 +81,45 @@ public partial class App : Application
     public App()
     {
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        // Before anything else can fail: a crash from here on is written to crash.log and the person is told.
+        CrashReport.Install();
     }
 
     protected override void OnStartup(StartupEventArgs e)
+    {
+        CrashReport.Quiet = IsUnattendedRun(e.Args);
+        try
+        {
+            StartApp(e);
+        }
+        catch (Exception ex)
+        {
+            string? file = CrashReport.Write("startup", ex);
+            LoggingService.Error("App", "TrayTrigger failed while starting.", ex);
+
+            // With the tray icon up the app is usable: the dispatcher handler below logs this one and says so, as it always did.
+            if (_trayIcon != null) throw;
+
+            // No tray icon means no window and no way back into the app, so a process left running would only be a hidden
+            // instance that the next launch hands over to. Say what happened, and end it.
+            CrashReport.Show(atStart: true, file);
+            _isShuttingDown = true;
+            Shutdown(1);
+            Environment.Exit(1);
+        }
+    }
+
+    /// <summary>
+    /// A run nobody is watching, which must not wait on a message box: a capture or a test (the screenshot and test switches), or the
+    /// uninstaller's call that puts the DLSS overrides back.
+    /// </summary>
+    internal static bool IsUnattendedRun(string[] args) =>
+        IsReleaseScreenshotRequest(args) || args.Any(a =>
+            a.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) || a.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
+            a.StartsWith("--test", StringComparison.OrdinalIgnoreCase) || a.StartsWith("-test", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--restore-dlss", StringComparison.OrdinalIgnoreCase));
+
+    private void StartApp(StartupEventArgs e)
     {
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
@@ -112,6 +148,17 @@ public partial class App : Application
         // Before any window exists, so the first frame already has the chosen colors. "--theme <id>" (a
         // capture or a test) wins over the setting and is not saved.
         TrayTrigger.Services.Theming.ThemeService.Instance.ShowBackground = startupSettings.ShowThemeBackground;
+        // The text size: the one in Settings, unless the theme sets its own. "--text-scale <percent>" (a capture) wins over both and is not saved.
+        TrayTrigger.Services.AppTypography.SystemPercent = Math.Clamp(startupSettings.TextSizePercent,
+            TrayTrigger.Services.AppTypography.MinScalePercent, TrayTrigger.Services.AppTypography.MaxScalePercent);
+        int scaleArg = Array.FindIndex(e.Args, a => a.Equals("--text-scale", StringComparison.OrdinalIgnoreCase));
+        if (scaleArg >= 0 && scaleArg + 1 < e.Args.Length
+            && double.TryParse(e.Args[scaleArg + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double scalePercent))
+            TrayTrigger.Services.AppTypography.OverrideScale = scalePercent / 100.0;
+        // The font: the one in Settings. "--font <name>" (a capture) wins over it and is not saved.
+        TrayTrigger.Services.AppFonts.SystemName = TrayTrigger.Services.AppFonts.Find(startupSettings.FontName) ?? string.Empty;
+        int fontArg = Array.FindIndex(e.Args, a => a.Equals("--font", StringComparison.OrdinalIgnoreCase));
+        if (fontArg >= 0 && fontArg + 1 < e.Args.Length) TrayTrigger.Services.AppFonts.OverrideName = e.Args[fontArg + 1];
         int themeArg = Array.FindIndex(e.Args, a => a.Equals("--theme", StringComparison.OrdinalIgnoreCase));
         TrayTrigger.Services.Theming.ThemeService.Instance.Apply(
             themeArg >= 0 && themeArg + 1 < e.Args.Length ? e.Args[themeArg + 1] : startupSettings.ThemeId);
@@ -140,11 +187,6 @@ public partial class App : Application
         Exit += (s, args) =>
         {
             LoggingService.Info("App", $"Application.Exit triggered! Code={args.ApplicationExitCode}");
-        };
-
-        AppDomain.CurrentDomain.UnhandledException += (s, args) =>
-        {
-            LoggingService.Error("App", $"FATAL AppDomain Exception: {args.ExceptionObject}");
         };
 
         DispatcherUnhandledException += (s, args) =>
@@ -883,7 +925,6 @@ public partial class App : Application
                             Style = TrayItemStyle,
                             IsEnabled = false,
                             IsHitTestVisible = false,
-                            FontSize = AppTypography.Size("FontSizeBody"),
                             Foreground = (Brush)FindResource("BrushTextMuted")
                         });
                     }

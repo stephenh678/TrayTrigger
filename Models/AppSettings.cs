@@ -25,6 +25,12 @@ public class AppSettings
     /// <summary>Whether the theme's background picture is shown behind the pages. Off leaves the theme's plain background color.</summary>
     public bool ShowThemeBackground { get; set; } = true;
 
+    /// <summary>How large the app's text is, in percent (100 is as designed), for every theme that does not set its own size. See <see cref="TrayTrigger.Services.AppTypography"/> for the range.</summary>
+    public int TextSizePercent { get; set; } = 100;
+
+    /// <summary>The font the app's text is set in; empty for the default (Segoe UI). See <see cref="TrayTrigger.Services.AppFonts"/>.</summary>
+    public string FontName { get; set; } = string.Empty;
+
     public bool StartWithWindows { get; set; } = false;
     public bool StartMinimizedToTray { get; set; } = true;
     public bool GroupTrayMenuByCategory { get; set; } = true;

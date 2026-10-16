@@ -134,12 +134,16 @@ public class ActivityServiceTests : IDisposable
         Assert.Equal("·  last 30 days", page.RecentWindowLabel);
         Assert.Equal(["today"], service.Entries.Select(e => e.Text));
 
+        page.RetentionOption = ActivityViewModel.Keep15Days;
+        Assert.Equal(15, settings.ActivityRetentionDays);
+        Assert.Equal("·  last 15 days", page.RecentWindowLabel);
+
         page.RetentionOption = ActivityViewModel.KeepAYear;
         Assert.Equal(365, settings.ActivityRetentionDays);
         Assert.Equal("·  last year", page.RecentWindowLabel);
         // The same choice again: nothing to save.
         page.RetentionOption = ActivityViewModel.KeepAYear;
-        Assert.Equal(2, saved);
+        Assert.Equal(3, saved);
     }
 
     [Fact]

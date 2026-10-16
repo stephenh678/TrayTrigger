@@ -84,25 +84,41 @@ public partial class HelpDialog : Window
 
     private Brush Res(string key) => (Brush)FindResource(key);
 
-    private TextBlock MakeHeading(string text, bool isFirst) => new()
+    /// <summary>A piece of code in a line of help, in the app's monospace font (a live reference, like the sizes).</summary>
+    private Run CodeRun(string text)
+    {
+        var run = new Run(text) { Foreground = Res("BrushTextPrimary") };
+        run.SetResourceReference(TextElement.FontFamilyProperty, "MonoFont");
+        return run;
+    }
+
+    /// <summary>
+    /// The block at the body text size, as a live resource: this window stays open beside Settings, so the page has to follow
+    /// the Text size slider while it is being moved, not keep the size it was built at.
+    /// </summary>
+    private static TextBlock Body(TextBlock block)
+    {
+        block.SetResourceReference(TextBlock.FontSizeProperty, "FontSizeBody");
+        return block;
+    }
+
+    private TextBlock MakeHeading(string text, bool isFirst) => Body(new TextBlock
     {
         Text = text,
-        FontSize = AppTypography.Size("FontSizeBody"),
         FontWeight = FontWeights.Bold,
         Foreground = Res("BrushAccentText"),
         Margin = new Thickness(0, isFirst ? 0 : 14, 0, 6)
-    };
+    });
 
     private TextBlock MakeParagraph(string text)
     {
-        var tb = new TextBlock
+        var tb = Body(new TextBlock
         {
-            FontSize = AppTypography.Size("FontSizeBody"),
             LineHeight = 18,
             Foreground = Res("BrushTextSecondary"),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 8)
-        };
+        });
         AddInlines(tb, text);
         return tb;
     }
@@ -141,7 +157,7 @@ public partial class HelpDialog : Window
             string inner = text.Substring(next + markerLen, end - next - markerLen);
             target.Inlines.Add(isBold
                 ? new Run(inner) { FontWeight = FontWeights.SemiBold, Foreground = Res("BrushTextPrimary") }
-                : new Run(inner) { FontFamily = new FontFamily("Cascadia Mono, Consolas"), Foreground = Res("BrushTextPrimary") });
+                : CodeRun(inner));
             i = end + markerLen;
         }
     }
@@ -152,23 +168,21 @@ public partial class HelpDialog : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var dot = new TextBlock
+        var dot = Body(new TextBlock
         {
             Text = indent == 0 ? "•" : "◦",
-            FontSize = AppTypography.Size("FontSizeBody"),
             Foreground = Res("BrushAccentText"),
             Margin = new Thickness(0, 0, 8, 0),
             VerticalAlignment = VerticalAlignment.Top
-        };
+        });
         Grid.SetColumn(dot, 0);
 
-        var body = new TextBlock
+        var body = Body(new TextBlock
         {
-            FontSize = AppTypography.Size("FontSizeBody"),
             LineHeight = 18,
             Foreground = Res("BrushTextSecondary"),
             TextWrapping = TextWrapping.Wrap
-        };
+        });
         AddInlines(body, text);
         Grid.SetColumn(body, 1);
 
@@ -179,25 +193,11 @@ public partial class HelpDialog : Window
 
     private UIElement MakeNote(string text)
     {
-        // Same amber callout treatment the System page uses for its "💡" banner.
-        var body = new TextBlock
-        {
-            FontSize = AppTypography.Size("FontSizeBody"),
-            LineHeight = 17,
-            Foreground = AppPalette.Brush("BrushWarning"),
-            TextWrapping = TextWrapping.Wrap
-        };
-        AddInlines(body, text);
-        return new Border
-        {
-            Background = AppPalette.Brush("BrushDialogCard"),
-            BorderBrush = AppPalette.Brush("BrushWarningWash"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = AppShapes.Radius("RadiusControl"),
-            Padding = new Thickness(10, 8, 10, 8),
-            Margin = new Thickness(0, 2, 0, 10),
-            Child = body
-        };
+        // The same note the settings pages use (the tip kind), on the Help window's card color.
+        var note = new NoteBar { Kind = NoteKind.Tip, Margin = new Thickness(0, 2, 0, 10) };
+        note.SetResourceReference(Control.BackgroundProperty, "BrushDialogCard");
+        AddInlines(note.MessageBlock, text);
+        return note;
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();

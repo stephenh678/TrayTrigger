@@ -50,20 +50,18 @@ public partial class App
     /// </summary>
     private void AttachTraySearch(ContextMenu menu, int navStart, IReadOnlyList<GameCardViewModel> games)
     {
-        var box = new TextBox
-        {
-            Style = (Style)FindResource("TraySearchBox"),
-            FontSize = TrayCompact ? 12 : 12.5,
-        };
+        var box = new TextBox { Style = (Style)FindResource("TraySearchBox") };
+        // The same size as the rows around it, as a live resource, so the box follows the Text size setting too.
+        box.SetResourceReference(Control.FontSizeProperty, "FontSizeBody");
         AutomationProperties.SetName(box, "Search games");
         var placeholder = new TextBlock
         {
             Text = "Search games",
             Foreground = (Brush)FindResource("BrushTextMuted"),
-            FontSize = box.FontSize,
             IsHitTestVisible = false,
             VerticalAlignment = VerticalAlignment.Center,
         };
+        placeholder.SetBinding(TextBlock.FontSizeProperty, new Binding(nameof(TextBox.FontSize)) { Source = box });
         placeholder.SetBinding(UIElement.VisibilityProperty, new Binding(nameof(TextBox.Text))
         {
             Source = box,

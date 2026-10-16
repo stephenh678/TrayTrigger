@@ -87,6 +87,91 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         }
     }
 
+    public int MinTextSize => Services.AppTypography.MinScalePercent;
+    public int MaxTextSize => Services.AppTypography.MaxScalePercent;
+
+    /// <summary>
+    /// How large the app's text is, in percent: 100 is as designed. It is the size for every theme that does not set its own;
+    /// setting it puts it on screen at once and saves it.
+    /// </summary>
+    public int TextSize
+    {
+        get => Math.Clamp(_settings.TextSizePercent, MinTextSize, MaxTextSize);
+        set
+        {
+            int percent = Math.Clamp(value, MinTextSize, MaxTextSize);
+            if (percent != TextSize)
+            {
+                _settings.TextSizePercent = percent;
+                Services.AppTypography.SystemPercent = percent;
+                Services.AppTypography.ApplyForTheme(_themes.Active.TextSize);
+                _save();
+            }
+            // Raised even when nothing changed: a number typed past the range comes back as the one it was brought to.
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(TextSizeIsLarge));
+            OnPropertyChanged(nameof(CanResetTextSize));
+        }
+    }
+
+    /// <summary>True past the size every screen is checked at: the window says some screens may clip text.</summary>
+    public bool TextSizeIsLarge => TextSize > Services.AppTypography.RecommendedMaxScalePercent;
+
+    public string TextSizeWarning => $"Past {Services.AppTypography.RecommendedMaxScalePercent}% some screens may clip text. Lower the size to fix it.";
+
+    /// <summary>The fonts that can be chosen (any installed font but the symbol fonts).</summary>
+    public IReadOnlyList<string> Fonts => Services.AppFonts.Installed;
+
+    /// <summary>The chosen font. Setting it puts it on screen at once and saves it; the default is saved as nothing.</summary>
+    public string FontName
+    {
+        get => Services.AppFonts.Find(_settings.FontName) ?? Services.AppFonts.DefaultName;
+        set
+        {
+            string chosen = Services.AppFonts.Find(value) ?? Services.AppFonts.DefaultName;
+            string stored = chosen == Services.AppFonts.DefaultName ? string.Empty : chosen;
+            if (stored != _settings.FontName)
+            {
+                _settings.FontName = stored;
+                Services.AppFonts.SystemName = stored;
+                Services.AppFonts.ApplyForTheme(_themes.Active.Font);
+                _save();
+            }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanResetFont));
+        }
+    }
+
+    /// <summary>Says so when the theme on screen sets its own font: this one is not used while that theme is on, so it is greyed out.</summary>
+    public string FontNote => Services.AppFonts.Find(_themes.Active.Font) is { } own
+        ? $"{_themes.Active.Name} sets its own font ({own}), so this setting is not used while it is on. Choose another theme to change it."
+        : string.Empty;
+
+    public bool HasFontNote => FontNote.Length > 0;
+
+    /// <summary>False while the theme on screen has a font of its own: a change here would show nothing, so the list is greyed out.</summary>
+    public bool FontCanBeSet => !HasFontNote;
+
+    public bool CanResetFont => FontName != Services.AppFonts.DefaultName;
+
+    public ICommand ResetFontCommand => _resetFont ??= new RelayCommand(() => FontName = Services.AppFonts.DefaultName);
+    private ICommand? _resetFont;
+
+    public bool CanResetTextSize => TextSize != 100;
+
+    public ICommand ResetTextSizeCommand => _resetTextSize ??= new RelayCommand(() => TextSize = 100);
+    private ICommand? _resetTextSize;
+
+    /// <summary>Says so when the theme on screen sets its own text size: this one is not used while that theme is on, so it is greyed out.</summary>
+    public string TextSizeNote => _themes.Active.TextSize is { } own
+        ? $"{_themes.Active.Name} sets its own text size ({own}%), so this setting is not used while it is on. Choose another theme to change it."
+        : string.Empty;
+
+    public bool HasTextSizeNote => TextSizeNote.Length > 0;
+
+    /// <summary>False while the theme on screen has a text size of its own: a change here would show nothing, so the slider is greyed out.</summary>
+    public bool TextSizeCanBeSet => !HasTextSizeNote;
+
     /// <summary>What to tell the user about the theme: why it is not the one chosen, what is hard to read in it, which files were skipped.</summary>
     public string Status
     {
@@ -147,6 +232,12 @@ public sealed class ThemeSettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(HasStatus));
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(TextSizeNote));
+        OnPropertyChanged(nameof(HasTextSizeNote));
+        OnPropertyChanged(nameof(TextSizeCanBeSet));
+        OnPropertyChanged(nameof(FontNote));
+        OnPropertyChanged(nameof(HasFontNote));
+        OnPropertyChanged(nameof(FontCanBeSet));
     }
 
     // ---- Your own theme ---------------------------------------------------------------------------------

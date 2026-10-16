@@ -24,6 +24,7 @@ internal static class TestLogRedirect
             string dir = Path.Combine(Path.GetTempPath(), "TrayTriggerTestLogs");
             Directory.CreateDirectory(dir);
             LoggingService.UseLogFileForTests(Path.Combine(dir, $"test-{Environment.ProcessId}.log"));
+            CrashReport.UseFileForTests(Path.Combine(dir, $"crash-{Environment.ProcessId}.log"));
         }
         catch
         {

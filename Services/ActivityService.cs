@@ -48,8 +48,8 @@ public sealed class ActivityService
 {
     public const string FileName = "activity.json";
     public const int DefaultRetentionDays = 90;
-    /// <summary>The windows the page's Keep dropdown offers: a month, a season, a year.</summary>
-    public static readonly IReadOnlyList<int> RetentionChoices = [30, 90, 365];
+    /// <summary>The windows the page's Keep dropdown offers: a fortnight, a month, a season, a year.</summary>
+    public static readonly IReadOnlyList<int> RetentionChoices = [15, 30, 90, 365];
     public const int MaxEntries = 500;
 
     /// <summary>A stored window, or the default when it isn't one of <see cref="RetentionChoices"/>.</summary>

@@ -71,7 +71,7 @@ internal static class ThemeFileTemplate
     internal static IEnumerable<string> Names => Main.Concat(Optional).Concat(FineTuning).Select(e => e.Name);
 
     public static string Write(string name, ThemePalette palette, bool isDark, (string Image, double Strength)? background = null, string position = BackgroundPosition.Center,
-        IReadOnlyDictionary<string, CornerRadius>? shape = null)
+        IReadOnlyDictionary<string, CornerRadius>? shape = null, int? textSize = null, string? font = null)
     {
         var text = new StringBuilder();
         text.AppendLine("{");
@@ -87,6 +87,16 @@ internal static class ThemeFileTemplate
         text.AppendLine($"    \"strength\": {(background?.Strength ?? 0.6).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}  // 0 hides the picture, 1 shows it at full brightness");
         text.AppendLine("  },");
         text.AppendLine();
+        if (textSize is { } size)
+        {
+            text.AppendLine($"  \"textSize\": {size},  // How large all the text is while this theme is on, in percent: {AppTypography.MinScalePercent} to {AppTypography.MaxScalePercent}. Leave the line out to use the size from Settings.");
+            text.AppendLine();
+        }
+        if (font != null)
+        {
+            text.AppendLine($"  \"font\": {Quote(font)},  // The font for all the text while this theme is on: the name of a font installed on the computer. Leave the line out to use the font from Settings.");
+            text.AppendLine();
+        }
         if (shape is { Count: > 0 })
         {
             text.AppendLine("  // Corner radii in pixels: one number for all four corners, or four (top-left, top-right, bottom-right, bottom-left).");

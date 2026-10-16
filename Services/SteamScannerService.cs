@@ -75,6 +75,10 @@ public partial class SteamScannerService
 
                     if (key.Equals("path", StringComparison.OrdinalIgnoreCase) && Directory.Exists(val))
                     {
+                        // Steam writes its own registry path in lowercase; the vdf has the real casing,
+                        // so it replaces the registry spelling of the same folder rather than being dropped.
+                        if (string.Equals(val.TrimEnd('\\'), steamPath.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+                            folders.Remove(steamPath);
                         folders.Add(val);
                     }
                 }

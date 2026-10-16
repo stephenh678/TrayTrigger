@@ -91,6 +91,9 @@ public partial class App
     private void ProcessDevArguments(StartupEventArgs e)
     {
         AttachConsole(ATTACH_PARENT_PROCESS);
+        // A deliberate failure at start-up, to see what a person would get (crash.log, the exit code) without waiting for a real one.
+        if (e.Args.Any(a => a.Equals("--test-startup-crash", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Deliberate start-up failure (--test-startup-crash).");
         // TRAYTRIGGER_MOTION=off: behave as if Windows' Animation effects were off (Views/Motion.cs),
         // for checking the reduced-motion paths without changing the system setting.
         if (string.Equals(Environment.GetEnvironmentVariable("TRAYTRIGGER_MOTION"), "off", StringComparison.OrdinalIgnoreCase))
@@ -2549,6 +2552,13 @@ public partial class App
             if (e.Args[i].Equals("--test-automation-names", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
             {
                 RunAutomationNameAudit(e.Args[i + 1]);
+                return;
+            }
+
+            // --test-layout-audit <out.txt>: text cut off and elements clipped on each page and dialog (App.LayoutAudit.cs).
+            if (e.Args[i].Equals("--test-layout-audit", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                RunLayoutAudit(e.Args[i + 1]);
                 return;
             }
 

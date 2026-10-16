@@ -1,4 +1,4 @@
-<Application x:Class="TrayTrigger.App"
+﻿<Application x:Class="TrayTrigger.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:TrayTrigger.Converters"
@@ -29,6 +29,7 @@
         <!-- Global Font -->
         <FontFamily x:Key="AppFont">Segoe UI</FontFamily>
         <FontFamily x:Key="IconFont">Segoe MDL2 Assets, Segoe Fluent Icons</FontFamily>
+        <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
 
         <!-- Keyboard focus: a 1 px accent ring drawn only when focus arrives by keyboard (Tab,
              arrows), never on a mouse click. WPF's own dotted rectangle is black and vanished on
@@ -74,8 +75,8 @@
         <!-- Modern Danger Button -->
         <Style x:Key="ModernDangerButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextOnSolid}"/>
             <Setter Property="Background" Value="{DynamicResource BrushDangerSolid}"/>
@@ -109,8 +110,8 @@
         <!-- Modern Accent Button -->
         <Style x:Key="ModernAccentButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextOnSolid}"/>
             <Setter Property="Background" Value="{DynamicResource BrushAccent}"/>
@@ -145,7 +146,7 @@
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -167,8 +168,8 @@
         <!-- Modern Outline Button -->
         <Style x:Key="ModernOutlineButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -206,8 +207,8 @@
         <!-- Modern Ghost Button -->
         <Style x:Key="ModernGhostButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -243,8 +244,8 @@
              ApiKeyCheckViewModel. Shared by Settings and the Welcome dialog. -->
         <Style x:Key="ApiKeyCheckStatusText" TargetType="TextBlock">
             <Setter Property="Text" Value="{Binding Message}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,5,0,0"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
@@ -266,8 +267,8 @@
         </Style>
 
         <Style x:Key="HelpLinkButton" TargetType="Button">
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushAccentText}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -314,8 +315,8 @@
              actual runtime values directly, sidestepping that entirely. -->
         <Style x:Key="SegmentedTabButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="12,5"/>
@@ -359,8 +360,8 @@
         <!-- Modern Sidebar Navigation Button -->
         <Style x:Key="SidebarNavButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -400,8 +401,8 @@
         <!-- Card Hover Quick Action Circle Buttons -->
         <Style x:Key="CardHoverCircleButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="28"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
@@ -437,8 +438,8 @@
 
         <Style x:Key="CardHoverDeleteButton" TargetType="Button">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="28"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
@@ -477,7 +478,7 @@
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRingRound}"/>
             <Setter Property="Width" Value="22"/>
             <Setter Property="Height" Value="22"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
@@ -505,8 +506,8 @@
 
         <!-- Modern Search & Input TextBox with Placeholder Support -->
         <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="Background" Value="{DynamicResource BrushDialogCard}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
@@ -522,7 +523,7 @@
                                 BorderThickness="{TemplateBinding BorderThickness}" 
                                 CornerRadius="{DynamicResource RadiusSmall}">
                             <Grid>
-                                <TextBlock Text="{TemplateBinding Tag}" Foreground="{DynamicResource BrushTextDisabled}" FontSize="{StaticResource FontSizeBody}" 
+                                <TextBlock Text="{TemplateBinding Tag}" Foreground="{DynamicResource BrushTextDisabled}" FontSize="{DynamicResource FontSizeBody}" 
                                            Margin="9,5" VerticalAlignment="Center" IsHitTestVisible="False">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -590,8 +591,8 @@
         <!-- Modern Dark ComboBox -->
         <Style x:Key="ModernComboBox" TargetType="ComboBox">
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="Background" Value="{DynamicResource BrushDialogCard}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
@@ -643,6 +644,12 @@
                                 <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="contentPresenter" Property="Visibility" Value="Hidden"/>
                             </Trigger>
+                            <!-- Greyed out: the chosen item in the disabled text color, the box and arrow dimmed. -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="contentPresenter" Property="TextElement.Foreground" Value="{DynamicResource BrushTextDisabled}"/>
+                                <Setter TargetName="toggleButton" Property="Opacity" Value="0.55"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -652,8 +659,8 @@
         <!-- ComboBoxItem Style -->
         <Style TargetType="ComboBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -683,8 +690,8 @@
              blue check, and its label turns the warning color, so the wording and the color say which way it is asked for. -->
         <Style x:Key="FilterOptionToggle" TargetType="ToggleButton">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
@@ -725,8 +732,8 @@
              whether it is the one on screen. -->
         <Style x:Key="FilterSavedRow" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
@@ -769,7 +776,7 @@
         <!-- The small glyph button beside a saved filter (delete): a row-height hover wash and nothing else. -->
         <Style x:Key="FilterSavedGlyphButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{StaticResource KeyboardFocusRing}"/>
@@ -846,8 +853,8 @@
 
         <!-- Modern CheckBox -->
         <Style x:Key="ModernCheckBox" TargetType="CheckBox">
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,2"/>
@@ -920,8 +927,8 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Padding" Value="6,6"/>
             <Setter Property="MinWidth" Value="275"/>
             <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
@@ -950,12 +957,13 @@
              presenter reaches the TextBlock WPF generates for a plain string tooltip, and leaves
              any tooltip with its own content alone. -->
         <Style TargetType="ToolTip">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="Background" Value="{DynamicResource BrushBorder}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderStrong}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="MaxWidth" Value="320"/>
             <Setter Property="HasDropShadow" Value="True"/>
@@ -1051,8 +1059,8 @@
              Space and the keyboard focus ring like any button. -->
         <Style x:Key="DisclosureExpander" TargetType="Expander">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Expander">
@@ -1065,7 +1073,7 @@
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
                                         <StackPanel Orientation="Horizontal" Background="Transparent">
-                                            <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}"
+                                            <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}"
                                                        VerticalAlignment="Center" Margin="0,1,6,0" Foreground="{TemplateBinding Foreground}"/>
                                             <ContentPresenter VerticalAlignment="Center"/>
                                         </StackPanel>
@@ -1101,8 +1109,8 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}"/>
             <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="TextElement.FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="TextElement.FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="TextElement.FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Effect">
                 <Setter.Value>
                     <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="{DynamicResource ColorFloatingShadow}"/>
@@ -1116,7 +1124,7 @@
         </Style>
         <Style x:Key="SelectionBarGlyph" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Margin" Value="0,1,6,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -1129,7 +1137,7 @@
             <Setter Property="Padding" Value="6,2"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextElement.Foreground" Value="{DynamicResource BrushSuccessText}"/>
-            <Setter Property="TextElement.FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="TextElement.FontWeight" Value="SemiBold"/>
         </Style>
         <Style x:Key="SpecLivePill" TargetType="Border" BasedOn="{StaticResource SpecStaticPill}">
@@ -1154,7 +1162,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RepeatButton">
                         <Border Background="{TemplateBinding Background}">
-                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBadge}"
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBadge}"
                                        Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"
                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="4,0"/>
                         </Border>
@@ -1211,7 +1219,7 @@
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="SelectionBrush" Value="{DynamicResource BrushAccent}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -1226,8 +1234,8 @@
 
         <Style TargetType="MenuItem">
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Padding" Value="10,7"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -1244,11 +1252,11 @@
                                 <!-- Current state for a checkable item (a profile tier, Run as Administrator). Hidden,
                                      not collapsed, while unchecked so the siblings in a submenu keep one text column. -->
                                 <TextBlock x:Name="CheckGlyph" Grid.Column="0" Text="&#xE73E;" Margin="0,0,10,0"
-                                           FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Width="20" TextAlignment="Center"
+                                           FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Width="20" TextAlignment="Center"
                                            Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"
                                            Visibility="Collapsed"/>
                                 <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="SubmenuArrow" Grid.Column="2" Text="›" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" 
+                                <TextBlock x:Name="SubmenuArrow" Grid.Column="2" Text="›" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" 
                                            Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" Margin="16,0,2,0"
                                            Visibility="Collapsed"/>
                                 <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False" 
@@ -1295,14 +1303,14 @@
         </Style>
         <Style x:Key="TrayMenuCompactItemStyle" TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
             <Setter Property="Padding" Value="10,3"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
         </Style>
 
         <!-- A Segoe glyph in a MenuItem.Icon slot: 20 px wide so it lines up with a 20 px game icon
              in the same column. Shared by the tray menu (built in code) and the in-app menus. -->
         <Style x:Key="MenuGlyphIcon" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Width" Value="20"/>
             <Setter Property="TextAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -1342,8 +1350,8 @@
             <Setter Property="IsHitTestVisible" Value="False"/>
             <Setter Property="Cursor" Value="Arrow"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
-            <Setter Property="FontFamily" Value="{StaticResource AppFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Template">
                 <Setter.Value>

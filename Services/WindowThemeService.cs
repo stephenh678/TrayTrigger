@@ -44,11 +44,12 @@ public static partial class WindowThemeService
     /// <summary>
     /// Call from a window's constructor (before it is shown). Applies dark title bar
     /// attributes before the HWND is visible and keeps the window cloaked until its
-    /// first frame has rendered. Idempotent.
+    /// first frame has rendered, and has the window text in the app's font (<see cref="AppFonts.Follow"/>). Idempotent.
     /// </summary>
     public static void PrepareForFirstShow(Window window)
     {
         if (window == null) return;
+        AppFonts.Follow(window);
         if (_firstShow.TryGetValue(window, out _)) return;
 
         var state = new FirstShowState();

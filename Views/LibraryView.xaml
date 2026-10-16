@@ -1,4 +1,4 @@
-<UserControl x:Class="TrayTrigger.Views.LibraryView"
+﻿<UserControl x:Class="TrayTrigger.Views.LibraryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -491,19 +491,19 @@
                        <DockPanel Grid.Row="0" Margin="0,0,0,14">
                            <!-- Right: Live Game Count Status (matching Settings & System) -->
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                               <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" 
+                               <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" 
                                           Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" 
-                                          FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                               <TextBlock Text="{Binding TotalGameCountDisplay, Mode=OneWay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" 
+                                          FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
                            </StackPanel>
 
                            <!-- Left: Title & Subtitle matching Settings & System -->
                            <StackPanel VerticalAlignment="Center">
-                               <TextBlock Text="Games Library" FontSize="{StaticResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
-                                          FontFamily="{StaticResource AppFont}" FontWeight="Normal"/>
+                               <TextBlock Text="Games Library" FontSize="{DynamicResource FontSizeHeading}" Foreground="{DynamicResource BrushTextPrimary}" 
+                                          FontFamily="{DynamicResource AppFont}" FontWeight="Normal"/>
                                <TextBlock Text="Launch and organize your games from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox, Battle.net, and local folders"
-                                          FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
-                                          FontFamily="{StaticResource AppFont}" Margin="0,4,0,0"/>
+                                          FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextTrimming="CharacterEllipsis"
+                                          FontFamily="{DynamicResource AppFont}" Margin="0,4,0,0"/>
                            </StackPanel>
                        </DockPanel>
 
@@ -516,19 +516,19 @@
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
                                    <StackPanel Orientation="Horizontal">
-                                       <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                       <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                        <TextBlock Text="Add Game" VerticalAlignment="Center"/>
                                    </StackPanel>
                                </Button>
                                <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
                                    <StackPanel Orientation="Horizontal">
-                                       <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                       <TextBlock Text="&#xED25;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                        <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
                                    </StackPanel>
                                </Button>
                                <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernOutlineButton}">
                                    <StackPanel Orientation="Horizontal">
-                                       <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                       <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                        <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
                                    </StackPanel>
                                </Button>
@@ -553,10 +553,10 @@
                                                        Margin="0,0,2,0">
                                                    <StackPanel Orientation="Horizontal">
                                                        <TextBlock Text="&#xE735;" FontFamily="{StaticResource IconFont}"
-                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushGold}" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                                  FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushGold}" Margin="0,0,5,0" VerticalAlignment="Center"
                                                                   Visibility="{Binding IsFavoritesTab, Converter={StaticResource BoolToVis}}"/>
-                                                       <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
-                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                       <TextBlock Text="&#xED1A;" FontFamily="{StaticResource IconFont}"
+                                                                  FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,5,0" VerticalAlignment="Center"
                                                                   Visibility="{Binding IsHiddenTab, Converter={StaticResource BoolToVis}}"/>
                                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                                    </StackPanel>
@@ -605,7 +605,7 @@
                                        Tag="{Binding Library.Filter.IsOpen}"
                                        ToolTip="{Binding Library.Filter.ActiveFilterSummary}"
                                        AutomationProperties.Name="{Binding Library.Filter.AccessibleName}">
-                                   <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
+                                   <TextBlock Text="&#xE71C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                               Foreground="{DynamicResource BrushTextPrimary}"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                </Button>
@@ -629,7 +629,7 @@
                                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0"
                                        Visibility="{Binding Library.Filter.HasActiveFilters, Converter={StaticResource BoolToVis}}">
                                    <TextBlock Text="{Binding Library.Filter.ActiveFilterCount}"
-                                              FontSize="{StaticResource FontSizeBadge}" FontFamily="{StaticResource AppFont}"
+                                              FontSize="{DynamicResource FontSizeBadge}" FontFamily="{DynamicResource AppFont}"
                                               Foreground="{DynamicResource BrushTextOnSolid}"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                </Border>
@@ -666,9 +666,9 @@
                                                    </Button.Style>
                                                </Button>
                                                <StackPanel VerticalAlignment="Center">
-                                                   <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                   <TextBlock Text="{Binding Library.Filter.ActiveFilterSummary}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                               Foreground="{DynamicResource BrushTextPrimary}"/>
-                                                   <TextBlock Text="{Binding Library.Filter.ResultSummary}" FontSize="{StaticResource FontSizeBody}"
+                                                   <TextBlock Text="{Binding Library.Filter.ResultSummary}" FontSize="{DynamicResource FontSizeBody}"
                                                               Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
                                                </StackPanel>
                                            </DockPanel>
@@ -683,11 +683,11 @@
                                                            <Button DockPanel.Dock="Right" Content="Save current..." Style="{StaticResource HelpLinkButton}"
                                                                    Command="{Binding Library.Filter.SaveCurrentCommand}" Click="LibraryFilterSave_Click"
                                                                    AutomationProperties.Name="Save the ticked filters under a name"/>
-                                                           <TextBlock Text="SAVED" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                           <TextBlock Text="SAVED" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                                       Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                                                        </DockPanel>
                                                        <TextBlock Text="Tick some options, then save them here." Margin="22,0,8,0" TextWrapping="Wrap"
-                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
+                                                                  FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
                                                            <TextBlock.Style>
                                                                <Style TargetType="TextBlock">
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
@@ -705,7 +705,7 @@
                                                                    <DockPanel>
                                                                        <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding DeleteCommand}"
                                                                                Style="{StaticResource FilterSavedGlyphButton}" HorizontalAlignment="Right"
-                                                                               FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" ToolTip="Delete this saved filter"
+                                                                               FontFamily="{StaticResource IconFont}" ToolTip="Delete this saved filter"
                                                                                AutomationProperties.Name="{Binding Name, StringFormat=Delete saved filter {0}}"/>
                                                                        <Button Command="{Binding ApplyCommand}" Tag="{Binding IsSelected}"
                                                                                Style="{StaticResource FilterSavedRow}"
@@ -745,7 +745,7 @@
                                                                                </Style>
                                                                            </Button.Style>
                                                                        </Button>
-                                                                       <TextBlock Text="{Binding HeadingText}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                                       <TextBlock Text="{Binding HeadingText}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                                                   Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                                                                    </DockPanel>
                                                                    <ItemsControl ItemsSource="{Binding Options}" Margin="14,0,0,0">
@@ -817,7 +817,7 @@
                                                    </Style.Triggers>
                                                </Style>
                                            </Border.Style>
-                                           <TextBlock Text="&#xED1A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeSubhead}"
+                                           <TextBlock Text="&#xED1A;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
                                                       HorizontalAlignment="Center" VerticalAlignment="Center">
                                                <TextBlock.Style>
                                                    <Style TargetType="TextBlock">
@@ -841,28 +841,28 @@
                                            Width="32" Height="30" Padding="0" Cursor="Hand"
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsExtraLargeView}"
         AutomationProperties.Name="Extra Large posters view" ToolTip="Extra large posters">
-                                       <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeSubhead}"
+                                       <TextBlock Text="&#xE8A9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}"
                                                   Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                    <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Poster Grid"
                                            Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsGridView}"
         AutomationProperties.Name="Poster grid view" ToolTip="Poster grid">
-                                       <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
+                                       <TextBlock Text="&#xE8B9;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                                   Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                    <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Compact Icons"
                                            Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsIconsView}"
         AutomationProperties.Name="Compact icons view" ToolTip="Compact icons">
-                                       <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
+                                       <TextBlock Text="&#xE80A;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                                   Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                    <Button Command="{Binding SettingsVM.SetViewModeCommand}" CommandParameter="Details List"
                                            Width="32" Height="30" Padding="0" Cursor="Hand" Margin="2,0,0,0"
                                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding SettingsVM.IsListView}"
         AutomationProperties.Name="Details list view" ToolTip="Details list">
-                                       <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}"
+                                       <TextBlock Text="&#xE8FD;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
                                                   Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                    </Button>
                                </StackPanel>
@@ -906,27 +906,27 @@
                                    <Image Source="pack://application:,,,/Assets/app_icon.png" Width="64" Height="64"
                                           HorizontalAlignment="Center" Margin="0,0,0,14" RenderOptions.BitmapScalingMode="HighQuality"/>
                                    <TextBlock Text="Your library is empty"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                                              FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Scan for Games imports what's installed from Steam, GOG, EA, Epic, Ubisoft Connect, Xbox (PC Game Pass), and Battle.net. Or drop a game's exe, shortcut, or install folder anywhere on this window."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
+                                              FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,18"/>
                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                        <Button AutomationProperties.Name="Scan for Games" Command="{Binding OpenScanForGamesCommand}" Style="{StaticResource ModernAccentButton}" Margin="0,0,10,0">
                                            <StackPanel Orientation="Horizontal">
-                                               <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                               <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                                <TextBlock Text="Scan for Games" VerticalAlignment="Center"/>
                                            </StackPanel>
                                        </Button>
                                        <Button AutomationProperties.Name="Add Game" Command="{Binding AddGameCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0">
                                            <StackPanel Orientation="Horizontal">
-                                               <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                               <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                                <TextBlock Text="Add Game" VerticalAlignment="Center"/>
                                            </StackPanel>
                                        </Button>
                                        <Button AutomationProperties.Name="Add Folder" Command="{Binding AddFolderCommand}" Style="{StaticResource ModernOutlineButton}">
                                            <StackPanel Orientation="Horizontal">
-                                               <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                               <TextBlock Text="&#xED25;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                                <TextBlock Text="Add Folder" VerticalAlignment="Center"/>
                                            </StackPanel>
                                        </Button>
@@ -952,17 +952,17 @@
                                            </Style.Triggers>
                                        </Style>
                                    </StackPanel.Style>
-                                   <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeDisplay}"
+                                   <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeDisplay}"
                                               Foreground="{DynamicResource BrushTextMuted}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                    <TextBlock Text="No games match"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                                              FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Nothing in this category matches your search. Press Esc to clear the search, or pick another tab."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                              FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                    <TextBlock Text="Adding a game instead? Drop its exe, shortcut, or install folder anywhere on this window, or use Add Game / Add Folder above."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                              FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                                </StackPanel>
 
                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -985,14 +985,14 @@
                                            </Style.Triggers>
                                        </Style>
                                    </StackPanel.Style>
-                                   <TextBlock Text="&#xE734;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeDisplay}"
+                                   <TextBlock Text="&#xE734;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeDisplay}"
                                               Foreground="{DynamicResource BrushGold}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                    <TextBlock Text="No favorites yet"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                                              FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Click the star on any game to add it to your Favorites."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                              FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                </StackPanel>
 
                                <!-- Filtered to nothing. The filter flyout persists across restarts, so
@@ -1010,14 +1010,14 @@
                                            </Style.Triggers>
                                        </Style>
                                    </StackPanel.Style>
-                                   <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeDisplay}"
+                                   <TextBlock Text="&#xE71C;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeDisplay}"
                                               Foreground="{DynamicResource BrushAccentText}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                                    <TextBlock Text="Hidden by your filters"
-                                              FontSize="{StaticResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center"/>
+                                              FontSize="{DynamicResource FontSizeTitle}" Foreground="{DynamicResource BrushTextPrimary}"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center"/>
                                    <TextBlock Text="Your library has games, but none of them match the filters you have set. Filters stay put between sessions - the filter button shows how many are on."
-                                              FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
-                                              FontFamily="{StaticResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,16"/>
+                                              FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                                              FontFamily="{DynamicResource AppFont}" HorizontalAlignment="Center" Margin="0,6,0,16"/>
                                    <Button Content="Clear filters" Command="{Binding Library.Filter.ClearCommand}"
                                            Style="{StaticResource ModernAccentButton}" HorizontalAlignment="Center"/>
                                </StackPanel>
@@ -1213,9 +1213,9 @@
                                                                    </Border.Background>
                                                                </Border>
                                                                <StackPanel Margin="11,18,11,9">
-                                                                   <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                                   <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                                               Foreground="{DynamicResource BrushArtText}" 
-                                                                              FontFamily="{StaticResource AppFont}"
+                                                                              FontFamily="{DynamicResource AppFont}"
                                                                               TextTrimming="CharacterEllipsis"
                                                                               views:PosterDetailFade.Part="Title"/>
                                                                    <Grid Margin="0,3,0,0">
@@ -1223,18 +1223,18 @@
                                                                            <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                            <ColumnDefinition Width="*"/>
                                                                        </Grid.ColumnDefinitions>
-                                                                       <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" 
+                                                                       <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                                                   Foreground="{DynamicResource BrushArtTextSecondary}" 
-                                                                                  FontFamily="{StaticResource AppFont}"
+                                                                                  FontFamily="{DynamicResource AppFont}"
                                                                                   TextTrimming="CharacterEllipsis"
                                                                                   views:PosterDetailFade.Part="Playtime"/>
-                                                                       <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" 
+                                                                       <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                                                   Foreground="{DynamicResource BrushArtTextMuted}" 
                                                                                   HorizontalAlignment="Right"
                                                                                   TextAlignment="Right"
                                                                                   TextTrimming="CharacterEllipsis"
                                                                                   Margin="4,0,0,0"
-                                                                                  FontFamily="{StaticResource AppFont}"
+                                                                                  FontFamily="{DynamicResource AppFont}"
                                                                                   views:PosterDetailFade.Part="LastPlayed"/>
                                                                    </Grid>
                                                                </StackPanel>
@@ -1259,9 +1259,9 @@
                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                </Border>
 
-                                                               <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" 
+                                                               <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" 
                                                                           Foreground="{DynamicResource BrushTextPrimary}" 
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"
                                                                           TextAlignment="Center" TextTrimming="CharacterEllipsis" 
                                                                           MaxWidth="160" HorizontalAlignment="Center"/>
                                                            </StackPanel>
@@ -1273,17 +1273,17 @@
                                                                        <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                                                        <ColumnDefinition Width="*"/>
                                                                    </Grid.ColumnDefinitions>
-                                                                   <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" 
+                                                                   <TextBlock Grid.Column="0" Text="{Binding PlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                                               Foreground="{DynamicResource BrushTextSecondary}" 
-                                                                              FontFamily="{StaticResource AppFont}"
+                                                                              FontFamily="{DynamicResource AppFont}"
                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                   <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" 
+                                                                   <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                                               Foreground="{DynamicResource BrushTextMuted}" 
                                                                               HorizontalAlignment="Right"
                                                                               TextAlignment="Right"
                                                                               TextTrimming="CharacterEllipsis"
                                                                               Margin="4,0,0,0"
-                                                                              FontFamily="{StaticResource AppFont}"/>
+                                                                              FontFamily="{DynamicResource AppFont}"/>
                                                                </Grid>
                                                            </StackPanel>
                                                        </Grid>
@@ -1460,9 +1460,9 @@
                                                                                </Style.Triggers>
                                                                            </Style>
                                                                        </Border.Style>
-                                                                       <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}"
+                                                                       <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBody}"
                                                                                   Foreground="{DynamicResource BrushArtTextSecondary}"
-                                                                                  FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                                                                  FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
                                                                    </Border>
 
                                                                    <!-- Hidden Pill -->
@@ -1479,9 +1479,9 @@
                                                                                </Style.Triggers>
                                                                            </Style>
                                                                        </Border.Style>
-                                                                       <TextBlock Text="HIDDEN" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
+                                                                       <TextBlock Text="HIDDEN" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
                                                                                   Foreground="{DynamicResource BrushTextSoft}"
-                                                                                  FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                                                                  FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
                                                                    </Border>
                                                                </StackPanel>
 
@@ -1505,7 +1505,7 @@
                                                                                </Style.Triggers>
                                                                            </Style>
                                                                        </Border.Style>
-                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{StaticResource AppFont}"/>
+                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
                                                                    </Border>
                                                                    <!-- Favorite Star - outermost corner -->
                                                                    <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
@@ -1515,7 +1515,7 @@
                                                                            <Style TargetType="Button" BasedOn="{StaticResource FavoriteToggleButton}">
                                                                                <Setter Property="Width" Value="19"/>
                                                                                <Setter Property="Height" Value="19"/>
-                                                                               <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                                                                               <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
                                                                                <Setter Property="Visibility" Value="Collapsed"/>
                                                                                <Style.Triggers>
                                                                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
@@ -1541,7 +1541,7 @@
                                                                    views:PosterDetailFade.Part="NotInstalledTag"
                                                                    CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="0,5,0,0" HorizontalAlignment="Center">
                                                                <TextBlock Style="{StaticResource UnavailableBadgeText}"
-                                                                          FontSize="{StaticResource FontSizeBadge}" FontFamily="{StaticResource AppFont}"/>
+                                                                          FontSize="{DynamicResource FontSizeBadge}" FontFamily="{DynamicResource AppFont}"/>
                                                            </Border>
                                                        </StackPanel>
 
@@ -1763,7 +1763,7 @@
                                                                <Button.Template>
                                                                    <ControlTemplate TargetType="Button">
                                                                        <TextBlock x:Name="StarGlyph" Text="&#xE734;" FontFamily="{StaticResource IconFont}"
-                                                                                  FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
+                                                                                  FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"
                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                        <ControlTemplate.Triggers>
                                                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
@@ -1791,7 +1791,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="STEAM" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="STEAM" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1808,7 +1808,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="GOG" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="GOG" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1825,7 +1825,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="EA" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="EA" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1842,7 +1842,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="EPIC" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="EPIC" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1859,7 +1859,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="UBI" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="UBI" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1876,7 +1876,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="XBOX" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="XBOX" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1893,7 +1893,7 @@
                                                                </Border.Style>
                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                    <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png" Height="11" Margin="0,0,2,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                                   <TextBlock Text="B.NET" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}" FontWeight="SemiBold"/>
+                                                                   <TextBlock Text="B.NET" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}" FontWeight="SemiBold"/>
                                                                </StackPanel>
                                                            </Border>
 
@@ -1909,7 +1909,7 @@
                                                                        </Style.Triggers>
                                                                    </Style>
                                                                </Border.Style>
-                                                               <TextBlock Text="LOCAL" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                               <TextBlock Text="LOCAL" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                            </Border>
 
                                                        </DockPanel>
@@ -1929,29 +1929,29 @@
                                                        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-3">
                                                            <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
                                                                <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
+                                                               <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
                                                            </Border>
                                                            <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                    CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" HorizontalAlignment="Center">
-                                                               <TextBlock Style="{StaticResource UnavailableBadgeText}" FontSize="{StaticResource FontSizeBadge}"/>
+                                                               <TextBlock Style="{StaticResource UnavailableBadgeText}" FontSize="{DynamicResource FontSizeBadge}"/>
                                                            </Border>
                                                        </StackPanel>
 
                                                        <!-- Title -->
-                                                       <TextBlock Grid.Row="2" Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" 
+                                                       <TextBlock Grid.Row="2" Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" 
                                                                   Foreground="{DynamicResource BrushTextPrimary}" 
-                                                                  FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"
+                                                                  FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"
                                                                   TextAlignment="Center" TextTrimming="CharacterEllipsis" 
                                                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
 
                                                        <!-- Playtime / Category Subtext -->
                                                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
-                                                           <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}"
+                                                           <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBody}"
                                                                       Foreground="{DynamicResource BrushTextMuted}"
-                                                                      FontFamily="{StaticResource AppFont}"
+                                                                      FontFamily="{DynamicResource AppFont}"
                                                                       TextTrimming="CharacterEllipsis"/>
-                                                           <TextBlock Text=" &#x2022; HIDDEN" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
-                                                                      Foreground="{DynamicResource BrushTextSoft}" FontFamily="{StaticResource AppFont}"
+                                                           <TextBlock Text=" &#x2022; HIDDEN" FontSize="{DynamicResource FontSizeBody}" FontWeight="Bold"
+                                                                      Foreground="{DynamicResource BrushTextSoft}" FontFamily="{DynamicResource AppFont}"
                                                                       Visibility="{Binding IsHidden, Converter={StaticResource BoolToVis}}"/>
                                                        </StackPanel>
 
@@ -1961,7 +1961,7 @@
                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
                                                            <Button.Style>
                                                                <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">
-                                                                   <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                                                                   <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
                                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                                    <Style.Triggers>
                                                                        <DataTrigger Binding="{Binding IsMouseOver, ElementName=IconCardBorder}" Value="True">
@@ -2048,16 +2048,16 @@
                                            <ColumnDefinition Width="125"/> <!-- Last Played -->
                                            <ColumnDefinition Width="90"/>  <!-- Actions -->
                                        </Grid.ColumnDefinitions>
-                                       <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}"/>
-                                       <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" 
-                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{StaticResource AppFont}" 
+                                       <TextBlock Grid.Column="1" Text="GAME TITLE" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Grid.Column="2" Text="CATEGORY" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Grid.Column="3" Text="PLAYTIME" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Grid.Column="4" Text="LAST PLAYED" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}"/>
+                                       <TextBlock Grid.Column="5" Text="ACTIONS" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold" 
+                                                  Foreground="{DynamicResource BrushTextMuted}" FontFamily="{DynamicResource AppFont}" 
                                                   HorizontalAlignment="Right" Margin="0,0,6,0"/>
                                    </Grid>
                                </Border>
@@ -2146,12 +2146,12 @@
                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                                        <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding IsPlaying}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{StaticResource AppFont}"/>
+                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
                                                        </Border>
                                                        <Border Style="{StaticResource UnavailableBadgeBorder}"
                                                                CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <TextBlock Style="{StaticResource UnavailableBadgeText}"
-                                                                      FontSize="{StaticResource FontSizeBadge}" FontFamily="{StaticResource AppFont}"/>
+                                                                      FontSize="{DynamicResource FontSizeBadge}" FontFamily="{DynamicResource AppFont}"/>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushAccentWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
@@ -2166,8 +2166,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/steam.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="STEAM" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Text="STEAM" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushAccentText}"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushBadgePurpleWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2183,8 +2183,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/gog_galaxy.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="GOG" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Text="GOG" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushBadgePurple}"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2200,8 +2200,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/ea_app.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="EA" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Text="EA" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2217,8 +2217,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/epic_games.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="EPIC" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Text="EPIC" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextPrimary}"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushWarningWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2234,8 +2234,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/ubisoft_connect.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="UBI" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Text="UBI" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushGold}"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSuccessWash}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2251,8 +2251,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/xbox.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="XBOX" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Text="XBOX" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushSuccessText}"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
 
@@ -2269,8 +2269,8 @@
                                                            </Border.Style>
                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                                <Image Source="pack://application:,,,/Assets/LauncherLogos/battlenet.png" Height="11" Margin="0,0,3,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                               <TextBlock Text="B.NET" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}"
-                                                                          FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                               <TextBlock Text="B.NET" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushInfoText}"
+                                                                          FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                            </StackPanel>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushSurfaceHover}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
@@ -2284,8 +2284,8 @@
                                                                    </Style.Triggers>
                                                                </Style>
                                                            </Border.Style>
-                                                           <TextBlock Text="LOCAL" FontSize="{StaticResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}"
-                                                                      FontFamily="{StaticResource AppFont}" FontWeight="SemiBold"/>
+                                                           <TextBlock Text="LOCAL" FontSize="{DynamicResource FontSizeBadge}" Foreground="{DynamicResource BrushTextSoft}"
+                                                                      FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"/>
                                                        </Border>
                                                        <Border Background="{DynamicResource BrushBorder}" CornerRadius="{DynamicResource RadiusSmall}" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                            <Border.Style>
@@ -2298,13 +2298,13 @@
                                                                    </Style.Triggers>
                                                                </Style>
                                                            </Border.Style>
-                                                           <TextBlock Text="HIDDEN" FontSize="{StaticResource FontSizeBadge}" FontWeight="Bold"
-                                                                      Foreground="{DynamicResource BrushTextSoft}" FontFamily="{StaticResource AppFont}"/>
+                                                           <TextBlock Text="HIDDEN" FontSize="{DynamicResource FontSizeBadge}" FontWeight="Bold"
+                                                                      Foreground="{DynamicResource BrushTextSoft}" FontFamily="{DynamicResource AppFont}"/>
                                                        </Border>
                                                        </StackPanel>
-                                                       <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                                       <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                                   Foreground="{DynamicResource BrushTextPrimary}"
-                                                                  FontFamily="{StaticResource AppFont}"
+                                                                  FontFamily="{DynamicResource AppFont}"
                                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"
                                                                   VerticalAlignment="Center"/>
                                                    </DockPanel>
@@ -2312,20 +2312,20 @@
                                                    <!-- Category Pill -->
                                                    <Border Grid.Column="2" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
                                                            CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                       <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBadge}" 
+                                                       <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBadge}" 
                                                                   Foreground="{DynamicResource BrushTextSecondary}" 
-                                                                  FontFamily="{StaticResource AppFont}"/>
+                                                                  FontFamily="{DynamicResource AppFont}"/>
                                                    </Border>
 
                                                    <!-- Playtime -->
-                                                   <TextBlock Grid.Column="3" Text="{Binding ListPlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" 
+                                                   <TextBlock Grid.Column="3" Text="{Binding ListPlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                               Foreground="{DynamicResource BrushTextSecondary}" 
-                                                              FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
 
                                                    <!-- Last Played -->
-                                                   <TextBlock Grid.Column="4" Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" 
+                                                   <TextBlock Grid.Column="4" Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" 
                                                               Foreground="{DynamicResource BrushTextMuted}" 
-                                                              FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                                              FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
 
                                                    <!-- Action Buttons -->
                                                    <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -2334,7 +2334,7 @@
                                                                Height="34" Width="34">
                                                            <Button.Style>
                                                                <Style TargetType="Button" BasedOn="{StaticResource CirclePlayButton}">
-                                                                   <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                                                                   <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
                                                                    <Style.Triggers>
                                                                        <!-- Hidden while games are multi-selected: Play is a single-game action. -->
                                                                        <DataTrigger Binding="{Binding DataContext.HasSelection, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
@@ -2448,13 +2448,13 @@
                                    </Style>
                                </Border.Style>
                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                   <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeSubhead}" Margin="0,0,10,0" VerticalAlignment="Center"
+                                   <TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}" Margin="0,0,10,0" VerticalAlignment="Center"
                                               Foreground="{DynamicResource BrushAccent}"/>
                                    <TextBlock Text="{Binding UndoToastMessage}" Foreground="{DynamicResource BrushTextPrimary}"
-                                              FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                              FontSize="{DynamicResource FontSizeBody}" FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
                                    <Button Content="UNDO" Command="{Binding UndoDeleteCommand}"
                                            Style="{StaticResource ModernAccentButton}" Padding="12,4" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                   <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Command="{Binding DismissUndoToastCommand}"
+                                   <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Command="{Binding DismissUndoToastCommand}"
                                            Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center" ToolTip="Dismiss"
         AutomationProperties.Name="Dismiss"/>
                                </StackPanel>
@@ -2472,10 +2472,10 @@
                        <DockPanel Grid.Row="4" Margin="0,14,0,0" LastChildFill="True">
                            <!-- Bound to the configurable hotkey, not hard-coded to Ctrl+Alt+G. -->
                            <!-- Only for the first five sessions (UX-14e); after that the tray tooltip says it. -->
-                           <TextBlock DockPanel.Dock="Right" Text="{Binding SettingsVM.GlobalManageHotkey, StringFormat='Hotkey: {0} to show or hide this window'}" FontSize="{StaticResource FontSizeBody}"
+                           <TextBlock DockPanel.Dock="Right" Text="{Binding SettingsVM.GlobalManageHotkey, StringFormat='Hotkey: {0} to show or hide this window'}" FontSize="{DynamicResource FontSizeBody}"
                                       Visibility="{Binding SettingsVM.ShowHotkeyHint, Converter={StaticResource BoolToVis}}"
                                       Foreground="{DynamicResource BrushTextMuted}" Margin="14,0,0,0"
-                                      FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                      FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
                            <!-- Multi-select hint: only while two or more cards are selected. -->
                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
                                <StackPanel.Style>
@@ -2487,15 +2487,15 @@
                                        </Style.Triggers>
                                    </Style>
                                </StackPanel.Style>
-                               <TextBlock Text="{Binding SelectionHint}" FontSize="{StaticResource FontSizeBody}"
+                               <TextBlock Text="{Binding SelectionHint}" FontSize="{DynamicResource FontSizeBody}"
                                           Foreground="{DynamicResource BrushAccentText}"
-                                          FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                          FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
                                <Button Style="{StaticResource HelpLinkButton}" Content="Learn more" Margin="10,0,0,0" VerticalAlignment="Center"
                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="library/select_mode"/>
                            </StackPanel>
-                           <TextBlock Text="{Binding StatusMessage}" FontSize="{StaticResource FontSizeBody}" TextTrimming="CharacterEllipsis"
+                           <TextBlock Text="{Binding StatusMessage}" FontSize="{DynamicResource FontSizeBody}" TextTrimming="CharacterEllipsis"
                                       Foreground="{DynamicResource BrushTextSecondary}"
-                                      FontFamily="{StaticResource AppFont}" VerticalAlignment="Center"/>
+                                      FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center"/>
                        </DockPanel>
     </Grid>
 </UserControl>
