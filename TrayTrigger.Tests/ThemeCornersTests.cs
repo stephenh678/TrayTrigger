@@ -134,32 +134,34 @@ public class ThemeCornersTests : IDisposable
     });
 
     [Fact]
-    public void ARowMovedByHand_KeepsItsSize_WhenTheRoundnessMoves() => WpfTestHost.Run(() =>
+    public void ARowMovedByHand_MovesBySameAmount_WhenTheRoundnessMoves() => WpfTestHost.Run(() =>
     {
         var corners = Open("Dark").Corners;
 
         corners.Controls.Step = 8;
         corners.Roundness = 2;
 
-        Assert.Equal(new CornerRadius(12), corners.Values["RadiusControl"]);
+        // Down by two from 4, so the control goes from 8 to 6 and the tags, which follow, to 2.
+        Assert.Equal(6, corners.Controls.Step);
         Assert.Equal(new CornerRadius(2), corners.Values["RadiusSmall"]);
         Assert.True(corners.HasOverrides);
     });
 
     [Fact]
-    public void ARowWithItsOwnShape_KeepsIt_WhenTheShapeAboveChanges() => WpfTestHost.Run(() =>
+    public void ARowWithItsOwnShape_FollowsAgain_WhenTheShapeAboveChanges() => WpfTestHost.Run(() =>
     {
         var corners = Open("Dark").Corners;
 
         corners.Tags.SelectedShape = corners.Tags.Choices.First(c => c.Id == "pill");
         corners.Shape = Shape("leaf");
 
-        Assert.Equal(new CornerRadius(16), corners.Values["RadiusSmall"]);
+        Assert.Equal(new CornerRadius(0, 4, 0, 4), corners.Values["RadiusSmall"]);
         Assert.Equal(new CornerRadius(0, 8, 0, 8), corners.Values["RadiusCard"]);
+        Assert.False(corners.HasOverrides);
     });
 
     [Fact]
-    public void APosterSetByHand_IsKept_AndWritten() => WpfTestHost.Run(() =>
+    public void APosterSetByHand_IsWritten_UntilTheChoiceAboveMoves() => WpfTestHost.Run(() =>
     {
         var corners = Open("Dark").Corners;
         corners.Shape = Shape("leaf");
@@ -170,9 +172,9 @@ public class ThemeCornersTests : IDisposable
         Assert.Equal(new CornerRadius(0), corners.Values["RadiusPoster"]);
         Assert.Equal(new CornerRadius(0), corners.ForSave().Set["RadiusPoster"]);
 
-        // Changing the card does not move it.
+        // Moving the choice above sets every row, the poster included, back to following it.
         corners.Roundness = 8;
-        Assert.Equal(new CornerRadius(0), corners.Values["RadiusPoster"]);
+        Assert.NotEqual(new CornerRadius(0), corners.Values["RadiusPoster"]);
     });
 
     [Fact]
@@ -220,47 +222,45 @@ public class ThemeCornersTests : IDisposable
     });
 
     [Fact]
-    public void TheChoiceAbove_StaysUsable_WhileAnyRowStillFollowsItsShapeOrSize() => WpfTestHost.Run(() =>
+    public void TheChoiceAbove_AlwaysWorks_AndAppliesToEveryRow() => WpfTestHost.Run(() =>
     {
-        var vm = OpenFile("Mixed", "{ \"shape\": { \"RadiusSmall\": 7 } }", out _);
-        var c = vm.Corners;
-        var leaf = ThemeCorners.Shapes.First(x => x.Id == "leaf");
-
-        // Tags have their own size but still follow the shape; controls and cards follow both.
-        Assert.True(c.DefaultUsed);
+        // A copy of Abyssal gives tags, controls and cards their own shapes; the choice above must not be greyed out then.
+        var c = Open("Abyssal").Corners;
+        Assert.True(c.HasOverrides);
         Assert.True(c.RoundnessEnabled);
 
-        // Every row but the posters has its own shape and size: nothing follows the choice above.
-        foreach (var row in new[] { c.Tags, c.Controls, c.Cards })
-        {
-            row.SelectedShape = leaf;
-            row.Step = 5;
-        }
-        Assert.False(c.DefaultUsed);
-        Assert.False(c.RoundnessEnabled);
+        c.Shape = Shape("leaf");
 
-        // Putting one back to Default gives both back.
-        c.Controls.ResetCommand.Execute(null);
-        Assert.True(c.DefaultUsed);
-        Assert.True(c.RoundnessEnabled);
+        foreach (var row in c.Rows) Assert.True(row.SelectedShape.IsSame);
+        Assert.Equal("leaf", c.Shape.Id);
     });
 
     [Fact]
-    public void TheRoundnessAbove_IsGreyed_WhenOnlyAShapeWithNoSizeFollowsIt() => WpfTestHost.Run(() =>
+    public void MovingTheRoundnessAbove_AppliesToEveryRow() => WpfTestHost.Run(() =>
+    {
+        var c = Open("Abyssal").Corners;
+        c.Cards.Step = 3;
+        double tagsBefore = c.Tags.Step;
+        var shapeBefore = c.Cards.SelectedShape;
+        double from = c.Roundness;
+
+        c.Roundness = from + 2;
+
+        Assert.Equal(5, c.Cards.Step);
+        Assert.Equal(tagsBefore + 2, c.Tags.Step);
+        // Each row keeps its own shape; only the size is set.
+        Assert.Same(shapeBefore, c.Cards.SelectedShape);
+        Assert.True(c.HasOverrides);
+    });
+
+    [Fact]
+    public void TheRoundnessAbove_IsGreyed_OnlyForAShapeWithNoSize() => WpfTestHost.Run(() =>
     {
         var c = Open("Dark").Corners;
-        c.Tags.SelectedShape = Shape("hanging", c.Tags);
-        c.Tags.Step = 5;
-        c.Controls.SelectedShape = Shape("left-cap", c.Controls);   // follows the size above, but a cap has none
-        c.Cards.SelectedShape = Shape("folder-tab", c.Cards);
-        c.Cards.Step = 9;
-        c.Posters.SelectedShape = Shape("reverse-ramp", c.Posters);
-        c.Posters.Step = 10;
-
+        c.Shape = Shape("left-cap");
         Assert.False(c.RoundnessEnabled);
 
-        // A row whose shape has a size, and that follows it, gives the slider back.
-        c.Controls.SelectedShape = Shape("leaf", c.Controls);
+        c.Shape = Shape("leaf");
         Assert.True(c.RoundnessEnabled);
     });
 
@@ -278,6 +278,20 @@ public class ThemeCornersTests : IDisposable
         c.Roundness = 8;
 
         Assert.NotEqual(before, c.Values["RadiusPoster"]);
+    });
+
+    [Fact]
+    public void ARoundnessNoRowTakes_IsNotExtreme() => WpfTestHost.Run(() =>
+    {
+        var c = Open("Dark").Corners;
+        c.Roundness = 12;
+        Assert.True(c.IsExtreme);
+
+        // Every row has its own size now, so the 12 above is drawn nowhere.
+        foreach (var row in c.Rows) row.Step = 3;
+
+        Assert.False(c.IsExtreme);
+        Assert.False(c.AnyExtreme);
     });
 
     [Fact]
@@ -326,10 +340,10 @@ public class ThemeCornersTests : IDisposable
         Assert.True(vm.Corners.ShowCustomize);
         Assert.Equal(new CornerRadius(6), vm.Corners.Values["RadiusControl"]);
 
-        // Moving the choice above never moves a row that has its own setting.
+        // Moving the roundness above moves every row's size by the same amount, the card's included, and leaves its shape.
         vm.Corners.Roundness = 12;
-        Assert.Equal(8, vm.Corners.Cards.Step);
-        Assert.Equal(new CornerRadius(0, 16, 0, 16), vm.Corners.Values["RadiusCard"]);
+        Assert.Equal(16, vm.Corners.Cards.Step);   // 8 moved up by 8, held at the top of the slider
+        Assert.Equal("leaf", vm.Corners.Cards.SelectedShape.Id);
     });
 
     [Fact]

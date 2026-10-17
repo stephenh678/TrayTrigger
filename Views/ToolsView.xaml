@@ -147,7 +147,7 @@
 
         <!-- VIEW 1: LARGE ICONS (64 px) -->
         <DataTemplate x:Key="LargeToolTemplate" DataType="{x:Type vm:ToolCardViewModel}">
-            <Border Style="{StaticResource ToolCardBorder}" CornerRadius="{DynamicResource RadiusCard}" Width="124" Height="136" Margin="6"
+            <Border Style="{StaticResource ToolCardBorder}" CornerRadius="{DynamicResource RadiusCard}" Width="132" Height="144" Margin="6"
                     AutomationProperties.Name="{Binding AccessibleName}"
                     ContextMenu="{StaticResource ToolItemContextMenu}" ContextMenuOpening="OnCardContextMenuOpening">
                 <Border.InputBindings>
@@ -175,7 +175,7 @@
                     <StackPanel Grid.Row="2">
                         <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontFamily="{DynamicResource AppFont}"
                                    Foreground="{DynamicResource BrushTextPrimary}" TextAlignment="Center"
-                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32"/>
+                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
                         <Border Style="{StaticResource ToolMissingBadge}" HorizontalAlignment="Center" Margin="0,3,0,0">
                             <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}" FontFamily="{DynamicResource AppFont}"/>
                         </Border>

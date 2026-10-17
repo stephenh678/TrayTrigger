@@ -198,7 +198,7 @@ $homePage.Add('- **Something wrong?** [Stutter Check](Stutter-Check), [Reading t
 $homePage.Add('')
 $homePage.Add('**Want something TrayTrigger doesn''t do before or after a game?** A pre-launch or post-exit script can: see [Writing your own script](Writing-your-own-script) and the ready-made ones in the [TrayTrigger-Scripts catalogue](https://github.com/stephenh678/TrayTrigger-Scripts).')
 $homePage.Add('')
-$homePage.Add('**New in 1.6.1: [scripts that say what they did](Writing-your-own-script), and a [catalogue of ready-made ones](https://github.com/stephenh678/TrayTrigger-Scripts).** A line your script prints starting with TT: lands on the game''s Played row in [Activity & History](Activity-&-History) and in the launch popup. New script... in Edit Game starts a PowerShell script of your own, and scripts are on from the start for a new install.')
+$homePage.Add('**New in 1.7.0: a new theming engine.** A theme now sets more than colors: the shape and roundness of tags, buttons, cards and posters, and its own font and text size. Edit theme... has a live preview, Randomize and a Corners card, and Import theme... adds a theme file made elsewhere. See [Themes](Themes).')
 $homePage.Add('')
 foreach ($g in $groups) {
     $homePage.Add("## $($g.Label)")

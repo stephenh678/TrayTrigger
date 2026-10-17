@@ -96,34 +96,34 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <DockPanel Margin="0,0,0,3" Visibility="{Binding HasDevelopers, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Developer:" Width="80" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="Developer:" Width="104" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding Developers}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
                         <DockPanel Margin="0,0,0,3" Visibility="{Binding HasPublishers, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Publisher:" Width="80" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="Publisher:" Width="104" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding Publishers}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
                         <DockPanel Visibility="{Binding HasReleaseDate, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Release Date:" Width="80" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="Release Date:" Width="104" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding ReleaseDate}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Margin="12,0,0,0">
                         <DockPanel Margin="0,0,0,3">
-                            <TextBlock Text="Playtime:" Width="75" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="Playtime:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="Medium"/>
                         </DockPanel>
                         <DockPanel Margin="0,0,0,3">
-                            <TextBlock Text="Last Played:" Width="75" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="Last Played:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                         <DockPanel>
-                            <TextBlock Text="Category:" Width="75" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="Category:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                         <!-- The drive it loads from: a game on a hard drive loads slower than on an SSD. -->
                         <DockPanel Margin="0,3,0,0" Visibility="{Binding HasInstallDrive, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Installed on:" Width="75" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                            <TextBlock Text="Installed on:" Width="96" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding InstallDrive}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                         </DockPanel>
                     </StackPanel>

@@ -350,9 +350,13 @@ public sealed partial class ThemeService
         try
         {
             // The source is opened first, so a picture that is not there leaves no empty file behind.
+            // A picture of the theme's own is read only when it is a plain file name in the theme's folder, as the loader insists:
+            // a path or network address in a theme file is not opened.
+            string? source = picture.Embedded ? null : ThemeBackgroundLoader.BesideTheme(picture.Directory ?? string.Empty, picture.Image);
+            if (!picture.Embedded && source == null) return false;
             using var input = picture.Embedded
                 ? System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream($"ThemeImage/{picture.Image}")
-                : File.OpenRead(Path.Combine(picture.Directory ?? string.Empty, picture.Image));
+                : File.OpenRead(source!);
             if (input == null) return false;
             using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write);
             try

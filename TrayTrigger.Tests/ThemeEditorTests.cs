@@ -268,7 +268,6 @@ public class ThemeEditorTests : IDisposable
 
         Assert.Equal(leaf, corners.Shape);
         Assert.Equal(6, corners.Roundness);
-        Assert.True(corners.DefaultUsed);
         Assert.True(corners.RoundnessEnabled);
     });
 

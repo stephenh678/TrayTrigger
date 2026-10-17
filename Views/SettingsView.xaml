@@ -935,7 +935,7 @@
                                            FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,6"/>
                                 <!-- Flows to as many columns as the card has room for: all nine on one line in a
                                      wide window, three at the smallest. -->
-                                <WrapPanel Orientation="Horizontal" ItemWidth="150">
+                                <WrapPanel Orientation="Horizontal" ItemWidth="176">
                                     <CheckBox Content="Category" IsChecked="{Binding PosterDetails.Category}"/>
                                     <CheckBox Content="Favorite star" IsChecked="{Binding PosterDetails.FavoriteStar}"/>
                                     <CheckBox Content="HIDDEN tag" IsChecked="{Binding PosterDetails.HiddenTag}"/>

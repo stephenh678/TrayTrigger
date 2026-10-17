@@ -488,7 +488,7 @@
                                 <StackPanel>
                                     <!-- Row 1: Global Hotkey - shows the configured value, not a hard-coded Ctrl+Alt+G -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2">
                                                 <TextBlock Text="{Binding SettingsVM.GlobalManageHotkey}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentText}"/>
                                             </Border>
@@ -499,7 +499,7 @@
 
                                     <!-- Row 1b: Tray menu hotkey - the configured value -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2">
                                                 <TextBlock Text="{Binding SettingsVM.TrayMenuHotkey}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentText}"/>
                                             </Border>
@@ -510,7 +510,7 @@
 
                                     <!-- Row 1c: Suspend hotkey - the configured value -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="7,2">
                                                 <TextBlock Text="{Binding SettingsVM.SuspendGameHotkey}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushAccentText}"/>
                                             </Border>
@@ -521,7 +521,7 @@
 
                                     <!-- Row 2: Tray Left-Click -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                                                 <TextBlock Text="Left-Click" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
@@ -533,7 +533,7 @@
 
                                     <!-- Row 3: Tray Right-Click -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                                                 <TextBlock Text="Right-Click" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
@@ -545,7 +545,7 @@
 
                                     <!-- Row 4: Game Card Left-Click -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                                                 <TextBlock Text="Left-Click" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
@@ -557,7 +557,7 @@
 
                                     <!-- Row 4b: Select mode -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                                                 <TextBlock Text="Ctrl+Click" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
@@ -573,7 +573,7 @@
 
                                     <!-- Row 5: Game Card Right-Click -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                                                 <TextBlock Text="Right-Click" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
@@ -585,7 +585,7 @@
 
                                     <!-- Row 6: Quick Search -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                                                 <TextBlock Text="Ctrl+F" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
@@ -596,7 +596,7 @@
 
                                     <!-- Row 6b: Edit Game's tabs -->
                                     <DockPanel Margin="0,0,0,9">
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2">
                                                 <TextBlock Text="Ctrl+Tab" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>
@@ -607,7 +607,7 @@
 
                                     <!-- Row 7: Escape -->
                                     <DockPanel>
-                                        <StackPanel Orientation="Horizontal" Width="200" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Width="250" VerticalAlignment="Center">
                                             <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="8,2">
                                                 <TextBlock Text="Esc" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
                                             </Border>

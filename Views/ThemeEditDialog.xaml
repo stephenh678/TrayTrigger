@@ -139,13 +139,13 @@
                                            Foreground="{DynamicResource BrushArtText}" TextTrimming="CharacterEllipsis"/>
                                 <Grid Margin="0,3,0,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextSecondary}"
                                                TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextMuted}"
-                                               HorizontalAlignment="Right" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="4,0,0,0"/>
+                                               HorizontalAlignment="Right" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="0"/>
                                 </Grid>
                             </StackPanel>
                         </Grid>
@@ -492,7 +492,7 @@
                                         <ColumnDefinition Width="28"/>
                                     </Grid.ColumnDefinitions>
                                     <ComboBox ItemsSource="{Binding Shapes}" SelectedItem="{Binding Shape}" ItemTemplate="{StaticResource ShapeItem}"
-                                              Style="{StaticResource ShapeComboBox}" IsEnabled="{Binding DefaultUsed}" AutomationProperties.Name="Corner shape"/>
+                                              Style="{StaticResource ShapeComboBox}" AutomationProperties.Name="Corner shape"/>
                                     <TextBlock Grid.Column="1" Text="Roundness" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}"
                                                Foreground="{DynamicResource BrushTextSecondary}" Margin="16,0,10,0"/>
                                     <Slider Grid.Column="2" Minimum="0" Maximum="16" SmallChange="1" LargeChange="2" TickFrequency="1" IsSnapToTickEnabled="True"
@@ -530,7 +530,7 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                     <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
-                                               Text="Each row is Default until you change it: it follows the shape and roundness above. Posters follow the cards, one pixel less round. Past 8 is extreme."/>
+                                               Text="Changing the shape above sets every row to that shape, and moving the roundness above makes every row rounder or squarer by the same amount. A row you change after that keeps its own. Posters follow the cards, one pixel less round, unless you change them. Past 8 is extreme."/>
                                 </StackPanel>
                                 <views:NoteBar Kind="Warning" Text="These corners may clip text and art. Lower the roundness to fix it." Margin="0,8,0,0"
                                        Visibility="{Binding AnyExtreme, Converter={StaticResource BoolToVis}}"/>
@@ -561,11 +561,11 @@
         <!-- THE LIVE PREVIEW: a panel on the window's right edge, shown when the tab above is pressed. -->
         <Border x:Name="PreviewPanel" Grid.Column="1" Visibility="Collapsed" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1,0,0,0" Padding="18,18,22,18">
             <DockPanel>
-                <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
-                    <TextBlock Text="LIVE PREVIEW" Style="{StaticResource CardLabel}" Margin="0"/>
-                    <TextBlock Text="Shows your colors, corners, text size and font. The app changes when you save." HorizontalAlignment="Right" TextWrapping="Wrap" TextAlignment="Right" MaxWidth="320"
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                    <TextBlock Text="LIVE PREVIEW" Style="{StaticResource CardLabel}" Margin="0,0,0,4"/>
+                    <TextBlock Text="Shows your colors, corners, text size and font. The app changes when you save." TextWrapping="Wrap"
                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
-                </Grid>
+                </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <!-- Its own set of colors and corners, filled in from the editor, so nothing else on screen changes. -->
                     <Border x:Name="PreviewHost" Background="{DynamicResource BrushBackground}" BorderBrush="{DynamicResource BrushBorder}"

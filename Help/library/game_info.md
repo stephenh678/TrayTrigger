@@ -26,6 +26,10 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 
 The **PCGamingWiki** button in the details window opens the game's page on pcgamingwiki.com, where the PC fixes are: ultrawide and FOV support, frame cap and save game location. A Steam game opens its page directly; any other game opens the wiki's search for its name, which lands on the page when the title matches. It shows for every game and does not follow the Steam | RAWG switch. Nothing is downloaded: the link opens in your browser.
 
+## The anti-cheat tag
+
+After you launch a game, its details window shows an **Anti-cheat: Name** tag beside the play-mode tags when TrayTrigger saw an anti-cheat service run with it (Easy Anti-Cheat, BattlEye, Riot Vanguard and the like), and the game's row in Activity & History says the same. The tag is there so you know which games not to expect tools like Suspend to work with. It comes from the game's last launch, so a game you have not launched since this was added has none yet.
+
 ## What RAWG adds to the library
 
 - Category. When "Automatically categorize games from store genres" is on, a game Steam cannot categorize gets RAWG's main genre instead: one with no Steam listing, one whose Steam page has been delisted, or one whose Steam page lists no genre. This only fills a game that is still Uncategorized; a category you set yourself is never overwritten. A new RAWG key runs this pass over the library as soon as it checks out.

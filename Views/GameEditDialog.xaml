@@ -82,7 +82,7 @@
         <!-- ============================================================== -->
         <Grid Grid.Row="2" Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220"/> <!-- Left: Visual Artwork Assets -->
+                <ColumnDefinition Width="240"/> <!-- Left: Visual Artwork Assets -->
                 <ColumnDefinition Width="*"/>   <!-- Right: Configuration Cards -->
             </Grid.ColumnDefinitions>
 
@@ -187,7 +187,7 @@
                     </StackPanel>
 
                     <!-- Divider -->
-                    <Rectangle DockPanel.Dock="Top" Height="1" Fill="{DynamicResource BrushSurfaceHover}" Margin="0,14,0,12"/>
+                    <Rectangle DockPanel.Dock="Top" Height="1" Fill="{DynamicResource BrushSurfaceHover}" Margin="0,8,0,6"/>
 
                     <!-- Section: Game Icon. The DockPanel's last child, so it takes the space the
                          poster section leaves, but it hugs the top at a fixed size: the icon is
@@ -460,7 +460,7 @@
                                          window hotkey, or another app already has the combo. Its message is rendered
                                          below, across the whole row, rather than wrapped under the 160 px box. -->
                                     <views:HotkeyRecorderBox AutomationProperties.Name="Launch hotkey" x:Name="LaunchHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding SourceGame.Id}"
-                                                             ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                                             ShowInlineMessage="False" Width="180" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Global Launch Hotkey" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                         <TextBlock Text="Click the box and press Ctrl, Alt or Shift plus a key, or F1-F24 alone. Works anywhere in Windows." FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap"/>
@@ -802,7 +802,7 @@
                             </Border>
 
                             <!-- Same pair of links, in the same place, as the scripts card in Settings. -->
-                            <StackPanel Orientation="Horizontal">
+                            <WrapPanel Orientation="Horizontal">
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Script guide &amp; examples"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
                                 <TextBlock Text="·" Foreground="{DynamicResource BrushTextMuted}" Margin="6,0" VerticalAlignment="Center"/>
@@ -815,7 +815,7 @@
                                 <Button Style="{StaticResource HelpLinkButton}" Content="Get more scripts"
                                         Command="{x:Static services:HelpCommands.OpenUrl}" CommandParameter="https://github.com/stephenh678/TrayTrigger-Scripts"
                                         ToolTip="The TrayTrigger-Scripts catalogue on GitHub: ready-made scripts to drop into the scripts folder, and where to share yours"/>
-                            </StackPanel>
+                            </WrapPanel>
                         </StackPanel>
                     </Border>
 
