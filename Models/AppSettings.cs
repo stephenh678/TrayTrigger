@@ -134,6 +134,10 @@ public class AppSettings
     /// default, matching <see cref="UseSteamGridDbArt"/>: both are third-party services the user
     /// supplies their own key for, so neither is on until the user asks for it.</summary>
     public bool UseRawgMetadata { get; set; } = false;
+    /// <summary>Shows PCGamingWiki's facts about a game (ultrawide, controller support, save folder...) as a
+    /// card in Game Details. Off by default, like the other third-party sources: turning it on is what lets
+    /// a game's Steam App ID or name be sent to the wiki when its details open. No key is needed.</summary>
+    public bool UsePcGamingWikiFacts { get; set; } = false;
     /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
     /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
     [JsonConverter(typeof(MetadataRefreshIntervalJsonConverter))]

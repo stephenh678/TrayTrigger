@@ -132,6 +132,15 @@ public class RamHardwareInfo
     public int SpeedMhz { get; set; }
     public int RatedSpeedMhz { get; set; }
     public bool IsXmpActive { get; set; }
+    /// <summary>Memory modules Windows lists, and the slots the board has for them (0 when it could not be read).</summary>
+    public int InstalledModules { get; set; }
+    public int MemorySlots { get; set; }
+    /// <summary>True when the modules are DIMM or SODIMM sticks, not memory soldered to the board.</summary>
+    public bool ModulesAreSocketed { get; set; }
+    /// <summary>One stick in a board with room for more: it runs on one channel. Soldered memory and one-slot boards are never flagged.</summary>
+    public bool IsSingleChannel => ModulesAreSocketed && InstalledModules == 1 && MemorySlots >= 2;
+    /// <summary>More than one stick fitted. Which slots they are in decides whether they pair up, which Windows does not report.</summary>
+    public bool HasSeveralModules => ModulesAreSocketed && InstalledModules >= 2;
     public string SpeedDisplay
     {
         get

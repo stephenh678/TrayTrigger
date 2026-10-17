@@ -65,7 +65,7 @@ Each script field in Edit Game has a Test button. It runs that script right now,
 - Pre-launch tests pass the phase prelaunch; post-exit tests pass postexit with a playtime of 0.
 - The test always runs hidden and without elevation so its output can be captured, and it is stopped after 30 seconds. A real run is never stopped.
 - If the game is set to run scripts as Administrator or visibly, the result dialog says so: the real run will differ in exactly that way.
-- The Test button works even while "Enable game scripts" is off. Clicking it is an explicit request to run the script once.
+- The Test button runs the script once, whatever a real launch would do. Clicking it is an explicit request. The default scripts and their Test buttons only appear once "Enable scripts" is ticked.
 
 ## More scripts
 

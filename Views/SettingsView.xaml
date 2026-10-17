@@ -837,6 +837,14 @@
                                 <TextBlock DataContext="{Binding RawgKeyCheck}" Style="{StaticResource ApiKeyCheckStatusText}"/>
                             </StackPanel>
 
+                            <!-- PCGamingWiki: a facts card in Game Details. No key; off until asked for, like the two above. -->
+                            <CheckBox Content="Show PC facts from PCGamingWiki (optional)"
+                                      IsChecked="{Binding UsePcGamingWikiFacts}"
+                                      Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
+                            <TextBlock Text="A card in each game's details window with what PCGamingWiki says about it: ultrawide and multi-monitor, HDR, controller support, online play, the save folder and more. No key needed. Opening a game's details sends PCGamingWiki that game's Steam App ID or name, and the answer is kept for two weeks. The facts are PCGamingWiki's, shared under CC BY-NC-SA 3.0."
+                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
+                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
+
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Refresh All Game Posters" Command="{Binding RefreshAllPostersCommand}"
                                         IsEnabled="{Binding CanRefreshAllPosters}"
@@ -868,7 +876,7 @@
                             <Button Content="Clear Cached Game Info" Command="{Binding ClearMetadataCacheCommand}"
                                     Style="{StaticResource ModernOutlineButton}" Padding="10,5"
                                     HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                            <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters are kept."
+                            <TextBlock Text="Forgets every game's saved Steam, RAWG and PCGamingWiki details so each fetches fresh info the next time you open it. Posters are kept."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="0,4,0,2" TextWrapping="Wrap"/>
                         </StackPanel>
@@ -1194,7 +1202,7 @@
                             <CheckBox Content="Enable scripts (per-game and default)"
                                       IsChecked="{Binding EnableGameScripts}"
                                       Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="The master switch. While off, no script runs for any game - not a game's own, not the defaults below - and the Scripts card stays out of Edit Game. Turning it on also installs the templates and examples in the scripts folder. Games that already have a script keep their settings either way."
+                            <TextBlock Text="The master switch. While off, no script runs for any game - not a game's own, not the defaults below - and the Scripts card stays out of Edit Game. Turning it on also installs the templates and examples in the scripts folder, and shows the default scripts for every game below. Games that already have a script keep their settings either way."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="24,3,0,2" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal" Margin="24,0,0,2">
@@ -1213,10 +1221,10 @@
                             </StackPanel>
 
                             <!-- Default scripts: run for every game that has no script of its own for that phase. -->
-                            <StackPanel Margin="0,12,0,0" IsEnabled="{Binding EnableGameScripts}">
+                            <StackPanel Margin="0,12,0,0" Visibility="{Binding EnableGameScripts, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Default scripts for every game" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                            Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,2"/>
-                                <TextBlock Text="Needs Enable scripts above. Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;."
+                                <TextBlock Text="Run for any game that has no script of its own for that phase. A game with its own pre-launch or post-exit script uses that one instead, and any game can opt out in Edit Game with &quot;Don't run the default scripts for this game&quot;."
                                            Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                                 <CheckBox Content="Run the default scripts"

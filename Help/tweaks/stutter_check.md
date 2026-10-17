@@ -10,6 +10,7 @@ Runs the checks every "my game stutters" thread tells you to go through, in one 
 - **Browser and chat apps holding video memory** - Chrome, Edge, Brave and Discord with hardware acceleration on, and how much GPU memory they hold right now.
 - **Display refresh rate** - a monitor running below the fastest rate it offers at its resolution.
 - **Memory speed** - RAM running below its rated speed, which means XMP or EXPO is off in the BIOS.
+- **Memory sticks** - a single stick in a board with room for more, which runs on one memory channel. Memory soldered to the board, and boards with one slot, are left out.
 - **Games on a hard drive** - library games installed on an HDD rather than an SSD.
 - **Drive space** - a drive that holds games or Windows with under 10 % (or 20 GB) free. Shader caches, the pagefile and patches all need room.
 - **Shader cache** - the NVIDIA driver's cache capped, or Windows cleanups set to delete the DirectX shader cache. A game recompiling shaders as you play is the most-cited cause of stutter in the fix threads. Fix it applies the tweak.

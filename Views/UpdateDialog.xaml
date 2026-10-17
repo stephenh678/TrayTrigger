@@ -99,23 +99,22 @@
             </StackPanel>
 
             <!-- Row 3: Action Buttons Footer -->
-            <DockPanel Grid.Row="3" LastChildFill="False">
-                <Button x:Name="ViewOnGitHubBtn" Content="View on GitHub" 
-                        Style="{StaticResource ModernOutlineButton}" 
-                        Padding="14,6" DockPanel.Dock="Left" Click="OnViewOnGitHubClick"/>
+            <!-- A wrapping row: at a large text size the three buttons no longer fit side by side, and the last one dropped off the edge. -->
+            <WrapPanel Grid.Row="3" HorizontalAlignment="Right">
+                <Button x:Name="ViewOnGitHubBtn" Content="View on GitHub"
+                        Style="{StaticResource ModernOutlineButton}"
+                        Padding="14,6" Margin="0,0,8,0" Click="OnViewOnGitHubClick"/>
 
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <Button x:Name="RemindLaterBtn" Content="Remind Me Later" 
-                            Style="{StaticResource ModernGhostButton}" 
-                            Padding="14,6" Margin="0,0,8,0" 
-                            IsCancel="True" Click="OnRemindLaterClick"/>
+                <Button x:Name="RemindLaterBtn" Content="Remind Me Later"
+                        Style="{StaticResource ModernGhostButton}"
+                        Padding="14,6" Margin="0,0,8,0"
+                        IsCancel="True" Click="OnRemindLaterClick"/>
 
-                    <Button x:Name="InstallBtn" Content="Download &amp; Install" 
-                            Style="{StaticResource ModernAccentButton}" 
-                            Padding="16,6" 
-                            IsDefault="True" Click="OnInstallClick"/>
-                </StackPanel>
-            </DockPanel>
+                <Button x:Name="InstallBtn" Content="Download &amp; Install"
+                        Style="{StaticResource ModernAccentButton}"
+                        Padding="16,6"
+                        IsDefault="True" Click="OnInstallClick"/>
+            </WrapPanel>
         </Grid>
     </Border>
 </Window>

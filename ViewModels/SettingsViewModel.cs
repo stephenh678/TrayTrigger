@@ -314,7 +314,8 @@ public class SettingsViewModel : ViewModelBase
         {
             SteamMetadataService.ClearCache();
             RawgService.ClearCache();
-            LoggingService.Info("Settings", "Cleared the cached Steam and RAWG game info.");
+            PcGamingWikiService.Shared.ClearCache();
+            LoggingService.Info("Settings", "Cleared the cached Steam, RAWG and PCGamingWiki game info.");
             StatusMessage = "Cached game info cleared. Each game fetches fresh details the next time you open it.";
         });
         OpenScanForGamesCommand = new RelayCommand(() => _onRequestOpenScanForGames?.Invoke());
@@ -1171,6 +1172,20 @@ public class SettingsViewModel : ViewModelBase
                 AutoSaveSettings();
                 if (value)
                     RawgKeyCheck.ScheduleCheck();
+            }
+        }
+    }
+
+    public bool UsePcGamingWikiFacts
+    {
+        get => _settings.UsePcGamingWikiFacts;
+        set
+        {
+            if (_settings.UsePcGamingWikiFacts != value)
+            {
+                _settings.UsePcGamingWikiFacts = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
             }
         }
     }
@@ -2203,6 +2218,7 @@ public class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(SteamGridDbApiKey));
         OnPropertyChanged(nameof(RawgApiKey));
         OnPropertyChanged(nameof(UseRawgMetadata));
+        OnPropertyChanged(nameof(UsePcGamingWikiFacts));
         OnPropertyChanged(nameof(MetadataRefreshOption));
         OnPropertyChanged(nameof(SteamIntegrationEnabled));
         OnPropertyChanged(nameof(AutoScanForGamesOnStartup));

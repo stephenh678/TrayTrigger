@@ -4,6 +4,10 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
+## 1.7.1
+
+- **Update window fix** - At a large text size, the Download & Install button no longer runs off the edge of the update window.
+
 ## 1.7.0
 
 - **A new theming engine** - You asked for more control over how TrayTrigger looks, so themes are now far more than a color swap. A theme sets the shape and roundness of tags, buttons, cards and posters, and its own text size and font, on top of its colors. Edit theme has a Corners card, a live preview that slides out beside it and Randomize for a new starting point, and Import theme... adds a theme file made elsewhere. The new Abyssal theme shows what's possible.

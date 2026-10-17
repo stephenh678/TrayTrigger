@@ -8,6 +8,13 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.7.1
+
+- **PC facts from PCGamingWiki** - an optional card in Game Details with what PCGamingWiki says about the game: ultrawide, multi-monitor, 4K and HDR support, controller support, online play, the save folder and more. Each line says Yes, No, With a fix or mod, or Limited, and pointing at it shows the wiki's own note. It is off until you tick Show PC facts from PCGamingWiki in Settings > Library & Art; then opening a game's details sends its Steam App ID or name to pcgamingwiki.com, and the answer is kept for two weeks. The card names the page it read and links to it.
+- **A shorter Game Launch Scripts card** - in Settings > Launch & Performance, the default scripts for every game now appear only once Enable scripts is ticked, so the card is a heading and one checkbox until you want scripts.
+- **Stutter Check: one memory stick** - on a PC with a single memory stick and room for more, Stutter Check says so. One stick runs on a single memory channel, which testing has found costs anything from a few percent to around a third of the frame rate in CPU-limited games and on built-in graphics. It only reports; a second matching stick fixes it.
+- **Update window at large text sizes** - the Download & Install button no longer runs off the edge of the update window when the text size is large; the buttons wrap to a second line instead.
+
 ## 1.7.0
 
 - **A new theming engine** - you asked for more control over how TrayTrigger looks, so themes are now far more than a color swap. On top of its colors, a theme can set the shape and roundness of tags, buttons, cards and posters, and its own text size and font. The details are in the entries below: the Corners card, Randomize, Import theme, the Live preview slide-out and the Text size and Font settings, with Abyssal as a built-in theme made to show what it can do.
