@@ -33,7 +33,11 @@ internal sealed record ThemeDefinition(
     /// <summary>What was skipped in the file (a color that is not one, a base that is neither dark nor light), for Settings to show.</summary>
     IReadOnlyList<string>? Warnings = null,
     /// <summary>The corner radii the theme sets (see <see cref="ThemeShape"/>); null leaves every radius at the app's own.</summary>
-    IReadOnlyDictionary<string, CornerRadius>? Shape = null);
+    IReadOnlyDictionary<string, CornerRadius>? Shape = null,
+    /// <summary>How large the app's text is while the theme is on, in percent (see <see cref="AppTypography"/>); null is 100, the sizes as designed.</summary>
+    int? TextSize = null,
+    /// <summary>The font the app's text is set in while the theme is on, as the file names it (see <see cref="AppFonts"/>); null follows Settings.</summary>
+    string? Font = null);
 
 /// <summary>The result of reading a theme file: the theme, or why there is none, and what was skipped on the way.</summary>
 internal sealed record ThemeLoadResult(ThemeDefinition? Theme, string? Error, IReadOnlyList<string> Warnings);
@@ -143,9 +147,34 @@ internal static class ThemeFileReader
                 else warnings.Add("shape must be an object of radius names; skipped.");
             }
 
+            int? textSize = null;
+            if (root.TryGetProperty("textSize", out var ts))
+            {
+                if (ts.ValueKind == JsonValueKind.Number && ts.TryGetDouble(out double percent))
+                {
+                    int rounded = (int)Math.Round(percent);
+                    textSize = Math.Clamp(rounded, AppTypography.MinScalePercent, AppTypography.MaxScalePercent);
+                    if (textSize != rounded)
+                        warnings.Add($"textSize is {AppTypography.MinScalePercent} to {AppTypography.MaxScalePercent} (percent); using {textSize}.");
+                }
+                else warnings.Add($"textSize is a number from {AppTypography.MinScalePercent} to {AppTypography.MaxScalePercent} (percent); skipped.");
+            }
+
+            string? font = null;
+            if (root.TryGetProperty("font", out var fo))
+            {
+                if (fo.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(fo.GetString()))
+                {
+                    font = fo.GetString()!.Trim();
+                    if (AppFonts.Find(font) == null)
+                        warnings.Add($"font \"{font}\" is not installed on this computer, so the font from Settings is used.");
+                }
+                else warnings.Add("font is the name of an installed font; skipped.");
+            }
+
             string id = origin == ThemeOrigin.BuiltIn ? name : "user:" + fileName;
             return new ThemeLoadResult(
-                new ThemeDefinition(id, name, author, baseName == "dark", origin, path, colors, background, warnings, shape),
+                new ThemeDefinition(id, name, author, baseName == "dark", origin, path, colors, background, warnings, shape, textSize, font),
                 null, warnings);
         }
         catch (JsonException ex)

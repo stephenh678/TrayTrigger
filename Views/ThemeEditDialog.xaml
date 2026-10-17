@@ -1,4 +1,4 @@
-<Window x:Class="TrayTrigger.Views.ThemeEditDialog"
+﻿<Window x:Class="TrayTrigger.Views.ThemeEditDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:TrayTrigger.Views"
@@ -9,12 +9,12 @@
         ShowInTaskbar="False"
         Background="{DynamicResource BrushSurface}"
         Foreground="{DynamicResource BrushTextPrimary}"
-        FontFamily="{StaticResource AppFont}">
+        FontFamily="{DynamicResource AppFont}">
 
     <Window.Resources>
         <!-- The small heading at the top of each card. -->
         <Style x:Key="CardLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
@@ -40,7 +40,7 @@
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
         <Style x:Key="StateCaption" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
             <Setter Property="Margin" Value="0,4,0,0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
@@ -52,7 +52,7 @@
         </Style>
         <!-- A small caption above a group in the preview. -->
         <Style x:Key="PreviewHeading" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
             <Setter Property="Margin" Value="0,16,0,6"/>
@@ -112,7 +112,7 @@
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                             <Border Background="{DynamicResource BrushScrim}" BorderBrush="{DynamicResource BrushOverlayLine}" BorderThickness="1"
                                     CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Height="19" Margin="5,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Category}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextSecondary}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Category}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextSecondary}" VerticalAlignment="Center"/>
                             </Border>
                         </StackPanel>
                         <Grid VerticalAlignment="Bottom">
@@ -135,16 +135,16 @@
                                 </Border.Background>
                             </Border>
                             <StackPanel Margin="11,18,11,9">
-                                <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold"
+                                <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                            Foreground="{DynamicResource BrushArtText}" TextTrimming="CharacterEllipsis"/>
                                 <Grid Margin="0,3,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" MaxWidth="80"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextSecondary}"
+                                    <TextBlock Text="{Binding PlaytimeDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextSecondary}"
                                                TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextMuted}"
+                                    <TextBlock Grid.Column="1" Text="{Binding LastPlayedDisplay}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushArtTextMuted}"
                                                HorizontalAlignment="Right" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="4,0,0,0"/>
                                 </Grid>
                             </StackPanel>
@@ -173,7 +173,7 @@
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
             </StackPanel>
         </DataTemplate>
-        <!-- The app's drop-down with its list in two columns, so eleven shapes need little height. -->
+        <!-- The app's drop-down with its list in two columns, so fifteen shapes need little height. -->
         <Style x:Key="ShapeComboBox" TargetType="ComboBox" BasedOn="{StaticResource ModernComboBox}">
             <Setter Property="Template">
                 <Setter.Value>
@@ -205,7 +205,7 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="CornerNumber" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -238,17 +238,17 @@
 
             <Grid Grid.Row="0" Margin="0,0,0,12">
                 <StackPanel HorizontalAlignment="Left" Margin="0,0,380,0">
-                    <TextBlock Text="{Binding HeadingText}" FontSize="{StaticResource FontSizeHeading}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                    <TextBlock Text="{Binding HeadingText}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource BrushTextPrimary}"/>
-                    <TextBlock Text="{Binding Subtitle}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding Subtitle}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
                     <Button Content="Undo randomize" Command="{Binding UndoRandomizeCommand}" Style="{StaticResource HelpLinkButton}" VerticalAlignment="Center" Margin="0,0,12,0"
                             Visibility="{Binding CanUndoRandomize, Converter={StaticResource BoolToVis}}"
-                            ToolTip="Put back the colors and corners from before the last Randomize" AutomationProperties.Name="Undo randomize"/>
+                            ToolTip="Put back everything from before the last Randomize" AutomationProperties.Name="Undo randomize"/>
                     <Button Command="{Binding RandomizeCommand}" Style="{StaticResource ModernOutlineButton}" Padding="12,4"
-                            ToolTip="Try a random set of colors and corners as a starting point. The text stays easy to read, and you can still change everything."
-                            AutomationProperties.Name="Randomize colors and corners">
+                            ToolTip="Try a random look as a starting point: colors, corners, text size, font and picture strength. The text stays easy to read, and you can still change everything."
+                            AutomationProperties.Name="Randomize the look of the theme">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8B1;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                             <TextBlock Text="Randomize" VerticalAlignment="Center"/>
@@ -277,7 +277,7 @@
                             <StackPanel>
                                 <TextBlock Text="NAME" Style="{StaticResource CardLabel}"/>
                                 <TextBox AutomationProperties.Name="Theme name" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBox}" MaxLength="60"/>
-                                <TextBlock Text="Starts from" Margin="0,12,0,4" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                <TextBlock Text="Starts from" Margin="0,12,0,4" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                 <Border Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                         CornerRadius="{DynamicResource RadiusCard}" Padding="3" HorizontalAlignment="Left">
                                     <StackPanel Orientation="Horizontal">
@@ -286,11 +286,11 @@
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="Changing it restarts the colors from Dark or Light."
-                                           TextWrapping="Wrap" Margin="0,6,0,0" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                                           TextWrapping="Wrap" Margin="0,6,0,0" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
                             </StackPanel>
                         </Border>
 
-                        <Border Style="{StaticResource DialogCardBorder}" Margin="0">
+                        <Border Style="{StaticResource DialogCardBorder}">
                             <StackPanel>
                                 <TextBlock Text="BACKGROUND PICTURE" Style="{StaticResource CardLabel}"/>
                                 <Border Height="110" CornerRadius="{DynamicResource RadiusControl}" Background="{DynamicResource BrushBackground}"
@@ -303,7 +303,7 @@
                                         <Border Background="{Binding Background.Swatch}" Opacity="{Binding ThumbnailTint}" IsHitTestVisible="False"
                                                 Visibility="{Binding HasPicture, Converter={StaticResource BoolToVis}}"/>
                                         <TextBlock Text="No picture" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                   FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
+                                                   FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Style.Triggers>
@@ -327,26 +327,90 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="40"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Strength" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Strength" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,10,0"/>
                                     <Slider Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True"
                                             Value="{Binding Strength, Mode=TwoWay}" Style="{StaticResource ThemeSliderStyle}" VerticalAlignment="Center"
                                             AutomationProperties.Name="How strongly the picture shows"/>
                                     <TextBlock Grid.Column="2" Text="{Binding StrengthText}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                                 </Grid>
                                 <Grid Margin="0,8,0,0" IsEnabled="{Binding HasPicture}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Keep in view" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,10,0"
+                                    <TextBlock Text="Keep in view" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,10,0"
                                                ToolTip="When the window is a different shape from the picture, the edges that do not fit are cropped. This is the part that always stays."/>
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding Positions}" SelectedValue="{Binding Position}" SelectedValuePath="Id" DisplayMemberPath="Label"
                                               Style="{StaticResource ModernComboBox}" HorizontalAlignment="Left" MinWidth="110"
                                               AutomationProperties.Name="Which part of the picture stays in view"/>
                                 </Grid>
                                 <TextBlock Text="{Binding PictureInfo}" TextWrapping="Wrap" Margin="0,8,0,0"
-                                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Font and text size: both are the theme's own or follow Settings. Each has its own "From Settings" box, and the card's
+                             Reset puts both back to following Settings. The slider waits a moment after it stops before the preview changes. -->
+                        <Border Style="{StaticResource DialogCardBorder}" Margin="0">
+                            <StackPanel>
+                                <Grid>
+                                    <TextBlock Text="FONT AND TEXT SIZE" Style="{StaticResource CardLabel}"/>
+                                    <Button Content="Reset" Command="{Binding ResetTypeCommand}" Style="{StaticResource HelpLinkButton}"
+                                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            ToolTip="Both follow the font and the size from Settings again"
+                                            Visibility="{Binding CanResetType, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                                <Grid Margin="0,2,0,0">
+                                    <TextBlock Text="Font" VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <CheckBox Content="From Settings" IsChecked="{Binding UseSettingsFont}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Use the font from Settings"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"
+                                              ToolTip="{Binding FontFollowNote}"/>
+                                </Grid>
+                                <ComboBox IsEnabled="{Binding HasOwnFont}" ItemsSource="{Binding Fonts}" SelectedItem="{Binding Font}"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,6,0,0"
+                                          AutomationProperties.Name="Font">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" FontFamily="{Binding}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <Grid Margin="0,14,0,0">
+                                    <TextBlock Text="Text size" VerticalAlignment="Center"
+                                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <CheckBox Content="From Settings" IsChecked="{Binding UseSettingsTextSize}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Use the text size from Settings"
+                                              Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"
+                                              ToolTip="{Binding TextSizeFollowNote}"/>
+                                </Grid>
+                                <Grid IsEnabled="{Binding HasOwnTextSize}" Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider Minimum="{Binding MinTextSize, Mode=OneTime}" Maximum="{Binding MaxTextSize, Mode=OneTime}"
+                                            SmallChange="1" LargeChange="5" TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Value="{Binding TextSize, Mode=TwoWay, Delay=120}"
+                                            Style="{StaticResource ThemeSliderStyle}" VerticalAlignment="Center"
+                                            AutomationProperties.Name="Text size, in percent"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBox MinWidth="56" TextAlignment="Center" Style="{StaticResource ModernTextBox}" Padding="6,0"
+                                                 AutomationProperties.Name="Text size in percent"
+                                                 Text="{Binding TextSize, UpdateSourceTrigger=LostFocus}" MaxLength="3"/>
+                                        <TextBlock Text="%" Margin="4,0,0,0" VerticalAlignment="Center"
+                                                   FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="Applies while this theme is on. Where the font is not installed, the font from Settings is used."
+                                           TextWrapping="Wrap" Margin="0,10,0,0"
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                                <views:NoteBar Kind="Warning" Text="{Binding TextSizeWarning}" Margin="0,8,0,0"
+                                       Visibility="{Binding TextSizeIsLarge, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -365,7 +429,7 @@
                                                 ToolTip="Put the main colors back to how they were when this window opened" AutomationProperties.Name="Reset the colors"/>
                                     </StackPanel>
                                 </Grid>
-                                <TextBlock Text="Click a swatch to pick, or type or paste #RRGGBB" Margin="0,0,0,6" FontSize="{StaticResource FontSizeBody}"
+                                <TextBlock Text="Click a swatch to pick, or type or paste #RRGGBB" Margin="0,0,0,6" FontSize="{DynamicResource FontSizeBody}"
                                            Foreground="{DynamicResource BrushTextMuted}"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -396,8 +460,12 @@
                                 </Grid>
 
                                 <TextBlock Text="{Binding HandSetNote}" TextWrapping="Wrap" Margin="0,10,0,0"
-                                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                            Visibility="{Binding HasHandSetNote, Converter={StaticResource BoolToVis}}"/>
+
+                                <!-- A warning only, shown when some text may be hard to read; no all-clear is claimed. Same look as the corner warning. -->
+                                <views:NoteBar Kind="Warning" Text="{Binding ContrastLine}" Margin="0,8,0,0"
+                                       Visibility="{Binding HasContrastLine, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
                         </Border>
 
@@ -414,7 +482,7 @@
                                                 ToolTip="Put every corner back to the app's own" AutomationProperties.Name="Reset the corners"/>
                                     </StackPanel>
                                 </Grid>
-                                <TextBlock Text="Default for every kind of corner" Margin="0,0,0,6" FontSize="{StaticResource FontSizeBody}"
+                                <TextBlock Text="Default for every kind of corner" Margin="0,0,0,6" FontSize="{DynamicResource FontSizeBody}"
                                            Foreground="{DynamicResource BrushTextMuted}"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -425,7 +493,7 @@
                                     </Grid.ColumnDefinitions>
                                     <ComboBox ItemsSource="{Binding Shapes}" SelectedItem="{Binding Shape}" ItemTemplate="{StaticResource ShapeItem}"
                                               Style="{StaticResource ShapeComboBox}" IsEnabled="{Binding DefaultUsed}" AutomationProperties.Name="Corner shape"/>
-                                    <TextBlock Grid.Column="1" Text="Roundness" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}"
+                                    <TextBlock Grid.Column="1" Text="Roundness" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}"
                                                Foreground="{DynamicResource BrushTextSecondary}" Margin="16,0,10,0"/>
                                     <Slider Grid.Column="2" Minimum="0" Maximum="16" SmallChange="1" LargeChange="2" TickFrequency="1" IsSnapToTickEnabled="True"
                                             IsEnabled="{Binding RoundnessEnabled}" Value="{Binding Roundness, Mode=TwoWay}" Style="{StaticResource ThemeSliderStyle}" VerticalAlignment="Center"
@@ -446,7 +514,7 @@
                                                         <ColumnDefinition Width="28"/>
                                                         <ColumnDefinition Width="26"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                                     <ComboBox Grid.Column="1" ItemsSource="{Binding Choices}" SelectedItem="{Binding SelectedShape}" ItemTemplate="{StaticResource ShapeItem}"
                                                               Style="{StaticResource ShapeComboBox}" AutomationProperties.Name="{Binding Label, StringFormat={}{0} shape}"/>
                                                     <Slider Grid.Column="2" Margin="14,0,8,0" Minimum="0" Maximum="16" SmallChange="1" LargeChange="2" TickFrequency="1" IsSnapToTickEnabled="True"
@@ -461,11 +529,11 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
+                                    <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"
                                                Text="Each row is Default until you change it: it follows the shape and roundness above. Posters follow the cards, one pixel less round. Past 8 is extreme."/>
                                 </StackPanel>
-                                <TextBlock Text="Extreme: the corners may clip text and art." Foreground="{DynamicResource BrushWarning}" Margin="0,10,0,0"
-                                           FontSize="{StaticResource FontSizeBody}" Visibility="{Binding AnyExtreme, Converter={StaticResource BoolToVis}}"/>
+                                <views:NoteBar Kind="Warning" Text="These corners may clip text and art. Lower the roundness to fix it." Margin="0,8,0,0"
+                                       Visibility="{Binding AnyExtreme, Converter={StaticResource BoolToVis}}"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -477,37 +545,15 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button Content="_Cancel" Command="{Binding CancelCommand}" IsCancel="True"
                             Style="{StaticResource ModernOutlineButton}" Margin="0,0,10,0" MinWidth="90"/>
-                    <Button Content="_Save Changes" Command="{Binding SaveCommand}" IsDefault="True"
+                    <Button Content="_Save Changes" Command="{Binding SaveCommand}" IsDefault="True" Click="SaveButton_Click"
                             Style="{StaticResource ModernAccentButton}" MinWidth="120"/>
                 </StackPanel>
                 <Button DockPanel.Dock="Left" Content="Open file" Command="{Binding OpenFileCommand}" Style="{StaticResource ModernOutlineButton}" Margin="0,0,14,0"
                         Visibility="{Binding CanOpenFile, Converter={StaticResource BoolToVis}}"
                         ToolTip="Show the theme file in Explorer, to change the colors this window does not cover"/>
                 <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                    <TextBlock Text="{Binding ValidationMessage}" Foreground="{DynamicResource BrushDanger}" FontSize="{StaticResource FontSizeBody}" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding ValidationMessage}" Foreground="{DynamicResource BrushDanger}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"
                                Visibility="{Binding HasValidationMessage, Converter={StaticResource BoolToVis}}"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="&#xE7BA;"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource BrushWarning}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ContrastOk}" Value="True">
-                                            <Setter Property="Text" Value="&#xE73E;"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource BrushSuccessText}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <TextBlock Grid.Column="1" Text="{Binding ContrastLine}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
-                                   TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
-                    </Grid>
                 </StackPanel>
             </DockPanel>
         </Grid>
@@ -517,8 +563,8 @@
             <DockPanel>
                 <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
                     <TextBlock Text="LIVE PREVIEW" Style="{StaticResource CardLabel}" Margin="0"/>
-                    <TextBlock Text="Shows your colors and corners. The app changes when you save." HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="320"
-                               FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
+                    <TextBlock Text="Shows your colors, corners, text size and font. The app changes when you save." HorizontalAlignment="Right" TextWrapping="Wrap" TextAlignment="Right" MaxWidth="320"
+                               FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}"/>
                 </Grid>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <!-- Its own set of colors and corners, filled in from the editor, so nothing else on screen changes. -->
@@ -555,20 +601,20 @@
                                     </Style>
                                 </Border.Style>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Samples[0].Name, FallbackValue='Cyberpunk 2077'}" FontSize="{StaticResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
-                                    <TextBlock Text="Second-level text, like a description" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0"/>
-                                    <TextBlock Text="Quiet text, like a hint or a caption" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding Samples[0].Name, FallbackValue='Cyberpunk 2077'}" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Text="Second-level text, like a description" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0"/>
+                                    <TextBlock Text="Quiet text, like a hint or a caption" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" Margin="0,2,0,0"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                        <TextBlock Text="A link" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="A link" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" VerticalAlignment="Center"/>
                                         <!-- The library's own badges: Playing, and the two readings of "isn't there" (Missing, Not installed). -->
                                         <Border Background="{DynamicResource BrushSuccessWash}" BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="4,0" Margin="14,0,0,0">
-                                            <TextBlock Text="▶ PLAYING" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
+                                            <TextBlock Text="▶ PLAYING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}"/>
                                         </Border>
                                         <Border Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="8,0,0,0">
-                                            <TextBlock Text="MISSING" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}"/>
+                                            <TextBlock Text="MISSING" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushWarning}"/>
                                         </Border>
                                         <Border Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorderStrong}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="8,0,0,0">
-                                            <TextBlock Text="NOT INSTALLED" FontSize="{StaticResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushInfoText}"/>
+                                            <TextBlock Text="NOT INSTALLED" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushInfoText}"/>
                                         </Border>
                                     </StackPanel>
                                 </StackPanel>
@@ -588,7 +634,7 @@
                             <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1"
                                     CornerRadius="{DynamicResource RadiusCard}" Padding="12">
                                 <StackPanel>
-                                    <TextBlock Text="A card inside a dialog, with a text box" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Text="A card inside a dialog, with a text box" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                     <TextBox Text="Text you type" IsReadOnly="True" Focusable="False" IsTabStop="False" Style="{StaticResource ModernTextBox}" Margin="0,8,0,0"/>
                                 </StackPanel>
                             </Border>
@@ -600,10 +646,10 @@
                                 <StackPanel Margin="0,0,8,8">
                                     <StackPanel Orientation="Horizontal">
                                         <Border Style="{StaticResource StateChip}" Background="{DynamicResource BrushAccent}" BorderBrush="{DynamicResource BrushAccent}">
-                                            <TextBlock Text="Normal" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
+                                            <TextBlock Text="Normal" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
                                         </Border>
                                         <Border Style="{StaticResource StateChip}" Background="{DynamicResource BrushAccentHover}" BorderBrush="{DynamicResource BrushAccentHover}">
-                                            <TextBlock Text="Hover" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
+                                            <TextBlock Text="Hover" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
                                         </Border>
                                     </StackPanel>
                                     <TextBlock Text="Main button" Style="{StaticResource StateCaption}"/>
@@ -611,10 +657,10 @@
                                 <StackPanel Margin="0,0,8,8">
                                     <StackPanel Orientation="Horizontal">
                                         <Border Style="{StaticResource StateChip}" Background="{DynamicResource BrushAccentPressed}" BorderBrush="{DynamicResource BrushAccentPressed}">
-                                            <TextBlock Text="Pressed" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
+                                            <TextBlock Text="Pressed" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
                                         </Border>
                                         <Border Style="{StaticResource StateChip}" Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushAccent}">
-                                            <TextBlock Text="Hover" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                            <TextBlock Text="Hover" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                                         </Border>
                                     </StackPanel>
                                     <TextBlock Text="Pressed, outline button hover" Style="{StaticResource StateCaption}"/>
@@ -623,30 +669,30 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Border BorderThickness="2" BorderBrush="{DynamicResource BrushAccentHover}" CornerRadius="{DynamicResource RadiusControl}" Padding="2" Margin="0,0,10,0">
                                             <Border Style="{StaticResource StateChip}" Margin="0" Background="{DynamicResource BrushAccent}" BorderBrush="{DynamicResource BrushAccent}">
-                                                <TextBlock Text="Focus" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
+                                                <TextBlock Text="Focus" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextOnSolid}"/>
                                             </Border>
                                         </Border>
-                                        <TextBlock Text="Disabled" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextDisabled}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Disabled" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextDisabled}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <TextBlock Text="Keyboard focus, disabled" Style="{StaticResource StateCaption}"/>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,8,0">
                                     <Border Style="{StaticResource StateRow}" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}">
-                                        <TextBlock Text="Row" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                        <TextBlock Text="Row" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                                     </Border>
                                     <TextBlock Text="Normal" Style="{StaticResource StateCaption}"/>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,8,0">
                                     <Border Style="{StaticResource StateRow}" Background="{DynamicResource BrushSurfaceHover}" BorderBrush="{DynamicResource BrushBorder}">
-                                        <TextBlock Text="Row" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                        <TextBlock Text="Row" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                                     </Border>
                                     <TextBlock Text="Mouse over" Style="{StaticResource StateCaption}"/>
                                 </StackPanel>
                                 <StackPanel>
                                     <Border Style="{StaticResource StateRow}" Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="Row" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                            <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushAccentText}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Row" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextPrimary}"/>
                                         </StackPanel>
                                     </Border>
                                     <TextBlock Text="Selected" Style="{StaticResource StateCaption}"/>

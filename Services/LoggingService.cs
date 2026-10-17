@@ -143,7 +143,7 @@ public static class LoggingService
     /// rotated - or a fragment someone pastes into chat - still names the build and the machine
     /// it came from.
     /// </summary>
-    private static string BuildBanner(string title)
+    internal static string BuildBanner(string title)
     {
         var sb = new StringBuilder();
         sb.AppendLine("================================================================================");

@@ -16,7 +16,7 @@ What's wrong right now, each with a button to fix it. It's shown only when there
 
 ## Recent
 
-Everything TrayTrigger noted in the last 90 days, newest first. Older entries go by themselves; the Keep dropdown beside the search box makes that 30 days or a year instead, and the heading says which. Clear History, next to it, empties the list after a confirmation; Needs Attention stays, since those are live problems, not history. Each row has a badge saying what kind it is: **CRITICAL** in solid red (your PC was left changed), **PROBLEM** in amber (something didn't do what you asked), **CHANGE** in blue and **ACTIVITY** in grey.
+Everything TrayTrigger noted in the last 90 days, newest first. Older entries go by themselves; the Keep dropdown beside the search box makes that 15 days, 30 days or a year instead, and the heading says which. Clear History, next to it, empties the list after a confirmation; Needs Attention stays, since those are live problems, not history. Each row has a badge saying what kind it is: **CRITICAL** in solid red (your PC was left changed), **PROBLEM** in amber (something didn't do what you asked), **CHANGE** in blue and **ACTIVITY** in grey.
 
 - **Critical**: a setting a Performance Profile couldn't put back after a game, when TrayTrigger closed, or after it closed unexpectedly; and a damaged record of what a profile changed, so TrayTrigger can't tell what to put back - the entry says what to check by hand.
 

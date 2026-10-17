@@ -1,0 +1,19 @@
+<UserControl x:Class="TrayTrigger.Views.NoteBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- A note under a setting: an icon and a line of text on a card, in the color of what it is. The one look for these notes:
+         Info (blue) says what is so, Tip (amber) suggests something, Warning (amber) says what may go wrong. The card is
+         Surface unless the note sits on a Surface card, where Background says DialogCard. A Link goes after the text. See NoteBar.xaml.cs. -->
+    <Border Background="{Binding Background, RelativeSource={RelativeSource AncestorType=UserControl}}"
+            CornerRadius="{DynamicResource RadiusControl}" Padding="8">
+        <DockPanel LastChildFill="True">
+            <TextBlock x:Name="Glyph" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}"
+                       VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"/>
+            <WrapPanel VerticalAlignment="Center">
+                <TextBlock x:Name="Message" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap" VerticalAlignment="Center"
+                           AutomationProperties.LiveSetting="Polite"/>
+                <ContentPresenter Content="{Binding Link, RelativeSource={RelativeSource AncestorType=UserControl}}" VerticalAlignment="Center"/>
+            </WrapPanel>
+        </DockPanel>
+    </Border>
+</UserControl>

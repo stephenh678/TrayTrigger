@@ -6,6 +6,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 1.6.3
 
+- **Text size and font** - Make all of TrayTrigger's text larger or smaller and pick any font you have installed, in Settings > Appearance. A theme can have its own too.
 - **Restore Settings Now** - Done tweaking mid-game? Right-click a running game, in the library or the tray, and put Windows back as it was while the game keeps running.
 - **Auto HDR per game** - Turn Auto HDR on or off for a single game in Edit Game, or opt in through the Optimized profile.
 - **Abyssal theme** - A new deep-blue look with its own corner shapes, in Settings > Appearance.

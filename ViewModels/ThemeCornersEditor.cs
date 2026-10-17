@@ -170,7 +170,8 @@ public sealed class CornerRow : ViewModelBase
         }
         if (found.Shape != _owner.Shape && !(_isPoster && found.Shape == _owner.Cards.EffectiveShape)) _selected = Choices.First(c => c == found.Shape);
         if (!found.Shape.IsFull && found.Step != Step) _stepOverride = found.Step;
-        _byHand = IsOverridden;
+        // A poster the file sets to what its card has is still the file's own number, not the card's less a pixel.
+        _byHand = IsOverridden || !ThemeCorners.Same(value, Value);
     }
 
     /// <summary>Keeps numbers no shape draws, shown as "Custom", until the person picks a shape for this row.</summary>
@@ -224,9 +225,20 @@ public sealed class ThemeCornersEditor : ViewModelBase
         var card = (CornerRadius)now["RadiusCard"];
         // Cards are a row like the others: the choice above is the app's own look until a row says otherwise, and a row a
         // theme file sets keeps its own shape and size, so moving the choice above never moves it.
+        var small = (CornerRadius)now["RadiusSmall"];
+        var control = (CornerRadius)now["RadiusControl"];
+        // A file saved with only the choice above set has the same shape and size on tags, controls and cards: that is the
+        // choice above again, so it shows there and the three rows follow it, instead of three rows with their own setting.
+        if (ThemeCorners.Recognise(Tags.Target, small) is { } t && ThemeCorners.Recognise(Controls.Target, control) is { } c
+            && ThemeCorners.Recognise(Cards.Target, card) is { } k
+            && t.Shape == c.Shape && c.Shape == k.Shape && (t.Shape.IsFull || (t.Step == c.Step && c.Step == k.Step)))
+        {
+            _shape = t.Shape;
+            if (!t.Shape.IsFull) _roundness = t.Step;
+        }
         Cards.Load(card);
-        Tags.Load((CornerRadius)now["RadiusSmall"]);
-        Controls.Load((CornerRadius)now["RadiusControl"]);
+        Tags.Load(small);
+        Controls.Load(control);
         if (_file?.ContainsKey("RadiusPoster") == true) Posters.Load((CornerRadius)now["RadiusPoster"]);
 
         // Open at first: the four rows are the card's main content, and a row that follows the choice above is drawn quiet.
@@ -242,7 +254,17 @@ public sealed class ThemeCornersEditor : ViewModelBase
     public CornerRow Posters { get; }
     public IReadOnlyList<CornerRow> Rows { get; }
 
-    public IReadOnlyList<CornerShape> Shapes => ThemeCorners.Shapes;
+    /// <summary>
+    /// The shapes for the choice above the rows. The list has two columns and has no "Default" to take the first place, so the two
+    /// shapes that are their own mirror go first, which leaves each pair that follows side by side.
+    /// </summary>
+    public IReadOnlyList<CornerShape> Shapes { get; } =
+    [
+        ThemeCorners.Shapes[0],
+        .. ThemeCorners.Shapes.Where(s => s.Id == "pill"),
+        .. ThemeCorners.Shapes.Skip(1).Where(s => s.Id != "pill" && s.Id != "one-big-corner"),
+        .. ThemeCorners.Shapes.Where(s => s.Id == "one-big-corner"),
+    ];
     public ICommand ResetCommand { get; }
     public ICommand ToggleCustomizeCommand { get; }
 
@@ -353,7 +375,7 @@ public sealed class ThemeCornersEditor : ViewModelBase
 
     /// <summary>
     /// A shape and a roundness for the whole theme, and then, for each kind of corner (tags, controls, cards, posters), usually a shape
-    /// and a size of its own, so the kinds differ. Anything on the sliders can come up, any of the eleven shapes and any size from 0
+    /// and a size of its own, so the kinds differ. Anything on the sliders can come up, any of the fifteen shapes and any size from 0
     /// to 16, extreme included (the roundness line says so, and a roll can be undone). Every one of them is still changed by hand like
     /// any other choice.
     /// </summary>

@@ -1,4 +1,4 @@
-<Window x:Class="TrayTrigger.Views.ScriptTestResultDialog"
+﻿<Window x:Class="TrayTrigger.Views.ScriptTestResultDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,21 +23,21 @@
                 <RowDefinition Height="Auto"/> <!-- Buttons -->
             </Grid.RowDefinitions>
 
-            <TextBlock x:Name="HeadingText" Grid.Row="0" FontSize="{StaticResource FontSizeTitle}" FontFamily="{StaticResource AppFont}"
+            <TextBlock x:Name="HeadingText" Grid.Row="0" FontSize="{DynamicResource FontSizeTitle}" FontFamily="{DynamicResource AppFont}"
                        Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap"/>
-            <TextBlock x:Name="SummaryText" Grid.Row="1" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}"
+            <TextBlock x:Name="SummaryText" Grid.Row="1" FontSize="{DynamicResource FontSizeBody}" FontFamily="{DynamicResource AppFont}"
                        Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap" Margin="0,6,0,12"/>
 
             <Border x:Name="NoteBorder" Grid.Row="2" Background="{DynamicResource BrushWarningWash}" BorderBrush="{DynamicResource BrushWarningBorder}" BorderThickness="1"
                     CornerRadius="{DynamicResource RadiusControl}" Padding="10,6" Margin="0,0,0,12" Visibility="Collapsed">
-                <TextBlock x:Name="NoteText" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
+                <TextBlock x:Name="NoteText" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushWarning}" TextWrapping="Wrap"/>
             </Border>
 
-            <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="{StaticResource FontSizeBody}"
+            <TextBlock Grid.Row="3" Text="Output (stdout and stderr, in order; stderr lines are marked)" FontSize="{DynamicResource FontSizeBody}"
                        Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,4"/>
 
             <TextBox AutomationProperties.Name="Script output" x:Name="OutputBox" Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
-                     FontFamily="Consolas" FontSize="{StaticResource FontSizeBody}"
+                     FontFamily="{StaticResource MonoFont}" FontSize="{DynamicResource FontSizeBody}"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                      Background="{DynamicResource BrushSurface}" Foreground="{DynamicResource BrushTextPrimary}"
                      BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" Padding="8"
@@ -49,7 +49,7 @@
                 <Button DockPanel.Dock="Right" Content="Copy Output" Click="CopyButton_Click"
                         Style="{StaticResource ModernGhostButton}" MinWidth="90"/>
                 <TextBlock Text="The full run is also in the TrayTrigger log under GameScript."
-                           FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
+                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"/>
             </DockPanel>
         </Grid>
     </Border>

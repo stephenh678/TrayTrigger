@@ -52,6 +52,38 @@ internal static class ThemeFileEditor
             ?? InsertAfterFirstBrace(text, NewLine(text) + "  \"" + key + "\": " + quoted + ",");
     }
 
+    private static readonly Regex TextSizeValue = new("(\"textSize\"\\s*:\\s*)-?[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?", RegexOptions.Compiled);
+
+    /// <summary>How large the app's text is while the theme is on, in percent. A line that sets it is changed; a theme without one gets a line.</summary>
+    public static string? SetTextSize(string text, int percent)
+    {
+        string value = percent.ToString(CultureInfo.InvariantCulture);
+        return ReplaceInCode(text, TextSizeValue, m => m.Groups[1].Value + value)
+            ?? InsertAfterFirstBrace(text, NewLine(text) + "  \"textSize\": " + value + ",");
+    }
+
+    /// <summary>Takes the text size line out, so the theme follows the size in Settings; the text is returned as it was when it has none.</summary>
+    public static string? RemoveTextSize(string text)
+    {
+        var line = new Regex("^[ \\t]*\"textSize\"\\s*:\\s*-?[0-9]+(?:\\.[0-9]+)?\\s*,?[ \\t]*(?://[^\\r\\n]*)?\\r?\\n", RegexOptions.Multiline);
+        if (ReplaceInCode(text, line, _ => string.Empty) is { } removed) return removed;
+        // On a line with other things: just the member.
+        var inline = new Regex("\"textSize\"\\s*:\\s*-?[0-9]+(?:\\.[0-9]+)?\\s*,?");
+        return ReplaceInCode(text, inline, _ => string.Empty) ?? text;
+    }
+
+    /// <summary>The font the text is set in while the theme is on. A line that sets it is changed; a theme without one gets a line.</summary>
+    public static string? SetFont(string text, string name) => SetString(text, "font", name);
+
+    /// <summary>Takes the font line out, so the theme follows the font in Settings; the text is returned as it was when it has none.</summary>
+    public static string? RemoveFont(string text)
+    {
+        var line = new Regex(@"^[ \t]*""font""\s*:\s*""(?:[^""\\]|\\.)*""\s*,?[ \t]*(?://[^\r\n]*)?\r?\n", RegexOptions.Multiline);
+        if (ReplaceInCode(text, line, _ => string.Empty) is { } removed) return removed;
+        var inline = new Regex(@"""font""\s*:\s*""(?:[^""\\]|\\.)*""\s*,?");
+        return ReplaceInCode(text, inline, _ => string.Empty) ?? text;
+    }
+
     /// <summary>
     /// One color of the theme. A line that sets it is changed; a line that was commented out (a color worked out from
     /// the others) is turned on with the new value; a color the file does not mention gets a line.

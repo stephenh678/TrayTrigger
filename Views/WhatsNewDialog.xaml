@@ -1,7 +1,7 @@
-<Window x:Class="TrayTrigger.Views.WhatsNewDialog"
+﻿<Window x:Class="TrayTrigger.Views.WhatsNewDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="TrayTrigger - What's New"
+        Title="What's New"
         Width="560" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
@@ -26,11 +26,11 @@
                        Width="48" Height="48" Stretch="Uniform" Margin="0,0,16,0" VerticalAlignment="Top"
                        RenderOptions.BitmapScalingMode="HighQuality"/>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="KickerText" Text="TrayTrigger updated" FontSize="{StaticResource FontSizeBody}"
+                    <TextBlock x:Name="KickerText" Text="TrayTrigger updated" FontSize="{DynamicResource FontSizeBody}"
                                Foreground="{DynamicResource BrushTextMuted}"/>
-                    <TextBlock x:Name="TitleText" Text="What's new" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
+                    <TextBlock x:Name="TitleText" Text="What's new" FontSize="{DynamicResource FontSizeTitle}" FontWeight="SemiBold"
                                Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0"/>
-                    <TextBlock x:Name="SubtitleText" FontSize="{StaticResource FontSizeBody}"
+                    <TextBlock x:Name="SubtitleText" FontSize="{DynamicResource FontSizeBody}"
                                Foreground="{DynamicResource BrushTextSecondary}" Margin="0,2,0,0"/>
                 </StackPanel>
             </Grid>
@@ -38,9 +38,9 @@
             <Border Grid.Row="1" Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                     BorderThickness="1" CornerRadius="{DynamicResource RadiusControl}" Padding="12,10" Margin="0,0,0,16">
                 <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <TextBlock x:Name="NotesText" FontSize="{StaticResource FontSizeBody}"
+                    <TextBlock x:Name="NotesText" FontSize="{DynamicResource FontSizeBody}"
                                Foreground="{DynamicResource BrushTextSecondary}"
-                               TextWrapping="Wrap" LineHeight="18" FontFamily="{StaticResource AppFont}"
+                               TextWrapping="Wrap" LineHeight="18" FontFamily="{DynamicResource AppFont}"
                                Margin="0,0,14,0"/>
                 </ScrollViewer>
             </Border>

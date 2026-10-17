@@ -917,8 +917,8 @@ public class SystemViewModel : ViewModelBase
     public bool IsSpecsLoaded => !IsLoadingSpecs;
 
     private DateTime? _specsRefreshedAt;
-    /// <summary>"Last read 14:02:11" in the Hardware Specs heading; empty, and hidden with <see cref="HasSpecs"/>, until the first read.</summary>
-    public string SpecsRefreshedDisplay => _specsRefreshedAt is DateTime t ? $"Last read {t:HH:mm:ss}" : "";
+    /// <summary>"Last read 2:02:11 PM" in the Hardware Specs heading; empty, and hidden with <see cref="HasSpecs"/>, until the first read.</summary>
+    public string SpecsRefreshedDisplay => _specsRefreshedAt is DateTime t ? $"Last read {t:T}" : "";
 
     private string _statusMessage = "Ready";
     public string StatusMessage
@@ -1369,7 +1369,7 @@ public class SystemViewModel : ViewModelBase
             OnPropertyChanged(nameof(SearchScope));
             // The load counter is a rate: this first read sets the baseline the next tick measures from.
             _ = SampleGpusAsync();
-            StatusMessage = $"Hardware refreshed at {DateTime.Now:HH:mm:ss}.";
+            StatusMessage = $"Hardware refreshed at {DateTime.Now:T}.";
         }
         catch (Exception ex)
         {

@@ -34,7 +34,7 @@ public sealed partial class ThemeService
             if (parsed.Theme == null)
                 return new ThemeImportOutcome(false, $"{Path.GetFileName(themeFile)} is not a theme: {parsed.Error}", null);
             var theme = parsed.Theme;
-            if (theme.Colors.Count == 0 && theme.Shape == null && theme.Background == null)
+            if (theme.Colors.Count == 0 && theme.Shape == null && theme.Background == null && theme.TextSize == null && theme.Font == null)
                 return new ThemeImportOutcome(false, $"{Path.GetFileName(themeFile)} sets no colors, so it is not a theme.", null);
 
             string directory = ThemeCatalog.UserThemesDirectory;

@@ -92,8 +92,7 @@ dark mode.
 
 ## Out of scope for this version
 
-Fonts and text sizes stay fixed. They are already named (`Typography.xaml`), so making them themeable later
-is a smaller step than this one.
+The font and text sizes are covered under Font (1.6.3) and Text size (1.6.3) below.
 
 ## Corner radii (1.6.3)
 
@@ -127,3 +126,38 @@ ones it changes, as `colors` does:
   window widens by the panel's width (moving left if it would leave the screen) and the editor keeps its size. It starts closed. Its game cards are the library's own card (184 x 276) with the player's most played games that have a cover, or made-up
   games when there are none (`PosterSample`).
 - **Not themeable:** launcher icons, elliptical or cut corners, and anything Windows draws itself.
+
+## Font (1.6.3)
+
+The font works like the text size, in two layers: Settings > General > Appearance has a list of installed fonts
+(`AppSettings.FontName`, kept by Reset Settings to Defaults, empty for Segoe UI), and a theme file's optional top-level `font`
+replaces it while that theme is on. A theme's own font wins and a theme with none follows Settings; they never combine.
+
+- **Any installed font** except symbol fonts and the sideways "@" copies (`AppFonts.Installed`). `AppFonts.Build` always
+  appends Segoe UI, so a missing font or glyph falls back to the default.
+- **How it reaches the views.** `AppFont` is a dynamic resource; `AppFonts.ApplyForTheme` replaces it when a theme applies or the
+  Settings list changes. Windows take it in their constructor (`WindowThemeService.PrepareForFirstShow` calls `AppFonts.Follow`, so the first measure has it), the context menu and tooltip styles
+  name it, and `TypographyGuardTests` rejects a font name written anywhere but App.xaml (`AppFont`, `IconFont`, `MonoFont`).
+- **A font the machine lacks.** The file keeps the name; the theme shows in the Settings font and Appearance lists a warning.
+- **Editor.** The Font and text size card has a "From Settings" box per row and one Reset that puts both back to Settings. The preview has its own
+  `AppFont` (`AppFonts.Fill`).
+- **Not affected:** the icon font and the monospace font (`MonoFont`).
+
+## Text size (1.6.3)
+
+Text size is an accessibility setting with two layers. Settings > General > Appearance has a slider (90 to 150%,
+`AppSettings.TextSizePercent`, kept by Reset Settings to Defaults), and a theme file's optional top-level `textSize` (a
+number, in percent) replaces it while that theme is on. They never multiply: a theme's own size wins, and a theme with
+none follows Settings.
+
+- **One scale.** Every size in `Typography.xaml` is multiplied by the same factor and rounded to the nearest half pixel, so
+  headings stay larger than body text. The badge size never goes below its designed 9. The scale is held to 90 to 150%; past
+  `AppTypography.RecommendedMaxScalePercent` the slider and the editor say some screens may clip text.
+- **How it reaches the views.** Every size is read with `DynamicResource`, and `AppTypography.ApplyForTheme` puts the scaled
+  sizes in the application's resources when a theme applies or the slider moves. Code that builds text sets a resource
+  reference, not a number. `TypographyGuardTests` rejects a written number and a static reference.
+- **Editor.** The Font and text size card has "From Settings" (the file gets no `textSize` line) or a slider and number box.
+  The preview has its own copy of the sizes (`AppTypography.Fill`), so it shows the size before Save and the editor around it
+  keeps the app's.
+- **Not scaled yet:** the fixed `LineHeight` values in a few dialogs and the Help page (they are pixels, not named sizes), and
+  the tray menu's icons.

@@ -111,4 +111,21 @@ public class ThemeImportTests : IDisposable
     {
         Assert.False(ThemeService.Instance.ImportThemeFiles(new[] { Picture("sea.png") }).Ok);
     }
+
+    [Fact]
+    public void A_theme_that_only_sets_a_text_size_is_a_theme()
+    {
+        var outcome = ThemeService.Instance.ImportThemeFiles(new[] { Download("Big.json", "{ \"name\": \"Big text\", \"textSize\": 130 }") });
+        Assert.True(outcome.Ok, outcome.Message);
+        Assert.Equal(130, ThemeFileReader.ReadFile(outcome.ThemePath!, ThemeOrigin.User).Theme!.TextSize);
+    }
+
+    [Fact]
+    public void A_theme_that_only_sets_a_font_is_a_theme()
+    {
+        string font = TrayTrigger.Services.AppFonts.Installed.First(n => n != TrayTrigger.Services.AppFonts.DefaultName);
+        var outcome = ThemeService.Instance.ImportThemeFiles(new[] { Download("Fancy.json", "{ \"name\": \"Fancy\", \"font\": \"" + font + "\" }") });
+        Assert.True(outcome.Ok, outcome.Message);
+        Assert.Equal(font, ThemeFileReader.ReadFile(outcome.ThemePath!, ThemeOrigin.User).Theme!.Font);
+    }
 }

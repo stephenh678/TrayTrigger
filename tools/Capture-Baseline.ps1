@@ -11,6 +11,8 @@
 
   Only a few screens:  .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-x -Only library,edit
   In another theme:    .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-light -Theme Light
+  At a text size:      .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-150 -TextScale 150
+  In another font:     .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-font -Font "Comic Sans MS"
   Switch live:         .\tools\Capture-Baseline.ps1 -Out C:\temp\tt-swap -SwapTo Light   (starts in the saved theme, then switches while the window is up)
 
   The compare counts pixels that differ between same-named PNGs and exits 1 if any do. For a cleanup
@@ -25,7 +27,9 @@ param(
     [int]$Tolerance = 0,
     [string[]]$Only,
     [string]$Theme,
-    [string]$SwapTo
+    [string]$SwapTo,
+    [int]$TextScale,
+    [string]$Font
 )
 
 # One entry per screen: the switch name, then any arguments it takes before the output file. Switches that
@@ -102,7 +106,9 @@ foreach ($screen in $Screens) {
     Remove-Item $png -ErrorAction SilentlyContinue
     $q = [char]34
     $themeArgs = if ($Theme) { @('--theme', "$q$Theme$q") } else { @() }
-    $argText = ($themeArgs + @("--screenshot-$name") + ($extra | ForEach-Object { "$q$_$q" }) + "$q$png$q") -join ' '
+    $scaleArgs = if ($TextScale) { @('--text-scale', "$TextScale") } else { @() }
+    $fontArgs = if ($Font) { @('--font', "$q$Font$q") } else { @() }
+    $argText = ($themeArgs + $scaleArgs + $fontArgs + @("--screenshot-$name") + ($extra | ForEach-Object { "$q$_$q" }) + "$q$png$q") -join ' '
     $p = Start-Process -FilePath $Exe -ArgumentList $argText -PassThru
     if (-not $p.WaitForExit($TimeoutSeconds * 1000)) { $p.Kill(); $p.WaitForExit() }
     if (Test-Path $png) { "{0,-34} ok" -f $label } else { "{0,-34} NO IMAGE" -f $label; $failed += $label }

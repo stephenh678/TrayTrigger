@@ -202,6 +202,8 @@ public sealed partial class ThemeService
         {
             ReplaceColors(app.Resources, Build(palette));
             ReplaceShapes(app.Resources, ThemeShape.Build(theme.Shape));
+            AppTypography.ApplyForTheme(theme.TextSize);
+            AppFonts.ApplyForTheme(theme.Font);
             WindowThemeService.UseDarkChrome = theme.IsDark;
             WindowThemeService.ReapplyChrome();
         }
@@ -580,7 +582,7 @@ public sealed partial class ThemeService
     {
         // A user theme that is selected is read again: an edit shows at once, and a file that stopped
         // being valid (or was deleted) falls back to Dark with the reason, then returns when it is fixed.
-        if (_selectedId.StartsWith("user:", StringComparison.Ordinal)) Apply(_selectedId);
+        if (_selectedId.StartsWith("user:", StringComparison.OrdinalIgnoreCase)) Apply(_selectedId);
         ThemesChanged?.Invoke(this, EventArgs.Empty);
     }
 }

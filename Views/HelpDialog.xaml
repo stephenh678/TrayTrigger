@@ -1,4 +1,4 @@
-<Window x:Class="TrayTrigger.Views.HelpDialog"
+﻿<Window x:Class="TrayTrigger.Views.HelpDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -12,7 +12,7 @@
         ShowInTaskbar="False"
         Background="{DynamicResource BrushSurface}"
         Foreground="{DynamicResource BrushTextPrimary}"
-        FontFamily="{StaticResource AppFont}">
+        FontFamily="{DynamicResource AppFont}">
 
     <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,1,0,0">
         <Grid Margin="24,20,24,18">
@@ -33,15 +33,15 @@
                 <Border Grid.Column="0" Width="44" Height="44" CornerRadius="{DynamicResource RadiusLarge}"
                         Background="{DynamicResource BrushAccentWash}" BorderBrush="{DynamicResource BrushBorderAccent}" BorderThickness="1.5"
                         Margin="0,0,16,0" VerticalAlignment="Top">
-                    <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeHeading}"
+                    <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeHeading}"
                                Foreground="{DynamicResource BrushAccentText}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="BreadcrumbText" Text="TRAYTRIGGER HELP" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold"
+                    <TextBlock x:Name="BreadcrumbText" Text="TRAYTRIGGER HELP" FontSize="{DynamicResource FontSizeBody}" FontWeight="Bold"
                                Foreground="{DynamicResource BrushAccentText}" Margin="0,0,0,3"/>
-                    <TextBlock x:Name="TitleText" Text="Topic" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
+                    <TextBlock x:Name="TitleText" Text="Topic" FontSize="{DynamicResource FontSizeTitle}" FontWeight="SemiBold"
                                Foreground="{DynamicResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="20"/>
                 </StackPanel>
             </Grid>
@@ -55,7 +55,7 @@
 
             <!-- Footer -->
             <DockPanel Grid.Row="3" LastChildFill="False">
-                <TextBlock x:Name="FooterHintText" Text="Esc to close" FontSize="{StaticResource FontSizeBody}"
+                <TextBlock x:Name="FooterHintText" Text="Esc to close" FontSize="{DynamicResource FontSizeBody}"
                            Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                 <Button Content="Close" Style="{StaticResource ModernOutlineButton}" Padding="16,6"
                         DockPanel.Dock="Right" IsCancel="True" Click="OnCloseClick"/>

@@ -53,17 +53,19 @@ public sealed class ActivityViewModel : ViewModelBase
     public ICommand ClearHistoryCommand { get; }
 
     // The Keep dropdown beside the search box, where the Library has its sort. The labels map to ActivityService.RetentionChoices.
+    public const string Keep15Days = "Keep 15 days";
     public const string Keep30Days = "Keep 30 days";
     public const string Keep90Days = "Keep 90 days";
     public const string KeepAYear = "Keep 1 year";
 
-    public IReadOnlyList<string> RetentionOptions { get; } = [Keep30Days, Keep90Days, KeepAYear];
+    public IReadOnlyList<string> RetentionOptions { get; } = [Keep15Days, Keep30Days, Keep90Days, KeepAYear];
 
     /// <summary>How far back Recent goes, saved in Settings; a shorter window applies at once.</summary>
     public string RetentionOption
     {
         get => ActivityService.NormalizeRetentionDays(_settings.ActivityRetentionDays) switch
         {
+            15 => Keep15Days,
             30 => Keep30Days,
             365 => KeepAYear,
             _ => Keep90Days,
@@ -72,6 +74,7 @@ public sealed class ActivityViewModel : ViewModelBase
         {
             int days = value switch
             {
+                Keep15Days => 15,
                 Keep30Days => 30,
                 KeepAYear => 365,
                 _ => ActivityService.DefaultRetentionDays,

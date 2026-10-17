@@ -2065,7 +2065,7 @@ public class SettingsViewModel : ViewModelBase
                 owner,
                 "Reset Settings",
                 "Are you sure you want to reset all settings to their recommended default values?",
-                "Your games, tools, scripts, artwork, API keys and scan locations are kept.",
+                "Your games, tools, scripts, artwork, API keys, scan locations, theme, text size and font are kept.",
                 confirmText: "Reset to Defaults",
                 cancelText: "Cancel");
 
@@ -2136,6 +2136,13 @@ public class SettingsViewModel : ViewModelBase
             nameof(AppSettings.HasSeenTrayHideNotice),
             nameof(AppSettings.HasTurnedOnToolsFor148),
             nameof(AppSettings.HasTurnedOnCompactTrayFor149),
+            // The look the person picked, kept like the window's layout: a reset would change the stored choice without the
+            // theme on screen changing, so the picker and the window would disagree.
+            nameof(AppSettings.ThemeId),
+            nameof(AppSettings.ShowThemeBackground),
+            // The text size is the same kind of choice (and an accessibility one: a reset must not shrink it).
+            nameof(AppSettings.TextSizePercent),
+            nameof(AppSettings.FontName),
             // Describes the machine (what a tweak found before it was applied), not a preference.
             nameof(AppSettings.TweakPriorState),
             nameof(AppSettings.TweaksAppliedByTrayTrigger),

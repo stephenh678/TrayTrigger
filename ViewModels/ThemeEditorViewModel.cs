@@ -131,6 +131,8 @@ public sealed class ThemeColorRow : ViewModelBase
     {
         bool changed = color != _color;
         _color = color;
+        // A color put in from somewhere else (the picker, Randomize, Reset) replaces whatever was typed wrong.
+        if (rewriteText) Error = null;
         if (changed)
         {
             Swatch = Freeze(color);
@@ -165,6 +167,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     private readonly Dictionary<string, Color> _handSet = new(StringComparer.Ordinal);
     private readonly string _initial;
     private bool _surfaceFollowsBackground;
+    private readonly bool _surfaceListed;
     private readonly bool _openSurfaceFollows;
     private bool _isDark;
     private string _name;
@@ -173,6 +176,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     private PictureChoice _picture = PictureChoice.Keep;
     private string? _pictureSource;
     private string _pictureInfo = string.Empty;
+    private ThemeDefinition _pictureTheme;
     private BitmapSource? _thumbnail;
     private string _validationMessage = string.Empty;
 
@@ -180,6 +184,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     {
         _themes = themes;
         _source = source;
+        _pictureTheme = source;
         _editingFile = source.Origin == ThemeOrigin.User && source.Path != null;
         _isDark = source.IsDark;
         _name = _editingFile ? source.Name : ThemeService.FreeThemeName("My " + source.Name);
@@ -194,7 +199,8 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             bool pinned = _editingFile ? listed.ContainsKey(key) : color != worked[key];
             if (pinned) _handSet[key] = color;
         }
-        _surfaceFollowsBackground = _editingFile ? !listed.ContainsKey("Surface") : palette["Surface"] == worked["Surface"];
+        _surfaceListed = _editingFile && listed.ContainsKey("Surface");
+        _surfaceFollowsBackground = _editingFile ? !_surfaceListed : palette["Surface"] == worked["Surface"];
 
         Background = Row(palette, "Background", "Background", "Window and page");
         Surface = Row(palette, "Surface", "Surface", "Cards and panels");
@@ -221,9 +227,19 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             ClearMessage();
             ShapeChanged?.Invoke(this, EventArgs.Empty);
         };
+        _useSettingsTextSize = source.TextSize == null;
+        _textSize = Math.Clamp(source.TextSize ?? AppTypography.SystemPercent, MinTextSize, MaxTextSize);
+        _useSettingsFont = source.Font == null;
+        _font = AppFonts.Find(source.Font) ?? AppFonts.Find(AppFonts.SystemName) ?? AppFonts.DefaultName;
+        _openedFont = _font;
+        ResetTypeCommand = new RelayCommand(() =>
+        {
+            UseSettingsFont = true;
+            UseSettingsTextSize = true;
+        });
         TogglePreviewCommand = new RelayCommand(() => IsPreviewOpen = !IsPreviewOpen);
         _openSurfaceFollows = _surfaceFollowsBackground;
-        RandomizeCommand = new RelayCommand(() => Randomize(true, true));
+        RandomizeCommand = new RelayCommand(() => Randomize(true, true, look: true));
         RandomizeColorsCommand = new RelayCommand(() => Randomize(true, false));
         RandomizeCornersCommand = new RelayCommand(() => Randomize(false, true));
         ResetColorsCommand = new RelayCommand(ResetColors);
@@ -276,10 +292,11 @@ public sealed class ThemeEditorViewModel : ViewModelBase
 
     // ---- Randomize -------------------------------------------------------------------------------------------------
 
-    /// <summary>What the colors and corners were before the last Randomize, for Undo; null before the first.</summary>
+    /// <summary>What the colors, corners, text size, font and picture strength were before the last Randomize, for Undo; null before the first.</summary>
     private RandomizeUndo? _undo;
 
-    private sealed record RandomizeUndo(Color[] Colors, bool SurfaceFollowsBackground, CornersState Corners);
+    private sealed record RandomizeUndo(Color[] Colors, bool SurfaceFollowsBackground, CornersState Corners,
+        bool UseSettingsTextSize, int TextSize, bool UseSettingsFont, string Font, double Strength);
 
     /// <summary>Where the colors and corners come from; a test or a capture replaces it to repeat a result.</summary>
     internal Random Random { get; set; } = new();
@@ -294,6 +311,8 @@ public sealed class ThemeEditorViewModel : ViewModelBase
 
     private void ResetColors()
     {
+        // The colors Reset puts back were worked out from the starting point the window opened with.
+        IsDark = _source.IsDark;
         foreach (var row in Rows) row.Color = row.Original;
         _surfaceFollowsBackground = _openSurfaceFollows;
         Recompute();
@@ -304,11 +323,12 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     public bool CanUndoRandomize => _undo != null;
 
     /// <summary>
-    /// Fills the main colors, the corners or both at random as a new starting point, which is then changed by hand like anything typed: the colors
+    /// Fills the main colors, the corners or both at random as a new starting point (and, from the Randomize button at the top, the text
+    /// size, the font and how strongly the picture shows, which are the theme's own from then on), which is then changed by hand like anything typed: the colors
     /// pass the contrast gate (their text is easy to read) and the corners can be anything the sliders allow. The name, the picture, the
     /// Dark or Light start and the fine-tuning colors a file lists are left as they are.
     /// </summary>
-    private void Randomize(bool colors, bool corners)
+    private void Randomize(bool colors, bool corners, bool look = false)
     {
         ThemeRandomizer.Colors? found = null;
         if (colors)
@@ -321,7 +341,8 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             }
         }
 
-        _undo = new RandomizeUndo(Rows.Select(r => r.Color).ToArray(), _surfaceFollowsBackground, Corners.Capture());
+        _undo = new RandomizeUndo(Rows.Select(r => r.Color).ToArray(), _surfaceFollowsBackground, Corners.Capture(),
+            _useSettingsTextSize, _textSize, _useSettingsFont, _font, _strength);
         OnPropertyChanged(nameof(CanUndoRandomize));
 
         if (found != null)
@@ -337,6 +358,27 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             Recompute();
         }
         if (corners) Corners.Randomize(Random);
+        if (look) RandomizeLook();
+    }
+
+    /// <summary>
+    /// A text size within the sizes every screen is checked at, a font that can write English, and (when there is a picture to
+    /// show) how strongly it shows. The theme gets its own text size and font, since a roll that followed Settings would show nothing.
+    /// </summary>
+    private void RandomizeLook()
+    {
+        _useSettingsTextSize = false;
+        _textSize = Random.Next(AppTypography.MinScalePercent, AppTypography.RecommendedMaxScalePercent + 1);
+        TextSizeEdited();
+
+        if (AppFonts.PickRandom(Random) is { } font)
+        {
+            _useSettingsFont = false;
+            _font = font;
+            FontEdited();
+        }
+
+        if (HasPicture) Strength = Math.Round(Random.Next(4, 21) / 20.0, 2);
     }
 
     private void UndoRandomize()
@@ -349,6 +391,14 @@ public sealed class ThemeEditorViewModel : ViewModelBase
         _surfaceFollowsBackground = undo.SurfaceFollowsBackground;
         Recompute();
         Corners.Restore(undo.Corners);
+
+        _useSettingsTextSize = undo.UseSettingsTextSize;
+        _textSize = undo.TextSize;
+        TextSizeEdited();
+        _useSettingsFont = undo.UseSettingsFont;
+        _font = undo.Font;
+        FontEdited();
+        Strength = undo.Strength;
     }
 
     /// <summary>Every color the theme would have with these main colors (and the fine-tuning ones a file sets by hand), for checking them before they are used.</summary>
@@ -416,10 +466,34 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             var start = ThemeCatalog.BasePalette(value);
             foreach (var row in Rows.Where(r => r.Key != "Surface")) row.Follow(start[row.Key]);
             if (_surfaceFollowsBackground) Surface.Follow(start["Surface"]);
+            FollowBasePicture();
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsLight));
             Recompute();
         }
+    }
+
+    /// <summary>
+    /// A new theme whose picture is just its starting theme's own (Dark's or Light's) takes the other one's when the starting
+    /// point is flipped, so a Light copy of Dark does not come out with Dark's picture. A picture a theme has of its own
+    /// (Abyssal's), or one chosen or removed here, is left alone.
+    /// </summary>
+    private void FollowBasePicture()
+    {
+        if (_editingFile || _picture != PictureChoice.Keep) return;
+        var oldBase = ThemeCatalog.BuiltIn(_isDark ? ThemeCatalog.LightId : ThemeCatalog.DarkId);
+        var newBase = ThemeCatalog.BuiltIn(_isDark ? ThemeCatalog.DarkId : ThemeCatalog.LightId);
+        if (oldBase == null || newBase == null) return;
+        string? shown = _pictureTheme.Background?.Image;
+        if (shown != null && !string.Equals(shown, oldBase.Background?.Image, StringComparison.OrdinalIgnoreCase)) return;
+
+        _pictureTheme = newBase;
+        var background = ThemeCatalog.ResolveBackground(newBase);
+        _thumbnail = background == null ? null : ThemeBackgroundLoader.Load(background, out _, ThumbnailPixels);
+        _pictureInfo = "The picture of " + newBase.Name;
+        Strength = background?.Strength ?? DefaultStrength;
+        Position = background?.Position ?? BackgroundPosition.Center;
+        PictureChanged();
     }
 
     public bool IsLight
@@ -478,6 +552,136 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     public System.Windows.HorizontalAlignment ThumbnailHorizontal => BackgroundPosition.Horizontal(_position);
     public System.Windows.VerticalAlignment ThumbnailVertical => BackgroundPosition.Vertical(_position);
 
+    // ---- Text size --------------------------------------------------------------------------------------------------
+
+    private int _textSize = 100;
+    private bool _useSettingsTextSize = true;
+
+    public int MinTextSize => AppTypography.MinScalePercent;
+    public int MaxTextSize => AppTypography.MaxScalePercent;
+
+    /// <summary>True while the theme has no size of its own and shows at the size from Settings: the slider is off, and the file gets no line.</summary>
+    public bool UseSettingsTextSize
+    {
+        get => _useSettingsTextSize;
+        set
+        {
+            if (_useSettingsTextSize == value) return;
+            _useSettingsTextSize = value;
+            TextSizeEdited();
+        }
+    }
+
+    public bool HasOwnTextSize => !_useSettingsTextSize;
+
+    /// <summary>How large the app's text is while this theme is on, in percent: 100 is the size it was designed at. Its own, when <see cref="UseSettingsTextSize"/> is off.</summary>
+    public int TextSize
+    {
+        get => _textSize;
+        set
+        {
+            int percent = Math.Clamp(value, MinTextSize, MaxTextSize);
+            bool changed = percent != _textSize;
+            _textSize = percent;
+            if (changed) TextSizeEdited();
+            // Raised even when nothing changed: a number typed past the range comes back as the one it was brought to.
+            else OnPropertyChanged();
+        }
+    }
+
+    /// <summary>The size the preview and the warning go by: the theme's own, or Settings' when it has none.</summary>
+    internal int EffectiveTextSize => _useSettingsTextSize ? AppTypography.SystemPercent : _textSize;
+
+    private void TextSizeEdited()
+    {
+        ClearMessage();
+        OnPropertyChanged(nameof(TextSize));
+        OnPropertyChanged(nameof(UseSettingsTextSize));
+        OnPropertyChanged(nameof(HasOwnTextSize));
+        OnPropertyChanged(nameof(TextSizeIsLarge));
+        OnPropertyChanged(nameof(CanResetType));
+        TextSizeChanged?.Invoke(this, EventArgs.Empty);
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    /// <summary>Raised when the text size changed, for the preview to show it.</summary>
+    internal event EventHandler? TextSizeChanged;
+
+    /// <summary>True past the size every screen is checked at: the window says some screens may clip text.</summary>
+    public bool TextSizeIsLarge => EffectiveTextSize > AppTypography.RecommendedMaxScalePercent;
+
+    public string TextSizeWarning => $"Past {AppTypography.RecommendedMaxScalePercent}% some screens may clip text. Lower the size to fix it.";
+
+    public string TextSizeFollowNote => $"Follows the size in Settings, {AppTypography.SystemPercent}%.";
+
+
+    // ---- Font -------------------------------------------------------------------------------------------------------
+
+    private string _font = AppFonts.DefaultName;
+    private bool _useSettingsFont = true;
+
+    /// <summary>The font the list showed when the window opened: the theme's own if this computer has it, and otherwise the Settings font.</summary>
+    private readonly string _openedFont;
+
+    /// <summary>
+    /// The font to write, null to follow Settings. A font left as it opened is written as the file has it: a theme shared by someone
+    /// whose font this computer lacks (the list cannot show it) or spelled in another case keeps its own line.
+    /// </summary>
+    private string? FontToSave => _useSettingsFont ? null : _font == _openedFont && _source.Font != null ? _source.Font : _font;
+
+    public IReadOnlyList<string> Fonts => AppFonts.Installed;
+
+    /// <summary>True while the theme has no font of its own and shows in the font from Settings: the list is off, and the file gets no line.</summary>
+    public bool UseSettingsFont
+    {
+        get => _useSettingsFont;
+        set
+        {
+            if (_useSettingsFont == value) return;
+            _useSettingsFont = value;
+            FontEdited();
+        }
+    }
+
+    public bool HasOwnFont => !_useSettingsFont;
+
+    /// <summary>The font the app's text is set in while this theme is on. Its own, when <see cref="UseSettingsFont"/> is off.</summary>
+    public string Font
+    {
+        get => _font;
+        set
+        {
+            string chosen = AppFonts.Find(value) ?? _font;
+            bool changed = chosen != _font;
+            _font = chosen;
+            if (changed) FontEdited();
+            else OnPropertyChanged();
+        }
+    }
+
+    /// <summary>The font the preview goes by: the theme's own, or Settings' when it has none.</summary>
+    internal string EffectiveFont => _useSettingsFont ? AppFonts.SystemName : _font;
+
+    private void FontEdited()
+    {
+        ClearMessage();
+        OnPropertyChanged(nameof(Font));
+        OnPropertyChanged(nameof(UseSettingsFont));
+        OnPropertyChanged(nameof(HasOwnFont));
+        OnPropertyChanged(nameof(CanResetType));
+        FontChanged?.Invoke(this, EventArgs.Empty);
+        CommandManager.InvalidateRequerySuggested();
+    }
+
+    /// <summary>Raised when the font changed, for the preview to show it.</summary>
+    internal event EventHandler? FontChanged;
+
+    public string FontFollowNote => $"Follows the font in Settings, {(AppFonts.SystemName.Length == 0 ? AppFonts.DefaultName : AppFonts.SystemName)}.";
+
+    /// <summary>True when the theme has a font or a text size of its own: the card's Reset shows, and puts both back to following Settings.</summary>
+    public bool CanResetType => !_useSettingsFont || !_useSettingsTextSize;
+
+    public ICommand ResetTypeCommand { get; }
     public ICommand ChoosePictureCommand { get; }
     public ICommand RemovePictureCommand { get; }
 
@@ -580,22 +784,25 @@ public sealed class ThemeEditorViewModel : ViewModelBase
         _issues = ThemeCatalog.ContrastIssues(Palette);
         foreach (var row in Rows)
         {
-            // Every pair this color is part of, worded as in the line at the foot, so a marked color and that line say the same thing.
+            // Every pair this color is part of, worded as in the line at the foot of the Main colors card, so a marked color and that line say the same thing.
             var mine = _issues.Where(i => i.Fixes.Contains(row.Key)).ToList();
             row.SetContrastNote(mine.Count == 0 ? null
                 : "Hard to read with this color:\n" + string.Join("\n", mine.Select(i => "• " + i.Short)) + "\n4.5:1 or more reads comfortably.");
         }
         OnPropertyChanged(nameof(ContrastLine));
         OnPropertyChanged(nameof(ContrastOk));
+        OnPropertyChanged(nameof(HasContrastLine));
     }
 
-    /// <summary>"All text is easy to read.", or how many pairs are hard to read; the colors that can fix it are marked in the list.</summary>
+    /// <summary>Which pairs may be hard to read, or empty when none are (no all-clear is claimed); the colors that can fix it are marked in the list.</summary>
     public string ContrastLine => _issues.Count switch
     {
-        0 => "All text is easy to read.",
-        1 => $"Hard to read: {_issues[0].Short}. Hover the marked color for details.",
-        _ => $"Hard to read: {_issues[0].Short}, and {_issues.Count - 1} more pair{(_issues.Count == 2 ? "" : "s")}. Hover a marked color for details.",
+        0 => "",
+        1 => $"{_issues[0].Label} may be hard to read. Hover the marked color for details.",
+        _ => $"{_issues[0].Label} and {_issues.Count - 1} more pair{(_issues.Count == 2 ? "" : "s")} may be hard to read. Hover a marked color for details.",
     };
+
+    public bool HasContrastLine => _issues.Count > 0;
 
     public bool ContrastOk => _issues.Count == 0;
 
@@ -640,7 +847,7 @@ public sealed class ThemeEditorViewModel : ViewModelBase
     public bool HasUnsavedChanges => Snapshot() != _initial;
 
     private string Snapshot() =>
-        string.Join('|', _name, _isDark, string.Join(',', Rows.Select(r => ThemeColor.Format(r.Color))), _strength.ToString("0.00"), _position, _picture, _pictureSource, Corners.Snapshot());
+        string.Join('|', _name, _isDark, string.Join(',', Rows.Select(r => ThemeColor.Format(r.Color))), _strength.ToString("0.00"), _position, _picture, _pictureSource, Corners.Snapshot(), _useSettingsTextSize ? "settings" : _textSize.ToString(), _useSettingsFont ? "settings" : _font);
 
     private void Save()
     {
@@ -655,13 +862,15 @@ public sealed class ThemeEditorViewModel : ViewModelBase
             return;
         }
 
-        // What changed, to write into a file that exists. A card color that follows the background is never written.
+        // What changed, to write into a file that exists. A card color that follows the background is not written, unless the
+        // file already has a line for it: that line would keep its old color and the file would no longer read back as shown.
         var changed = Rows
-            .Where(r => r.Color != r.Original && !(r.Key == "Surface" && _surfaceFollowsBackground))
+            .Where(r => r.Color != r.Original && !(r.Key == "Surface" && _surfaceFollowsBackground && !_surfaceListed))
             .ToDictionary(r => r.Key, r => r.Color);
 
         var (shapeSet, shapeClear) = Corners.ForSave(newFile: _source.Path == null);
-        var request = new ThemeEditRequest(_source, _name.Trim(), _isDark, Palette, changed, _picture, _pictureSource, _strength, _position, shapeSet, shapeClear);
+        // A new theme keeps the picture the window showed, which after a flip is the other starting theme's.
+        var request = new ThemeEditRequest(_editingFile ? _source : _pictureTheme, _name.Trim(), _isDark, Palette, changed, _picture, _pictureSource, _strength, _position, shapeSet, shapeClear, _useSettingsTextSize ? null : _textSize, FontToSave);
         var outcome = _themes.SaveTheme(request);
         if (!outcome.Ok)
         {

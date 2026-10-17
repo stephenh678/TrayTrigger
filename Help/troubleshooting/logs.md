@@ -4,6 +4,12 @@
 
 TrayTrigger writes debug.log to its local cache folder under %LocalAppData%\TrayTrigger. Settings > Diagnostics & Storage shows the exact path and has buttons to open, clear, or reveal it. When the log grows large it is archived as debug.old.log and a fresh one starts.
 
+## When TrayTrigger will not start, or stops
+
+If TrayTrigger cannot start, or stops on its own, it says so in a message box and writes what happened to crash.log, in the same folder as debug.log. The message shows the full path. crash.log is written whatever the logging setting is, so there is nothing to turn on first. Each entry has the same banner as the log (version, Windows build, machine, .NET runtime) followed by the error and where it happened. A file that grows past 256 KB starts again.
+
+Attach crash.log when you report it. It is a short file, and it holds the one thing the report needs most.
+
 ## What is in it
 
 - Every run starts with a banner giving the TrayTrigger version, your Windows build, the machine and user name, and the .NET runtime. When a log covers several runs, the banners are what separate them.
@@ -21,6 +27,6 @@ Leave it on across the whole session you are reporting, including the launch and
 
 - Reproduce the issue with verbose logging on, so the log captures it.
 - On the About page, click Copy Diagnostic Info. That puts a report on the clipboard: version, Windows build, CPU, GPU and RAM, which launchers are installed, library counts, the settings that matter to bugs, applied tweaks and the last warnings from the log. API keys are never included. Save Report writes the same thing to a file.
-- Open Report an Issue on the About page, describe what you did and what happened, paste the diagnostic info, and attach debug.log.
+- Open Report an Issue on the About page, describe what you did and what happened, paste the diagnostic info, and attach debug.log. If TrayTrigger would not start or stopped on its own, attach crash.log too.
 
 > The log can contain game paths and titles from your library. Skim it before attaching if that concerns you.

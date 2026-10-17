@@ -205,8 +205,8 @@ public class ThemeEditorTests : IDisposable
     });
 
     [Theory]
-    [InlineData("Light", false)]
-    [InlineData("Dark", true)]
+    [InlineData("Light", true)]
+    [InlineData("Dark", false)]
     public void FlippingACopyToTheOtherStartingPoint_GivesThatThemeWholeNotAMixOfBoth(string from, bool flipsToDark) => WpfTestHost.Run(() =>
     {
         var vm = Open(from);
@@ -219,6 +219,60 @@ public class ThemeEditorTests : IDisposable
     });
 
     [Fact]
+    public void ResetColors_AfterFlippingTheStartingPoint_PutsTheStartingPointBackToo() => WpfTestHost.Run(() =>
+    {
+        var vm = Open("Dark");
+        vm.IsDark = false;
+
+        vm.ResetColorsCommand.Execute(null);
+
+        Assert.True(vm.IsDark);
+        Assert.False(vm.ColorsDiffer);
+    });
+
+    [Fact]
+    public void FlippingACopy_BringsTheOtherStartingThemesPicture() => WpfTestHost.Run(() =>
+    {
+        var vm = Open("Dark");
+        Assert.Contains("Dark", vm.PictureInfo);
+
+        vm.IsDark = false;
+        Assert.Contains("Light", vm.PictureInfo);
+
+        vm.IsDark = true;
+        Assert.Contains("Dark", vm.PictureInfo);
+    });
+
+    [Fact]
+    public void ATypedHexError_GoesWhenAColorIsPickedInstead() => WpfTestHost.Run(() =>
+    {
+        var vm = Open("Dark");
+        vm.Accent.Hex = "#12";
+        vm.Accent.CommitHex();
+        Assert.True(vm.Accent.HasError);
+
+        vm.Accent.Color = Green;
+
+        Assert.False(vm.Accent.HasError);
+    });
+
+    [Fact]
+    public void ACornerShapeAndSizeSetOnlyAbove_ComeBackAsThatChoiceWhenReopened() => WpfTestHost.Run(() =>
+    {
+        var leaf = ThemeCorners.Shapes.First(s => s.Id == "leaf");
+        var radii = new Dictionary<string, System.Windows.CornerRadius>();
+        foreach (var t in ThemeCorners.Targets.Take(3)) radii[t.Key] = leaf.At(t.Px(6), t.Max, t.FullPx);
+        var theme = ThemeCatalog.BuiltIn("Dark")! with { Shape = radii };
+
+        var corners = new ThemeCornersEditor(theme);
+
+        Assert.Equal(leaf, corners.Shape);
+        Assert.Equal(6, corners.Roundness);
+        Assert.True(corners.DefaultUsed);
+        Assert.True(corners.RoundnessEnabled);
+    });
+
+    [Fact]
     public void TheContrastLine_SaysWhenSomethingIsHardToRead() => WpfTestHost.Run(() =>
     {
         var vm = Open("Dark");
@@ -227,7 +281,8 @@ public class ThemeEditorTests : IDisposable
         vm.Text.Color = vm.Background.Color;
 
         Assert.False(vm.ContrastOk);
-        Assert.StartsWith("Hard to read", vm.ContrastLine);
+        Assert.True(vm.HasContrastLine);
+        Assert.Contains("may be hard to read", vm.ContrastLine);
     });
 
     [Fact]
@@ -247,14 +302,14 @@ public class ThemeEditorTests : IDisposable
         // The note lists every pair the color is part of, in the words of the line at the foot.
         Assert.Contains("• Text on the window background is", vm.Background.ContrastNote);
         Assert.Contains("• Text on a card is", vm.Surface.ContrastNote);
-        Assert.StartsWith("Hard to read: Text on the window background is", vm.ContrastLine);
-        Assert.Contains(", and 3 more pairs.", vm.ContrastLine);
+        Assert.StartsWith("Text on the window background and 3 more pairs may be hard to read.", vm.ContrastLine);
         Assert.EndsWith("Hover a marked color for details.", vm.ContrastLine);
 
         vm.Text.ResetCommand.Execute(null);
 
         Assert.All(vm.Rows, r => Assert.False(r.HasContrastIssue));
         Assert.True(vm.ContrastOk);
+        Assert.False(vm.HasContrastLine);
     });
 
     [Fact]

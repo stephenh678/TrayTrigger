@@ -1,4 +1,4 @@
-<Window x:Class="TrayTrigger.MainWindow"
+﻿<Window x:Class="TrayTrigger.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -57,7 +57,7 @@
                     <Button Command="{Binding ToggleSidebarCommand}" Style="{StaticResource ModernGhostButton}" 
                             Height="38" Width="48" Padding="0" AutomationProperties.Name="{Binding SidebarToggleName}" ToolTip="{Binding SidebarToggleName}" DockPanel.Dock="Left"
                             HorizontalContentAlignment="Center">
-                        <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}" 
+                        <TextBlock Text="&#xE700;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}" 
                                    Foreground="{DynamicResource BrushTextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
 
@@ -74,7 +74,7 @@
                         </StackPanel.Style>
                         <!-- The wordmark, "Trigger" in the logo's blue, sized to fill the ~120 px beside the
                              toggle in the 190 px expanded sidebar. Runs on one line, so no space creeps in. -->
-                        <TextBlock FontSize="{StaticResource FontSizeHeading}" FontWeight="SemiBold" FontFamily="{StaticResource AppFont}"
+                        <TextBlock FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold" FontFamily="{DynamicResource AppFont}"
                                    Foreground="{DynamicResource BrushTextPrimary}" VerticalAlignment="Center"><Run Text="Tray"/><Run Text="Trigger" Foreground="{DynamicResource BrushBrand}"/></TextBlock>
                     </StackPanel>
                 </DockPanel>
@@ -104,9 +104,9 @@
                                 </Style>
                             </Button.Style>
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}" 
+                                <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}" 
                                            Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                <TextBlock Text="Library" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                <TextBlock Text="Library" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -135,9 +135,9 @@
                                 </Style>
                             </Button.Style>
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}"
+                                <TextBlock Text="&#xE90F;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}"
                                            Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                <TextBlock Text="Tools" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                <TextBlock Text="Tools" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -165,9 +165,9 @@
                                 </Style>
                             </Button.Style>
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE950;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}"
+                                <TextBlock Text="&#xE950;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}"
                                            Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                <TextBlock Text="System" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                <TextBlock Text="System" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -195,9 +195,9 @@
                                 </Style>
                             </Button.Style>
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}" 
+                                <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}" 
                                            Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                <TextBlock Text="Settings" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                <TextBlock Text="Settings" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -225,9 +225,9 @@
                                 </Style>
                             </Button.Style>
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}" 
+                                <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}" 
                                            Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                <TextBlock Text="About" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                <TextBlock Text="About" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -263,13 +263,13 @@
                             </Button.Style>
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
                                 <Grid Width="26" Height="20" DockPanel.Dock="Left">
-                                    <TextBlock Text="&#xEA8F;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}"
+                                    <TextBlock Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}"
                                                TextAlignment="Center" VerticalAlignment="Center"/>
                                     <Ellipse Width="8" Height="8" Fill="{DynamicResource BrushDanger}" Stroke="{DynamicResource BrushSurface}" StrokeThickness="1"
                                              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,2,0"
                                              Visibility="{Binding ActivityVM.HasAttention, Converter={StaticResource BoolToVis}}"/>
                                 </Grid>
-                                <TextBlock Text="Activity" FontSize="{StaticResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                <TextBlock Text="Activity" FontSize="{DynamicResource FontSizeBody}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -285,9 +285,9 @@
                         </Button>
                         <Button Command="{Binding ExitApplicationCommand}" AutomationProperties.Name="Exit TrayTrigger" Style="{StaticResource SidebarNavButton}">
                             <DockPanel LastChildFill="True" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons" FontSize="{StaticResource FontSizeTitle}" 
+                                <TextBlock Text="&#xE7E8;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeTitle}" 
                                            Foreground="{DynamicResource BrushDanger}" Width="26" Height="20" TextAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                                <TextBlock Text="Exit App" FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource BrushDanger}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{StaticResource AppFont}">
+                                <TextBlock Text="Exit App" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushDanger}" VerticalAlignment="Center" Margin="10,0,0,0" FontFamily="{DynamicResource AppFont}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -333,11 +333,11 @@
                     </Style>
                 </Border.Style>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding LaunchToastIcon}" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeSubhead}" Margin="0,0,10,0" VerticalAlignment="Center"
+                    <TextBlock Text="{Binding LaunchToastIcon}" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeSubhead}" Margin="0,0,10,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource BrushAccent}"/>
                     <TextBlock Text="{Binding LaunchToastMessage}" Foreground="{DynamicResource BrushTextPrimary}"
-                               FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                    <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{StaticResource FontSizeBody}" Command="{Binding DismissLaunchToastCommand}"
+                               FontSize="{DynamicResource FontSizeBody}" FontFamily="{DynamicResource AppFont}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Content="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="{DynamicResource FontSizeBody}" Command="{Binding DismissLaunchToastCommand}"
                             Style="{StaticResource ModernGhostButton}" Padding="6,4" VerticalAlignment="Center" ToolTip="Dismiss"
  AutomationProperties.Name="Dismiss"/>
                 </StackPanel>
