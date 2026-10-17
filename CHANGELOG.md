@@ -8,6 +8,10 @@ Format: one `## x.y.z` heading per stable version (no `v` prefix), then a few bu
 Pre-release builds (`-beta.N`, `-rc.N`) do not get their own section; they roll up into the
 stable version they lead to.
 
+## 1.7.1
+
+- **Update window at large text sizes** - the Download & Install button no longer runs off the edge of the update window when the text size is large; the buttons wrap to a second line instead.
+
 ## 1.7.0
 
 - **A new theming engine** - you asked for more control over how TrayTrigger looks, so themes are now far more than a color swap. On top of its colors, a theme can set the shape and roundness of tags, buttons, cards and posters, and its own text size and font. The details are in the entries below: the Corners card, Randomize, Import theme, the Live preview slide-out and the Text size and Font settings, with Abyssal as a built-in theme made to show what it can do.
