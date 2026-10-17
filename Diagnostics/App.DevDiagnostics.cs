@@ -1482,6 +1482,43 @@ public partial class App
                 return;
             }
 
+            // --screenshot-dialog-fit <editgame|theme|themepreview> <out.png> <workWidth> <workHeight>: a dialog at the size it
+            // opens at on a screen with that work area (WPF cannot pretend the screen is smaller, so the sizes the dialogs work
+            // out from SystemParameters.WorkArea are reproduced here). Edit Game keeps its fixed size; the theme editor is
+            // never taller than the work area less 40, and the preview widens it up to the work width.
+            if (e.Args[i].Equals("--screenshot-dialog-fit", StringComparison.OrdinalIgnoreCase) && i + 4 < e.Args.Length
+                && double.TryParse(e.Args[i + 3], out double fitWidth) && double.TryParse(e.Args[i + 4], out double fitHeight))
+            {
+                _skipSettingsSaveOnExit = true;
+                string kind = e.Args[i + 1].ToLowerInvariant(), targetPng = e.Args[i + 2];
+                _mainWindow.Show();
+                Window dialog;
+                if (kind == "editgame")
+                {
+                    var game = _mainViewModel.Games.FirstOrDefault()?.Game ?? new GameEntry { Name = "Audit Game" };
+                    dialog = new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                    dialog.Width = 820;
+                    dialog.Height = 675;
+                }
+                else
+                {
+                    var editor = new ThemeEditorViewModel(TrayTrigger.Services.Theming.ThemeService.Instance.Active, TrayTrigger.Services.Theming.ThemeService.Instance);
+                    ThemeEditDialog.WorkWidthOverride = fitWidth;
+                    var themeDialog = new ThemeEditDialog(editor);
+                    themeDialog.Width = 940;
+                    editor.IsPreviewOpen = kind == "themepreview";
+                    themeDialog.Height = Math.Min(792, fitHeight - 40);
+                    dialog = themeDialog;
+                }
+                dialog.Owner = null;
+                dialog.Show();
+                PumpDispatcher(TimeSpan.FromMilliseconds(600));
+                CaptureVisual(dialog, (int)dialog.Width, (int)dialog.Height, targetPng);
+                dialog.Close();
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-nomatch <out.png>: the library's "No games match" state (a search
             // that hits nothing).
             if ((e.Args[i].Equals("--screenshot-nomatch", StringComparison.OrdinalIgnoreCase) ||

@@ -66,6 +66,35 @@ public class ThemeImportTests : IDisposable
     }
 
     [Fact]
+    public void A_picture_named_with_a_path_is_never_read_or_copied()
+    {
+        // Another folder's picture, named by full path in the theme file: not looked at, so not copied.
+        string elsewhere = Picture("private.png");
+        string text = "{ \"name\": \"Sly\", \"base\": \"dark\", \"colors\": { \"Accent\": \"#1F70C9\" }, \"background\": { \"image\": "
+            + System.Text.Json.JsonSerializer.Serialize(elsewhere) + " } }";
+        var outcome = ThemeService.Instance.ImportThemeFiles(new[] { Download("Sly.theme.json", text) });
+
+        Assert.True(outcome.Ok, outcome.Message);
+        Assert.Contains("was not found", outcome.Message);
+        Assert.Empty(Directory.GetFiles(Themes, "*.png"));
+    }
+
+    [Fact]
+    public void BesideTheme_AcceptsOnlyAPlainFileNameInTheThemeFolder()
+    {
+        string dir = Path.Combine(_folder, "Themes");
+        Directory.CreateDirectory(dir);
+
+        Assert.Equal(Path.Combine(dir, "sea.png"), ThemeBackgroundLoader.BesideTheme(dir, "sea.png"));
+        Assert.Null(ThemeBackgroundLoader.BesideTheme(dir, @"..\sea.png"));
+        Assert.Null(ThemeBackgroundLoader.BesideTheme(dir, @"sub\sea.png"));
+        Assert.Null(ThemeBackgroundLoader.BesideTheme(dir, Path.Combine(_folder, "Download", "sea.png")));
+        Assert.Null(ThemeBackgroundLoader.BesideTheme(dir, @"\\server\share\sea.png"));
+        Assert.Null(ThemeBackgroundLoader.BesideTheme(dir, "a\0b.png"));
+        Assert.Null(ThemeBackgroundLoader.BesideTheme(dir, ""));
+    }
+
+    [Fact]
     public void A_chosen_picture_is_copied_and_set_in_the_file()
     {
         var outcome = ThemeService.Instance.ImportThemeFiles(new[] { Download("Ocean.json", Plain), Picture("sea.png") });

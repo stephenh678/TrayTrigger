@@ -104,7 +104,7 @@ Each game's Played row in Activity & History lists what the profile changed, wha
 
 ### Also in the box
 
-A hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Override per game, light and dark themes (and your own), and 21 system tweaks that each show Windows' real current state. All of it has a page on the [wiki](https://github.com/stephenh678/TrayTrigger/wiki/Home).
+A hardware readout, library backup and restore, batch editing, an NVIDIA DLSS Override per game, a theming engine (colors, corner shapes, font and text size, with themes of your own), and 21 system tweaks that each show Windows' real current state. All of it has a page on the [wiki](https://github.com/stephenh678/TrayTrigger/wiki/Home).
 
 ---
 
@@ -145,7 +145,7 @@ Every release ships a `SHA256SUMS.txt`. The in-app updater verifies the installe
 
 Releases are **not code-signed**, so Windows SmartScreen may warn the first time you run the installer (**More info** > **Run anyway**). To check a download, compare its hash with the matching line in the release's `SHA256SUMS.txt`:
 ```powershell
-Get-FileHash .\TrayTrigger-v1.6.1-Setup.exe -Algorithm SHA256
+Get-FileHash .\TrayTrigger-v1.7.0-Setup.exe -Algorithm SHA256
 ```
 Releases are built by the public [GitHub Actions workflow](.github/workflows/release.yml), and the checksum file is itself signed. To verify that signature, see [SECURITY.md](SECURITY.md#verifying-a-release).
 

@@ -3,6 +3,8 @@
   "name": "Abyssal",
   "author": "TrayTrigger",
   "base": "dark",
+  "textSize": 115,
+  "font": "Trebuchet MS",
   "background": {
     "image": "abyssal.jpg",
     "position": "right",
@@ -29,9 +31,9 @@
     ],
     "RadiusPoster": [
       0,
-      36,
+      16,
       0,
-      36
+      16
     ]
   },
   "colors": {

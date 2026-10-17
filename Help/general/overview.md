@@ -22,6 +22,10 @@ These three are under Settings > Launch & Performance > Launching Games.
 - **Keep game launchers minimized when launching a game** asks Steam, GOG Galaxy and Epic to start quietly, so only the game opens. See How a game is launched.
 - **Show a launch popup by the tray icon** shows a small popup by the clock when a game is started from the tray or a hotkey: what it is waiting for, and the reason if the launch fails. See How the tray menu works.
 
+## Window sizes
+
+Edit Game, Edit Tool, Scan for Games, the folder import and Edit Theme open at the size you last left them, as Game Details does. A window you never resized keeps its normal size, and a saved size that is too big for the screen is ignored.
+
 ## The tray icon
 
 - Left-click shows or hides the window, and right-click opens the menu. With **Left-click on the tray icon opens the game menu** on, both clicks open the menu. Double-click always opens the window.

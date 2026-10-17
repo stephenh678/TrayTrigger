@@ -4,15 +4,14 @@ The short, player-facing notes the "What's new" window shows once after an updat
 feature, no internals. The full write-up for each release stays in CHANGELOG.md. Add a
 `## x.y.z` section here for every stable release (betas use their stable version's section).
 
-## 1.6.3
+## 1.7.0
 
+- **A new theming engine** - You asked for more control over how TrayTrigger looks, so themes are now far more than a color swap. A theme sets the shape and roundness of tags, buttons, cards and posters, and its own text size and font, on top of its colors. Edit theme has a Corners card, a live preview that slides out beside it and Randomize for a new starting point, and Import theme... adds a theme file made elsewhere. The new Abyssal theme shows what's possible.
 - **Text size and font** - Make all of TrayTrigger's text larger or smaller and pick any font you have installed, in Settings > Appearance. A theme can have its own too.
 - **Restore Settings Now** - Done tweaking mid-game? Right-click a running game, in the library or the tray, and put Windows back as it was while the game keeps running.
 - **Auto HDR per game** - Turn Auto HDR on or off for a single game in Edit Game, or opt in through the Optimized profile.
-- **Abyssal theme** - A new deep-blue look with its own corner shapes, in Settings > Appearance.
-- **Import theme** - Settings > Appearance > Import theme... adds a theme file (and its picture) made elsewhere.
-- **Theme corners** - Edit theme has a Corners card: pick a shape and how round it is for tags, buttons, cards and posters, with a live preview that slides out beside the window, and Randomize links to roll the colors, the corners or both for a new starting point.
-- **Smarter Stutter Check** - It now spots a missing or tiny paging file, and a stopped AMD V-Cache optimizer on dual-chiplet X3D CPUs.
+- **Smarter Stutter Check** - It now spots a missing or tiny paging file, and a stopped AMD V-Cache optimizer on the 7900X3D, 7950X3D and 9950X3D.
+- **And more** - An anti-cheat tag in Game Details, a message and a `crash.log` if TrayTrigger can't start, dialogs that remember their size, and no more dropdowns changing as you scroll past them.
 
 ## 1.6.2
 

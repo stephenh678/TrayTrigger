@@ -118,7 +118,7 @@ public partial class ThemeEditDialog : Window
         PreviewPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
 
         var work = SystemParameters.WorkArea;
-        var (target, added) = PlanPreview(open, Width, _previewAdded, PreviewWidth, work.Width, MinWidth);
+        var (target, added) = PlanPreview(open, Width, _previewAdded, PreviewWidth, WorkWidthOverride ?? work.Width, MinWidth);
         if (!firstTime && open && !double.IsNaN(Left) && Left + target > work.Right) Left = Math.Max(work.Left, work.Right - target);
         _previewAdded = added;
         // The panel takes what the window gained, so on a narrow screen the preview is the narrower one, not the editor.
@@ -138,6 +138,9 @@ public partial class ThemeEditDialog : Window
         target = Math.Max(target, minWidth);
         return (target, open ? Math.Max(0, target - width) : 0);
     }
+
+    /// <summary>Set by a screenshot mode to see the dialog as a screen of another width would show it; null in normal use.</summary>
+    internal static double? WorkWidthOverride { get; set; }
 
     private double _previewAdded;
     private long _keptEditingAt = long.MinValue / 2;

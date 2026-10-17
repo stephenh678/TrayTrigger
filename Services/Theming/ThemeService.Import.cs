@@ -49,8 +49,9 @@ public sealed partial class ThemeService
             string? wanted = theme.Background?.Image;
             if (picture == null && !string.IsNullOrEmpty(wanted) && wanted != ThemeBackground.None)
             {
-                string beside = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(themeFile))!, wanted);
-                if (IsPictureFile(beside) && File.Exists(beside)) picture = beside;
+                // Only a plain file name: a path (or a network address, which File.Exists would call out to) is never looked at.
+                string? beside = ThemeBackgroundLoader.BesideTheme(Path.GetDirectoryName(Path.GetFullPath(themeFile))!, wanted);
+                if (beside != null && IsPictureFile(beside) && File.Exists(beside)) picture = beside;
             }
 
             string note = string.Empty;

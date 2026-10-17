@@ -42,7 +42,7 @@ public sealed class CornerRow : ViewModelBase
 
     public string Label => Target.Label;
 
-    /// <summary>"Default" (or "Default (follows cards)") first, then the shapes, then "Custom" when the file holds numbers no shape draws.</summary>
+    /// <summary>"Default" (or "Follows cards") first, then the shapes, then "Custom" when the file holds numbers no shape draws.</summary>
     public IReadOnlyList<CornerShape> Choices { get; private set; }
 
     public CornerShape SelectedShape
@@ -110,9 +110,6 @@ public sealed class CornerRow : ViewModelBase
         }
     }
 
-    /// <summary>True when this row still takes its shape from the choice above it.</summary>
-    internal bool FollowsShape => _custom == null && _selected.IsSame;
-
     /// <summary>True when the size is the roundness above: a poster's is the card's, which is the roundness above unless the card has its own.</summary>
     private bool StepFollowsDefault => _stepOverride == null && (!_isPoster || _owner.Cards.StepFollowsDefault);
 
@@ -132,6 +129,25 @@ public sealed class CornerRow : ViewModelBase
         OnPropertyChanged(nameof(IsExtreme));
         OnPropertyChanged(nameof(HasOwnSetting));
         OnPropertyChanged(nameof(SizeEnabled));
+    }
+
+    /// <summary>Puts this row's shape back to following the choice above, and leaves its size as it is.</summary>
+    internal void ClearShape()
+    {
+        _selected = Same;
+        _custom = null;
+        _byHand = _stepOverride != null;
+    }
+
+    /// <summary>
+    /// Moves this row's own size by the same amount the roundness above moved, so the sizes keep their differences. A row that
+    /// follows the roundness moves with it already, and so does a poster that follows the cards; a shape with no size, and numbers
+    /// kept from the file, are left alone.
+    /// </summary>
+    internal void ShiftSize(double delta)
+    {
+        if (_custom != null || _stepOverride is not { } own || EffectiveShape is { IsFull: true }) return;
+        _stepOverride = Math.Clamp(Math.Round(own + delta), 0, ThemeCorners.MaxStep);
     }
 
     internal void Clear()
@@ -217,7 +233,7 @@ public sealed class ThemeCornersEditor : ViewModelBase
         Tags = new CornerRow(this, ThemeCorners.Targets[0], "Default");
         Controls = new CornerRow(this, ThemeCorners.Targets[1], "Default");
         Cards = new CornerRow(this, ThemeCorners.Targets[2], "Default");
-        Posters = new CornerRow(this, ThemeCorners.Targets[3], "Default (follows cards)");
+        Posters = new CornerRow(this, ThemeCorners.Targets[3], "Follows cards");
         Rows = [Tags, Controls, Cards, Posters];
 
         // What the theme says now (what it leaves out is the app's own), worked out as the app will.
@@ -279,6 +295,8 @@ public sealed class ThemeCornersEditor : ViewModelBase
         {
             if (value == null || value == _shape) return;
             _shape = value;
+            // The shape above is for the whole theme: every row goes back to following it. Each row's own size stays.
+            foreach (var row in Rows) row.ClearShape();
             OnPropertyChanged();
             RowChanged();
         }
@@ -292,7 +310,10 @@ public sealed class ThemeCornersEditor : ViewModelBase
         {
             value = Math.Clamp(Math.Round(value), 0, ThemeCorners.MaxStep);
             if (value == _roundness) return;
+            double delta = value - _roundness;
             _roundness = value;
+            // The roundness above is for the whole theme: every row's own size moves by the same amount, so their differences stay.
+            foreach (var row in Rows) row.ShiftSize(delta);
             OnPropertyChanged();
             OnPropertyChanged(nameof(RoundnessText));
             RowChanged();
@@ -302,16 +323,13 @@ public sealed class ThemeCornersEditor : ViewModelBase
     public string RoundnessText => _roundness.ToString("0.#");
 
     /// <summary>True when the roundness is past the usual range and some corner takes it: the window says it may clip text and art.</summary>
-    public bool IsExtreme => RoundnessEnabled && _roundness > ThemeCorners.NormalSteps;
+    public bool IsExtreme => _roundness > ThemeCorners.NormalSteps && Rows.Any(r => r.UsesRoundness);
 
     /// <summary>True when the default or any row shows its number in the warning color.</summary>
     public bool AnyExtreme => IsExtreme || Rows.Any(r => r.IsExtreme);
 
-    /// <summary>False when tags, controls and cards all have their own shape: nothing follows the shape above, so it is greyed out rather than moved to no effect.</summary>
-    public bool DefaultUsed => Rows.Any(r => r.Target.Key != "RadiusPoster" && r.FollowsShape);
-
-    /// <summary>The same for the size: greyed out unless moving it changes some row (not one that has its own size, or a shape with none).</summary>
-    public bool RoundnessEnabled => Rows.Any(r => r.UsesRoundness);
+    /// <summary>False only for a shape that has no size (a pill, a cap): there is nothing for the slider to move. Moving it, like picking a shape, applies to every row.</summary>
+    public bool RoundnessEnabled => !_shape.IsFull;
 
     public bool ShowCustomize
     {
@@ -347,7 +365,6 @@ public sealed class ThemeCornersEditor : ViewModelBase
         foreach (var row in Rows) row.Refresh();
         OnPropertyChanged(nameof(DiffersFromDefault));
         OnPropertyChanged(nameof(HasOverrides));
-        OnPropertyChanged(nameof(DefaultUsed));
         OnPropertyChanged(nameof(RoundnessEnabled));
         OnPropertyChanged(nameof(IsExtreme));
         OnPropertyChanged(nameof(AnyExtreme));

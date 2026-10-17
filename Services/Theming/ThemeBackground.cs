@@ -73,6 +73,27 @@ internal static class ThemeBackgroundLoader
     public static bool IsPictureFile(string path) =>
         Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// The full path of a picture a theme names, when the name is a plain file name and the file would be in <paramref name="directory"/>,
+    /// the theme's own folder. Null for a path, a network address or a name that is not valid. Nothing on disk (or the network) is touched,
+    /// so a name from a theme file can be checked here before anything opens it.
+    /// </summary>
+    public static string? BesideTheme(string directory, string image)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(image) || image != Path.GetFileName(image)) return null;
+            string path = Path.GetFullPath(Path.Combine(directory, image));
+            return string.Equals(Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(path) ?? string.Empty),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)), StringComparison.OrdinalIgnoreCase) ? path : null;
+        }
+        catch (ArgumentException)
+        {
+            // A name the file system cannot take is just "not beside the theme"; the caller says the picture was not found.
+            return null;
+        }
+    }
+
     /// <summary>The picture, frozen; or null with <paramref name="problem"/> saying why there is none.</summary>
     public static BitmapSource? Load(ResolvedBackground background, out string? problem, long maxPixels = MaxDecodePixels)
     {

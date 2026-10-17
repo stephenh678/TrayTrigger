@@ -48,7 +48,7 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- Icon -->
-                            <StackPanel Grid.Column="0" Margin="0,0,16,0" Width="96">
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0" Width="136">
                                 <Border Width="72" Height="72" CornerRadius="{DynamicResource RadiusCard}" Background="{DynamicResource BrushBackground}"
                                         BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" HorizontalAlignment="Center">
                                     <Grid>
@@ -208,7 +208,7 @@
                         <StackPanel>
                             <DockPanel>
                                 <views:HotkeyRecorderBox AutomationProperties.Name="Hotkey" x:Name="ToolHotkeyBox" DockPanel.Dock="Right" Hotkey="{Binding Hotkey}" OwnerId="{Binding OwnerId}"
-                                                         ShowInlineMessage="False" Width="160" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                                         ShowInlineMessage="False" Width="180" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="Global Launch Hotkey" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"/>
                                     <TextBlock Text="Click the box and press the keys (Ctrl, Alt or Shift plus a key, or F1-F24 alone). Works anywhere in Windows. Clear it for none."

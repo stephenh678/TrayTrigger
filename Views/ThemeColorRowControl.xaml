@@ -56,7 +56,7 @@
                            Foreground="{DynamicResource BrushWarning}" ToolTip="{Binding ContrastNote}"
                            Visibility="{Binding HasContrastIssue, Converter={StaticResource BoolToVis}}"/>
             </StackPanel>
-            <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding Description}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap"/>
         </StackPanel>
 
         <TextBox x:Name="HexBox" Grid.Column="2" Width="96" VerticalAlignment="Center" MaxLength="9"

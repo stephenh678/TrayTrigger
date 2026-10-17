@@ -92,9 +92,9 @@ dark mode.
 
 ## Out of scope for this version
 
-The font and text sizes are covered under Font (1.6.3) and Text size (1.6.3) below.
+The font and text sizes are covered under Font (1.7.0) and Text size (1.7.0) below.
 
-## Corner radii (1.6.3)
+## Corner radii (1.7.0)
 
 Corner radii are themeable. `Shapes.xaml` keeps its names, and a theme file's optional `shape` block sets the
 ones it changes, as `colors` does:
@@ -127,7 +127,7 @@ ones it changes, as `colors` does:
   games when there are none (`PosterSample`).
 - **Not themeable:** launcher icons, elliptical or cut corners, and anything Windows draws itself.
 
-## Font (1.6.3)
+## Font (1.7.0)
 
 The font works like the text size, in two layers: Settings > General > Appearance has a list of installed fonts
 (`AppSettings.FontName`, kept by Reset Settings to Defaults, empty for Segoe UI), and a theme file's optional top-level `font`
@@ -143,7 +143,7 @@ replaces it while that theme is on. A theme's own font wins and a theme with non
   `AppFont` (`AppFonts.Fill`).
 - **Not affected:** the icon font and the monospace font (`MonoFont`).
 
-## Text size (1.6.3)
+## Text size (1.7.0)
 
 Text size is an accessibility setting with two layers. Settings > General > Appearance has a slider (90 to 150%,
 `AppSettings.TextSizePercent`, kept by Reset Settings to Defaults), and a theme file's optional top-level `textSize` (a
