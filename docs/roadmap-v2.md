@@ -33,7 +33,10 @@ things (power plans reset, drivers replaced, GPU settings wiped); control, custo
 
 ## The ranking
 
-### 1. "What changed?" journal
+### 1. "What changed?" journal - DROPPED (2026-10-18)
+Dropped by Stephen: Activity & History already records what TrayTrigger changes and puts back, and a second
+page would duplicate it. A lighter idea (quiet Activity entries when the GPU driver, Windows build or a game's
+build differs from the last launch) was offered and not taken up.
 TrayTrigger records the gaming-relevant state: Windows build and update, GPU driver, power plan,
 HAGS, HDR, refresh rate and the game's own build. When a game starts running worse or crashing, it
 shows what changed since the last good session. Includes patch watch: a new game build is logged,
