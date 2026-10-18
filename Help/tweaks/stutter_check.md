@@ -4,6 +4,8 @@
 
 Runs the checks every "my game stutters" thread tells you to go through, in one click, and sorts the results into what needs a look, what TrayTrigger can fix, and what's fine. It only reports: nothing changes until you press a button, and nothing it finds in another app is ever edited or closed.
 
+It has its own **Stutter Check** tab on the System page, and the All tab still shows it above the performance tweaks.
+
 ## What it checks
 
 - **Overlay apps running** - Discord, the NVIDIA App overlay, RivaTuner (RTSS), Medal, Overwolf and the Xbox Game Bar. One is normal; two or more at once is the most common cause of stutter in the fix threads.

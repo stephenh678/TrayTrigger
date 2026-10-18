@@ -59,7 +59,11 @@ public sealed class PcGamingWikiService
     private static readonly TimeSpan DefaultRequestGap = TimeSpan.FromMilliseconds(1100);
 
     /// <summary>The one the app uses; tests build their own with a fake handler and a temp cache file.</summary>
-    public static PcGamingWikiService Shared { get; } = new();
+    public static PcGamingWikiService Shared => _shared;
+    private static PcGamingWikiService _shared = new();
+
+    /// <summary>Test seam: points the shared service at another cache file (null restores the real one).</summary>
+    internal static void UseCacheFileForTests(string? path) => _shared = new PcGamingWikiService(null, path, null, null);
 
     /// <summary>Beside the other game-info caches, so Settings' "clear cache" covers it.</summary>
     public static string DefaultCacheFilePath => Path.Combine(
@@ -350,6 +354,34 @@ public sealed class PcGamingWikiService
         if (IsDigits(steamAppId)) return "app:" + steamAppId!.Trim();
         string name = NormalizeName(gameName);
         return name.Length > 0 ? "name:" + name : null;
+    }
+
+    /// <summary>
+    /// The facts held for a game, however old, or null when there are none. Game Details paints these at once while a
+    /// newer copy is fetched, so the card does not blink out for the seconds the wiki takes.
+    /// </summary>
+    public PcGamingWikiFacts? PeekCached(string? steamAppId, string? gameName)
+    {
+        string? key = CacheKey(steamAppId, gameName);
+        if (key == null)
+            return null;
+        lock (_cacheLock)
+        {
+            return LoadCacheLocked().TryGetValue(key, out var entry) && !entry.NoFacts ? entry.Facts : null;
+        }
+    }
+
+    /// <summary>Forgets the answers held under these cache keys (see <see cref="CacheKey"/>). Returns how many there were.</summary>
+    internal int Invalidate(IEnumerable<string> keys)
+    {
+        lock (_cacheLock)
+        {
+            var cache = LoadCacheLocked();
+            int removed = keys.Count(cache.Remove);
+            if (removed > 0)
+                SaveCacheLocked();
+            return removed;
+        }
     }
 
     private bool TryGetFresh(string key, out PcGamingWikiResult result)

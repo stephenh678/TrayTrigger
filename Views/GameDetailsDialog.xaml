@@ -444,6 +444,11 @@
                     </StackPanel>
                 </Border>
 
+                <!-- B2a. While PCGamingWiki is being asked and there is no card yet. -->
+                <TextBlock Text="Loading PC facts from PCGamingWiki..." FontSize="{DynamicResource FontSizeBody}"
+                           Foreground="{DynamicResource BrushTextMuted}" Margin="0,0,0,14" TextWrapping="Wrap"
+                           Visibility="{Binding ShowPcgwLoading, Converter={StaticResource BoolToVis}}"/>
+
                 <!-- B2. PCGamingWiki facts. Only present when the player turned them on in Settings and the wiki had
                      facts for this game; the wiki's note for a line is its tooltip. CC BY-NC-SA 3.0: the page is named and linked. -->
                 <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,12" Margin="0,0,0,14"

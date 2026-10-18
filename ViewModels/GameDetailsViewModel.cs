@@ -567,15 +567,30 @@ public class GameDetailsViewModel : ViewModelBase
     public string PcgwPageTitle => _pcgwFacts?.PageTitle ?? string.Empty;
     public ICommand OpenPcgwFactsPageCommand { get; }
 
+    private int _pcgwLookups;
+
+    /// <summary>A lookup is running and there is no card yet: shows a one-line "loading" so the cards below do not jump when it lands.</summary>
+    public bool ShowPcgwLoading => _pcgwLookups > 0 && !ShowPcgwCard;
+
     private async Task LoadPcGamingWikiFactsAsync(bool forceRefresh)
     {
         var service = _pcGamingWikiService;
         if (service == null)
             return;
 
-        // GetAsync only throws for the caller's own cancellation, and none is passed.
-        var result = await service.GetAsync(Game.SteamAppId, Game.Name, forceRefresh).ConfigureAwait(true);
-        ApplyPcGamingWikiFacts(FactsAfter(result, _pcgwFacts));
+        _pcgwLookups++;
+        OnPropertyChanged(nameof(ShowPcgwLoading));
+        try
+        {
+            // GetAsync only throws for the caller's own cancellation, and none is passed.
+            var result = await service.GetAsync(Game.SteamAppId, Game.Name, forceRefresh).ConfigureAwait(true);
+            ApplyPcGamingWikiFacts(FactsAfter(result, _pcgwFacts));
+        }
+        finally
+        {
+            _pcgwLookups--;
+            OnPropertyChanged(nameof(ShowPcgwLoading));
+        }
     }
 
     /// <summary>
@@ -596,6 +611,7 @@ public class GameDetailsViewModel : ViewModelBase
         PcgwGroups = facts == null ? Array.Empty<PcGamingWikiGroupViewModel>() : PcGamingWikiGroupViewModel.From(facts.Facts);
         OnPropertyChanged(nameof(PcgwGroups));
         OnPropertyChanged(nameof(ShowPcgwCard));
+        OnPropertyChanged(nameof(ShowPcgwLoading));
         OnPropertyChanged(nameof(PcgwPageTitle));
     }
     public ICommand LaunchGameCommand { get; }
@@ -700,6 +716,8 @@ public class GameDetailsViewModel : ViewModelBase
         // PCGamingWiki's facts, when the player has turned them on: from the saved copy at once, else a lookup behind it.
         if (_pcGamingWikiService != null)
         {
+            // A copy that has gone stale still shows while the newer one is fetched; a failed fetch then leaves it.
+            ApplyPcGamingWikiFacts(_pcGamingWikiService.PeekCached(Game.SteamAppId, Game.Name));
             _ = LoadPcGamingWikiFactsAsync(forceRefresh: false);
         }
 

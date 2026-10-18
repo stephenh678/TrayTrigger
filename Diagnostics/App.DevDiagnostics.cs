@@ -1425,7 +1425,7 @@ public partial class App
                 return;
             }
 
-            // --screenshot-stutter <out.png>: the Performance Tweaks tab after a Stutter Check has run
+            // --screenshot-stutter <out.png>: the Stutter Check tab after a Stutter Check has run
             // on this PC, with the list of fine checks open, so the card is captured with real rows.
             if ((e.Args[i].Equals("--screenshot-stutter", StringComparison.OrdinalIgnoreCase) ||
                  e.Args[i].Equals("-screenshot-stutter", StringComparison.OrdinalIgnoreCase)) &&
@@ -1434,7 +1434,7 @@ public partial class App
                 string targetPng = e.Args[i + 1];
                 _skipSettingsSaveOnExit = true;
                 _mainViewModel.CurrentSection = NavSection.System;
-                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.PerformanceTweaks;
+                _mainViewModel.SystemVM.CurrentSubSection = SystemSubSection.StutterCheck;
                 _mainWindow.Show();
                 _mainWindow.UpdateLayout();
                 // Selecting the System section starts the run itself when one is due, and then this

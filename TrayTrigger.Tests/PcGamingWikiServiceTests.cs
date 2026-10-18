@@ -441,6 +441,19 @@ public class PcGamingWikiServiceTests : IDisposable
         Assert.True(_wiki.Requests.Count > asked);
     }
 
+    [Fact]
+    public async Task PeekCached_GivesFactsHoweverOldTheyAre()
+    {
+        WikiWithEldenRing();
+        var service = NewService();
+        Assert.Null(service.PeekCached("1245620", "Elden Ring"));
+        await service.GetAsync("1245620", "Elden Ring");
+
+        _now += TimeSpan.FromDays(60);
+
+        Assert.Equal("Elden Ring", service.PeekCached("1245620", "Elden Ring")!.PageTitle);
+    }
+
     // ------------------------------------------------------------------ when the wiki says no
 
     [Theory]

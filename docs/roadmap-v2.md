@@ -74,7 +74,11 @@ checks and artwork lookups only), and the signed-release check, with an Export a
 - **Why:** gamers distrust closed utilities, telemetry and kernel anti-cheat, and want local-first,
   open-source tools. Cheap to build and a strong PR story.
 
-### 7. PC facts for this game (PCGamingWiki) - built in 1.7.1-beta.1, off by default
+### 7. PC facts for this game (PCGamingWiki) - complete, untested in the app (1.7.1-beta.1, off by default)
+**Status:** built and covered by unit and live-wiki tests, but not yet tried in the running app on real games.
+To check at home: tick the setting, open about ten games (one non-Steam), press Refresh with the network off,
+and look at the card at 130% text size.
+
 An optional card in Game Details with what PCGamingWiki's structured tables say about the game, read
 from the page's wikitext through the wiki's anonymous API. Help: Where game info comes from >
 PCGamingWiki. Code: `Services/PcGamingWikiService.cs` (lookup, cache, manners),
@@ -176,7 +180,7 @@ Notes:
 
 - **Done (1.7.1-beta.1):** Stutter Check reports a single memory stick in a board with room for more
   (LaptopMedia measured Far Cry 5 at 58 fps single-channel against 77 fps dual-channel).
-- **Done (1.7.1-beta.1):** the PCGamingWiki facts card (item 7), the update window's buttons wrap at large
+- **Done, untested in the app (1.7.1-beta.1):** the PCGamingWiki facts card (item 7), the update window's buttons wrap at large
   text sizes, and the Game Launch Scripts card hides its defaults until Enable scripts is ticked.
 - **Held, evidence too thin:** naming which Windows features (WSL2, Virtual Machine Platform,
   Hyper-V) keep the hypervisor loaded. The measured cost belongs to Memory Integrity, which is

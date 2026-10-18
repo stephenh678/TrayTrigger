@@ -233,6 +233,8 @@
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsAllTab}"/>
                 <Button Content="Hardware Specs" Command="{Binding SelectSpecsTabCommand}" Margin="2,0,0,0"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsSpecsTab}"/>
+                <Button Content="Stutter Check" Command="{Binding SelectStutterTabCommand}" Margin="2,0,0,0"
+                        Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsStutterTab}"/>
                 <Button Content="Performance Tweaks" Command="{Binding SelectTweaksTabCommand}" Margin="2,0,0,0"
                         Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsTweaksTab}"/>
                 <Button Content="Performance Profiles" Command="{Binding SelectGameProfilesTabCommand}" Margin="2,0,0,0"
@@ -601,7 +603,11 @@
                         </DockPanel>
                     </Border>
 
-                    <!-- Stutter Check: the verdict. It only reports; Fix it applies a tweak below. -->
+                </StackPanel>
+
+                <!-- Stutter Check has its own tab, and still shows on All between the tweaks header and the preset. -->
+                <StackPanel Visibility="{Binding ShowStutterSection, Converter={StaticResource BoolToVis}}">
+                    <!-- Stutter Check: the verdict. It only reports; Fix it applies a tweak from the Performance Tweaks tab. -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
                             <DockPanel LastChildFill="True" Margin="0,0,0,4">
@@ -616,7 +622,7 @@
                                 <StackPanel VerticalAlignment="Top">
                                     <TextBlock Text="Stutter Check" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource BrushTextPrimary}"/>
-                                    <TextBlock Text="The things stutter threads tell you to check, checked for you: overlays, other apps' use of the GPU, your display, memory and drives, Windows services, and the tweaks below that matter for stutter."
+                                    <TextBlock Text="The things stutter threads tell you to check, checked for you: overlays, other apps' use of the GPU, your display, memory and drives, Windows services, and the tweaks that matter for stutter."
                                                FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                 </StackPanel>
                             </DockPanel>
@@ -674,7 +680,7 @@
                                         </ItemsControl>
                                     </StackPanel>
                                 </Border>
-                                <TextBlock Text="Fix it applies a TrayTrigger tweak you can undo below. Here's how opens the help page for that app. Results are included in Copy Diagnostic Info."
+                                <TextBlock Text="Fix it applies a TrayTrigger tweak you can undo on the Performance Tweaks tab. Here's how opens the help page for that app. Results are included in Copy Diagnostic Info."
                                            FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                             <Button Style="{StaticResource HelpLinkButton}" Content="How Stutter Check works" Margin="0,6,0,0" HorizontalAlignment="Left"
@@ -682,6 +688,9 @@
                         </StackPanel>
                     </Border>
 
+                </StackPanel>
+
+                <StackPanel Visibility="{Binding ShowTweaksSection, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                     <!-- Performance Preset: the recommended tweaks below, applied and undone together -->
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>

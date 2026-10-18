@@ -18,6 +18,7 @@ namespace TrayTrigger.Services;
 /// falls back to when the normal file is locked.</item>
 /// <item><c>steam-cache.json[SteamAppId]</c> and <c>rawg-cache.json[RawgId]</c> - fetched details,
 /// again shared by every entry with that id.</item>
+/// <item><c>pcgw-cache.json[app:SteamAppId or name:game name]</c> - PCGamingWiki facts, shared the same way.</item>
 /// </list>
 /// A file or cache entry is only removed when no remaining entry references its path or owns its
 /// key, so removing one of two entries for the same game never blanks the other one's art.
@@ -45,6 +46,7 @@ public static class GameDataCleanup
         var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var steamIds = new List<string>();
         var rawgIds = new List<int>();
+        var pcgwKeys = new List<string>();
 
         foreach (var game in removed)
         {
@@ -66,6 +68,12 @@ public static class GameDataCleanup
                 rawgIds.Add(game.RawgId);
             }
 
+            string? pcgwKey = PcGamingWikiService.CacheKey(game.SteamAppId, game.Name);
+            if (pcgwKey != null && !live.PcgwKeys.Contains(pcgwKey))
+            {
+                pcgwKeys.Add(pcgwKey);
+            }
+
             AddIfDirectlyInside(candidates, game.IconPath, iconsDirectory);
             AddIfDirectlyInside(candidates, game.CoverImagePath, coversDirectory);
         }
@@ -82,6 +90,7 @@ public static class GameDataCleanup
 
         int steam = SteamMetadataService.InvalidateCache(steamIds);
         int rawg = RawgService.InvalidateCache(rawgIds);
+        PcGamingWikiService.Shared.Invalidate(pcgwKeys);
         return new Result(files, steam, rawg);
     }
 
@@ -111,6 +120,7 @@ public static class GameDataCleanup
         private readonly HashSet<string> _keys = new(StringComparer.OrdinalIgnoreCase);
         public readonly HashSet<string> SteamAppIds = new(StringComparer.OrdinalIgnoreCase);
         public readonly HashSet<int> RawgIds = new();
+        public readonly HashSet<string> PcgwKeys = new();
 
         public LiveReferences(IEnumerable<GameEntry> games)
         {
@@ -128,6 +138,9 @@ public static class GameDataCleanup
                 }
 
                 if (game.RawgId > 0) RawgIds.Add(game.RawgId);
+
+                string? pcgwKey = PcGamingWikiService.CacheKey(game.SteamAppId, game.Name);
+                if (pcgwKey != null) PcgwKeys.Add(pcgwKey);
             }
         }
 
