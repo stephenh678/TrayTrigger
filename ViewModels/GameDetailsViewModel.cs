@@ -573,16 +573,21 @@ public class GameDetailsViewModel : ViewModelBase
         if (service == null)
             return;
 
-        try
-        {
-            var result = await service.GetAsync(Game.SteamAppId, Game.Name, forceRefresh).ConfigureAwait(true);
-            ApplyPcGamingWikiFacts(result.Status == PcGamingWikiStatus.Found ? result.Facts : null);
-        }
-        catch (OperationCanceledException)
-        {
-            // The window closed before the wiki answered: nothing is left to show.
-        }
+        // GetAsync only throws for the caller's own cancellation, and none is passed.
+        var result = await service.GetAsync(Game.SteamAppId, Game.Name, forceRefresh).ConfigureAwait(true);
+        ApplyPcGamingWikiFacts(FactsAfter(result, _pcgwFacts));
     }
+
+    /// <summary>
+    /// What the card shows once a lookup has answered. A lookup that failed (offline, or the wiki asked for a
+    /// pause) says nothing about the game, so a refresh that fails leaves the facts already on the card alone.
+    /// </summary>
+    internal static PcGamingWikiFacts? FactsAfter(PcGamingWikiResult result, PcGamingWikiFacts? showing) => result.Status switch
+    {
+        PcGamingWikiStatus.Found => result.Facts,
+        PcGamingWikiStatus.NoFacts => null,
+        _ => showing,
+    };
 
     /// <summary>Puts a game's facts on the card, or takes the card away when there are none. Also how a capture shows a sample card.</summary>
     internal void ApplyPcGamingWikiFacts(PcGamingWikiFacts? facts)

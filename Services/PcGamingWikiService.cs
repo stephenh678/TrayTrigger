@@ -101,7 +101,13 @@ public sealed class PcGamingWikiService
 
     private const int MaxIdCandidates = 4;
 
-    private sealed record Page(string Title, string Wikitext);
+    private sealed record Page(string Title, string Wikitext)
+    {
+        private PcGamingWikiParser.PageReading? _reading;
+
+        /// <summary>The page read once: the Steam App IDs checked while finding it, and the facts shown once it is chosen.</summary>
+        public PcGamingWikiParser.PageReading Reading => _reading ??= PcGamingWikiParser.Read(Wikitext);
+    }
 
     /// <summary>
     /// The facts for a game: from the cache while the answer is fresh, otherwise from the wiki. Never
@@ -143,7 +149,7 @@ public sealed class PcGamingWikiService
                 return Remember(key, null);
             }
 
-            var facts = PcGamingWikiParser.Parse(page.Wikitext);
+            var facts = page.Reading.Facts;
             LoggingService.Verbose(Category, $"'{gameName}': read {facts.Count} facts from the page '{page.Title}'.");
             if (facts.Count == 0)
                 return Remember(key, null);
@@ -180,7 +186,7 @@ public sealed class PcGamingWikiService
         foreach (string title in titles.Take(MaxIdCandidates))
         {
             var page = await FetchPageAsync(title, ct).ConfigureAwait(false);
-            if (page != null && PcGamingWikiParser.Read(page.Wikitext).SteamAppIds.Contains(id))
+            if (page != null && page.Reading.SteamAppIds.Contains(id))
             {
                 LoggingService.Verbose(Category, $"Steam App ID {id}: page '{page.Title}', whose infobox lists it.");
                 return page;
@@ -216,7 +222,7 @@ public sealed class PcGamingWikiService
                 return null;
         }
 
-        var listed = steamId != null ? PcGamingWikiParser.Read(page.Wikitext).SteamAppIds : new List<string>();
+        var listed = steamId != null ? page.Reading.SteamAppIds : new List<string>();
         if (steamId != null && listed.Count > 0)
         {
             if (!listed.Contains(steamId))
@@ -269,7 +275,8 @@ public sealed class PcGamingWikiService
         if (root.TryGetProperty("error", out var error))
         {
             string code = error.TryGetProperty("code", out var c) ? c.GetString() ?? string.Empty : string.Empty;
-            if (code == "missingtitle")
+            // "invalidtitle" is a name with characters no wiki title can have ("Skyrim [Modded]"): a game with no page, not a failure.
+            if (code is "missingtitle" or "invalidtitle")
                 return null;
             throw new HttpRequestException($"the wiki answered an error ({code})");
         }
@@ -286,17 +293,23 @@ public sealed class PcGamingWikiService
 
     private readonly record struct Reply(HttpStatusCode Status, string Body);
 
-    /// <summary>One request, spaced from the last, with the pause after a refusal. Reads a body only when the answer is 200.</summary>
+    /// <summary>One request, spaced from the last, with the pause after a refusal. The body is used only when the answer is 200.</summary>
     private async Task<Reply> GetAsync(string url, CancellationToken ct)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            // A lookup that queued here before another one's request was refused must not ask the wiki into the pause.
+            if (_utcNow() < _pausedUntilUtc)
+                throw new HttpRequestException("lookups are paused after the wiki's last refusal");
+
             var wait = _requestGap - (_utcNow() - _lastRequestUtc);
             if (wait > TimeSpan.Zero)
                 await Task.Delay(wait, ct).ConfigureAwait(false);
 
-            using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+            // The whole answer is buffered, so the client's 12 second timeout and 4 MB cap cover the body as well. With
+            // ResponseHeadersRead neither applies to it, and a body that stalls would hold the gate (and every lookup behind it) for good.
+            using var response = await _http.GetAsync(url, ct).ConfigureAwait(false);
             _lastRequestUtc = _utcNow();
 
             if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable)
@@ -337,16 +350,6 @@ public sealed class PcGamingWikiService
         if (IsDigits(steamAppId)) return "app:" + steamAppId!.Trim();
         string name = NormalizeName(gameName);
         return name.Length > 0 ? "name:" + name : null;
-    }
-
-    /// <summary>The answer already held for a game, whether or not it is still fresh. Used to paint at once.</summary>
-    public bool TryGetCached(string? steamAppId, string? gameName, out PcGamingWikiResult result)
-    {
-        string? key = CacheKey(steamAppId, gameName);
-        if (key != null && TryGetFresh(key, out result))
-            return true;
-        result = PcGamingWikiResult.NoFacts;
-        return false;
     }
 
     private bool TryGetFresh(string key, out PcGamingWikiResult result)

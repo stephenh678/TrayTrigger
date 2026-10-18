@@ -30,13 +30,35 @@ public class PcGamingWikiServiceTests : IDisposable
         public List<string> Requests { get; } = new();
         public List<string> UserAgents { get; } = new();
         public Func<string, HttpResponseMessage> Respond { get; set; } = _ => new HttpResponseMessage(HttpStatusCode.NotFound);
+        /// <summary>When set, answers instead of <see cref="Respond"/>, so a test can hold a request open.</summary>
+        public Func<string, Task<HttpResponseMessage>>? RespondAsync { get; set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Requests.Add(request.RequestUri!.AbsoluteUri);
             UserAgents.Add(request.Headers.UserAgent.ToString());
-            return Task.FromResult(Respond(request.RequestUri.AbsoluteUri));
+            return RespondAsync != null
+                ? RespondAsync(request.RequestUri.AbsoluteUri)
+                : Task.FromResult(Respond(request.RequestUri.AbsoluteUri));
+        }
+    }
+
+    /// <summary>An answer that claims to be bigger than the service's size cap and notes whether anyone read it.</summary>
+    private sealed class OversizedContent : HttpContent
+    {
+        public bool WasRead { get; private set; }
+
+        protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context)
+        {
+            WasRead = true;
+            return stream.WriteAsync("{}"u8.ToArray()).AsTask();
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 5L * 1024 * 1024;
+            return true;
         }
     }
 
@@ -301,6 +323,23 @@ public class PcGamingWikiServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AGameNameWithCharactersNoTitleCanHave_IsNoFacts_AndRemembered()
+    {
+        // Square brackets cannot be in a wiki title, so the wiki answers "invalidtitle" for "Skyrim [Modded]".
+        // That is a game it has no page for, not a wiki that failed: no warning, and no asking again at every open.
+        _wiki.Respond = url => url.Contains("action=parse")
+            ? Json("""{"error":{"code":"invalidtitle","info":"Bad title \"Skyrim [Modded]\"."}}""")
+            : Json(SearchAnswer());
+        var service = NewService();
+
+        Assert.Equal(PcGamingWikiStatus.NoFacts, (await service.GetAsync(null, "Skyrim [Modded]")).Status);
+        int asked = _wiki.Requests.Count;
+        Assert.Equal(PcGamingWikiStatus.NoFacts, (await service.GetAsync(null, "Skyrim [Modded]")).Status);
+
+        Assert.Equal(asked, _wiki.Requests.Count);
+    }
+
+    [Fact]
     public async Task APageWithNoStructuredFacts_IsNoFacts()
     {
         _wiki.Respond = url => url.Contains("list=search")
@@ -402,21 +441,6 @@ public class PcGamingWikiServiceTests : IDisposable
         Assert.True(_wiki.Requests.Count > asked);
     }
 
-    [Fact]
-    public async Task TryGetCached_ShowsAFreshAnswerWithoutAskingTheWiki()
-    {
-        WikiWithEldenRing();
-        var service = NewService();
-        Assert.False(service.TryGetCached("1245620", "Elden Ring", out _));
-
-        await service.GetAsync("1245620", "Elden Ring");
-        int asked = _wiki.Requests.Count;
-
-        Assert.True(service.TryGetCached("1245620", "Elden Ring", out var cached));
-        Assert.Equal(PcGamingWikiStatus.Found, cached.Status);
-        Assert.Equal(asked, _wiki.Requests.Count);
-    }
-
     // ------------------------------------------------------------------ when the wiki says no
 
     [Theory]
@@ -438,6 +462,42 @@ public class PcGamingWikiServiceTests : IDisposable
         _now += TimeSpan.FromMinutes(6);
         WikiWithEldenRing();
         Assert.Equal(PcGamingWikiStatus.Found, (await service.GetAsync("1245620", "Elden Ring")).Status);
+    }
+
+    [Fact]
+    public async Task ALookupWaitingBehindARefusedRequest_DoesNotSendItsOwn()
+    {
+        // Game Two's lookup queues behind Game One's request. The wiki refuses that one, so the pause starts while
+        // Game Two is still waiting, and Game Two has to honour it instead of asking the wiki as well.
+        var release = new TaskCompletionSource();
+        _wiki.RespondAsync = async _ =>
+        {
+            await release.Task;
+            return new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+        };
+        var service = NewService();
+
+        var first = service.GetAsync("1245620", "Game One");
+        var second = service.GetAsync("570", "Game Two");
+        Assert.True(SpinWait.SpinUntil(() => _wiki.Requests.Count == 1, TimeSpan.FromSeconds(5)), "the first request should be in flight");
+        release.SetResult();
+
+        Assert.Equal(PcGamingWikiStatus.Failed, (await first).Status);
+        Assert.Equal(PcGamingWikiStatus.Failed, (await second).Status);
+        Assert.Single(_wiki.Requests);
+    }
+
+    [Fact]
+    public async Task AnAnswerBeyondTheSizeCap_IsNotRead()
+    {
+        // The cap on an answer only holds when the client buffers the whole answer; the body must not be read past it.
+        var oversized = new OversizedContent();
+        _wiki.Respond = _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = oversized };
+
+        var result = await NewService().GetAsync(null, "Big Page");
+
+        Assert.Equal(PcGamingWikiStatus.Failed, result.Status);
+        Assert.False(oversized.WasRead);
     }
 
     [Fact]

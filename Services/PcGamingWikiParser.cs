@@ -338,7 +338,7 @@ internal static class PcGamingWikiParser
             string s = PathToken.Replace(raw.Trim(), m =>
             {
                 placeholders.Add(TokenText(m.Groups[1].Value));
-                return "" + (placeholders.Count - 1) + "";
+                return "\uE000" + (placeholders.Count - 1) + "\uE001";
             });
 
             if (s.IndexOfAny(['{', '}', '[', ']', '<', '>', '|']) >= 0) return null;
@@ -346,7 +346,7 @@ internal static class PcGamingWikiParser
             if (s.Any(char.IsControl)) return null;
 
             for (int i = 0; i < placeholders.Count; i++)
-                s = s.Replace("" + i + "", placeholders[i], StringComparison.Ordinal);
+                s = s.Replace("\uE000" + i + "\uE001", placeholders[i], StringComparison.Ordinal);
 
             s = s.Trim();
             return s.Length is > 0 and <= MaxDetailLength ? s : null;

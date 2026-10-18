@@ -6,6 +6,8 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 ## 1.7.1
 
+- **PC facts from PCGamingWiki** - An optional card in Game Details with what PCGamingWiki says about a game: ultrawide, HDR, controller support, online play and where it keeps its saves. It's off until you tick Show PC facts from PCGamingWiki in Settings > Library & Art.
+- **Stutter Check spots a single memory stick** - If your PC has one stick of memory and room for another, Stutter Check now says so and what to do about it.
 - **Update window fix** - At a large text size, the Download & Install button no longer runs off the edge of the update window.
 
 ## 1.7.0
