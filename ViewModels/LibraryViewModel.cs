@@ -1125,7 +1125,8 @@ public class LibraryViewModel : ViewModelBase
             refreshInterval: _settings.MetadataRefreshInterval,
             isPlaying: card.IsPlaying,
             closeGameAction: _ => requestedCloseGame = true,
-            forceCloseAction: _ => requestedForceClose = true);
+            forceCloseAction: _ => requestedForceClose = true,
+            showPcGamingWikiFacts: _settings.UsePcGamingWikiFacts);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();
@@ -1340,6 +1341,7 @@ public class LibraryViewModel : ViewModelBase
         }
         else if (isMissing)
         {
+            RecordFailedLaunch(card, err, executableMissing: true);
             IsLaunchToastVisible = false;
             card.RefreshProperties();
             if (LaunchPopup?.TryShowFailure(LaunchTarget.ForGame(card.Game), "Its executable wasn't found.", "Locate executable...",
@@ -1350,6 +1352,7 @@ public class LibraryViewModel : ViewModelBase
         }
         else
         {
+            RecordFailedLaunch(card, err, executableMissing: false);
             IsLaunchToastVisible = false;
             StatusMessage = $"Error: {err}";
             string message = err ?? "Failed to launch game.";
@@ -1358,6 +1361,14 @@ public class LibraryViewModel : ViewModelBase
                 ModernDialog.ShowWarning(owner, "Launch Error", message);
             }
         }
+    }
+
+    /// <summary>A launch that failed outright also goes on Activity &amp; History, so it can be found after the popup is gone.</summary>
+    private static void RecordFailedLaunch(GameCardViewModel card, string? err, bool executableMissing)
+    {
+        var (text, detail) = LaunchProblems.DescribeFailed(card.Name, err, executableMissing);
+        ActivityService.Add(ActivityLevel.Problem, text, subject: card.Name, detail: detail,
+            groupKey: LaunchProblems.FailedGroupKey(card.Game.Id));
     }
 
     /// <summary>

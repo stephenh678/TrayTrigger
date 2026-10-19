@@ -20,7 +20,8 @@ public enum SystemSubSection
     All,
     HardwareSpecs,
     PerformanceTweaks,
-    GameProfiles
+    GameProfiles,
+    StutterCheck
 }
 
 public class SystemTweakViewModel : ViewModelBase
@@ -396,6 +397,8 @@ public class SystemViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsSpecsTab));
                 OnPropertyChanged(nameof(IsTweaksTab));
                 OnPropertyChanged(nameof(IsGameProfilesTab));
+                OnPropertyChanged(nameof(IsStutterTab));
+                OnPropertyChanged(nameof(ShowStutterSection));
                 OnPropertyChanged(nameof(ShowSpecsSection));
                 OnPropertyChanged(nameof(ShowTweaksSection));
                 OnPropertyChanged(nameof(ShowGameProfilesSection));
@@ -419,6 +422,9 @@ public class SystemViewModel : ViewModelBase
     public bool IsSpecsTab => CurrentSubSection == SystemSubSection.HardwareSpecs;
     public bool IsTweaksTab => CurrentSubSection == SystemSubSection.PerformanceTweaks;
     public bool IsGameProfilesTab => CurrentSubSection == SystemSubSection.GameProfiles;
+
+    public bool IsStutterTab => CurrentSubSection == SystemSubSection.StutterCheck;
+    public bool ShowStutterSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.StutterCheck;
 
     public bool ShowSpecsSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.HardwareSpecs;
     public bool ShowTweaksSection => CurrentSubSection == SystemSubSection.All || CurrentSubSection == SystemSubSection.PerformanceTweaks;
@@ -940,6 +946,7 @@ public class SystemViewModel : ViewModelBase
     public ICommand SelectSpecsTabCommand { get; }
     public ICommand SelectTweaksTabCommand { get; }
     public ICommand SelectGameProfilesTabCommand { get; }
+    public ICommand SelectStutterTabCommand { get; }
     public ICommand RefreshSpecsCommand { get; }
     public ICommand ApplyRecommendedPresetCommand { get; }
     public ICommand ResetDefaultsCommand { get; }
@@ -1258,6 +1265,7 @@ public class SystemViewModel : ViewModelBase
         SelectSpecsTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.HardwareSpecs);
         SelectTweaksTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.PerformanceTweaks);
         SelectGameProfilesTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.GameProfiles);
+        SelectStutterTabCommand = new RelayCommand(() => CurrentSubSection = SystemSubSection.StutterCheck);
         RefreshSpecsCommand = new AsyncRelayCommand(LoadHardwareSpecsAsync, () => CanRefreshSpecs);
         ApplyRecommendedPresetCommand = new AsyncRelayCommand(ExecuteApplyPresetAsync, () => CanRunBulkAction);
         ResetDefaultsCommand = new AsyncRelayCommand(ExecuteResetDefaultsAsync, () => CanRunBulkAction);

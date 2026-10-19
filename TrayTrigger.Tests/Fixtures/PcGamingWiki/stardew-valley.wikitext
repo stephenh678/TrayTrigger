@@ -1,0 +1,252 @@
+<!-- Excerpt of https://www.pcgamingwiki.com/wiki/Stardew_Valley (CC BY-NC-SA 3.0, retrieved 2026-10-17). Only the templates TrayTrigger reads. -->
+{{Infobox game
+|cover        = Stardew Valley cover.png
+|developers   = 
+{{Infobox game/row/developer|ConcernedApe}}
+|publishers   = 
+|engines      = 
+{{Infobox game/row/engine|MonoGame|ref=<ref>{{Refurl|url=https://steamcommunity.com/games/413150/announcements/detail/3121554202587262743|title=1.5.5 update: Migrated the game from XNA (targeting .NET Framework 4.5.2) to MonoGame (targeting .NET 5). This futureproofs the game and allows mods to access more than 4 gigs of RAM.|date=May 2023}}</ref><ref>{{Refurl|url=https://twitter.com/ConcernedApe/status/755798115182051328|title=ConcernedApe on Twitter: "@rilut It was done with Monogame, as a milestone in the progress toward releasing console versions!"|date=9 June 2023}}</ref>}}
+|release dates= 
+{{Infobox game/row/date|Windows|February 26, 2016|ref=<ref>{{Refurl|url=https://steamcommunity.com/games/413150/announcements/detail/842541922562074817|title=Stardew Valley Is Now Available!- Steam Community :: Group Announcements :: Stardew Valley|date=May 2023}}</ref>}}
+{{Infobox game/row/date|OS X|July 29, 2016|ref=<ref name="release date">[https://twitter.com/ConcernedApe/status/755796881658241024 ConcernedApe on Twitter: "Quick Update: Mac & Linux are set to be launched on the 29th! Multiplayer, localizations, and the version 1.1 update are still in progress."]</ref>}}
+{{Infobox game/row/date|Linux|July 29, 2016|ref=<ref name="release date"/>}}
+|reception    = 
+{{Infobox game/row/reception|Metacritic|stardew-valley|89}}
+{{Infobox game/row/reception|OpenCritic|2242/stardew-valley|90}}
+{{Infobox game/row/reception|IGDB|stardew-valley|91}}
+|real ai level= 0
+|taxonomy     =
+{{Infobox game/row/taxonomy/monetization      | One-time game purchase }}
+{{Infobox game/row/taxonomy/microtransactions | None }}
+{{Infobox game/row/taxonomy/modes             | Singleplayer, Multiplayer }}
+{{Infobox game/row/taxonomy/pacing            | Real-time }}
+{{Infobox game/row/taxonomy/perspectives      | Bird's-eye view, Scrolling }}
+{{Infobox game/row/taxonomy/controls          | Direct control, Point and select }}
+{{Infobox game/row/taxonomy/genres            | RPG, Building, Farming, Life sim}}
+{{Infobox game/row/taxonomy/sports            | }}
+{{Infobox game/row/taxonomy/vehicles          | }}
+{{Infobox game/row/taxonomy/art styles        | Anime, Pixel art, Stylized}}
+{{Infobox game/row/taxonomy/themes            | }}
+{{Infobox game/row/taxonomy/series            | }}
+|steam appid  = 413150
+|steam appid side = 
+|gogcom id    = 1453375253
+|gogcom id side = 1541385446
+|official site= http://stardewvalley.net/
+|hltb         = 34716
+|strategywiki = Stardew Valley
+|mobygames    = 80992
+|wikipedia    = Stardew Valley
+|winehq       = 17422
+|license      = commercial
+}}
+{{Game data|
+{{Game data/config|Windows|{{p|appdata}}\StardewValley\default_options}}
+{{Game data/config|OS X|{{p|osxhome}}/.config/StardewValley/}}
+{{Game data/config|Linux|{{p|xdgconfighome}}/StardewValley/}}
+}}
+{{Game data|
+{{Game data/saves|Windows|{{p|appdata}}\StardewValley\Saves\}}
+{{Game data/saves|OS X|{{p|osxhome}}/.config/StardewValley/Saves/}}
+{{Game data/saves|Linux|{{p|xdgconfighome}}/StardewValley/Saves/}}
+}}
+{{Save game cloud syncing
+|discord                   = 
+|discord notes             = 
+|epic games launcher       = 
+|epic games launcher notes = 
+|gog galaxy                = true
+|gog galaxy notes          = 
+|origin                    = 
+|origin notes              = 
+|icloud                    = 
+|icloud notes              = 
+|steam cloud               = true
+|steam cloud notes         = 
+|ubisoft connect           = 
+|ubisoft connect notes     = 
+|xbox cloud                = true
+|xbox cloud notes          = 
+}}
+{{Video
+|wsgf link                  = https://www.wsgf.org/dr/stardew-valley/en
+|widescreen wsgf award      = gold
+|multimonitor wsgf award    = silver
+|ultrawidescreen wsgf award = gold
+|4k ultra hd wsgf award     = gold
+|widescreen resolution      = true
+|widescreen resolution notes= 
+|multimonitor               = true
+|multimonitor notes         = 
+|ultrawidescreen            = true
+|ultrawidescreen notes      = 
+|4k ultra hd                = true
+|4k ultra hd notes          = 
+|fov                        = n/a
+|fov notes                  = You can choose to zoom in and out in the menus to see more stuff on screen.
+|windowed                   = true
+|windowed notes             = 
+|borderless windowed        = true
+|borderless windowed notes  = 
+|anisotropic                = n/a
+|anisotropic notes          = 
+|antialiasing               = n/a
+|antialiasing notes         = 
+|upscaling                  = unknown
+|upscaling tech             = 
+|upscaling notes            = 
+|framegen                   = unknown
+|framegen tech              = 
+|framegen notes             = 
+|vsync                      = always on
+|vsync notes                = 
+|60 fps                     = true
+|60 fps notes               = Capped at 60 FPS.
+|120 fps                    = false
+|120 fps notes              = 
+|hdr                        = false
+|hdr notes                  = Not applicable; a pixel sprite game such as Stardew Valley has its colors as definitive values, so it would not gain any fidelity by supporting HDR.
+|ray tracing                = false
+|ray tracing notes          = 
+|color blind                = false
+|color blind notes          = 
+}}
+{{Input
+|key remap                 = true
+|key remap notes           = 
+|acceleration option       = false
+|acceleration option notes = Based on your cursor settings in Windows.
+|mouse sensitivity         = false
+|mouse sensitivity notes   = 
+|mouse menu                = true
+|mouse menu notes          = 
+|invert mouse y-axis       = false
+|invert mouse y-axis notes = 
+|controller support        = true
+|controller support notes  = Uses an analog stick (which switches depending on whether you're in-game or in a menu) to move a cursor.
+|full controller           = true
+|full controller notes     = As of the 1.5.4 version. Requires disabling <b>Steam Input</b> for the game to work.
+|controller remap          = false
+|controller remap notes    = The control remapping section in the options only remaps keyboard controls.
+|controller sensitivity    = false
+|controller sensitivity notes= There is no option to adjust the cursor sensitivity on a controller.
+|invert controller y-axis  = false
+|invert controller y-axis notes= 
+|touchscreen               = false
+|touchscreen notes         = 
+|xinput controllers        = true
+|xinput controllers notes  = 
+|xbox prompts              = true
+|xbox prompts notes        = 
+|impulse triggers          = unknown
+|impulse triggers notes    = 
+|directinput controllers       = 
+|directinput controllers notes = 
+|directinput prompts           = 
+|directinput prompts notes     = 
+|playstation controllers   = true
+|playstation controller models = DualShock 4, DualSense
+|playstation controllers notes = 
+|playstation prompts       = false
+|playstation prompts notes = 
+|light bar support         = false
+|light bar support notes   = 
+|dualsense adaptive trigger support = false
+|dualsense adaptive trigger support notes =
+|dualsense haptics support  = false
+|dualsense haptics support notes =
+|playstation connection modes = Wired, Wireless (Bluetooth)
+|playstation connection modes notes = 
+|nintendo controllers          = 
+|nintendo controller models    = 
+|nintendo controllers notes    = 
+|nintendo prompts              = 
+|nintendo prompts notes        = 
+|nintendo button layout        = 
+|nintendo button layout notes  = 
+|nintendo motion sensors       = 
+|nintendo motion sensors modes = 
+|nintendo motion sensors notes = 
+|nintendo connection modes     = 
+|nintendo connection modes notes = 
+|tracked motion controllers= unknown
+|tracked motion controllers notes = 
+|tracked motion prompts    = unknown
+|tracked motion prompts notes = 
+|other controllers         = unknown
+|other controllers notes   = 
+|peripheral devices            = 
+|peripheral device types       = 
+|peripheral devices notes      = 
+|other button prompts      = unknown
+|other button prompts notes= 
+|button prompts            = Xbox, DualShock
+|button prompts notes      = Occasional prompts for XInput devices. If using a DualShock use [https://www.nexusmods.com/stardewvalley/mods/381/ Playstation Prompts Mod]
+|controller hotplug        = true
+|controller hotplug notes  = 
+|input prompt override         = 
+|input prompt override notes   = 
+|haptic feedback           = true
+|haptic feedback notes     = Can be enabled/disabled in the settings.
+|haptic feedback hd        = 
+|haptic feedback hd notes  = 
+|haptic feedback hd controller models = 
+|digital movement supported = 
+|digital movement supported notes = 
+|simultaneous input        = true
+|simultaneous input notes  = 
+}}
+{{Network/Multiplayer
+|local play           = true
+|local play players   = 8
+|local play modes     = Co-op
+|local play notes     = 
+|lan play             = true
+|lan play players     = 8
+|lan play modes       = Co-op
+|lan play notes       = 
+|online play          = true
+|online play players  = 8
+|online play modes    = Co-op
+|online play notes    = Cross-play between GOG.com and Steam versions is supported.
+|asynchronous         = false
+|asynchronous notes   = 
+|crossplay            = true
+|crossplay platforms  = android, ios
+|crossplay notes      = Added with patch 1.6.9<ref>{{Refurl|url=https://www.stardewvalley.net/mobile-multiplayer-guide/|title=Experimental Mobile Multiplayer Guide|date=2025-02-07}}</ref>
+}}
+{{API
+|direct3d versions      = 9.0c
+|direct3d notes         = 
+|directdraw versions    = 
+|directdraw notes       = 
+|opengl versions        = 2.0
+|opengl notes           = 
+|glide versions         = 
+|glide notes            = 
+|software mode          = 
+|software mode notes    = 
+|mantle support         = 
+|mantle support notes   = 
+|metal support          = 
+|metal support notes    = 
+|vulkan versions        = 
+|vulkan notes           = 
+|dos modes              = 
+|dos modes notes        = 
+|shader model versions  = 3.0
+|shader model notes     = 
+|windows 32-bit exe     = true
+|windows 64-bit exe     = true
+|windows arm app        = unknown
+|windows exe notes      = The legacy compatibility version on Steam is 32-bit.
+|mac os x powerpc app   = unknown
+|macos intel 32-bit app = unknown
+|macos intel 64-bit app = true
+|macos arm app          = unknown
+|macos app notes        = 
+|linux 32-bit executable= unknown
+|linux 64-bit executable= true
+|linux arm app          = hackable
+|linux executable notes = ARM support: see [https://github.com/a9ix/ValleyCore ValleyCore]
+}}

@@ -151,6 +151,7 @@ public static class StutterCheckService
         AppAcceleration(inputs, items);
         Displays(inputs, items);
         Memory(inputs, items);
+        MemoryChannels(inputs, items);
         Drives(inputs, items);
         DriveSpace(inputs, items);
         Pcie(inputs, items);
@@ -234,6 +235,22 @@ public static class StutterCheckService
         else
         {
             items.Add(new("xmp", $"Memory at its rated {ram.SpeedMhz} MHz" + (ram.IsXmpActive ? " (XMP/EXPO on)" : ""), "", StutterVerdict.Fine));
+        }
+    }
+
+    private static void MemoryChannels(StutterCheckInputs inputs, List<StutterCheckItem> items)
+    {
+        var ram = inputs.Hardware?.Ram;
+        if (ram == null) return;
+        if (ram.IsSingleChannel)
+        {
+            items.Add(new("memory_channels", $"Only one memory stick is fitted, in a board with {ram.MemorySlots} slots",
+                "One stick runs on a single memory channel, which halves the bandwidth two sticks would have. Testing found anything from a few percent with a strong graphics card at high settings to around a third in CPU-limited games and on built-in graphics. A second matching stick in the right slot fixes it; the motherboard manual says which.",
+                StutterVerdict.NeedsLook, StutterAction.HelpTopic, "Here's how", "tweaks/stutter_channels"));
+        }
+        else if (ram.HasSeveralModules)
+        {
+            items.Add(new("memory_channels", $"Memory is fitted as {ram.InstalledModules} sticks", "", StutterVerdict.Fine));
         }
     }
 

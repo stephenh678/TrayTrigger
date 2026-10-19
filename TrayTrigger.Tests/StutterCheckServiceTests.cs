@@ -215,6 +215,33 @@ public class StutterCheckServiceTests
     }
 
     [Fact]
+    public void OneStickInABoardWithSeveralSlots_NeedsALook_WithTheChannelsPage()
+    {
+        var hw = new SystemHardwareReport { Ram = new RamHardwareInfo { InstalledModules = 1, MemorySlots = 4, ModulesAreSocketed = true } };
+        var item = StutterCheckService.Run(new StutterCheckInputs { Hardware = hw }).Items.Single(i => i.Id == "memory_channels");
+        Assert.Equal(StutterVerdict.NeedsLook, item.Verdict);
+        Assert.Equal("tweaks/stutter_channels", item.ActionArg);
+    }
+
+    [Theory]
+    [InlineData(1, 1, true)]   // a board with one slot has nothing to add
+    [InlineData(1, 4, false)]  // memory soldered to the board
+    [InlineData(0, 0, true)]   // nothing could be read
+    public void SingleChannel_IsLeftOut_WhenThereIsNothingToDo(int modules, int slots, bool socketed)
+    {
+        var hw = new SystemHardwareReport { Ram = new RamHardwareInfo { InstalledModules = modules, MemorySlots = slots, ModulesAreSocketed = socketed } };
+        Assert.DoesNotContain(StutterCheckService.Run(new StutterCheckInputs { Hardware = hw }).Items, i => i.Id == "memory_channels");
+    }
+
+    [Fact]
+    public void SeveralSticks_AreFine()
+    {
+        var hw = new SystemHardwareReport { Ram = new RamHardwareInfo { InstalledModules = 2, MemorySlots = 4, ModulesAreSocketed = true } };
+        var item = StutterCheckService.Run(new StutterCheckInputs { Hardware = hw }).Items.Single(i => i.Id == "memory_channels");
+        Assert.Equal(StutterVerdict.Fine, item.Verdict);
+    }
+
+    [Fact]
     public void GamesOnAHardDrive_AreCounted_AcrossDrives()
     {
         var hw = new SystemHardwareReport

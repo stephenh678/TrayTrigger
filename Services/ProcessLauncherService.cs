@@ -830,6 +830,11 @@ public partial class ProcessLauncherService
             else
             {
                 LoggingService.Verbose("Launcher", $"'{game.Name}' session closed without the game running ({reason}); rolling back its Performance Profile.");
+                if (LaunchProblems.DescribeUnseen(game.Name, reason) is var (unseenText, unseenDetail))
+                {
+                    ActivityService.Add(ActivityLevel.Problem, unseenText, subject: game.Name, detail: unseenDetail,
+                        groupKey: LaunchProblems.UnseenGroupKey(game.Id));
+                }
             }
         }
         catch (Exception ex)

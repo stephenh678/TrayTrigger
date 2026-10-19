@@ -1,0 +1,256 @@
+<!-- Excerpt of https://www.pcgamingwiki.com/wiki/Hades (CC BY-NC-SA 3.0, retrieved 2026-10-17). Only the templates TrayTrigger reads. -->
+{{Infobox game
+|cover        = Hades cover.jpg
+|developers   = 
+{{Infobox game/row/developer|Supergiant Games}}
+|publishers   = 
+|engines      = 
+{{Infobox game/row/engine|MonoGame|Early access|ref=<ref>{{Refurl|url=https://fearlessrevolution.com/viewtopic.php?f=2&t=8378|title=Hades|date=2020-02-29}}</ref>}}
+{{Infobox game/row/engine|The Forge|Release|ref=<ref>{{Refurl|url=https://github.com/ConfettiFX/The-Forge#supergiant-games-hades|title=The Forge on GitHub|date=2021-05-27|snippet=One of the on-going challenges was that [Supergiant Games] run-time was written in C#. At the beginning of 2019, we suggested to help them in building a new cross-platform game engine in C/C++ from scratch with The Forge.}}</ref><ref>{{Refurl|url=https://theforge.dev/2020-a-retrospective/|title=2020 - A Retrospective - The Forge|date=2021-05-27|snippet=One of the on-going challenges was that [Supergiant Games] run-time was written in C#. At the beginning of 2019, we suggested to help them in building a new cross-platform game engine in C/C++ from scratch with The Forge.}}</ref><ref>{{Refurl|url=https://www.youtube.com/watch?v=_rRan888rRY|title=How 6 Months of COVID-19 Quarantine Affected Life at Supergiant Games - Developing Hell #05|date=2021-05-27|snippet=Talks about Hades engine switch during the "March" section (04:15 - 06:27)}}</ref>}}
+|release dates= 
+{{Infobox game/row/date|Windows|September 17, 2020}}
+{{Infobox game/row/date|OS X|September 17, 2020}}
+|reception    = 
+{{Infobox game/row/reception|Metacritic|hades|93}}
+{{Infobox game/row/reception|OpenCritic|10181/hades|94}}
+{{Infobox game/row/reception|IGDB|hades--1|94}}
+|real ai level= 0
+|taxonomy     = 
+{{Infobox game/row/taxonomy/monetization      | One-time game purchase }}
+{{Infobox game/row/taxonomy/microtransactions | None }}
+{{Infobox game/row/taxonomy/modes             | Singleplayer }}
+{{Infobox game/row/taxonomy/pacing            | Real-time }}
+{{Infobox game/row/taxonomy/perspectives      | Bird's-eye view, Scrolling, Isometric }}
+{{Infobox game/row/taxonomy/controls          | Direct control }}
+{{Infobox game/row/taxonomy/genres            | ARPG, Hack and slash, Roguelike }}
+{{Infobox game/row/taxonomy/sports            | }}
+{{Infobox game/row/taxonomy/vehicles          | }}
+{{Infobox game/row/taxonomy/art styles        | Stylized }}
+{{Infobox game/row/taxonomy/themes            | Classical, Fantasy }}
+{{Infobox game/row/taxonomy/series            | Hades }}
+|steam appid  = 1145360
+|steam appid side  = 1206340
+|gogcom id    = 
+|gogcom id side = 
+|official site= https://www.supergiantgames.com/games/hades/
+|hltb         = 62941
+|igdb         = hades--1
+|lutris       = hades
+|strategywiki = Hades
+|mobygames    = 122190
+|wikipedia    = Hades (video game)
+|winehq       = 20174
+|license      = commercial
+}}
+{{Game data|
+{{Game data/config|Windows|{{p|userprofile\Documents}}\Saved Games\Hades\}}
+{{Game data/config|Microsoft Store|{{P|localappdata}}\Packages\SupergiantGamesLLC.Hades_q53c1yqmx7pha\SystemAppData\wgs}}
+{{Game data/config|OS X|{{P|osxhome}}/Library/Application Support/Supergiant Games/Hades/}}
+}}
+{{Game data|
+{{Game data/saves|Windows|{{p|userprofile\Documents}}\Saved Games\Hades\}}
+{{Game data/saves|Microsoft Store|{{P|localappdata}}\Packages\SupergiantGamesLLC.Hades_q53c1yqmx7pha\SystemAppData\wgs}}
+{{Game data/saves|OS X|{{P|osxhome}}/Library/Application Support/Supergiant Games/Hades/}}
+}}
+{{Save game cloud syncing
+|discord                   = 
+|discord notes             = 
+|epic games launcher       = true
+|epic games launcher notes = 
+|gog galaxy                = 
+|gog galaxy notes          = 
+|origin                    = 
+|origin notes              = 
+|icloud                    = 
+|icloud notes              = 
+|steam cloud               = true
+|steam cloud notes         = 
+|ubisoft connect           = 
+|ubisoft connect notes     = 
+|xbox cloud                = true
+|xbox cloud notes          = 
+}}
+{{Video
+|wsgf link                  = https://www.wsgf.org/dr/hades/en
+|widescreen wsgf award      = gold
+|multimonitor wsgf award    = limited
+|ultrawidescreen wsgf award = limited
+|4k ultra hd wsgf award     = gold
+|widescreen resolution      = true
+|widescreen resolution notes= Native 16:9 support (scaled up/down from the internal viewport of 1920x1080); see [[#16:10 (Steam Deck)|16:10 (Steam Deck)]] for 16:10 support.
+|multimonitor               = hackable
+|multimonitor notes         = See [[#Multi-monitor|Multi-monitor]].
+|ultrawidescreen            = hackable
+|ultrawidescreen notes      = See [[#Ultra-widescreen|Ultra-widescreen]].
+|4k ultra hd                = true
+|4k ultra hd notes          = Upscaled from the internal viewport of 1920x1080.
+|fov                        = n/a
+|fov notes                  = 
+|windowed                   = true
+|windowed notes             = See [[#Windowed|Windowed]].
+|borderless windowed        = true
+|borderless windowed notes  = See [[#Windowed|Windowed]].
+|anisotropic                = n/a
+|anisotropic notes          = 
+|antialiasing               = n/a
+|antialiasing notes         = 
+|upscaling                  = false
+|upscaling tech             = 
+|upscaling notes            = 
+|framegen                   = unknown
+|framegen tech              = 
+|framegen notes             = 
+|vsync                      = true
+|vsync notes                = 
+|60 fps                     = true
+|60 fps notes               = 
+|120 fps                    = true
+|120 fps notes              = 
+|hdr                        = false
+|hdr notes                  = 
+|ray tracing                = unknown
+|ray tracing notes          = 
+|color blind                = false
+|color blind notes          = 
+}}
+{{Input
+|key remap                 = true
+|key remap notes           = 
+|acceleration option       = false
+|acceleration option notes = 
+|mouse sensitivity         = n/a
+|mouse sensitivity notes   = 
+|mouse menu                = true
+|mouse menu notes          = 
+|keyboard and mouse prompts = true
+|keyboard and mouse prompts notes =
+|invert mouse y-axis       = n/a
+|invert mouse y-axis notes = 
+|touchscreen               = unknown
+|touchscreen notes         = 
+|controller support        = true
+|controller support notes  = 
+|full controller           = true
+|full controller notes     = 
+|controller remap          = limited
+|controller remap notes    = by default: Gameplay Bindings will be based on Controller Type's Face button layout.<ref>{{Refcheck|user=Al2009man|date=2024-12-08|comment=Tested between PlayStation and Nintendo controllers. For example: starting the game with a DualSense controller will be based on Xbox/PlayStation layout...but if you swap with a Nintendo Switch Pro Controller: the gameplay bindings will follow the Nintendo layout. However: if you start the game with a Nintendo Switch Pro Controller: it'll follow the Xbox prompts, but if you swap with a PlayStation controller midway: it'll switch to Nintendo layout instead. <br><br>The workaround is to either rebind or reset gameplay bindings and it'll correct itself.}}</ref>
+|controller sensitivity    = n/a
+|controller sensitivity notes= Configurable deadzone.
+|invert controller y-axis  = n/a
+|invert controller y-axis notes= 
+|xinput controllers        = true
+|xinput controllers notes  = 
+|xbox prompts              = true
+|xbox prompts notes        = 
+|impulse triggers          = false
+|impulse triggers notes    = 
+|directinput controllers       = 
+|directinput controllers notes = 
+|directinput prompts           = 
+|directinput prompts notes     = 
+|playstation controllers   = true
+|playstation controller models = DualShock 4, DualSense, DualSense Edge
+|playstation controllers notes = 
+|playstation prompts       = true
+|playstation prompts notes = 
+|playstation motion sensors = false
+|playstation motion sensors modes =
+|playstation motion sensors notes =
+|light bar support         = true
+|light bar support notes   = Lightbar only works for DualShock 4 controllers when connected via Wired. <br/><br/>The light color varies depending on power-ups. 
+|dualsense adaptive trigger support = false
+|dualsense adaptive trigger support notes =
+|dualsense haptics support  = false
+|dualsense haptics support notes =
+|playstation connection modes = Wired, Dongle, Bluetooth
+|playstation connection modes notes = 
+|nintendo controllers          = true
+|nintendo controller models    = switch pro controller
+|nintendo controllers notes     = 
+|nintendo prompts              = true
+|nintendo prompts notes        = 
+|nintendo button layout        = limited
+|nintendo button layout notes  = Nintendo Layout is used for Menu Navigation only, while gameplay is based on your current bindings. 
+|nintendo motion sensors       = false
+|nintendo motion sensors modes = 
+|nintendo motion sensors notes = 
+|nintendo connection modes     = usb, bluetooth
+|nintendo connection modes notes = 
+|tracked motion controllers= unknown
+|tracked motion controllers notes = 
+|tracked motion prompts    = unknown
+|tracked motion prompts notes = 
+|other controllers         = true
+|other controllers notes   = 
+|peripheral devices            = 
+|peripheral device types       = 
+|peripheral devices notes      = 
+|other button prompts      = unknown
+|other button prompts notes= 
+|controller hotplug        = false
+|controller hotplug notes  = 
+|input prompt override  = false
+|input prompt override notes =
+|haptic feedback           = true
+|haptic feedback notes     = 
+|haptic feedback hd        = 
+|haptic feedback hd notes  = 
+|haptic feedback hd controller models = 
+|digital movement supported = true
+|digital movement supported notes= 
+|simultaneous input        = true
+|simultaneous input notes  = 
+|steam input api           = false
+|steam input api notes     = 
+|steam hook input          = true
+|steam hook input notes    = 
+|steam input prompts = limited
+|steam input prompts icons = xbox, playstation, nintendo, steam
+|steam input prompts styles = in-game
+|steam input prompts notes = Using a DualSense or Nintendo Controllers may display incorrect prompts, showing Steam Controller or Xbox 360 button icons instead.<ref>{{Refcheck|user=Al2009man|date=2024-12-08|comment=Enabling Steam Input mode and connect a DualSense and Nintendo Switch Pro Controller. it'll show Xbox 360 and/or Steam Controller prompts based on the current menu section. <br><br>[https://store.steampowered.com/news/app/1145360/view/3056223484266320295 This bug was most likely introduced around the February 2nd, 2021 Patch.}}</ref>
+|steam deck prompts  = true
+|steam deck prompts notes = 
+|steam controller prompts  = true
+|steam controller prompts notes = 
+|steam input motion sensors = false
+|steam input motion sensors modes =
+|steam input motion sensors notes =
+|steam input presets       = limited
+|steam input presets notes = uses default Gamepad Template
+|steam cursor detection    = unknown
+|steam cursor detection notes = 
+}}
+{{API
+|direct3d versions      = 11
+|direct3d notes         = 
+|directdraw versions    = 
+|directdraw notes       = 
+|opengl versions        = 
+|opengl notes           = 
+|glide versions         = 
+|glide notes            = 
+|software mode          = 
+|software mode notes    = 
+|mantle support         = 
+|mantle support notes   = 
+|metal support          = true
+|metal support notes    = 
+|vulkan versions        = 1.1
+|vulkan notes           = Added with an update released on October 27, 2020.<ref>{{Refurl|url=https://steamcommunity.com/games/1145360/announcements/detail/2958261948859213498|title=Post-Launch Patch - October 27, 2020|date=2020-11-03}}</ref>
+|dos modes              = 
+|dos modes notes        = 
+|shader model versions  = 
+|shader model notes     = 
+|windows 32-bit exe     = true
+|windows 64-bit exe     = true
+|windows arm app        = unknown
+|windows exe notes      = 
+|macos intel 32-bit app = false
+|macos intel 64-bit app = true
+|macos arm app          = 
+|macos app notes        = 
+|linux 32-bit executable= 
+|linux 64-bit executable= 
+|linux arm app          = unknown
+|linux executable notes = 
+}}

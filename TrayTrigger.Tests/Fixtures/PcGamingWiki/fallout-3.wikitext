@@ -1,0 +1,238 @@
+<!-- Excerpt of https://www.pcgamingwiki.com/wiki/Fallout_3 (CC BY-NC-SA 3.0, retrieved 2026-10-17). Only the templates TrayTrigger reads. -->
+{{Infobox game
+|cover        = Fallout 3 cover.jpg
+|developers   = 
+{{Infobox game/row/developer|Bethesda Game Studios}}
+|publishers   = 
+{{Infobox game/row/publisher|Bethesda Softworks}}
+|engines      = 
+{{Infobox game/row/engine|Gamebryo (TES Engine)}}
+|release dates= 
+{{Infobox game/row/date|Windows|October 28, 2008}}
+|reception    = 
+{{Infobox game/row/reception|Metacritic|fallout-3|91}}
+{{Infobox game/row/reception|IGDB|fallout-3|89}}
+|real ai level= 0
+|taxonomy     = 
+{{Infobox game/row/taxonomy/monetization      | One-time game purchase, DLC, Subscription gaming service }}
+{{Infobox game/row/taxonomy/microtransactions | None }}
+{{Infobox game/row/taxonomy/modes             | Singleplayer }}
+{{Infobox game/row/taxonomy/pacing            | Real-time }}
+{{Infobox game/row/taxonomy/perspectives      | First-person, Third-person }}
+{{Infobox game/row/taxonomy/controls          | Direct control }}
+{{Infobox game/row/taxonomy/genres            | ARPG, Open world, Shooter }}
+{{Infobox game/row/taxonomy/sports            | }}
+{{Infobox game/row/taxonomy/vehicles          | }}
+{{Infobox game/row/taxonomy/art styles        | Realistic }}
+{{Infobox game/row/taxonomy/themes            | North America, Post-apocalyptic, Sci-fi }}
+{{Infobox game/row/taxonomy/series            | Fallout }}
+|steam appid  = 22300
+|steam appid side  = 22400, 22410, 22420, 22430, 22440, 22370
+|gogcom id    = 1248282609
+|gogcom id side = 1454315831
+|official site= https://web.archive.org/web/20081226062326/http://www.bethsoft.com/eng/games/games_fallout3.html
+|hltb         = 3340
+|lutris       = fallout-3-game-of-the-year-edition
+|mobygames    = 37167
+|strategywiki = Fallout 3
+|wikipedia    = Fallout 3
+|winehq       = 8559
+|license      = commercial
+}}
+{{Game data|
+{{Game data/config|Windows|{{p|userprofile\Documents}}\My Games\Fallout3\*.ini}}
+{{Game data/config|Microsoft Store|}}
+}}
+{{Game data|
+{{Game data/saves|Windows|{{p|userprofile\Documents}}\My Games\Fallout3\Saves\}}
+{{Game data/saves|Microsoft Store|}}
+}}
+{{Save game cloud syncing
+|discord                   = 
+|discord notes             = 
+|epic games launcher       = true
+|epic games launcher notes = 
+|gog galaxy                = true
+|gog galaxy notes          = 
+|origin                    = 
+|origin notes              = 
+|icloud                    = 
+|icloud notes              = 
+|steam cloud               = true
+|steam cloud notes         = 
+|ubisoft connect           = 
+|ubisoft connect notes     = 
+|xbox cloud                = false
+|xbox cloud notes          = 
+}}
+{{Video
+|wsgf link                  = https://www.wsgf.org/dr/fallout-3
+|widescreen wsgf award      = silver
+|multimonitor wsgf award    = silver
+|ultrawidescreen wsgf award = silver
+|4k ultra hd wsgf award     = incomplete
+|widescreen resolution      = true
+|widescreen resolution notes= 
+|multimonitor               = hackable
+|multimonitor notes         = See [[#Multi-monitor|Multi-monitor]].
+|ultrawidescreen            = hackable
+|ultrawidescreen notes      = See [[#Ultra-widescreen|Ultra-widescreen]].
+|4k ultra hd                = true
+|4k ultra hd notes          = 
+|fov                        = hackable
+|fov notes                  = See [[#Field of view (FOV)|Field of view (FOV)]].
+|windowed                   = true
+|windowed notes             = 
+|borderless windowed        = hackable
+|borderless windowed notes  = Install [https://www.nexusmods.com/fallout3/mods/25485 OneTweak] followed by [[#Fallout_3_Script_Extender_.28FOSE.29|FOSE]] and enable the windowed mode in the launcher.
+|anisotropic                = true
+|anisotropic notes          = Set in launcher. Up to 15 samples.
+|antialiasing               = true
+|antialiasing notes         = Set in launcher. Up to 8x [[MSAA]]. [[SGSSAA]] can be achieved on Nvidia systems with flag <code>0x000010C1</code>.
+|upscaling                  = unknown
+|upscaling tech             = 
+|upscaling notes            = 
+|framegen                   = unknown
+|framegen tech              = 
+|framegen notes             = 
+|vsync                      = always on
+|vsync notes                = Double Buffering.
+Toggle in launcher is broken. Set <code>iPresentInterval=0</code> in [[#Game data|fallout.ini]] to disable.
+|60 fps                     = true
+|60 fps notes               = 
+|120 fps                    = hackable
+|120 fps notes              = See [[#High frame rate|High frame rate]].
+|hdr                        = false
+|hdr notes                  = Rendered image uses {{term|SDR}} color space. In-game {{term|HDR}} option refers only to {{term|HDR Rendering}}.
+|ray tracing                = false
+|ray tracing notes          = 
+|color blind                = false
+|color blind notes          = 
+}}
+{{Input
+|key remap                 = true
+|key remap notes           = 
+|acceleration option       = hackable
+|acceleration option notes = Enabled by default; see [[#Mouse acceleration|Mouse acceleration]].
+|mouse sensitivity         = true
+|mouse sensitivity notes   = 
+|mouse menu                = true
+|mouse menu notes          = 
+|invert mouse y-axis       = true
+|invert mouse y-axis notes = 
+|controller support        = true
+|controller support notes  = Native XInput controller support.
+|full controller           = false
+|full controller notes     = Partial support
+|controller remap          = unknown
+|controller remap notes    = 
+|controller sensitivity    = unknown
+|controller sensitivity notes= 
+|invert controller y-axis  = unknown
+|invert controller y-axis notes= 
+|touchscreen               = false
+|touchscreen notes         = 
+|xinput controllers        = unknown
+|xinput controllers notes  = 
+|xbox prompts              = unknown
+|xbox prompts notes        = 
+|impulse triggers          = unknown
+|impulse triggers notes    = 
+|dualshock 4               = unknown
+|dualshock 4 notes         = 
+|dualshock prompts         = unknown
+|dualshock prompts notes   = 
+|light bar support         = false
+|light bar support notes   = 
+|dualshock 4 modes         = unknown
+|dualshock 4 modes notes   = 
+|nintendo controllers          = 
+|nintendo controller models    = 
+|nintendo controllers notes    = 
+|nintendo prompts              = 
+|nintendo prompts notes        = 
+|nintendo button layout        = 
+|nintendo button layout notes  = 
+|nintendo motion sensors       = 
+|nintendo motion sensors modes = 
+|nintendo motion sensors notes = 
+|nintendo connection modes     = 
+|nintendo connection modes notes = 
+|tracked motion controllers= unknown
+|tracked motion controllers notes = 
+|tracked motion prompts    = unknown
+|tracked motion prompts notes = 
+|other controllers         = unknown
+|other controllers notes   = 
+|peripheral devices            = 
+|peripheral device types       = 
+|peripheral devices notes      = 
+|other button prompts      = unknown
+|other button prompts notes= 
+|button prompts            = Xbox
+|button prompts notes      = For DualShock, use the [https://www.nexusmods.com/fallout3/mods/23538 Playstation 4 Controller] mod.
+|controller hotplug        = unknown
+|controller hotplug notes  = 
+|input prompt override         = 
+|input prompt override notes   = 
+|haptic feedback           = true
+|haptic feedback notes     = 
+|haptic feedback hd        = 
+|haptic feedback hd notes  = 
+|haptic feedback hd controller models = 
+|digital movement supported = 
+|digital movement supported notes = 
+|simultaneous input        = false
+|simultaneous input notes  = 
+|steam input api           = unknown
+|steam input api notes     = 
+|steam hook input          = unknown
+|steam hook input notes    = 
+|steam input motion sensors    = 
+|steam input motion sensors modes = 
+|steam input motion sensors notes = 
+|steam input presets       = unknown
+|steam input presets notes = 
+|steam input prompts           = 
+|steam input prompts icons     = 
+|steam input prompts styles    = 
+|steam input prompts notes     = 
+|steam deck prompts            = 
+|steam deck prompts notes      = 
+|steam controller prompts  = unknown
+|steam controller prompts notes = 
+|steam cursor detection    = unknown
+|steam cursor detection notes = 
+}}
+{{API
+|direct3d versions      = 9.0c
+|direct3d notes         = 
+|directdraw versions    = 
+|directdraw notes       = 
+|opengl versions        = 
+|opengl notes           = 
+|glide versions         = 
+|glide notes            = 
+|software mode          = 
+|software mode notes    = 
+|mantle support         = 
+|mantle support notes   = 
+|vulkan versions        = 
+|vulkan notes           = 
+|dos modes              = 
+|dos modes notes        = 
+|shader model versions  = 3.0
+|shader model notes     = 
+|windows 32-bit exe     = true
+|windows 64-bit exe     = false
+|windows arm app        = false
+|windows exe notes      = 
+|macos intel 32-bit app = 
+|macos intel 64-bit app = 
+|macos arm app          = unknown
+|macos app notes        = 
+|linux 32-bit executable= 
+|linux 64-bit executable= 
+|linux arm app          = unknown
+|linux executable notes = 
+}}

@@ -18,6 +18,16 @@ public class AppSettingsDefaultsTests
         Assert.False(settings.UseSteamGridDbArt);
     }
 
+    /// <summary>
+    /// PCGamingWiki's facts need no key, so nothing else holds them back: the setting is the opt-in that
+    /// decides whether opening a game's details sends its Steam App ID or name to the wiki.
+    /// </summary>
+    [Fact]
+    public void PcGamingWikiFacts_DefaultToDisabled()
+    {
+        Assert.False(new AppSettings().UsePcGamingWikiFacts);
+    }
+
     /// <summary>The tray menu starts compact (1.5.0), so a long library fits without scrolling.</summary>
     [Fact]
     public void CompactTrayMenu_DefaultsToOn()

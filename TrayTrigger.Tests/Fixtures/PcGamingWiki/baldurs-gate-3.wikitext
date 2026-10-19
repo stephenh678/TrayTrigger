@@ -1,0 +1,278 @@
+<!-- Excerpt of https://www.pcgamingwiki.com/wiki/Baldur's_Gate_3 (CC BY-NC-SA 3.0, retrieved 2026-10-17). Only the templates TrayTrigger reads. -->
+{{Infobox game
+|cover        = Baldur's Gate III cover.jpg
+|developers   = 
+{{Infobox game/row/developer|Larian Studios}}
+|publishers   = 
+|engines      = 
+{{Infobox game/row/engine|Divinity Engine|name=Divinity Engine 4.0}}
+|release dates= 
+{{Infobox game/row/date|Windows|August 3, 2023}}
+{{Infobox game/row/date|OS X|September 22, 2023}}
+{{Infobox game/row/date|Linux|September 23, 2025}}
+|reception    = 
+{{Infobox game/row/reception|Metacritic|baldurs-gate-3|96}}
+{{Infobox game/row/reception|OpenCritic|9136/baldurs-gate-3|96}}
+{{Infobox game/row/reception|IGDB|baldurs-gate-3|93}}
+|real ai level= 2
+|taxonomy     = 
+{{Infobox game/row/taxonomy/monetization      | One-time game purchase }}
+{{Infobox game/row/taxonomy/microtransactions | Cosmetic }}
+{{Infobox game/row/taxonomy/modes             | Singleplayer, Multiplayer }}
+{{Infobox game/row/taxonomy/pacing            | Turn-based }}
+{{Infobox game/row/taxonomy/perspectives      | Bird's-eye view }}
+{{Infobox game/row/taxonomy/controls          | Multiple select, Point and select }}
+{{Infobox game/row/taxonomy/genres            | Adventure, RPG, Exploration, Open world }}
+{{Infobox game/row/taxonomy/sports            | }}
+{{Infobox game/row/taxonomy/vehicles          | }}
+{{Infobox game/row/taxonomy/art styles        | }}
+{{Infobox game/row/taxonomy/themes            | Fantasy }}
+{{Infobox game/row/taxonomy/series            | Baldur's Gate }}
+|steam appid  = 1086940
+|steam appid side  = 2378500
+|gogcom id    = 1456460669
+|gogcom id side = 1157299235
+|official site= https://baldursgate3.game/
+|hltb         = 68033
+|igdb         = <!-- Only needs to be set if there is no IGDB reception row -->
+|lutris       = baldurs-gate-3
+|mobygames    = 150689
+|strategywiki = 
+|wikipedia    = Baldur's Gate III
+|winehq       = 20233
+|license      = commercial
+}}
+{{Game data|
+{{Game data/config|Windows|{{p|localappdata}}\Lari'an Studios\Baldur's Gate 3\PlayerProfiles\|{{p|localappdata}}\Larian Studios\Baldur's Gate 3\graphicSettings.lsx|{{p|localappdata}}\Larian Studios\Baldur's Gate 3\analytics.lsx|{{p|localappdata}}\Larian Studios\Baldur's Gate 3\imgui.ini}}
+{{Game data/config|OS X|{{p|osxhome}}/Documents/Larian Studios/Baldur's Gate 3/PlayerProfiles/}}
+{{Game data/config|Linux|{{p|xdgdatahome}}/Larian Studios/Baldur's Gate 3/PlayerProfiles/}}
+}}
+{{Game data|
+{{Game data/saves|Windows|{{p|localappdata}}\Larian Studios\Baldur's Gate 3\PlayerProfiles\Public\Savegames\Story\}}
+{{Game data/saves|Steam|{{p|steam}}\userdata\{{p|uid}}\1086940\remote}}
+{{Game data/saves|OS X|{{p|osxhome}}/Documents/Larian Studios/Baldur's Gate 3/PlayerProfiles/Public/Savegames/Story/}}
+{{Game data/saves|Linux|{{p|xdgdatahome}}/Larian Studios/Baldur's Gate 3/PlayerProfiles/Public/Savegames/Story/}}
+}}
+{{Save game cloud syncing
+|discord                   = 
+|discord notes             = 
+|epic games launcher       = 
+|epic games launcher notes = 
+|gog galaxy                = true
+|gog galaxy notes          = Must opt-in within Options Menu.
+|origin                    = 
+|origin notes              = 
+|icloud                    = 
+|icloud notes              = 
+|steam cloud               = true
+|steam cloud notes         = <ref name="Steam-Store-Page-2019-06-06">{{Refurl|url=https://store.steampowered.com/app/1086940/Baldurs_Gate_III/|title=Steam - Baldur's Gate III|date=2019-06-06}}</ref>
+|ubisoft connect           = 
+|ubisoft connect notes     = 
+|xbox cloud                = unknown
+|xbox cloud notes          = 
+}}
+{{Video
+|wsgf link                  = 
+|widescreen wsgf award      = 
+|multimonitor wsgf award    = 
+|ultrawidescreen wsgf award = 
+|4k ultra hd wsgf award     = 
+|widescreen resolution      = true
+|widescreen resolution notes= 
+|multimonitor               = unknown
+|multimonitor notes         = 
+|ultrawidescreen            = true
+|ultrawidescreen notes      = {{term|Hor+}} scaling.<ref>{{Refcheck|user=Rose|date=2020-10-08|comment=Screenshots taken at 2560x1080 (native), 3840x1080, 5760x1080, 1920x1080 and compared.}}</ref>
+|4k ultra hd                = true
+|4k ultra hd notes          = <ref>{{Refcheck|user=Rose|date=2020-10-08|comment=Applying a custom 3840x2160 resolution in the settings resulted in a significant decrease in FPS.}}</ref>
+|fov                        = hackable
+|fov notes                  = Use [https://www.nexusmods.com/baldursgate3/mods/945 Native Camera Tweaks].
+|windowed                   = true
+|windowed notes             = 
+|borderless windowed        = true
+|borderless windowed notes  = 
+|anisotropic                = true
+|anisotropic notes          = Up to 16x.
+|antialiasing               = true
+|antialiasing notes         = [[FXAA]], [[SMAA]], [[TAA]], [[DLAA]] and [[XeSS Native]] . 
+|upscaling                  = true
+|upscaling tech             = DLSS 2.4.2, FSR 1.0, FSR 2.2, XeSS 2
+|upscaling notes            = FSR 2.2 quietly added in Patch 4 (v4.1.1.3882084).<ref>{{Refurl|url=https://www.gamingonlinux.com/2023/11/baldurs-gate-3-patch-4-brings-amd-fsr-22-looking-better-on-steam-deck/|title=Baldur's Gate 3 patch 4 brings AMD FSR 2.2, looking better on Steam Deck <nowiki>|</nowiki> GamingOnLinux|date=2023-11-02}}</ref><ref>{{Refurl|url=https://twitter.com/Cromwelp/status/1720110955906904339|title=Cromwelp on X|date=2023-11-02|snippet=Very AFK on X: "Patch 4 also includes FSR 2.2, which improves image quality on Steam Deck! Eager to try it myself."}}</ref><br>XeSS support added in Hotfix 34 (v4.1.1.6931813).<ref>{{Refurl|url=https://store.steampowered.com/news/app/1086940/view/511843343389426278|title=Baldur's Gate 3 - Hotfix #34 Now Live! - Steam News|date=2025-09-30}}</ref><ref>{{Refurl|url=https://x.com/larianstudios/status/1973010068556882076|title=Larian Studios on X|snippet=uh, we may have also forgotten to mention that @baldursgate3 now supports Intel's new Super Sampling tech, XeSS, available on DX11 for Intel Xe cards and on Vulkan for Intel Xe and other vendors' cards.|date=2025-09-30}}</ref>
+|framegen                   = unknown
+|framegen tech              = 
+|framegen notes             = 
+|vsync                      = true
+|vsync notes                = Double and triple buffering selectable.
+|60 fps                     = true
+|60 fps notes               = 
+|120 fps                    = true
+|120 fps notes              = Framerate cap can be manually configured (10-240 FPS) or entirely disabled.
+|hdr                        = true
+|hdr notes                  = As of the full game release, Vulkan version also supports HDR.<ref>{{Refurl|url=https://www.reddit.com/r/BaldursGate3/comments/15hwa99/hdr_settings_dx11_vs_vulkan/|title=r/BaldursGate3 - HDR settings - dx11 vs Vulkan|date=2023-08-12}}</ref><ref>{{Refurl|url=https://steamcommunity.com/app/1086940/discussions/0/3808408328761421358/|title=Steam Community Discussion - Bug: Too dark UI and screen with HDR on Vulkan on Release|date=2023-08-12}}</ref> Automatically enables when support is detected and cannot be disabled manually.<ref>{{Refcheck|user=13xforever|date=2023-08-12|comment=}}</ref> It is possible to verify the game is using HDR when the '''Gamma Correction''' option is replaced with '''HDR Calibration''' in video settings. [https://www.nexusmods.com/baldursgate3/mods/15892 RenoDX] greatly improves existing implementation.
+|ray tracing                = false
+|ray tracing notes          = 
+|color blind                = true
+|color blind notes          = Settings for protanopia, deuteranopia, and tritanopia added in Patch 4 (v4.1.1.3882084).<ref name="BG3Patch4">{{Refurl|url=https://baldursgate3.game/news/patch-4-now-live_96|title=Patch #4 Now Live! - Baldur's Gate 3|date=2023-11-02}}</ref>
+}}
+{{Input
+|key remap                 = true
+|key remap notes           = 
+|acceleration option       = false
+|acceleration option notes = 
+|mouse sensitivity         = false
+|mouse sensitivity notes   = 
+|mouse menu                = true
+|mouse menu notes          = 
+|keyboard and mouse prompts = true
+|keyboard and mouse prompts notes = If the player uses a keyboard such as QWERTZ or AZERTY, the UI will not change the key prompts (e.g. the Jump command is still shown as using the {{key|Z}} key, but is actually handled by the {{key|Y}} key on a QWERTZ keyboard).<ref>{{Refurl|url=https://steamcommunity.com/app/1086940/discussions/0/3818529563396022758/|title=AZERTY :: Baldur's Gate 3 General Discussions|date=2023-09-03}}</ref><ref>{{Refcheck|user=Plok|date=2023-09-03|comment=Observed in full release and post-launch patches, running on a QWERTZ (Croatian layout) keyboard.}}</ref>
+|invert mouse y-axis       = n/a
+|invert mouse y-axis notes = 
+|touchscreen               = unknown
+|touchscreen notes         = 
+|controller support        = true
+|controller support notes  = <ref>{{Refurl|url=https://steamcommunity.com/app/1086940/discussions/0/3764482382514300332/|date=2023-08-04}}</ref>
+|full controller           = limited
+|full controller notes     = Larian Launcher can't be fully navigated with a game controller, but it can be bypassed via {{code|--skip-launcher}} launch command.
+|controller remap          = false
+|controller remap notes    = Only a default control set is available (see image below).
+|controller sensitivity    = false
+|controller sensitivity notes= 
+|invert controller y-axis  = false
+|invert controller y-axis notes= 
+|xinput controllers        = true
+|xinput controllers notes  = 
+|xbox prompts              = true
+|xbox prompts notes        = 
+|impulse triggers          = unknown
+|impulse triggers notes    = 
+|directinput controllers       = 
+|directinput controllers notes = 
+|directinput prompts           = 
+|directinput prompts notes     = 
+|playstation controllers   = true
+|playstation controller models = DS4, DS
+|playstation controllers notes = 
+|playstation prompts       = true
+|playstation prompts notes = 
+|playstation motion sensors = false
+|playstation motion sensors modes =
+|playstation motion sensors notes =
+|light bar support         = true
+|light bar support notes   = 
+|dualsense adaptive trigger support = false
+|dualsense adaptive trigger support notes =
+|dualsense haptics support  = false
+|dualsense haptics support notes = 
+|playstation connection modes = Wired, Wireless
+|playstation connection modes notes = 
+|nintendo controllers          = 
+|nintendo controller models    = 
+|nintendo controllers notes    = 
+|nintendo prompts              = 
+|nintendo prompts notes        = 
+|nintendo button layout        = 
+|nintendo button layout notes  = 
+|nintendo motion sensors       = 
+|nintendo motion sensors modes = 
+|nintendo motion sensors notes = 
+|nintendo connection modes     = 
+|nintendo connection modes notes = 
+|tracked motion controllers= unknown
+|tracked motion controllers notes = 
+|tracked motion prompts    = unknown
+|tracked motion prompts notes = 
+|other controllers         = true
+|other controllers notes   = Native Switch Pro support, as well as other controllers supported by SDL2
+|peripheral devices            = 
+|peripheral device types       = 
+|peripheral devices notes      = 
+|other button prompts      = Nintendo
+|other button prompts notes= 
+|controller hotplug        = true
+|controller hotplug notes  = Separate controller UI takes a second to switch
+|input prompt override  = true
+|input prompt override notes = Option to select button prompt style was added in Patch 1<ref>{{Refurl|url=https://baldursgate3.game/news/patch-1-now-live_87|title=Patch #1 changelog|date=2023-08-25|snippet=}}</ref>. Using a Game Controller or setting [Input Mode] to "Controller only" is required.
+|haptic feedback           = true
+|haptic feedback notes     = 
+|haptic feedback hd        = 
+|haptic feedback hd notes  = 
+|haptic feedback hd controller models = 
+|digital movement supported = 
+|digital movement supported notes = 
+|simultaneous input        = true
+|simultaneous input notes  = By Default: [Input Mode] is set to "Automatic" and the game will switch input methods alongside UI, but Controller or Keyboard/Mouse Input modes can be forced.
+|steam input api           = false
+|steam input api notes     = 
+|steam hook input          = true
+|steam hook input notes    = {{cn|date=2025-08-06|reason=at some point between Patch 7 and Patch 8: Larian Studios updated their version of SDL2 to 2.30.6, which will include Steam Virtual Gamepad/Hook Input support.}}
+|steam input prompts = true
+|steam input prompts icons = xbox, playstation
+|steam input prompts styles = in-game
+|steam input prompts notes =
+|steam deck prompts  = false
+|steam deck prompts notes = 
+|steam controller prompts  = false
+|steam controller prompts notes = 
+|steam input motion sensors = false
+|steam input motion sensors modes =
+|steam input motion sensors notes =
+|steam input presets       = unknown
+|steam input presets notes = 
+|steam cursor detection    = unknown
+|steam cursor detection notes = 
+}}
+{{Network/Multiplayer
+|local play           = true
+|local play players   = 2
+|local play modes     = Co-op 
+|local play notes     = Splitscreen not officially supported on minimum spec machines and Steam Deck. 
+|lan play             = true
+|lan play players     = 4
+|lan play modes       = Co-op
+|lan play notes       = 
+|online play          = true
+|online play players  = 4
+|online play modes    = Co-op
+|online play notes    = 
+|asynchronous         = false
+|asynchronous notes   = 
+|crossplay            = true
+|crossplay platforms  = PlayStation 5, Xbox Series
+|crossplay notes      = Cross-store multiplayer supported between Windows and macOS since early access,<ref name="Steam-Store-Page-2019-06-06"/> and consoles since Patch 8 (4.1.1.6758295) from April 15, 2025.<ref>{{Refurl|url=https://baldursgate3.game/news/the-final-patch-new-subclasses-photo-mode-and-cross-play_138|title=Baldur's Gate 3 - The Final Patch: New Subclasses, Photo Mode, and Cross-Play|date=2025-04-15}}</ref> The latter requires integration with a Larian account.<ref>{{Refurl|url=https://larian.com/support/faqs/cross-play-hosting-or-joining-a-game_117|title=Support - Larian Studios - Cross-play: Hosting or Joining a Game|date=2025-04-15}}</ref>
+}}
+{{API
+|direct3d versions      = 11
+|direct3d notes         = 
+|directdraw versions    = 
+|directdraw notes       = 
+|wing                   = 
+|wing notes             = 
+|opengl versions        = 
+|opengl notes           = 
+|glide versions         = 
+|glide notes            = 
+|software mode          = 
+|software mode notes    = 
+|mantle support         = 
+|mantle support notes   = 
+|metal support          = true
+|metal support notes    = 
+|vulkan versions        = 1.1
+|vulkan notes           = 
+|dos modes              = 
+|dos modes notes        = 
+|shader model versions  = 
+|shader model notes     = 
+|windows 32-bit exe     = false
+|windows 64-bit exe     = true
+|windows arm app        = false
+|windows exe notes      = 
+|macos intel 32-bit app = false
+|macos intel 64-bit app = true
+|macos arm app          = true
+|macos app notes        = 
+|linux 32-bit executable= false
+|linux 64-bit executable= limited
+|linux arm app          = false
+|linux executable notes = The Linux native binaries are only officially supported on Steam Deck, however, it can run on other Linux machines.
+}}

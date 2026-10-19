@@ -427,21 +427,33 @@ public partial class SystemInfoService
             // Speed = the module's rated/capable speed (e.g. 6000 for DDR5-6000); ConfiguredClockSpeed
             // is what it's actually running at right now - lower than Speed means XMP/EXPO isn't active
             // and the module is running at its JEDEC default instead of its rated speed.
-            using var searcher = new ManagementObjectSearcher("SELECT Speed, ConfiguredClockSpeed FROM Win32_PhysicalMemory");
+            using var searcher = new ManagementObjectSearcher("SELECT Speed, ConfiguredClockSpeed, FormFactor FROM Win32_PhysicalMemory");
+            int modules = 0, socketed = 0;
             foreach (ManagementObject obj in searcher.Get())
             {
                 using (obj)
                 {
+                    modules++;
+                    // FormFactor 8 = DIMM, 12 = SODIMM; anything else (row of chips, unknown) is memory on the board itself.
+                    if ((obj["FormFactor"] as ushort? ?? 0) is 8 or 12) socketed++;
                     uint rated = obj["Speed"] as uint? ?? 0;
                     uint configured = obj["ConfiguredClockSpeed"] as uint? ?? 0;
-                    if (configured > 0)
+                    if (configured > 0 && ram.SpeedMhz == 0)
                     {
                         ram.SpeedMhz = (int)configured;
                         ram.RatedSpeedMhz = (int)rated;
                         ram.IsXmpActive = rated > 0 && configured >= rated;
-                        break;
                     }
                 }
+            }
+            ram.InstalledModules = modules;
+            ram.ModulesAreSocketed = modules > 0 && socketed == modules;
+
+            using var array = new ManagementObjectSearcher("SELECT MemoryDevices FROM Win32_PhysicalMemoryArray");
+            foreach (ManagementObject obj in array.Get())
+            {
+                using (obj)
+                    ram.MemorySlots += (int)(obj["MemoryDevices"] as ushort? ?? 0);
             }
         }
         catch (Exception ex)

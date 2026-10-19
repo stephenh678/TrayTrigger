@@ -1,0 +1,242 @@
+<!-- Excerpt of https://www.pcgamingwiki.com/wiki/Dota_2 (CC BY-NC-SA 3.0, retrieved 2026-10-17). Only the templates TrayTrigger reads. -->
+{{Infobox game
+|cover        = Dota 2 cover.jpg
+|developers   = 
+{{Infobox game/row/developer|Valve Corporation}}
+|publishers   = 
+|engines      = 
+{{Infobox game/row/engine|Source|Former}}
+{{Infobox game/row/engine|Source 2}}
+|release dates= 
+{{Infobox game/row/date|Windows|July 9, 2013}}
+{{Infobox game/row/date|OS X|July 18, 2013}}
+{{Infobox game/row/date|Linux|July 18, 2013}}
+|reception    = 
+{{Infobox game/row/reception|Metacritic|dota-2|90}}
+{{Infobox game/row/reception|OpenCritic|9753/dota-2|91}}
+{{Infobox game/row/reception|IGDB|dota-2|91}}
+|taxonomy     =
+{{Infobox game/row/taxonomy/monetization      | Free-to-play, Subscription |ref=}}
+{{Infobox game/row/taxonomy/microtransactions | Cosmetic, Infinite spend, Loot box, Player trading, Time-limited, Free-to-grind | ref=<ref>{{Refurl|url=https://www.dota2.com/store/|title=Dota 2 Store|date=2020-05-09}}</ref> }}
+{{Infobox game/row/taxonomy/modes             | Singleplayer, Multiplayer }}
+{{Infobox game/row/taxonomy/pacing            | Real-time }}
+{{Infobox game/row/taxonomy/perspectives      | Bird's-eye view }}
+{{Infobox game/row/taxonomy/controls          | Point and select }}
+{{Infobox game/row/taxonomy/genres            | Strategy }}
+{{Infobox game/row/taxonomy/art styles        | Stylized }}
+{{Infobox game/row/taxonomy/themes            | Fantasy }}
+{{Infobox game/row/taxonomy/series            | Dota }}
+|steam appid  = 570
+|steam appid side = 1241930, 652720
+|official site= https://www.dota2.com/play/
+|strategywiki = Dota 2
+|mobygames    = 62741
+|wikipedia    = Dota 2
+|winehq       = 13522
+|license      = free-to-play
+}}
+{{Game data|
+{{Game data/config|Steam|{{p|game}}/dota/cfg/}}
+}}
+{{Save game cloud syncing
+|discord                   = 
+|discord notes             = 
+|epic games launcher       = 
+|epic games launcher notes = 
+|gog galaxy                = 
+|gog galaxy notes          = 
+|origin                    = 
+|origin notes              = 
+|icloud                    = 
+|icloud notes              = 
+|steam cloud               = true
+|steam cloud notes         = Approx. 2 GB available.
+|ubisoft connect           = 
+|ubisoft connect notes     = 
+|xbox cloud                = 
+|xbox cloud notes          = 
+}}
+{{Video
+|wsgf link                  = https://www.wsgf.org/dr/dota-2/en
+|widescreen wsgf award      = gold
+|multimonitor wsgf award    = limited
+|ultrawidescreen wsgf award = incomplete
+|4k ultra hd wsgf award     = unsupported
+|widescreen resolution      = true
+|widescreen resolution notes= 
+|multimonitor               = true
+|multimonitor notes         = HUD is stretched, affecting gameplay.
+|ultrawidescreen            = true
+|ultrawidescreen notes      = 
+|4k ultra hd                = true
+|4k ultra hd notes          = 
+|fov                        = hackable
+|fov notes                  = FOV is adjustable in console with convar 'dota_camera_legacy'. Values can be 0 or 1, with 0 being default and 1 slightly lower.<ref>{{Refurl|url=https://twitter.com/wykrhm/status/1220903800602419200|title=twitter.com|date=May 2023}}</ref>
+|windowed                   = true
+|windowed notes             = 
+|borderless windowed        = true
+|borderless windowed notes  = Available in Video Options or through [[#Launch options|Launch options]].
+|anisotropic                = false
+|anisotropic notes          = 
+|antialiasing               = true
+|antialiasing notes         = [[FXAA]] available in-game.
+|upscaling                  = true
+|upscaling tech             = FSR 1
+|upscaling notes            = 
+|framegen                   = unknown
+|framegen tech              = 
+|framegen notes             = 
+|vsync                      = true
+|vsync notes                = 
+|60 fps                     = true
+|60 fps notes               = 
+|120 fps                    = true
+|120 fps notes              = Max FPS sliders for the dashboard and for the actual game.
+|hdr                        = unknown
+|hdr notes                  = 
+|color blind                = limited
+|color blind notes          = Limited native support; use the [https://www.reddit.com/r/DotA2/comments/1eaald/dota_2_colorblind_mode/ Dota 2 Colorblind Mode] mod for best experience.
+}}
+{{Input
+|key remap                 = true
+|key remap notes           = 
+|acceleration option       = hackable
+|acceleration option notes = Enabled by default with no in-game option; follow [[#Mouse acceleration|Mouse acceleration]] to disable.
+|mouse sensitivity         = unknown
+|mouse sensitivity notes   = 
+|mouse menu                = true
+|mouse menu notes          = 
+|invert mouse y-axis       = true
+|invert mouse y-axis notes = 
+|touchscreen               = unknown
+|touchscreen notes         = 
+|controller support        = false
+|controller support notes  = 
+|full controller           = false
+|full controller notes     = 
+|controller remap          = false
+|controller remap notes    = 
+|controller sensitivity    = unknown
+|controller sensitivity notes= 
+|invert controller y-axis  = unknown
+|invert controller y-axis notes= 
+|xinput controllers        = true
+|xinput controllers notes  = 
+|xbox prompts              = unknown
+|xbox prompts notes        = 
+|impulse triggers          = unknown
+|impulse triggers notes    = 
+|dualshock 4               = true
+|dualshock 4 notes         = 
+|dualshock prompts         = unknown
+|dualshock prompts notes   = 
+|light bar support         = unknown
+|light bar support notes   = 
+|dualshock 4 modes         = unknown
+|dualshock 4 modes notes   = 
+|nintendo controllers          = 
+|nintendo controller models    = 
+|nintendo controllers notes    = 
+|nintendo prompts              = 
+|nintendo prompts notes        = 
+|nintendo button layout        = 
+|nintendo button layout notes  = 
+|nintendo motion sensors       = 
+|nintendo motion sensors modes = 
+|nintendo motion sensors notes = 
+|nintendo connection modes     = 
+|nintendo connection modes notes = 
+|tracked motion controllers= true
+|tracked motion controllers notes = 
+|tracked motion prompts    = unknown
+|tracked motion prompts notes = 
+|other controllers         = unknown
+|other controllers notes   = 
+|peripheral devices            = 
+|peripheral device types       = 
+|peripheral devices notes      = 
+|other button prompts      = unknown
+|other button prompts notes= 
+|controller hotplug        = unknown
+|controller hotplug notes  = 
+|input prompt override         = 
+|input prompt override notes   = 
+|haptic feedback           = unknown
+|haptic feedback notes     = 
+|haptic feedback hd        = 
+|haptic feedback hd notes  = 
+|haptic feedback hd controller models = 
+|digital movement supported = 
+|digital movement supported notes = 
+|simultaneous input        = true
+|simultaneous input notes  = 
+|steam input api           = true
+|steam input api notes     = <ref>{{Refurl|url=https://www.dota2.com/controllerfaq|title=Dota Controller FAQ|date=25 September 2022}}</ref>
+|steam hook input          = unknown
+|steam hook input notes    = 
+|steam input motion sensors    = 
+|steam input motion sensors modes = 
+|steam input motion sensors notes = 
+|steam input presets       = unknown
+|steam input presets notes = 
+|steam input prompts           = 
+|steam input prompts icons     = 
+|steam input prompts styles    = 
+|steam input prompts notes     = 
+|steam deck prompts            = 
+|steam deck prompts notes      = 
+|steam controller prompts  = unknown
+|steam controller prompts notes = 
+|steam cursor detection    = unknown
+|steam cursor detection notes = 
+}}
+{{Network/Multiplayer
+|local play           = true
+|local play players   = 10
+|local play modes     = Versus
+|local play notes     = Added in 4 June 2013 update.<ref>{{Refurl|url=https://www.reddit.com/r/DotA2/comments/1fn196/todays_update_also_adds_native_offline_support/|title=Today's update also adds native offline support for Dota 2|date=August 2023}}</ref>
+|lan play             = hackable
+|lan play players     = 10
+|lan play modes       = 
+|lan play notes       = Added in 23 September 2013 update.<br>Supported but game requires Steam authentication.<ref>{{Refurl|url=https://steamcommunity.com/sharedfiles/filedetails/?id=181099802|title=Steam Community :: Guide :: Guide to Local Play (LAN) in Dota 2|date=May 2023}}</ref>
+|online play          = true
+|online play players  = 10
+|online play modes    = 
+|online play notes    = Up to 5 players in Bot match mode.<br>10 players in Normal and Ranked matches modes.<br>Custom games support 24 players.<br>For Source 1 version use [https://dota2classic.com/ this] to play online again.
+|asynchronous         = 
+|asynchronous notes   = 
+}}
+{{API
+|direct3d versions      = 11
+|direct3d notes         = Previous support for DirectX 9 and OpenGL has been removed.<ref>{{Refurl|url=https://steamcommunity.com/games/dota2/announcements/detail/3072012083350982842|title=Steam Community|date=May 2023}}</ref>
+|directdraw versions    = 
+|directdraw notes       = 
+|opengl versions        = 
+|opengl notes           = 
+|glide versions         = 
+|glide notes            = 
+|software mode          = 
+|software mode notes    = 
+|mantle support         = 
+|mantle support notes   = 
+|vulkan versions        = 1.2+
+|vulkan notes           = Use <code>-vulkan</code> [[Glossary:Command line arguments#Steam|launch option]] after installing the Vulkan DLC<ref>{{Refurl|url=https://store.steampowered.com/news/22000/|title=News - Dota 2 Update - May 23rd 2016|date=May 2023}}</ref> or select Vulkan in the in-game settings.<ref>{{Refurl|url=https://linuxconfig.org/install-and-test-vulkan-on-linux|title=linuxconfig.org|date=May 2023}}</ref>
+|dos modes              = 
+|dos modes notes        = 
+|shader model versions  = 
+|shader model notes     = 
+|windows 32-bit exe     = limited
+|windows 64-bit exe     = true
+|windows arm app        = unknown
+|windows exe notes      = 64-bit since Source 2.<ref name="RebornPart3">[http://www.dota2.com/reborn/part3 Dota 2 - Reborn (Part 3)]</ref> Previous support for 32-bit has been removed.<ref>{{Refurl|url=https://steamcommunity.com/games/dota2/announcements/detail/3072012083350982842|title=Steam Community|date=May 2023}}</ref>
+|mac os x powerpc app   = unknown
+|macos intel 32-bit app = false
+|macos intel 64-bit app = true
+|macos arm app          = unknown
+|macos app notes        = 
+|linux powerpc app      = unknown
+|linux 32-bit executable= false
+|linux 64-bit executable= true
+|linux arm app          = unknown
+|linux executable notes = 
+}}
