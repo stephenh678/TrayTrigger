@@ -8,6 +8,9 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 
 - **PC facts from PCGamingWiki** - An optional card in Game Details with what PCGamingWiki says about a game: ultrawide, HDR, controller support, online play and where it keeps its saves. It's off until you tick Show PC facts from PCGamingWiki in Settings > Library & Art.
 - **Stutter Check spots a single memory stick** - If your PC has one stick of memory and room for another, Stutter Check now says so and what to do about it.
+- **Stutter Check has its own tab** - On the System page, between Hardware Specs and Performance Tweaks. The All tab still shows it.
+- **Launch problems are recorded** - A game that didn't launch, or that was started but never seen running, now leaves an entry in Activity & History with the reason.
+- **Favorite star at large text sizes** - On poster cards with a long category, the star and the PLAYING tag are no longer pushed off the card.
 - **Update window fix** - At a large text size, the Download & Install button no longer runs off the edge of the update window.
 
 ## 1.7.0

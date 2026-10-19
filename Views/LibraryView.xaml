@@ -1300,6 +1300,57 @@
                                                             stays). The not-installed scrim under the art always stays. -->
                                                        <StackPanel VerticalAlignment="Top" Margin="10,10,10,0">
                                                            <DockPanel LastChildFill="False">
+                                                               <!-- Declared first so it gets its room first: at a large text size the left badges and category would otherwise take the whole row and push PLAYING and the favorite star out of the card. -->
+                                                               <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                                                                   <!-- With details on hover there's no top vignette under PLAYING while the card
+                                                                        is at rest, so its near-clear fill goes nearly solid to stay readable on
+                                                                        bright art. -->
+                                                                   <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center"
+                                                                           views:PosterDetailFade.Part="PlayingTag">
+                                                                       <Border.Style>
+                                                                           <Style TargetType="Border">
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                                   <DataTrigger Binding="{Binding DataContext.SettingsVM.PosterDetailsOnHover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                                                                       <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Border.Style>
+                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
+                                                                   </Border>
+                                                                   <!-- Favorite Star - outermost corner -->
+                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
+                                                                           views:PosterDetailFade.Part="FavoriteStar"
+            AutomationProperties.Name="{Binding FavoriteMenuLabel}">
+                                                                       <Button.Style>
+                                                                           <Style TargetType="Button" BasedOn="{StaticResource FavoriteToggleButton}">
+                                                                               <Setter Property="Width" Value="19"/>
+                                                                               <Setter Property="Height" Value="19"/>
+                                                                               <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+                                                                               <Setter Property="Visibility" Value="Collapsed"/>
+                                                                               <Style.Triggers>
+                                                                                   <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                                   <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
+                                                                                       <Setter Property="Visibility" Value="Visible"/>
+                                                                                   </DataTrigger>
+                                                                                   <!-- With details on hover the star is only there while the card has
+                                                                                        focus, so tabbing on to it would hide it - the trap the Play button
+                                                                                        below avoids the same way. Favorite stays on the right-click menu. -->
+                                                                                   <DataTrigger Binding="{Binding DataContext.SettingsVM.PosterDetailsOnHover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                                                                       <Setter Property="Focusable" Value="False"/>
+                                                                                   </DataTrigger>
+                                                                               </Style.Triggers>
+                                                                           </Style>
+                                                                       </Button.Style>
+                                                                   </Button>
+                                                               </StackPanel>
                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" DockPanel.Dock="Left">
                                                                    <!-- The launcher logos, one part for "Show details on hover": a card shows
                                                                         exactly one of them. -->
@@ -1485,56 +1536,6 @@
                                                                    </Border>
                                                                </StackPanel>
 
-                                                               <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                                                                   <!-- With details on hover there's no top vignette under PLAYING while the card
-                                                                        is at rest, so its near-clear fill goes nearly solid to stay readable on
-                                                                        bright art. -->
-                                                                   <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center"
-                                                                           views:PosterDetailFade.Part="PlayingTag">
-                                                                       <Border.Style>
-                                                                           <Style TargetType="Border">
-                                                                               <Setter Property="Visibility" Value="Collapsed"/>
-                                                                               <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
-                                                                               <Style.Triggers>
-                                                                                   <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                                                                       <Setter Property="Visibility" Value="Visible"/>
-                                                                                   </DataTrigger>
-                                                                                   <DataTrigger Binding="{Binding DataContext.SettingsVM.PosterDetailsOnHover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                                                       <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
-                                                                                   </DataTrigger>
-                                                                               </Style.Triggers>
-                                                                           </Style>
-                                                                       </Border.Style>
-                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
-                                                                   </Border>
-                                                                   <!-- Favorite Star - outermost corner -->
-                                                                   <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
-                                                                           views:PosterDetailFade.Part="FavoriteStar"
-            AutomationProperties.Name="{Binding FavoriteMenuLabel}">
-                                                                       <Button.Style>
-                                                                           <Style TargetType="Button" BasedOn="{StaticResource FavoriteToggleButton}">
-                                                                               <Setter Property="Width" Value="19"/>
-                                                                               <Setter Property="Height" Value="19"/>
-                                                                               <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
-                                                                               <Setter Property="Visibility" Value="Collapsed"/>
-                                                                               <Style.Triggers>
-                                                                                   <DataTrigger Binding="{Binding IsFavorite}" Value="True">
-                                                                                       <Setter Property="Visibility" Value="Visible"/>
-                                                                                   </DataTrigger>
-                                                                                   <DataTrigger Binding="{Binding IsMouseOver, ElementName=CardBorder}" Value="True">
-                                                                                       <Setter Property="Visibility" Value="Visible"/>
-                                                                                   </DataTrigger>
-                                                                                   <!-- With details on hover the star is only there while the card has
-                                                                                        focus, so tabbing on to it would hide it - the trap the Play button
-                                                                                        below avoids the same way. Favorite stays on the right-click menu. -->
-                                                                                   <DataTrigger Binding="{Binding DataContext.SettingsVM.PosterDetailsOnHover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                                                       <Setter Property="Focusable" Value="False"/>
-                                                                                   </DataTrigger>
-                                                                               </Style.Triggers>
-                                                                           </Style>
-                                                                       </Button.Style>
-                                                                   </Button>
-                                                               </StackPanel>
                                                            </DockPanel>
 
                                                            <Border Style="{StaticResource UnavailableBadgeBorder}"

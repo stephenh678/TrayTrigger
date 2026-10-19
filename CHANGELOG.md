@@ -15,6 +15,7 @@ stable version they lead to.
 - **Launch problems in Activity & History** - a game that didn't launch, or that was started but never seen running (so no playtime was recorded), now leaves a Problem entry with the reason, instead of only a popup.
 - **A shorter Game Launch Scripts card** - in Settings > Launch & Performance, the default scripts for every game now appear only once Enable scripts is ticked, so the card is a heading and one checkbox until you want scripts.
 - **Stutter Check: one memory stick** - on a PC with a single memory stick and room for more, Stutter Check says so. One stick runs on a single memory channel, which testing has found costs anything from a few percent to around a third of the frame rate in CPU-limited games and on built-in graphics. It only reports; a second matching stick fixes it.
+- **Poster cards keep their favorite star at large text sizes** - on a poster card with a long category such as "Massively Multiplayer", the favorite star and the PLAYING tag are no longer pushed off the card; the category is clipped instead.
 - **Update window at large text sizes** - the Download & Install button no longer runs off the edge of the update window when the text size is large; the buttons wrap to a second line instead.
 
 ## 1.7.0
