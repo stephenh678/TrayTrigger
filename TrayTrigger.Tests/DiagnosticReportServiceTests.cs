@@ -106,6 +106,51 @@ public class DiagnosticReportServiceTests : IDisposable
     }
 
     [Fact]
+    public void Build_ReportsTheSettingsBehindLayoutAndProfileBugs()
+    {
+        var inputs = SampleInputs();
+        inputs.Settings.TextSizePercent = 130;
+        inputs.Settings.FontName = "Verdana";
+        inputs.Settings.ThemeId = "dark";
+        inputs.Settings.NewGameProfile = PerformanceProfileMode.Optimized;
+        inputs.Games[1].PerformanceProfile = PerformanceProfileMode.Optimized;
+        inputs.Games[1].RunAsAdmin = true;
+        inputs.Games[2].PerformanceProfile = PerformanceProfileMode.Aggressive;
+        inputs.Games[2].CpuAffinity = CpuAffinityMode.PerformanceCoresOnly;
+
+        string report = DiagnosticReportService.Build(inputs, () => "- Windows: x");
+
+        Assert.Contains("text size 130%, font Verdana", report);
+        Assert.Contains("theme dark", report);
+        Assert.Contains("new games get Optimized; Optimized tweaks on: PowerPlan, GpuPreference", report);
+        Assert.Contains("- Per-game settings: Optimized 1, Aggressive 1, CPU cores set 1, run as administrator 1,", report);
+        Assert.Contains("**Recent changes**", report);
+    }
+
+    [Fact]
+    public void RedactUserFolder_HidesTheWindowsUserName_WhateverTheCase()
+    {
+        string text = @"- Install: portable (`C:\Users\Jane\Desktop\TrayTrigger.exe`); log c:\users\jane\AppData\x.log; D:\Games\Hades";
+
+        string redacted = DiagnosticReportService.RedactUserFolder(text, @"C:\Users\Jane");
+
+        Assert.Equal(@"- Install: portable (`%USERPROFILE%\Desktop\TrayTrigger.exe`); log %USERPROFILE%\AppData\x.log; D:\Games\Hades", redacted);
+    }
+
+    [Fact]
+    public void Build_NeverContainsTheRealUserFolder()
+    {
+        var inputs = SampleInputs();
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        inputs.Games[2].ExecutablePath = Path.Combine(profile, "Games", "Fatekeeper.exe");
+
+        string report = DiagnosticReportService.Build(inputs, () => "- Windows: x");
+
+        Assert.DoesNotContain(profile, report, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(@"%USERPROFILE%\Games\Fatekeeper.exe", report);
+    }
+
+    [Fact]
     public void Build_SurvivesAFailingMachineProbe()
     {
         string report = DiagnosticReportService.Build(SampleInputs(), () => throw new InvalidOperationException("WMI down"));

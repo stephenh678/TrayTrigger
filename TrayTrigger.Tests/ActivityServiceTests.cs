@@ -265,6 +265,20 @@ public class ActivityServiceTests : IDisposable
     }
 
     [Fact]
+    public void RecentChangeLines_ListChanges_AndLeaveOutProblemsAndOldOnes()
+    {
+        var service = Service();
+        service.Record(ActivityLevel.Change, "Old change");
+        _now = _now.AddDays(40);
+        service.Record(ActivityLevel.Change, "Hades: launch arguments changed");
+        service.Record(ActivityLevel.Problem, "SimHub couldn't be closed after your game");
+        service.Record(ActivityLevel.Activity, "Played Hades for 2h");
+
+        var line = Assert.Single(service.RecentChangeLines());
+        Assert.EndsWith("Hades: launch arguments changed", line);
+    }
+
+    [Fact]
     public void RecentProblemLines_AreGrouped_AndLeaveOutChanges()
     {
         var service = Service();

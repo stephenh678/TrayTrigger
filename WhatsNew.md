@@ -10,7 +10,8 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 - **Stutter Check spots a single memory stick** - If your PC has one stick of memory and room for another, Stutter Check now says so and what to do about it.
 - **Stutter Check has its own tab** - On the System page, between Hardware Specs and Performance Tweaks. The All tab still shows it.
 - **Launch problems are recorded** - A game that didn't launch, or that was started but never seen running, now leaves an entry in Activity & History with the reason.
-- **Favorite star at large text sizes** - On poster cards with a long category, the star and the PLAYING tag are no longer pushed off the card.
+- **Edits and removals are recorded** - Activity & History now notes when you change a game's launch settings in Edit Game, with the old and new values, and when you remove a game or undo it.
+- **Favorite star at large text sizes** - On poster cards with a long category, the star is no longer pushed off the card, and the PLAYING tag moves below the middle of the poster so it always has room.
 - **Update window fix** - At a large text size, the Download & Install button no longer runs off the edge of the update window.
 
 ## 1.7.0

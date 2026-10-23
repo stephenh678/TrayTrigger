@@ -1264,6 +1264,23 @@
                                                                           FontFamily="{DynamicResource AppFont}" FontWeight="SemiBold"
                                                                           TextAlignment="Center" TextTrimming="CharacterEllipsis" 
                                                                           MaxWidth="160" HorizontalAlignment="Center"/>
+
+                                                               <!-- PLAYING for a card without art: under the name, where the centred overlay tag below would sit on top of it. -->
+                                                               <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2"
+                                                                       HorizontalAlignment="Center" Margin="0,8,0,0" Background="{DynamicResource BrushSuccessWash}"
+                                                                       views:PosterDetailFade.Part="PlayingTag">
+                                                                   <Border.Style>
+                                                                       <Style TargetType="Border">
+                                                                           <Setter Property="Visibility" Value="Collapsed"/>
+                                                                           <Style.Triggers>
+                                                                               <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                                                   <Setter Property="Visibility" Value="Visible"/>
+                                                                               </DataTrigger>
+                                                                           </Style.Triggers>
+                                                                       </Style>
+                                                                   </Border.Style>
+                                                                   <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
+                                                               </Border>
                                                            </StackPanel>
 
                                                            <!-- Footer Playtime -->
@@ -1300,29 +1317,8 @@
                                                             stays). The not-installed scrim under the art always stays. -->
                                                        <StackPanel VerticalAlignment="Top" Margin="10,10,10,0">
                                                            <DockPanel LastChildFill="False">
-                                                               <!-- Declared first so it gets its room first: at a large text size the left badges and category would otherwise take the whole row and push PLAYING and the favorite star out of the card. -->
+                                                               <!-- Declared first so it gets its room first: at a large text size the left badges and category would otherwise take the whole row and push the favorite star out of the card. -->
                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                                                                   <!-- With details on hover there's no top vignette under PLAYING while the card
-                                                                        is at rest, so its near-clear fill goes nearly solid to stay readable on
-                                                                        bright art. -->
-                                                                   <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2" Margin="0,0,4,0" VerticalAlignment="Center"
-                                                                           views:PosterDetailFade.Part="PlayingTag">
-                                                                       <Border.Style>
-                                                                           <Style TargetType="Border">
-                                                                               <Setter Property="Visibility" Value="Collapsed"/>
-                                                                               <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
-                                                                               <Style.Triggers>
-                                                                                   <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                                                                       <Setter Property="Visibility" Value="Visible"/>
-                                                                                   </DataTrigger>
-                                                                                   <DataTrigger Binding="{Binding DataContext.SettingsVM.PosterDetailsOnHover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                                                       <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
-                                                                                   </DataTrigger>
-                                                                               </Style.Triggers>
-                                                                           </Style>
-                                                                       </Border.Style>
-                                                                       <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
-                                                                   </Border>
                                                                    <!-- Favorite Star - outermost corner -->
                                                                    <Button Command="{Binding ToggleFavoriteCommand}" VerticalAlignment="Center"
                                                                            views:PosterDetailFade.Part="FavoriteStar"
@@ -1545,6 +1541,30 @@
                                                                           FontSize="{DynamicResource FontSizeBadge}" FontFamily="{DynamicResource AppFont}"/>
                                                            </Border>
                                                        </StackPanel>
+
+                                                       <!-- PLAYING sits just below the middle of the art, under where the hover Play
+                                                            button appears (46 high, centred), so it never competes with the icon,
+                                                            category and star for room in the top row at a large text size. The
+                                                            offset keeps it clear of the button. -->
+                                                       <Border BorderBrush="{DynamicResource BrushSuccessSolid}" BorderThickness="1" CornerRadius="{DynamicResource RadiusSmall}" Padding="6,2"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,84,0,0"
+                                                               views:PosterDetailFade.Part="PlayingTag">
+                                                           <Border.Style>
+                                                               <Style TargetType="Border">
+                                                                   <Setter Property="Visibility" Value="Collapsed"/>
+                                                                   <Setter Property="Background" Value="{DynamicResource BrushSuccessWash}"/>
+                                                                   <Style.Triggers>
+                                                                       <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                                           <Setter Property="Visibility" Value="Visible"/>
+                                                                       </DataTrigger>
+                                                                       <DataTrigger Binding="{Binding ShowPosterArt}" Value="False">
+                                                                           <Setter Property="Visibility" Value="Collapsed"/>
+                                                                       </DataTrigger>
+                                                                   </Style.Triggers>
+                                                               </Style>
+                                                           </Border.Style>
+                                                           <TextBlock Text="{Binding PlayingTagText}" FontSize="{DynamicResource FontSizeBadge}" FontWeight="SemiBold" Foreground="{DynamicResource BrushSuccessText}" FontFamily="{DynamicResource AppFont}"/>
+                                                       </Border>
 
                                                        <!-- 4. Hover Play Button Overlay. Not focusable: it shows only while the
                                                             card is hovered or focused, so Tab onto it hid it and dropped focus

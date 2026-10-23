@@ -10,7 +10,7 @@ Settings > Diagnostics & Storage > Backup & Restore saves everything TrayTrigger
 - The themes you made, with their background pictures. The built-in themes are part of TrayTrigger itself.
 - Cached artwork and icons, so posters don't have to be fetched again.
 
-Game saves are not in it, and neither is anything in the games' own folders.
+Game saves are not in it, and neither is anything in the games' own folders. Activity & History stays behind too, because it records what happened on this PC and an old PC's entries would mislead on a new one. Game details fetched from Steam, RAWG and PCGamingWiki are fetched again.
 
 ## Backing up
 

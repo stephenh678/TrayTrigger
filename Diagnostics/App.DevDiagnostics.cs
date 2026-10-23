@@ -838,6 +838,36 @@ public partial class App
                 return;
             }
 
+            // --screenshot-playing <view mode> <text size %> <out.png>: the library at the given text size with
+            // the first three visible cards marked as playing, to check where the PLAYING tag sits. Nothing
+            // is saved; the text size is only applied to this run.
+            if ((e.Args[i].Equals("--screenshot-playing", StringComparison.OrdinalIgnoreCase) ||
+                 e.Args[i].Equals("-screenshot-playing", StringComparison.OrdinalIgnoreCase)) &&
+                i + 3 < e.Args.Length && int.TryParse(e.Args[i + 2], out int playingPercent))
+            {
+                string viewMode = e.Args[i + 1];
+                string targetPng = e.Args[i + 3];
+                _skipSettingsSaveOnExit = true;
+                _mainViewModel.CurrentSection = NavSection.Library;
+                _mainViewModel.SettingsVM.LibraryViewMode = viewMode;
+                Services.AppTypography.SystemPercent = playingPercent;
+                Services.AppTypography.ApplyForTheme(null);
+                _mainWindow.Show();
+                var heavyState = _mainViewModel.Library.HeavyStateLoad;
+                PumpDispatcher(TimeSpan.FromSeconds(10), () => heavyState.IsCompleted);
+                PumpDispatcher(TimeSpan.FromMilliseconds(500));
+                for (int marked = 0; marked < 3; marked++)
+                {
+                    var next = FindVisualChild<Border>(_mainWindow, b => b.Name == "CardBorder" && b.IsVisible && b.DataContext is GameCardViewModel { IsPlaying: false });
+                    if (next?.DataContext is GameCardViewModel vm) vm.IsPlaying = true;
+                }
+                _mainWindow.UpdateLayout();
+                PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                CaptureVisual(_mainWindow, 960, 700, targetPng);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-select <view mode> <out.png>: the library in Select mode with the first
             // two visible cards checked, in the given view ("Poster Grid", "Extra Large",
             // "Compact Icons", "Details List").

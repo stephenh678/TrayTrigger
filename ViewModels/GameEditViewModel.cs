@@ -1738,6 +1738,9 @@ public class GameEditViewModel : ViewModelBase
             }
         }
 
+        var settingsBefore = LibraryChanges.Capture(SourceGame);
+        string platformBefore = PlatformName;
+
         SourceGame.Name = Name.Trim();
         SourceGame.ExecutablePath = ExecutablePath.Trim();
         SourceGame.Arguments = Arguments?.Trim() ?? string.Empty;
@@ -1804,6 +1807,17 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.PreLaunchScriptTimeoutSeconds = timeoutSeconds;
         SourceGame.CloseLauncherOnExit = CloseLauncherOnExit && !_convertToLocal;
         SourceGame.IsHidden = IsHidden;
+
+        var edit = LibraryChanges.DescribeEdit(settingsBefore, LibraryChanges.Capture(SourceGame));
+        if (edit != null)
+        {
+            ActivityService.Add(ActivityLevel.Change, edit.Value.Text, subject: SourceGame.Name, detail: edit.Value.Detail);
+        }
+        if (_convertToLocal)
+        {
+            ActivityService.Add(ActivityLevel.Change, $"{SourceGame.Name} is now a Local game", subject: SourceGame.Name,
+                detail: $"It was linked to {platformBefore}; it no longer is, and launches the way a Local game does.");
+        }
 
         // Handle custom icon caching
         if (!string.IsNullOrEmpty(CustomIconPath) && CustomIconPath != SourceGame.IconPath && File.Exists(CustomIconPath))
