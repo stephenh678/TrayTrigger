@@ -367,35 +367,68 @@ public sealed class DisplayModeServiceTests : System.IDisposable
         Assert.Empty(display.Calls);
     }
 
-    [Fact]
-    public void TheEditGameList_StartsWithNoChange_ThenTheModes()
-    {
-        var options = ViewModels.GameEditViewModel.BuildDisplayOptions([new(2560, 1440, 144), new(1920, 1080, 60)], null);
+    private static readonly DisplayMode[] Sample =
+    [
+        new(3840, 2160, 60), new(2560, 1440, 144), new(2560, 1440, 60), new(1920, 1080, 144), new(1920, 1080, 60),
+    ];
 
-        Assert.Equal([ViewModels.GameEditViewModel.NoDisplayChangeLabel, "2560 × 1440 @ 144 Hz", "1920 × 1080 @ 60 Hz"], options.Select(o => o.Label).ToList());
-        Assert.Null(options[0].Mode);
+    [Fact]
+    public void TheResolutionList_StartsWithNoChange_ThenEachResolutionOnce_LargestFirst()
+    {
+        var options = ViewModels.GameEditViewModel.BuildResolutionOptions(Sample, null);
+
+        Assert.Equal([ViewModels.GameEditViewModel.NoDisplayChangeLabel, "3840 × 2160", "2560 × 1440", "1920 × 1080"], options.Select(o => o.Label).ToList());
+        Assert.True(options[0].IsNone);
     }
 
     [Fact]
-    public void ASavedModeTheDisplayDoesNotList_IsKeptAndLabelled_SoSavingDoesNotDropIt()
+    public void TheRefreshRateList_ShowsOnlyWhatThatResolutionOffers_FastestFirst()
+    {
+        var qhd = new ViewModels.GameEditViewModel.ResolutionOption(2560, 1440, "2560 × 1440");
+
+        var rates = ViewModels.GameEditViewModel.BuildRateOptions(Sample, qhd, null);
+
+        Assert.Equal(["144 Hz", "60 Hz"], rates.Select(r => r.Label).ToList());
+        Assert.Equal(["60 Hz"], ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(3840, 2160, "4K"), null).Select(r => r.Label).ToList());
+    }
+
+    [Fact]
+    public void NoResolutionChosen_MeansNoRefreshRateList()
+    {
+        Assert.Empty(ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(0, 0, "none"), null));
+    }
+
+    [Fact]
+    public void ASavedResolutionTheDisplayDoesNotList_IsKeptAndLabelled_SoSavingDoesNotDropIt()
     {
         var saved = new DisplayMode(1280, 720, 75);
 
-        var options = ViewModels.GameEditViewModel.BuildDisplayOptions([new(1920, 1080, 60)], saved);
+        var resolutions = ViewModels.GameEditViewModel.BuildResolutionOptions(Sample, saved);
+        var kept = resolutions[^1];
+        var rates = ViewModels.GameEditViewModel.BuildRateOptions(Sample, kept, saved);
 
-        var kept = options[^1];
-        Assert.Equal(saved, kept.Mode);
         Assert.Contains("this display doesn't list it", kept.Label);
+        Assert.Equal(75, Assert.Single(rates).Hz);
     }
 
     [Fact]
-    public void ASavedModeTheDisplayLists_IsNotAddedTwice()
+    public void ASavedRateTheResolutionDoesNotOffer_IsKeptAndLabelled()
+    {
+        var saved = new DisplayMode(2560, 1440, 120);
+        var qhd = ViewModels.GameEditViewModel.BuildResolutionOptions(Sample, saved).Single(o => o.Width == 2560);
+
+        var rates = ViewModels.GameEditViewModel.BuildRateOptions(Sample, qhd, saved);
+
+        Assert.Equal(["144 Hz", "60 Hz", "120 Hz (this display doesn't list it)"], rates.Select(r => r.Label).ToList());
+    }
+
+    [Fact]
+    public void ASavedModeTheDisplayLists_IsNotAddedAgain()
     {
         var saved = new DisplayMode(1920, 1080, 60);
 
-        var options = ViewModels.GameEditViewModel.BuildDisplayOptions([saved], saved);
-
-        Assert.Equal(2, options.Count);
+        Assert.Equal(4, ViewModels.GameEditViewModel.BuildResolutionOptions(Sample, saved).Count);
+        Assert.Equal(2, ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(1920, 1080, "x"), saved).Count);
     }
 
     [Fact]

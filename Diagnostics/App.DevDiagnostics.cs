@@ -1782,6 +1782,11 @@ public partial class App
                     ExecutablePath = @"C:\Games\DOOM Eternal\DOOMEternalx64tk.exe",
                     WorkingDirectory = @"C:\Games\DOOM Eternal"
                 };
+                // A fourth argument "display" opens it with a display mode already chosen (the second-largest mode), to see both lists.
+                if (e.Args.Skip(i + 3).FirstOrDefault() == "display" && DisplayModeService.Shared.AvailableModes() is { Count: > 1 } shown)
+                {
+                    sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz };
+                }
                 var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
                 dlg.Show();
                 dlg.UpdateLayout();

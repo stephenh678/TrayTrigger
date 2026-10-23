@@ -566,8 +566,12 @@
                             <StackPanel Visibility="{Binding ShowDisplay, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Display" FontSize="{DynamicResource FontSizeBody}"
                                            Foreground="{DynamicResource BrushTextSecondary}" Margin="0,4,0,4"/>
-                                <ComboBox AutomationProperties.Name="Display mode" ItemsSource="{Binding DisplayOptions}"
-                                          SelectedItem="{Binding SelectedDisplay}" DisplayMemberPath="Label"
+                                <ComboBox AutomationProperties.Name="Resolution" ItemsSource="{Binding ResolutionOptions}"
+                                          SelectedItem="{Binding SelectedResolution}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <ComboBox AutomationProperties.Name="Refresh rate" ItemsSource="{Binding RateOptions}"
+                                          SelectedItem="{Binding SelectedRate}" DisplayMemberPath="Label"
+                                          Visibility="{Binding ShowRate, Converter={StaticResource BoolToVis}}"
                                           Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding DisplayHint}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>

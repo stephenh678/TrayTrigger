@@ -236,7 +236,7 @@ public class GameEditViewModel : ViewModelBase
     {
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
-        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr, SelectedDisplay.Label,
+        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr, SelectedDisplayMode?.ToString(),
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -509,55 +509,118 @@ public class GameEditViewModel : ViewModelBase
 
     // --- Display (per game: the main display's resolution and refresh rate while it runs) ---
 
-    /// <summary>One choice in the Display list: no change, or a mode.</summary>
-    public sealed record DisplayOption(DisplayMode? Mode, string Label);
+    /// <summary>One choice in the Resolution list: no change (Width 0), or a resolution.</summary>
+    public sealed record ResolutionOption(int Width, int Height, string Label)
+    {
+        public bool IsNone => Width == 0;
+    }
+
+    /// <summary>One choice in the Refresh rate list.</summary>
+    public sealed record RateOption(int Hz, string Label);
 
     internal const string NoDisplayChangeLabel = "Don't change the display";
 
     /// <summary>
-    /// The list: no change, then each mode the main display offers, largest and fastest first. A mode the
-    /// game has saved that this display doesn't offer (another monitor, a remote session) stays at the
-    /// end, labelled, so opening and saving Edit Game doesn't quietly drop it.
+    /// The Resolution list: no change, then each resolution the main display offers, largest first. A
+    /// resolution the game has saved that this display doesn't offer (another monitor, a remote session)
+    /// stays at the end, labelled, so opening and saving Edit Game doesn't quietly drop it.
     /// </summary>
-    internal static IReadOnlyList<DisplayOption> BuildDisplayOptions(IReadOnlyList<DisplayMode> available, DisplayMode? saved)
+    internal static IReadOnlyList<ResolutionOption> BuildResolutionOptions(IReadOnlyList<DisplayMode> available, DisplayMode? saved)
     {
-        var options = new List<DisplayOption> { new(null, NoDisplayChangeLabel) };
-        options.AddRange(available.Select(m => new DisplayOption(m, m.ToString())));
-        if (saved is { } kept && !available.Contains(kept))
+        var options = new List<ResolutionOption> { new(0, 0, NoDisplayChangeLabel) };
+        foreach (var m in available)
         {
-            options.Add(new DisplayOption(kept, $"{kept} (this display doesn't list it)"));
+            if (!options.Any(o => o.Width == m.Width && o.Height == m.Height))
+                options.Add(new ResolutionOption(m.Width, m.Height, $"{m.Width} × {m.Height}"));
+        }
+        if (saved is { } kept && !options.Any(o => o.Width == kept.Width && o.Height == kept.Height))
+        {
+            options.Add(new ResolutionOption(kept.Width, kept.Height, $"{kept.Width} × {kept.Height} (this display doesn't list it)"));
         }
         return options;
     }
 
-    public IReadOnlyList<DisplayOption> DisplayOptions { get; private set; } = [];
-
-    private DisplayOption _selectedDisplay = new(null, NoDisplayChangeLabel);
-    public DisplayOption SelectedDisplay
+    /// <summary>
+    /// The refresh rates the display offers at a resolution, fastest first. The game's saved rate stays,
+    /// labelled, if the display doesn't offer it there.
+    /// </summary>
+    internal static IReadOnlyList<RateOption> BuildRateOptions(IReadOnlyList<DisplayMode> available, ResolutionOption resolution, DisplayMode? saved)
     {
-        get => _selectedDisplay;
+        if (resolution.IsNone) return [];
+        var rates = available.Where(m => m.Width == resolution.Width && m.Height == resolution.Height)
+            .Select(m => m.RefreshHz).Distinct().OrderByDescending(hz => hz).ToList();
+        var options = rates.Select(hz => new RateOption(hz, $"{hz} Hz")).ToList();
+        if (saved is { } kept && kept.Width == resolution.Width && kept.Height == resolution.Height && !rates.Contains(kept.RefreshHz))
+        {
+            options.Add(new RateOption(kept.RefreshHz, $"{kept.RefreshHz} Hz (this display doesn't list it)"));
+        }
+        return options;
+    }
+
+    private IReadOnlyList<DisplayMode> _availableModes = [];
+    private DisplayMode? _savedMode;
+
+    public IReadOnlyList<ResolutionOption> ResolutionOptions { get; private set; } = [];
+
+    private IReadOnlyList<RateOption> _rateOptions = [];
+    public IReadOnlyList<RateOption> RateOptions
+    {
+        get => _rateOptions;
+        private set { _rateOptions = value; OnPropertyChanged(); }
+    }
+
+    private ResolutionOption _selectedResolution = new(0, 0, NoDisplayChangeLabel);
+    public ResolutionOption SelectedResolution
+    {
+        get => _selectedResolution;
         set
         {
-            _selectedDisplay = value ?? DisplayOptions[0];
+            var previousRate = _selectedRate?.Hz;
+            _selectedResolution = value ?? ResolutionOptions[0];
+            RateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode);
+            // The same rate if the new resolution offers it, else the fastest it does.
+            SelectedRate = RateOptions.FirstOrDefault(r => r.Hz == previousRate) ?? RateOptions.FirstOrDefault();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowRate));
+            OnPropertyChanged(nameof(DisplayHint));
+        }
+    }
+
+    private RateOption? _selectedRate;
+    public RateOption? SelectedRate
+    {
+        get => _selectedRate;
+        set
+        {
+            _selectedRate = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(DisplayHint));
         }
     }
 
+    /// <summary>The refresh rate list shows once a resolution is chosen.</summary>
+    public bool ShowRate => !SelectedResolution.IsNone;
+
+    /// <summary>What the two lists add up to, or null for no change.</summary>
+    private DisplayMode? SelectedDisplayMode =>
+        SelectedResolution.IsNone || SelectedRate == null ? null : new DisplayMode(SelectedResolution.Width, SelectedResolution.Height, SelectedRate.Hz);
+
     /// <summary>Shown when the display lists modes, or the game already has one.</summary>
     public bool ShowDisplay { get; private set; }
 
-    public string DisplayHint => SelectedDisplay.Mode == null
+    public string DisplayHint => SelectedDisplayMode == null
         ? "The display is left as it is."
-        : "The main display is set to this before the game starts and put back when it ends. Windows moves open windows and desktop icons while it is set, and a game that sets its own resolution overrides it.";
+        : "The main display is set to this before the game starts and put back when it ends. A game that sets its own resolution overrides it while it runs. A different resolution may rearrange open windows and desktop icons.";
 
     private void LoadDisplay(GameEntry game)
     {
-        var saved = DisplayModeService.RequestedMode(game);
-        var available = DisplayModeService.Shared.AvailableModes();
-        DisplayOptions = BuildDisplayOptions(available, saved);
-        _selectedDisplay = DisplayOptions.FirstOrDefault(o => o.Mode == saved) ?? DisplayOptions[0];
-        ShowDisplay = available.Count > 0 || saved != null;
+        _savedMode = DisplayModeService.RequestedMode(game);
+        _availableModes = DisplayModeService.Shared.AvailableModes();
+        ResolutionOptions = BuildResolutionOptions(_availableModes, _savedMode);
+        _selectedResolution = ResolutionOptions.FirstOrDefault(o => _savedMode is { } s && o.Width == s.Width && o.Height == s.Height) ?? ResolutionOptions[0];
+        _rateOptions = BuildRateOptions(_availableModes, _selectedResolution, _savedMode);
+        _selectedRate = _rateOptions.FirstOrDefault(r => r.Hz == _savedMode?.RefreshHz) ?? _rateOptions.FirstOrDefault();
+        ShowDisplay = _availableModes.Count > 0 || _savedMode != null;
     }
 
     public sealed record HdrOption(HdrMode Value, string Label);
@@ -1847,9 +1910,10 @@ public class GameEditViewModel : ViewModelBase
             PerformanceActivity.AutoHdrGameChanged(SourceGame, SourceGame.AutoHdr, AutoHdr);
         }
         SourceGame.AutoHdr = AutoHdr;
-        SourceGame.DisplayWidth = SelectedDisplay.Mode?.Width ?? 0;
-        SourceGame.DisplayHeight = SelectedDisplay.Mode?.Height ?? 0;
-        SourceGame.DisplayRefreshHz = SelectedDisplay.Mode?.RefreshHz ?? 0;
+        var displayMode = SelectedDisplayMode;
+        SourceGame.DisplayWidth = displayMode?.Width ?? 0;
+        SourceGame.DisplayHeight = displayMode?.Height ?? 0;
+        SourceGame.DisplayRefreshHz = displayMode?.RefreshHz ?? 0;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.
         if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;
