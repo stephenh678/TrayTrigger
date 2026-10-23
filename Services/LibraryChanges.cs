@@ -19,14 +19,14 @@ internal static class LibraryChanges
         bool IsHidden, bool CloseLauncherOnExit,
         string PreLaunchScriptPath, string PostExitScriptPath, bool WaitForPreLaunchScript, bool AbortLaunchOnScriptFailure,
         bool RunScriptsHidden, bool RunScriptsAsAdmin, string ScriptArguments, bool SkipDefaultScripts, int PreLaunchScriptTimeoutSeconds,
-        string DisplayMode);
+        string DisplayMode, bool KeepMouseOnGameScreen);
 
     public static GameSettings Capture(GameEntry g) => new(
         g.Name, g.ExecutablePath, g.Arguments, g.WorkingDirectory, g.RunAsAdmin, g.LaunchDirectly,
         g.IsHidden, g.CloseLauncherOnExit,
         g.PreLaunchScriptPath, g.PostExitScriptPath, g.WaitForPreLaunchScript, g.AbortLaunchOnScriptFailure,
         g.RunScriptsHidden, g.RunScriptsAsAdmin, g.ScriptArguments, g.SkipDefaultScripts, g.PreLaunchScriptTimeoutSeconds,
-        DisplayModeService.RequestedMode(g)?.ToString() ?? string.Empty);
+        DisplayModeService.RequestedMode(g)?.ToString() ?? string.Empty, g.KeepMouseOnGameScreen);
 
     /// <summary>
     /// "Hades: launch arguments and run as administrator changed", with each old and new value as the detail;
@@ -57,6 +57,7 @@ internal static class LibraryChanges
         Flag("run as administrator", before.RunAsAdmin, after.RunAsAdmin);
         Flag("launch directly", before.LaunchDirectly, after.LaunchDirectly);
         Text("display mode", before.DisplayMode, after.DisplayMode);
+        Flag("keep the mouse on the game's screen", before.KeepMouseOnGameScreen, after.KeepMouseOnGameScreen);
         Flag("hidden", before.IsHidden, after.IsHidden);
         Flag("close launcher on exit", before.CloseLauncherOnExit, after.CloseLauncherOnExit);
         Text("pre-launch script", before.PreLaunchScriptPath, after.PreLaunchScriptPath);

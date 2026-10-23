@@ -856,6 +856,7 @@ public partial class ProcessLauncherService
         }
         // Never throws; a game that set no display mode is ignored.
         DisplayModeService.Shared.End(game.Id);
+        CursorLockService.Shared.Untrack(game.Id);
         if (gameRan)
         {
             _scriptService.RunPostExit(game, minutes);
@@ -1463,6 +1464,7 @@ public partial class ProcessLauncherService
                         session.Process = proc;
                         LoggingService.Verbose("Launcher", $"Found Steam game process for '{game.Name}' (PID {proc.Id}).");
                         _performanceProfileService.OnGameProcessStarted(game, proc);
+                        CursorLockService.Shared.Track(game, proc.Id);
                         CpuTopologyService.ApplyCpuCores(proc, game);
                         WaitForWindowAndActivate(session, proc);
                         StartDlssObservation(session, proc);
@@ -1626,6 +1628,7 @@ public partial class ProcessLauncherService
         try
         {
             _performanceProfileService.OnGameProcessStarted(game, process);
+            CursorLockService.Shared.Track(game, process.Id);
             // Only a direct launch hands over the process it started (allowStubHandoff); a process
             // found under the install folder was opened by id, and has no launch handle.
             CpuTopologyService.ApplyCpuCores(process, game, startedByTrayTrigger: allowStubHandoff);

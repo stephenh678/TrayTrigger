@@ -544,6 +544,7 @@ public partial class App : Application
                 _launcherService?.ResumeAllOnShutdown();
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
                 DisplayModeService.Shared.ReleaseAll();
+                CursorLockService.Shared.ReleaseAll();
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
                 _launcherService?.RecordPlaytimeOnShutdown();
                 FinalizePendingRemovalOnShutdown();
@@ -1516,6 +1517,7 @@ public partial class App : Application
             _launcherService?.ResumeAllOnShutdown();
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
             DisplayModeService.Shared.ReleaseAll();
+            CursorLockService.Shared.ReleaseAll();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
             _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();

@@ -944,6 +944,87 @@ public partial class App
                 return;
             }
 
+            // --test-cursor <info|clip|free|service> <out.txt> [seconds]: checks the mouse confinement on this PC.
+            // info reads the current confinement. clip confines the mouse to the left half of the main monitor and
+            // waits [seconds], so a harness can kill the process and see whether Windows frees the mouse. free
+            // lifts any confinement. service runs the real service end to end with a test window as the game
+            // (the monitor shrunk by 200 pixels, so the confinement shows on a single monitor): in front, another
+            // program in front, back in front, then the end. Whatever happens, the mouse is freed at the end.
+            if (e.Args[i].Equals("--test-cursor", StringComparison.OrdinalIgnoreCase) && i + 2 < e.Args.Length)
+            {
+                string action = e.Args[i + 1].ToLowerInvariant();
+                string outFile = e.Args[i + 2];
+                int seconds = i + 3 < e.Args.Length && int.TryParse(e.Args[i + 3], out int s) ? s : 20;
+                var lines = new List<string>();
+                var backend = new Win32CursorBackend();
+                try
+                {
+                    var front = backend.Foreground();
+                    lines.Add($"clip={backend.CurrentClip()} foreground={front?.ProcessId} monitor={(front is { } f ? backend.MonitorOf(f.Handle) : null)}");
+                    switch (action)
+                    {
+                        case "clip":
+                        {
+                            var monitor = backend.MonitorOf(front!.Value.Handle)!.Value;
+                            var half = new ScreenRect(monitor.Left, monitor.Top, monitor.Left + (monitor.Right - monitor.Left) / 2, monitor.Bottom);
+                            lines.Add($"clipped={backend.Clip(half)} now={backend.CurrentClip()}");
+                            File.WriteAllLines(outFile, lines);
+                            PumpDispatcher(TimeSpan.FromSeconds(seconds));
+                            break;
+                        }
+                        case "free":
+                            lines.Add($"freed={backend.Clip(null)} now={backend.CurrentClip()}");
+                            break;
+                        case "service":
+                        {
+                            // The window in front belongs to someone else, and Windows won't let a background process take the
+                            // front, so the checks use what is already there: the program in front is "the game", then its
+                            // parent is "the game" (a launcher that started it), then an unrelated program is.
+                            var service = new CursorLockService(new ShrunkMonitorCursor(backend));
+                            var fg = backend.Foreground();
+                            if (fg is not { } front2) { lines.Add("no foreground window"); break; }
+                            int frontPid = front2.ProcessId;
+                            int? parent = null;
+                            using (var self = Process.GetProcessById(frontPid)) { parent = ParentOf(frontPid); }
+                            string Now(string label) => $"{label}: clip={backend.CurrentClip()}";
+                            try
+                            {
+                                service.Track(new GameEntry { Id = "t1", Name = "In front", KeepMouseOnGameScreen = true }, frontPid);
+                                lines.Add(Now("the program in front is the game (expect the monitor less 200 px)"));
+                                service.Untrack("t1");
+                                lines.Add(Now("the game ended (expect the whole monitor)"));
+                                if (parent is { } p)
+                                {
+                                    service.Track(new GameEntry { Id = "t2", Name = "Parent", KeepMouseOnGameScreen = true }, p);
+                                    lines.Add(Now($"its parent {p} is the game, the program in front started by it (expect the monitor less 200 px)"));
+                                    service.Untrack("t2");
+                                }
+                                service.Track(new GameEntry { Id = "t3", Name = "Other", KeepMouseOnGameScreen = true }, Environment.ProcessId);
+                                lines.Add(Now("an unrelated program is the game (expect the whole monitor)"));
+                                service.Untrack("t3");
+                            }
+                            finally
+                            {
+                                service.ReleaseAll();
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                finally
+                {
+                    backend.Clip(null);
+                }
+                lines.Add($"final clip={backend.CurrentClip()}");
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-playing <view mode> <text size %> <out.png>: the library at the given text size with
             // the first three visible cards marked as playing, to check where the PLAYING tag sits. Nothing
             // is saved; the text size is only applied to this run.
@@ -1785,7 +1866,7 @@ public partial class App
                 // A fourth argument "display" opens it with a display mode already chosen (the second-largest mode), to see both lists.
                 if (e.Args.Skip(i + 3).FirstOrDefault() == "display" && DisplayModeService.Shared.AvailableModes() is { Count: > 1 } shown)
                 {
-                    sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz };
+                    sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz, KeepMouseOnGameScreen = true };
                 }
                 var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
                 dlg.Show();
@@ -4123,6 +4204,25 @@ public partial class App
         poll.Start();
     }
 
+    /// <summary>The process that started <paramref name="pid"/>, or null (toolhelp snapshot; for the --test-cursor capture).</summary>
+    private static int? ParentOf(int pid)
+    {
+        using var p = Process.GetProcessById(pid);
+        var q = new System.Management.ManagementObjectSearcher($"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {pid}");
+        foreach (var o in q.Get()) return Convert.ToInt32(o["ParentProcessId"]);
+        return null;
+    }
+    [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+
+    /// <summary>For the --test-cursor capture: brings a test window to the front even from a background process (a tap of Alt first, which Windows accepts as input).</summary>
+    private static void ForceForeground(Window window)
+    {
+        const byte VK_MENU = 0x12; const uint KEYEVENTF_KEYUP = 0x2;
+        keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(window).Handle);
+        window.Activate();
+    }
 #endif
 }
 #endif

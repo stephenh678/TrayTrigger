@@ -166,6 +166,8 @@ public class GameEditViewModel : ViewModelBase
         _autoHdr = game.AutoHdr;
         _initialAutoHdr = game.AutoHdr;
         LoadDisplay(game);
+        _keepMouseOnGameScreen = game.KeepMouseOnGameScreen;
+        _initialKeepMouse = game.KeepMouseOnGameScreen;
         _cpuCoresDelaySeconds = game.CpuCoresDelaySeconds.ToString();
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
@@ -236,7 +238,7 @@ public class GameEditViewModel : ViewModelBase
     {
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
-        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr, SelectedDisplayMode?.ToString(),
+        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr, SelectedDisplayMode?.ToString(), KeepMouseOnGameScreen,
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -608,6 +610,26 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>Shown when the display lists modes, or the game already has one.</summary>
     public bool ShowDisplay { get; private set; }
 
+    // --- Keep the mouse on the game's screen ---
+
+    private bool _keepMouseOnGameScreen;
+    public bool KeepMouseOnGameScreen
+    {
+        get => _keepMouseOnGameScreen;
+        set { _keepMouseOnGameScreen = value; OnPropertyChanged(); }
+    }
+
+    private bool _initialKeepMouse;
+
+    /// <summary>How many monitors are attached; a test stands in its own answer.</summary>
+    internal Func<int> MonitorCount { get; init; } = Win32CursorBackend.MonitorCount;
+
+    /// <summary>The option only does something with more than one monitor, so it shows then, or when the game already has it on.</summary>
+    public bool ShowMouseLock => _initialKeepMouse || MonitorCount() > 1;
+
+    /// <summary>The Display card shows on the Performance tab when any part of it has something to offer.</summary>
+    public bool ShowDisplayCard => ShowPerformanceCard && (ShowDisplay || ShowMouseLock);
+
     public string DisplayHint => SelectedDisplayMode == null
         ? "The display is left as it is."
         : "The main display is set to this before the game starts and put back when it ends. A game that sets its own resolution overrides it while it runs. A different resolution may rearrange open windows and desktop icons.";
@@ -700,6 +722,7 @@ public class GameEditViewModel : ViewModelBase
                 OnPropertyChanged(nameof(ShowIdentityCard));
                 OnPropertyChanged(nameof(ShowLaunchCard));
                 OnPropertyChanged(nameof(ShowPerformanceCard));
+                OnPropertyChanged(nameof(ShowDisplayCard));
                 // The DLSS card shares the Performance tab; it owns its own visibility so the
                 // XAML needs one binding rather than a multi-binding across two view models.
                 Dlss.IsOnTab = IsAllSection || IsPerformanceSection;
@@ -1914,6 +1937,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.DisplayWidth = displayMode?.Width ?? 0;
         SourceGame.DisplayHeight = displayMode?.Height ?? 0;
         SourceGame.DisplayRefreshHz = displayMode?.RefreshHz ?? 0;
+        SourceGame.KeepMouseOnGameScreen = KeepMouseOnGameScreen;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.
         if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;

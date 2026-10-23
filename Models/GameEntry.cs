@@ -159,6 +159,12 @@ public class GameEntry
     public int DisplayHeight { get; set; }
     public int DisplayRefreshHz { get; set; }
 
+    /// <summary>
+    /// While this game's window is in front, the mouse is confined to the monitor it is on, and freed
+    /// the moment the focus moves (Edit Game › Display). See <see cref="Services.CursorLockService"/>.
+    /// </summary>
+    public bool KeepMouseOnGameScreen { get; set; }
+
     /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
     public string PreLaunchScriptPath { get; set; } = string.Empty;
     /// <summary>

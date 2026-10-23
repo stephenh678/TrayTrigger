@@ -101,6 +101,16 @@ public class LibraryChangesTests
     }
 
     [Fact]
+    public void KeepingTheMouseOnTheGamesScreen_IsRecorded()
+    {
+        var game = Game();
+        var line = Edit(game, () => game.KeepMouseOnGameScreen = true);
+
+        Assert.Equal("Hades: keep the mouse on the game's screen changed", line!.Value.Text);
+        Assert.Equal("Keep the mouse on the game's screen: off -> on", line.Value.Detail);
+    }
+
+    [Fact]
     public void WhatPerformanceActivityRecords_IsNotRecordedAgain()
     {
         var game = Game();
