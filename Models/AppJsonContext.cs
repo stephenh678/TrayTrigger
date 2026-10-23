@@ -25,6 +25,7 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(ActivityLogFile))]
 [JsonSerializable(typeof(Services.DisplaySessionRecord))]
+[JsonSerializable(typeof(Services.AudioSessionRecord))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

@@ -896,6 +896,17 @@ public partial class App
                         case "restore":
                             if (device != null) lines.Add($"restore={backend.RestoreDefault(device)} now={backend.Current(device)}");
                             break;
+                        case "monitors":
+                            foreach (var m in backend.Monitors()) lines.Add($"monitor {m.Label} primary={m.IsPrimary} bounds={m.Bounds} id={m.Id}");
+                            lines.Add("placements: " + string.Join(", ", backend.Placements().Select(p => $"{p.Device}@{p.X},{p.Y}")));
+                            break;
+                        case "layout-noop":
+                            // The layout call with every monitor where it already is: nothing should move.
+                            var placed = backend.Placements();
+                            lines.Add($"before: {string.Join(", ", placed.Select(p => $"{p.Device}@{p.X},{p.Y}"))}");
+                            lines.Add($"result={backend.SetLayout(placed)}");
+                            lines.Add($"after:  {string.Join(", ", backend.Placements().Select(p => $"{p.Device}@{p.X},{p.Y}"))} current={(device == null ? null : backend.Current(device))}");
+                            break;
                         case "holdservice":
                         {
                             // The real service, then wait: a harness kills this process to test the crash recovery.
@@ -944,6 +955,119 @@ public partial class App
                 return;
             }
 
+            // --test-overlay <identify|dim> <out.png> <out.txt>: puts the overlay on this PC's screen and checks it: a
+            // picture of the screen with it showing, whether it took the focus, and whether a click at its middle would
+            // go through to what is under it. The dim case covers a block of the monitor, since there is only one.
+            if (e.Args[i].Equals("--test-overlay", StringComparison.OrdinalIgnoreCase) && i + 3 < e.Args.Length)
+            {
+                string kind = e.Args[i + 1].ToLowerInvariant(), png = e.Args[i + 2], report = e.Args[i + 3];
+                var lines = new List<string>();
+                var backend = new Win32CursorBackend();
+                var surface = new OverlayDimSurface();
+                try
+                {
+                    var monitors = DisplayModeService.Shared.AvailableMonitors();
+                    var main = monitors.First();
+                    int? before = backend.Foreground()?.ProcessId;
+                    ScreenRect covered;
+                    if (kind == "identify")
+                    {
+                        MonitorIdentifier.Flash(monitors);
+                        int w = Math.Min(900, main.Bounds.Right - main.Bounds.Left), h = Math.Min(480, main.Bounds.Bottom - main.Bounds.Top);
+                        int l = main.Bounds.Left + (main.Bounds.Right - main.Bounds.Left - w) / 2, tp = main.Bounds.Top + (main.Bounds.Bottom - main.Bounds.Top - h) / 2;
+                        covered = new ScreenRect(l, tp, l + w, tp + h);
+                    }
+                    else
+                    {
+                        covered = new ScreenRect(main.Bounds.Left + 200, main.Bounds.Top + 200, main.Bounds.Left + 1400, main.Bounds.Top + 900);
+                        surface.Show([covered]);
+                    }
+                    PumpDispatcher(TimeSpan.FromMilliseconds(900));
+                    lines.Add($"covering {covered} on {main.Label}");
+                    lines.Add($"focus: foreground before={before} after={backend.Foreground()?.ProcessId} ({(before == backend.Foreground()?.ProcessId ? "not taken" : "CHANGED")})");
+                    var middle = new System.Drawing.Point((covered.Left + covered.Right) / 2, (covered.Top + covered.Bottom) / 2);
+                    var under = WindowFromPoint(middle);
+                    var name = new System.Text.StringBuilder(256);
+                    GetClassName(under, name, name.Capacity);
+                    lines.Add($"window at its middle: class '{name}' ({(name.ToString() == "TrayTriggerOverlay" ? "the overlay would catch a click" : "clicks go through")})");
+                    using (var bmp = new System.Drawing.Bitmap(main.Bounds.Right - main.Bounds.Left, main.Bounds.Bottom - main.Bounds.Top))
+                    using (var g = System.Drawing.Graphics.FromImage(bmp))
+                    {
+                        g.CopyFromScreen(main.Bounds.Left, main.Bounds.Top, 0, 0, bmp.Size);
+                        // Thumbnail: the full screenshot is large.
+                        using var small = new System.Drawing.Bitmap(bmp, new System.Drawing.Size(bmp.Width / 3, bmp.Height / 3));
+                        small.Save(png, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                    lines.Add($"saved {png}");
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                finally
+                {
+                    surface.Hide();
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                }
+                File.WriteAllLines(report, lines);
+                ExitApplication();
+                return;
+            }
+            // --test-audio <info|switch> <out.txt>: checks the sound output calls on this PC. info lists the playback
+            // devices and which has each job. switch sends a test game's sound to another device, checks it took,
+            // puts it back through the real service, checks that, and in any case gives every job back to the device
+            // that had it. The sound moves for about two seconds.
+            if (e.Args[i].Equals("--test-audio", StringComparison.OrdinalIgnoreCase) && i + 2 < e.Args.Length)
+            {
+                string action = e.Args[i + 1].ToLowerInvariant();
+                string outFile = e.Args[i + 2];
+                var lines = new List<string>();
+                var backend = new Win32AudioBackend();
+                var originals = new Dictionary<AudioRole, string?>();
+                foreach (AudioRole role in Enum.GetValues<AudioRole>()) originals[role] = backend.DefaultId(role);
+                try
+                {
+                    var devices = backend.PlaybackDevices();
+                    string NameOf(string? id) => devices.Where(d => d.Id == id).Select(d => d.Name).FirstOrDefault() ?? id ?? "none";
+                    foreach (var d in devices) lines.Add($"device {d.Name} id={d.Id}");
+                    foreach (var (role, id) in originals) lines.Add($"{role} -> {NameOf(id)}");
+                    if (action == "switch")
+                    {
+                        var other = devices.Where(d => d.Id != originals[AudioRole.Console]).Cast<AudioDevice?>().FirstOrDefault();
+                        if (other is not { } target) { lines.Add("only one playback device: nothing to switch to"); }
+                        else
+                        {
+                            string path = Path.Combine(Path.GetTempPath(), "audio-test-" + Guid.NewGuid().ToString("N") + ".json");
+                            var service = new AudioOutputService(backend, path);
+                            var game = new GameEntry { Id = "audio-test", Name = "Audio test", AudioOutputDeviceId = target.Id };
+                            lines.Add($"begin={service.Begin(game)} target={target.Name}");
+                            PumpDispatcher(TimeSpan.FromSeconds(2));
+                            foreach (AudioRole role in Enum.GetValues<AudioRole>()) lines.Add($"during {role} -> {NameOf(backend.DefaultId(role))}");
+                            service.End(game.Id);
+                            PumpDispatcher(TimeSpan.FromSeconds(1));
+                            foreach (AudioRole role in Enum.GetValues<AudioRole>())
+                                lines.Add($"after {role} -> {NameOf(backend.DefaultId(role))} ({(backend.DefaultId(role) == originals[role] ? "ok" : "WRONG")})");
+                            lines.Add($"note removed={!File.Exists(path)}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                finally
+                {
+                    // Whatever happened: every job back to the device that had it.
+                    foreach (var (role, id) in originals)
+                    {
+                        if (id != null && backend.DefaultId(role) != id) backend.SetDefault(id, role);
+                    }
+                }
+                foreach (var (role, id) in originals) lines.Add($"final {role} -> {(backend.DefaultId(role) == id ? "unchanged" : "CHANGED")}");
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
             // --test-cursor <info|clip|free|service> <out.txt> [seconds]: checks the mouse confinement on this PC.
             // info reads the current confinement. clip confines the mouse to the left half of the main monitor and
             // waits [seconds], so a harness can kill the process and see whether Windows frees the mouse. free
@@ -1866,7 +1990,7 @@ public partial class App
                 // A fourth argument "display" opens it with a display mode already chosen (the second-largest mode), to see both lists.
                 if (e.Args.Skip(i + 3).FirstOrDefault() == "display" && DisplayModeService.Shared.AvailableModes() is { Count: > 1 } shown)
                 {
-                    sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz, KeepMouseOnGameScreen = true };
+                    sampleGame = new GameEntry { Name = sampleGame.Name, Category = sampleGame.Category, ExecutablePath = sampleGame.ExecutablePath, DisplayWidth = shown[1].Width, DisplayHeight = shown[1].Height, DisplayRefreshHz = shown[1].RefreshHz, KeepMouseOnGameScreen = true, DimOtherScreens = true, DisplayMonitorId = DisplayModeService.Shared.AvailableMonitors().Select(m => m.Id).FirstOrDefault() ?? string.Empty, AudioOutputDeviceId = AudioOutputService.Shared.AvailableDevices().Select(d => d.Id).FirstOrDefault() ?? string.Empty };
                 }
                 var dlg = new GameEditDialog(sampleGame, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
                 dlg.Show();
@@ -4212,6 +4336,8 @@ public partial class App
         foreach (var o in q.Get()) return Convert.ToInt32(o["ParentProcessId"]);
         return null;
     }
+    [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(System.Drawing.Point point);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int max);
     [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
 
     /// <summary>For the --test-cursor capture: brings a test window to the front even from a background process (a tap of Alt first, which Windows accepts as input).</summary>

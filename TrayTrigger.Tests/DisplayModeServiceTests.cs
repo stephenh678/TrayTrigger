@@ -20,8 +20,34 @@ internal sealed class FakeDisplay : IDisplayBackend
     public bool ThrowOnApply;
     public DisplayMode Desktop = new(3840, 2160, 60);
     public List<string> Calls = [];
+    /// <summary>The monitors; the first at 0, 0 is the main display. Their places move when the layout is set.</summary>
+    public List<MonitorInfo> Mons = [new(@"\.\DISPLAY1", "MON1", "Main", true, new ScreenRect(0, 0, 3840, 2160))];
+    public DisplayChange LayoutResult = DisplayChange.Ok;
+    /// <summary>Makes the next this-many layout calls fail, then lets them work.</summary>
+    public int FailLayoutCalls;
+    public List<string> AppliedOn = [];
 
     public bool IsRemoteSession => Remote;
+    public IReadOnlyList<MonitorInfo> Monitors() => Mons;
+    public IReadOnlyList<MonitorPlacement> Placements() => Mons.Select(m => new MonitorPlacement(m.Device, m.Bounds.Left, m.Bounds.Top)).ToList();
+
+    public System.Action? DuringLayout;
+    public DisplayChange SetLayout(IReadOnlyList<MonitorPlacement> placements)
+    {
+        DuringLayout?.Invoke();
+        Calls.Add("layout " + string.Join(" ", placements.Select(p => $"{p.Device.Replace(@"\\.\", "")}@{p.X},{p.Y}")));
+        if (FailLayoutCalls > 0) { FailLayoutCalls--; return DisplayChange.Failed; }
+        if (LayoutResult != DisplayChange.Ok) return LayoutResult;
+        Mons = Mons.Select(m =>
+        {
+            var p = placements.First(x => x.Device == m.Device);
+            int w = m.Bounds.Right - m.Bounds.Left, h = m.Bounds.Bottom - m.Bounds.Top;
+            return m with { IsPrimary = p.X == 0 && p.Y == 0, Bounds = new ScreenRect(p.X, p.Y, p.X + w, p.Y + h) };
+        }).ToList();
+        Primary = Mons.First(m => m.IsPrimary).Device;
+        return DisplayChange.Ok;
+    }
+
     public string? PrimaryDevice() => Primary;
     public bool IsAttached(string device) => Attached.Contains(device);
     public IReadOnlyList<DisplayMode> Modes(string device) => Listed;
@@ -31,6 +57,7 @@ internal sealed class FakeDisplay : IDisplayBackend
     public DisplayChange ApplyTemporary(string device, DisplayMode mode)
     {
         Calls.Add($"apply {mode}");
+        AppliedOn.Add(device);
         if (ThrowOnApply) throw new System.InvalidOperationException("driver exploded");
         if (ApplyResult == DisplayChange.Ok) Now = mode;
         return ApplyResult;
@@ -429,6 +456,27 @@ public sealed class DisplayModeServiceTests : System.IDisposable
 
         Assert.Equal(4, ViewModels.GameEditViewModel.BuildResolutionOptions(Sample, saved).Count);
         Assert.Equal(2, ViewModels.GameEditViewModel.BuildRateOptions(Sample, new(1920, 1080, "x"), saved).Count);
+    }
+
+    [Fact]
+    public void TheMonitorList_HasTheMainDisplayFirst_AndKeepsAMonitorThatIsNotConnected()
+    {
+        var monitors = new[] { new MonitorInfo(@"\\.\DISPLAY1", "MON1", "Left", true, new ScreenRect(0, 0, 1920, 1080)) };
+
+        var options = ViewModels.GameEditViewModel.BuildMonitorOptions(monitors, "GONE");
+
+        Assert.Equal([ViewModels.GameEditViewModel.MainDisplayLabel, "Display 1: Left (1920 × 1080) (main display now)", "A monitor that isn't connected"], options.Select(o => o.Label).ToList());
+        Assert.Equal("", options[0].Id);
+        Assert.Equal("GONE", options[^1].Id);
+    }
+
+    [Fact]
+    public void TheSoundList_StartsWithNoChange_AndKeepsADeviceThatIsNotConnected()
+    {
+        var options = ViewModels.GameEditViewModel.BuildAudioOptions([new AudioDevice("a", "Speakers")], "gone");
+
+        Assert.Equal([ViewModels.GameEditViewModel.NoAudioChangeLabel, "Speakers", "A sound output that isn't connected"], options.Select(o => o.Label).ToList());
+        Assert.Equal("gone", options[^1].Id);
     }
 
     [Fact]

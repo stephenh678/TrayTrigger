@@ -49,6 +49,7 @@ internal sealed class FakeCursor : ICursorBackend
     }
 
     public ScreenRect? MonitorOf(IntPtr window) => Monitors.TryGetValue(window, out var m) ? m : null;
+    public IReadOnlyList<ScreenRect> AllMonitors() => Monitors.Values.ToList();
     public ScreenRect? CurrentClip() => Clip_;
 
     public bool Clip(ScreenRect? rect)

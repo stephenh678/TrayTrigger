@@ -19,14 +19,16 @@ internal static class LibraryChanges
         bool IsHidden, bool CloseLauncherOnExit,
         string PreLaunchScriptPath, string PostExitScriptPath, bool WaitForPreLaunchScript, bool AbortLaunchOnScriptFailure,
         bool RunScriptsHidden, bool RunScriptsAsAdmin, string ScriptArguments, bool SkipDefaultScripts, int PreLaunchScriptTimeoutSeconds,
-        string DisplayMode, bool KeepMouseOnGameScreen);
+        string DisplayMode, bool KeepMouseOnGameScreen,
+        string DisplayMonitorId, bool MakeMainDisplay, bool DimOtherScreens, string AudioOutputDeviceId);
 
     public static GameSettings Capture(GameEntry g) => new(
         g.Name, g.ExecutablePath, g.Arguments, g.WorkingDirectory, g.RunAsAdmin, g.LaunchDirectly,
         g.IsHidden, g.CloseLauncherOnExit,
         g.PreLaunchScriptPath, g.PostExitScriptPath, g.WaitForPreLaunchScript, g.AbortLaunchOnScriptFailure,
         g.RunScriptsHidden, g.RunScriptsAsAdmin, g.ScriptArguments, g.SkipDefaultScripts, g.PreLaunchScriptTimeoutSeconds,
-        DisplayModeService.RequestedMode(g)?.ToString() ?? string.Empty, g.KeepMouseOnGameScreen);
+        DisplayModeService.RequestedMode(g)?.ToString() ?? string.Empty, g.KeepMouseOnGameScreen,
+        g.DisplayMonitorId, g.MakeMainDisplay, g.DimOtherScreens, g.AudioOutputDeviceId);
 
     /// <summary>
     /// "Hades: launch arguments and run as administrator changed", with each old and new value as the detail;
@@ -43,6 +45,12 @@ internal static class LibraryChanges
             labels.Add(label);
             lines.Add($"{Capital(label)}: {Shown(was)} -> {Shown(now)}");
         }
+        void Chosen(string label, string was, string now, string none)
+        {
+            if (string.Equals(was, now, StringComparison.Ordinal)) return;
+            labels.Add(label);
+            lines.Add($"{Capital(label)}: {(string.IsNullOrEmpty(was) ? none : "a chosen one")} -> {(string.IsNullOrEmpty(now) ? none : "a chosen one")}");
+        }
         void Flag(string label, bool was, bool now)
         {
             if (was == now) return;
@@ -58,6 +66,11 @@ internal static class LibraryChanges
         Flag("launch directly", before.LaunchDirectly, after.LaunchDirectly);
         Text("display mode", before.DisplayMode, after.DisplayMode);
         Flag("keep the mouse on the game's screen", before.KeepMouseOnGameScreen, after.KeepMouseOnGameScreen);
+        // A monitor and a sound device are named by ids that mean nothing to read, so only that they changed is said.
+        Chosen("monitor", before.DisplayMonitorId, after.DisplayMonitorId, "the main display");
+        Flag("make the monitor the main display", before.MakeMainDisplay, after.MakeMainDisplay);
+        Flag("dim the other screens", before.DimOtherScreens, after.DimOtherScreens);
+        Chosen("sound output", before.AudioOutputDeviceId, after.AudioOutputDeviceId, "not changed");
         Flag("hidden", before.IsHidden, after.IsHidden);
         Flag("close launcher on exit", before.CloseLauncherOnExit, after.CloseLauncherOnExit);
         Text("pre-launch script", before.PreLaunchScriptPath, after.PreLaunchScriptPath);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace TrayTrigger.Services;
@@ -20,6 +21,11 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
     private const uint DM_INTERLACED = 0x2;
     private const uint DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x1;
     private const uint DISPLAY_DEVICE_PRIMARY_DEVICE = 0x4;
+    private const uint EDD_GET_DEVICE_INTERFACE_NAME = 0x1;
+    private const uint CDS_UPDATEREGISTRY = 0x1;
+    private const uint CDS_SET_PRIMARY = 0x10;
+    private const uint CDS_NORESET = 0x10000000;
+    private const uint DM_POSITION = 0x20;
     private const int DISP_CHANGE_SUCCESSFUL = 0;
     private const int DISP_CHANGE_BADMODE = -2;
     private const int SM_REMOTESESSION = 0x1000;
@@ -110,6 +116,69 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
                 && (d.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0) return true;
         }
         return false;
+    }
+
+    public IReadOnlyList<MonitorInfo> Monitors()
+    {
+        var list = new List<MonitorInfo>();
+        foreach (var device in Devices())
+        {
+            if ((device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0) continue;
+            var current = NewMode();
+            if (!EnumDisplaySettingsExW(device.DeviceName, ENUM_CURRENT_SETTINGS, ref current, 0)) continue;
+
+            // The monitor itself, one level down. Its interface path stays with the monitor and its connection, where
+            // the \.\DISPLAYn name can change when cables are swapped.
+            var monitor = new DisplayDeviceW { cb = (uint)Marshal.SizeOf<DisplayDeviceW>() };
+            string id = device.DeviceName, name = string.Empty;
+            if (EnumDisplayDevicesW(device.DeviceName, 0, ref monitor, EDD_GET_DEVICE_INTERFACE_NAME))
+            {
+                if (!string.IsNullOrWhiteSpace(monitor.DeviceID)) id = monitor.DeviceID;
+                name = monitor.DeviceString?.Trim() ?? string.Empty;
+            }
+            var bounds = new ScreenRect(current.dmPositionX, current.dmPositionY, current.dmPositionX + (int)current.dmPelsWidth, current.dmPositionY + (int)current.dmPelsHeight);
+            list.Add(new MonitorInfo(device.DeviceName, id, name, (device.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE) != 0, bounds));
+        }
+        return list.OrderByDescending(m => m.IsPrimary).ThenBy(m => m.Number).ToList();
+    }
+
+    public IReadOnlyList<MonitorPlacement> Placements()
+    {
+        var list = new List<MonitorPlacement>();
+        foreach (var device in Devices())
+        {
+            if ((device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0) continue;
+            var current = NewMode();
+            if (EnumDisplaySettingsExW(device.DeviceName, ENUM_CURRENT_SETTINGS, ref current, 0))
+            {
+                list.Add(new MonitorPlacement(device.DeviceName, current.dmPositionX, current.dmPositionY));
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Stages each monitor's place in the desktop's own setting (the one at 0, 0 as the main display), then applies
+    /// them together: Windows asks for the new main display to be at 0, 0 and for every other place to be given
+    /// relative to it, and for the change to be applied once, after the last is staged.
+    /// </summary>
+    public DisplayChange SetLayout(IReadOnlyList<MonitorPlacement> placements)
+    {
+        foreach (var (p, setPrimary) in DisplayLayout.StagingPlan(placements))
+        {
+            var mode = NewMode();
+            if (!EnumDisplaySettingsExW(p.Device, ENUM_CURRENT_SETTINGS, ref mode, 0)) return DisplayChange.Failed;
+            mode.dmPositionX = p.X;
+            mode.dmPositionY = p.Y;
+            // The fields the monitor already reports (its size, colour depth, rate) stay: Windows works out the shape
+            // of the desktop from them. Only the position is added.
+            mode.dmFields |= DM_POSITION;
+            mode.dmDriverExtra = 0;
+            uint flags = CDS_UPDATEREGISTRY | CDS_NORESET | (setPrimary ? CDS_SET_PRIMARY : 0);
+            var staged = Map(ChangeDisplaySettingsExW(p.Device, ref mode, IntPtr.Zero, flags, IntPtr.Zero));
+            if (staged != DisplayChange.Ok) return staged;
+        }
+        return Map(ChangeDisplaySettingsExW(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero));
     }
 
     public DisplayMode? Current(string device)

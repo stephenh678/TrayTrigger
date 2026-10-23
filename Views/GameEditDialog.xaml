@@ -562,18 +562,41 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    <!-- CARD 3a: DISPLAY - everything to do with the screen a game runs on, in one card: the main display's
-                         resolution and refresh rate while the game runs, and keeping the mouse on the game's screen. Shares the
-                         Performance tab. Each part shows only when it can do something on this PC. -->
+                    <!-- CARD 3a: DISPLAY AND SOUND - everything to do with the screens and speakers a game runs on, in one card:
+                         which monitor, its resolution and refresh rate, making it the main display, keeping the mouse on it,
+                         dimming the others, and the sound output. Shares the Performance tab. Each part shows only when it can
+                         do something on this PC: the monitor parts with more than one monitor, the sound with more than one device. -->
                     <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
                             BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14" Margin="0,0,0,12"
                             Visibility="{Binding ShowDisplayCard, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Text="Display" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
+                            <TextBlock Text="Display and sound" FontSize="{DynamicResource FontSizeSubhead}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
+                            <StackPanel Visibility="{Binding ShowMonitorChoice, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Monitor" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                <DockPanel Margin="0,0,0,4">
+                                    <Button DockPanel.Dock="Right" Content="Identify" Margin="8,0,0,0" Padding="12,4"
+                                            Command="{Binding IdentifyMonitorsCommand}"
+                                            AutomationProperties.Name="Identify monitors"
+                                            ToolTip="Shows a number on each monitor for a moment"/>
+                                    <ComboBox AutomationProperties.Name="Monitor" ItemsSource="{Binding MonitorOptions}"
+                                              SelectedItem="{Binding SelectedMonitor}" DisplayMemberPath="Label"
+                                              Style="{StaticResource ModernComboBox}"/>
+                                </DockPanel>
+                                <CheckBox Content="Make this monitor the main display while the game runs" IsChecked="{Binding MakeMainDisplay}"
+                                          Visibility="{Binding ShowMakeMainDisplay, Converter={StaticResource BoolToVis}}"
+                                          AutomationProperties.Name="Make this monitor the main display while the game runs"
+                                          Foreground="{DynamicResource BrushTextPrimary}" Margin="0,6,0,4"/>
+                                <TextBlock Visibility="{Binding ShowMakeMainDisplay, Converter={StaticResource BoolToVis}}"
+                                           Text="The taskbar, open windows and desktop icons move to it, and back when the game ends. It changes Windows' own display layout for the time the game runs, which is why it is off unless you ask for it."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            </StackPanel>
+
                             <StackPanel Visibility="{Binding ShowDisplay, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Resolution and refresh rate (main display)" FontSize="{DynamicResource FontSizeBody}"
+                                <TextBlock Text="Resolution and refresh rate" FontSize="{DynamicResource FontSizeBody}"
                                            Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <ComboBox AutomationProperties.Name="Resolution" ItemsSource="{Binding ResolutionOptions}"
                                           SelectedItem="{Binding SelectedResolution}" DisplayMemberPath="Label"
@@ -595,11 +618,30 @@
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
                             </StackPanel>
 
-                            <Button AutomationProperties.Name="Learn more about the display settings" Style="{StaticResource HelpLinkButton}"
+                            <StackPanel Visibility="{Binding ShowDim, Converter={StaticResource BoolToVis}}">
+                                <CheckBox Content="Dim the other screens" IsChecked="{Binding DimOtherScreens}"
+                                          AutomationProperties.Name="Dim the other screens"
+                                          Foreground="{DynamicResource BrushTextPrimary}" Margin="0,6,0,4"/>
+                                <TextBlock Text="While this game's window is in front, every other monitor is dimmed. Alt+Tab or the Windows key lifts it at once, and it is lifted when the game ends."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <StackPanel Visibility="{Binding ShowAudio, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Sound output" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,4"/>
+                                <ComboBox AutomationProperties.Name="Sound output" ItemsSource="{Binding AudioOptions}"
+                                          SelectedItem="{Binding SelectedAudio}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="The game's sound plays through this device while it runs, and goes back when it ends. A sound output chosen for this game in Windows' volume mixer overrides it."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
+                            <Button AutomationProperties.Name="Learn more about the display and sound settings" Style="{StaticResource HelpLinkButton}"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/display_mode"/>
                         </StackPanel>
                     </Border>
-
                     <!-- CARD 3b: DLSS OVERRIDE, after the Performance card: the profile is the main choice
                          on the Performance tab, and this card is NVIDIA-only. "DLSS Override", "DLSS Indicator" and the three
                          feature names are NVIDIA's own words, kept so a user who has seen them in

@@ -111,6 +111,24 @@ public class LibraryChangesTests
     }
 
     [Fact]
+    public void TheMonitorSoundAndDimmingChoices_AreRecorded_WithoutTheirIds()
+    {
+        var game = Game();
+        var line = Edit(game, () =>
+        {
+            game.DisplayMonitorId = @"\\?\DISPLAY#X#1";
+            game.MakeMainDisplay = true;
+            game.DimOtherScreens = true;
+            game.AudioOutputDeviceId = "{0.0.0}.{abc}";
+        });
+
+        Assert.Equal("Hades: monitor, make the monitor the main display, dim the other screens and sound output changed", line!.Value.Text);
+        Assert.Contains("Monitor: the main display -> a chosen one", line.Value.Detail);
+        Assert.Contains("Sound output: not changed -> a chosen one", line.Value.Detail);
+        Assert.DoesNotContain("abc", line.Value.Detail);
+    }
+
+    [Fact]
     public void WhatPerformanceActivityRecords_IsNotRecordedAgain()
     {
         var game = Game();

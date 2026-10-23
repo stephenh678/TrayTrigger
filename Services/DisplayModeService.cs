@@ -13,15 +13,74 @@ public readonly record struct DisplayMode(int Width, int Height, int RefreshHz)
     public override string ToString() => $"{Width} × {Height} @ {RefreshHz} Hz";
 }
 
+/// <summary>One attached monitor.</summary>
+/// <param name="Device">Windows' name for it right now ("\\.\DISPLAY2"); it can change when cables are swapped.</param>
+/// <param name="Id">The monitor's own interface path, which stays with the monitor and its connection; this is what a game remembers.</param>
+/// <param name="Name">What the monitor calls itself.</param>
+public readonly record struct MonitorInfo(string Device, string Id, string Name, bool IsPrimary, ScreenRect Bounds)
+{
+    /// <summary>The number Windows' own Identify shows: the one in the device name.</summary>
+    public int Number => int.TryParse(new string(Device.Where(char.IsDigit).ToArray()), out int n) ? n : 0;
+
+    /// <summary>"Display 2: LG ULTRAGEAR (2560 × 1440)".</summary>
+    public string Label => $"Display {Number}: {(string.IsNullOrWhiteSpace(Name) ? "Monitor" : Name)} ({Bounds.Right - Bounds.Left} × {Bounds.Bottom - Bounds.Top})";
+}
+
+/// <summary>Where a monitor sits on the desktop, in pixels; the main display is at 0, 0.</summary>
+public readonly record struct MonitorPlacement(string Device, int X, int Y);
+
+/// <summary>Moving the origin of the desktop to another monitor, as Windows needs it to make that monitor the main one.</summary>
+internal static class DisplayLayout
+{
+    /// <summary>
+    /// Every placement shifted so <paramref name="newPrimary"/> sits at 0, 0, which is what being the main display
+    /// means, with each monitor keeping its place relative to the others. Null when it isn't in the list.
+    /// </summary>
+    public static IReadOnlyList<MonitorPlacement>? WithPrimary(IReadOnlyList<MonitorPlacement> placements, string newPrimary)
+    {
+        var target = placements.FirstOrDefault(p => string.Equals(p.Device, newPrimary, StringComparison.OrdinalIgnoreCase));
+        if (target.Device == null) return null;
+        return placements.Select(p => new MonitorPlacement(p.Device, p.X - target.X, p.Y - target.Y)).ToList();
+    }
+
+    /// <summary>
+    /// The order and flags for staging a layout: the monitor at 0, 0 first and marked as the main display, then the others.
+    /// Windows checks the shape of the desktop as each is staged, and it is the main display's place that the others are given against.
+    /// </summary>
+    public static IReadOnlyList<(MonitorPlacement Placement, bool SetPrimary)> StagingPlan(IReadOnlyList<MonitorPlacement> placements) =>
+        placements.Select(p => (Placement: p, SetPrimary: p.X == 0 && p.Y == 0))
+            .OrderByDescending(x => x.SetPrimary)
+            .ToList();
+
+    /// <summary>The monitor sitting at 0, 0, or null.</summary>
+    public static string? PrimaryOf(IReadOnlyList<MonitorPlacement> placements) =>
+        placements.Where(p => p.X == 0 && p.Y == 0).Select(p => p.Device).FirstOrDefault();
+}
+
+/// <summary>One placement in the record of what was changed.</summary>
+public sealed class DisplayPlacementRecord
+{
+    public string Device { get; set; } = string.Empty;
+    public int X { get; set; }
+    public int Y { get; set; }
+}
+
 /// <summary>What was set, written down before the display is touched so a crash can be recovered from.</summary>
 public sealed class DisplaySessionRecord
 {
     public string GameId { get; set; } = string.Empty;
     public string GameName { get; set; } = string.Empty;
+    /// <summary>The monitor the mode was set on; empty when only the main display was changed.</summary>
     public string Device { get; set; } = string.Empty;
+    /// <summary>0 when no mode was set.</summary>
     public int Width { get; set; }
     public int Height { get; set; }
     public int RefreshHz { get; set; }
+    /// <summary>The monitor made the main display, if one was; empty otherwise.</summary>
+    public string MadePrimary { get; set; } = string.Empty;
+    /// <summary>The monitor that was the main display before, and where every monitor sat.</summary>
+    public string PrimaryBefore { get; set; } = string.Empty;
+    public List<DisplayPlacementRecord> LayoutBefore { get; set; } = [];
 }
 
 /// <summary>What Windows said to a display change.</summary>
@@ -36,6 +95,15 @@ internal interface IDisplayBackend
     string? PrimaryDevice();
     /// <summary>The display is still attached to the desktop.</summary>
     bool IsAttached(string device);
+    /// <summary>Every attached monitor, the main display first.</summary>
+    IReadOnlyList<MonitorInfo> Monitors();
+    /// <summary>Where every attached monitor sits now.</summary>
+    IReadOnlyList<MonitorPlacement> Placements();
+    /// <summary>
+    /// Puts the monitors at these places and makes the one at 0, 0 the main display, as the desktop's own setting
+    /// (it lasts until it is changed back). Every attached monitor is in the list.
+    /// </summary>
+    DisplayChange SetLayout(IReadOnlyList<MonitorPlacement> placements);
     /// <summary>Every mode the display lists, each once.</summary>
     IReadOnlyList<DisplayMode> Modes(string device);
     DisplayMode? Current(string device);
@@ -47,27 +115,30 @@ internal interface IDisplayBackend
     DisplayChange RestoreDefault(string device);
 }
 
-/// <summary>Why a game's display mode was, or wasn't, applied.</summary>
+/// <summary>Why a game's display settings were, or weren't, applied.</summary>
 public enum DisplayApply
 {
-    /// <summary>The game has no display mode set.</summary>
+    /// <summary>The game has no display setting that changes anything.</summary>
     NotRequested,
     Applied,
-    /// <summary>The display already runs the mode, so there is nothing to change or put back.</summary>
+    /// <summary>The display already runs the mode and is already the main display, so there is nothing to change or put back.</summary>
     AlreadyInMode,
-    /// <summary>Another game holds a display mode right now; one at a time.</summary>
+    /// <summary>Another game holds the display right now; one at a time.</summary>
     Busy,
     /// <summary>A remote desktop session.</summary>
     Remote,
     NoDisplay,
+    /// <summary>The monitor the game was set up for isn't connected.</summary>
+    MonitorMissing,
     /// <summary>The display doesn't list the mode, or Windows would refuse it.</summary>
     Unsupported,
     Failed,
 }
 
 /// <summary>
-/// Per-game display mode: the main display's resolution and refresh rate while a game runs, put back
-/// when its session ends.
+/// Per-game display settings: the resolution and refresh rate of the game's monitor (the main display unless
+/// another is chosen) and, if asked, making that monitor the main display, while a game runs; all put back when
+/// its session ends.
 ///
 /// <para>The mode is set as a temporary one (Windows' CDS_FULLSCREEN): it is never written to the
 /// desktop's own setting, so a restart brings the desktop's mode back, and Windows undoes it when this
@@ -77,14 +148,16 @@ public enum DisplayApply
 /// kill. So a small record of what was set is also written first, and <see cref="RecoverIfNeeded"/>
 /// uses it at the next start. It does nothing if the display is already back.</para>
 ///
-/// <para>Putting the display back always means asking for the desktop's own mode, never re-applying a
-/// remembered one: that is always a mode the display supports, even if the monitor was replaced, and a
-/// setting the user changed in between is not undone. Recovery only does it when the display is still
-/// in the mode that was set; if it isn't, someone has changed it since and it is left alone.</para>
+/// <para>Making a monitor the main display is different: Windows has no temporary form of it, so the
+/// desktop's own layout is changed, and the record is what puts it back, by hand if need be: it holds where
+/// every monitor sat. It is put back when the game ends, when TrayTrigger closes and at the next start, and
+/// only when the monitor that was made main still is.</para>
 ///
-/// <para>Only a mode the display itself lists is ever asked for, and Windows is asked to test it
-/// first. One game at a time holds the display: a second game that wants a different mode leaves it
-/// alone, and only the game that set the mode puts it back.</para>
+/// <para>Putting the display mode back always means asking for the desktop's own mode, never re-applying a
+/// remembered one: that is always a mode the display supports, even if the monitor was replaced, and a
+/// setting the user changed in between is not undone. Only a mode the display itself lists is ever asked for,
+/// and Windows is asked to test it first. One game at a time holds the display: a second game that wants a
+/// change leaves it alone, and only the game that made the change puts it back.</para>
 /// </summary>
 internal sealed class DisplayModeService
 {
@@ -108,9 +181,8 @@ internal sealed class DisplayModeService
     private readonly Lock _lock = new();
     private string? _ownerId;
     private string? _ownerName;
-    private string? _device;
-    private DisplayMode _applied;
     private bool _ending;
+    private DisplaySessionRecord? _record;
 
     internal DisplayModeService(IDisplayBackend backend, string snapshotPath)
     {
@@ -121,16 +193,36 @@ internal sealed class DisplayModeService
     /// <summary>The game asks for a display mode: all three numbers are set.</summary>
     public static bool Wants(GameEntry game) => game.DisplayWidth > 0 && game.DisplayHeight > 0 && game.DisplayRefreshHz > 0;
 
+    /// <summary>The game asks for the monitor to be made the main display, or for a mode.</summary>
+    public static bool WantsAnyChange(GameEntry game) => Wants(game) || game.MakeMainDisplay;
+
     /// <summary>The mode a game asks for, or null.</summary>
     public static DisplayMode? RequestedMode(GameEntry game) =>
         Wants(game) ? new DisplayMode(game.DisplayWidth, game.DisplayHeight, game.DisplayRefreshHz) : null;
 
-    /// <summary>The main display's modes, best first (largest, then fastest), for Edit Game's list; empty when it can't be read.</summary>
-    public IReadOnlyList<DisplayMode> AvailableModes()
+    /// <summary>The attached monitors, the main display first; empty in a remote session or when they can't be read.</summary>
+    public IReadOnlyList<MonitorInfo> AvailableMonitors()
     {
         try
         {
-            if (_backend.IsRemoteSession || _backend.PrimaryDevice() is not { } device) return [];
+            if (_backend.IsRemoteSession) return [];
+            return _backend.Monitors();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Swallowed("Display", ex, "listing the monitors; Edit Game shows none");
+            return [];
+        }
+    }
+
+    /// <summary>The modes of a monitor (the main display when <paramref name="monitorId"/> is empty), best first (largest, then fastest), for Edit Game's lists; empty when it can't be read.</summary>
+    public IReadOnlyList<DisplayMode> AvailableModes(string? monitorId = null)
+    {
+        try
+        {
+            if (_backend.IsRemoteSession) return [];
+            string? device = string.IsNullOrEmpty(monitorId) ? _backend.PrimaryDevice() : FindDevice(monitorId);
+            if (device == null) return [];
             return _backend.Modes(device)
                 .OrderByDescending(m => (long)m.Width * m.Height).ThenByDescending(m => m.RefreshHz).ToList();
         }
@@ -141,23 +233,26 @@ internal sealed class DisplayModeService
         }
     }
 
+    private string? FindDevice(string monitorId) =>
+        _backend.Monitors().Where(m => string.Equals(m.Id, monitorId, StringComparison.OrdinalIgnoreCase)).Select(m => m.Device).FirstOrDefault();
+
     /// <summary>Before the game launches. Never throws: a game must start whatever the display does.</summary>
     public DisplayApply Begin(GameEntry game)
     {
-        if (RequestedMode(game) is not { } wanted) return DisplayApply.NotRequested;
+        if (!WantsAnyChange(game)) return DisplayApply.NotRequested;
         try
         {
-            return BeginCore(game, wanted);
+            return BeginCore(game);
         }
         catch (Exception ex)
         {
             LoggingService.Error("Display", $"Setting the display for '{game.Name}' failed: {ex.Message}", ex);
-            Problem(game, $"{game.Name}: the display mode couldn't be set", "The game starts with the display as it is.");
+            Problem(game, $"{game.Name}: the display couldn't be set", "The game starts with the display as it is.");
             return DisplayApply.Failed;
         }
     }
 
-    private DisplayApply BeginCore(GameEntry game, DisplayMode wanted)
+    private DisplayApply BeginCore(GameEntry game)
     {
         if (_backend.IsRemoteSession)
         {
@@ -165,6 +260,7 @@ internal sealed class DisplayModeService
             return DisplayApply.Remote;
         }
 
+        string description;
         lock (_lock)
         {
             if (_ownerId != null && _ownerId != game.Id)
@@ -174,91 +270,182 @@ internal sealed class DisplayModeService
             }
             if (_ownerId == game.Id) return DisplayApply.Applied;
 
-            if (_backend.PrimaryDevice() is not { } device)
+            // The monitor the game is set up for: the main display unless it names another.
+            string? device;
+            if (string.IsNullOrEmpty(game.DisplayMonitorId))
             {
-                Skip(game, "no main display was found");
-                return DisplayApply.NoDisplay;
+                device = _backend.PrimaryDevice();
+                if (device == null)
+                {
+                    Skip(game, "no main display was found");
+                    return DisplayApply.NoDisplay;
+                }
+            }
+            else
+            {
+                device = FindDevice(game.DisplayMonitorId);
+                if (device == null)
+                {
+                    Skip(game, "the monitor it is set up for isn't connected");
+                    Problem(game, $"{game.Name}: its monitor isn't connected", "The game starts with the display as it is. Pick a monitor in Edit Game > Display.");
+                    return DisplayApply.MonitorMissing;
+                }
             }
 
-            if (_backend.Current(device) == wanted)
+            var wantedMode = RequestedMode(game);
+            bool setMode = false;
+            if (wantedMode is { } wanted)
             {
-                LoggingService.Verbose("Display", $"'{game.Name}': the display already runs {wanted}.");
+                if (_backend.Current(device) == wanted)
+                {
+                    LoggingService.Verbose("Display", $"'{game.Name}': the display already runs {wanted}.");
+                }
+                // Only a mode the display lists, and only one Windows says it would accept. Never one made up.
+                else if (!_backend.Modes(device).Contains(wanted) || _backend.Test(device, wanted) != DisplayChange.Ok)
+                {
+                    Skip(game, $"the display doesn't support {wanted}");
+                    Problem(game, $"{game.Name}: the display doesn't support {wanted}",
+                        "The game starts with the display as it is. Pick another mode in Edit Game > Display.");
+                    return DisplayApply.Unsupported;
+                }
+                else
+                {
+                    setMode = true;
+                }
+            }
+
+            // The layout as it is now, and what changing the main display would make of it.
+            var before = _backend.Placements();
+            string? primaryBefore = DisplayLayout.PrimaryOf(before);
+            IReadOnlyList<MonitorPlacement>? newLayout = null;
+            if (game.MakeMainDisplay && !string.Equals(device, primaryBefore, StringComparison.OrdinalIgnoreCase))
+            {
+                newLayout = DisplayLayout.WithPrimary(before, device);
+                if (newLayout == null || primaryBefore == null)
+                {
+                    Skip(game, "the monitors' places couldn't be read");
+                    return DisplayApply.Failed;
+                }
+            }
+
+            if (!setMode && newLayout == null)
+            {
                 return DisplayApply.AlreadyInMode;
             }
 
-            // Only a mode the display lists, and only one Windows says it would accept. Never one made up.
-            if (!_backend.Modes(device).Contains(wanted) || _backend.Test(device, wanted) != DisplayChange.Ok)
+            // Written before the display is touched: a change that couldn't be put back after a crash is never made.
+            var record = new DisplaySessionRecord
             {
-                Skip(game, $"the display doesn't support {wanted}");
-                Problem(game, $"{game.Name}: the display doesn't support {wanted}",
-                    "The game starts with the display as it is. Pick another mode in Edit Game > Display.");
-                return DisplayApply.Unsupported;
-            }
-
-            // Written before the display is touched: a mode that couldn't be put back after a crash is
-            // never set.
-            if (!WriteSnapshot(new DisplaySessionRecord { GameId = game.Id, GameName = game.Name, Device = device, Width = wanted.Width, Height = wanted.Height, RefreshHz = wanted.RefreshHz }))
+                GameId = game.Id,
+                GameName = game.Name,
+                Device = setMode ? device : string.Empty,
+                Width = setMode ? wantedMode!.Value.Width : 0,
+                Height = setMode ? wantedMode!.Value.Height : 0,
+                RefreshHz = setMode ? wantedMode!.Value.RefreshHz : 0,
+                MadePrimary = newLayout != null ? device : string.Empty,
+                PrimaryBefore = newLayout != null ? primaryBefore! : string.Empty,
+                LayoutBefore = newLayout != null ? before.Select(p => new DisplayPlacementRecord { Device = p.Device, X = p.X, Y = p.Y }).ToList() : [],
+            };
+            if (!WriteSnapshot(record))
             {
                 Skip(game, "TrayTrigger couldn't write down what it was about to change");
-                Problem(game, $"{game.Name}: the display mode wasn't set", "TrayTrigger couldn't save a note of the change, so it left the display alone.");
+                Problem(game, $"{game.Name}: the display wasn't changed", "TrayTrigger couldn't save a note of the change, so it left the display alone.");
                 return DisplayApply.Failed;
             }
 
-            if (_backend.ApplyTemporary(device, wanted) != DisplayChange.Ok)
+            if (newLayout != null && _backend.SetLayout(newLayout) != DisplayChange.Ok)
             {
-                DeleteSnapshot();
-                Skip(game, $"Windows wouldn't set {wanted}");
-                Problem(game, $"{game.Name}: Windows wouldn't set the display to {wanted}", "The game starts with the display as it is.");
+                // Some of it may have been staged: put every monitor back where it was.
+                if (_backend.SetLayout(before) == DisplayChange.Ok)
+                {
+                    DeleteSnapshot();
+                    Skip(game, "Windows wouldn't make the monitor the main display");
+                    Problem(game, $"{game.Name}: Windows wouldn't make its monitor the main display", "The game starts with the display as it is.");
+                }
+                else
+                {
+                    // Not even the old layout went back: the note stays, so the next start tries again.
+                    Skip(game, "Windows wouldn't make the monitor the main display, or put the layout back");
+                    Problem(game, $"{game.Name}: the monitor layout may be wrong",
+                        "Windows wouldn't make the monitor the main display and then wouldn't put the layout back. TrayTrigger tries again at the next start; Windows Settings > System > Display sets it by hand.");
+                }
                 return DisplayApply.Failed;
+            }
+
+            if (setMode && _backend.ApplyTemporary(device, wantedMode!.Value) != DisplayChange.Ok)
+            {
+                if (newLayout != null)
+                {
+                    // The main display was changed for this game; keep that, and say the mode wasn't.
+                    record.Device = string.Empty;
+                    record.Width = record.Height = record.RefreshHz = 0;
+                    WriteSnapshot(record);
+                }
+                else
+                {
+                    DeleteSnapshot();
+                }
+                Skip(game, $"Windows wouldn't set {wantedMode}");
+                Problem(game, $"{game.Name}: Windows wouldn't set the display to {wantedMode}", "The game starts with the display as it is.");
+                if (newLayout == null) return DisplayApply.Failed;
+                setMode = false;
             }
 
             _ownerId = game.Id;
             _ownerName = game.Name;
-            _device = device;
-            _applied = wanted;
+            _record = record;
+            description = Describe(device, setMode ? wantedMode : null, newLayout != null);
         }
 
-        LoggingService.Info("Display", $"Set the display to {wanted} for '{game.Name}'.");
-        LaunchRecord.Note(game.Id, LaunchRecord.Profile, $"display set to {wanted}");
-        ActivityService.Add(ActivityLevel.Change, $"{game.Name}: display set to {wanted} while it runs", subject: game.Name,
+        LoggingService.Info("Display", $"Set the display for '{game.Name}': {description}.");
+        LaunchRecord.Note(game.Id, LaunchRecord.Profile, $"display {description}");
+        ActivityService.Add(ActivityLevel.Change, $"{game.Name}: display {description} while it runs", subject: game.Name,
             detail: "It is put back when the game ends.");
         return DisplayApply.Applied;
     }
 
+    private string Describe(string device, DisplayMode? mode, bool madePrimary)
+    {
+        string monitor = _backend.Monitors().Where(m => m.Device == device).Select(m => m.Number > 0 ? $"Display {m.Number}" : "the monitor").FirstOrDefault() ?? "the monitor";
+        var parts = new List<string>();
+        if (madePrimary) parts.Add($"{monitor} made the main display");
+        if (mode is { } m2) parts.Add($"set to {m2}");
+        return string.Join(" and ", parts);
+    }
+
     /// <summary>
-    /// The game's session ended (or its launch failed): puts the display back if this game set it.
+    /// The game's session ended (or its launch failed): puts the display back if this game changed it.
     /// Safe to call for any game, any number of times.
     /// </summary>
     public void End(string gameId)
     {
-        string? device;
+        DisplaySessionRecord record;
         string name;
-        DisplayMode applied;
         lock (_lock)
         {
-            if (_ownerId == null || _ownerId != gameId || _ending) return;
+            if (_ownerId == null || _ownerId != gameId || _ending || _record == null) return;
             // The owner stays until the display is back: a game starting meanwhile is told it is busy
-            // instead of setting a mode the put-back below would then undo.
+            // instead of changing something the put-back below would then undo.
             _ending = true;
-            device = _device;
+            record = _record;
             name = _ownerName ?? gameId;
-            applied = _applied;
         }
         try
         {
-            PutBack(gameId, name, device, applied);
+            PutBack(gameId, name, record);
         }
         finally
         {
             lock (_lock)
             {
-                _ownerId = _ownerName = _device = null;
+                _ownerId = _ownerName = null;
+                _record = null;
                 _ending = false;
             }
         }
     }
 
-    /// <summary>TrayTrigger is closing: puts the display back whoever set it.</summary>
+    /// <summary>TrayTrigger is closing: puts the display back whoever changed it.</summary>
     public void ReleaseAll()
     {
         string? id;
@@ -266,34 +453,29 @@ internal sealed class DisplayModeService
         if (id != null) End(id);
     }
 
-    private void PutBack(string gameId, string name, string? device, DisplayMode applied)
+    private void PutBack(string gameId, string name, DisplaySessionRecord record)
     {
         try
         {
-            // The display may be gone (unplugged, lid closed): Windows has already moved on, and
-            // there is nothing of ours left to put back.
-            if (device == null || !_backend.IsAttached(device))
+            bool ok = Restore(record, name, out bool anythingToReport);
+            if (!ok)
             {
-                DeleteSnapshot();
-                LoggingService.Info("Display", $"The display set for '{name}' is no longer attached; nothing to put back.");
-                LaunchRecord.Note(gameId, LaunchRecord.Profile, LaunchRecord.PutBackPrefix + "display (it was unplugged)");
-                return;
-            }
-
-            var result = _backend.RestoreDefault(device);
-            if (result != DisplayChange.Ok)
-            {
-                LoggingService.Warn("Display", $"Putting the display back after '{name}' failed ({result}).");
                 // The record stays, so the next start tries again.
-                Problem(gameId, name, $"{name}: the display couldn't be put back from {applied}",
-                    "TrayTrigger tries again at the next start. Display settings in Windows can also change it by hand.");
+                Problem(gameId, name, $"{name}: the display couldn't be put back", "TrayTrigger tries again at the next start. Display settings in Windows can also change it by hand.");
                 return;
             }
 
             DeleteSnapshot();
-            LoggingService.Info("Display", $"Put the display back after '{name}'.");
-            LaunchRecord.Note(gameId, LaunchRecord.Profile, LaunchRecord.PutBackPrefix + "display");
-            ActivityService.Add(ActivityLevel.Change, $"Put back the display after {name}", subject: name);
+            if (anythingToReport)
+            {
+                LoggingService.Info("Display", $"Put the display back after '{name}'.");
+                LaunchRecord.Note(gameId, LaunchRecord.Profile, LaunchRecord.PutBackPrefix + "display");
+                ActivityService.Add(ActivityLevel.Change, $"Put back the display after {name}", subject: name);
+            }
+            else
+            {
+                LaunchRecord.Note(gameId, LaunchRecord.Profile, LaunchRecord.PutBackPrefix + "display (it was unplugged)");
+            }
         }
         catch (Exception ex)
         {
@@ -303,9 +485,63 @@ internal sealed class DisplayModeService
     }
 
     /// <summary>
-    /// Call once at startup: if TrayTrigger stopped while a game's display mode was set, puts the display
-    /// back. Asks for the desktop's own mode, and only when the display is still in the mode that was
-    /// set - one that has changed since (a restart, the user, another tool) is left alone.
+    /// Undoes what a record says was changed: the mode first, then the main display. Returns false if something
+    /// that should have been put back couldn't be. <paramref name="didSomething"/> is false when there was nothing
+    /// left to undo (the monitor is gone, or the display has changed since).
+    /// </summary>
+    private bool Restore(DisplaySessionRecord record, string name, out bool didSomething)
+    {
+        didSomething = false;
+        bool ok = true;
+
+        if (record.Width > 0 && !string.IsNullOrEmpty(record.Device))
+        {
+            var set = new DisplayMode(record.Width, record.Height, record.RefreshHz);
+            // Only while the display is still in the mode that was set: if it isn't, something else changed it since.
+            if (_backend.IsAttached(record.Device) && _backend.Current(record.Device) == set)
+            {
+                if (_backend.RestoreDefault(record.Device) == DisplayChange.Ok) didSomething = true;
+                else
+                {
+                    LoggingService.Warn("Display", $"Putting the display mode back after '{name}' failed.");
+                    ok = false;
+                }
+            }
+            else
+            {
+                LoggingService.Info("Display", $"The display mode set for '{name}' is no longer in effect; nothing to put back.");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(record.MadePrimary) && record.LayoutBefore.Count > 0)
+        {
+            var original = record.LayoutBefore.Select(p => new MonitorPlacement(p.Device, p.X, p.Y)).ToList();
+            var now = _backend.Placements();
+            bool stillMain = string.Equals(DisplayLayout.PrimaryOf(now), record.MadePrimary, StringComparison.OrdinalIgnoreCase);
+            // Every monitor that was there must still be, or the old places mean nothing.
+            bool allThere = original.All(p => now.Any(n => string.Equals(n.Device, p.Device, StringComparison.OrdinalIgnoreCase)));
+            if (!stillMain || !allThere)
+            {
+                LoggingService.Info("Display", $"The main display made for '{name}' has changed since, or a monitor is gone; the layout is left as it is.");
+            }
+            else if (_backend.SetLayout(original) == DisplayChange.Ok)
+            {
+                didSomething = true;
+            }
+            else
+            {
+                LoggingService.Warn("Display", $"Putting the main display back after '{name}' failed.");
+                ok = false;
+            }
+        }
+
+        return ok;
+    }
+
+    /// <summary>
+    /// Call once at startup: if TrayTrigger stopped while a game's display settings were in effect, puts the display
+    /// back. The mode only if the display is still in the mode that was set, the main display only if the monitor
+    /// that was made main still is: one that has changed since (a restart, the user, another tool) is left alone.
     /// </summary>
     public void RecoverIfNeeded()
     {
@@ -319,41 +555,33 @@ internal sealed class DisplayModeService
             }
             catch (Exception ex) when (ex is JsonException or IOException)
             {
-                LoggingService.Warn("Display", $"The note of the display mode a game set couldn't be read ({ex.Message}); discarded.");
+                LoggingService.Warn("Display", $"The note of the display change a game made couldn't be read ({ex.Message}); discarded.");
             }
-            if (record == null || string.IsNullOrWhiteSpace(record.Device))
+            if (record == null || (string.IsNullOrWhiteSpace(record.Device) && string.IsNullOrWhiteSpace(record.MadePrimary)))
             {
                 DeleteSnapshot();
                 return;
             }
 
-            var set = new DisplayMode(record.Width, record.Height, record.RefreshHz);
-            bool attached = _backend.IsAttached(record.Device);
-            if (!attached || _backend.Current(record.Device) != set)
+            if (!Restore(record, record.GameName, out bool didSomething))
             {
-                LoggingService.Info("Display", $"The display mode set for '{record.GameName}' is no longer in effect; nothing to put back.");
-                DeleteSnapshot();
-                return;
-            }
-
-            var result = _backend.RestoreDefault(record.Device);
-            if (result != DisplayChange.Ok)
-            {
-                LoggingService.Warn("Display", $"Putting the display back after '{record.GameName}' at start failed ({result}).");
-                Problem(record.GameId, record.GameName, $"{record.GameName}: the display couldn't be put back from {set}",
+                Problem(record.GameId, record.GameName, $"{record.GameName}: the display couldn't be put back",
                     "TrayTrigger tries again at the next start. Display settings in Windows can also change it by hand.");
                 return;
             }
 
             DeleteSnapshot();
-            LoggingService.Warn("Display", $"Put the display back from {set}: TrayTrigger had stopped while '{record.GameName}' was running.");
-            ActivityService.Add(ActivityLevel.Change, "Put back the display after TrayTrigger stopped during a game",
-                subject: record.GameName,
-                detail: $"The display was still at {set} for {record.GameName} when TrayTrigger started, so it was put back to the desktop's own mode.");
+            if (didSomething)
+            {
+                LoggingService.Warn("Display", $"Put the display back: TrayTrigger had stopped while '{record.GameName}' was running.");
+                ActivityService.Add(ActivityLevel.Change, "Put back the display after TrayTrigger stopped during a game",
+                    subject: record.GameName,
+                    detail: $"The display was still as it had been set for {record.GameName} when TrayTrigger started, so it was put back.");
+            }
         }
         catch (Exception ex)
         {
-            LoggingService.Error("Display", $"Checking for a display mode left set failed: {ex.Message}", ex);
+            LoggingService.Error("Display", $"Checking for a display change left in place failed: {ex.Message}", ex);
         }
     }
 
@@ -385,7 +613,7 @@ internal sealed class DisplayModeService
 
     private static void Skip(GameEntry game, string why)
     {
-        LoggingService.Info("Display", $"'{game.Name}': display mode not set, {why}.");
+        LoggingService.Info("Display", $"'{game.Name}': display not changed, {why}.");
         LaunchRecord.Note(game.Id, LaunchRecord.Profile, LaunchRecord.SkippedPrefix + $"display ({why})");
     }
 

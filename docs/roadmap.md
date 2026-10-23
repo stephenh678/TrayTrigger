@@ -22,7 +22,7 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 | # | Item | Status |
 |---|---|---|
 | 1 | Activity gaps: Edit Game changes, game removal and undo | **Done** (1.7.1-beta.2, built and tested, not yet tried in the app) |
-| 2 | Per-game display and audio device, with crash-safe restore | **Done for the main display** (2026-10-23, 1.7.1-beta.2): resolution and refresh rate, put back after the game and after a crash, in one Display card with **Keep the mouse on the game's screen** (shown with two or more monitors). Tested live on one monitor; the mouse hold has not been tried on two monitors. Not built: choosing a monitor, Identify, dimming other screens, the sound output device. Still to try with a second monitor (Preston's) |
+| 2 | Per-game display and audio device, with crash-safe restore | **Done** (2026-10-23, 1.7.1-beta.2), in one Display and sound card in Edit Game: resolution and refresh rate, monitor choice, Identify, make a monitor the main display, keep the mouse on the game's screen, dim the other screens, and the sound output device; each put back after the game and after a crash. Tested live on one monitor (resolution and refresh rate, the mouse hold, the sound switch, the overlays, the monitor list and a no-change layout call). **Not tried on two monitors:** changing the main display, the mouse hold across screens, dimming another screen. To try with a second monitor (Preston's) |
 | 3 | Game recipes (export and import a game's setup) | **Skipped** (2026-10-23) |
 | 4 | Companion tool presets, such as Lossless Scaling | **Done** (2026-10-23): companion tools already start with a game and close with it or after it; a Lossless Scaling preset would only save picking the .exe, so it is not built |
 | 5 | Save backup through Ludusavi | **Skipped** (2026-10-23): saves stay out of TrayTrigger, as decided before |
@@ -37,9 +37,7 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 1. **Activity gaps.** Saving Edit Game records one Change entry with each old and new value; removing a
    game, removing a launcher's games with its integration, and Undo are recorded. Favorites, categories
    and pictures are left out as noise. Launch arguments show in plain text in the entry's detail.
-2. **Display and audio.** The most-asked feature in competing tools (AutoActions, Display Changer and
-   LaunchBox's feedback board). TrayTrigger's strength is the put-back guarantee. Resolution, refresh rate,
-   monitor and default audio device per game, put back when the game ends and after a crash.
+2. **Display and sound.** Built. Edit Game's Display and sound card holds the monitor (remembered by its own identity), its resolution and refresh rate, Identify, making it the main display (the layout is changed in Windows' own setting, so a note is kept and it is put back after the game, on exit and at the next start), keeping the mouse on the game's screen, dimming the other screens (a click-through layer owned by TrayTrigger) and the sound output (the voice-chat job is left alone). The part that couldn't be tested here, the multi-monitor layout call, was written to the order Windows asks for and reviewed, and is the first thing to try with a second monitor.
 3. **Game recipes.** Skipped: a game holds few settings of its own, since most tweaking lives in the
    Optimized and Aggressive profiles, so a recipe would mostly say "Aggressive" with no way to know what
    that means on another PC. Sharing a profile instead would spread other people's tweak choices, which

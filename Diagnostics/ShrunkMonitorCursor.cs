@@ -23,6 +23,7 @@ internal sealed class ShrunkMonitorCursor : ICursorBackend
     public ForegroundWindow? Foreground() => _real.Foreground();
     public bool IsSameOrDescendant(int ancestor, int pid) => _real.IsSameOrDescendant(ancestor, pid);
     public ScreenRect? CurrentClip() => _real.CurrentClip();
+    public System.Collections.Generic.IReadOnlyList<ScreenRect> AllMonitors() => _real.AllMonitors();
     public bool Clip(ScreenRect? rect) => _real.Clip(rect);
 
     public ScreenRect? MonitorOf(IntPtr window) =>

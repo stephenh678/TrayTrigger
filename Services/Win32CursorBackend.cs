@@ -125,12 +125,7 @@ internal sealed class Win32CursorBackend : ICursorBackend
     private void OnSessionSwitch(object sender, Microsoft.Win32.SessionSwitchEventArgs e) => Changed?.Invoke();
 
     /// <summary>The hook belongs to the thread that sets it and needs that thread's message loop; without one (a test), it runs here.</summary>
-    private static void PostToUiThread(Action action)
-    {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher == null || dispatcher.HasShutdownStarted || dispatcher.CheckAccess()) action();
-        else dispatcher.BeginInvoke(action);
-    }
+    private static void PostToUiThread(Action action) => WindowThread.Post(action);
 
     public ForegroundWindow? Foreground()
     {
@@ -187,6 +182,20 @@ internal sealed class Win32CursorBackend : ICursorBackend
         var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
         if (!GetMonitorInfo(monitor, ref info)) return null;
         return new ScreenRect(info.Monitor.Left, info.Monitor.Top, info.Monitor.Right, info.Monitor.Bottom);
+    }
+
+    private delegate bool MonitorEnumProc(IntPtr monitor, IntPtr hdc, ref Rect rect, IntPtr data);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc proc, IntPtr data);
+
+    public IReadOnlyList<ScreenRect> AllMonitors()
+    {
+        var list = new List<ScreenRect>();
+        EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr monitor, IntPtr hdc, ref Rect rect, IntPtr data) =>
+        {
+            list.Add(new ScreenRect(rect.Left, rect.Top, rect.Right, rect.Bottom));
+            return true;
+        }, IntPtr.Zero);
+        return list;
     }
 
     public ScreenRect? CurrentClip() =>

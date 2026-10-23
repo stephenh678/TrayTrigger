@@ -592,6 +592,7 @@ public partial class ProcessLauncherService
 
         // The game's own display mode, if it has one: set before the game exists, put back in FinishSession.
         DisplayModeService.Shared.Begin(game);
+        AudioOutputService.Shared.Begin(game);
 
         var scriptResult = _scriptService.RunPreLaunch(game);
         if (!scriptResult.ProceedWithLaunch)
@@ -856,7 +857,9 @@ public partial class ProcessLauncherService
         }
         // Never throws; a game that set no display mode is ignored.
         DisplayModeService.Shared.End(game.Id);
+        AudioOutputService.Shared.End(game.Id);
         CursorLockService.Shared.Untrack(game.Id);
+        ScreenDimService.Shared.Untrack(game.Id);
         if (gameRan)
         {
             _scriptService.RunPostExit(game, minutes);
@@ -1465,6 +1468,7 @@ public partial class ProcessLauncherService
                         LoggingService.Verbose("Launcher", $"Found Steam game process for '{game.Name}' (PID {proc.Id}).");
                         _performanceProfileService.OnGameProcessStarted(game, proc);
                         CursorLockService.Shared.Track(game, proc.Id);
+                        ScreenDimService.Shared.Track(game, proc.Id);
                         CpuTopologyService.ApplyCpuCores(proc, game);
                         WaitForWindowAndActivate(session, proc);
                         StartDlssObservation(session, proc);
@@ -1629,6 +1633,7 @@ public partial class ProcessLauncherService
         {
             _performanceProfileService.OnGameProcessStarted(game, process);
             CursorLockService.Shared.Track(game, process.Id);
+            ScreenDimService.Shared.Track(game, process.Id);
             // Only a direct launch hands over the process it started (allowStubHandoff); a process
             // found under the install folder was opened by id, and has no launch handle.
             CpuTopologyService.ApplyCpuCores(process, game, startedByTrayTrigger: allowStubHandoff);

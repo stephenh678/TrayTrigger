@@ -32,6 +32,8 @@ internal interface ICursorBackend
     bool IsSameOrDescendant(int ancestor, int pid);
     /// <summary>The whole monitor the window is on.</summary>
     ScreenRect? MonitorOf(IntPtr window);
+    /// <summary>Every attached monitor.</summary>
+    IReadOnlyList<ScreenRect> AllMonitors();
     /// <summary>Where the mouse is confined now; the whole desktop when it is free.</summary>
     ScreenRect? CurrentClip();
     /// <summary>Confines the mouse to the rectangle, or frees it for null.</summary>

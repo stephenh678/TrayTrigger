@@ -160,6 +160,21 @@ public class GameEntry
     public int DisplayRefreshHz { get; set; }
 
     /// <summary>
+    /// The monitor the display settings apply to, by its own interface path (Edit Game â€º Display); empty is the main
+    /// display, whichever it is. See <see cref="Services.MonitorInfo"/>.
+    /// </summary>
+    public string DisplayMonitorId { get; set; } = string.Empty;
+
+    /// <summary>Makes the game's monitor the main display while the game runs, and puts the old one back after. See <see cref="Services.DisplayModeService"/>.</summary>
+    public bool MakeMainDisplay { get; set; }
+
+    /// <summary>While this game's window is in front, every other monitor is dimmed. See <see cref="Services.ScreenDimService"/>.</summary>
+    public bool DimOtherScreens { get; set; }
+
+    /// <summary>The sound output device (a playback device id) the game plays through while it runs; empty leaves the sound as it is. See <see cref="Services.AudioOutputService"/>.</summary>
+    public string AudioOutputDeviceId { get; set; } = string.Empty;
+
+    /// <summary>
     /// While this game's window is in front, the mouse is confined to the monitor it is on, and freed
     /// the moment the focus moves (Edit Game › Display). See <see cref="Services.CursorLockService"/>.
     /// </summary>
