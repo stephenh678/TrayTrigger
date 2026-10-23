@@ -560,6 +560,20 @@
                                 <Button AutomationProperties.Name="Learn more about Auto HDR" Style="{StaticResource HelpLinkButton}"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/auto_hdr"/>
                             </StackPanel>
+
+                            <!-- Display - per game: the main display's resolution and refresh rate while it runs, put back when it ends.
+                                 Shown when the display lists modes, or the game already has one. -->
+                            <StackPanel Visibility="{Binding ShowDisplay, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Display" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,4,0,4"/>
+                                <ComboBox AutomationProperties.Name="Display mode" ItemsSource="{Binding DisplayOptions}"
+                                          SelectedItem="{Binding SelectedDisplay}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding DisplayHint}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <Button AutomationProperties.Name="Learn more about the display mode" Style="{StaticResource HelpLinkButton}"
+                                        Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/display_mode"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

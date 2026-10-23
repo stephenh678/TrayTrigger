@@ -361,6 +361,7 @@ public partial class App : Application
         if (!isScreenshot)
         {
             _performanceProfileService.RecoverFromCrashIfNeeded();
+            DisplayModeService.Shared.RecoverIfNeeded();
             // An Ultimate plan made before 1.5.1 still unparks every core on a dual-CCD Ryzen X3D;
             // a plan left on all the time may not be applied again for months. Returns at once elsewhere.
             _ = Task.Run(SystemTweaksService.KeepX3dCoreParkingInExistingPlans);
@@ -542,6 +543,7 @@ public partial class App : Application
             {
                 _launcherService?.ResumeAllOnShutdown();
                 _performanceProfileService?.RestoreActiveSessionOnShutdown(skipElevated: true);
+                DisplayModeService.Shared.ReleaseAll();
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
                 _launcherService?.RecordPlaytimeOnShutdown();
                 FinalizePendingRemovalOnShutdown();
@@ -1513,6 +1515,7 @@ public partial class App : Application
             // First: a game left frozen would stay frozen, with no tray icon left to resume it.
             _launcherService?.ResumeAllOnShutdown();
             _performanceProfileService?.RestoreActiveSessionOnShutdown();
+            DisplayModeService.Shared.ReleaseAll();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
             _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();

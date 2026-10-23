@@ -590,6 +590,9 @@ public partial class ProcessLauncherService
 
         _performanceProfileService.BeginGameSession(game);
 
+        // The game's own display mode, if it has one: set before the game exists, put back in FinishSession.
+        DisplayModeService.Shared.Begin(game);
+
         var scriptResult = _scriptService.RunPreLaunch(game);
         if (!scriptResult.ProceedWithLaunch)
         {
@@ -851,6 +854,8 @@ public partial class ProcessLauncherService
         {
             LoggingService.Error("Launcher", $"Error restoring profile for '{game.Name}': {ex.Message}", ex);
         }
+        // Never throws; a game that set no display mode is ignored.
+        DisplayModeService.Shared.End(game.Id);
         if (gameRan)
         {
             _scriptService.RunPostExit(game, minutes);

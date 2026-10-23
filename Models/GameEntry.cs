@@ -150,6 +150,15 @@ public class GameEntry
     /// </summary>
     public HdrMode AutoHdr { get; set; } = HdrMode.ProfileDefault;
 
+    /// <summary>
+    /// The main display's resolution and refresh rate while this game runs (Edit Game › Display);
+    /// 0 for width, height or rate leaves the display alone. Applied as a temporary mode just before
+    /// launch and put back when the session ends. See <see cref="Services.DisplayModeService"/>.
+    /// </summary>
+    public int DisplayWidth { get; set; }
+    public int DisplayHeight { get; set; }
+    public int DisplayRefreshHz { get; set; }
+
     /// <summary>Optional .bat/.cmd/.ps1/.exe run just before the game starts. See <see cref="Services.GameScriptService"/>.</summary>
     public string PreLaunchScriptPath { get; set; } = string.Empty;
     /// <summary>

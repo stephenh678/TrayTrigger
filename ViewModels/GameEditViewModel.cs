@@ -165,6 +165,7 @@ public class GameEditViewModel : ViewModelBase
         _initialHdr = game.Hdr;
         _autoHdr = game.AutoHdr;
         _initialAutoHdr = game.AutoHdr;
+        LoadDisplay(game);
         _cpuCoresDelaySeconds = game.CpuCoresDelaySeconds.ToString();
         _preLaunchScriptPath = game.PreLaunchScriptPath;
         _postExitScriptPath = game.PostExitScriptPath;
@@ -235,7 +236,7 @@ public class GameEditViewModel : ViewModelBase
     {
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
-        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr,
+        PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr, SelectedDisplay.Label,
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -505,6 +506,59 @@ public class GameEditViewModel : ViewModelBase
         HdrMode.Off => "Auto HDR is switched off for this game while it runs and put back when it exits, even when the profile would turn it on. For a game whose HUD blows out or whose whites clip.",
         _ => "Follows the Optimized profile's Enable Auto HDR switch on the System page, like every other game on that profile. It needs Windows' HDR and the global Auto HDR switch to be on.",
     };
+
+    // --- Display (per game: the main display's resolution and refresh rate while it runs) ---
+
+    /// <summary>One choice in the Display list: no change, or a mode.</summary>
+    public sealed record DisplayOption(DisplayMode? Mode, string Label);
+
+    internal const string NoDisplayChangeLabel = "Don't change the display";
+
+    /// <summary>
+    /// The list: no change, then each mode the main display offers, largest and fastest first. A mode the
+    /// game has saved that this display doesn't offer (another monitor, a remote session) stays at the
+    /// end, labelled, so opening and saving Edit Game doesn't quietly drop it.
+    /// </summary>
+    internal static IReadOnlyList<DisplayOption> BuildDisplayOptions(IReadOnlyList<DisplayMode> available, DisplayMode? saved)
+    {
+        var options = new List<DisplayOption> { new(null, NoDisplayChangeLabel) };
+        options.AddRange(available.Select(m => new DisplayOption(m, m.ToString())));
+        if (saved is { } kept && !available.Contains(kept))
+        {
+            options.Add(new DisplayOption(kept, $"{kept} (this display doesn't list it)"));
+        }
+        return options;
+    }
+
+    public IReadOnlyList<DisplayOption> DisplayOptions { get; private set; } = [];
+
+    private DisplayOption _selectedDisplay = new(null, NoDisplayChangeLabel);
+    public DisplayOption SelectedDisplay
+    {
+        get => _selectedDisplay;
+        set
+        {
+            _selectedDisplay = value ?? DisplayOptions[0];
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayHint));
+        }
+    }
+
+    /// <summary>Shown when the display lists modes, or the game already has one.</summary>
+    public bool ShowDisplay { get; private set; }
+
+    public string DisplayHint => SelectedDisplay.Mode == null
+        ? "The display is left as it is."
+        : "The main display is set to this before the game starts and put back when it ends. Windows moves open windows and desktop icons while it is set, and a game that sets its own resolution overrides it.";
+
+    private void LoadDisplay(GameEntry game)
+    {
+        var saved = DisplayModeService.RequestedMode(game);
+        var available = DisplayModeService.Shared.AvailableModes();
+        DisplayOptions = BuildDisplayOptions(available, saved);
+        _selectedDisplay = DisplayOptions.FirstOrDefault(o => o.Mode == saved) ?? DisplayOptions[0];
+        ShowDisplay = available.Count > 0 || saved != null;
+    }
 
     public sealed record HdrOption(HdrMode Value, string Label);
 
@@ -1793,6 +1847,9 @@ public class GameEditViewModel : ViewModelBase
             PerformanceActivity.AutoHdrGameChanged(SourceGame, SourceGame.AutoHdr, AutoHdr);
         }
         SourceGame.AutoHdr = AutoHdr;
+        SourceGame.DisplayWidth = SelectedDisplay.Mode?.Width ?? 0;
+        SourceGame.DisplayHeight = SelectedDisplay.Mode?.Height ?? 0;
+        SourceGame.DisplayRefreshHz = SelectedDisplay.Mode?.RefreshHz ?? 0;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.
         if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;

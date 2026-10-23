@@ -28,6 +28,7 @@ public class BackupCoverageTests
         ["poster-sources.json"] = "where each cached poster came from; a poster without a record is looked at once more",
         ["nvidia-products.xml"] = "NVIDIA's own product list, downloaded for this PC's driver",
         ["dlss-roundtrip-records.json"] = "what DLSS Override changed in this PC's driver",
+        ["display-session.json"] = "the display mode a game set on this PC, so it can be put back after a crash",
         ["installerdata.xml"] = "Ubisoft Connect's own file, which TrayTrigger only reads",
     };
 

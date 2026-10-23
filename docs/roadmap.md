@@ -22,7 +22,7 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 | # | Item | Status |
 |---|---|---|
 | 1 | Activity gaps: Edit Game changes, game removal and undo | **Done** (1.7.1-beta.2, built and tested, not yet tried in the app) |
-| 2 | Per-game display and audio device, with crash-safe restore | Not started. Needs a second monitor to test (Preston's) |
+| 2 | Per-game display and audio device, with crash-safe restore | **Done for the main display** (2026-10-23, 1.7.1-beta.2): resolution and refresh rate, put back after the game and after a crash. Tested live on one monitor. Not built: choosing a monitor and the sound output device. Still to try with a second monitor (Preston's) |
 | 3 | Game recipes (export and import a game's setup) | **Skipped** (2026-10-23) |
 | 4 | Companion tool presets, such as Lossless Scaling | **Done** (2026-10-23): companion tools already start with a game and close with it or after it; a Lossless Scaling preset would only save picking the .exe, so it is not built |
 | 5 | Save backup through Ludusavi | **Skipped** (2026-10-23): saves stay out of TrayTrigger, as decided before |

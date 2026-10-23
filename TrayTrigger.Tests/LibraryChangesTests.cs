@@ -91,6 +91,16 @@ public class LibraryChangesTests
     }
 
     [Fact]
+    public void ADisplayMode_IsRecorded()
+    {
+        var game = Game();
+        var line = Edit(game, () => { game.DisplayWidth = 1920; game.DisplayHeight = 1080; game.DisplayRefreshHz = 144; });
+
+        Assert.Equal("Hades: display mode changed", line!.Value.Text);
+        Assert.Equal("Display mode: (none) -> 1920 × 1080 @ 144 Hz", line.Value.Detail);
+    }
+
+    [Fact]
     public void WhatPerformanceActivityRecords_IsNotRecordedAgain()
     {
         var game = Game();

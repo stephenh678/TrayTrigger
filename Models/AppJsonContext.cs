@@ -24,6 +24,7 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(Dictionary<string, PcGamingWikiCacheEntry>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(ActivityLogFile))]
+[JsonSerializable(typeof(Services.DisplaySessionRecord))]
 public partial class AppJsonContext : JsonSerializerContext
 {
 }

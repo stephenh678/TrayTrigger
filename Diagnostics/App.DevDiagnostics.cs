@@ -838,6 +838,112 @@ public partial class App
                 return;
             }
 
+            // --test-display <info|hold|restore|switch> <out.txt> [seconds]: checks the display calls on this
+            // PC, writing what happened to <out.txt>. info only reads (the modes, and whether Windows
+            // would accept each - nothing is changed). hold sets a temporary mode and keeps it for
+            // [seconds] so a harness can kill the process and check Windows put the display back.
+            // restore asks for the desktop's own mode. switch runs the real service end to end: set,
+            // check, put back, check. The mode used is one Windows has already said it would accept,
+            // with the smallest change from the current one.
+            if ((e.Args[i].Equals("--test-display", StringComparison.OrdinalIgnoreCase)) && i + 2 < e.Args.Length)
+            {
+                string action = e.Args[i + 1].ToLowerInvariant();
+                string outFile = e.Args[i + 2];
+                int seconds = i + 3 < e.Args.Length && int.TryParse(e.Args[i + 3], out int s) ? s : 20;
+                var lines = new List<string>();
+                try
+                {
+                    var backend = new Win32DisplayBackend();
+                    string? device = backend.PrimaryDevice();
+                    var current = device == null ? null : backend.Current(device);
+                    lines.Add($"device={device} remote={backend.IsRemoteSession} current={current}");
+
+                    DisplayMode? Candidate()
+                    {
+                        if (device == null || current is not { } now) return null;
+                        return backend.Modes(device)
+                            .Where(m => m != now && backend.Test(device, m) == DisplayChange.Ok)
+                            .OrderBy(m => m.Width == now.Width && m.Height == now.Height ? 0 : 1)
+                            .ThenBy(m => Math.Abs((long)m.Width * m.Height - (long)now.Width * now.Height))
+                            .ThenBy(m => Math.Abs(m.RefreshHz - now.RefreshHz))
+                            .Cast<DisplayMode?>().FirstOrDefault();
+                    }
+
+                    switch (action)
+                    {
+                        case "info":
+                        {
+                            var modes = device == null ? [] : backend.Modes(device);
+                            int accepted = modes.Count(m => backend.Test(device!, m) == DisplayChange.Ok);
+                            lines.Add($"modes={modes.Count} acceptedByWindows={accepted}");
+                            lines.Add($"candidate={Candidate()}");
+                            lines.Add($"attached={(device != null && backend.IsAttached(device))}");
+                            break;
+                        }
+                        case "hold":
+                        {
+                            var pick = Candidate();
+                            lines.Add($"candidate={pick}");
+                            if (pick is { } mode && device != null)
+                            {
+                                lines.Add($"apply={backend.ApplyTemporary(device, mode)} now={backend.Current(device)}");
+                                File.WriteAllLines(outFile, lines);
+                                PumpDispatcher(TimeSpan.FromSeconds(seconds));
+                                lines.Add($"released={backend.RestoreDefault(device)} now={backend.Current(device)}");
+                            }
+                            break;
+                        }
+                        case "restore":
+                            if (device != null) lines.Add($"restore={backend.RestoreDefault(device)} now={backend.Current(device)}");
+                            break;
+                        case "holdservice":
+                        {
+                            // The real service, then wait: a harness kills this process to test the crash recovery.
+                            var pick = Candidate();
+                            lines.Add($"candidate={pick}");
+                            if (pick is { } mode && device != null)
+                            {
+                                var game = new GameEntry { Id = "display-test", Name = "Display test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz };
+                                lines.Add($"begin={DisplayModeService.Shared.Begin(game)} now={backend.Current(device)}");
+                                File.WriteAllLines(outFile, lines);
+                                PumpDispatcher(TimeSpan.FromSeconds(seconds));
+                                DisplayModeService.Shared.End(game.Id);
+                                lines.Add($"ended now={backend.Current(device)}");
+                            }
+                            break;
+                        }
+                        case "recover":
+                            DisplayModeService.Shared.RecoverIfNeeded();
+                            if (device != null) lines.Add($"recovered now={backend.Current(device)}");
+                            break;
+                        case "switch":
+                        {
+                            var pick = Candidate();
+                            lines.Add($"candidate={pick}");
+                            if (pick is { } mode && device != null && current is { } before)
+                            {
+                                var game = new GameEntry { Id = "display-test", Name = "Display test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz };
+                                var service = DisplayModeService.Shared;
+                                lines.Add($"begin={service.Begin(game)}");
+                                PumpDispatcher(TimeSpan.FromSeconds(2));
+                                lines.Add($"during={backend.Current(device)} ({(backend.Current(device) == mode ? "ok" : "WRONG")})");
+                                service.End(game.Id);
+                                PumpDispatcher(TimeSpan.FromSeconds(2));
+                                lines.Add($"after={backend.Current(device)} ({(backend.Current(device) == before ? "ok" : "WRONG")})");
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
+
             // --screenshot-playing <view mode> <text size %> <out.png>: the library at the given text size with
             // the first three visible cards marked as playing, to check where the PLAYING tag sits. Nothing
             // is saved; the text size is only applied to this run.
