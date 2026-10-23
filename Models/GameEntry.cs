@@ -151,7 +151,7 @@ public class GameEntry
     public HdrMode AutoHdr { get; set; } = HdrMode.ProfileDefault;
 
     /// <summary>
-    /// The main display's resolution and refresh rate while this game runs (Edit Game › Display);
+    /// The resolution and refresh rate of the game's monitor while this game runs (Edit Game, Display and sound card);
     /// 0 for width, height or rate leaves the display alone. Applied as a temporary mode just before
     /// launch and put back when the session ends. See <see cref="Services.DisplayModeService"/>.
     /// </summary>
@@ -160,7 +160,7 @@ public class GameEntry
     public int DisplayRefreshHz { get; set; }
 
     /// <summary>
-    /// The monitor the display settings apply to, by its own interface path (Edit Game â€º Display); empty is the main
+    /// The monitor the display settings apply to, by its own interface path (Edit Game, Display card); empty is the main
     /// display, whichever it is. See <see cref="Services.MonitorInfo"/>.
     /// </summary>
     public string DisplayMonitorId { get; set; } = string.Empty;
@@ -176,7 +176,7 @@ public class GameEntry
 
     /// <summary>
     /// While this game's window is in front, the mouse is confined to the monitor it is on, and freed
-    /// the moment the focus moves (Edit Game › Display). See <see cref="Services.CursorLockService"/>.
+    /// the moment the focus moves (Edit Game, Display and sound card). See <see cref="Services.CursorLockService"/>.
     /// </summary>
     public bool KeepMouseOnGameScreen { get; set; }
 

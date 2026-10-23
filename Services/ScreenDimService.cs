@@ -25,14 +25,8 @@ internal interface IDimSurface
 /// </summary>
 internal sealed class ScreenDimService
 {
-    private static ScreenDimService _shared = new(new Win32CursorBackend(), new OverlayDimSurface());
-
     /// <summary>The service the launcher uses.</summary>
-    public static ScreenDimService Shared => _shared;
-
-    /// <summary>Test seam: stands another backend and surface in for the real ones (null puts them back).</summary>
-    internal static void UseForTests(ICursorBackend? backend, IDimSurface? surface) =>
-        _shared = new ScreenDimService(backend ?? new Win32CursorBackend(), surface ?? new OverlayDimSurface());
+    public static ScreenDimService Shared { get; } = new(new Win32CursorBackend(), new OverlayDimSurface());
 
     private readonly ICursorBackend _backend;
     private readonly IDimSurface _surface;

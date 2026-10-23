@@ -878,6 +878,7 @@ public partial class App
                             lines.Add($"modes={modes.Count} acceptedByWindows={accepted}");
                             lines.Add($"candidate={Candidate()}");
                             lines.Add($"attached={(device != null && backend.IsAttached(device))}");
+                            lines.Add($"dpi awareness={GetAwarenessFromDpiAwarenessContext(GetThreadDpiAwarenessContext())} (0 unaware, 1 system, 2 per-monitor), system dpi={GetDpiForSystem()}");
                             break;
                         }
                         case "hold":
@@ -955,6 +956,42 @@ public partial class App
                 return;
             }
 
+            // --test-editgame-monitor <out.txt>: opens Edit Game for a game that has a mode saved, switches the Monitor list
+            // away and back through the real ComboBox, and writes what the Resolution and Refresh rate lists show each time,
+            // to check the lists keep the chosen mode when the monitor changes (WPF clears a ComboBox's selection when its
+            // items are replaced, and writes that back to the view model).
+            if (e.Args[i].Equals("--test-editgame-monitor", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                var lines = new List<string>();
+                try
+                {
+                    var monitors = DisplayModeService.Shared.AvailableMonitors();
+                    var modes = DisplayModeService.Shared.AvailableModes();
+                    var mode = modes[1];
+                    var game = new GameEntry { Id = "t", Name = "Test", DisplayWidth = mode.Width, DisplayHeight = mode.Height, DisplayRefreshHz = mode.RefreshHz, DisplayMonitorId = monitors[0].Id };
+                    var dialog = new GameEditDialog(game, _mainViewModel.Categories, _iconExtractorService, scriptsEnabled: true);
+                    dialog.Show();
+                    dialog.UpdateLayout();
+                    var vm = (ViewModels.GameEditViewModel)dialog.DataContext;
+                    var combo = FindVisualChild<ComboBox>(dialog, c => System.Windows.Automation.AutomationProperties.GetName(c) == "Monitor");
+                    string State(string label) => $"{label}: monitor='{vm.SelectedMonitor.Label}' resolution='{vm.SelectedResolution.Label}' rate='{vm.SelectedRate?.Label}' (saved {mode})";
+                    lines.Add(State("opened"));
+                    combo!.SelectedIndex = 0;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                    lines.Add(State("main display chosen"));
+                    combo.SelectedIndex = 1;
+                    PumpDispatcher(TimeSpan.FromMilliseconds(300));
+                    lines.Add(State("monitor 1 chosen"));
+                    dialog.Close();
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(e.Args[i + 1], lines);
+                ExitApplication();
+                return;
+            }
             // --test-overlay <identify|dim> <out.png> <out.txt>: puts the overlay on this PC's screen and checks it: a
             // picture of the screen with it showing, whether it took the focus, and whether a click at its middle would
             // go through to what is under it. The dim case covers a block of the monitor, since there is only one.
@@ -1108,8 +1145,7 @@ public partial class App
                             var fg = backend.Foreground();
                             if (fg is not { } front2) { lines.Add("no foreground window"); break; }
                             int frontPid = front2.ProcessId;
-                            int? parent = null;
-                            using (var self = Process.GetProcessById(frontPid)) { parent = ParentOf(frontPid); }
+                            int? parent = ParentOf(frontPid);
                             string Now(string label) => $"{label}: clip={backend.CurrentClip()}";
                             try
                             {
@@ -4328,14 +4364,18 @@ public partial class App
         poll.Start();
     }
 
-    /// <summary>The process that started <paramref name="pid"/>, or null (toolhelp snapshot; for the --test-cursor capture).</summary>
+    /// <summary>The process that started <paramref name="pid"/>, or null (for the --test-cursor capture).</summary>
     private static int? ParentOf(int pid)
     {
-        using var p = Process.GetProcessById(pid);
-        var q = new System.Management.ManagementObjectSearcher($"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {pid}");
-        foreach (var o in q.Get()) return Convert.ToInt32(o["ParentProcessId"]);
+        using var searcher = new System.Management.ManagementObjectSearcher($"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {pid}");
+        foreach (var o in searcher.Get()) return Convert.ToInt32(o["ParentProcessId"]);
         return null;
     }
+
+    [DllImport("user32.dll")] private static extern IntPtr GetThreadDpiAwarenessContext();
+    [DllImport("user32.dll")] private static extern int GetAwarenessFromDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll")] private static extern uint GetDpiForSystem();
+
     [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(System.Drawing.Point point);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int max);
     [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);

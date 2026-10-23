@@ -138,6 +138,16 @@ public class DiagnosticReportServiceTests : IDisposable
     }
 
     [Fact]
+    public void RedactUserFolder_LeavesAnotherUsersFolderThatStartsTheSameWayAlone()
+    {
+        string text = @"C:\Users\Jo\Desktop and C:\Users\Joanna\Desktop and C:\Users\Jo.";
+
+        string redacted = DiagnosticReportService.RedactUserFolder(text, @"C:\Users\Jo");
+
+        Assert.Equal(@"%USERPROFILE%\Desktop and C:\Users\Joanna\Desktop and %USERPROFILE%.", redacted);
+    }
+
+    [Fact]
     public void Build_NeverContainsTheRealUserFolder()
     {
         var inputs = SampleInputs();

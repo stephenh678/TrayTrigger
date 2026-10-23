@@ -77,8 +77,14 @@ internal static class NativeOverlay
             if (RegisterClassW(ref cls) == 0 && Marshal.GetLastWin32Error() != 1410 /* class already exists */) return IntPtr.Zero;
             s_registered = true;
         }
-        IntPtr hwnd = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_NOACTIVATE, ClassName, null, WS_POPUP,
-            area.Left, area.Top, area.Right - area.Left, area.Bottom - area.Top, IntPtr.Zero, IntPtr.Zero, GetModuleHandleW(null), IntPtr.Zero);
+        // In physical pixels, like the monitor rectangles it is given: a window made in the process's own (system DPI)
+        // awareness would be scaled on a monitor whose scaling differs from the main one's.
+        IntPtr hwnd;
+        using (new PhysicalPixels())
+        {
+            hwnd = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_NOACTIVATE, ClassName, null, WS_POPUP,
+                area.Left, area.Top, area.Right - area.Left, area.Bottom - area.Top, IntPtr.Zero, IntPtr.Zero, GetModuleHandleW(null), IntPtr.Zero);
+        }
         if (hwnd == IntPtr.Zero) return IntPtr.Zero;
         s_text[hwnd] = (number, caption);
         SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);

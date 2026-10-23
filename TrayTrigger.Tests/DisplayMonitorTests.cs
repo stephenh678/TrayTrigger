@@ -77,6 +77,61 @@ public sealed class DisplayMonitorTests : System.IDisposable
     }
 
     [Fact]
+    public void AGameStartingWhileAnEarlierPutBackIsStillPending_ChangesNothing_UntilThatIsDone()
+    {
+        var (service, display) = TwoMonitors();
+        var first = Game("a");
+        first.DisplayMonitorId = "MON2";
+        first.MakeMainDisplay = true;
+        service.Begin(first);
+        display.LayoutResult = DisplayChange.Failed;
+        service.End("a");
+        Assert.True(System.IO.File.Exists(SnapshotPath));
+        string pending = System.IO.File.ReadAllText(SnapshotPath);
+
+        var second = Game("b");
+        second.DisplayMonitorId = "MON1";
+        second.DisplayWidth = 1920; second.DisplayHeight = 1080; second.DisplayRefreshHz = 144;
+        Assert.Equal(DisplayApply.Failed, service.Begin(second));
+
+        // The first game's note is still the one on disk, and nothing was applied for the second.
+        Assert.Equal(pending, System.IO.File.ReadAllText(SnapshotPath));
+        Assert.DoesNotContain(display.Calls, c => c.StartsWith("apply"));
+
+        // Once Windows takes the old layout back, the next game goes ahead.
+        display.LayoutResult = DisplayChange.Ok;
+        Assert.Equal(DisplayApply.Applied, service.Begin(second));
+        Assert.Equal(One, display.Primary);
+    }
+
+    [Fact]
+    public void DuplicatedMonitors_CannotBeMadeTheMainDisplay()
+    {
+        var (service, display) = TwoMonitors();
+        display.Mons = display.Mons.Select(m => m with { Bounds = new ScreenRect(0, 0, 1920, 1080) }).ToList();
+        var game = Game();
+        game.DisplayMonitorId = "MON2";
+        game.MakeMainDisplay = true;
+
+        Assert.Equal(DisplayApply.Unsupported, service.Begin(game));
+        Assert.DoesNotContain(display.Calls, c => c.StartsWith("layout"));
+        Assert.False(System.IO.File.Exists(SnapshotPath));
+    }
+
+    [Fact]
+    public void ANoteWithNoLayoutList_IsHandledAndDiscarded()
+    {
+        var (service, display) = TwoMonitors();
+        System.IO.Directory.CreateDirectory(_dir);
+        System.IO.File.WriteAllText(SnapshotPath, "{ \"GameId\": \"a\", \"GameName\": \"A\", \"MadePrimary\": \"\\\\\\\\.\\\\DISPLAY2\", \"LayoutBefore\": null }");
+
+        service.RecoverIfNeeded();
+
+        Assert.DoesNotContain(display.Calls, c => c.StartsWith("layout"));
+        Assert.False(System.IO.File.Exists(SnapshotPath));
+    }
+
+    [Fact]
     public void TheLayoutMath_HandlesAMonitorAboveAndBelow()
     {
         var layout = new[] { new MonitorPlacement(One, 0, 0), new MonitorPlacement(Two, 500, -1080) };

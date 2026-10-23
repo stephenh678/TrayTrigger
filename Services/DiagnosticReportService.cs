@@ -86,7 +86,9 @@ public static class DiagnosticReportService
     {
         userProfile ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (string.IsNullOrWhiteSpace(userProfile)) return text;
-        return text.Replace(userProfile.TrimEnd('\\'), "%USERPROFILE%", StringComparison.OrdinalIgnoreCase);
+        // Not when more of a name follows: C:\Users\Jo must not eat the start of C:\Users\Joanna.
+        return System.Text.RegularExpressions.Regex.Replace(text, System.Text.RegularExpressions.Regex.Escape(userProfile.TrimEnd('\\')) + @"(?![\p{L}\p{N}_\-])",
+            "%USERPROFILE%", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 
     /// <summary>Activity &amp; History's changes from the last 30 days (Edit Game saves, removals, profile and tweak changes), newest first: what was done before a problem.</summary>
@@ -406,25 +408,16 @@ public static class DiagnosticReportService
             var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(main);
             scale = $", {dpi.DpiScaleX * 100:0}% scale";
         }
-        int monitors = GetSystemMetrics(SM_CMONITORS);
+        int monitors = Win32CursorBackend.MonitorCount();
         string refresh = PrimaryRefreshRate() is { } hz ? $", {hz} Hz" : "";
         return $"- Display: {monitors} monitor{(monitors == 1 ? "" : "s")}; primary {w:0}×{h:0} (device-independent px{scale}{refresh}); virtual desktop {vw:0}×{vh:0}";
     }
 
-    private const int SM_CMONITORS = 80;
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern int GetSystemMetrics(int index);
-
-    /// <summary>The refresh rate Windows reports for the first adapter that gives one, or null.</summary>
+    /// <summary>The refresh rate the main display runs at now, or null.</summary>
     private static int? PrimaryRefreshRate()
     {
-        using var searcher = new ManagementObjectSearcher("SELECT CurrentRefreshRate FROM Win32_VideoController");
-        foreach (var o in searcher.Get())
-        {
-            if (o["CurrentRefreshRate"] is not null && Convert.ToInt32(o["CurrentRefreshRate"]) > 1) return Convert.ToInt32(o["CurrentRefreshRate"]);
-        }
-        return null;
+        var display = new Win32DisplayBackend();
+        return display.PrimaryDevice() is { } device && display.Current(device) is { RefreshHz: > 1 } mode ? mode.RefreshHz : null;
     }
 
     private static string LocaleLine()

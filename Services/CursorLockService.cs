@@ -52,13 +52,8 @@ internal interface ICursorBackend
 /// </summary>
 internal sealed class CursorLockService
 {
-    private static CursorLockService _shared = new(new Win32CursorBackend());
-
     /// <summary>The service the launcher uses.</summary>
-    public static CursorLockService Shared => _shared;
-
-    /// <summary>Test seam: stands another backend in for Windows (null puts the real one back).</summary>
-    internal static void UseBackendForTests(ICursorBackend? backend) => _shared = new CursorLockService(backend ?? new Win32CursorBackend());
+    public static CursorLockService Shared { get; } = new(new Win32CursorBackend());
 
     private readonly ICursorBackend _backend;
     private readonly Lock _lock = new();

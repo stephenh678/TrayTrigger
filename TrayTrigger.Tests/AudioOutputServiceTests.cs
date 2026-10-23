@@ -155,6 +155,39 @@ public sealed class AudioOutputServiceTests : System.IDisposable
     }
 
     [Fact]
+    public void AChangeThatCannotBeRolledBackEither_KeepsTheNote()
+    {
+        var (service, audio) = Make();
+        audio.FailOnlyRole = AudioRole.Multimedia;
+        // The console job is set, the multimedia job refused; putting the console job back is refused too.
+        audio.DuringSet = () => { if (audio.Defaults[AudioRole.Console] == "headset") audio.FailSet = true; };
+
+        Assert.Equal(AudioApply.Failed, service.Begin(Game()));
+
+        Assert.True(System.IO.File.Exists(SnapshotPath));
+    }
+
+    [Fact]
+    public void AGameStartingWhileAnEarlierPutBackIsStillPending_ChangesNothing_UntilThatIsDone()
+    {
+        var (service, audio) = Make();
+        service.Begin(Game("a", "headset"));
+        audio.FailSet = true;
+        service.End("a");
+        string pending = System.IO.File.ReadAllText(SnapshotPath);
+        int calls = audio.Calls.Count;
+
+        Assert.Equal(AudioApply.Failed, service.Begin(Game("b", "tv")));
+        Assert.Equal(pending, System.IO.File.ReadAllText(SnapshotPath));
+        Assert.True(AllRolesAre(audio, "headset"));
+
+        audio.FailSet = false;
+        Assert.Equal(AudioApply.Applied, service.Begin(Game("b", "tv")));
+        Assert.True(AllRolesAre(audio, "tv"));
+        Assert.True(audio.Calls.Count > calls);
+    }
+
+    [Fact]
     public void TheNoteIsWrittenBeforeTheSoundChanges()
     {
         var (service, audio) = Make();

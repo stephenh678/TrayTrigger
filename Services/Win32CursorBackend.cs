@@ -177,6 +177,7 @@ internal sealed class Win32CursorBackend : ICursorBackend
 
     public ScreenRect? MonitorOf(IntPtr window)
     {
+        using var physical = new PhysicalPixels();
         IntPtr monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
         if (monitor == IntPtr.Zero) return null;
         var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
@@ -189,6 +190,7 @@ internal sealed class Win32CursorBackend : ICursorBackend
 
     public IReadOnlyList<ScreenRect> AllMonitors()
     {
+        using var physical = new PhysicalPixels();
         var list = new List<ScreenRect>();
         EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr monitor, IntPtr hdc, ref Rect rect, IntPtr data) =>
         {
@@ -198,11 +200,15 @@ internal sealed class Win32CursorBackend : ICursorBackend
         return list;
     }
 
-    public ScreenRect? CurrentClip() =>
-        GetClipCursor(out Rect r) ? new ScreenRect(r.Left, r.Top, r.Right, r.Bottom) : null;
+    public ScreenRect? CurrentClip()
+    {
+        using var physical = new PhysicalPixels();
+        return GetClipCursor(out Rect r) ? new ScreenRect(r.Left, r.Top, r.Right, r.Bottom) : null;
+    }
 
     public bool Clip(ScreenRect? rect)
     {
+        using var physical = new PhysicalPixels();
         if (rect is not { } r) return ClipCursorFree(IntPtr.Zero);
         var native = new Rect { Left = r.Left, Top = r.Top, Right = r.Right, Bottom = r.Bottom };
         return ClipCursor(ref native);

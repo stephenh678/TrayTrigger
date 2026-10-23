@@ -13,6 +13,7 @@ namespace TrayTrigger.Services;
 internal sealed class Win32DisplayBackend : IDisplayBackend
 {
     private const int ENUM_CURRENT_SETTINGS = -1;
+    private const int ENUM_REGISTRY_SETTINGS = -2;
     private const uint CDS_TEST = 0x2;
     private const uint CDS_FULLSCREEN = 0x4;
     private const uint DM_PELSWIDTH = 0x80000;
@@ -128,7 +129,7 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
             if (!EnumDisplaySettingsExW(device.DeviceName, ENUM_CURRENT_SETTINGS, ref current, 0)) continue;
 
             // The monitor itself, one level down. Its interface path stays with the monitor and its connection, where
-            // the \.\DISPLAYn name can change when cables are swapped.
+            // the \\.\DISPLAYn name can change when cables are swapped.
             var monitor = new DisplayDeviceW { cb = (uint)Marshal.SizeOf<DisplayDeviceW>() };
             string id = device.DeviceName, name = string.Empty;
             if (EnumDisplayDevicesW(device.DeviceName, 0, ref monitor, EDD_GET_DEVICE_INTERFACE_NAME))
@@ -166,8 +167,14 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
     {
         foreach (var (p, setPrimary) in DisplayLayout.StagingPlan(placements))
         {
+            // Built on the desktop's own saved settings, not on what the monitor runs this moment: the staged change is written
+            // to the desktop's setting, and a temporary mode (a game in exclusive full screen, say) would be saved with it.
             var mode = NewMode();
-            if (!EnumDisplaySettingsExW(p.Device, ENUM_CURRENT_SETTINGS, ref mode, 0)) return DisplayChange.Failed;
+            if (!EnumDisplaySettingsExW(p.Device, ENUM_REGISTRY_SETTINGS, ref mode, 0))
+            {
+                mode = NewMode();
+                if (!EnumDisplaySettingsExW(p.Device, ENUM_CURRENT_SETTINGS, ref mode, 0)) return DisplayChange.Failed;
+            }
             mode.dmPositionX = p.X;
             mode.dmPositionY = p.Y;
             // The fields the monitor already reports (its size, colour depth, rate) stay: Windows works out the shape

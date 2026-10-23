@@ -125,7 +125,19 @@ internal sealed class AudioOutputService
             }
             if (_ownerId == game.Id) return AudioApply.Applied;
 
-            var device = _backend.PlaybackDevices().Where(d => string.Equals(d.Id, wanted, StringComparison.OrdinalIgnoreCase)).Cast<AudioDevice?>().FirstOrDefault();
+            // A put-back that failed earlier left its note for the next start. Finish it now, and change nothing while it
+            // can't be finished: a new note would take the old one's place, and what it says to put back would be lost.
+            if (File.Exists(_snapshotPath))
+            {
+                RecoverIfNeeded();
+                if (File.Exists(_snapshotPath))
+                {
+                    Skip(game, "an earlier change to the sound output hasn't been put back yet");
+                    return AudioApply.Failed;
+                }
+            }
+
+            var device =_backend.PlaybackDevices().Where(d => string.Equals(d.Id, wanted, StringComparison.OrdinalIgnoreCase)).Cast<AudioDevice?>().FirstOrDefault();
             if (device is not { } target)
             {
                 Skip(game, "the sound output it is set up for isn't connected");
@@ -156,23 +168,30 @@ internal sealed class AudioOutputService
                 return AudioApply.Failed;
             }
 
-            bool any = false, failed = false;
+            bool failed = false;
             foreach (var role in Roles)
             {
                 if (!Differs(current[role], target.Id)) continue;
-                if (_backend.SetDefault(target.Id, role)) any = true;
-                else failed = true;
+                if (!_backend.SetDefault(target.Id, role)) failed = true;
             }
             if (failed)
             {
-                // Some of it may have taken: put every job back where it was, then give up.
-                Restore(record, game.Name);
-                DeleteSnapshot();
-                Skip(game, "Windows wouldn't change the sound output");
-                Problem(game.Id, game.Name, $"{game.Name}: Windows wouldn't change the sound output", "The game starts with the sound as it is.");
+                // Some of it may have taken: put every job back where it was, then give up. If even that can't be done,
+                // the note stays, so the next start tries again.
+                if (Restore(record, game.Name))
+                {
+                    DeleteSnapshot();
+                    Skip(game, "Windows wouldn't change the sound output");
+                    Problem(game.Id, game.Name, $"{game.Name}: Windows wouldn't change the sound output", "The game starts with the sound as it is.");
+                }
+                else
+                {
+                    Skip(game, "Windows wouldn't change the sound output, or put it back");
+                    Problem(game.Id, game.Name, $"{game.Name}: the sound output may be wrong",
+                        "Windows wouldn't change the sound output and then wouldn't put it back. TrayTrigger tries again at the next start; Windows' sound settings set it by hand.");
+                }
                 return AudioApply.Failed;
             }
-            _ = any;
 
             _ownerId = game.Id;
             _ownerName = game.Name;

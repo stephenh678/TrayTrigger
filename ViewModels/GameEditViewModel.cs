@@ -510,7 +510,7 @@ public class GameEditViewModel : ViewModelBase
         _ => "Follows the Optimized profile's Enable Auto HDR switch on the System page, like every other game on that profile. It needs Windows' HDR and the global Auto HDR switch to be on.",
     };
 
-    // --- Display (per game: the main display's resolution and refresh rate while it runs) ---
+    // --- Display (per game: a monitor's resolution and refresh rate while it runs) ---
 
     /// <summary>One choice in the Resolution list: no change (Width 0), or a resolution.</summary>
     public sealed record ResolutionOption(int Width, int Height, string Label)
@@ -659,15 +659,23 @@ public class GameEditViewModel : ViewModelBase
         set
         {
             _selectedMonitor = value ?? MonitorOptions[0];
-            // The lists are of this monitor's modes: a saved mode is kept only if it is on offer.
-            var chosen = SelectedDisplayMode ?? _savedMode;
+            // The lists are of this monitor's modes. What is chosen now carries over (nothing chosen stays nothing); a mode
+            // this monitor doesn't list is kept at the end, labelled, like the one the game opened with.
+            var chosen = SelectedDisplayMode;
+            _savedMode = chosen;
             _availableModes = DisplayModeService.Shared.AvailableModes(_selectedMonitor.Id);
-            ResolutionOptions = BuildResolutionOptions(_availableModes, chosen);
-            _selectedResolution = ResolutionOptions.FirstOrDefault(o => chosen is { } s && o.Width == s.Width && o.Height == s.Height) ?? ResolutionOptions[0];
-            RateOptions = BuildRateOptions(_availableModes, _selectedResolution, chosen);
-            _selectedRate = RateOptions.FirstOrDefault(r => r.Hz == chosen?.RefreshHz) ?? RateOptions.FirstOrDefault();
-            OnPropertyChanged();
+            var resolutions = BuildResolutionOptions(_availableModes, chosen);
+            var resolution = resolutions.FirstOrDefault(o => chosen is { } s && o.Width == s.Width && o.Height == s.Height) ?? resolutions[0];
+            var rates = BuildRateOptions(_availableModes, resolution, chosen);
+            var rate = rates.FirstOrDefault(r => r.Hz == chosen?.RefreshHz) ?? rates.FirstOrDefault();
+
+            // The lists first and the choices after: replacing a ComboBox's items clears its selection and writes that back here.
+            ResolutionOptions = resolutions;
             OnPropertyChanged(nameof(ResolutionOptions));
+            RateOptions = rates;
+            _selectedResolution = resolution;
+            _selectedRate = rate;
+            OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedResolution));
             OnPropertyChanged(nameof(SelectedRate));
             OnPropertyChanged(nameof(ShowRate));
@@ -732,9 +740,12 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>The Display card shows on the Performance tab when any part of it has something to offer.</summary>
     public bool ShowDisplayCard => ShowPerformanceCard && (ShowDisplay || ShowMouseLock || ShowDim || ShowMonitorChoice || ShowAudio);
 
-    public string DisplayHint => SelectedDisplayMode == null && !MakeMainDisplay
-        ? "The display is left as it is."
-        : "The monitor is set to this before the game starts and put back when it ends. A game that sets its own resolution overrides it while it runs. A different resolution may rearrange open windows and desktop icons.";
+    public string DisplayHint => (SelectedDisplayMode, MakeMainDisplay && ShowMakeMainDisplay) switch
+    {
+        (null, false) => "The display is left as it is.",
+        (null, true) => "The monitor is made the main display before the game starts and put back when it ends.",
+        _ => "The monitor is set to this before the game starts and put back when it ends. A game that sets its own resolution overrides it while it runs. A different resolution may rearrange open windows and desktop icons.",
+    };
 
     private void LoadDisplay(GameEntry game)
     {
@@ -759,6 +770,7 @@ public class GameEditViewModel : ViewModelBase
         _selectedAudio = AudioOptions.FirstOrDefault(o => string.Equals(o.Id, game.AudioOutputDeviceId, StringComparison.OrdinalIgnoreCase)) ?? AudioOptions[0];
         ShowAudio = devices.Count > 1 || !string.IsNullOrEmpty(game.AudioOutputDeviceId);
     }
+
     public sealed record HdrOption(HdrMode Value, string Label);
 
     public IReadOnlyList<HdrOption> HdrOptions { get; } =

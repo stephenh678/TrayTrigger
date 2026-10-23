@@ -270,6 +270,18 @@ internal sealed class DisplayModeService
             }
             if (_ownerId == game.Id) return DisplayApply.Applied;
 
+            // A put-back that failed earlier left its note for the next start. Finish it now, and change nothing while it
+            // can't be finished: a new note would take the old one's place, and what it says to put back would be lost.
+            if (File.Exists(_snapshotPath))
+            {
+                RecoverIfNeeded();
+                if (File.Exists(_snapshotPath))
+                {
+                    Skip(game, "an earlier change to the display hasn't been put back yet");
+                    return DisplayApply.Failed;
+                }
+            }
+
             // The monitor the game is set up for: the main display unless it names another.
             string? device;
             if (string.IsNullOrEmpty(game.DisplayMonitorId))
@@ -320,6 +332,13 @@ internal sealed class DisplayModeService
             IReadOnlyList<MonitorPlacement>? newLayout = null;
             if (game.MakeMainDisplay && !string.Equals(device, primaryBefore, StringComparison.OrdinalIgnoreCase))
             {
+                // Monitors shown as one picture (duplicated) sit at the same place; none of them can be made the main one.
+                if (before.GroupBy(p => (p.X, p.Y)).Any(g => g.Count() > 1))
+                {
+                    Skip(game, "the monitors show the same picture, so none can be made the main display");
+                    Problem(game, $"{game.Name}: the monitors are duplicated", "The game starts with the display as it is. Extend the monitors in Windows Settings > System > Display to use this option.");
+                    return DisplayApply.Unsupported;
+                }
                 newLayout = DisplayLayout.WithPrimary(before, device);
                 if (newLayout == null || primaryBefore == null)
                 {
@@ -474,7 +493,7 @@ internal sealed class DisplayModeService
             }
             else
             {
-                LaunchRecord.Note(gameId, LaunchRecord.Profile, LaunchRecord.PutBackPrefix + "display (it was unplugged)");
+                LaunchRecord.Note(gameId, LaunchRecord.Profile, LaunchRecord.PutBackPrefix + "display (nothing left to put back)");
             }
         }
         catch (Exception ex)
@@ -562,6 +581,8 @@ internal sealed class DisplayModeService
                 DeleteSnapshot();
                 return;
             }
+            // A note edited by hand, or half written, may have no list.
+            record.LayoutBefore ??= [];
 
             if (!Restore(record, record.GameName, out bool didSomething))
             {

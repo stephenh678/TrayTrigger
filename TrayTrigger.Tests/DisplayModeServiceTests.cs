@@ -50,7 +50,9 @@ internal sealed class FakeDisplay : IDisplayBackend
 
     public string? PrimaryDevice() => Primary;
     public bool IsAttached(string device) => Attached.Contains(device);
-    public IReadOnlyList<DisplayMode> Modes(string device) => Listed;
+    /// <summary>Modes of particular monitors, where they differ from <see cref="Listed"/>.</summary>
+    public Dictionary<string, List<DisplayMode>> ModesByDevice = [];
+    public IReadOnlyList<DisplayMode> Modes(string device) => ModesByDevice.TryGetValue(device, out var modes) ? modes : Listed;
     public DisplayMode? Current(string device) => Now;
     public DisplayChange Test(string device, DisplayMode mode) { Calls.Add($"test {mode}"); return TestResult; }
 

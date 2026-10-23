@@ -1,4 +1,4 @@
-<Window x:Class="TrayTrigger.Views.GameEditDialog"
+﻿<Window x:Class="TrayTrigger.Views.GameEditDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -562,6 +562,7 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
+
                     <!-- CARD 3a: DISPLAY AND SOUND - everything to do with the screens and speakers a game runs on, in one card:
                          which monitor, its resolution and refresh rate, making it the main display, keeping the mouse on it,
                          dimming the others, and the sound output. Shares the Performance tab. Each part shows only when it can
@@ -578,6 +579,7 @@
                                            Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                 <DockPanel Margin="0,0,0,4">
                                     <Button DockPanel.Dock="Right" Content="Identify" Margin="8,0,0,0" Padding="12,4"
+                                            Style="{StaticResource ModernOutlineButton}"
                                             Command="{Binding IdentifyMonitorsCommand}"
                                             AutomationProperties.Name="Identify monitors"
                                             ToolTip="Shows a number on each monitor for a moment"/>
@@ -642,6 +644,7 @@
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/display_mode"/>
                         </StackPanel>
                     </Border>
+
                     <!-- CARD 3b: DLSS OVERRIDE, after the Performance card: the profile is the main choice
                          on the Performance tab, and this card is NVIDIA-only. "DLSS Override", "DLSS Indicator" and the three
                          feature names are NVIDIA's own words, kept so a user who has seen them in

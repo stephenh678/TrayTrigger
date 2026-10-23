@@ -31,7 +31,12 @@ internal static class MonitorIdentifier
             }
 
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
-            if (dispatcher == null) return;
+            if (dispatcher == null)
+            {
+                // No window thread to time it on (not the running app): nothing is left on screen.
+                foreach (var hwnd in windows) NativeOverlay.Destroy(hwnd);
+                return;
+            }
             var timer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal, dispatcher) { Interval = ShownFor };
             timer.Tick += (_, _) =>
             {
