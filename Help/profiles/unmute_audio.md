@@ -20,6 +20,6 @@ When a game with this profile starts, TrayTrigger clears the mute flag on your c
 - Volume level is untouched. A device sitting at 5% still plays at 5% - this lifts the mute and nothing else.
 - Nothing is recorded when the device was already unmuted, which is the usual case, so most sessions leave no state behind and the exit restore does nothing.
 - The prior state is captured in the session snapshot, so a crash still restores the mute on the next start.
-- A game with its own Sound output in Edit Game > Display is unmuted on that device, and its mute is put back before the old default device is.
+- A game with its own Sound output in Edit Game > Display & Sound is unmuted on that device, and its mute is put back before the old default device is.
 - Restore applies to whichever device is default when the game exits. If you moved the sound somewhere else mid-session, TrayTrigger follows you rather than re-muting a device you have walked away from.
 - A machine with no playback device at all is logged and skipped.

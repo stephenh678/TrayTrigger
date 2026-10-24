@@ -374,7 +374,7 @@ internal sealed class DisplayModeService
                 if (device == null)
                 {
                     Skip(game, "the monitor it is set up for isn't connected");
-                    Problem(game, $"{game.Name}: its monitor isn't connected", "The game starts with the display as it is. Pick a monitor in Edit Game > Display.");
+                    Problem(game, $"{game.Name}: its monitor isn't connected", "The game starts with the display as it is. Pick a monitor in Edit Game > Display & Sound.");
                     return DisplayApply.MonitorMissing;
                 }
             }
@@ -388,7 +388,7 @@ internal sealed class DisplayModeService
                 {
                     Skip(game, $"the display doesn't support {requested}");
                     Problem(game, $"{game.Name}: the display doesn't support {requested}",
-                        "The game starts with the display as it is. Pick another mode in Edit Game > Display.");
+                        "The game starts with the display as it is. Pick another mode in Edit Game > Display & Sound.");
                     return DisplayApply.Unsupported;
                 }
                 if (_backend.Current(device) == wanted)
@@ -400,7 +400,7 @@ internal sealed class DisplayModeService
                 {
                     Skip(game, $"the display doesn't support {wanted}");
                     Problem(game, $"{game.Name}: the display doesn't support {wanted}",
-                        "The game starts with the display as it is. Pick another mode in Edit Game > Display.");
+                        "The game starts with the display as it is. Pick another mode in Edit Game > Display & Sound.");
                     return DisplayApply.Unsupported;
                 }
                 else

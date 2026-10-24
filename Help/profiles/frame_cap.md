@@ -14,7 +14,7 @@ Caps the frame rate a little under the primary display's refresh rate while you 
 
 - On a screen without variable refresh, a cap below the refresh rate makes frames judder. Only turn this on with a G-SYNC or FreeSync monitor.
 - You give up the frames above the cap. Some competitive players prefer every frame, even with tearing.
-- It uses the primary display's refresh rate. A game with its own resolution and refresh rate in Edit Game > Display is capped for that rate, or for the rate of the monitor it makes the main display, since the display is set after the profile. If you play on a second display that stays second and has a different refresh rate, set the cap yourself instead.
+- It uses the primary display's refresh rate. A game with its own resolution and refresh rate in Edit Game > Display & Sound is capped for that rate, or for the rate of the monitor it makes the main display, since the display is set after the profile. If you play on a second display that stays second and has a different refresh rate, set the cap yourself instead.
 - NVIDIA GPUs only, and opt-in.
 
 ## Details

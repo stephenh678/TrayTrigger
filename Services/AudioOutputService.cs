@@ -141,7 +141,7 @@ internal sealed class AudioOutputService
             if (device is not { } target)
             {
                 Skip(game, "the sound output it is set up for isn't connected");
-                Problem(game.Id, game.Name, $"{game.Name}: its sound output isn't connected", "The game starts with the sound as it is. Pick a sound output in Edit Game > Display.");
+                Problem(game.Id, game.Name, $"{game.Name}: its sound output isn't connected", "The game starts with the sound as it is. Pick a sound output in Edit Game > Display & Sound.");
                 return AudioApply.DeviceMissing;
             }
 
