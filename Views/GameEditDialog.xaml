@@ -253,8 +253,7 @@
                             Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsDisplaySection}"
                             Visibility="{Binding HasDisplayParts, Converter={StaticResource BoolToVis}}"/>
                     <Button Content="Scripts" Command="{Binding SelectSectionCommand}" CommandParameter="Scripts" Margin="2,0,0,0"
-                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsScriptsSection}"
-                            Visibility="{Binding ShowScriptsCard, Converter={StaticResource BoolToVis}}"/>
+                            Style="{StaticResource SegmentedTabButton}" Tag="{Binding IsScriptsSection}"/>
                 </WrapPanel>
             </Border>
             <ScrollViewer x:Name="EditScroll" VerticalScrollBarVisibility="Auto" Padding="14,0,4,0"
@@ -657,21 +656,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Scripts stub: when the scripts feature is off, say so instead of silently
-                         omitting the card, so the feature is discoverable from here. -->
-                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
-                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,10" Margin="0,0,0,12"
-                            Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
-                        <DockPanel LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
-                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
-                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
-                                <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}"/>
-                                <Run Text=" are hidden. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
-                            </TextBlock>
-                        </DockPanel>
-                    </Border>
-
                     <!-- CARD 3c: DISPLAY AND SOUND - everything to do with the screens and speakers a game runs on, in one card, on its own Display tab and after the Performance cards on All:
                          which monitor, its resolution and refresh rate, making it the main display, keeping the mouse on it,
                          dimming the others, and the sound output. Each part shows only when it can
@@ -902,6 +886,21 @@
                                         ToolTip="The TrayTrigger-Scripts catalogue on GitHub: ready-made scripts to drop into the scripts folder, and where to share yours"/>
                             </WrapPanel>
                         </StackPanel>
+                    </Border>
+
+                    <!-- Scripts stub: when the scripts feature is off, say so instead of silently
+                         omitting the card, so the feature is discoverable from here. -->
+                    <Border Background="{DynamicResource BrushDialogCard}" BorderBrush="{DynamicResource BrushBorder}"
+                            BorderThickness="1" CornerRadius="{DynamicResource RadiusCard}" Padding="14,10" Margin="0,0,0,12"
+                            Visibility="{Binding ShowScriptsStubOnTab, Converter={StaticResource BoolToVis}}">
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource HelpLinkButton}" Content="What scripts can do" VerticalAlignment="Center" Margin="12,0,0,0"
+                                    Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="scripts/overview"/>
+                            <TextBlock FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextMuted}" TextWrapping="Wrap" VerticalAlignment="Center">
+                                <Run Text="Pre-Launch &amp; Post-Exit Scripts" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                <Run Text=" are hidden. Tick Enable scripts under Settings › Launch &amp; Performance to run your own script before this game starts and after it exits."/>
+                            </TextBlock>
+                        </DockPanel>
                     </Border>
 
                 </StackPanel>

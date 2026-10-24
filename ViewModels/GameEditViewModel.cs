@@ -857,8 +857,6 @@ public class GameEditViewModel : ViewModelBase
         get => _selectedSection;
         set
         {
-            // The Scripts tab exists only while the scripts card does.
-            if (value == GameEditSection.Scripts && !ShowScriptsCard) value = GameEditSection.All;
             // Likewise the Display tab, which exists only while its card has something to show.
             if (value == GameEditSection.Display && !HasDisplayParts) value = GameEditSection.All;
             if (SetProperty(ref _selectedSection, value))
@@ -894,7 +892,7 @@ public class GameEditViewModel : ViewModelBase
     public bool ShowPerformanceCard => IsAllSection || IsPerformanceSection;
     public bool ShowScriptsCardOnTab => ShowScriptsCard && (IsAllSection || IsScriptsSection);
     /// <summary>The "scripts are hidden" stub has no tab of its own; it shows on All, as it always did.</summary>
-    public bool ShowScriptsStubOnTab => ShowScriptsStub && IsAllSection;
+    public bool ShowScriptsStubOnTab => ShowScriptsStub && (IsAllSection || IsScriptsSection);
 
     public ICommand SelectSectionCommand { get; }
 
@@ -909,14 +907,14 @@ public class GameEditViewModel : ViewModelBase
         set => SetProperty(ref _showAdvancedLaunchOptions, value);
     }
 
-    /// <summary>The tabs in strip order, without Scripts while its card is hidden.</summary>
+    /// <summary>The tabs in strip order. Scripts is always there: while scripts are off it holds the note about turning them on.</summary>
     public IReadOnlyList<GameEditSection> AvailableSections
     {
         get
         {
             var sections = new List<GameEditSection> { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance };
             if (HasDisplayParts) sections.Add(GameEditSection.Display);
-            if (ShowScriptsCard) sections.Add(GameEditSection.Scripts);
+            sections.Add(GameEditSection.Scripts);
             return sections;
         }
     }
