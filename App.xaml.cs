@@ -577,7 +577,7 @@ public partial class App : Application
                 LoggingService.Warn("App", $"Restore during session end failed: {ex.Message}");
             }
         };
-        _mainViewModel.RequestExitApplication += ExitApplication;
+        _mainViewModel.RequestExitApplication += RequestExit;
         _mainViewModel.SettingsVM.RequestRestart += RestartApplication;
         _mainViewModel.RequestTrayNotification += (title, message) => ShowTrayNotification(title, message);
 
@@ -600,6 +600,7 @@ public partial class App : Application
         }
 
         // Show window if not started with --minimized
+        if (!isScreenshot) NotePutBackWaitingAtStart(windowWillShow: !startMinimized);
         if (!startMinimized)
         {
             Log("Showing MainWindow...");
@@ -1113,7 +1114,7 @@ public partial class App : Application
             menu.Items.Add(new Separator());
 
             var exitBrush = (Brush)FindResource("BrushDanger");
-            var exitItem = CreateNavMenuItem("Exit TrayTrigger", "\uE7E8", ExitApplication, exitBrush, exitBrush);
+            var exitItem = CreateNavMenuItem("Exit TrayTrigger", "\uE7E8", RequestExit, exitBrush, exitBrush);
             menu.Items.Add(exitItem);
 
             // The optional search row at the very top (UX-16); with the setting off the menu is
@@ -1418,6 +1419,7 @@ public partial class App : Application
     public void ShowMainWindow()
     {
         if (_isShuttingDown) return;
+        ShowPutBackPromptIfPending();
 
         try
         {

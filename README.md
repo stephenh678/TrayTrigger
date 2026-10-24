@@ -92,7 +92,7 @@ The launch is the trigger. Pick a game, and everything you chose for it happens 
 
 **3. Play.** TrayTrigger stays a tray icon. Suspend a game with Ctrl+Alt+P for a cutscene you can't pause, or close it from the tray.
 
-**4. Put back.** When the game exits, every per-game setting goes back and is checked. Closed tools return, and the launcher closes if you asked. After a crash, it happens on the next start.
+**4. Put back.** When the game exits, every per-game setting goes back and is checked. Closed tools return, and the launcher closes if you asked. After a crash, it happens on the next start; anything that needs your permission asks first.
 
 ### Every launch, on the record
 

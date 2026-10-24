@@ -100,11 +100,26 @@ public class PerformanceProfileService
         get { lock (_lock) return _unrestored.Select(u => u.What).ToList(); }
     }
 
-    private void NoteUnrestored(string what, Func<bool> retry, object? key = null)
+    /// <summary>Set while a retry runs: what it still can't put back stays noted by the entry being retried, not by a second one.</summary>
+    [ThreadStatic] private static bool _quietNotes;
+
+    /// <param name="tried">False for what was left on record without asking for the administrator rights it needs.</param>
+    private void NoteUnrestored(string what, Func<bool> retry, object? key = null, bool tried = true)
     {
+        if (tried) LoggingService.Warn("PerformanceProfile", $"Could not put back {what}.");
+        else LoggingService.Info("PerformanceProfile", $"Left {what} to be put back when TrayTrigger is allowed to ask for administrator rights.");
+        if (_quietNotes) return;
         lock (_lock) _unrestored.Add((what, retry, key));
-        LoggingService.Warn("PerformanceProfile", $"Could not put back {what}.");
     }
+
+    /// <summary>
+    /// The snapshot adopted at start with what needs administrator rights still waiting on it, until a session applies an ADMIN tweak of
+    /// its own. While it is the current one, what it holds is the user's to put back (the prompt at start and exit, or Restore Previous):
+    /// a session that has no ADMIN tweaks of its own doesn't raise a prompt when it ends.
+    /// </summary>
+    private PerformanceProfileSessionSnapshot? _leftoverSnapshot;
+
+    private bool IsLeftoverOnly(PerformanceProfileSessionSnapshot snapshot) => ReferenceEquals(snapshot, _leftoverSnapshot);
 
     /// <summary>
     /// The game whose launch is being worked on, so each tweak can say on its Played row what it did
@@ -226,19 +241,30 @@ public class PerformanceProfileService
 
         int before;
         lock (_lock) before = _unrestored.Count;
-        RestoreGlobalTweaks(snapshot, skipElevated: false);
-        foreach (var perGame in snapshot.PerGameSnapshots)
+        // What needs administrator rights waits for the user to say so (the prompt at start, or Restore Previous): a
+        // prompt nobody expects, over a window that isn't even showing yet, is the one thing here that's worse than
+        // leaving a harmless setting changed a little longer. Already elevated, nothing is waited for.
+        bool elevated = _backend.IsElevated;
+        RestoreGlobalTweaks(snapshot, skipElevated: !elevated);
+        foreach (var perGame in snapshot.PerGameSnapshots.ToList())
         {
-            RestorePerGameTweaks(perGame);
+            RestoreGpuPreference(perGame);
+            if (elevated) RestoreDefenderExclusion(perGame);
+            else if (!perGame.DefenderExclusionCaptured || perGame.DefenderExclusionWasPreExisting) snapshot.PerGameSnapshots.Remove(perGame);
         }
-        if (snapshot.NvidiaSettings.Count > 0)
+        List<string> waiting = new();
+        if (!IsEmpty(snapshot))
         {
-            // An NVIDIA setting that couldn't be put back stays on record (see RestoreNvidiaSettings).
-            // Adopted as this run's snapshot, so a game started now records into it rather than
-            // writing a new file over it.
-            snapshot.PerGameSnapshots.Clear();
+            // What couldn't be put back stays on record (see RestoreNvidiaSettings). Adopted as this run's snapshot, so a
+            // game started now records into it rather than writing a new file over it.
+            if (elevated) snapshot.PerGameSnapshots.Clear();
             lock (_lock) _snapshot ??= snapshot;
             _store.SaveProfileSessionSnapshot(snapshot);
+            if (!elevated)
+            {
+                waiting = NoteAdminLeftovers(snapshot);
+                if (waiting.Count > 0) lock (_lock) _leftoverSnapshot = snapshot;
+            }
         }
         else
         {
@@ -246,12 +272,16 @@ public class PerformanceProfileService
         }
 
         List<string> failed;
-        lock (_lock) failed = _unrestored.Skip(before).Select(u => u.What).ToList();
+        lock (_lock) failed = _unrestored.Skip(before).Select(u => u.What).Where(w => !waiting.Contains(w)).ToList();
+        if (waiting.Count > 0)
+        {
+            ReportWaiting(waiting);
+        }
         if (failed.Count > 0)
         {
             ReportUnrestored(failed, gameName: null);
         }
-        else
+        else if (waiting.Count == 0)
         {
             ActivityService.Add(ActivityLevel.Change,
                 "Put back the settings a Performance Profile had changed when TrayTrigger last stopped",
@@ -274,6 +304,22 @@ public class PerformanceProfileService
             detail: nvidiaOnly
                 ? "Restore Previous on this page tries again. So does TrayTrigger, when the next game ends and the next time it starts."
                 : $"Restore Previous on this page tries again. Windows Settings can also change {ItOrThem(justFailed)} back by hand.",
+            groupKey: UnrestoredActivityKey);
+        if (entry != null) lock (_lock) _unrestoredEntryIds.Add(entry.Id);
+        PublishUnrestoredState();
+    }
+
+    /// <summary>
+    /// What a profile left changed because putting it back needs the user's permission, which TrayTrigger asks for
+    /// itself (the prompt at start and exit) and Restore Previous does at once. Critical like a failed restore: it is
+    /// still not back.
+    /// </summary>
+    private void ReportWaiting(IReadOnlyList<string> waiting)
+    {
+        string what = JoinList(waiting);
+        var entry = ActivityService.Add(ActivityLevel.Critical,
+            $"{Capitalize(what)} {(ItOrThem(waiting) == "them" ? "are" : "is")} still changed from a game",
+            detail: $"Putting {ItOrThem(waiting)} back needs administrator rights, and TrayTrigger only asks when you say so. Restore Previous on this page does it.",
             groupKey: UnrestoredActivityKey);
         if (entry != null) lock (_lock) _unrestoredEntryIds.Add(entry.Id);
         PublishUnrestoredState();
@@ -311,6 +357,7 @@ public class PerformanceProfileService
         {
             pending = _unrestored.ToList();
             _unrestored.Clear();
+            _retryPass++;
         }
         var fixedNow = new List<string>();
         foreach (var item in pending)
@@ -356,22 +403,27 @@ public class PerformanceProfileService
     }
 
     /// <summary>
-    /// Drops what was noted for an NVIDIA setting whose record is no longer pending: a later restore
-    /// put it back, or found it changed by someone else, so there is nothing left to offer Restore
-    /// Previous for. Returns what was dropped. Call with the lock held, and only after the newly
-    /// failed have been read off the end of the list.
+    /// Drops what was noted for something whose record is no longer pending (an NVIDIA setting, the
+    /// scheduler values, a Defender exclusion): a later restore put it back, or found it changed by
+    /// someone else, so there is nothing left to offer Restore Previous for. Returns what was dropped.
+    /// Call with the lock held, and only after the newly failed have been read off the end of the list.
     /// </summary>
-    private List<string> TakeSettledNvidiaEntries(List<NvidiaSettingSnapshot> stillPending)
+    private List<string> TakeSettledEntries(PerformanceProfileSessionSnapshot snapshot)
     {
-        bool Settled((string What, Func<bool> Retry, object? Key) entry) =>
-            entry.Key is NvidiaSettingSnapshot record && !stillPending.Contains(record);
+        bool Settled((string What, Func<bool> Retry, object? Key) entry) => entry.Key switch
+        {
+            NvidiaSettingSnapshot record => !snapshot.NvidiaSettings.Contains(record),
+            PerGameProfileSnapshot perGame => !perGame.DefenderExclusionCaptured,
+            _ when ReferenceEquals(entry.Key, SchedulerEntryKey) => !RegistryOnRecord(snapshot),
+            _ => false,
+        };
 
         var settled = _unrestored.Where(Settled).Select(u => u.What).Distinct().ToList();
         if (settled.Count > 0) _unrestored.RemoveAll(Settled);
         return settled;
     }
 
-    private static string JoinList(IReadOnlyList<string> items) => items.Count switch
+    internal static string JoinList(IReadOnlyList<string> items) => items.Count switch
     {
         0 => string.Empty,
         1 => items[0],
@@ -682,6 +734,8 @@ public class PerformanceProfileService
 
             if (hklmChanges.Count > 0 || adminNvidia.Count > 0)
             {
+                // This session has ADMIN tweaks of its own, so its end asks for permission anyway, and puts back what was left too.
+                _leftoverSnapshot = null;
                 var result = _backend.ApplyAdminChanges(hklmChanges, adminNvidia);
                 if (hklmChanges.Count > 0)
                 {
@@ -747,6 +801,7 @@ public class PerformanceProfileService
         if (aggressive && settings.AggressiveProfileTweaks.DefenderExclusionEnabled && resolvedExePath != null)
         {
             perGame ??= new PerGameProfileSnapshot { GameId = game.Id };
+            _leftoverSnapshot = null;
             ApplyDefenderExclusion(perGame, resolvedExePath);
             applied = true;
         }
@@ -788,19 +843,30 @@ public class PerformanceProfileService
             int before = _unrestored.Count;
             var snapshot = _snapshot;
 
-            var perGame = _snapshot.PerGameSnapshots.FirstOrDefault(p => p.GameId == gameId);
-            if (perGame != null)
+            // Nothing of its own that needs administrator rights, with some left waiting from before: that is the user's to put back.
+            bool leftoverOnly = IsLeftoverOnly(_snapshot);
+
+            // Every record for the game: one adopted at start and the session's own are both about it.
+            foreach (var perGame in _snapshot.PerGameSnapshots.Where(p => p.GameId == gameId).ToList())
             {
-                RestorePerGameTweaks(perGame);
+                if (leftoverOnly)
+                {
+                    RestoreGpuPreference(perGame);
+                    if (DefenderOnRecord(perGame)) continue;
+                }
+                else
+                {
+                    RestorePerGameTweaks(perGame);
+                }
                 _snapshot.PerGameSnapshots.Remove(perGame);
             }
 
             if (_activeSessionKeys.Count == 0)
             {
-                RestoreGlobalTweaks(_snapshot, skipElevated: false);
-                if (_snapshot.NvidiaSettings.Count > 0)
+                RestoreGlobalTweaks(_snapshot, skipElevated: leftoverOnly);
+                if (!IsEmpty(_snapshot))
                 {
-                    // An NVIDIA setting that couldn't be put back stays on record (see RestoreNvidiaSettings).
+                    // An NVIDIA setting or the scheduler values that couldn't be put back stay on record (see RestoreNvidiaSettings).
                     _store.SaveProfileSessionSnapshot(_snapshot);
                 }
                 else
@@ -816,7 +882,7 @@ public class PerformanceProfileService
             }
             failed = _unrestored.Skip(before).Select(u => u.What).ToList();
             // An NVIDIA setting an earlier session couldn't put back, and this one's end did.
-            settled = TakeSettledNvidiaEntries(snapshot.NvidiaSettings);
+            settled = TakeSettledEntries(snapshot);
 
             PutBack(gameId, failed.Count > 0
                 ? $"everything except {JoinList(failed)}, which couldn't be"
@@ -838,6 +904,21 @@ public class PerformanceProfileService
             putBack = info.Mode;
         }
         return true;
+    }
+
+    /// <summary>What still has to be put back, for the prompt before TrayTrigger closes or after it starts.</summary>
+    /// <param name="GameRunning">A game is running, so closing puts back its changes, and those that need administrator rights ask for it.</param>
+    /// <param name="Items">What would need the user's say-so (a game running), or what an earlier put-back left (none running).</param>
+    public sealed record PutBackCheck(bool GameRunning, IReadOnlyList<string> Items);
+
+    public PutBackCheck CheckPutBacks()
+    {
+        lock (_lock)
+        {
+            if (_activeSessionKeys.Count > 0 && _snapshot != null && !IsLeftoverOnly(_snapshot))
+                return new PutBackCheck(true, _backend.IsElevated ? [] : AdminPutBacks(_snapshot));
+            return new PutBackCheck(false, _unrestored.Select(u => u.What).Distinct().ToList());
+        }
     }
 
     /// <summary>
@@ -863,8 +944,8 @@ public class PerformanceProfileService
         }
         if (nextStart.Count > 0)
         {
-            ActivityService.Add(ActivityLevel.Problem, $"Couldn't put back {JoinList(nextStart)} when TrayTrigger closed",
-                detail: "TrayTrigger will try again the next time it starts.",
+            ActivityService.Add(ActivityLevel.Problem, $"{Capitalize(JoinList(nextStart))} {(ItOrThem(nextStart) == "them" ? "were" : "was")} still changed when TrayTrigger closed",
+                detail: $"TrayTrigger offers to put {ItOrThem(nextStart)} back the next time it starts.",
                 groupKey: UnrestoredActivityKey);
         }
         // An entry for next time: nothing is left to retry it once TrayTrigger has gone.
@@ -881,7 +962,10 @@ public class PerformanceProfileService
     private List<string> RestoreActiveSessionOnShutdownLocked(PerformanceProfileSessionSnapshot snapshot, bool skipElevated)
     {
         {
-            bool deferElevated = skipElevated && !_backend.IsElevated;
+            // No game of its own that needs administrator rights: what is left on record is what an earlier put-back couldn't do, and the
+            // next start asks again. Asking here too would be a second prompt for the same thing, straight after one that was just
+            // declined or failed.
+            bool deferElevated = (skipElevated || _activeSessionKeys.Count == 0 || IsLeftoverOnly(snapshot)) && !_backend.IsElevated;
 
             RestoreGlobalTweaks(snapshot, deferElevated);
             foreach (var perGame in snapshot.PerGameSnapshots.ToList())
@@ -900,7 +984,9 @@ public class PerformanceProfileService
             // NVIDIA settings that couldn't be put back are kept whatever the reason for closing:
             // nothing else will ever try them again (see RestoreNvidiaSettings).
             var nextStart = snapshot.NvidiaSettings.Select(r => NvidiaSessionSettings[r.SettingId].What).ToList();
-            bool anythingDeferred = (deferElevated && (snapshot.SystemResponsivenessCaptured || snapshot.SchedulingCategoryCaptured || snapshot.PerGameSnapshots.Count > 0))
+            bool registryLeft = snapshot.SystemResponsivenessCaptured || snapshot.SchedulingCategoryCaptured;
+            if (registryLeft && !deferElevated) nextStart.Add("Windows' multimedia scheduler settings");
+            bool anythingDeferred = (deferElevated && (registryLeft || snapshot.PerGameSnapshots.Count > 0))
                                     || nextStart.Count > 0;
 
             _activeSessionKeys.Clear();
@@ -1011,6 +1097,14 @@ public class PerformanceProfileService
     /// </summary>
     private SystemTweaksService.RegFileEntry CaptureSystemResponsiveness(PerformanceProfileSessionSnapshot snapshot)
     {
+        var change = new SystemTweaksService.RegFileEntry(
+            SystemResponsivenessPath, "SystemResponsiveness", AggressiveSystemResponsiveness, RegistryValueKind.DWord, Delete: false);
+        if (snapshot.SystemResponsivenessCaptured)
+        {
+            // An earlier put-back is still waiting: its record of what was there before the first game is the one to keep.
+            LoggingService.Verbose("PerformanceProfile", "System Responsiveness: setting to " + AggressiveSystemResponsiveness + " (an earlier put-back is still waiting, so what it recorded stays).");
+            return change;
+        }
         int? current = _backend.ReadHklmDword(SystemResponsivenessPath, "SystemResponsiveness");
         // Already ours before the game - only the first session captures, so no other is running: most
         // likely left by an earlier session that never got to restore. Putting that back would keep
@@ -1025,8 +1119,7 @@ public class PerformanceProfileService
 
         // Microsoft's MMCSS docs: values below 10 are clamped back up to 20, so 10 is the
         // lowest reserve Windows actually honors.
-        return new SystemTweaksService.RegFileEntry(
-            SystemResponsivenessPath, "SystemResponsiveness", AggressiveSystemResponsiveness, RegistryValueKind.DWord, Delete: false);
+        return change;
     }
 
     /// <summary>
@@ -1053,6 +1146,14 @@ public class PerformanceProfileService
     /// <summary>Captures and returns the change; see <see cref="CaptureSystemResponsiveness"/>.</summary>
     private SystemTweaksService.RegFileEntry CaptureSchedulingCategory(PerformanceProfileSessionSnapshot snapshot)
     {
+        var change = new SystemTweaksService.RegFileEntry(
+            SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", AggressiveSchedulingCategory, RegistryValueKind.String, Delete: false);
+        if (snapshot.SchedulingCategoryCaptured)
+        {
+            // An earlier put-back is still waiting: what it recorded stays, as for System Responsiveness above.
+            LoggingService.Verbose("PerformanceProfile", $"MMCSS Scheduling Category: setting to '{AggressiveSchedulingCategory}' (an earlier put-back is still waiting, so what it recorded stays).");
+            return change;
+        }
         string? current = _backend.ReadHklmString(SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category");
         // Already ours before the game: left over, as for System Responsiveness above.
         bool leftOver = string.Equals(current, AggressiveSchedulingCategory, StringComparison.OrdinalIgnoreCase);
@@ -1064,8 +1165,7 @@ public class PerformanceProfileService
             : $"MMCSS Scheduling Category: setting to '{AggressiveSchedulingCategory}' (was '{current ?? "unset"}').");
 
         // SFIO Priority is intentionally not written - Microsoft's MMCSS docs state it "is not used".
-        return new SystemTweaksService.RegFileEntry(
-            SystemTweaksService.MmcssGamesTaskPath, "Scheduling Category", AggressiveSchedulingCategory, RegistryValueKind.String, Delete: false);
+        return change;
     }
 
     /// <summary>
@@ -1249,13 +1349,23 @@ public class PerformanceProfileService
         {
             return;
         }
-        // All together, as they were applied: one administrator prompt on the way out too.
+        RestoreAdminTweaks(snapshot);
+    }
+
+    /// <summary>
+    /// What needs administrator rights, put back together as it was applied: one prompt for the registry values and the
+    /// NVIDIA Resizable BAR setting. What can't be put back stays on record, and is noted for Restore Previous.
+    /// </summary>
+    private void RestoreAdminTweaks(PerformanceProfileSessionSnapshot snapshot)
+    {
         var hklmChanges = new List<SystemTweaksService.RegFileEntry>(2);
-        if (TryRestoreSystemResponsiveness(snapshot, out var responsiveness)) hklmChanges.Add(responsiveness);
-        if (TryRestoreSchedulingCategory(snapshot, out var scheduling)) hklmChanges.Add(scheduling);
+        bool putBackResponsiveness = TryRestoreSystemResponsiveness(snapshot, out var responsiveness);
+        if (putBackResponsiveness) hklmChanges.Add(responsiveness);
+        bool putBackScheduling = TryRestoreSchedulingCategory(snapshot, out var scheduling);
+        if (putBackScheduling) hklmChanges.Add(scheduling);
 
         // Cleared whether or not there was anything to write: a capture we have decided not to put
-        // back must not be retried by crash recovery on the next start.
+        // back must not be retried by crash recovery on the next start. (Set again below when the write fails.)
         snapshot.SystemResponsivenessCaptured = false;
         snapshot.SchedulingCategoryCaptured = false;
 
@@ -1266,12 +1376,14 @@ public class PerformanceProfileService
             snapshot.NvidiaSettings = snapshot.NvidiaSettings.Where(r => !IsAdminNvidia(r.SettingId)).Concat(failedAdmin).ToList();
             foreach (var record in failedAdmin)
             {
-                NoteUnrestored(NvidiaSessionSettings[record.SettingId].What, () => RetryNvidiaSetting(snapshot, record), key: record);
+                NoteAdminRecord(snapshot, record, tried: true);
             }
             if (hklmChanges.Count > 0 && !registryOk)
             {
-                var entries = hklmChanges.ToList();
-                NoteUnrestored("Windows' multimedia scheduler settings", () => _backend.ApplyHklmChanges(entries));
+                // Kept on record, as the NVIDIA setting is: put back in the same prompt as it, later.
+                snapshot.SystemResponsivenessCaptured = putBackResponsiveness;
+                snapshot.SchedulingCategoryCaptured = putBackScheduling;
+                NoteSchedulerRecord(snapshot, tried: true);
             }
         }
     }
@@ -1632,6 +1744,120 @@ public class PerformanceProfileService
         _ => new NvidiaAdminOp(record.SettingId, NvidiaAdminAction.Delete),
     };
 
+    private const string SchedulerSettingsWhat = "Windows' multimedia scheduler settings";
+
+    private static bool RegistryOnRecord(PerformanceProfileSessionSnapshot snapshot) =>
+        snapshot.SystemResponsivenessCaptured || snapshot.SchedulingCategoryCaptured;
+
+    /// <summary>A Defender exclusion on record that needs an administrator prompt to remove.</summary>
+    private static bool DefenderOnRecord(PerGameProfileSnapshot perGame) =>
+        perGame.DefenderExclusionCaptured && !perGame.DefenderExclusionWasPreExisting && perGame.DefenderExclusionPath != null;
+
+    /// <summary>
+    /// What a snapshot holds that needs administrator rights to put back, as Activity &amp; History names it: the NVIDIA
+    /// Resizable BAR setting, the scheduler values and a Defender exclusion.
+    /// </summary>
+    private static List<string> AdminPutBacks(PerformanceProfileSessionSnapshot snapshot)
+    {
+        var names = snapshot.NvidiaSettings.Where(r => IsAdminNvidia(r.SettingId)).Select(r => NvidiaSessionSettings[r.SettingId].What).ToList();
+        if (RegistryOnRecord(snapshot)) names.Add(SchedulerSettingsWhat);
+        names.AddRange(snapshot.PerGameSnapshots.Where(DefenderOnRecord).Select(DefenderWhat));
+        return names;
+    }
+
+    private static string DefenderWhat(PerGameProfileSnapshot perGame) => $"the Defender exclusion for {Path.GetFileName(perGame.DefenderExclusionPath!)}";
+
+    /// <summary>
+    /// Notes what is on record and needs administrator rights, without asking for it: Restore Previous, or "Put back now" in
+    /// the prompt at start and exit, does that. Returns what it noted.
+    /// </summary>
+    private List<string> NoteAdminLeftovers(PerformanceProfileSessionSnapshot snapshot)
+    {
+        var names = new List<string>();
+        foreach (var record in snapshot.NvidiaSettings.Where(r => IsAdminNvidia(r.SettingId)).ToList())
+        {
+            NoteAdminRecord(snapshot, record, tried: false);
+            names.Add(NvidiaSessionSettings[record.SettingId].What);
+        }
+        if (RegistryOnRecord(snapshot))
+        {
+            NoteSchedulerRecord(snapshot, tried: false);
+            names.Add(SchedulerSettingsWhat);
+        }
+        foreach (var perGame in snapshot.PerGameSnapshots.Where(DefenderOnRecord).ToList())
+        {
+            NoteUnrestored(DefenderWhat(perGame), () => RetryDefender(snapshot, perGame), key: perGame, tried: false);
+            names.Add(DefenderWhat(perGame));
+        }
+        return names;
+    }
+
+    /// <summary>The entry that offers Restore Previous for an NVIDIA setting that needs administrator rights.</summary>
+    private void NoteAdminRecord(PerformanceProfileSessionSnapshot snapshot, NvidiaSettingSnapshot record, bool tried) =>
+        NoteUnrestored(NvidiaSessionSettings[record.SettingId].What, () => RetryAdmin(snapshot, () => !snapshot.NvidiaSettings.Contains(record)), key: record, tried: tried);
+
+    /// <summary>The one entry for the scheduler values (its key is what lets a later restore settle it).</summary>
+    private void NoteSchedulerRecord(PerformanceProfileSessionSnapshot snapshot, bool tried) =>
+        NoteUnrestored(SchedulerSettingsWhat, () => RetryAdmin(snapshot, () => !RegistryOnRecord(snapshot)), key: SchedulerEntryKey, tried: tried);
+
+    private static readonly object SchedulerEntryKey = new();
+
+    /// <summary>
+    /// Restore Previous for what needs administrator rights. The registry values and Resizable BAR go back in one step, so
+    /// one prompt however many of them are noted: the first to be retried in a pass does it, and the rest only look.
+    /// </summary>
+    private bool RetryAdmin(PerformanceProfileSessionSnapshot snapshot, Func<bool> isBack)
+    {
+        if (_adminPutBackPass != _retryPass)
+        {
+            _adminPutBackPass = _retryPass;
+            PutBackAdmin(snapshot);
+        }
+        return isBack();
+    }
+
+    private int _retryPass;
+    private int _adminPutBackPass = -1;
+
+    private void PutBackAdmin(PerformanceProfileSessionSnapshot snapshot)
+    {
+        // What it can't put back is noted by the retry that called it, which keeps its own entry for that.
+        _quietNotes = true;
+        try { RestoreAdminTweaks(snapshot); }
+        finally { _quietNotes = false; }
+        lock (_lock) FinishSnapshot(snapshot);
+    }
+
+    private bool RetryDefender(PerformanceProfileSessionSnapshot snapshot, PerGameProfileSnapshot perGame)
+    {
+        if (perGame.DefenderExclusionPath is not { } path || !_backend.RemoveDefenderExclusion(path)) return false;
+        lock (_lock)
+        {
+            perGame.DefenderExclusionCaptured = false;
+            snapshot.PerGameSnapshots.Remove(perGame);
+            FinishSnapshot(snapshot);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The snapshot on disk after something on record was put back: gone when nothing is left and no game is running, otherwise
+    /// as it now is. Not this run's snapshot (a later restore replaced it): nothing on disk to update. Call with the lock held.
+    /// </summary>
+    private void FinishSnapshot(PerformanceProfileSessionSnapshot snapshot)
+    {
+        if (!ReferenceEquals(snapshot, _snapshot)) return;
+        if (_activeSessionKeys.Count == 0 && IsEmpty(snapshot))
+        {
+            _snapshot = null;
+            _store.DeleteProfileSessionSnapshot();
+        }
+        else
+        {
+            _store.SaveProfileSessionSnapshot(snapshot);
+        }
+    }
+
     /// <summary>
     /// Restore Previous for one NVIDIA setting. Once it's back its record goes too, from the
     /// snapshot in memory and on disk: left there, the same value chosen by the user later would
@@ -1639,25 +1865,12 @@ public class PerformanceProfileService
     /// </summary>
     private bool RetryNvidiaSetting(PerformanceProfileSessionSnapshot snapshot, NvidiaSettingSnapshot record)
     {
-        var stillFailed = IsAdminNvidia(record.SettingId)
-            ? PutBackAdminNvidia([record], []).Failed
-            : PutBackNvidiaSettings([record]);
-        if (stillFailed.Count > 0) return false;
+        if (PutBackNvidiaSettings([record]).Count > 0) return false;
 
         lock (_lock)
         {
-            // Not this run's snapshot any more (or a record a later restore already settled): nothing on disk to update.
-            if (!snapshot.NvidiaSettings.Remove(record) || !ReferenceEquals(snapshot, _snapshot)) return true;
-
-            if (_activeSessionKeys.Count == 0 && IsEmpty(snapshot))
-            {
-                _snapshot = null;
-                _store.DeleteProfileSessionSnapshot();
-            }
-            else
-            {
-                _store.SaveProfileSessionSnapshot(snapshot);
-            }
+            // A record a later restore already settled: nothing on disk to update.
+            if (snapshot.NvidiaSettings.Remove(record)) FinishSnapshot(snapshot);
         }
         return true;
     }

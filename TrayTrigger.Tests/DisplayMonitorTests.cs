@@ -7,6 +7,8 @@ using Xunit;
 namespace TrayTrigger.Tests;
 
 /// <summary>The monitor a game's display settings apply to, and making that monitor the main display.</summary>
+// Its problems are recorded into Activity & History's static Current, which other tests swap in while they run.
+[Collection(ActivityCurrentCollection.Name)]
 public sealed class DisplayMonitorTests : System.IDisposable
 {
     private const string One = @"\\.\DISPLAY1";

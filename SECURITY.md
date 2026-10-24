@@ -33,7 +33,7 @@ One change cannot be made by Windows' own tools: the NVIDIA driver only lets an 
 
 ## Are changes reversible?
 
-Yes. Every tweak TrayTrigger applies — whether a global tweak from Settings or a per-game performance profile — records the prior state before changing anything and restores that exact prior state automatically (on toggle-off, or the moment a game with a session profile exits). If TrayTrigger or your PC crashes mid-session, the next launch detects the incomplete session and restores your pre-game state.
+Yes. Every tweak TrayTrigger applies — whether a global tweak from Settings or a per-game performance profile — records the prior state before changing anything and restores that exact prior state automatically (on toggle-off, or the moment a game with a session profile exits). If TrayTrigger or your PC crashes mid-session, the next launch detects the incomplete session and restores your pre-game state. What needs administrator rights (the Aggressive profile's ADMIN tweaks and a Defender exclusion) isn't restored without asking: TrayTrigger says what is still changed and offers "Put back now" in its own dialog, at start and before it closes, and the Windows prompt follows your click. Activity & History keeps a reminder with Restore Previous meanwhile.
 
 You can also enable **"Create a System Restore point before applying tweaks"** in Settings (on by default) as an additional safety net before any bulk Apply Preset or Restore Previous Settings.
 

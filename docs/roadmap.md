@@ -102,3 +102,12 @@ Still to settle:
 3. ~~Make a failed write visible~~ Done: a Problem entry in Activity & History. The ENABLED badge still says nothing about whether it took effect.
 4. Does a Global value reach a game whose own profile lacks it (Hellraiser's profile has 16 settings and no value)? Only a game
    running can show that.
+5. Done 2026-10-24: a put-back that needs administrator rights and is declined (found in UAT) no longer prompts by surprise.
+   The scheduler values are kept on record with Resizable BAR (they were dropped, and stayed at 10/High); start and exit leave
+   them waiting and ask first in a TrayTrigger dialog (`App.PutBack.cs`, `PerformanceProfileService.CheckPutBacks`), "Put back
+   now" or Restore Previous doing the one combined prompt. Exit with a game running says the prompt is coming. A start in the
+   tray shows a toast and asks when the window opens. Not covered: audio and display records (they need no prompt).
+   Code review of this (max): what was left waiting is "leftover only" until a session applies an ADMIN tweak of its own (an Optimized
+   game ending doesn't prompt for it); later restores settle every entry that offered it (scheduler, Defender, not only NVIDIA); a
+   session over a waiting put-back keeps the original it recorded; Restore Previous retries notes nothing twice. Left as is: the exit
+   put-back runs on the UI thread while the prompt waits, and Esc on the "Some settings are still changed" dialog closes TrayTrigger.

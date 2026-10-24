@@ -78,6 +78,8 @@ internal sealed class FakeDisplay : IDisplayBackend
 }
 
 /// <summary>Per-game display mode: set before a game, put back after, and never left set.</summary>
+// Its problems are recorded into Activity & History's static Current, which other tests swap in while they run.
+[Xunit.Collection(ActivityCurrentCollection.Name)]
 public sealed class DisplayModeServiceTests : System.IDisposable
 {
     private static GameEntry Game(string id, int w = 1920, int h = 1080, int hz = 144) =>
