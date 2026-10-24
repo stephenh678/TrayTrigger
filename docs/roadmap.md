@@ -26,7 +26,7 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 | 3 | Game recipes (export and import a game's setup) | **Skipped** (2026-10-23) |
 | 4 | Companion tool presets, such as Lossless Scaling | **Done** (2026-10-23): companion tools already start with a game and close with it or after it; a Lossless Scaling preset would only save picking the .exe, so it is not built |
 | 5 | Save backup through Ludusavi | **Skipped** (2026-10-23): saves stay out of TrayTrigger, as decided before |
-| 6 | Back up and restore TrayTrigger's own data | **Done** (2026-10-23): already built (Settings > Diagnostics & Storage). Reviewed for gaps; Activity & History is an option when backing up (a tick, on by default), and a test makes every new data file be either backed up or listed as staying behind |
+| 6 | Back up and restore TrayTrigger's own data | **Done** (2026-10-23): already built (Settings > Diagnostics & Storage). Reviewed for gaps; Activity & History is an option when backing up (a tick, on by default), and automatic backups are an opt-in (weekly, keep 4, in the data folder's Backups\Automatic; the uninstaller keeps them unless asked), and a test makes every new data file be either backed up or listed as staying behind |
 | 7 | "Copy diagnostics" button | **Done** (2026-10-23): already built (About > Copy Diagnostic Info); reviewed and updated: user folder removed from paths, appearance, profile and per-game settings, recent changes, monitor count and refresh rate |
 | 8 | Discord Rich Presence | **Closed, not built** (2026-10-23): nobody asked for it, and the benefit is thin |
 | 9 | Dock and handheld scenes | **Skipped** (2026-10-23) |

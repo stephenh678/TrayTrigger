@@ -1539,6 +1539,28 @@
                                           Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}" Margin="0,6,0,0">
                                     <TextBlock Text="Include Activity &amp; History in the backup" TextWrapping="Wrap"/>
                                 </CheckBox>
+                                <CheckBox IsChecked="{Binding AutoBackupEnabled}"
+                                          Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}" Margin="0,6,0,0">
+                                    <TextBlock Text="Back up automatically" TextWrapping="Wrap"/>
+                                </CheckBox>
+                                <StackPanel Margin="24,2,0,0" Visibility="{Binding AutoBackupEnabled, Converter={StaticResource BoolToVis}}">
+                                    <WrapPanel Margin="0,2,0,0">
+                                        <ComboBox AutomationProperties.Name="How often to back up" ItemsSource="{Binding AutoBackupEveryOptions}"
+                                                  SelectedItem="{Binding AutoBackupEveryOption, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernComboBox}" Width="150" Margin="0,0,16,4"/>
+                                        <TextBlock Text="Keep the last" VerticalAlignment="Center" Margin="0,0,8,4"
+                                                   Foreground="{DynamicResource BrushTextPrimary}" FontSize="{DynamicResource FontSizeBody}"/>
+                                        <ComboBox AutomationProperties.Name="How many automatic backups to keep" ItemsSource="{Binding AutoBackupKeepOptions}"
+                                                  SelectedItem="{Binding AutoBackupKeep, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernComboBox}" Width="70" Margin="0,0,0,4"/>
+                                    </WrapPanel>
+                                    <TextBlock Text="Saved on this PC, in the Backups folder of TrayTrigger's data folder. Copy them somewhere else to be safe from a disk failure."
+                                               Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" TextWrapping="Wrap"/>
+                                    <Button Style="{StaticResource HelpLinkButton}" Content="Open backups folder" Margin="0,4,0,0" HorizontalAlignment="Left"
+                                            Command="{Binding OpenAutoBackupFolderCommand}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding AutoBackupStatus}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"/>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="How backups work" Margin="0,4,0,0" HorizontalAlignment="Left"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/backup"/>
                             </StackPanel>

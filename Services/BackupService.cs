@@ -462,6 +462,11 @@ public sealed class BackupService
         restored.TweakPriorState = current?.TweakPriorState ?? new Dictionary<string, string>();
         restored.TweaksAppliedByTrayTrigger = current?.TweaksAppliedByTrayTrigger ?? new List<string>();
         restored.LastRunVersion = current?.LastRunVersion ?? string.Empty;
+        restored.LastBackupUtc = current?.LastBackupUtc;
+        restored.LastAutoBackupUtc = current?.LastAutoBackupUtc;
+        restored.AutoBackupLastError = current?.AutoBackupLastError ?? string.Empty;
+        restored.AutoBackupAttemptDay = current?.AutoBackupAttemptDay ?? string.Empty;
+        restored.AutoBackupAttemptsToday = current?.AutoBackupAttemptsToday ?? 0;
         restored.MainWindowLeft = current?.MainWindowLeft;
         restored.MainWindowTop = current?.MainWindowTop;
         restored.MainWindowWidth = current?.MainWindowWidth;

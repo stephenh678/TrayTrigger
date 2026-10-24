@@ -60,6 +60,9 @@ public partial class App : Application
     /// <summary>Re-writes the tooltip's elapsed time while a game is running; stopped when none is.</summary>
     private System.Windows.Threading.DispatcherTimer? _trayToolTipTimer;
 
+    /// <summary>Checks whether an automatic backup is due: shortly after start, then once a day.</summary>
+    private System.Windows.Threading.DispatcherTimer? _autoBackupTimer;
+
     private const int SM_CXSMICON = 49;
     private const int SM_CYSMICON = 50;
 
@@ -571,6 +574,7 @@ public partial class App : Application
         Log("Initializing Tray Icon...");
         InitializeTrayIcon();
         InitializeActivityNotifications();
+        if (!isScreenshot) StartAutoBackupChecks();
 
         // Explorer only re-reads an icon's NotifyIconSettings entry when the icon is registered,
         // so a freshly written "always show" flag takes effect only after the icon is re-added.
@@ -599,6 +603,21 @@ public partial class App : Application
         }
 
         Log("OnStartup completed successfully.");
+    }
+
+    private void StartAutoBackupChecks()
+    {
+        var settingsVm = _mainViewModel.SettingsVM;
+        // A moment after start, so the backup doesn't compete with the library loading; then once a day.
+        _autoBackupTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
+        _autoBackupTimer.Tick += (_, _) =>
+        {
+            _autoBackupTimer!.Interval = TimeSpan.FromHours(24);
+            settingsVm.RunAutoBackupIfDue();
+        };
+        _autoBackupTimer.Start();
+        // A backup that waited for a game is taken when the last one exits.
+        _launcherService.SessionEnded += _ => Dispatcher.BeginInvoke(() => settingsVm.RunAutoBackupIfDue(), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>Every script path something could run: each game's, the defaults, and each tool's

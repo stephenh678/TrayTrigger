@@ -7,6 +7,7 @@ feature, no internals. The full write-up for each release stays in CHANGELOG.md.
 ## 1.7.1
 
 - **Activity & History in a backup** - Back Up has a tick, on by default, to include your history, so it comes back after a restore.
+- **Automatic backups** - Tick Back up automatically beside Back Up and TrayTrigger backs up every week (or 2 weeks, or month) and keeps the last few. Off until you turn it on.
 - **Stutter Check spots a single memory stick** - If your PC has one stick of memory and room for another, Stutter Check now says so and what to do about it.
 - **Stutter Check has its own tab** - On the System page, between Hardware Specs and Performance Tweaks. The All tab still shows it.
 - **Launch problems are recorded** - A game that didn't launch, or that was started but never seen running, now leaves an entry in Activity & History with the reason.
