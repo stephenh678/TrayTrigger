@@ -20,7 +20,7 @@ internal static class LibraryChanges
         string PreLaunchScriptPath, string PostExitScriptPath, bool WaitForPreLaunchScript, bool AbortLaunchOnScriptFailure,
         bool RunScriptsHidden, bool RunScriptsAsAdmin, string ScriptArguments, bool SkipDefaultScripts, int PreLaunchScriptTimeoutSeconds,
         string DisplayMode, bool KeepMouseOnGameScreen,
-        string DisplayMonitorId, bool MakeMainDisplay, bool DimOtherScreens, string AudioOutputDeviceId);
+        string DisplayMonitorId, bool MakeMainDisplay, bool DimOtherScreens, string AudioOutputDeviceId, string AudioInputDeviceId);
 
     public static GameSettings Capture(GameEntry g) => new(
         g.Name, g.ExecutablePath, g.Arguments, g.WorkingDirectory, g.RunAsAdmin, g.LaunchDirectly,
@@ -28,7 +28,7 @@ internal static class LibraryChanges
         g.PreLaunchScriptPath, g.PostExitScriptPath, g.WaitForPreLaunchScript, g.AbortLaunchOnScriptFailure,
         g.RunScriptsHidden, g.RunScriptsAsAdmin, g.ScriptArguments, g.SkipDefaultScripts, g.PreLaunchScriptTimeoutSeconds,
         DisplayModeService.RequestedMode(g)?.ToString() ?? string.Empty, g.KeepMouseOnGameScreen,
-        g.DisplayMonitorId, g.MakeMainDisplay, g.DimOtherScreens, g.AudioOutputDeviceId);
+        g.DisplayMonitorId, g.MakeMainDisplay, g.DimOtherScreens, g.AudioOutputDeviceId, g.AudioInputDeviceId);
 
     /// <summary>
     /// "Hades: launch arguments and run as administrator changed", with each old and new value as the detail;
@@ -71,6 +71,7 @@ internal static class LibraryChanges
         Flag("make the monitor the main display", before.MakeMainDisplay, after.MakeMainDisplay);
         Flag("dim the other screens", before.DimOtherScreens, after.DimOtherScreens);
         Chosen("sound output", before.AudioOutputDeviceId, after.AudioOutputDeviceId, "not changed");
+        Chosen("microphone", before.AudioInputDeviceId, after.AudioInputDeviceId, "not changed");
         Flag("hidden", before.IsHidden, after.IsHidden);
         Flag("close launcher on exit", before.CloseLauncherOnExit, after.CloseLauncherOnExit);
         Text("pre-launch script", before.PreLaunchScriptPath, after.PreLaunchScriptPath);

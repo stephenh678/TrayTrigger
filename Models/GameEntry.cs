@@ -175,6 +175,12 @@ public class GameEntry
     public string AudioOutputDeviceId { get; set; } = string.Empty;
 
     /// <summary>
+    /// The recording device (microphone) Windows uses while this game runs (Edit Game, Display &amp; Sound tab); empty leaves it alone.
+    /// Set before launch like <see cref="AudioOutputDeviceId"/> and put back when the session ends.
+    /// </summary>
+    public string AudioInputDeviceId { get; set; } = string.Empty;
+
+    /// <summary>
     /// While this game's window is in front, the mouse is confined to the monitor it is on, and freed
     /// the moment the focus moves (Edit Game, Display & Sound tab). See <see cref="Services.CursorLockService"/>.
     /// </summary>

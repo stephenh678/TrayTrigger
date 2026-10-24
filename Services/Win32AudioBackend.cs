@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace TrayTrigger.Services;
 
 /// <summary>
-/// <see cref="IAudioBackend"/> over Core Audio: IMMDeviceEnumerator to list the playback devices and find the ones
+/// <see cref="IAudioBackend"/> over Core Audio: IMMDeviceEnumerator to list the playback and recording devices and find the ones
 /// doing each job, and IPolicyConfig to hand a job to another device. IPolicyConfig is what Windows' own sound
 /// settings use; it is not documented, so only the one call needed is declared in full and its position in the
 /// interface is what must be right. Each call is made for one job at a time, with Windows' own device id string.
@@ -15,6 +15,7 @@ internal sealed class Win32AudioBackend : IAudioBackend
     private static readonly Guid MMDeviceEnumeratorClsid = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
     private static readonly Guid PolicyConfigClientClsid = new("870AF99C-171D-4F9E-AF0D-E63DF40C2BC9");
     private const int eRender = 0;
+    private const int eCapture = 1;
     private const uint DEVICE_STATE_ACTIVE = 1;
     private const int STGM_READ = 0;
     private const ushort VT_LPWSTR = 31;
@@ -87,14 +88,18 @@ internal sealed class Win32AudioBackend : IAudioBackend
         return type == null ? null : Activator.CreateInstance(type) as IMMDeviceEnumerator;
     }
 
-    public IReadOnlyList<AudioDevice> PlaybackDevices()
+    public IReadOnlyList<AudioDevice> PlaybackDevices() => Devices(eRender);
+
+    public IReadOnlyList<AudioDevice> RecordingDevices() => Devices(eCapture);
+
+    private static IReadOnlyList<AudioDevice> Devices(int flow)
     {
         var list = new List<AudioDevice>();
         var enumerator = Enumerator();
         if (enumerator == null) return list;
         try
         {
-            if (enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, out var collection) != 0 || collection == null) return list;
+            if (enumerator.EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE, out var collection) != 0 || collection == null) return list;
             try
             {
                 collection.GetCount(out uint count);
@@ -131,13 +136,17 @@ internal sealed class Win32AudioBackend : IAudioBackend
         finally { Marshal.ReleaseComObject(store); }
     }
 
-    public string? DefaultId(AudioRole role)
+    public string? DefaultId(AudioRole role) => Default(eRender, role);
+
+    public string? DefaultRecordingId(AudioRole role) => Default(eCapture, role);
+
+    private static string? Default(int flow, AudioRole role)
     {
         var enumerator = Enumerator();
         if (enumerator == null) return null;
         try
         {
-            if (enumerator.GetDefaultAudioEndpoint(eRender, (int)role, out var device) != 0 || device == null) return null;
+            if (enumerator.GetDefaultAudioEndpoint(flow, (int)role, out var device) != 0 || device == null) return null;
             try { return device.GetId(out string id) == 0 ? id : null; }
             finally { Marshal.ReleaseComObject(device); }
         }

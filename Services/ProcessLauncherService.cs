@@ -591,6 +591,7 @@ public partial class ProcessLauncherService
         // Before the profile, which goes by the default playback device: its Unmute audio has to act on the device the
         // game will play through, and put the mute back on that same one. FinishSession ends the profile first and this last.
         AudioOutputService.Shared.Begin(game);
+        AudioOutputService.SharedInput.Begin(game);
 
         _performanceProfileService.BeginGameSession(game);
 
@@ -861,6 +862,7 @@ public partial class ProcessLauncherService
         }
         // Never throws; a game that set no display mode is ignored.
         DisplayModeService.Shared.End(game.Id);
+        AudioOutputService.SharedInput.End(game.Id);
         AudioOutputService.Shared.End(game.Id);
         CursorLockService.Shared.Untrack(game.Id);
         ScreenDimService.Shared.Untrack(game.Id);

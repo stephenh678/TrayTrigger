@@ -129,6 +129,7 @@ public sealed class GameEditDisplayTests : IDisposable
         _display.Mons = [_display.Mons[0]];
         _display.Listed = [];
         _audio.Devices = [new AudioDevice("speakers", "Speakers")];
+        _audio.Mics = [new AudioDevice("desk-mic", "Desk microphone")];
         var vm = Open(new GameEntry { Name = "Hades", Category = "Action" }, monitors: 1);
 
         Assert.False(vm.HasDisplayParts);
@@ -274,4 +275,28 @@ public sealed class GameEditDisplayTests : IDisposable
         vm.MakeMainDisplay = false;
         Assert.Contains("left as it is", vm.DisplayHint);
     });
+
+    [Fact]
+    public void TheMicrophoneList_ShowsWithTwoRecordingDevices_AndIsSaved() => Sta(() =>
+    {
+        var game = new GameEntry { Name = "Hades", Category = "Action" };
+        var vm = Open(game);
+
+        Assert.True(vm.ShowMicrophone);
+        Assert.Equal(GameEditViewModel.NoAudioChangeLabel, vm.SelectedMicrophone.Label);
+        vm.SelectedMicrophone = vm.MicrophoneOptions.Single(o => o.Id == "headset-mic");
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal("headset-mic", game.AudioInputDeviceId);
+    });
+
+    [Fact]
+    public void WithOneRecordingDevice_TheMicrophoneListIsLeftOut() => Sta(() =>
+    {
+        _audio.Mics = [new AudioDevice("desk-mic", "Desk microphone")];
+        var vm = Open(new GameEntry { Name = "Hades", Category = "Action" });
+
+        Assert.False(vm.ShowMicrophone);
+    });
+
 }

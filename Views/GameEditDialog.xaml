@@ -732,6 +732,17 @@
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
                             </StackPanel>
 
+                            <StackPanel Visibility="{Binding ShowMicrophone, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Microphone" FontSize="{DynamicResource FontSizeBody}"
+                                           Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,4"/>
+                                <ComboBox AutomationProperties.Name="Microphone" ItemsSource="{Binding MicrophoneOptions}"
+                                          SelectedItem="{Binding SelectedMicrophone}" DisplayMemberPath="Label"
+                                          Style="{StaticResource ModernComboBox}" Margin="0,0,0,4"/>
+                                <TextBlock Text="Windows uses this microphone while the game runs, and goes back when it ends. A program set to use the Communications device, or a microphone chosen inside the game or the chat app, keeps its own."
+                                           FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+                            </StackPanel>
+
                             <Button AutomationProperties.Name="Learn more about the display and sound settings" Style="{StaticResource HelpLinkButton}"
                                     Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="profiles/display_mode"/>
                         </StackPanel>

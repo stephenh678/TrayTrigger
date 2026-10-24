@@ -2,12 +2,13 @@
 
 ## What it does
 
-Edit Game has a **Display** tab for each game, holding the **Display and sound** card (it is on the All tab too, after the Performance and DLSS cards). The tab is left out on a PC where there's nothing for it to show. It holds everything about the screens and speakers a game runs on, and each part shows only when it can do something on your PC:
+Edit Game has a **Display & Sound** tab for each game, holding the **Display and sound** card (it is on the All tab too, after the Performance and DLSS cards). The tab is left out on a PC where there's nothing for it to show. It holds everything about the screens and speakers a game runs on, and each part shows only when it can do something on your PC:
 
 - **Resolution and refresh rate** for a monitor (always, when your display lists modes).
 - **Monitor**, **Identify**, **Make this monitor the main display** and **Dim the other screens** (with more than one monitor).
 - **Keep the mouse on the game's screen** (with more than one monitor).
 - **Sound output** (with more than one playback device).
+- **Microphone** (with more than one recording device).
 
 Everything is off until you choose it, set just before the game starts, and put back when it ends.
 
@@ -69,6 +70,16 @@ The playback device the game's sound plays through while it runs, put back when 
 - Windows has no public way to do this, so TrayTrigger uses the call Windows' own sound settings use. A Windows update could change it; if so, Activity & History says the sound output couldn't be set, and the game starts as usual.
 - A sound output chosen for this game in Windows' volume mixer (Settings > System > Sound > Volume mixer) overrides it.
 
+## Microphone
+
+The recording device Windows uses while the game runs, put back when it ends, for a game whose voice chat or recording should use a different microphone from the one you normally have, such as a headset's.
+
+- It works exactly like Sound output: it moves the device used by default, not the one a program uses for calls. A program set to the Communications device, or one with its own microphone choice (the game's settings, Discord, OBS), keeps that choice.
+- The list starts at **Default (Windows' choice)**, which changes nothing, and shows only with more than one recording device.
+- A microphone that isn't connected when the game starts is left alone, the game starts as usual, and Activity & History says so.
+- It is put back only while it still has the job TrayTrigger gave it, and also after a crash, at the next start.
+- TrayTrigger only chooses which microphone Windows uses; it never records or listens to anything.
+
 ## What the settings do not do
 
 - The resolution and refresh rate set a mode, not HDR (see HDR), colour depth or scaling.
@@ -79,7 +90,7 @@ The playback device the game's sound plays through while it runs, put back when 
 ## Putting it back
 
 - The resolution and refresh rate come back when the game ends, when TrayTrigger closes, and at the next start if TrayTrigger stopped during the game. TrayTrigger asks Windows for the desktop's own mode, the one set in Windows Settings; it doesn't re-apply a remembered one, so a change you made in Windows in between isn't undone. The mode is temporary, never saved as the desktop's own setting, so a restart brings your normal mode back, and Windows also undoes it when TrayTrigger stops.
-- The main display, the sound output and the mode each have a short note kept until they are put back, and each is put back only if it is still as TrayTrigger left it.
+- The main display, the sound output, the microphone and the mode each have a short note kept until they are put back, and each is put back only if it is still as TrayTrigger left it.
 - If something can't be put back, Activity & History says so and TrayTrigger tries again at the next start.
 
 ## Things to know

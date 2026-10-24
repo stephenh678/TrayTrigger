@@ -14,6 +14,11 @@ internal sealed class FakeAudio : IAudioBackend
     {
         [AudioRole.Console] = "speakers", [AudioRole.Multimedia] = "speakers", [AudioRole.Communications] = "speakers",
     };
+    public List<AudioDevice> Mics = [new("desk-mic", "Desk microphone"), new("headset-mic", "Headset microphone")];
+    public Dictionary<AudioRole, string?> MicDefaults = new()
+    {
+        [AudioRole.Console] = "desk-mic", [AudioRole.Multimedia] = "desk-mic", [AudioRole.Communications] = "desk-mic",
+    };
     public List<string> Calls = [];
     public bool FailSet;
     public AudioRole? FailOnlyRole;
@@ -21,13 +26,17 @@ internal sealed class FakeAudio : IAudioBackend
 
     public IReadOnlyList<AudioDevice> PlaybackDevices() => Devices;
     public string? DefaultId(AudioRole role) => Defaults[role];
+    public IReadOnlyList<AudioDevice> RecordingDevices() => Mics;
+    public string? DefaultRecordingId(AudioRole role) => MicDefaults[role];
 
     public bool SetDefault(string id, AudioRole role)
     {
         Calls.Add($"set {id} {role}");
         DuringSet?.Invoke();
         if (FailSet || FailOnlyRole == role) return false;
-        Defaults[role] = id;
+        // A device id says which side it is on, as it does in Windows.
+        if (Mics.Any(m => m.Id == id)) MicDefaults[role] = id;
+        else Defaults[role] = id;
         return true;
     }
 }

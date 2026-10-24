@@ -365,7 +365,7 @@ public partial class App : Application
         {
             _performanceProfileService.RecoverFromCrashIfNeeded();
             DisplayModeService.Shared.RecoverIfNeeded();
-            AudioOutputService.Shared.RecoverIfNeeded();
+            foreach (var audio in AudioOutputService.Both) audio.RecoverIfNeeded();
             // An Ultimate plan made before 1.5.1 still unparks every core on a dual-CCD Ryzen X3D;
             // a plan left on all the time may not be applied again for months. Returns at once elsewhere.
             _ = Task.Run(SystemTweaksService.KeepX3dCoreParkingInExistingPlans);
@@ -550,7 +550,7 @@ public partial class App : Application
                 DisplayModeService.Shared.ReleaseAll();
                 CursorLockService.Shared.ReleaseAll();
                 ScreenDimService.Shared.ReleaseAll();
-                AudioOutputService.Shared.ReleaseAll();
+                foreach (var audio in AudioOutputService.Both) audio.ReleaseAll();
                 _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
                 _launcherService?.RecordPlaytimeOnShutdown();
                 FinalizePendingRemovalOnShutdown();
@@ -1541,7 +1541,7 @@ public partial class App : Application
             DisplayModeService.Shared.ReleaseAll();
             CursorLockService.Shared.ReleaseAll();
             ScreenDimService.Shared.ReleaseAll();
-            AudioOutputService.Shared.ReleaseAll();
+            foreach (var audio in AudioOutputService.Both) audio.ReleaseAll();
             _gameScriptService?.RunPendingPostExitScriptsOnShutdown();
             _launcherService?.RecordPlaytimeOnShutdown();
             FinalizePendingRemovalOnShutdown();

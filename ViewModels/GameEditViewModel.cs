@@ -240,7 +240,7 @@ public class GameEditViewModel : ViewModelBase
         Name, ExecutablePath, Arguments, WorkingDirectory, RunAsAdmin, IsHidden, Category, Hotkey,
         IsSteamGame, ForceSteamOverlayTag, SteamAppId, LaunchDirectly, _convertToLocal,
         PerformanceProfile, CpuAffinity, CpuCoresDelaySeconds, Hdr, AutoHdr, SelectedDisplayMode?.ToString(), KeepMouseOnGameScreen,
-        SelectedMonitor.Id, MakeMainDisplay, DimOtherScreens, SelectedAudio.Id,
+        SelectedMonitor.Id, MakeMainDisplay, DimOtherScreens, SelectedAudio.Id, SelectedMicrophone.Id,
         PreLaunchScriptPath, PostExitScriptPath, UseSameScriptForBoth, WaitForPreLaunchScript,
         RunScriptsHidden, RunScriptsAsAdmin, ScriptArguments, SkipDefaultScripts,
         AbortLaunchOnScriptFailure, PreLaunchScriptTimeoutSeconds, CloseLauncherOnExit,
@@ -644,13 +644,13 @@ public class GameEditViewModel : ViewModelBase
 
     internal const string NoAudioChangeLabel = "Default (Windows' choice)";
 
-    internal static IReadOnlyList<AudioOption> BuildAudioOptions(IReadOnlyList<AudioDevice> devices, string savedId)
+    internal static IReadOnlyList<AudioOption> BuildAudioOptions(IReadOnlyList<AudioDevice> devices, string savedId, string missingLabel = "A sound output that isn't connected")
     {
         var options = new List<AudioOption> { new(string.Empty, NoAudioChangeLabel) };
         options.AddRange(devices.Select(d => new AudioOption(d.Id, d.Name)));
         if (!string.IsNullOrEmpty(savedId) && !devices.Any(d => string.Equals(d.Id, savedId, StringComparison.OrdinalIgnoreCase)))
         {
-            options.Add(new AudioOption(savedId, "A sound output that isn't connected"));
+            options.Add(new AudioOption(savedId, missingLabel));
         }
         return options;
     }
@@ -727,6 +727,19 @@ public class GameEditViewModel : ViewModelBase
     /// <summary>The Sound output list shows with more than one playback device, or when the game already has one.</summary>
     public bool ShowAudio { get; private set; }
 
+    internal const string MissingMicrophoneLabel = "A microphone that isn't connected";
+
+    public IReadOnlyList<AudioOption> MicrophoneOptions { get; private set; } = [];
+    private AudioOption _selectedMicrophone = new(string.Empty, NoAudioChangeLabel);
+    public AudioOption SelectedMicrophone
+    {
+        get => _selectedMicrophone;
+        set { _selectedMicrophone = value ?? MicrophoneOptions[0]; OnPropertyChanged(); }
+    }
+
+    /// <summary>The Microphone list shows with more than one recording device, or when the game already has one.</summary>
+    public bool ShowMicrophone { get; private set; }
+
     private bool _keepMouseOnGameScreen;
     public bool KeepMouseOnGameScreen
     {
@@ -744,7 +757,7 @@ public class GameEditViewModel : ViewModelBase
     public bool ShowDim => _initialDim || MonitorCount() > 1;
 
     /// <summary>Some part of the Display and sound card has something to offer on this PC (or the game already uses it); without, the card and its tab are left out.</summary>
-    public bool HasDisplayParts => ShowDisplay || ShowMouseLock || ShowDim || ShowMonitorChoice || ShowAudio;
+    public bool HasDisplayParts => ShowDisplay || ShowMouseLock || ShowDim || ShowMonitorChoice || ShowAudio || ShowMicrophone;
 
     /// <summary>The Display and sound card shows on the All tab and on its own Display tab.</summary>
     public bool ShowDisplayCard => (IsAllSection || IsDisplaySection) && HasDisplayParts;
@@ -790,6 +803,11 @@ public class GameEditViewModel : ViewModelBase
         AudioOptions = BuildAudioOptions(devices, game.AudioOutputDeviceId);
         _selectedAudio = AudioOptions.FirstOrDefault(o => string.Equals(o.Id, game.AudioOutputDeviceId, StringComparison.OrdinalIgnoreCase)) ?? AudioOptions[0];
         ShowAudio = devices.Count > 1 || !string.IsNullOrEmpty(game.AudioOutputDeviceId);
+
+        var microphones = AudioOutputService.SharedInput.AvailableDevices();
+        MicrophoneOptions = BuildAudioOptions(microphones, game.AudioInputDeviceId, MissingMicrophoneLabel);
+        _selectedMicrophone = MicrophoneOptions.FirstOrDefault(o => string.Equals(o.Id, game.AudioInputDeviceId, StringComparison.OrdinalIgnoreCase)) ?? MicrophoneOptions[0];
+        ShowMicrophone = microphones.Count > 1 || !string.IsNullOrEmpty(game.AudioInputDeviceId);
     }
 
     public sealed record HdrOption(HdrMode Value, string Label);
@@ -2098,6 +2116,7 @@ public class GameEditViewModel : ViewModelBase
         SourceGame.MakeMainDisplay = ShowMakeMainDisplay && MakeMainDisplay;
         SourceGame.DimOtherScreens = DimOtherScreens;
         SourceGame.AudioOutputDeviceId = SelectedAudio.Id;
+        SourceGame.AudioInputDeviceId = SelectedMicrophone.Id;
         // Kept as it was while CPU Cores is on Default, where the box is hidden: switching back
         // to a choice brings the game's own delay back with it.
         if (CpuAffinity != CpuAffinityMode.Default) SourceGame.CpuCoresDelaySeconds = cpuCoresDelay;
