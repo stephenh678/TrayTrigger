@@ -79,10 +79,15 @@ Read with the debug capture `--test-rebar <out.txt>` (reads only, not elevated):
 - Reading needs no elevation. Writing this hidden setting was refused without it. The other NVIDIA writes (power mode, frame cap)
   gave no warning today.
 
+Write test (`--test-rebar-write`, 2026-10-24, driver value put back afterwards and checked):
+
+- Not elevated: `SetSetting 0x000F00BA = 1` on the Global profile is **refused** (`NVAPI_INVALID_USER_PRIVILEGE`, -137), before any save.
+- Elevated: SetSetting ok, read back 1, Save ok, put back ok, Save ok. So **this write needs administrator rights.**
+
 Still to settle:
 
-1. Does the write succeed elevated? Run `--test-rebar` style write test once with UAC, then once without, and restore.
-2. If it needs admin: mark it ADMIN and write it in an elevated step (the bundled UAC runs PowerShell, not NVAPI, so it is a new
+1. (Answered above: it needs admin.)
+2. It needs admin: mark it ADMIN and write it in an elevated step (the bundled UAC runs PowerShell, not NVAPI, so it is a new
    elevated NVAPI step), or take the tweak out.
 3. Make a failed write visible: a Problem entry in Activity & History, not only the log, and not an ENABLED badge that says nothing.
 4. Does a Global value reach a game whose own profile lacks it (Hellraiser's profile has 16 settings and no value)? Only a game

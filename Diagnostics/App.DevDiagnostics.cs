@@ -1116,6 +1116,76 @@ public partial class App
                 ExitApplication();
                 return;
             }
+            // --test-rebar-write <out.txt>: tries the Resizable BAR write the Aggressive profile makes, on the Global profile
+            // (0x000F00BA = 1), saves it, reads it back, then puts back what was there and checks that. Run it once normally and
+            // once elevated to see which step, if any, the driver refuses without administrator rights.
+            if (e.Args[i].Equals("--test-rebar-write", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                const uint id = 0x000F00BA;
+                var lines = new List<string>();
+                try
+                {
+                    bool elevated = new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
+                        .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                    lines.Add($"this process is elevated: {elevated}");
+                    using var session = NvApi.Session.TryOpen(out string? error);
+                    if (session == null)
+                    {
+                        lines.Add("could not open the driver's settings: " + error);
+                    }
+                    else
+                    {
+                        var global = session.GetGlobalProfile(out IntPtr handle, out error);
+                        if (global == null)
+                        {
+                            lines.Add("could not read the Global profile: " + error);
+                        }
+                        else
+                        {
+                            string Read()
+                            {
+                                var v = session.GetSetting(handle, id, out string? err);
+                                return v == null ? (err == null ? "absent" : "absent or unreadable (" + err + ")") : $"0x{v.CurrentValue:X8} from {v.Origin}";
+                            }
+                            var before = session.GetSetting(handle, id, out _);
+                            lines.Add($"profile '{global.ProfileName}', before: {Read()}");
+
+                            bool set = session.SetSetting(handle, id, 1, out error);
+                            lines.Add($"SetSetting 0x{id:X8} = 1: {(set ? "ok" : "REFUSED: " + error)}");
+                            bool saved = false;
+                            if (set)
+                            {
+                                lines.Add($"read back before saving: {Read()}");
+                                saved = session.Save(out error);
+                                lines.Add($"Save: {(saved ? "ok" : "REFUSED: " + error)}");
+                            }
+
+                            // Put back what was there: the old value, or nothing.
+                            if (set)
+                            {
+                                bool back = before != null
+                                    ? session.SetSetting(handle, id, before.CurrentValue, out error)
+                                    : session.DeleteSetting(handle, id, out error);
+                                lines.Add($"put back ({(before != null ? "old value" : "delete")}): {(back ? "ok" : "FAILED: " + error)}");
+                                if (saved)
+                                {
+                                    bool saved2 = session.Save(out error);
+                                    lines.Add($"Save after putting back: {(saved2 ? "ok" : "FAILED: " + error)}");
+                                }
+                                lines.Add($"after: {Read()}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
             // --test-cursor <info|clip|free|service> <out.txt> [seconds]: checks the mouse confinement on this PC.
             // info reads the current confinement. clip confines the mouse to the left half of the main monitor and
             // waits [seconds], so a harness can kill the process and see whether Windows frees the mouse. free
