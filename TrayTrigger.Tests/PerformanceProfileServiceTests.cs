@@ -105,6 +105,10 @@ public class PerformanceProfileServiceTests : IDisposable
         public int? PrimaryRefreshHz = 144;
         public int? GetPrimaryRefreshHz() => PrimaryRefreshHz;
 
+        /// <summary>What the game's own display setting will make the main display run at, once it is applied after the profile; null for none.</summary>
+        public int? PlannedPrimaryRefreshHz;
+        public int? GetPlannedPrimaryRefreshHz(GameEntry game) => PlannedPrimaryRefreshHz;
+
         public bool? ResizableBarOn = true;
         public bool? IsResizableBarEnabled() => ResizableBarOn;
 
@@ -1142,6 +1146,23 @@ public class PerformanceProfileServiceTests : IDisposable
 
         Assert.True(service.EndGameSession("g"));
         Assert.False(driver.Global.Settings.ContainsKey(FrameCap));
+    }
+
+    /// <summary>
+    /// The game's own display setting is applied after the profile, so a cap worked out for the desktop's 60 Hz would hold a
+    /// game set to 144 Hz at 59 fps: the rate that setting will give the main display wins when there is one.
+    /// </summary>
+    [Fact]
+    public void FrameCap_FollowsTheRefreshRateTheGamesDisplaySettingWillGive_NotTheDesktops()
+    {
+        var driver = new FakeDrsBackend();
+        _settings.OptimizedProfileTweaks.FrameCapEnabled = true;
+        _backend.PrimaryRefreshHz = 60;
+        _backend.PlannedPrimaryRefreshHz = 144;
+
+        Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Optimized)));
+
+        Assert.Equal((138u, false), driver.Global.Settings[FrameCap]);
     }
 
     /// <summary>A Max Frame Rate the user set - for power, heat, or a game that misbehaves uncapped - is theirs.</summary>

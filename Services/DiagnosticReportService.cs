@@ -86,8 +86,16 @@ public static class DiagnosticReportService
     {
         userProfile ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (string.IsNullOrWhiteSpace(userProfile)) return text;
+        var folders = userProfile.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+        if (folders.Length == 0) return text;
+        // Each folder of the path with any run of slashes between them, so a path written with forward slashes (C:/Users/Jo)
+        // or doubled backslashes (C:\\Users\\Jo), as a log line or a quoted value can, is hidden as well as the usual one.
+        // A network profile (\\server\share\...) keeps its leading slashes.
+        int leading = userProfile.TakeWhile(c => c is '\\' or '/').Count();
+        string pattern = (leading > 0 ? $@"[\\/]{{{leading},}}" : "")
+            + string.Join(@"[\\/]+", folders.Select(System.Text.RegularExpressions.Regex.Escape));
         // Not when more of a name follows: C:\Users\Jo must not eat the start of C:\Users\Joanna.
-        return System.Text.RegularExpressions.Regex.Replace(text, System.Text.RegularExpressions.Regex.Escape(userProfile.TrimEnd('\\')) + @"(?![\p{L}\p{N}_\-])",
+        return System.Text.RegularExpressions.Regex.Replace(text, pattern + @"(?![\p{L}\p{N}_\-])",
             "%USERPROFILE%", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 
@@ -408,9 +416,9 @@ public static class DiagnosticReportService
             var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(main);
             scale = $", {dpi.DpiScaleX * 100:0}% scale";
         }
-        int monitors = Win32CursorBackend.MonitorCount();
+        int monitors = Win32DisplayBackend.MonitorCount();
         string refresh = PrimaryRefreshRate() is { } hz ? $", {hz} Hz" : "";
-        return $"- Display: {monitors} monitor{(monitors == 1 ? "" : "s")}; primary {w:0}×{h:0} (device-independent px{scale}{refresh}); virtual desktop {vw:0}×{vh:0}";
+        return $"- Display: {monitors} monitor{(monitors == 1 ? "" : "s")}; primary {w:0}×{h:0} (device-independent px{scale}){refresh}; virtual desktop {vw:0}×{vh:0}";
     }
 
     /// <summary>The refresh rate the main display runs at now, or null.</summary>

@@ -137,7 +137,7 @@ internal sealed class AudioOutputService
                 }
             }
 
-            var device =_backend.PlaybackDevices().Where(d => string.Equals(d.Id, wanted, StringComparison.OrdinalIgnoreCase)).Cast<AudioDevice?>().FirstOrDefault();
+            var device = _backend.PlaybackDevices().Where(d => string.Equals(d.Id, wanted, StringComparison.OrdinalIgnoreCase)).Cast<AudioDevice?>().FirstOrDefault();
             if (device is not { } target)
             {
                 Skip(game, "the sound output it is set up for isn't connected");

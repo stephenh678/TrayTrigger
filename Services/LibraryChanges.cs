@@ -95,9 +95,11 @@ internal static class LibraryChanges
     /// <summary>"Hades was removed from the library" or "3 games were removed from the library".</summary>
     public static (string Text, string Detail) DescribeRemoved(IReadOnlyList<string> names, bool undoable)
     {
-        string text = names.Count == 1 ? $"{names[0]} was removed from the library" : $"{names.Count} games were removed from the library";
-        string detail = (names.Count > 1 ? string.Join(", ", names) + ". " : "")
-            + (undoable ? "Their files on disk were not touched, and the removal could be undone for a few seconds." : "Their files on disk were not touched.");
+        bool one = names.Count == 1;
+        string text = one ? $"{names[0]} was removed from the library" : $"{names.Count} games were removed from the library";
+        string files = one ? "Its files" : "Their files";
+        string detail = (one ? "" : string.Join(", ", names) + ". ")
+            + (undoable ? $"{files} on disk were not touched, and the removal could be undone for a few seconds." : $"{files} on disk were not touched.");
         return (text, detail);
     }
 

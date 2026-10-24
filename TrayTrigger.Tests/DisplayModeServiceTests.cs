@@ -21,7 +21,7 @@ internal sealed class FakeDisplay : IDisplayBackend
     public DisplayMode Desktop = new(3840, 2160, 60);
     public List<string> Calls = [];
     /// <summary>The monitors; the first at 0, 0 is the main display. Their places move when the layout is set.</summary>
-    public List<MonitorInfo> Mons = [new(@"\.\DISPLAY1", "MON1", "Main", true, new ScreenRect(0, 0, 3840, 2160))];
+    public List<MonitorInfo> Mons = [new(@"\\.\DISPLAY1", "MON1", "Main", true, new ScreenRect(0, 0, 3840, 2160))];
     public DisplayChange LayoutResult = DisplayChange.Ok;
     /// <summary>Makes the next this-many layout calls fail, then lets them work.</summary>
     public int FailLayoutCalls;

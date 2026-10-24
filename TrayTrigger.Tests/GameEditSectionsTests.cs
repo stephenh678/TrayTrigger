@@ -90,7 +90,9 @@ public class GameEditSectionsTests : IDisposable
         Assert.Equal(GameEditSection.All, vm.SelectedSection);
         Assert.True(vm.ShowScriptsStubOnTab);
         vm.MoveSection(-1);
-        Assert.Equal(GameEditSection.Performance, vm.SelectedSection);
+        // The last tab left: Display where the PC has something to show there, Performance where it doesn't.
+        Assert.Equal(vm.AvailableSections[^1], vm.SelectedSection);
+        Assert.NotEqual(GameEditSection.Scripts, vm.SelectedSection);
         Assert.False(vm.ShowScriptsStubOnTab);
     });
 

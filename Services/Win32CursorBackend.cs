@@ -54,11 +54,6 @@ internal sealed class Win32CursorBackend : ICursorBackend
     [DllImport("kernel32.dll", EntryPoint = "Process32NextW", CharSet = CharSet.Unicode)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool Process32Next(IntPtr snapshot, ref ProcessEntry entry);
     [DllImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool CloseHandle(IntPtr handle);
 
-    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
-
-    /// <summary>How many monitors are attached to the desktop.</summary>
-    public static int MonitorCount() => GetSystemMetrics(80);
-
     public event Action? Changed;
 
     private readonly WinEventProc _callback;

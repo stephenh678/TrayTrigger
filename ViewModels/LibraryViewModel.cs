@@ -1996,7 +1996,7 @@ public class LibraryViewModel : ViewModelBase
         LoggingService.Info("Library", $"Removed {toRemove.Count} {launcher} game(s) from the library after the {launcher} integration was turned off.");
         var removedLine = LibraryChanges.DescribeRemoved(toRemove.Select(c => c.Name).ToList(), undoable: false);
         ActivityService.Add(ActivityLevel.Change, removedLine.Text, subject: toRemove.Count == 1 ? toRemove[0].Name : null,
-            detail: $"{removedLine.Detail} They were removed with the {launcher} integration.");
+            detail: $"{removedLine.Detail} {(toRemove.Count == 1 ? "It was" : "They were")} removed with the {launcher} integration.");
         return toRemove.Count;
     }
 

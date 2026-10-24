@@ -588,11 +588,15 @@ public partial class ProcessLauncherService
         // state, not a session tweak, so they apply even when the performance profile is Off.
         ReapplyDlssSettings(game);
 
+        // Before the profile, which goes by the default playback device: its Unmute audio has to act on the device the
+        // game will play through, and put the mute back on that same one. FinishSession ends the profile first and this last.
+        AudioOutputService.Shared.Begin(game);
+
         _performanceProfileService.BeginGameSession(game);
 
-        // The game's own display mode, if it has one: set before the game exists, put back in FinishSession.
+        // The game's own display mode, if it has one: set before the game exists, put back in FinishSession. After the
+        // profile, whose HDR change comes first; the profile's frame cap asks the display setting for the refresh rate to expect.
         DisplayModeService.Shared.Begin(game);
-        AudioOutputService.Shared.Begin(game);
 
         var scriptResult = _scriptService.RunPreLaunch(game);
         if (!scriptResult.ProceedWithLaunch)

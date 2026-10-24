@@ -233,6 +233,33 @@ internal sealed class DisplayModeService
         }
     }
 
+    /// <summary>
+    /// The refresh rate the main display will have once this game's display settings are applied, or null when they leave it
+    /// as it is (nothing asked, a remote session, a monitor that isn't connected, or one that stays a secondary display).
+    /// For what is set up before the display is and goes by that rate. A mode counts only if the display lists it, as
+    /// <see cref="Begin"/> asks.
+    /// </summary>
+    public int? PlannedMainRefreshHz(GameEntry game)
+    {
+        if (!WantsAnyChange(game)) return null;
+        try
+        {
+            if (_backend.IsRemoteSession) return null;
+            string? primary = _backend.PrimaryDevice();
+            string? device = string.IsNullOrEmpty(game.DisplayMonitorId) ? primary : FindDevice(game.DisplayMonitorId);
+            if (device == null) return null;
+            // A monitor that stays a secondary display leaves the main display's rate alone.
+            if (!game.MakeMainDisplay && !string.Equals(device, primary, StringComparison.OrdinalIgnoreCase)) return null;
+            if (RequestedMode(game) is { } wanted && _backend.Modes(device).Contains(wanted)) return wanted.RefreshHz;
+            return _backend.Current(device)?.RefreshHz;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Swallowed("Display", ex, "working out the refresh rate the game's display will have; the current one is used");
+            return null;
+        }
+    }
+
     private string? FindDevice(string monitorId) =>
         _backend.Monitors().Where(m => string.Equals(m.Id, monitorId, StringComparison.OrdinalIgnoreCase)).Select(m => m.Device).FirstOrDefault();
 

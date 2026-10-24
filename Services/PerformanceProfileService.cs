@@ -688,7 +688,7 @@ public class PerformanceProfileService
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
-            if (ApplyNvidiaSettings(snapshot, settings, aggressive))
+            if (ApplyNvidiaSettings(game, snapshot, settings, aggressive))
             {
                 applied = true;
             }
@@ -1265,7 +1265,7 @@ public class PerformanceProfileService
     /// the snapshot on disk before the database is saved, so a crash during or after the save
     /// still leaves a record. True when anything was written.
     /// </summary>
-    private bool ApplyNvidiaSettings(PerformanceProfileSessionSnapshot snapshot, AppSettings settings, bool aggressive)
+    private bool ApplyNvidiaSettings(GameEntry game, PerformanceProfileSessionSnapshot snapshot, AppSettings settings, bool aggressive)
     {
         bool maxPerformance = settings.OptimizedProfileTweaks.NvidiaMaxPerformanceEnabled;
         bool frameCap = settings.OptimizedProfileTweaks.FrameCapEnabled;
@@ -1282,7 +1282,7 @@ public class PerformanceProfileService
         var wanted = new List<NvidiaWanted>(3);
         if (maxPerformance)
             wanted.Add(new(NvPowerModeSettingId, NvPowerModePreferMax, "NVIDIA power management", "Prefer maximum performance", _ => null));
-        if (frameCap && FrameCapWanted() is { } cap) wanted.Add(cap);
+        if (frameCap && FrameCapWanted(game) is { } cap) wanted.Add(cap);
         if (resizableBar && ResizableBarWanted() is { } rebar) wanted.Add(rebar);
         if (wanted.Count == 0) return false;
 
@@ -1362,10 +1362,13 @@ public class PerformanceProfileService
         return true;
     }
 
-    private NvidiaWanted? FrameCapWanted()
+    private NvidiaWanted? FrameCapWanted(GameEntry game)
     {
+        // The game's own display setting is applied after this, so the rate it will give the main display is asked of it first:
+        // a cap worked out for the desktop's 60 Hz would hold a game set to 144 Hz at 59 fps.
+        int? expected = _backend.GetPlannedPrimaryRefreshHz(game) ?? _backend.GetPrimaryRefreshHz();
         // 59, not 60: Windows reports a 59.94 Hz mode, which many TVs and monitors run at, as 59.
-        if (_backend.GetPrimaryRefreshHz() is not int refresh || refresh < MinFrameCapRefreshHz)
+        if (expected is not int refresh || refresh < MinFrameCapRefreshHz)
         {
             LoggingService.Verbose("PerformanceProfile", $"Frame cap: the primary display's refresh rate couldn't be read, or is under {MinFrameCapRefreshHz} Hz; no cap set.");
             Skipped($"frame cap, the primary display's refresh rate couldn't be read or is under {MinFrameCapRefreshHz} Hz");

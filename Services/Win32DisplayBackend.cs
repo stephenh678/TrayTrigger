@@ -22,6 +22,8 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
     private const uint DM_INTERLACED = 0x2;
     private const uint DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x1;
     private const uint DISPLAY_DEVICE_PRIMARY_DEVICE = 0x4;
+    /// <summary>A pseudo device that remoting software mirrors drawing through; it has no monitor you can see.</summary>
+    private const uint DISPLAY_DEVICE_MIRRORING_DRIVER = 0x8;
     private const uint EDD_GET_DEVICE_INTERFACE_NAME = 0x1;
     private const uint CDS_UPDATEREGISTRY = 0x1;
     private const uint CDS_SET_PRIMARY = 0x10;
@@ -30,6 +32,7 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
     private const int DISP_CHANGE_SUCCESSFUL = 0;
     private const int DISP_CHANGE_BADMODE = -2;
     private const int SM_REMOTESESSION = 0x1000;
+    private const int SM_CMONITORS = 80;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct DevModeW
@@ -97,6 +100,13 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
 
     public bool IsRemoteSession => GetSystemMetrics(SM_REMOTESESSION) != 0;
 
+    /// <summary>How many monitors are attached to the desktop; Windows leaves out the pseudo ones remoting software adds.</summary>
+    public static int MonitorCount() => GetSystemMetrics(SM_CMONITORS);
+
+    /// <summary>A real monitor's output: on the desktop, and not a mirroring pseudo device.</summary>
+    private static bool IsShownOnDesktop(DisplayDeviceW device) =>
+        (device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 && (device.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) == 0;
+
     public string? PrimaryDevice()
     {
         foreach (var device in Devices())
@@ -124,7 +134,7 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
         var list = new List<MonitorInfo>();
         foreach (var device in Devices())
         {
-            if ((device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0) continue;
+            if (!IsShownOnDesktop(device)) continue;
             var current = NewMode();
             if (!EnumDisplaySettingsExW(device.DeviceName, ENUM_CURRENT_SETTINGS, ref current, 0)) continue;
 
@@ -148,7 +158,7 @@ internal sealed class Win32DisplayBackend : IDisplayBackend
         var list = new List<MonitorPlacement>();
         foreach (var device in Devices())
         {
-            if ((device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0) continue;
+            if (!IsShownOnDesktop(device)) continue;
             var current = NewMode();
             if (EnumDisplaySettingsExW(device.DeviceName, ENUM_CURRENT_SETTINGS, ref current, 0))
             {

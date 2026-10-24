@@ -148,6 +148,24 @@ public class DiagnosticReportServiceTests : IDisposable
     }
 
     [Fact]
+    public void RedactUserFolder_AlsoHidesThePathWrittenWithForwardSlashesOrDoubledBackslashes()
+    {
+        string text = @"url file:///C:/Users/Jane/Games and quoted ""C:\\Users\\Jane\\AppData"" and C:/users/jane. but not C:\Users\Janet\x";
+
+        string redacted = DiagnosticReportService.RedactUserFolder(text, @"C:\Users\Jane");
+
+        Assert.Equal(@"url file:///%USERPROFILE%/Games and quoted ""%USERPROFILE%\\AppData"" and %USERPROFILE%. but not C:\Users\Janet\x", redacted);
+    }
+
+    [Fact]
+    public void RedactUserFolder_HidesANetworkProfileToo()
+    {
+        string redacted = DiagnosticReportService.RedactUserFolder(@"log \\fileserver\profiles\jo\AppData\x.log", @"\\fileserver\profiles\jo");
+
+        Assert.Equal(@"log %USERPROFILE%\AppData\x.log", redacted);
+    }
+
+    [Fact]
     public void Build_NeverContainsTheRealUserFolder()
     {
         var inputs = SampleInputs();

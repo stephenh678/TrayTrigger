@@ -68,7 +68,8 @@ public sealed class GameEditDisplayTests : IDisposable
 
     private GameEditViewModel Open(GameEntry game, int monitors = 2) =>
         new(game, new[] { "Action" },
-            new IconExtractorService(new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"))))
+            new IconExtractorService(new StorageService(Path.Combine(_root, "roaming"), Path.Combine(_root, "local"))),
+            scriptsEnabled: true)
         { MonitorCount = () => monitors };
 
     private static GameEntry GameWithMode(string monitorId = "MON1") => new()
@@ -88,6 +89,53 @@ public sealed class GameEditDisplayTests : IDisposable
         Assert.True(vm.ShowDim);
         Assert.True(vm.ShowAudio);
         Assert.Equal(3, vm.MonitorOptions.Count);
+    });
+
+    [Fact]
+    public void TheDisplayTab_SitsBetweenPerformanceAndScripts_AndShowsOnlyItsCard() => Sta(() =>
+    {
+        var vm = Open(new GameEntry { Name = "Hades", Category = "Action" });
+
+        Assert.Equal(
+            [GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Display, GameEditSection.Scripts],
+            vm.AvailableSections);
+        Assert.True(vm.HasDisplayParts);
+
+        vm.SelectedSection = GameEditSection.Display;
+        Assert.True(vm.ShowDisplayCard);
+        Assert.False(vm.ShowPerformanceCard || vm.ShowIdentityCard || vm.ShowLaunchCard || vm.ShowScriptsCardOnTab);
+
+        vm.SelectedSection = GameEditSection.Performance;
+        Assert.False(vm.ShowDisplayCard);
+        vm.SelectedSection = GameEditSection.All;
+        Assert.True(vm.ShowDisplayCard);
+    });
+
+    [Fact]
+    public void CtrlTab_VisitsTheDisplayTabAfterPerformance() => Sta(() =>
+    {
+        var vm = Open(new GameEntry { Name = "Hades", Category = "Action" });
+        vm.SelectedSection = GameEditSection.Performance;
+
+        vm.MoveSection(1);
+        Assert.Equal(GameEditSection.Display, vm.SelectedSection);
+        vm.MoveSection(1);
+        Assert.Equal(GameEditSection.Scripts, vm.SelectedSection);
+    });
+
+    [Fact]
+    public void WithNothingToShow_TheDisplayTabAndCardAreLeftOut() => Sta(() =>
+    {
+        _display.Mons = [_display.Mons[0]];
+        _display.Listed = [];
+        _audio.Devices = [new AudioDevice("speakers", "Speakers")];
+        var vm = Open(new GameEntry { Name = "Hades", Category = "Action" }, monitors: 1);
+
+        Assert.False(vm.HasDisplayParts);
+        Assert.DoesNotContain(GameEditSection.Display, vm.AvailableSections);
+        vm.SelectedSection = GameEditSection.Display;
+        Assert.Equal(GameEditSection.All, vm.SelectedSection);
+        Assert.False(vm.ShowDisplayCard);
     });
 
     [Fact]

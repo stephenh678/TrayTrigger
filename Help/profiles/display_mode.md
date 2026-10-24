@@ -2,7 +2,7 @@
 
 ## What it does
 
-Edit Game > Performance has a **Display and sound** card for each game. It holds everything about the screens and speakers a game runs on, and each part shows only when it can do something on your PC:
+Edit Game has a **Display** tab for each game, holding the **Display and sound** card (it is on the All tab too, after the Performance and DLSS cards). The tab is left out on a PC where there's nothing for it to show. It holds everything about the screens and speakers a game runs on, and each part shows only when it can do something on your PC:
 
 - **Resolution and refresh rate** for a monitor (always, when your display lists modes).
 - **Monitor**, **Identify**, **Make this monitor the main display** and **Dim the other screens** (with more than one monitor).
@@ -67,7 +67,7 @@ The playback device the game's sound plays through while it runs, put back when 
 - The resolution and refresh rate set a mode, not HDR (see HDR), colour depth or scaling.
 - They never ask for a mode the monitor doesn't list. A mode Windows would refuse is skipped, the game starts as usual, and Activity & History says why.
 - One game at a time holds the display and the sound. If a second game with its own settings starts while the first is running, the second leaves them alone and the first puts them back.
-- Nothing here works in a remote desktop session.
+- A remote desktop session can't change the display, so the resolution, refresh rate and main display are left alone there.
 
 ## Putting it back
 

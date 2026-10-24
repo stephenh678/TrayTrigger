@@ -22,6 +22,7 @@ public enum GameEditSection
     Identity,
     Launch,
     Performance,
+    Display,
     Scripts
 }
 
@@ -731,14 +732,17 @@ public class GameEditViewModel : ViewModelBase
     private bool _initialKeepMouse;
 
     /// <summary>How many monitors are attached; a test stands in its own answer.</summary>
-    internal Func<int> MonitorCount { get; init; } = Win32CursorBackend.MonitorCount;
+    internal Func<int> MonitorCount { get; init; } = Win32DisplayBackend.MonitorCount;
 
     /// <summary>The mouse and dimming options only do something with more than one monitor, so they show then, or when the game already has them on.</summary>
     public bool ShowMouseLock => _initialKeepMouse || MonitorCount() > 1;
     public bool ShowDim => _initialDim || MonitorCount() > 1;
 
-    /// <summary>The Display card shows on the Performance tab when any part of it has something to offer.</summary>
-    public bool ShowDisplayCard => ShowPerformanceCard && (ShowDisplay || ShowMouseLock || ShowDim || ShowMonitorChoice || ShowAudio);
+    /// <summary>Some part of the Display and sound card has something to offer on this PC (or the game already uses it); without, the card and its tab are left out.</summary>
+    public bool HasDisplayParts => ShowDisplay || ShowMouseLock || ShowDim || ShowMonitorChoice || ShowAudio;
+
+    /// <summary>The Display and sound card shows on the All tab and on its own Display tab.</summary>
+    public bool ShowDisplayCard => (IsAllSection || IsDisplaySection) && HasDisplayParts;
 
     public string DisplayHint => (SelectedDisplayMode, MakeMainDisplay && ShowMakeMainDisplay) switch
     {
@@ -838,12 +842,15 @@ public class GameEditViewModel : ViewModelBase
         {
             // The Scripts tab exists only while the scripts card does.
             if (value == GameEditSection.Scripts && !ShowScriptsCard) value = GameEditSection.All;
+            // Likewise the Display tab, which exists only while its card has something to show.
+            if (value == GameEditSection.Display && !HasDisplayParts) value = GameEditSection.All;
             if (SetProperty(ref _selectedSection, value))
             {
                 OnPropertyChanged(nameof(IsAllSection));
                 OnPropertyChanged(nameof(IsIdentitySection));
                 OnPropertyChanged(nameof(IsLaunchSection));
                 OnPropertyChanged(nameof(IsPerformanceSection));
+                OnPropertyChanged(nameof(IsDisplaySection));
                 OnPropertyChanged(nameof(IsScriptsSection));
                 OnPropertyChanged(nameof(ShowIdentityCard));
                 OnPropertyChanged(nameof(ShowLaunchCard));
@@ -862,6 +869,7 @@ public class GameEditViewModel : ViewModelBase
     public bool IsIdentitySection => SelectedSection == GameEditSection.Identity;
     public bool IsLaunchSection => SelectedSection == GameEditSection.Launch;
     public bool IsPerformanceSection => SelectedSection == GameEditSection.Performance;
+    public bool IsDisplaySection => SelectedSection == GameEditSection.Display;
     public bool IsScriptsSection => SelectedSection == GameEditSection.Scripts;
 
     public bool ShowIdentityCard => IsAllSection || IsIdentitySection;
@@ -885,9 +893,16 @@ public class GameEditViewModel : ViewModelBase
     }
 
     /// <summary>The tabs in strip order, without Scripts while its card is hidden.</summary>
-    public IReadOnlyList<GameEditSection> AvailableSections => ShowScriptsCard
-        ? new[] { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance, GameEditSection.Scripts }
-        : new[] { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance };
+    public IReadOnlyList<GameEditSection> AvailableSections
+    {
+        get
+        {
+            var sections = new List<GameEditSection> { GameEditSection.All, GameEditSection.Identity, GameEditSection.Launch, GameEditSection.Performance };
+            if (HasDisplayParts) sections.Add(GameEditSection.Display);
+            if (ShowScriptsCard) sections.Add(GameEditSection.Scripts);
+            return sections;
+        }
+    }
 
     /// <summary>Ctrl+Tab and Ctrl+Shift+Tab: the next or previous tab, wrapping at the ends.</summary>
     public void MoveSection(int step)

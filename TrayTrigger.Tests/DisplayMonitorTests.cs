@@ -105,6 +105,80 @@ public sealed class DisplayMonitorTests : System.IDisposable
     }
 
     [Fact]
+    public void ThePlannedRefreshRate_IsTheModeAskedFor_WhenItIsForTheMainDisplay()
+    {
+        var (service, _) = TwoMonitors();
+        var game = Game();
+        game.DisplayWidth = 1920; game.DisplayHeight = 1080; game.DisplayRefreshHz = 144;
+
+        Assert.Equal(144, service.PlannedMainRefreshHz(game));
+    }
+
+    [Fact]
+    public void ThePlannedRefreshRate_IsThatMonitorsOwn_WhenItIsOnlyMadeTheMainDisplay()
+    {
+        var (service, display) = TwoMonitors();
+        display.Now = new DisplayMode(1920, 1080, 75);
+        var game = Game();
+        game.DisplayMonitorId = "MON2";
+        game.MakeMainDisplay = true;
+
+        Assert.Equal(75, service.PlannedMainRefreshHz(game));
+    }
+
+    [Fact]
+    public void ThePlannedRefreshRate_IsTheModeAskedFor_ForAMonitorMadeTheMainDisplay()
+    {
+        var (service, display) = TwoMonitors();
+        display.ModesByDevice[Two] = [new(1920, 1080, 144)];
+        var game = Game();
+        game.DisplayMonitorId = "MON2";
+        game.MakeMainDisplay = true;
+        game.DisplayWidth = 1920; game.DisplayHeight = 1080; game.DisplayRefreshHz = 144;
+
+        Assert.Equal(144, service.PlannedMainRefreshHz(game));
+    }
+
+    [Fact]
+    public void ThePlannedRefreshRate_LeavesTheMainDisplayAlone_WhenNothingChangesIt()
+    {
+        var (service, display) = TwoMonitors();
+
+        // Nothing asked.
+        Assert.Null(service.PlannedMainRefreshHz(Game()));
+
+        // A second monitor's mode, with that monitor staying second.
+        var second = Game();
+        second.DisplayMonitorId = "MON2";
+        second.DisplayWidth = 1920; second.DisplayHeight = 1080; second.DisplayRefreshHz = 144;
+        display.ModesByDevice[Two] = [new(1920, 1080, 144)];
+        Assert.Null(service.PlannedMainRefreshHz(second));
+
+        // A monitor that isn't connected.
+        var gone = Game();
+        gone.DisplayMonitorId = "UNPLUGGED";
+        gone.MakeMainDisplay = true;
+        Assert.Null(service.PlannedMainRefreshHz(gone));
+
+        // A remote session changes nothing.
+        display.Remote = true;
+        var asked = Game();
+        asked.DisplayWidth = 1920; asked.DisplayHeight = 1080; asked.DisplayRefreshHz = 144;
+        Assert.Null(service.PlannedMainRefreshHz(asked));
+    }
+
+    [Fact]
+    public void ThePlannedRefreshRate_IsTheCurrentOne_WhenTheModeAskedForIsNotListed()
+    {
+        var (service, display) = TwoMonitors();
+        var game = Game();
+        game.DisplayWidth = 1280; game.DisplayHeight = 720; game.DisplayRefreshHz = 240;
+
+        // Begin would leave the display as it is, so that is what the game will run at.
+        Assert.Equal(display.Now.RefreshHz, service.PlannedMainRefreshHz(game));
+    }
+
+    [Fact]
     public void DuplicatedMonitors_CannotBeMadeTheMainDisplay()
     {
         var (service, display) = TwoMonitors();

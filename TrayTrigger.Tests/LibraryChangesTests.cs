@@ -148,7 +148,7 @@ public class LibraryChangesTests
         var (text, detail) = LibraryChanges.DescribeRemoved(["Hades"], undoable: true);
 
         Assert.Equal("Hades was removed from the library", text);
-        Assert.Contains("files on disk were not touched", detail);
+        Assert.StartsWith("Its files on disk were not touched", detail);
         Assert.Contains("undone", detail);
     }
 
@@ -158,7 +158,7 @@ public class LibraryChangesTests
         var (text, detail) = LibraryChanges.DescribeRemoved(["Hades", "Celeste"], undoable: false);
 
         Assert.Equal("2 games were removed from the library", text);
-        Assert.StartsWith("Hades, Celeste. ", detail);
+        Assert.StartsWith("Hades, Celeste. Their files on disk were not touched", detail);
         Assert.DoesNotContain("undone", detail);
     }
 
