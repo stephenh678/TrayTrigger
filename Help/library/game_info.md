@@ -26,24 +26,6 @@ With RAWG enabled, a Steam | RAWG switch sits above the "About the Game" section
 
 The **PCGamingWiki** button in the details window opens the game's page on pcgamingwiki.com, where the PC fixes are: ultrawide and FOV support, frame cap and save game location. A Steam game opens its page directly; any other game opens the wiki's search for its name, which lands on the page when the title matches. It shows for every game and does not follow the Steam | RAWG switch. The button itself downloads nothing: the link opens in your browser.
 
-### The PC facts card
-
-Tick **Show PC facts from PCGamingWiki** in Settings > Library & Art and the details window gets a **PC facts from PCGamingWiki** card, under the PC requirements, with what the wiki's tables say about the game:
-
-- **Display** - ultrawide, multi-monitor, 4K, HDR, 120+ FPS, a field of view setting, borderless windowed, ray tracing and upscaling.
-- **Controls** - controller support (and whether it is full or partial), PlayStation controllers and key remapping.
-- **Audio and accessibility** - subtitles, closed captions, a color blind mode and whether the sound mutes when the game loses focus.
-- **Online** - local play, LAN play, online play (with the number of players) and crossplay.
-- **Saves** - Steam Cloud, and where the game keeps its saves. The folder is text to read, written with Windows' own names such as %APPDATA%; nothing is opened or checked on your PC.
-- **Technical** - the DirectX, Vulkan and OpenGL versions the game uses.
-
-Each line says **Yes**, **No**, **With a fix or mod** (the wiki's "hackable": the game doesn't have it, but a fix or mod adds it), **Limited** or **Always on**. Point at a line to read the wiki's own note on it. A fact the wiki lists as unknown or not applicable is left out, so a short card means the wiki knows little about the game, and a game the wiki has no facts for has no card.
-
-- **How the page is found.** For a Steam game, the page whose infobox lists the game's Steam App ID. Otherwise the page whose title is exactly the game's name. A near match is never used, because another game's facts are worse than none, so a game the wiki names differently may have no card. The card names the page it read ("From the PCGamingWiki page Minecraft: Java Edition") so you can tell which edition you are looking at.
-- **What is sent.** When you open a game's details, TrayTrigger asks pcgamingwiki.com about that game, sending its Steam App ID or name and nothing else. The answer is kept on disk for two weeks (three days when the wiki had nothing), so a game is asked about once in that time. When a saved answer is older than that, it still shows while a newer one is fetched, and a short "Loading PC facts" line stands in while there is nothing to show yet. Removing a game from the library forgets its saved answer. Refresh in the details window asks again (if the wiki can't be reached, the card stays as it was), and Clear Cached Game Info under Library & Art forgets every saved answer. If the wiki can't be reached the card is missing and the next open tries again; if it asks TrayTrigger to slow down, lookups pause for ten minutes.
-- **It is off by default.** There is no account and no key to set up. Turn it off again in the same place and the card disappears.
-- **The facts are PCGamingWiki's**, shared under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 license, which is why the card links to the page it came from.
-
 ## The anti-cheat tag
 
 After you launch a game, its details window shows an **Anti-cheat: Name** tag beside the play-mode tags when TrayTrigger saw an anti-cheat service run with it (Easy Anti-Cheat, BattlEye, Riot Vanguard and the like), and the game's row in Activity & History says the same. The tag is there so you know which games not to expect tools like Suspend to work with. It comes from the game's last launch, so a game you have not launched since this was added has none yet.

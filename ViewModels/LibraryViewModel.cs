@@ -1125,8 +1125,7 @@ public class LibraryViewModel : ViewModelBase
             refreshInterval: _settings.MetadataRefreshInterval,
             isPlaying: card.IsPlaying,
             closeGameAction: _ => requestedCloseGame = true,
-            forceCloseAction: _ => requestedForceClose = true,
-            showPcGamingWikiFacts: _settings.UsePcGamingWikiFacts);
+            forceCloseAction: _ => requestedForceClose = true);
 
         var dlg = new Views.GameDetailsDialog(vm);
         dlg.Owner = WindowHelper.ActiveOwner();

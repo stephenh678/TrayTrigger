@@ -21,7 +21,6 @@ namespace TrayTrigger.Models;
 [JsonSerializable(typeof(BackupManifest))]
 [JsonSerializable(typeof(Dictionary<string, SteamAppDetails>))]
 [JsonSerializable(typeof(Dictionary<int, RawgGameDetails>))]
-[JsonSerializable(typeof(Dictionary<string, PcGamingWikiCacheEntry>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(ActivityLogFile))]
 [JsonSerializable(typeof(Services.DisplaySessionRecord))]

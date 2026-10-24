@@ -59,7 +59,6 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 
 ## To check at home
 
-The 1.7.1 work has not been run on real games: the PC facts card (about ten games, one non-Steam, Refresh
-with the network off), the layout at 130% text on the new card and the Stutter tab, `tools\Audit-Layout.ps1`
+The 1.7.1 work has not been run on real games: the layout at 130% text on the Stutter tab, `tools\Audit-Layout.ps1`
 with TrayTrigger closed, the PLAYING tag on poster cards at large text sizes, and the new Edit Game and
 removal entries in Activity.

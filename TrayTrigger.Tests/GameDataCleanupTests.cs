@@ -29,7 +29,6 @@ public class GameDataCleanupTests : IDisposable
         _covers = Directory.CreateDirectory(Path.Combine(_root, "local", "Covers")).FullName;
         SteamMetadataService.UseCacheFileForTests(Path.Combine(_root, "steam-cache.json"));
         RawgService.UseCacheFileForTests(Path.Combine(_root, "rawg-cache.json"));
-        PcGamingWikiService.UseCacheFileForTests(Path.Combine(_root, "pcgw-cache.json"));
     }
 
     public void Dispose()
@@ -41,7 +40,6 @@ public class GameDataCleanupTests : IDisposable
         InstalledGameIndex.Current = _indexBefore;
         SteamMetadataService.UseCacheFileForTests(null);
         RawgService.UseCacheFileForTests(null);
-        PcGamingWikiService.UseCacheFileForTests(null);
         try { Directory.Delete(_root, recursive: true); } catch { }
     }
 
@@ -115,29 +113,6 @@ public class GameDataCleanupTests : IDisposable
         Assert.True(SteamMetadataService.TryGetCached("400", out _));
         Assert.False(RawgService.TryGetCached(4200, out _));
         Assert.True(RawgService.TryGetCached(1, out _));
-    }
-
-    [Fact]
-    public void RemovedGame_ForgetsItsPcGamingWikiFacts_ButNotARemainingGamesOrASharedOnes()
-    {
-        var entry = new PcGamingWikiCacheEntry { FetchedUtc = DateTime.UtcNow, Facts = new PcGamingWikiFacts { PageTitle = "X" } };
-        var cache = new Dictionary<string, PcGamingWikiCacheEntry>
-        {
-            ["app:620"] = entry, ["app:400"] = entry, ["name:shared game"] = entry, ["name:gone game"] = entry,
-        };
-        string path = Path.Combine(_root, "pcgw-cache.json");
-        File.WriteAllText(path, JsonSerializer.Serialize(cache, AppJsonContext.Default.DictionaryStringPcGamingWikiCacheEntry));
-        PcGamingWikiService.UseCacheFileForTests(path);
-
-        var removed = new[] { new GameEntry { SteamAppId = "620", Name = "Portal" }, new GameEntry { Name = "Gone Game" }, new GameEntry { Name = "Shared Game" } };
-        var remaining = new[] { new GameEntry { SteamAppId = "400", Name = "Other" }, new GameEntry { Name = "Shared Game" } };
-        GameDataCleanup.DeleteRemovedGameData(removed, remaining, _icons, _covers);
-
-        var service = PcGamingWikiService.Shared;
-        Assert.Null(service.PeekCached("620", "Portal"));
-        Assert.Null(service.PeekCached(null, "Gone Game"));
-        Assert.NotNull(service.PeekCached("400", "Other"));
-        Assert.NotNull(service.PeekCached(null, "Shared Game"));
     }
 
     [Fact]

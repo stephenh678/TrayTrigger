@@ -170,7 +170,7 @@ Only the profiles, tweaks, and scripts you enable. Per-game profile settings res
 Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the Defender exclusion list) and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.
 
 **Does it phone home?**
-No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), PCGamingWiki (only if you turn on Show PC facts from PCGamingWiki in Settings), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).
+No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).
 
 **Can changes be reverted?**
 Per-game profile settings restore on exit, with recovery on the next start after a crash. System-wide tweaks can be reverted individually or with Undo Preset. Custom scripts are not automatically undone; configure a post-exit script for any cleanup they need.

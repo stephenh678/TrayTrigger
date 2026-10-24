@@ -24,7 +24,6 @@ public class BackupCoverageTests
         ["suspended-games.json"] = "games frozen on this PC right now",
         ["steam-cache.json"] = "Steam details; fetched again",
         ["rawg-cache.json"] = "RAWG details; fetched again",
-        ["pcgw-cache.json"] = "PCGamingWiki facts; fetched again",
         ["poster-sources.json"] = "where each cached poster came from; a poster without a record is looked at once more",
         ["nvidia-products.xml"] = "NVIDIA's own product list, downloaded for this PC's driver",
         ["dlss-roundtrip-records.json"] = "what DLSS Override changed in this PC's driver",

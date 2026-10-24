@@ -837,14 +837,6 @@
                                 <TextBlock DataContext="{Binding RawgKeyCheck}" Style="{StaticResource ApiKeyCheckStatusText}"/>
                             </StackPanel>
 
-                            <!-- PCGamingWiki: a facts card in Game Details. No key; off until asked for, like the two above. -->
-                            <CheckBox Content="Show PC facts from PCGamingWiki (optional)"
-                                      IsChecked="{Binding UsePcGamingWikiFacts}"
-                                      Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}"/>
-                            <TextBlock Text="A card in each game's details window with what PCGamingWiki says about it: ultrawide and multi-monitor, HDR, controller support, online play, the save folder and more. No key needed. Opening a game's details sends PCGamingWiki that game's Steam App ID or name, and the answer is kept for two weeks. The facts are PCGamingWiki's, shared under CC BY-NC-SA 3.0."
-                                       Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
-                                       Margin="24,3,0,12" TextWrapping="Wrap"/>
-
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Refresh All Game Posters" Command="{Binding RefreshAllPostersCommand}"
                                         IsEnabled="{Binding CanRefreshAllPosters}"
@@ -876,7 +868,7 @@
                             <Button Content="Clear Cached Game Info" Command="{Binding ClearMetadataCacheCommand}"
                                     Style="{StaticResource ModernOutlineButton}" Padding="10,5"
                                     HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                            <TextBlock Text="Forgets every game's saved Steam, RAWG and PCGamingWiki details so each fetches fresh info the next time you open it. Posters are kept."
+                            <TextBlock Text="Forgets every game's saved Steam and RAWG details so each fetches fresh info the next time you open it. Posters are kept."
                                        Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}"
                                        Margin="0,4,0,2" TextWrapping="Wrap"/>
                         </StackPanel>

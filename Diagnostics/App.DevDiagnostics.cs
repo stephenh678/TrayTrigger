@@ -20,52 +20,6 @@ namespace TrayTrigger;
 public partial class App
 {
 #if DEBUG
-    /// <summary>A short PCGamingWiki page for the "pcgw" capture: enough of each template to fill the card.</summary>
-    private const string SamplePcGamingWikiPage = """
-        {{Video
-        |ultrawidescreen = hackable
-        |multimonitor = hackable
-        |4k ultra hd = true
-        |hdr = true
-        |120 fps = true
-        |fov = hackable
-        |borderless windowed = true
-        |ray tracing = false
-        |upscaling = true
-        |upscaling tech = DLSS 3, FSR 3
-        |ultrawidescreen notes = See [[#Modifications|Modifications]].
-        |color blind = false
-        }}
-        {{Input
-        |controller support = true
-        |full controller = true
-        |playstation controllers = true
-        |key remap = limited
-        }}
-        {{Audio
-        |subtitles = true
-        |closed captions = false
-        |mute on focus lost = false
-        }}
-        {{Network/Multiplayer
-        |local play = false
-        |lan play = false
-        |online play = true
-        |online play players = 4
-        |crossplay = true
-        }}
-        {{Save game cloud syncing
-        |steam cloud = true
-        }}
-        {{Game data|
-        {{Game data/saves|Windows|{{p|appdata}}\Sample Game\{{p|uid}}\}}
-        }}
-        {{API
-        |direct3d versions = 12
-        |vulkan versions = 1.2
-        }}
-        """;
-
     [DllImport("kernel32.dll")]
     private static extern bool AttachConsole(int dwProcessId);
     private const int ATTACH_PARENT_PROCESS = -1;
@@ -3364,26 +3318,13 @@ public partial class App
                 vm.Details = sampleDetails;
                 vm.IsLoading = false;
 
-                // "--screenshot-details <out.png> pcgw": with the PCGamingWiki facts card, and a taller picture to hold it.
-                bool withPcgw = e.Args.Any(a => a.Equals("pcgw", StringComparison.OrdinalIgnoreCase));
-                if (withPcgw)
-                {
-                    vm.ApplyPcGamingWikiFacts(new PcGamingWikiFacts
-                    {
-                        PageTitle = "The Blood of Dawnwalker",
-                        PageUrl = "https://www.pcgamingwiki.com/wiki/The_Blood_of_Dawnwalker",
-                        FetchedUtc = DateTime.UtcNow,
-                        Facts = PcGamingWikiParser.Parse(SamplePcGamingWikiPage),
-                    });
-                }
-
                 var dlg = new GameDetailsDialog(vm);
                 // "--screenshot-details <out.png> scroll": scrolled to the end of the details, to see the cards below the fold.
                 if (e.Args.Any(a => a.Equals("scroll", StringComparison.OrdinalIgnoreCase)))
                 {
                     dlg.ContentRendered += (_, _) => (dlg.FindName("DetailsScroll") as ScrollViewer)?.ScrollToEnd();
                 }
-                CaptureVisual(dlg, 820, withPcgw ? 2000 : 680, targetPng);
+                CaptureVisual(dlg, 820, 680, targetPng);
                 ExitApplication();
                 return;
             }

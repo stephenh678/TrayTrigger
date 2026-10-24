@@ -20,7 +20,6 @@ The app's only outbound network calls are:
 - **Steam's public APIs** — to fetch metadata (name, description, release date, Metacritic score) for games you've added.
 - **SteamGridDB** — only if you enter your own API key in Settings, to fetch box art/poster images for games you've added. The key is stored encrypted (DPAPI) and only sent to SteamGridDB.
 - **RAWG (rawg.io)** — only if you enable it in Settings with your own API key, to fetch developer, publisher, synopsis and ratings for games that aren't on Steam. The key is stored encrypted (DPAPI) and only sent to RAWG.
-- **PCGamingWiki (pcgamingwiki.com)** — only if you turn on **Show PC facts from PCGamingWiki** in Settings (it is off by default and needs no key), to read the wiki's facts about a game (ultrawide, controller support, save folder) when you open its details. The request carries that game's Steam App ID or name and nothing else, and the answer is kept on your PC for two weeks.
 - **NVIDIA's driver service** — only when you press **Check for Newer Driver** on an NVIDIA GPU in System > Hardware Specs, to ask which Game Ready driver is newest for it. The request names your GPU model and nothing else, and TrayTrigger never makes it on its own. NVIDIA's product list is kept for a week so the lookup doesn't fetch it each time.
 - **GitHub Releases** — to check whether a newer version of TrayTrigger is available. Update checks can be turned off in Settings.
 
