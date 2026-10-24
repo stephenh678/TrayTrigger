@@ -9,8 +9,9 @@ Settings > Diagnostics & Storage > Backup & Restore saves everything TrayTrigger
 - Your tools, and your scripts folder.
 - The themes you made, with their background pictures. The built-in themes are part of TrayTrigger itself.
 - Cached artwork and icons, so posters don't have to be fetched again.
+- Activity & History, when **Include Activity & History in the backup** is ticked beside Back Up (it is on by default). Untick it to leave this PC's history out, which suits a backup you will restore on a different PC, where the old entries could mislead. A restore from a backup that holds it replaces your history with the backup's; a restore from one that doesn't leaves your history alone. The backup made before a restore always includes it.
 
-Game saves are not in it, and neither is anything in the games' own folders. Activity & History stays behind too, because it records what happened on this PC and an old PC's entries would mislead on a new one. Game details fetched from Steam and RAWG are fetched again.
+Game saves are not in it, and neither is anything in the games' own folders. Game details fetched from Steam and RAWG are fetched again.
 
 ## Backing up
 

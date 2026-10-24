@@ -1535,6 +1535,10 @@
                                            Foreground="{DynamicResource BrushTextPrimary}"/>
                                 <TextBlock Text="Saves your game library, settings, tools, scripts, themes and artwork to one .zip file, to move TrayTrigger to a new PC or undo a mistake. Restoring puts them back and finds games whose drive letter or folder changed. Game saves aren't included."
                                            Foreground="{DynamicResource BrushTextMuted}" FontSize="{DynamicResource FontSizeBody}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                <CheckBox IsChecked="{Binding BackupIncludesActivity}"
+                                          Style="{StaticResource ModernCheckBox}" FontSize="{DynamicResource FontSizeBody}" Margin="0,6,0,0">
+                                    <TextBlock Text="Include Activity &amp; History in the backup" TextWrapping="Wrap"/>
+                                </CheckBox>
                                 <Button Style="{StaticResource HelpLinkButton}" Content="How backups work" Margin="0,4,0,0" HorizontalAlignment="Left"
                                         Command="{x:Static services:HelpCommands.ShowTopic}" CommandParameter="troubleshooting/backup"/>
                             </StackPanel>

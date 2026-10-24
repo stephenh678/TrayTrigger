@@ -26,7 +26,7 @@ one before relying on it. Nothing here is scheduled until the owner says so.
 | 3 | Game recipes (export and import a game's setup) | **Skipped** (2026-10-23) |
 | 4 | Companion tool presets, such as Lossless Scaling | **Done** (2026-10-23): companion tools already start with a game and close with it or after it; a Lossless Scaling preset would only save picking the .exe, so it is not built |
 | 5 | Save backup through Ludusavi | **Skipped** (2026-10-23): saves stay out of TrayTrigger, as decided before |
-| 6 | Back up and restore TrayTrigger's own data | **Done** (2026-10-23): already built (Settings > Diagnostics & Storage). Reviewed for gaps; Activity & History stays behind on purpose and Help now says so, and a test makes every new data file be either backed up or listed as staying behind |
+| 6 | Back up and restore TrayTrigger's own data | **Done** (2026-10-23): already built (Settings > Diagnostics & Storage). Reviewed for gaps; Activity & History is an option when backing up (a tick, on by default), and a test makes every new data file be either backed up or listed as staying behind |
 | 7 | "Copy diagnostics" button | **Done** (2026-10-23): already built (About > Copy Diagnostic Info); reviewed and updated: user folder removed from paths, appearance, profile and per-game settings, recent changes, monitor count and refresh rate |
 | 8 | Discord Rich Presence | **Closed, not built** (2026-10-23): nobody asked for it, and the benefit is thin |
 | 9 | Dock and handheld scenes | **Skipped** (2026-10-23) |
@@ -47,7 +47,7 @@ one before relying on it. Nothing here is scheduled until the owner says so.
    more to hand over.
 5. **Ludusavi.** If wanted, call Ludusavi and do not write a save engine of our own.
 6. **Own-data backup.** Already exists: one .zip of the library, settings, tools, scripts, themes and art,
-   with a safety backup before each restore. Not in it, on purpose: Activity & History, the details caches
+   with a safety backup before each restore. Activity & History is a tick beside Back Up. Not in it, on purpose: the details caches
    and what describes this PC (a running session, suspended games, DLSS records).
 7. **Diagnostics.** Version, Windows and GPU details, the recent log and recent Activity entries, with
    paths and keys removed, so a tester can send a real report.

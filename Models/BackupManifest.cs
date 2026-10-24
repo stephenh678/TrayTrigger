@@ -26,4 +26,6 @@ public sealed class BackupManifest
     public int Tools { get; set; }
     public int Scripts { get; set; }
     public int ArtFiles { get; set; }
+    /// <summary>The backup holds Activity &amp; History (an option when backing up).</summary>
+    public bool HasActivity { get; set; }
 }

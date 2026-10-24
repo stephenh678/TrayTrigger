@@ -134,6 +134,8 @@ public class AppSettings
     /// default, matching <see cref="UseSteamGridDbArt"/>: both are third-party services the user
     /// supplies their own key for, so neither is on until the user asks for it.</summary>
     public bool UseRawgMetadata { get; set; } = false;
+    /// <summary>Back Up also saves Activity &amp; History. On by default; the tick beside Back Up changes it.</summary>
+    public bool BackupIncludesActivity { get; set; } = true;
     /// <summary>How long cached Steam and RAWG details are trusted before the Game Details window
     /// re-fetches them in the background. See <see cref="Services.MetadataFreshness"/>.</summary>
     [JsonConverter(typeof(MetadataRefreshIntervalJsonConverter))]

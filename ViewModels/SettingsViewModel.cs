@@ -1159,6 +1159,20 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    public bool BackupIncludesActivity
+    {
+        get => _settings.BackupIncludesActivity;
+        set
+        {
+            if (_settings.BackupIncludesActivity != value)
+            {
+                _settings.BackupIncludesActivity = value;
+                OnPropertyChanged();
+                AutoSaveSettings();
+            }
+        }
+    }
+
     public bool UseRawgMetadata
     {
         get => _settings.UseRawgMetadata;
@@ -2297,8 +2311,9 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             SaveEverything();
-            var manifest = await Task.Run(() => new BackupService(_storageService).Create(path));
-            StatusMessage = $"Backed up {manifest.Games} game(s), {manifest.Tools} tool(s), your settings, {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s) to {path}";
+            bool includeActivity = BackupIncludesActivity;
+            var manifest = await Task.Run(() => new BackupService(_storageService).Create(path, includeActivity));
+            StatusMessage = $"Backed up {manifest.Games} game(s), {manifest.Tools} tool(s), your settings, {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s){(manifest.HasActivity ? ", with Activity & History," : "")} to {path}";
         }
         catch (Exception ex)
         {
@@ -2345,7 +2360,8 @@ public class SettingsViewModel : ViewModelBase
         string from = string.IsNullOrWhiteSpace(manifest.MachineName) ? "" : $" on {manifest.MachineName}";
         bool confirmed = ModernDialog.Confirm(owner, "Restore from Backup",
             $"Replace your library, settings, tools and scripts with the backup made {manifest.CreatedUtc.ToLocalTime():MMM d, yyyy h:mm tt}{from}?",
-            $"It holds {manifest.Games} game(s), {manifest.Tools} tool(s), {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s), from TrayTrigger {manifest.AppVersion}. "
+            $"It holds {manifest.Games} game(s), {manifest.Tools} tool(s), {manifest.Scripts} script(s) and {manifest.ArtFiles} artwork file(s), from TrayTrigger {manifest.AppVersion}"
+                + (manifest.HasActivity ? ", and its Activity & History, which replaces yours. " : ". ")
                 + $"What you have now is backed up first, to the Backups folder in {_storageService.BaseDirectory}, so you can go back. "
                 + "TrayTrigger restarts to finish. Game saves aren't touched.",
             confirmText: "Restore and Restart",

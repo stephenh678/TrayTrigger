@@ -18,7 +18,7 @@ public class BackupCoverageTests
     private static readonly Dictionary<string, string> ThisPcOnly = new(StringComparer.OrdinalIgnoreCase)
     {
         ["backup.json"] = "the manifest inside a backup, not a file TrayTrigger keeps",
-        ["activity.json"] = "Activity & History describes what happened on this PC; an old PC's entries would mislead on a new one",
+        ["activity.json"] = "an option when backing up (BackupService.Create includeActivity), not part of every backup",
         ["profile-session.json"] = "what a running game's profile changed on this PC, so it can be put back",
         ["pending-removal.json"] = "a removal still inside its undo window",
         ["suspended-games.json"] = "games frozen on this PC right now",
