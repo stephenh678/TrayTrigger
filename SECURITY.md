@@ -29,6 +29,8 @@ No game library contents, hardware telemetry, or usage data are sent as part of 
 
 TrayTrigger does **not** run elevated by default. Some individual tweaks write to `HKEY_LOCAL_MACHINE` or manage Microsoft Defender exclusions via the supported `Add-MpPreference`/`Remove-MpPreference` PowerShell cmdlets, and Windows will prompt for a UAC elevation only when one of those specific tweaks is applied. Tweaks that only touch the current user's settings (`HKEY_CURRENT_USER`) never require elevation.
 
+One change cannot be made by Windows' own tools: the NVIDIA driver only lets an administrator change its Resizable BAR setting (Aggressive performance profile). For that, TrayTrigger starts **itself** elevated, once, under the same UAC prompt as the registry changes (`--elevated-apply`, then it exits), so that prompt names TrayTrigger and shows an unknown publisher: releases aren't code-signed. The elevated run does only what is written in `Services/ElevatedHelper.cs`: it accepts only that one NVIDIA setting with the values off, on, delete or restore-default, and a `.reg` file in the temp folder named the way TrayTrigger names its own, which stays locked against changes until the import is done. It takes no file path or command from anywhere else.
+
 ## Are changes reversible?
 
 Yes. Every tweak TrayTrigger applies — whether a global tweak from Settings or a per-game performance profile — records the prior state before changing anything and restores that exact prior state automatically (on toggle-off, or the moment a game with a session profile exits). If TrayTrigger or your PC crashes mid-session, the next launch detects the incomplete session and restores your pre-game state.

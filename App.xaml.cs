@@ -120,7 +120,8 @@ public partial class App : Application
         IsReleaseScreenshotRequest(args) || args.Any(a =>
             a.StartsWith("--screenshot", StringComparison.OrdinalIgnoreCase) || a.StartsWith("-screenshot", StringComparison.OrdinalIgnoreCase) ||
             a.StartsWith("--test", StringComparison.OrdinalIgnoreCase) || a.StartsWith("-test", StringComparison.OrdinalIgnoreCase) ||
-            a.Equals("--restore-dlss", StringComparison.OrdinalIgnoreCase));
+            a.Equals("--restore-dlss", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals(ElevatedHelper.Switch, StringComparison.Ordinal));
 
     private void StartApp(StartupEventArgs e)
     {
@@ -241,6 +242,16 @@ public partial class App : Application
         if (e.Args.Any(a => a.Equals("--restore-dlss", StringComparison.OrdinalIgnoreCase)))
         {
             RestoreDlssOverridesAndExit();
+            return;
+        }
+
+        // The elevated step of a Performance Profile, started under the one administrator prompt: this same program run
+        // again with administrator rights to make the changes the NVIDIA driver won't take from a normal process (and
+        // to import the registry changes in the same prompt), then it exits. It never gets as far as a window or the
+        // single-instance check. See ElevatedHelper.
+        if (e.Args.Any(a => a.Equals(ElevatedHelper.Switch, StringComparison.Ordinal)))
+        {
+            Shutdown(ElevatedHelper.RunAsHelper(e.Args));
             return;
         }
 

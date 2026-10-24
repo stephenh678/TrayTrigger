@@ -2274,31 +2274,9 @@ public partial class SystemTweaksService
     /// Applies a batch of HKLM changes through one elevated "reg.exe import &lt;file&gt;" (a single
     /// UAC prompt). The .reg file is written to the user's temp folder and deleted afterwards.
     /// </summary>
-    private static bool RunElevatedRegImport(List<RegFileEntry> entries)
-    {
-        string? tempFile = null;
-        try
+    private static bool RunElevatedRegImport(List<RegFileEntry> entries) =>
+        RunElevatedWithRegFile(entries, tempFile =>
         {
-            string content = BuildRegFileContent(entries);
-            tempFile = Path.Combine(Path.GetTempPath(), $"TrayTrigger-{Guid.NewGuid():N}.reg");
-            // reg.exe expects UTF-16 LE with a BOM for "Version 5.00" files; Encoding.Unicode emits one.
-            File.WriteAllText(tempFile, content, System.Text.Encoding.Unicode);
-
-            // The file sits in the user's temp folder and is read by an elevated reg.exe only after
-            // the UAC prompt is answered - seconds in which any process running as the user could
-            // rewrite it and have its own HKLM values imported. This handle shares read access only,
-            // so until reg.exe is done nothing can write to, replace or delete the file; reading it
-            // back through the same handle covers the moment between the write above and the open.
-            using var guard = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read);
-            using (var reader = new StreamReader(guard, System.Text.Encoding.Unicode, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
-            {
-                if (!string.Equals(reader.ReadToEnd(), content, StringComparison.Ordinal))
-                {
-                    LoggingService.Error("SystemTweaks", "Elevated registry import refused: the temporary .reg file changed after it was written.");
-                    return false;
-                }
-            }
-
             var psi = new ProcessStartInfo
             {
                 FileName = SystemExecutables.Reg,
@@ -2307,23 +2285,63 @@ public partial class SystemTweaksService
                 WindowStyle = ProcessWindowStyle.Hidden
             };
             psi.ArgumentList.Add("import");
-            psi.ArgumentList.Add(tempFile);
+            psi.ArgumentList.Add(tempFile!);
+            return psi;
+        }) == 0;
 
-            using var proc = Process.Start(psi);
-            if (proc == null) return false;
+    /// <summary>
+    /// Runs one elevated process (one UAC prompt) that is given a guarded temporary .reg file of <paramref name="entries"/>
+    /// (none, when there are no entries) and returns its exit code; null when it did not start or finish, most commonly
+    /// because the prompt was declined. <paramref name="buildStart"/> makes the process's start info from the file's path.
+    /// </summary>
+    internal static int? RunElevatedWithRegFile(IReadOnlyList<RegFileEntry> entries, Func<string?, ProcessStartInfo> buildStart)
+    {
+        string? tempFile = null;
+        try
+        {
+            FileStream? guard = null;
+            if (entries.Count > 0)
+            {
+                string content = BuildRegFileContent(entries);
+                tempFile = Path.Combine(Path.GetTempPath(), $"TrayTrigger-{Guid.NewGuid():N}.reg");
+                // reg.exe expects UTF-16 LE with a BOM for "Version 5.00" files; Encoding.Unicode emits one.
+                File.WriteAllText(tempFile, content, System.Text.Encoding.Unicode);
 
-            // A generous timeout: WaitForExit(5000) used to return while the user was still
-            // looking at the UAC prompt, after which reading ExitCode on a still-running
-            // process threw and got swallowed by the catch below as a false "failed".
-            proc.WaitForExit(120000);
-            if (!proc.HasExited) return false;
-            return proc.ExitCode == 0;
+                // The file sits in the user's temp folder and is read by an elevated reg.exe only after
+                // the UAC prompt is answered - seconds in which any process running as the user could
+                // rewrite it and have its own HKLM values imported. This handle shares read access only,
+                // so until reg.exe is done nothing can write to, replace or delete the file; reading it
+                // back through the same handle covers the moment between the write above and the open.
+                guard = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using (var reader = new StreamReader(guard, System.Text.Encoding.Unicode, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
+                {
+                    if (!string.Equals(reader.ReadToEnd(), content, StringComparison.Ordinal))
+                    {
+                        LoggingService.Error("SystemTweaks", "Elevated registry import refused: the temporary .reg file changed after it was written.");
+                        guard.Dispose();
+                        return null;
+                    }
+                }
+            }
+
+            using (guard)
+            {
+                using var proc = Process.Start(buildStart(tempFile));
+                if (proc == null) return null;
+
+                // A generous timeout: WaitForExit(5000) used to return while the user was still
+                // looking at the UAC prompt, after which reading ExitCode on a still-running
+                // process threw and got swallowed by the catch below as a false "failed".
+                proc.WaitForExit(120000);
+                if (!proc.HasExited) return null;
+                return proc.ExitCode;
+            }
         }
         catch (Exception ex)
         {
             // Most commonly the user cancelled the UAC prompt (Win32Exception 1223).
             LoggingService.Warn("SystemTweaks", $"Elevated registry import failed: {ex.Message}");
-            return false;
+            return null;
         }
         finally
         {

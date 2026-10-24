@@ -1236,6 +1236,60 @@ public partial class App
                 ExitApplication();
                 return;
             }
+            // --test-elevated <out.txt>: the real one-prompt elevated step, end to end. Sends a registry change that changes nothing
+            // (the value System Responsiveness already has) together with Resizable BAR on the Global profile through
+            // ElevatedHelper.Run - one administrator prompt, to be answered - reads it back, then does the same to take it out again
+            // (a second prompt). If anything is left set at the end, one more step removes it.
+            if (e.Args[i].Equals("--test-elevated", StringComparison.OrdinalIgnoreCase) && i + 1 < e.Args.Length)
+            {
+                string outFile = e.Args[i + 1];
+                const uint id = PerformanceProfileService.NvResizableBarSettingId;
+                const string key = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
+                var lines = new List<string>();
+                var drs = new NvApiDrsBackend();
+                string ReadRebar()
+                {
+                    // Straight from a session: NvidiaGlobalSetting.Read asks the driver to name the setting first, and it won't name this one.
+                    using var session = drs.OpenSession(out string? err);
+                    var global = session?.GetGlobalProfile(out err);
+                    if (session == null || global == null) return "unreadable: " + err;
+                    var reading = session.GetSetting(global, id, out err);
+                    return reading != null ? $"{reading.Value} ({reading.Origin})" : err != null ? "absent (" + err + ")" : "absent";
+                }
+                try
+                {
+                    lines.Add($"this process is elevated: {SystemTweaksService.IsElevated}");
+                    var backend = new WindowsTweakBackend();
+                    int? current = backend.ReadHklmDword(key, "SystemResponsiveness");
+                    lines.Add($"SystemResponsiveness now: {current?.ToString() ?? "absent"}");
+                    var noop = current is int v
+                        ? new SystemTweaksService.RegFileEntry(key, "SystemResponsiveness", v, Microsoft.Win32.RegistryValueKind.DWord, Delete: false)
+                        : new SystemTweaksService.RegFileEntry(key, "SystemResponsiveness", null, Microsoft.Win32.RegistryValueKind.None, Delete: true);
+                    lines.Add($"Resizable BAR before: {ReadRebar()}");
+
+                    var on = ElevatedHelper.Run([noop], [new NvidiaAdminOp(id, NvidiaAdminAction.Set, 1)]);
+                    lines.Add($"step 1 (registry no-op + Resizable BAR on): registry ok={on.RegistryOk}, NVIDIA ok={on.NvidiaOk}, problem={on.Problem ?? "none"}");
+                    lines.Add($"Resizable BAR after step 1: {ReadRebar()}");
+
+                    var off = ElevatedHelper.Run([noop], [new NvidiaAdminOp(id, NvidiaAdminAction.Delete)]);
+                    lines.Add($"step 2 (registry no-op + Resizable BAR removed): registry ok={off.RegistryOk}, NVIDIA ok={off.NvidiaOk}, problem={off.Problem ?? "none"}");
+                    lines.Add($"Resizable BAR after step 2: {ReadRebar()}");
+
+                    if (!ReadRebar().StartsWith("absent"))
+                    {
+                        var clean = ElevatedHelper.Run([], [new NvidiaAdminOp(id, NvidiaAdminAction.Delete)]);
+                        lines.Add($"clean-up step: NVIDIA ok={clean.NvidiaOk}; Resizable BAR now: {ReadRebar()}");
+                    }
+                    lines.Add($"SystemResponsiveness at the end: {backend.ReadHklmDword(key, "SystemResponsiveness")?.ToString() ?? "absent"}");
+                }
+                catch (Exception ex)
+                {
+                    lines.Add("error=" + ex);
+                }
+                File.WriteAllLines(outFile, lines);
+                ExitApplication();
+                return;
+            }
             // --test-cursor <info|clip|free|service> <out.txt> [seconds]: checks the mouse confinement on this PC.
             // info reads the current confinement. clip confines the mouse to the left half of the main monitor and
             // waits [seconds], so a harness can kill the process and see whether Windows frees the mouse. free

@@ -60,6 +60,27 @@ public class PerformanceProfileServiceTests : IDisposable
         public int ElevatedBatches;
         /// <summary>Every change sent in an elevated step, so a test can build the .reg file production would import.</summary>
         public readonly List<SystemTweaksService.RegFileEntry> Applied = new();
+
+        /// <summary>The driver the NVIDIA changes of an elevated step are made on; set by WithDriver.</summary>
+        public FakeDrsBackend? Driver;
+        /// <summary>Makes the NVIDIA part of an elevated step fail, with this reason.</summary>
+        public string? NvidiaProblem;
+        /// <summary>What each elevated step carried: registry changes and NVIDIA changes together.</summary>
+        public readonly List<(int Registry, IReadOnlyList<NvidiaAdminOp> Nvidia)> AdminSteps = new();
+
+        public ElevatedResult ApplyAdminChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> registry, IReadOnlyList<NvidiaAdminOp> nvidia)
+        {
+            if (registry.Count == 0 && nvidia.Count == 0) return ElevatedResult.Nothing;
+            AdminSteps.Add((registry.Count, nvidia.ToList()));
+            // The registry part counts itself; a step of NVIDIA changes alone is a prompt too.
+            if (registry.Count == 0) ElevatedBatches++;
+            bool regOk = ApplyHklmChanges(registry);
+            if (nvidia.Count == 0) return new ElevatedResult(regOk, true);
+            if (NvidiaProblem != null) return new ElevatedResult(regOk, false, NvidiaProblem);
+            bool ok = Driver != null && ElevatedHelper.ApplyNvidiaOps(nvidia, Driver, out _);
+            return new ElevatedResult(regOk, ok);
+        }
+
         public bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries)
         {
             if (entries.Count == 0) return true;
@@ -1020,7 +1041,11 @@ public class PerformanceProfileServiceTests : IDisposable
     private const uint PowerMode = PerformanceProfileService.NvPowerModeSettingId;
     private const uint FrameCap = PerformanceProfileService.NvFrameCapSettingId;
 
-    private PerformanceProfileService WithDriver(FakeDrsBackend driver) => new(_store, () => _settings, _backend, driver);
+    private PerformanceProfileService WithDriver(FakeDrsBackend driver)
+    {
+        _backend.Driver = driver;
+        return new(_store, () => _settings, _backend, driver);
+    }
 
     [Fact]
     public void NvidiaMaxPerformance_IsSetForTheSession_AndRemovedAfter()
@@ -1284,25 +1309,128 @@ public class PerformanceProfileServiceTests : IDisposable
         Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
     }
 
-    /// <summary>The driver refuses the write: nothing is changed, the game still starts, and Activity says so.</summary>
+    /// <summary>A setting the session itself writes, refused by the driver: nothing is changed, the game still starts, and Activity says so.</summary>
     [Fact]
-    public void ResizableBar_RefusedByTheDriver_IsAProblemInActivity_AndTheGameStillStarts()
+    public void ANvidiaSetting_RefusedByTheDriver_IsAProblemInActivity_AndTheGameStillStarts()
     {
         var activity = new ActivityService(Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N")), readOnly: false);
         ActivityService.Current = activity;
         try
         {
             var driver = new FakeDrsBackend();
-            driver.RefusedWrites[Rebar] = "NVAPI_INVALID_USER_PRIVILEGE (-137)";
+            driver.RefusedWrites[PowerMode] = "NVAPI_INVALID_USER_PRIVILEGE (-137)";
+
+            Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+
+            Assert.False(driver.Global.Settings.ContainsKey(PowerMode));
+            var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
+            Assert.Contains("couldn't be set", problem.Text);
+            Assert.Contains("administrator rights", problem.Detail);
+        }
+        finally { ActivityService.Current = null; }
+    }
+
+    /// <summary>The registry changes and Resizable BAR are one elevated step in, and one out: one prompt each way.</summary>
+    [Fact]
+    public void ResizableBar_RidesTheSameElevatedStepAsTheRegistryTweaks()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        var step = Assert.Single(_backend.AdminSteps);
+        Assert.Equal(2, step.Registry);
+        Assert.Equal(new NvidiaAdminOp(Rebar, NvidiaAdminAction.Set, 1), Assert.Single(step.Nvidia));
+        Assert.Equal((1u, false), driver.Global.Settings[Rebar]);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.Equal(2, _backend.AdminSteps.Count);
+        var back = _backend.AdminSteps[1];
+        Assert.Equal(2, back.Registry);
+        Assert.Equal(new NvidiaAdminOp(Rebar, NvidiaAdminAction.Delete), Assert.Single(back.Nvidia));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>With no registry tweaks on, Resizable BAR is the whole prompt.</summary>
+    [Fact]
+    public void ResizableBar_Alone_IsOneElevatedStepEachWay()
+    {
+        _settings.AggressiveProfileTweaks.SystemResponsivenessEnabled = false;
+        _settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled = false;
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.Equal(0, Assert.Single(_backend.AdminSteps).Registry);
+
+        Assert.True(service.EndGameSession("g"));
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+    }
+
+    /// <summary>
+    /// The prompt was declined, or the driver refused even then: nothing was changed, so no record is kept, the game still
+    /// starts and Activity says why.
+    /// </summary>
+    [Fact]
+    public void ResizableBar_WhenTheElevatedStepFails_KeepsNoRecord_AndIsAProblemInActivity()
+    {
+        var activity = new ActivityService(Path.Combine(Path.GetTempPath(), "TrayTriggerTests", Guid.NewGuid().ToString("N")), readOnly: false);
+        ActivityService.Current = activity;
+        try
+        {
+            var driver = new FakeDrsBackend();
+            _backend.NvidiaProblem = "The administrator prompt was declined, or the elevated step did not finish.";
 
             Assert.True(WithDriver(driver).BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
 
             Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+            Assert.DoesNotContain(_store.OnDisk!.NvidiaSettings, r => r.SettingId == Rebar);
             var problem = Assert.Single(activity.Entries, e => e.Level == ActivityLevel.Problem);
             Assert.Contains("Resizable BAR couldn't be set", problem.Text);
-            Assert.Contains("administrator rights", problem.Detail);
+            Assert.Contains("administrator prompt was declined", problem.Detail);
         }
         finally { ActivityService.Current = null; }
+    }
+
+    /// <summary>
+    /// TrayTrigger closing without administrator rights can't put it back: the record stays for the next start, which does,
+    /// and nothing is reported as lost meanwhile.
+    /// </summary>
+    [Fact]
+    public void ResizableBar_AtShutdownWithoutAdminRights_StaysOnRecord_AndIsPutBackAtTheNextStart()
+    {
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        Assert.True(driver.Global.Settings.ContainsKey(Rebar));
+
+        service.RestoreActiveSessionOnShutdown(skipElevated: true);
+
+        Assert.True(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Contains(_store.OnDisk!.NvidiaSettings, r => r.SettingId == Rebar);
+
+        var nextStart = WithDriver(driver);
+        nextStart.RecoverFromCrashIfNeeded();
+        Assert.False(driver.Global.Settings.ContainsKey(Rebar));
+        Assert.Null(_store.OnDisk);
+    }
+
+    /// <summary>A value someone changed since is theirs: no elevated step is made for it.</summary>
+    [Fact]
+    public void ResizableBar_ChangedByTheUserDuringTheGame_IsLeftAlone_WithoutAPrompt()
+    {
+        _settings.AggressiveProfileTweaks.SystemResponsivenessEnabled = false;
+        _settings.AggressiveProfileTweaks.MmcssGamesPriorityEnabled = false;
+        var driver = new FakeDrsBackend();
+        var service = WithDriver(driver);
+        Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
+        driver.Global.Settings[Rebar] = (0, false);
+
+        Assert.True(service.EndGameSession("g"));
+
+        Assert.Equal((0u, false), driver.Global.Settings[Rebar]);
+        Assert.Single(_backend.AdminSteps);
     }
 
     /// <summary>
@@ -1324,8 +1452,8 @@ public class PerformanceProfileServiceTests : IDisposable
     }
 
     /// <summary>
-    /// A session loads the driver's whole database, well over 100 ms, on the way into a game: all
-    /// three settings go on with one save and come off with one.
+    /// A session loads the driver's whole database, well over 100 ms, on the way into a game: the two
+    /// settings a session writes go on with one save and come off with one. Resizable BAR is made in the elevated step.
     /// </summary>
     [Fact]
     public void NvidiaSettings_GoOnWithOneSave_AndComeOffWithOne()
@@ -1335,12 +1463,14 @@ public class PerformanceProfileServiceTests : IDisposable
         var service = WithDriver(driver);
 
         Assert.True(service.BeginGameSession(Game("g", _exeA, PerformanceProfileMode.Aggressive)));
-        Assert.Equal([PowerMode, FrameCap, Rebar], _store.OnDisk!.NvidiaSettings.Select(r => r.SettingId));
-        Assert.Equal(1, driver.SaveCount);
+        // Resizable BAR first: it is planned before the registry step, and written in the elevated step. The other two share a session.
+        Assert.Equal([Rebar, PowerMode, FrameCap], _store.OnDisk!.NvidiaSettings.Select(r => r.SettingId));
+        // One save for the elevated step, one for the session the other two share.
+        Assert.Equal(2, driver.SaveCount);
 
         Assert.True(service.EndGameSession("g"));
         Assert.Empty(driver.Global.Settings);
-        Assert.Equal(2, driver.SaveCount);
+        Assert.Equal(4, driver.SaveCount);
     }
 
     /// <summary>

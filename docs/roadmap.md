@@ -84,10 +84,15 @@ Write test (`--test-rebar-write`, 2026-10-24, driver value put back afterwards a
 - Not elevated: `SetSetting 0x000F00BA = 1` on the Global profile is **refused** (`NVAPI_INVALID_USER_PRIVILEGE`, -137), before any save.
 - Elevated: SetSetting ok, read back 1, Save ok, put back ok, Save ok. So **this write needs administrator rights.**
 
+Built 2026-10-24 (option 2): `ElevatedHelper`. TrayTrigger runs itself elevated (`--elevated-apply`) for the NVIDIA change and the registry
+import together, so it is still one prompt each way. It accepts only the settings and values in `NvidiaAdminOp.Allowed` (Resizable BAR, 0/1,
+delete, restore default) and a .reg file TrayTrigger made in the temp folder. Tested end to end with real UAC runs (`--test-elevated`): set,
+read back, removed, driver left as it was. A future setting that needs administrator rights is a new entry in `Allowed` plus its own checks.
+
 Still to settle:
 
 1. (Answered above: it needs admin.)
-2. It needs admin: mark it ADMIN and write it in an elevated step (the bundled UAC runs PowerShell, not NVAPI, so it is a new
+2. (Done, see above.) It needs admin: mark it ADMIN and write it in an elevated step (the bundled UAC runs PowerShell, not NVAPI, so it is a new
    elevated NVAPI step), or take the tweak out.
 3. ~~Make a failed write visible~~ Done: a Problem entry in Activity & History. The ENABLED badge still says nothing about whether it took effect.
 4. Does a Global value reach a game whose own profile lacks it (Hellraiser's profile has 16 settings and no value)? Only a game

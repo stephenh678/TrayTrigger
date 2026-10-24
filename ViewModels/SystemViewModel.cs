@@ -863,7 +863,8 @@ public class SystemViewModel : ViewModelBase
                 "profiles/resizable_bar",
                 () => config.ResizableBarEnabled,
                 v => { config.ResizableBarEnabled = v; Save(); },
-                note: "NVIDIA GPUs only, with Resizable BAR on in the BIOS."),
+                requiresAdmin: true,
+                note: "NVIDIA GPUs only, with Resizable BAR on in the BIOS. The NVIDIA driver only lets an administrator change it, so it is part of the one administrator prompt."),
         };
     }
 

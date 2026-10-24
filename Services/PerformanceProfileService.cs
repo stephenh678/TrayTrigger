@@ -162,6 +162,12 @@ public class PerformanceProfileService
         };
 
     /// <summary>
+    /// A setting the driver only lets an administrator change (Resizable BAR): it is made in the elevated step, under the same
+    /// administrator prompt as the registry changes, and not in the session the others share.
+    /// </summary>
+    private static bool IsAdminNvidia(uint settingId) => NvidiaAdminOp.Allowed.ContainsKey(settingId);
+
+    /// <summary>
     /// The cap for a refresh rate: refresh - refresh^2 / 3600, rounded down. The formula NVIDIA's
     /// Reflex uses for its own automatic cap with G-SYNC: 59 at 60 Hz, 138 at 144, 157 at 165, 224
     /// at 240, 324 at 360. Far enough under the refresh rate that frame-time variation doesn't
@@ -668,10 +674,21 @@ public class PerformanceProfileService
                 _store.SaveProfileSessionSnapshot(snapshot);
             }
 
-            if (hklmChanges.Count > 0)
+            // Resizable BAR is the one NVIDIA setting here that the driver only lets an administrator change. It goes in the same
+            // elevated step as the registry changes, so the player still answers one prompt.
+            var adminNvidia = new List<NvidiaAdminOp>(1);
+            var resizableBar = PlanResizableBar(snapshot, settings, aggressive, adminNvidia);
+            if (resizableBar != null) applied = true;
+
+            if (hklmChanges.Count > 0 || adminNvidia.Count > 0)
             {
-                if (_backend.ApplyHklmChanges(hklmChanges)) Note("Windows' multimedia scheduler settings");
-                else Skipped("Windows' multimedia scheduler settings couldn't be set");
+                var result = _backend.ApplyAdminChanges(hklmChanges, adminNvidia);
+                if (hklmChanges.Count > 0)
+                {
+                    if (result.RegistryOk) Note("Windows' multimedia scheduler settings");
+                    else Skipped("Windows' multimedia scheduler settings couldn't be set");
+                }
+                if (resizableBar != null) FinishResizableBar(game, snapshot, resizableBar, result);
             }
 
             if (settings.OptimizedProfileTweaks.DoNotDisturbEnabled)
@@ -1232,7 +1249,7 @@ public class PerformanceProfileService
         {
             return;
         }
-        // Both together, as they were applied: one administrator prompt on the way out too.
+        // All together, as they were applied: one administrator prompt on the way out too.
         var hklmChanges = new List<SystemTweaksService.RegFileEntry>(2);
         if (TryRestoreSystemResponsiveness(snapshot, out var responsiveness)) hklmChanges.Add(responsiveness);
         if (TryRestoreSchedulingCategory(snapshot, out var scheduling)) hklmChanges.Add(scheduling);
@@ -1242,10 +1259,20 @@ public class PerformanceProfileService
         snapshot.SystemResponsivenessCaptured = false;
         snapshot.SchedulingCategoryCaptured = false;
 
-        if (hklmChanges.Count > 0 && !_backend.ApplyHklmChanges(hklmChanges))
+        var adminRecords = snapshot.NvidiaSettings.Where(r => IsAdminNvidia(r.SettingId)).ToList();
+        if (hklmChanges.Count > 0 || adminRecords.Count > 0)
         {
-            var entries = hklmChanges.ToList();
-            NoteUnrestored("Windows' multimedia scheduler settings", () => _backend.ApplyHklmChanges(entries));
+            var (failedAdmin, registryOk) = PutBackAdminNvidia(adminRecords, hklmChanges);
+            snapshot.NvidiaSettings = snapshot.NvidiaSettings.Where(r => !IsAdminNvidia(r.SettingId)).Concat(failedAdmin).ToList();
+            foreach (var record in failedAdmin)
+            {
+                NoteUnrestored(NvidiaSessionSettings[record.SettingId].What, () => RetryNvidiaSetting(snapshot, record), key: record);
+            }
+            if (hklmChanges.Count > 0 && !registryOk)
+            {
+                var entries = hklmChanges.ToList();
+                NoteUnrestored("Windows' multimedia scheduler settings", () => _backend.ApplyHklmChanges(entries));
+            }
         }
     }
 
@@ -1269,8 +1296,7 @@ public class PerformanceProfileService
     {
         bool maxPerformance = settings.OptimizedProfileTweaks.NvidiaMaxPerformanceEnabled;
         bool frameCap = settings.OptimizedProfileTweaks.FrameCapEnabled;
-        bool resizableBar = aggressive && settings.AggressiveProfileTweaks.ResizableBarEnabled;
-        if (!maxPerformance && !frameCap && !resizableBar) return false;
+        if (!maxPerformance && !frameCap) return false;
 
         if (_drs.GetSettingName(NvidiaGlobalSetting.PresenceProbeId) == null)
         {
@@ -1279,11 +1305,10 @@ public class PerformanceProfileService
             return false;
         }
 
-        var wanted = new List<NvidiaWanted>(3);
+        var wanted = new List<NvidiaWanted>(2);
         if (maxPerformance)
             wanted.Add(new(NvPowerModeSettingId, NvPowerModePreferMax, "NVIDIA power management", "Prefer maximum performance", _ => null));
         if (frameCap && FrameCapWanted(game) is { } cap) wanted.Add(cap);
-        if (resizableBar && ResizableBarWanted() is { } rebar) wanted.Add(rebar);
         if (wanted.Count == 0) return false;
 
         var written = new List<(NvidiaSettingSnapshot Record, NvidiaWanted Want)>(wanted.Count);
@@ -1363,6 +1388,98 @@ public class PerformanceProfileService
         return true;
     }
 
+    /// <summary>
+    /// Works out whether Resizable BAR is to be set for this session, and if so writes what was there to the crash-recovery
+    /// snapshot (before anything is changed) and adds the change to <paramref name="ops"/> for the elevated step. Reading
+    /// needs no administrator rights. Null when there is nothing to do.
+    /// </summary>
+    private NvidiaSettingSnapshot? PlanResizableBar(PerformanceProfileSessionSnapshot snapshot, AppSettings settings, bool aggressive, List<NvidiaAdminOp> ops)
+    {
+        if (!aggressive || !settings.AggressiveProfileTweaks.ResizableBarEnabled) return null;
+
+        if (_drs.GetSettingName(NvidiaGlobalSetting.PresenceProbeId) == null)
+        {
+            LoggingService.Verbose("PerformanceProfile", "Resizable BAR: no NVIDIA driver; nothing to do.");
+            Skipped("Resizable BAR, no NVIDIA driver");
+            return null;
+        }
+        if (ResizableBarWanted() is not { } want) return null;
+
+        using var session = _drs.OpenSession(out string? error);
+        var global = session?.GetGlobalProfile(out error);
+        if (session == null || global == null)
+        {
+            LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not open the driver's settings ({error}); left unchanged.");
+            Skipped($"{want.Label}, the driver's settings couldn't be opened");
+            return null;
+        }
+
+        var reading = session.GetSetting(global, want.SettingId, out error);
+        if (error != null)
+        {
+            // A failed read is not "absent": recording it as such would make undo delete a value the user had chosen.
+            LoggingService.Warn("PerformanceProfile", $"{want.Label}: could not read the driver's setting ({error}); left unchanged.");
+            Skipped($"{want.Label}, the driver's setting couldn't be read");
+            return null;
+        }
+        if (reading?.Value == want.Value)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"{want.Label}: already {want.Describe}; nothing to do.");
+            Skipped($"{want.Label} already {want.Describe}");
+            return null;
+        }
+        if (want.LeaveAlone(reading) is string reason)
+        {
+            LoggingService.Verbose("PerformanceProfile", $"{want.Label}: {reason}; left as it is.");
+            Skipped($"{want.Label}, {reason}");
+            return null;
+        }
+
+        var record = new NvidiaSettingSnapshot { SettingId = want.SettingId, Written = want.Value, Previous = NvidiaGlobalSetting.TokenFor(reading) };
+        snapshot.NvidiaSettings.Add(record);
+        _store.SaveProfileSessionSnapshot(snapshot);
+        ops.Add(new NvidiaAdminOp(want.SettingId, NvidiaAdminAction.Set, want.Value));
+        return record;
+    }
+
+    /// <summary>
+    /// After the elevated step: says it was set, or, when it was not, takes the record out unless the driver holds the value
+    /// after all (then it still has to be put back) and tells Activity &amp; History why, in plain words.
+    /// </summary>
+    private void FinishResizableBar(GameEntry game, PerformanceProfileSessionSnapshot snapshot, NvidiaSettingSnapshot record, ElevatedResult result)
+    {
+        const string label = "Resizable BAR";
+        if (result.NvidiaOk)
+        {
+            LoggingService.Info("PerformanceProfile", $"{label}: on for games NVIDIA hasn't decided on (was {record.Previous}).");
+            Note($"{label}: on for games NVIDIA hasn't decided on");
+            return;
+        }
+
+        bool held = ReadGlobalValue(record.SettingId) == record.Written;
+        if (!held)
+        {
+            snapshot.NvidiaSettings.Remove(record);
+            _store.SaveProfileSessionSnapshot(snapshot);
+        }
+        LoggingService.Warn("PerformanceProfile", $"{label}: the elevated step did not set it ({result.Problem}); {(held ? "the driver holds it all the same" : "left as it was")}.");
+        Skipped($"{label} couldn't be set");
+        ActivityService.Add(ActivityLevel.Problem, $"{game.Name}: {label} couldn't be set", subject: game.Name,
+            detail: $"{result.Problem ?? "The change was not made."} {(held ? "The driver may hold it all the same; it is put back when the game ends." : "It was left as it was.")} The game started as usual.",
+            groupKey: $"nvidia-set|{record.SettingId}");
+    }
+
+    /// <summary>
+    /// What the Global profile holds for a setting, read straight from a session: <see cref="NvidiaGlobalSetting.Read"/> first asks the
+    /// driver to name the setting, which it won't for a hidden one such as Resizable BAR. Null when absent or unreadable.
+    /// </summary>
+    private uint? ReadGlobalValue(uint settingId)
+    {
+        using var session = _drs.OpenSession(out string? error);
+        var global = session?.GetGlobalProfile(out error);
+        return session != null && global != null ? session.GetSetting(global, settingId, out error)?.Value : null;
+    }
+
     /// <summary>NVAPI_INVALID_USER_PRIVILEGE: the driver wants administrator rights for this change.</summary>
     internal const string NvidiaNeedsAdminCode = "-137";
 
@@ -1426,14 +1543,97 @@ public class PerformanceProfileService
     /// </summary>
     private void RestoreNvidiaSettings(PerformanceProfileSessionSnapshot snapshot)
     {
-        if (snapshot.NvidiaSettings.Count == 0) return;
-        var failed = PutBackNvidiaSettings(snapshot.NvidiaSettings);
-        snapshot.NvidiaSettings = failed;
+        // The ones the driver lets an administrator change stay on the record: they go back in the elevated step (RestoreGlobalTweaks).
+        var admin = snapshot.NvidiaSettings.Where(r => IsAdminNvidia(r.SettingId)).ToList();
+        var own = snapshot.NvidiaSettings.Where(r => !IsAdminNvidia(r.SettingId)).ToList();
+        if (own.Count == 0) return;
+        var failed = PutBackNvidiaSettings(own);
+        snapshot.NvidiaSettings = failed.Concat(admin).ToList();
         foreach (var record in failed)
         {
             NoteUnrestored(NvidiaSessionSettings[record.SettingId].What, () => RetryNvidiaSetting(snapshot, record), key: record);
         }
     }
+
+    /// <summary>
+    /// Puts back the settings the driver only lets an administrator change, in the same elevated step as
+    /// <paramref name="registry"/> (so one prompt for both). Reading what the driver holds needs no administrator rights: a
+    /// value someone changed since is left alone, as for the other settings. Returns the records that couldn't be put back,
+    /// and whether the registry changes went in.
+    /// </summary>
+    private (List<NvidiaSettingSnapshot> Failed, bool RegistryOk) PutBackAdminNvidia(IReadOnlyList<NvidiaSettingSnapshot> records, IReadOnlyList<SystemTweaksService.RegFileEntry> registry)
+    {
+        var failed = new List<NvidiaSettingSnapshot>();
+        var planned = new List<NvidiaSettingSnapshot>();
+        var ops = new List<NvidiaAdminOp>();
+
+        var known = records.Where(r => IsAdminNvidia(r.SettingId)).ToList();
+        if (known.Count > 0 && _drs.GetSettingName(NvidiaGlobalSetting.PresenceProbeId) == null)
+        {
+            LoggingService.Info("PerformanceProfile", $"No NVIDIA driver any more, so {known.Count} NVIDIA setting(s) recorded by an earlier session have nothing to be put back on.");
+            known.Clear();
+        }
+
+        if (known.Count > 0)
+        {
+            using var session = _drs.OpenSession(out string? error);
+            var global = session?.GetGlobalProfile(out error);
+            if (session == null || global == null)
+            {
+                LoggingService.Warn("PerformanceProfile", $"Could not open the NVIDIA driver's settings to put them back ({error}).");
+                failed.AddRange(known);
+            }
+            else
+            {
+                for (int i = known.Count - 1; i >= 0; i--)
+                {
+                    var record = known[i];
+                    var now = session.GetSetting(global, record.SettingId, out error);
+                    if (error != null)
+                    {
+                        LoggingService.Warn("PerformanceProfile", $"Restoring {NvidiaSessionSettings[record.SettingId].What} failed: {error}");
+                        failed.Add(record);
+                        continue;
+                    }
+                    if (now?.Value != record.Written)
+                    {
+                        LoggingService.Info("NvidiaSettings", $"Global setting 0x{record.SettingId:X8} was changed outside TrayTrigger since it was set to {record.Written}; left as it is.");
+                        continue;
+                    }
+                    var op = PutBackOp(record);
+                    if (!op.IsAllowed)
+                    {
+                        LoggingService.Warn("PerformanceProfile", $"Restoring {NvidiaSessionSettings[record.SettingId].What} failed: the value to put back ({record.Previous}) is not one TrayTrigger writes.");
+                        failed.Add(record);
+                        continue;
+                    }
+                    ops.Add(op);
+                    planned.Add(record);
+                }
+            }
+        }
+
+        bool registryOk = true;
+        if (ops.Count > 0 || registry.Count > 0)
+        {
+            var result = _backend.ApplyAdminChanges(registry, ops);
+            registryOk = result.RegistryOk;
+            if (!result.NvidiaOk)
+            {
+                LoggingService.Warn("PerformanceProfile", $"The elevated step did not put the NVIDIA setting back ({result.Problem}).");
+                failed.AddRange(planned);
+            }
+        }
+        return (known.Where(failed.Contains).ToList(), registryOk);
+    }
+
+    /// <summary>What puts a setting back the way <see cref="NvidiaSettingSnapshot.Previous"/> says it was.</summary>
+    private static NvidiaAdminOp PutBackOp(NvidiaSettingSnapshot record) => NvidiaGlobalSetting.ParseToken(record.Previous) switch
+    {
+        (DlssSettingOrigin.UserSet, uint value) => new NvidiaAdminOp(record.SettingId, NvidiaAdminAction.Set, value),
+        (DlssSettingOrigin.Predefined, _) => new NvidiaAdminOp(record.SettingId, NvidiaAdminAction.RestoreDefault),
+        _ => new NvidiaAdminOp(record.SettingId, NvidiaAdminAction.Delete),
+    };
 
     /// <summary>
     /// Restore Previous for one NVIDIA setting. Once it's back its record goes too, from the
@@ -1442,7 +1642,10 @@ public class PerformanceProfileService
     /// </summary>
     private bool RetryNvidiaSetting(PerformanceProfileSessionSnapshot snapshot, NvidiaSettingSnapshot record)
     {
-        if (PutBackNvidiaSettings([record]).Count > 0) return false;
+        var stillFailed = IsAdminNvidia(record.SettingId)
+            ? PutBackAdminNvidia([record], []).Failed
+            : PutBackNvidiaSettings([record]);
+        if (stillFailed.Count > 0) return false;
 
         lock (_lock)
         {

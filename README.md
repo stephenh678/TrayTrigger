@@ -167,7 +167,7 @@ Yes. TrayTrigger launches each game through its own client and changes nothing a
 Only the profiles, tweaks, and scripts you enable. Per-game profile settings restore on exit; system-wide tweaks stay applied until reverted. Scripts require their own cleanup actions. Bulk changes can create a System Restore point first. Scripts are off until you enable them and choose one, and they run as you. See [SECURITY.md](SECURITY.md) for the full breakdown.
 
 **Does it need administrator access?**
-Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the Defender exclusion list) and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.
+Not to run. A few tweaks write machine-wide settings (`HKEY_LOCAL_MACHINE`, the Defender exclusion list, NVIDIA's Resizable BAR setting) and show a UAC prompt when you enable them. TrayTrigger never runs elevated by default.
 
 **Does it phone home?**
 No telemetry. Outbound calls are Steam's public API (metadata and artwork for games you add), SteamGridDB and RAWG (only if you enter your own key), NVIDIA's driver service (only when you press Check for Newer Driver on an NVIDIA GPU), and GitHub Releases (update checks, which you can turn off).

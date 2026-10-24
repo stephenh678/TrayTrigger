@@ -44,6 +44,12 @@ public interface ISystemTweakBackend
     /// </summary>
     bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries);
 
+    /// <summary>
+    /// The registry changes and the NVIDIA changes that need administrator rights, together, under one administrator prompt
+    /// (none when TrayTrigger is elevated already). With no NVIDIA changes this is <see cref="ApplyHklmChanges"/>.
+    /// </summary>
+    ElevatedResult ApplyAdminChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> registry, IReadOnlyList<NvidiaAdminOp> nvidia);
+
     List<HdrControlService.DisplayColorState> GetHdrDisplayStates();
     bool SetDisplayHdrEnabled(HdrControlService.LUID adapterId, uint targetId, bool enable);
 
@@ -136,6 +142,9 @@ public sealed class WindowsTweakBackend : ISystemTweakBackend
 
     public bool ApplyHklmChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> entries) =>
         SystemTweaksService.ApplyHklmEntries(entries as List<SystemTweaksService.RegFileEntry> ?? entries.ToList());
+
+    public ElevatedResult ApplyAdminChanges(IReadOnlyList<SystemTweaksService.RegFileEntry> registry, IReadOnlyList<NvidiaAdminOp> nvidia) =>
+        ElevatedHelper.Run(registry, nvidia);
 
     public bool WriteHklmDword(string subKey, string valueName, int value) => SystemTweaksService.SetHklmDword(subKey, valueName, value);
 
